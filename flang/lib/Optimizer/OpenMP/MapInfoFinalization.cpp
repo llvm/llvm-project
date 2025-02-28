@@ -586,16 +586,16 @@ class MapInfoFinalizationPass
       //     if (!shouldMapField)
       //       continue;
 
-      //     int64_t fieldIdx = recordType.getFieldIndex(field);
-      //     bool alreadyMapped = [&]() {
-      //       if (op.getMembersIndexAttr())
-      //         for (auto indexList : op.getMembersIndexAttr()) {
-      //           auto indexListAttr = mlir::cast<mlir::ArrayAttr>(indexList);
-      //           if (indexListAttr.size() == 1 &&
-      //               mlir::cast<mlir::IntegerAttr>(indexListAttr[0]).getInt() ==
-      //                   fieldIdx)
-      //             return true;
-      //         }
+      // int32_t fieldIdx = recordType.getFieldIndex(field);
+      // bool alreadyMapped = [&]() {
+      //   if (op.getMembersIndexAttr())
+      //     for (auto indexList : op.getMembersIndexAttr()) {
+      //       auto indexListAttr = mlir::cast<mlir::ArrayAttr>(indexList);
+      //       if (indexListAttr.size() == 1 &&
+      //           mlir::cast<mlir::IntegerAttr>(indexListAttr[0]).getInt() ==
+      //               fieldIdx)
+      //         return true;
+      //     }
 
       //       return false;
       //     }();
@@ -603,43 +603,43 @@ class MapInfoFinalizationPass
       //     if (alreadyMapped)
       //       continue;
 
-      //     builder.setInsertionPoint(op);
-      //     mlir::Value fieldIdxVal = builder.createIntegerConstant(
-      //         op.getLoc(), mlir::IndexType::get(builder.getContext()),
-      //         fieldIdx);
-      //     auto fieldCoord = builder.create<fir::CoordinateOp>(
-      //         op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-      //         fieldIdxVal);
-      //     Fortran::lower::AddrAndBoundsInfo info =
-      //         Fortran::lower::getDataOperandBaseAddr(
-      //             builder, fieldCoord, /*isOptional=*/false, op.getLoc());
-      //     llvm::SmallVector<mlir::Value> bounds =
-      //         Fortran::lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-      //                                              mlir::omp::MapBoundsType>(
-      //             builder, info,
-      //             hlfir::translateToExtendedValue(op.getLoc(), builder,
-      //                                             hlfir::Entity{fieldCoord})
-      //                 .first,
-      //             /*dataExvIsAssumedSize=*/false, op.getLoc());
-      //     mlir::omp::MapInfoOp fieldMapOp =
-      //         builder.create<mlir::omp::MapInfoOp>(
-      //             op.getLoc(), fieldCoord.getResult().getType(),
-      //             fieldCoord.getResult(),
-      //             mlir::TypeAttr::get(
-      //                 fir::unwrapRefType(fieldCoord.getResult().getType())),
-      //             /*varPtrPtr=*/mlir::Value{},
-      //             /*members=*/mlir::ValueRange{},
-      //             /*members_index=*/mlir::ArrayAttr{},
-      //             /*bounds=*/bounds, op.getMapTypeAttr(),
-      //             /*mapperId*/ mlir::FlatSymbolRefAttr(),
-      //             builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-      //                 mlir::omp::VariableCaptureKind::ByRef),
-      //             builder.getStringAttr(op.getNameAttr().strref() + "." +
-      //                                   field + ".implicit_map"),
-      //             /*partial_map=*/builder.getBoolAttr(false));
-      //     newMapOpsForFields.emplace_back(fieldMapOp);
-      //     fieldIndicies.emplace_back(fieldIdx);
-      //   }
+      //   builder.setInsertionPoint(op);
+      //   fir::IntOrValue idxConst =
+      //       mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
+      //   auto fieldCoord = builder.create<fir::CoordinateOp>(
+      //       op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
+      //       llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
+      //   fir::factory::AddrAndBoundsInfo info =
+      //       fir::factory::getDataOperandBaseAddr(
+      //           builder, fieldCoord, /*isOptional=*/false, op.getLoc());
+      //   llvm::SmallVector<mlir::Value> bounds =
+      //       fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+      //                                          mlir::omp::MapBoundsType>(
+      //           builder, info,
+      //           hlfir::translateToExtendedValue(op.getLoc(), builder,
+      //                                           hlfir::Entity{fieldCoord})
+      //               .first,
+      //           /*dataExvIsAssumedSize=*/false, op.getLoc());
+
+      //   mlir::omp::MapInfoOp fieldMapOp =
+      //       builder.create<mlir::omp::MapInfoOp>(
+      //           op.getLoc(), fieldCoord.getResult().getType(),
+      //           fieldCoord.getResult(),
+      //           mlir::TypeAttr::get(
+      //               fir::unwrapRefType(fieldCoord.getResult().getType())),
+      //           /*varPtrPtr=*/mlir::Value{},
+      //           /*members=*/mlir::ValueRange{},
+      //           /*members_index=*/mlir::ArrayAttr{},
+      //           /*bounds=*/bounds, op.getMapTypeAttr(),
+      //           /*mapperId*/ mlir::FlatSymbolRefAttr(),
+      //           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+      //               mlir::omp::VariableCaptureKind::ByRef),
+      //           builder.getStringAttr(op.getNameAttr().strref() + "." +
+      //                                 field + ".implicit_map"),
+      //           /*partial_map=*/builder.getBoolAttr(false));
+      //   newMapOpsForFields.emplace_back(fieldMapOp);
+      //   fieldIndicies.emplace_back(fieldIdx);
+      // }
 
       //   if (newMapOpsForFields.empty())
       //     return mlir::WalkResult::advance();
