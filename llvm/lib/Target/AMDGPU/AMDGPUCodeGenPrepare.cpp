@@ -404,8 +404,8 @@ bool AMDGPUCodeGenPrepareImpl::isSigned(const BinaryOperator &I) const {
 }
 
 bool AMDGPUCodeGenPrepareImpl::isSigned(const SelectInst &I) const {
-  return isa<ICmpInst>(I.getOperand(0)) ?
-      cast<ICmpInst>(I.getOperand(0))->isSigned() : false;
+  return isa<ICmpInst>(I.getOperand(0)) &&
+         cast<ICmpInst>(I.getOperand(0))->isSigned();
 }
 
 bool AMDGPUCodeGenPrepareImpl::needsPromotionToI32(const Type *T) const {
