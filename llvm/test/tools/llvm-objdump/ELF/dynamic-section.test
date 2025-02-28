@@ -475,11 +475,11 @@ Sections:
 # RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --strict-whitespace -DFILE=%t5 --check-prefix=WARN
 
 # WARN: Dynamic Section:
-# WARN: warning: '[[FILE]]': invalid string table offset
-# WARN:  NEEDED 0x0000000000000010
-# WARN:  NEEDED
-# WARN:  STRTAB 0x0000000000001000
-# WARN:  STRSZ  0x0000000000000010
+# WARN-NEXT: warning: '[[FILE]]': invalid string table offset
+# WARN-NEXT:  NEEDED 0x0000000000000010
+# WARN-NEXT:  NEEDED {{$}}
+# WARN-NEXT:  STRTAB 0x0000000000001000
+# WARN-NEXT:  STRSZ  0x0000000000000010
 
 --- !ELF
 FileHeader:
