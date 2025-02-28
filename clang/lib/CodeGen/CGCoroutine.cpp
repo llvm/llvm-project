@@ -857,7 +857,11 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // parameter copies.
     for (const ParmVarDecl *Parm : FnArgs) {
       // If the original param is in an alloca, exclude it from the coroutine
-      // frame. The parameter copy will be part of the frame.
+      // frame. The parameter copy will be part of the frame, but the original
+      // parameter memory should remain on the stack. This is necessary to
+      // ensure that parameters destroyed in callees, as with `trivial_abi` or
+      // in the MSVC C++ ABI, are appropriately destroyed after setting up the
+      // coroutine.
       Address ParmAddr = GetAddrOfLocalVar(Parm);
       if (auto *ParmAlloca =
               dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
