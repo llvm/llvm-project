@@ -4415,8 +4415,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  ? llvm::Intrinsic::smax
                                                  : llvm::Intrinsic::umax,
                                              Op0, Op1, nullptr, "elt.max");
-    } else
-      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
+    } else {
+      FastMathFlags FMF;
+      FMF.setNoSignedZeros(true);
+      FMFSource FMFSrc(FMF);
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/FMFSrc, "elt.max");
+    }
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4431,8 +4435,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  ? llvm::Intrinsic::smin
                                                  : llvm::Intrinsic::umin,
                                              Op0, Op1, nullptr, "elt.min");
-    } else
-      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    } else {
+      FastMathFlags FMF;
+      FMF.setNoSignedZeros(true);
+      FMFSource FMFSrc(FMF);
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/FMFSrc, "elt.min");
+    }
     return RValue::get(Result);
   }
 
