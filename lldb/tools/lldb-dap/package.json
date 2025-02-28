@@ -75,6 +75,15 @@
           "type": "string",
           "description": "The path to the lldb-dap binary."
         },
+        "lldb-dap.arguments": {
+          "scope": "resource",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "The arguments provided to the lldb-dap process."
+        },
         "lldb-dap.log-path": {
           "scope": "resource",
           "type": "string",
@@ -161,6 +170,13 @@
               "debugAdapterExecutable": {
                 "type": "string",
                 "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "The list of arguments used to launch the debug adapter executable."
               },
               "program": {
                 "type": "string",
@@ -351,6 +367,13 @@
               "debugAdapterExecutable": {
                 "type": "string",
                 "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "The list of arguments used to launch the debug adapter executable."
               },
               "program": {
                 "type": "string",
