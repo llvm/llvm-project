@@ -1567,6 +1567,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
+        setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+        setOperationAction(ISD::FP_TO_UINT, VT, Custom);
         setOperationAction(ISD::SINT_TO_FP, VT, Custom);
         setOperationAction(ISD::UINT_TO_FP, VT, Custom);
       }
@@ -4726,7 +4728,18 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   EVT InVT = Op.getOperand(IsStrict ? 1 : 0).getValueType();
   EVT VT = Op.getValueType();
 
+  assert(!(IsStrict && VT.isScalableVector()) &&
+         "Unimplemented SVE support for STRICT_FP_to_INT!");
+
   if (VT.isScalableVector()) {
+    if (VT.getVectorElementType() == MVT::i1) {
+      SDLoc DL(Op);
+      EVT CvtVT = getPromotedVTForPredicate(VT);
+      SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, CvtVT, Op.getOperand(0));
+      SDValue Zero = DAG.getConstant(0, DL, CvtVT);
+      return DAG.getSetCC(DL, VT, Cvt, Zero, ISD::SETNE);
+    }
+
     unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
                           ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
                           : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
@@ -5031,6 +5044,9 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   EVT InVT = In.getValueType();
   unsigned Opc = Op.getOpcode();
   bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
+
+  assert(!(IsStrict && VT.isScalableVector()) &&
+         "Unimplemented SVE support for ISD:::STRICT_INT_TO_FP!");
 
   if (VT.isScalableVector()) {
     if (InVT.getVectorElementType() == MVT::i1) {
