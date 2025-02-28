@@ -1585,6 +1585,21 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
+    for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+      if (!EnablePartialReduceNodes)
+        break;
+      for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+        ElementCount VTElemCount = VT.getVectorElementCount();
+        if (VTElemCount.getKnownMinValue() == 1)
+          continue;
+        if (VTElemCount * 4 == InnerVT.getVectorElementCount())
+          setPartialReduceMLAAction(VT, InnerVT, Custom);
+        if (InnerVT.getVectorElementType().getSizeInBits() * 4 ==
+            VT.getVectorElementType().getSizeInBits())
+          setPartialReduceMLAAction(VT, InnerVT, Legal);
+      }
+    }
+
     // Firstly, exclude all scalable vector extending loads/truncating stores,
     // include both integer and floating scalable vector.
     for (MVT VT : MVT::scalable_vector_valuetypes()) {
