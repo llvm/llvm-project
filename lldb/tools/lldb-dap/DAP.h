@@ -13,6 +13,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
@@ -29,6 +30,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -67,9 +69,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopEventThread = 1u << 0,
   eBroadcastBitStopProgressThread = 1u << 1
 };
-
-typedef void (*RequestCallback)(DAP &dap, const llvm::json::Object &command);
-typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
   Success = 0,
@@ -116,6 +115,10 @@ struct Variables {
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
+  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
+
+  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
+
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
 };
@@ -143,7 +146,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   std::string name;
-  llvm::StringRef debug_adaptor_path;
+  llvm::StringRef debug_adapter_path;
   std::ofstream *log;
   InputStream input;
   OutputStream output;
@@ -186,8 +189,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  std::map<std::string, RequestCallback, std::less<>> request_handlers;
-  llvm::StringMap<std::unique_ptr<RequestHandler>> new_request_handlers;
+  llvm::StringMap<std::unique_ptr<RequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -195,7 +197,7 @@ struct DAP {
   llvm::DenseSet<lldb::tid_t> thread_ids;
   uint32_t reverse_request_seq;
   std::mutex call_mutex;
-  std::map<int /* request_seq */, ResponseCallback /* reply handler */>
+  llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
   std::string command_escape_prefix = "`";
@@ -209,7 +211,7 @@ struct DAP {
   std::string last_nonempty_var_expression;
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
       std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;
@@ -224,8 +226,8 @@ struct DAP {
   llvm::Error ConfigureIO(std::FILE *overrideOut = nullptr,
                           std::FILE *overrideErr = nullptr);
 
-  /// Stop the redirected IO threads and associated pipes.
-  void StopIO();
+  /// Stop event handler threads.
+  void StopEventHandlers();
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
@@ -305,8 +307,6 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  const std::map<std::string, RequestCallback> &GetRequestHandlers();
-
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
@@ -327,28 +327,28 @@ struct DAP {
   ///   The reverse request command.
   ///
   /// \param[in] arguments
-  ///   The reverse request arguements.
-  ///
-  /// \param[in] callback
-  ///   A callback to execute when the response arrives.
-  void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
-                          ResponseCallback callback);
+  ///   The reverse request arguments.
+  template <typename Handler>
+  void SendReverseRequest(llvm::StringRef command,
+                          llvm::json::Value arguments) {
+    int64_t id;
+    {
+      std::lock_guard<std::mutex> locker(call_mutex);
+      id = ++reverse_request_seq;
+      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
+    }
 
-  /// Registers a callback handler for a Debug Adapter Protocol request
-  ///
-  /// \param[in] request
-  ///     The name of the request following the Debug Adapter Protocol
-  ///     specification.
-  ///
-  /// \param[in] callback
-  ///     The callback to execute when the given request is triggered by the
-  ///     IDE.
-  void RegisterRequestCallback(std::string request, RequestCallback callback);
+    SendJSON(llvm::json::Object{
+        {"type", "request"},
+        {"seq", id},
+        {"command", command},
+        {"arguments", std::move(arguments)},
+    });
+  }
 
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
-    new_request_handlers[Handler::getCommand()] =
-        std::make_unique<Handler>(*this);
+    request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
   }
 
   /// Debuggee will continue from stopped state.

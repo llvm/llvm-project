@@ -207,7 +207,8 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
       return TTI::TCC_Free;
     // zext.w
-    if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
+    if (Imm == UINT64_C(0xffffffff) &&
+        ((ST->hasStdExtZba() && ST->isRV64()) || ST->isRV32()))
       return TTI::TCC_Free;
     // bclri
     if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
@@ -481,7 +482,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              ArrayRef<const Value *> Args,
                                              const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
-
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -585,7 +585,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       case TTI::SK_PermuteSingleSrc:
       case TTI::SK_Transpose:
       case TTI::SK_PermuteTwoSrc:
-      case TTI::SK_Select:
         return true;
       }
     };
@@ -890,11 +889,12 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   if (Opcode == Instruction::Load) {
     InstructionCost Cost = MemCost;
     for (unsigned Index : Indices) {
-      FixedVectorType *SubVecTy =
+      FixedVectorType *VecTy =
           FixedVectorType::get(FVTy->getElementType(), VF * Factor);
       auto Mask = createStrideMask(Index, Factor, VF);
+      Mask.resize(VF * Factor, -1);
       InstructionCost ShuffleCost =
-          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, SubVecTy, Mask,
+          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, VecTy, Mask,
                          CostKind, 0, nullptr, {});
       Cost += ShuffleCost;
     }
@@ -2517,7 +2517,7 @@ void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {
   if (Ty->isVectorTy()) {
     // f16 with only zvfhmin and bf16 will be promoted to f32
     Type *EltTy = cast<VectorType>(Ty)->getElementType();

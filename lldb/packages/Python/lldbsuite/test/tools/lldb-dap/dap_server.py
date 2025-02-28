@@ -76,7 +76,7 @@ def read_packet(f, verbose=False, trace_file=None):
         if verbose:
             print('json: "%s"' % (json_str))
         if trace_file:
-            trace_file.write("from adaptor:\n%s\n" % (json_str))
+            trace_file.write("from adapter:\n%s\n" % (json_str))
         # Decode the JSON bytes into a python dictionary
         return json.loads(json_str)
 
@@ -259,7 +259,7 @@ class DebugCommunication(object):
     def send_packet(self, command_dict, set_sequence=True):
         """Take the "command_dict" python dictionary and encode it as a JSON
         string and send the contents as a packet to the VSCode debug
-        adaptor"""
+        adapter"""
         # Set the sequence ID for this command automatically
         if set_sequence:
             command_dict["seq"] = self.sequence
@@ -267,7 +267,7 @@ class DebugCommunication(object):
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(command_dict, separators=(",", ":"))
         if self.trace_file:
-            self.trace_file.write("to adaptor:\n%s\n" % (json_str))
+            self.trace_file.write("to adapter:\n%s\n" % (json_str))
         length = len(json_str)
         if length > 0:
             # Send the encoded JSON packet and flush the 'send' file
@@ -275,7 +275,7 @@ class DebugCommunication(object):
             self.send.flush()
 
     def recv_packet(self, filter_type=None, filter_event=None, timeout=None):
-        """Get a JSON packet from the VSCode debug adaptor. This function
+        """Get a JSON packet from the VSCode debug adapter. This function
         assumes a thread that reads packets is running and will deliver
         any received packets by calling handle_recv_packet(...). This
         function will wait for the packet to arrive and return it when
@@ -1068,6 +1068,19 @@ class DebugCommunication(object):
                 print("[%3u] %s" % (idx, name))
         return response
 
+    def request_source(self, sourceReference):
+        """Request a source from a 'Source' reference."""
+        command_dict = {
+            "command": "source",
+            "type": "request",
+            "arguments": {
+                "source": {"sourceReference": sourceReference},
+                # legacy version of the request
+                "sourceReference": sourceReference,
+            },
+        }
+        return self.send_recv(command_dict)
+
     def request_threads(self):
         """Request a list of all threads and combine any information from any
         "stopped" events since those contain more information about why a
@@ -1171,7 +1184,7 @@ class DebugCommunication(object):
         return self.send_recv(command_dict)
 
 
-class DebugAdaptorServer(DebugCommunication):
+class DebugAdapterServer(DebugCommunication):
     def __init__(
         self,
         executable=None,
@@ -1183,7 +1196,7 @@ class DebugAdaptorServer(DebugCommunication):
         self.process = None
         self.connection = None
         if executable is not None:
-            process, connection = DebugAdaptorServer.launch(
+            process, connection = DebugAdapterServer.launch(
                 executable=executable, connection=connection, env=env, log_file=log_file
             )
             self.process = process
@@ -1211,12 +1224,12 @@ class DebugAdaptorServer(DebugCommunication):
 
     @classmethod
     def launch(cls, /, executable, env=None, log_file=None, connection=None):
-        adaptor_env = os.environ.copy()
+        adapter_env = os.environ.copy()
         if env is not None:
-            adaptor_env.update(env)
+            adapter_env.update(env)
 
         if log_file:
-            adaptor_env["LLDBDAP_LOG"] = log_file
+            adapter_env["LLDBDAP_LOG"] = log_file
         args = [executable]
 
         if connection is not None:
@@ -1228,7 +1241,7 @@ class DebugAdaptorServer(DebugCommunication):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=adaptor_env,
+            env=adapter_env,
         )
 
         if connection is None:
@@ -1258,7 +1271,7 @@ class DebugAdaptorServer(DebugCommunication):
         return -1
 
     def terminate(self):
-        super(DebugAdaptorServer, self).terminate()
+        super(DebugAdapterServer, self).terminate()
         if self.process is not None:
             self.process.terminate()
             self.process.wait()
@@ -1334,7 +1347,7 @@ def run_vscode(dbg, args, options):
 def main():
     parser = optparse.OptionParser(
         description=(
-            "A testing framework for the Visual Studio Code Debug Adaptor protocol"
+            "A testing framework for the Visual Studio Code Debug Adapter protocol"
         )
     )
 
@@ -1344,7 +1357,7 @@ def main():
         dest="vscode_path",
         help=(
             "The path to the command line program that implements the "
-            "Visual Studio Code Debug Adaptor protocol."
+            "Visual Studio Code Debug Adapter protocol."
         ),
         default=None,
     )
@@ -1394,7 +1407,7 @@ def main():
         dest="replay",
         help=(
             "Specify a file containing a packet log to replay with the "
-            "current Visual Studio Code Debug Adaptor executable."
+            "current Visual Studio Code Debug Adapter executable."
         ),
         default=None,
     )
@@ -1405,7 +1418,7 @@ def main():
         action="store_true",
         dest="debug",
         default=False,
-        help="Pause waiting for a debugger to attach to the debug adaptor",
+        help="Pause waiting for a debugger to attach to the debug adapter",
     )
 
     parser.add_option(
@@ -1568,11 +1581,11 @@ def main():
     if options.vscode_path is None and options.connection is None:
         print(
             "error: must either specify a path to a Visual Studio Code "
-            "Debug Adaptor vscode executable path using the --vscode "
+            "Debug Adapter vscode executable path using the --vscode "
             "option, or using the --connection option"
         )
         return
-    dbg = DebugAdaptorServer(
+    dbg = DebugAdapterServer(
         executable=options.vscode_path, connection=options.connection
     )
     if options.debug:

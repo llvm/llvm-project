@@ -27,7 +27,7 @@
 ! CHECK-SAME:    alloc {
 ! CHECK:           %[[REF:.*]] = fir.alloca i64
 ! CHECK:           omp.yield(%[[REF]] : !fir.ref<i64>)
-! CHECK-LABE:    } init {
+! CHECK-LABEL:   } init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i64>, %[[ALLOC:.*]]: !fir.ref<i64>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i64
 ! CHECK:           fir.store %[[VAL_1]] to %[[ALLOC]] : !fir.ref<i64>
