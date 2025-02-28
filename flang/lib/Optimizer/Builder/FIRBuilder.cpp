@@ -33,6 +33,25 @@
 #include "llvm/Support/MD5.h"
 #include <optional>
 
+fir::MinimalCTargetInfo::MinimalCTargetInfo(const llvm::Triple &T) {
+  CharWidth = 8;
+  ShortWidth = 16;
+  DataPointerWidth = T.getArchPointerBitWidth();
+  // TODO: This will need to be changed for targets such as AVR and MSP430
+  IntWidth = 32;
+  // TODO: flags such as -fshort-enums can change ABI
+  EnumWidth = IntWidth;
+  LongLongWidth = 64;
+  if (T.isArch64Bit() && T.isOSWindows()) {
+    // Windows uses sizeof(long) = 32 bits
+    LongWidth = 32;
+  } else {
+    // Assumes sizeof(long) == sizeof(ptr)
+    // (typical for Unix-likes: ILP32 and LP64)
+    LongWidth = DataPointerWidth;
+  }
+}
+
 static llvm::cl::opt<std::size_t>
     nameLengthHashSize("length-to-hash-string-literal",
                        llvm::cl::desc("string literals that exceed this length"

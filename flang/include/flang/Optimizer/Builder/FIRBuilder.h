@@ -43,8 +43,27 @@ class BoxValue;
 inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   // TODO: Delay the need of such type until codegen or find a way to use
   // llvm::DataLayout::getPointerSizeInBits here.
+  // (Note: this is *only* used by MemoryUtils.cpp)
   return builder.getI64Type();
 }
+
+//===----------------------------------------------------------------------===//
+// MinimalCTargetInfo
+//===----------------------------------------------------------------------===//
+
+/// Minimal information needed to interface with C code on the target,
+/// for generating runtime calls.
+struct MinimalCTargetInfo {
+  unsigned char CharWidth;
+  unsigned char ShortWidth;
+  unsigned char IntWidth;
+  unsigned char LongWidth;
+  unsigned char LongLongWidth;
+  unsigned char DataPointerWidth;
+  unsigned char EnumWidth;
+
+  MinimalCTargetInfo(const llvm::Triple &T);
+};
 
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
@@ -57,7 +76,8 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {
+        symbolTable{symbolTable},
+        cTargetInfo{fir::getTargetTriple(getModule())} {
     auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
     if (fmi) {
       // Set the builder with FastMathFlags attached to the operation.
@@ -67,17 +87,20 @@ public:
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {
+        symbolTable{symbolTable},
+        cTargetInfo{fir::getTargetTriple(getModule())} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, mlir::ModuleOp mod)
       : OpBuilder(builder), OpBuilder::Listener(),
-        kindMap{getKindMapping(mod)} {
+        kindMap{getKindMapping(mod)},
+        cTargetInfo{fir::getTargetTriple(getModule())} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::Operation *op)
-      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
+        cTargetInfo{fir::getTargetTriple(getModule())} {
     setListener(this);
     auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
     if (fmi) {
@@ -93,7 +116,8 @@ public:
       : OpBuilder(other), OpBuilder::Listener(), kindMap{other.kindMap},
         fastMathFlags{other.fastMathFlags},
         integerOverflowFlags{other.integerOverflowFlags},
-        symbolTable{other.symbolTable} {
+        symbolTable{other.symbolTable},
+        cTargetInfo{other.cTargetInfo} {
     setListener(this);
   }
 
@@ -101,7 +125,8 @@ public:
       : OpBuilder(other), OpBuilder::Listener(),
         kindMap{std::move(other.kindMap)}, fastMathFlags{other.fastMathFlags},
         integerOverflowFlags{other.integerOverflowFlags},
-        symbolTable{other.symbolTable} {
+        symbolTable{other.symbolTable},
+        cTargetInfo{other.cTargetInfo} {
     setListener(this);
   }
 
@@ -160,7 +185,45 @@ public:
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
-  mlir::Type getIntPtrType() { return fir::getIntPtrType(*this); }
+  mlir::Type getIntPtrType() {
+    return getIntegerType(cTargetInfo.DataPointerWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// the `char` type in C
+  mlir::Type getCCharType() {
+    return getIntegerType(cTargetInfo.CharWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// the `short` type in C
+  mlir::Type getCShortType() {
+    return getIntegerType(cTargetInfo.ShortWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// the `int` type in C
+  mlir::Type getCIntType() {
+    return getIntegerType(cTargetInfo.IntWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// the `long` type in C
+  mlir::Type getCLongType() {
+    return getIntegerType(cTargetInfo.LongWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// the `long long` type in C
+  mlir::Type getCLongLongType() {
+    return getIntegerType(cTargetInfo.LongLongWidth);
+  }
+
+  /// Get the integer type whose bit width corresponds to the width of
+  /// enums in C
+  mlir::Type getCEnumType() {
+    return getIntegerType(cTargetInfo.EnumWidth);
+  }
 
   /// Wrap `str` to a SymbolRefAttr.
   mlir::SymbolRefAttr getSymbolRefAttr(llvm::StringRef str) {
@@ -619,6 +682,8 @@ private:
   /// Stored via a unique_ptr rather than an optional so as not to bloat this
   /// class when most instances won't ever need a data layout.
   std::unique_ptr<mlir::DataLayout> dataLayout = nullptr;
+
+  MinimalCTargetInfo cTargetInfo;
 };
 
 } // namespace fir
