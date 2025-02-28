@@ -462,8 +462,7 @@ define amdgpu_ps void @divergent_because_of_temporal_divergent_use(float %val, p
 ; NEW_RBS-NEXT:    s_cbranch_execnz .LBB15_1
 ; NEW_RBS-NEXT:  ; %bb.2: ; %exit
 ; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; NEW_RBS-NEXT:    v_mov_b32_e32 v0, s0
-; NEW_RBS-NEXT:    v_mul_lo_u32 v0, v0, 10
+; NEW_RBS-NEXT:    v_mul_lo_u32 v0, s0, 10
 ; NEW_RBS-NEXT:    global_store_dword v[1:2], v0, off
 ; NEW_RBS-NEXT:    s_endpgm
 entry:
