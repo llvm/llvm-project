@@ -71,20 +71,14 @@ enum PredefinedDeclIDs {
   /// The extern "C" context.
   PREDEF_DECL_EXTERN_C_CONTEXT_ID,
 
-  /// The internal '__make_integer_seq' template.
-  PREDEF_DECL_MAKE_INTEGER_SEQ_ID,
-
   /// The internal '__NSConstantString' typedef.
   PREDEF_DECL_CF_CONSTANT_STRING_ID,
 
   /// The internal '__NSConstantString' tag type.
   PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
-  /// The internal '__type_pack_element' template.
-  PREDEF_DECL_TYPE_PACK_ELEMENT_ID,
-
-  /// The internal '__builtin_common_type' template.
-  PREDEF_DECL_COMMON_TYPE_ID,
+#define BuiltinTemplate(BTName) PREDEF_DECL##BTName##_ID,
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// The number of declaration IDs that are predefined.
   NUM_PREDEF_DECL_IDS

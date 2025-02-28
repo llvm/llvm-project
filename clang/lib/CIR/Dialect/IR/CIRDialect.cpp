@@ -118,6 +118,24 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
+                          mlir::OperationState &odsState, mlir::Type addr,
+                          mlir::Type allocaType, llvm::StringRef name,
+                          mlir::IntegerAttr alignment) {
+  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
+                        mlir::TypeAttr::get(allocaType));
+  odsState.addAttribute(getNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(name));
+  if (alignment) {
+    odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
+  }
+  odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -414,17 +432,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
   }
-}
-
-// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-// attribute is present.  This can check for preconditions of the
-// getNumArguments hook not failing.
-LogicalResult cir::FuncOp::verifyType() {
-  auto type = getFunctionType();
-  if (!isa<cir::FuncType>(type))
-    return emitOpError("requires '" + getFunctionTypeAttrName().str() +
-                       "' attribute of function type");
-  return success();
 }
 
 // TODO(CIR): The properties of functions that require verification haven't

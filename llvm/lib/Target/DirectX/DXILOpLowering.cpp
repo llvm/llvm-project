@@ -569,6 +569,32 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerCBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getCBufRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::CBufferLoadLegacy, {Handle, Index}, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceNamedStructUses(CI, *OpCall))
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -807,6 +833,11 @@ public:
         break;
       case Intrinsic::dx_resource_store_rawbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
+        break;
+      case Intrinsic::dx_resource_load_cbufferrow_2:
+      case Intrinsic::dx_resource_load_cbufferrow_4:
+      case Intrinsic::dx_resource_load_cbufferrow_8:
+        HasErrors |= lowerCBufferLoad(F);
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);

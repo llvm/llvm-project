@@ -375,7 +375,7 @@ td_library(
     srcs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.td"],
     includes = ["include"],
     deps = [
-        ":DestinationStyleOpInterfaceTdFiles"
+        ":DestinationStyleOpInterfaceTdFiles",
     ],
 )
 
@@ -401,7 +401,10 @@ gentbl_cc_library(
 cc_library(
     name = "RelayoutOpInterface",
     hdrs = ["include/mlir/Dialect/Linalg/IR/RelayoutOpInterface.h"],
-    deps = [":RelayoutOpInterfaceIncGen"],
+    deps = [
+        ":IR",
+        ":RelayoutOpInterfaceIncGen",
+    ],
 )
 
 cc_library(
@@ -1594,7 +1597,10 @@ td_library(
     srcs = ["include/mlir/Dialect/AMDGPU/IR/AMDGPU.td"],
     includes = ["include"],
     deps = [
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -1658,7 +1664,10 @@ gentbl_cc_library(
 cc_library(
     name = "AMDGPUDialect",
     srcs = ["lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"],
+    hdrs = [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
+        "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
+    ],
     includes = ["include"],
     deps = [
         ":AMDGPUIncGen",
@@ -1666,8 +1675,10 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -11185,10 +11196,10 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":RelayoutOpInterfaceIncGen",
         ":SideEffectInterfacesTdFiles",
         ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
-        ":RelayoutOpInterfaceIncGen",
     ],
 )
 
@@ -11641,12 +11652,12 @@ cc_library(
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
         ":LinalgRelayoutOpsIncGen",
-        ":RelayoutOpInterfaceIncGen",
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
         ":MeshShardingInterface",
         ":Parser",
+        ":RelayoutOpInterfaceIncGen",
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SparseTensorDialect",

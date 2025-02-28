@@ -98,6 +98,7 @@ enum class ResultReason {
   CantSchedule,
   Unimplemented,
   Infeasible,
+  ForcePackForDebugging,
 };
 
 #ifndef NDEBUG
@@ -142,6 +143,8 @@ struct ToStr {
       return "Unimplemented";
     case ResultReason::Infeasible:
       return "Infeasible";
+    case ResultReason::ForcePackForDebugging:
+      return "ForcePackForDebugging";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -347,6 +350,10 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
+  /// \Returns a Pack with reason 'ForcePackForDebugging'.
+  const LegalityResult &getForcedPackForDebugging() {
+    return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
+  }
   void clear();
 };
 

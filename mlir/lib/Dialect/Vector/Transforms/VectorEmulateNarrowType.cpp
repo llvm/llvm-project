@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements target-independent rewrites and utilities to emulate
-// narrow types that are not supported by the target hardware, e.g. i4, using
-// wider types, e.g. i8.
+// narrow types that are not supported by the target hardware, e.g. i4
+// ("emulated type"), using wider types, e.g. i8 ("container type").
 //
 /// Currently, only power-of-two integer types are supported. These are
 /// converted to wider integers that are either 8 bits wide or wider.
@@ -2063,19 +2063,19 @@ void vector::populateVectorNarrowTypeRewritePatterns(
 
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.
-  // The emulated type is always i8.
+  // The container type is always i8.
   patterns.add<RewriteAlignedSubByteIntExt<arith::ExtSIOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntExt<arith::SIToFPOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
-  // The emulated type is always i8.
+  // The container type is always i8.
   patterns
       .add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>,
            RewriteAlignedSubByteIntExt<arith::UIToFPOp, /*isSigned=*/false>>(
           patterns.getContext(), benefit.getBenefit() + 1);
 }
 
-// The emulated type is always i8.
+// The container type is always i8.
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<RewriteVectorTranspose>(patterns.getContext(), benefit);

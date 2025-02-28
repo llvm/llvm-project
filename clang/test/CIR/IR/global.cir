@@ -30,9 +30,9 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global @ip = #cir.ptr<null> : !cir.ptr<!cir.int<s, 32>>
   cir.global @dp : !cir.ptr<!cir.double>
   cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
-  cir.global @fp : !cir.ptr<!cir.func<!cir.void ()>>
-  cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<!cir.int<s, 32> (!cir.int<s, 32>)>>
-  cir.global @fpvar : !cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>, ...)>>
+  cir.global @fp : !cir.ptr<!cir.func<()>>
+  cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
+  cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>
 }
 
 // CHECK: cir.global @c : !cir.int<s, 8>
@@ -64,6 +64,6 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 // CHECK: cir.global @ip = #cir.ptr<null> : !cir.ptr<!cir.int<s, 32>>
 // CHECK: cir.global @dp : !cir.ptr<!cir.double>
 // CHECK: cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
-// CHECK: cir.global @fp : !cir.ptr<!cir.func<!cir.void ()>>
-// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<!cir.int<s, 32> (!cir.int<s, 32>)>>
-// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>, ...)>>
+// CHECK: cir.global @fp : !cir.ptr<!cir.func<()>>
+// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
+// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>

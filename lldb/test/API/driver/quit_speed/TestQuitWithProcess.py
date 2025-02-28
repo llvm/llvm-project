@@ -28,7 +28,7 @@ class DriverQuitSpeedTest(PExpectTest):
         # Launch the process without a TTY so we don't have to interrupt:
         child.sendline("process launch -n")
         print("launched process")
-        child.expect("Process ([\d]*) launched:")
+        child.expect(r"Process ([\d]*) launched:")
         print("Got launch message")
         child.sendline("quit")
         print("sent quit")

@@ -58,6 +58,15 @@ int16_t3 abs(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t abs(uint16_t V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t2 abs(uint16_t2 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t3 abs(uint16_t3 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t4 abs(uint16_t4 V) { return V; }
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -82,6 +91,11 @@ int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
 
+constexpr uint abs(uint V) { return V; }
+constexpr uint2 abs(uint2 V) { return V; }
+constexpr uint3 abs(uint3 V) { return V; }
+constexpr uint4 abs(uint4 V) { return V; }
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -99,6 +113,11 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
+
+constexpr uint64_t abs(uint64_t V) { return V; }
+constexpr uint64_t2 abs(uint64_t2 V) { return V; }
+constexpr uint64_t3 abs(uint64_t3 V) { return V; }
+constexpr uint64_t4 abs(uint64_t4 V) { return V; }
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
@@ -269,6 +288,28 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool3 and(bool3 x, bool3 y);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
 bool4 and(bool4 x, bool4 y);
+// clang-format on
+
+//===----------------------------------------------------------------------===//
+// or builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool or(bool x, bool y)
+/// \brief Logically ors two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool or(bool, bool);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2 or(bool2, bool2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3 or(bool3, bool3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4 or(bool4, bool4);
 // clang-format on
 
 //===----------------------------------------------------------------------===//
