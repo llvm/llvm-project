@@ -367,6 +367,9 @@ struct GenericKernelTy {
     return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
   }
 
+  /// Indicate if the input block size is within the limit.
+  virtual bool isValidBlockSize(uint32_t BlockSize) const { return true; }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -1345,8 +1348,10 @@ struct KernelRunRecordTy {
 
   // Get parameters for next kernel launch.
   std::pair<uint32_t, uint32_t>
-  getLaunchParamsForKernel(std::string KernelName,
+  getLaunchParamsForKernel(const GenericKernelTy &Kernel,
                            GenericDeviceTy &GenericDevice) {
+    std::string KernelName = Kernel.getName();
+
     // If the kernel reaches the run limit,
     // return the current optimal launch parameters.
     if (reachedRunLimitForKernel(KernelName)) {
@@ -1381,7 +1386,7 @@ struct KernelRunRecordTy {
 
     // Threads should be smaller than ConstWGSize.
     if (IdxThread >= ThreadCandidate.size() ||
-        ThreadCandidate[IdxThread] >= ConstWGSize) {
+        !Kernel.isValidBlockSize(ThreadCandidate[IdxThread])) {
       TuningData[KernelName].IdxThread = 0;
       TuningData[KernelName].IdxCUMultiplier++;
     }

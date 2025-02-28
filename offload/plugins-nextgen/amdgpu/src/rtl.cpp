@@ -853,6 +853,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
 
+  bool isValidBlockSize(uint32_t BlockSize) const override {
+    return BlockSize <= ConstWGSize;
+  }
+
   /// Envar to enable occupancy-based optimization for SPMD kernel.
   BoolEnvar OMPX_SPMDOccupancyBasedOpt;
 
