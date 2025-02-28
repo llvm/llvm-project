@@ -193,7 +193,10 @@ public:
   MachineInstr *getPreviousWaitAlu(MachineBasicBlock::instr_iterator &MI) {
     auto PrevMI = std::prev(MI);
     while (PrevMI != PrevMI->getParent()->instr_begin() &&
-           (PrevMI->isDebugInstr() || PrevMI->isMetaInstruction()))
+           (PrevMI->isDebugInstr() ||
+            (PrevMI->isMetaInstruction() &&
+             PrevMI->getOpcode() != AMDGPU::SCHED_BARRIER &&
+             PrevMI->getOpcode() != AMDGPU::SCHED_GROUP_BARRIER)))
       --PrevMI;
 
     return &(*PrevMI);

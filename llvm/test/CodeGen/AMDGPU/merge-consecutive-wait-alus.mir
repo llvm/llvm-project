@@ -59,4 +59,20 @@ body: |
     LIFETIME_END 0
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
 ...
+---
+name: dont_skip_sched_barrier_meta_instruction
+machineFunctionInfo:
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: dont_skip_sched_barrier_meta_instruction
+    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR 65530
+    ; CHECK-NEXT: SCHED_BARRIER 0
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR 61951
+    ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
+    renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc
+    S_WAITCNT_DEPCTR 65530
+    SCHED_BARRIER 0
+    renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
+...
 
