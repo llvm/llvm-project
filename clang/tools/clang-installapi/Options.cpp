@@ -31,41 +31,21 @@ namespace drv = clang::driver::options;
 namespace clang {
 namespace installapi {
 
-/// Create prefix string literals used in InstallAPIOpts.td.
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
 
-static constexpr const llvm::StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const ArrayRef<StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_UNION_CODE
+#include "InstallAPIOpts.inc"
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 /// Create table mapping all options defined in InstallAPIOpts.td.
 static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   Option::KIND##Class,                                                        \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "InstallAPIOpts.inc"
 #undef OPTION
 };
@@ -75,7 +55,9 @@ namespace {
 /// \brief Create OptTable class for parsing actual command line arguments.
 class DriverOptTable : public opt::PrecomputedOptTable {
 public:
-  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
+  DriverOptTable()
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion) {}
 };
 
 } // end anonymous namespace.
@@ -281,11 +263,12 @@ bool Options::processInstallAPIXOptions(InputArgList &Args) {
     }
     const StringRef ASpelling = NextA->getSpelling();
     const auto &AValues = NextA->getValues();
+    auto &UniqueArgs = FEOpts.UniqueArgs[Label];
     if (AValues.empty())
-      FEOpts.UniqueArgs[Label].emplace_back(ASpelling.str());
+      UniqueArgs.emplace_back(ASpelling.str());
     else
       for (const StringRef Val : AValues)
-        FEOpts.UniqueArgs[Label].emplace_back((ASpelling + Val).str());
+        UniqueArgs.emplace_back((ASpelling + Val).str());
 
     A->claim();
     NextA->claim();
@@ -554,7 +537,7 @@ bool Options::processFrontendOptions(InputArgList &Args) {
 bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
                            OptSpecifier ID) {
   for (const StringRef Path : Args.getAllArgValues(ID)) {
-    if ((bool)FM->getDirectory(Path, /*CacheFailure=*/false)) {
+    if ((bool)FM->getOptionalDirectoryRef(Path, /*CacheFailure=*/false)) {
       auto InputHeadersOrErr = enumerateFiles(*FM, Path);
       if (!InputHeadersOrErr) {
         Diags->Report(diag::err_cannot_open_file)
@@ -626,32 +609,37 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
       ParsedArgs.hasArg(OPT_not_for_dyld_shared_cache);
 
   for (const Arg *A : ParsedArgs.filtered(OPT_allowable_client)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.AllowableClients[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_l)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedLibraries[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_library)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedLibraryPaths[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_framework)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.ReexportedFrameworks[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_rpath)) {
+    auto It = ArgToArchMap.find(A);
     LinkerOpts.RPaths[A->getValue()] =
-        ArgToArchMap.count(A) ? ArgToArchMap[A] : ArchitectureSet();
+        It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 

@@ -700,11 +700,12 @@ IBCHNG, ISHA, ISHC, ISHL, IXOR
 IARG, IARGC, NARGS, NUMARG
 BADDRESS, IADDR
 CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
-MALLOC
+MALLOC, FREE
 ```
 
 ### Library subroutine 
 ```
+CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
@@ -765,11 +766,11 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Coarray intrinsic functions | COSHAPE |
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
-| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
-| Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
+| Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC, FREE, GETUID, GETGID |
+| Intrinsic subroutines |MVBITS (elemental), CHDIR, CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG, GETENV |
+| Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -1052,6 +1053,9 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-standard Intrinsics: LNBLNK
+This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
+
 #### Usage and Info
 
 - **Standard:** GNU extension
@@ -1060,3 +1064,45 @@ function form.
 - **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
                           seconds is written
 - **RETURN value:** same as TIME argument
+
+### Non-Standard Intrinsics: CHDIR
+
+#### Description
+`CHDIR(NAME[, STATUS])` Change current working directory to a specified path.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+*STATUS* is `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `NAME`     | The type shall be `CHARACTER` of default kind and shall specify a valid path within the file system.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of the default kind. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL CHDIR(NAME[, STATUS])` and `STATUS = CHDIR(NAME)`
+
+#### Example
+```Fortran
+program chdir_func
+  character(len=) :: path
+  integer :: status 
+
+  call chdir("/tmp")
+  status = chdir("..")
+  print *, "status: ", status
+end program chdir_func
+```
+
+### Non-Standard Intrinsics: IERRNO
+
+#### Description
+`IERRNO()` returns the last system error number, as given by the C `errno` variable.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IERRNO()`

@@ -67,15 +67,9 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   // The mask is constant or extended from a bool vector. Convert this x86
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
-    // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-    // the LLVM intrinsic definition for the pointer argument.
-    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
-    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
-
     // The pass-through vector for an x86 masked load is a zero vector.
     CallInst *NewMaskedLoad = IC.Builder.CreateMaskedLoad(
-        II.getType(), PtrCast, Align(1), BoolMask, ZeroVec);
+        II.getType(), Ptr, Align(1), BoolMask, ZeroVec);
     return IC.replaceInstUsesWith(II, NewMaskedLoad);
   }
 
@@ -105,7 +99,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
+    PointerType *VecPtrTy = PointerType::get(Vec->getContext(), AddrSpace);
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
     IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
@@ -1875,9 +1869,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
     // If we were an EXTRQ call, we'll save registers if we convert to EXTRQI.
     if (II.getIntrinsicID() == Intrinsic::x86_sse4a_extrq) {
       Value *Args[] = {Op0, CILength, CIIndex};
-      Module *M = II.getModule();
-      Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_extrqi);
-      return Builder.CreateCall(F, Args);
+      return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_extrqi, {}, Args);
     }
   }
 
@@ -1974,9 +1966,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Constant *CIIndex = ConstantInt::get(IntTy8, Index, false);
 
     Value *Args[] = {Op0, Op1, CILength, CIIndex};
-    Module *M = II.getModule();
-    Function *F = Intrinsic::getDeclaration(M, Intrinsic::x86_sse4a_insertqi);
-    return Builder.CreateCall(F, Args);
+    return Builder.CreateIntrinsic(Intrinsic::x86_sse4a_insertqi, {}, Args);
   }
 
   return nullptr;

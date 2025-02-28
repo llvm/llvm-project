@@ -37,6 +37,8 @@ class InterpState final : public State, public SourceMapper {
 public:
   InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
+  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+              const Function *Func);
 
   ~InterpState();
 
@@ -77,7 +79,7 @@ public:
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
   }
-  bool inConstantContext() const { return Parent.InConstantContext; }
+  bool inConstantContext() const;
   bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
   void setActiveDiagnostic(bool Flag) override {
     Parent.setActiveDiagnostic(Flag);
@@ -116,6 +118,7 @@ public:
 
 private:
   friend class EvaluationResult;
+  friend class InterpStateCCOverride;
   /// AST Walker state.
   State &Parent;
   /// Dead block chain.
@@ -124,6 +127,7 @@ private:
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   DynamicAllocator Alloc;
+  std::optional<bool> ConstantContextOverride;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -132,6 +136,8 @@ public:
   InterpStack &Stk;
   /// Interpreter Context.
   Context &Ctx;
+  /// Bottom function frame.
+  InterpFrame BottomFrame;
   /// The current frame.
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
@@ -142,6 +148,26 @@ public:
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+};
+
+class InterpStateCCOverride final {
+public:
+  InterpStateCCOverride(InterpState &Ctx, bool Value)
+      : Ctx(Ctx), OldCC(Ctx.ConstantContextOverride) {
+    // We only override this if the new value is true.
+    Enabled = Value;
+    if (Enabled)
+      Ctx.ConstantContextOverride = Value;
+  }
+  ~InterpStateCCOverride() {
+    if (Enabled)
+      Ctx.ConstantContextOverride = OldCC;
+  }
+
+private:
+  bool Enabled;
+  InterpState &Ctx;
+  std::optional<bool> OldCC;
 };
 
 } // namespace interp

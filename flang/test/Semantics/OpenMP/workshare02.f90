@@ -9,6 +9,14 @@ module my_mod
   integer function my_func()
     my_func = 10
   end function my_func
+
+  impure integer function impure_my_func()
+    impure_my_func = 20
+  end function impure_my_func
+
+  impure elemental integer function impure_ele_my_func()
+    impure_ele_my_func = 20
+  end function impure_ele_my_func
 end module my_mod
 
 subroutine workshare(aa, bb, cc, dd, ee, ff, n)
@@ -61,6 +69,16 @@ subroutine workshare(aa, bb, cc, dd, ee, ff, n)
   j = j - my_func()
   !$omp end atomic
 
+  !ERROR: User defined IMPURE, non-ELEMENTAL function 'impure_my_func' is not allowed in a WORKSHARE construct
+  cc = impure_my_func()
+  !ERROR: User defined IMPURE function 'impure_ele_my_func' is not allowed in a WORKSHARE construct
+  aa(1) = impure_ele_my_func()
+
   !$omp end workshare
+
+  !$omp workshare
+    j = j + 1
+  !ERROR: At most one NOWAIT clause can appear on the END WORKSHARE directive
+  !$omp end workshare nowait nowait
 
 end subroutine workshare

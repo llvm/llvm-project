@@ -79,6 +79,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -118,6 +119,11 @@ GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
 static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
     cl::desc("Improve global merge pass to look at uses"), cl::init(true));
+
+static cl::opt<bool> GlobalMergeAllConst(
+    "global-merge-all-const", cl::Hidden,
+    cl::desc("Merge all const globals without looking at uses"),
+    cl::init(false));
 
 static cl::opt<bool> GlobalMergeIgnoreSingleUse(
     "global-merge-ignore-single-use", cl::Hidden,
@@ -197,12 +203,13 @@ public:
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
                        bool OnlyOptimizeForSize, bool MergeExternalGlobals,
-                       bool MergeConstantGlobals)
+                       bool MergeConstantGlobals, bool MergeConstAggressive)
       : FunctionPass(ID), TM(TM) {
     Opt.MaxOffset = MaximalOffset;
     Opt.SizeOnly = OnlyOptimizeForSize;
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
+    Opt.MergeConstAggressive = MergeConstAggressive;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -263,9 +270,8 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
       });
 
   // If we want to just blindly group all globals together, do so.
-  if (!GlobalMergeGroupByUse) {
-    BitVector AllGlobals(Globals.size());
-    AllGlobals.set();
+  if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
+    BitVector AllGlobals(Globals.size(), true);
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
@@ -371,7 +377,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
         size_t UGSIdx = GlobalUsesByFunction[ParentFn];
 
-        // If this is the first global the basic block uses, map it to the set
+        // If this is the first global the function uses, map it to the set
         // consisting of this global only.
         if (!UGSIdx) {
           // If that set doesn't exist yet, create it.
@@ -386,7 +392,8 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
           continue;
         }
 
-        // If we already encountered this BB, just increment the counter.
+        // If we already encountered a use of this global in this function, just
+        // increment the counter.
         if (UsedGlobalSets[UGSIdx].Globals.test(GI)) {
           ++UsedGlobalSets[UGSIdx].UsageCount;
           continue;
@@ -415,8 +422,22 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     }
   }
 
+  // We can choose to merge all globals together, but ignore globals never used
+  // with another global.  This catches the obviously non-profitable cases of
+  // having a single global, but is aggressive enough for any other case.
+  if (GlobalMergeIgnoreSingleUse) {
+    BitVector AllGlobals(Globals.size());
+    for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+      if (UGS.UsageCount == 0)
+        continue;
+      if (UGS.Globals.count() > 1)
+        AllGlobals |= UGS.Globals;
+    }
+    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
+  }
+
   // Now we found a bunch of sets of globals used together.  We accumulated
-  // the number of times we encountered the sets (i.e., the number of blocks
+  // the number of times we encountered the sets (i.e., the number of functions
   // that use that exact set of globals).
   //
   // Multiply that by the size of the set to give us a crude profitability
@@ -426,20 +447,6 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
                       return UGS1.Globals.count() * UGS1.UsageCount <
                              UGS2.Globals.count() * UGS2.UsageCount;
                     });
-
-  // We can choose to merge all globals together, but ignore globals never used
-  // with another global.  This catches the obviously non-profitable cases of
-  // having a single global, but is aggressive enough for any other case.
-  if (GlobalMergeIgnoreSingleUse) {
-    BitVector AllGlobals(Globals.size());
-    for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
-      if (UGS.UsageCount == 0)
-        continue;
-      if (UGS.Globals.count() > 1)
-        AllGlobals |= UGS.Globals;
-    }
-    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
-  }
 
   // Starting from the sets with the best (=biggest) profitability, find a
   // good combination.
@@ -578,12 +585,18 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       Globals[k]->replaceAllUsesWith(GEP);
       Globals[k]->eraseFromParent();
 
-      // When the linkage is not internal we must emit an alias for the original
-      // variable name as it may be accessed from another object. On non-Mach-O
-      // we can also emit an alias for internal linkage as it's safe to do so.
-      // It's not safe on Mach-O as the alias (and thus the portion of the
-      // MergedGlobals variable) may be dead stripped at link time.
-      if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
+      // Emit an alias for the original variable name. This is necessary for an
+      // external symbol, as it may be accessed from another object. For
+      // internal symbols, it's not strictly required, but it's useful.
+      //
+      // This _should_ also work on Mach-O ever since '.alt_entry' support was
+      // added in 2016. Unfortunately, there's a bug in ld-prime (present at
+      // least from Xcode 15.0 through Xcode 16.0), in which -dead_strip doesn't
+      // always honor alt_entry. To workaround this issue, we don't emit aliases
+      // on Mach-O. Except, we _must_ do so for external symbols. That means
+      // MergeExternal is broken with that linker. (That option is currently off
+      // by default on MachO).
+      if (!IsMachO || Linkage == GlobalValue::ExternalLinkage) {
         GlobalAlias *GA = GlobalAlias::create(Tys[StructIdxs[idx]], AddrSpace,
                                               Linkage, Name, GEP, &M);
         GA->setVisibility(Visibility);
@@ -619,11 +632,14 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
-      Instruction *Pad = BB.getFirstNonPHI();
-      if (!Pad->isEHPad())
+      BasicBlock::iterator Pad = BB.getFirstNonPHIIt();
+      auto *II = dyn_cast<IntrinsicInst>(Pad);
+      if (!Pad->isEHPad() &&
+          !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
         continue;
 
-      // Keep globals used by landingpads and catchpads.
+      // Keep globals used by landingpads, catchpads,
+      // or intrinsics that require a plain global.
       for (const Use &U : Pad->operands()) {
         if (const GlobalVariable *GV =
                 dyn_cast<GlobalVariable>(U->stripPointerCasts()))
@@ -638,6 +654,18 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
       }
     }
   }
+}
+
+// This function returns true if the given data Section name has custom
+// subsection-splitting semantics in Mach-O (such as splitting by a fixed size)
+//
+// See also ObjFile::parseSections and getRecordSize in lld/MachO/InputFiles.cpp
+static bool isSpecialMachOSection(StringRef Section) {
+  // Uses starts_with, since section attributes can appear at the end of the
+  // name.
+  return Section.starts_with("__DATA,__cfstring") ||
+         Section.starts_with("__DATA,__objc_classrefs") ||
+         Section.starts_with("__DATA,__objc_selrefs");
 }
 
 bool GlobalMergeImpl::run(Module &M) {
@@ -678,6 +706,10 @@ bool GlobalMergeImpl::run(Module &M) {
     unsigned AddressSpace = PT->getAddressSpace();
     StringRef Section = GV.getSection();
 
+    // On Mach-O, some section names have special semantics. Don't merge these.
+    if (IsMachO && isSpecialMachOSection(Section))
+      continue;
+
     // Ignore all 'special' globals.
     if (GV.getName().starts_with("llvm.") || GV.getName().starts_with(".llvm."))
       continue;
@@ -696,7 +728,8 @@ bool GlobalMergeImpl::run(Module &M) {
 
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
-    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
+    bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
+    if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -705,11 +738,8 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
-    LLVM_DEBUG(dbgs() << "GV "
-                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
-                              ? "to merge: "
-                              : "not to merge: ")
-                      << GV << "\n");
+    LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
+                      << "\n");
   }
 
   for (auto &P : Globals)
@@ -731,10 +761,14 @@ bool GlobalMergeImpl::run(Module &M) {
 Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
                                   bool OnlyOptimizeForSize,
                                   bool MergeExternalByDefault,
-                                  bool MergeConstantByDefault) {
+                                  bool MergeConstantByDefault,
+                                  bool MergeConstAggressiveByDefault) {
   bool MergeExternal = (EnableGlobalMergeOnExternal == cl::BOU_UNSET) ?
     MergeExternalByDefault : (EnableGlobalMergeOnExternal == cl::BOU_TRUE);
   bool MergeConstant = EnableGlobalMergeOnConst || MergeConstantByDefault;
+  bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
+                                  ? GlobalMergeAllConst
+                                  : MergeConstAggressiveByDefault;
   return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
-                         MergeConstant);
+                         MergeConstant, MergeConstAggressive);
 }

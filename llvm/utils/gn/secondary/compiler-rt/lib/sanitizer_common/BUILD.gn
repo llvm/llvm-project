@@ -155,6 +155,7 @@ source_set("sources") {
     "sanitizer_symbolizer_win.cpp",
     "sanitizer_termination.cpp",
     "sanitizer_thread_arg_retval.cpp",
+    "sanitizer_thread_history.cpp",
     "sanitizer_thread_registry.cpp",
     "sanitizer_thread_registry.h",
     "sanitizer_thread_safety.h",
@@ -167,9 +168,9 @@ source_set("sources") {
     "sanitizer_vector.h",
     "sanitizer_win.cpp",
     "sanitizer_win.h",
+    "sanitizer_win_defs.h",
     "sanitizer_win_interception.cpp",
     "sanitizer_win_interception.h",
-    "sanitizer_win_defs.h",
     "sanitizer_win_thunk_interception.h",
   ]
 }

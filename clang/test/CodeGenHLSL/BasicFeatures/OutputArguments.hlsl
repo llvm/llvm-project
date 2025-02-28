@@ -9,7 +9,7 @@
 // CHECK: define void {{.*}}trunc_Param{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) {{%.*}})
 void trunc_Param(inout int X) {}
 
-// ALL-LABEL: define noundef float {{.*}}case1
+// ALL-LABEL: define noundef nofpclass(nan inf) float {{.*}}case1
 // CHECK: [[F:%.*]] = alloca float
 // CHECK: [[ArgTmp:%.*]] = alloca i32
 // CHECK: [[FVal:%.*]] = load float, ptr {{.*}}
@@ -197,7 +197,7 @@ export int case7() {
 // CHECK: define void {{.*}}trunc_vec{{.*}}(ptr noalias noundef nonnull align 16 dereferenceable(16) {{%.*}})
 void trunc_vec(inout int3 V) {}
 
-// ALL-LABEL: define noundef <3 x float> {{.*}}case8
+// ALL-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}case8
 
 // CHECK: [[V:%.*]] = alloca <3 x float>
 // CHECK: [[Tmp:%.*]] = alloca <3 x i32>
@@ -260,10 +260,10 @@ void order_matters(inout int X, inout int Y) {
 // CHECK: store i32 [[VVal]], ptr [[Tmp0]]
 // CHECK: [[VVal:%.*]] = load i32, ptr [[V]]
 // CHECK: store i32 [[VVal]], ptr [[Tmp1]]
-// CHECK: call void {{.*}}order_matters{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp1]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp0]])
-// CHECK: [[Arg1Val:%.*]] = load i32, ptr [[Tmp1]]
+// CHECK: call void {{.*}}order_matters{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp0]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp1]])
+// CHECK: [[Arg1Val:%.*]] = load i32, ptr [[Tmp0]]
 // CHECK: store i32 [[Arg1Val]], ptr [[V]]
-// CHECK: [[Arg2Val:%.*]] = load i32, ptr [[Tmp0]]
+// CHECK: [[Arg2Val:%.*]] = load i32, ptr [[Tmp1]]
 // CHECK: store i32 [[Arg2Val]], ptr [[V]]
 
 // OPT: ret i32 2
@@ -289,17 +289,19 @@ void setFour(inout int I) {
 // CHECK: [[B:%.*]] = alloca %struct.B
 // CHECK: [[Tmp:%.*]] = alloca i32
 
-// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
-// CHECK: [[BFshl:%.*]] = shl i32 [[BFLoad]], 24
-// CHECK: [[BFashr:%.*]] = ashr i32 [[BFshl]], 24
-// CHECK: store i32 [[BFashr]], ptr [[Tmp]]
+// CHECK: [[BFLoad:%.*]] = load i16, ptr [[B]]
+// CHECK: [[BFshl:%.*]] = shl i16 [[BFLoad]], 8
+// CHECK: [[BFashr:%.*]] = ashr i16 [[BFshl]], 8
+// CHECK: [[BFcast:%.*]] = sext i16 [[BFashr]] to i32
+// CHECK: store i32 [[BFcast]], ptr [[Tmp]]
 // CHECK: call void {{.*}}setFour{{.*}}(ptr noalias noundef nonnull align 4 dereferenceable(4) [[Tmp]])
 // CHECK: [[RetVal:%.*]] = load i32, ptr [[Tmp]]
-// CHECK: [[BFLoad:%.*]] = load i32, ptr [[B]]
-// CHECK: [[BFValue:%.*]] = and i32 [[RetVal]], 255
-// CHECK: [[ZerodField:%.*]] = and i32 [[BFLoad]], -256
-// CHECK: [[BFSet:%.*]] = or i32 [[ZerodField]], [[BFValue]]
-// CHECK: store i32 [[BFSet]], ptr [[B]]
+// CHECK: [[TruncVal:%.*]] = trunc i32 [[RetVal]] to i16
+// CHECK: [[BFLoad:%.*]] = load i16, ptr [[B]]
+// CHECK: [[BFValue:%.*]] = and i16 [[TruncVal]], 255
+// CHECK: [[ZerodField:%.*]] = and i16 [[BFLoad]], -256
+// CHECK: [[BFSet:%.*]] = or i16 [[ZerodField]], [[BFValue]]
+// CHECK: store i16 [[BFSet]], ptr [[B]]
 
 // OPT: ret i32 8
 export int case11() {

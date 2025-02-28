@@ -122,12 +122,46 @@ ConvertRealOperandsResult ConvertRealOperands(
                     defaultRealKind, std::move(iy)))};
           },
           [&](Expr<SomeInteger> &&ix,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
+              Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](Expr<SomeInteger> &&ix,
+              Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertTo(ry, std::move(ix)), std::move(ry))};
+          },
+          [&](Expr<SomeUnsigned> &&ix,
               Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(ix)), std::move(ry))};
           },
           [&](Expr<SomeReal> &&rx,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                std::move(rx), ConvertTo(rx, std::move(iy)))};
+          },
+          [&](Expr<SomeReal> &&rx,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 std::move(rx), ConvertTo(rx, std::move(iy)))};
           },
@@ -144,8 +178,24 @@ ConvertRealOperandsResult ConvertRealOperands(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(by)))};
           },
+          [&](Expr<SomeUnsigned> &&ix,
+              BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(ix)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(by)))};
+          },
           [&](BOZLiteralConstant &&bx,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
+            return {AsSameKindExprs<TypeCategory::Real>(
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(bx)),
+                ConvertToKind<TypeCategory::Real>(
+                    defaultRealKind, std::move(iy)))};
+          },
+          [&](BOZLiteralConstant &&bx,
+              Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
                     defaultRealKind, std::move(bx)),
@@ -162,8 +212,14 @@ ConvertRealOperandsResult ConvertRealOperands(
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
+          [&](BOZLiteralConstant &&,
+              BOZLiteralConstant &&) -> ConvertRealOperandsResult {
+            messages.Say("operands cannot both be BOZ"_err_en_US);
+            return std::nullopt;
+          },
           [&](auto &&, auto &&) -> ConvertRealOperandsResult { // C718
-            messages.Say("operands must be INTEGER or REAL"_err_en_US);
+            messages.Say(
+                "operands must be INTEGER, UNSIGNED, REAL, or BOZ"_err_en_US);
             return std::nullopt;
           },
       },
@@ -437,7 +493,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
 // the operands to a dyadic operation where one is permitted, it assumes the
 // type and kind of the other operand.
-template <template <typename> class OPR>
+template <template <typename> class OPR, bool CAN_BE_UNSIGNED>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -450,6 +506,15 @@ std::optional<Expr<SomeType>> NumericOperation(
           [](Expr<SomeReal> &&rx, Expr<SomeReal> &&ry) {
             return Package(PromoteAndCombine<OPR, TypeCategory::Real>(
                 std::move(rx), std::move(ry)));
+          },
+          [&](Expr<SomeUnsigned> &&ix, Expr<SomeUnsigned> &&iy) {
+            if constexpr (CAN_BE_UNSIGNED) {
+              return Package(PromoteAndCombine<OPR, TypeCategory::Unsigned>(
+                  std::move(ix), std::move(iy)));
+            } else {
+              messages.Say("Operands must not be UNSIGNED"_err_en_US);
+              return NoExpr();
+            }
           },
           // Mixed REAL/INTEGER operations
           [](Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
@@ -508,24 +573,44 @@ std::optional<Expr<SomeType>> NumericOperation(
           },
           // Operations with one typeless operand
           [&](BOZLiteralConstant &&bx, Expr<SomeInteger> &&iy) {
-            return NumericOperation<OPR>(messages,
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
+                defaultRealKind);
+          },
+          [&](BOZLiteralConstant &&bx, Expr<SomeUnsigned> &&iy) {
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
                 AsGenericExpr(ConvertTo(iy, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](BOZLiteralConstant &&bx, Expr<SomeReal> &&ry) {
-            return NumericOperation<OPR>(messages,
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
                 AsGenericExpr(ConvertTo(ry, std::move(bx))), std::move(y),
                 defaultRealKind);
           },
           [&](Expr<SomeInteger> &&ix, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR>(messages, std::move(x),
-                AsGenericExpr(ConvertTo(ix, std::move(by))), defaultRealKind);
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
+                defaultRealKind);
+          },
+          [&](Expr<SomeUnsigned> &&ix, BOZLiteralConstant &&by) {
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(ix, std::move(by))),
+                defaultRealKind);
           },
           [&](Expr<SomeReal> &&rx, BOZLiteralConstant &&by) {
-            return NumericOperation<OPR>(messages, std::move(x),
-                AsGenericExpr(ConvertTo(rx, std::move(by))), defaultRealKind);
+            return NumericOperation<OPR, CAN_BE_UNSIGNED>(messages,
+                std::move(x), AsGenericExpr(ConvertTo(rx, std::move(by))),
+                defaultRealKind);
           },
-          // Default case
+          // Error cases
+          [&](Expr<SomeUnsigned> &&, auto &&) {
+            messages.Say("Both operands must be UNSIGNED"_err_en_US);
+            return NoExpr();
+          },
+          [&](auto &&, Expr<SomeUnsigned> &&) {
+            messages.Say("Both operands must be UNSIGNED"_err_en_US);
+            return NoExpr();
+          },
           [&](auto &&, auto &&) {
             messages.Say("non-numeric operands to numeric operation"_err_en_US);
             return NoExpr();
@@ -534,7 +619,7 @@ std::optional<Expr<SomeType>> NumericOperation(
       std::move(x.u), std::move(y.u));
 }
 
-template std::optional<Expr<SomeType>> NumericOperation<Power>(
+template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -581,6 +666,7 @@ std::optional<Expr<SomeType>> Negation(
             messages.Say("LOGICAL cannot be negated"_err_en_US);
             return NoExpr();
           },
+          [&](Expr<SomeUnsigned> &&x) { return Package(-std::move(x)); },
           [&](Expr<SomeDerived> &&) {
             messages.Say("Operand cannot be negated"_err_en_US);
             return NoExpr();
@@ -611,6 +697,10 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
       common::visitors{
           [=](Expr<SomeInteger> &&ix,
               Expr<SomeInteger> &&iy) -> std::optional<Expr<LogicalResult>> {
+            return PromoteAndRelate(opr, std::move(ix), std::move(iy));
+          },
+          [=](Expr<SomeUnsigned> &&ix,
+              Expr<SomeUnsigned> &&iy) -> std::optional<Expr<LogicalResult>> {
             return PromoteAndRelate(opr, std::move(ix), std::move(iy));
           },
           [=](Expr<SomeReal> &&rx,
@@ -718,6 +808,16 @@ std::optional<Expr<SomeType>> ConvertToType(
           ConvertToKind<TypeCategory::Integer>(type.kind(), std::move(*boz))};
     }
     return ConvertToNumeric<TypeCategory::Integer>(type.kind(), std::move(x));
+  case TypeCategory::Unsigned:
+    if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
+      return Expr<SomeType>{
+          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*boz))};
+    }
+    if (auto *cx{UnwrapExpr<Expr<SomeUnsigned>>(x)}) {
+      return Expr<SomeType>{
+          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*cx))};
+    }
+    break;
   case TypeCategory::Real:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
       return Expr<SomeType>{
@@ -811,13 +911,9 @@ bool IsAssumedRank(const ActualArgument &arg) {
   }
 }
 
-bool IsCoarray(const ActualArgument &arg) {
+int GetCorank(const ActualArgument &arg) {
   const auto *expr{arg.UnwrapExpr()};
-  return expr && IsCoarray(*expr);
-}
-
-bool IsCoarray(const Symbol &symbol) {
-  return GetAssociationRoot(symbol).Corank() > 0;
+  return GetCorank(*expr);
 }
 
 bool IsProcedureDesignator(const Expr<SomeType> &expr) {
@@ -1051,6 +1147,23 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
 }
 
+// HasConstant()
+struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
+                               /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasConstantHelper, bool, false>;
+  HasConstantHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Constant<T> &) const {
+    return true;
+  }
+  // Only look for constant not in subscript.
+  bool operator()(const Subscript &) const { return false; }
+};
+
+bool HasConstant(const Expr<SomeType> &expr) {
+  return HasConstantHelper{}(expr);
+}
+
 parser::Message *AttachDeclaration(
     parser::Message &message, const Symbol &symbol) {
   const Symbol *unhosted{&symbol};
@@ -1212,6 +1325,9 @@ template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
     const Expr<SomeType> &expr) {
+  if (!IsValidKindOfIntrinsicType(FROM, toType.kind())) {
+    return std::nullopt;
+  }
   DynamicType sizedType{FROM, toType.kind()};
   if (auto sized{
           Fold(context, ConvertToType(sizedType, Expr<SomeType>{expr}))}) {
@@ -1320,8 +1436,10 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
 
 // Extracts a whole symbol being used as a bound of a dummy argument,
 // possibly wrapped with parentheses or MAX(0, ...).
+// Works with any integer expression.
+template <typename T> const Symbol *GetBoundSymbol(const Expr<T> &);
 template <int KIND>
-static const Symbol *GetBoundSymbol(
+const Symbol *GetBoundSymbol(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   using T = Type<TypeCategory::Integer, KIND>;
   return common::visit(
@@ -1358,9 +1476,15 @@ static const Symbol *GetBoundSymbol(
       },
       expr.u);
 }
+template <>
+const Symbol *GetBoundSymbol<SomeInteger>(const Expr<SomeInteger> &expr) {
+  return common::visit(
+      [](const auto &kindExpr) { return GetBoundSymbol(kindExpr); }, expr.u);
+}
 
+template <typename T>
 std::optional<bool> AreEquivalentInInterface(
-    const Expr<SubscriptInteger> &x, const Expr<SubscriptInteger> &y) {
+    const Expr<T> &x, const Expr<T> &y) {
   auto xVal{ToInt64(x)};
   auto yVal{ToInt64(y)};
   if (xVal && yVal) {
@@ -1394,6 +1518,10 @@ std::optional<bool> AreEquivalentInInterface(
     return std::nullopt; // not sure
   }
 }
+template std::optional<bool> AreEquivalentInInterface<SubscriptInteger>(
+    const Expr<SubscriptInteger> &, const Expr<SubscriptInteger> &);
+template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
+    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
 
 bool CheckForCoindexedObject(parser::ContextualMessages &messages,
     const std::optional<ActualArgument> &arg, const std::string &procName,
@@ -1412,10 +1540,12 @@ bool CheckForCoindexedObject(parser::ContextualMessages &messages,
 
 namespace Fortran::semantics {
 
-const Symbol &ResolveAssociations(const Symbol &original) {
+const Symbol &ResolveAssociations(
+    const Symbol &original, bool stopAtTypeGuard) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (!details->rank()) { // Not RANK(n) or RANK(*)
+    if (!details->rank() /* not RANK(n) or RANK(*) */ &&
+        !(stopAtTypeGuard && details->isTypeGuard())) {
       if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
@@ -1439,8 +1569,8 @@ static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   return nullptr;
 }
 
-const Symbol &GetAssociationRoot(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
+const Symbol &GetAssociationRoot(const Symbol &original, bool stopAtTypeGuard) {
+  const Symbol &symbol{ResolveAssociations(original, stopAtTypeGuard)};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
     if (const Symbol * root{GetAssociatedVariable(*details)}) {
       return *root;
@@ -1684,13 +1814,18 @@ bool IsSaved(const Symbol &original) {
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true; // explicit SAVE attribute
+    // explicit or implied SAVE attribute
+    // N.B.: semantics sets implied SAVE for main program
+    // local variables whose derived types have coarray
+    // potential subobject components.
+    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
       IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
-          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)))) {
+          (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)) &&
+          Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
@@ -1976,6 +2111,39 @@ std::optional<int> GetDummyArgumentNumber(const Symbol *symbol) {
     }
   }
   return std::nullopt;
+}
+
+// Given a symbol that is a SubprogramNameDetails in a submodule, try to
+// find its interface definition in its module or ancestor submodule.
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
+  if (symInSubmodule && symInSubmodule->owner().IsSubmodule()) {
+    if (const auto *nameDetails{
+            symInSubmodule->detailsIf<semantics::SubprogramNameDetails>()};
+        nameDetails &&
+        nameDetails->kind() == semantics::SubprogramKind::Module) {
+      const Symbol *next{symInSubmodule->owner().symbol()};
+      while (const Symbol * submodSym{next}) {
+        next = nullptr;
+        if (const auto *modDetails{
+                submodSym->detailsIf<semantics::ModuleDetails>()};
+            modDetails && modDetails->isSubmodule() && modDetails->scope()) {
+          if (const semantics::Scope & parent{modDetails->scope()->parent()};
+              parent.IsSubmodule() || parent.IsModule()) {
+            if (auto iter{parent.find(symInSubmodule->name())};
+                iter != parent.end()) {
+              const Symbol &proc{iter->second->GetUltimate()};
+              if (IsProcedure(proc)) {
+                return &proc;
+              }
+            } else if (parent.IsSubmodule()) {
+              next = parent.symbol();
+            }
+          }
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 } // namespace Fortran::semantics

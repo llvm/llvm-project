@@ -20,14 +20,14 @@
  * THE SOFTWARE.
  */
 
-#include <utils.h>
+#include <clc/utils.h>
 
 #ifdef __CLC_SCALAR
 #define __CLC_FUNCTION __CLC_XCONCAT(__clc_native_, __CLC_NATIVE_INTRINSIC)
 #define __CLC_INTRINSIC "llvm." __CLC_XSTR(__CLC_NATIVE_INTRINSIC)
 
 #undef cl_khr_fp64
-#include <math/unary_intrin.inc>
+#include <clc/math/unary_intrin.inc>
 
 #endif
 

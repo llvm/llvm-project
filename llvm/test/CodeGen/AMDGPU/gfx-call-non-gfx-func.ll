@@ -74,10 +74,10 @@ define amdgpu_gfx void @gfx_func() {
 ; SDAG-NEXT:    v_readlane_b32 s6, v40, 2
 ; SDAG-NEXT:    v_readlane_b32 s5, v40, 1
 ; SDAG-NEXT:    v_readlane_b32 s4, v40, 0
+; SDAG-NEXT:    s_mov_b32 s32, s33
 ; SDAG-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; SDAG-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; SDAG-NEXT:    s_mov_b64 exec, s[34:35]
-; SDAG-NEXT:    s_addk_i32 s32, 0xfc00
 ; SDAG-NEXT:    s_mov_b32 s33, s36
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -151,10 +151,10 @@ define amdgpu_gfx void @gfx_func() {
 ; GISEL-NEXT:    v_readlane_b32 s6, v40, 2
 ; GISEL-NEXT:    v_readlane_b32 s5, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s4, v40, 0
+; GISEL-NEXT:    s_mov_b32 s32, s33
 ; GISEL-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b64 exec, s[34:35]
-; GISEL-NEXT:    s_addk_i32 s32, 0xfc00
 ; GISEL-NEXT:    s_mov_b32 s33, s36
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]

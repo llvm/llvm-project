@@ -2,7 +2,7 @@
 ;
 ; Check that we do not crash as described here: http://llvm.org/PR21167
 ;
-; In case the pieceweise affine function used to create an isl_ast_expr
+; In case the piecewise affine function used to create an isl_ast_expr
 ; had empty cases (e.g., with contradicting constraints on the
 ; parameters), it was possible that the condition of the isl_ast_expr
 ; select was not a comparison but a constant (thus of type i64).

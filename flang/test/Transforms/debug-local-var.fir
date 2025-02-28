@@ -77,7 +77,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[REAL4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[LOG4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 32, encoding = DW_ATE_boolean>
-// CHECK-DAG: #[[MAIN:.*]] = #llvm.di_subprogram<{{.*}}name = "_QQmain"{{.*}}>
+// CHECK-DAG: #[[MAIN:.*]] = #llvm.di_subprogram<{{.*}}name = "mn"{{.*}}>
 // CHECK-DAG: #[[FN1:.*]] = #llvm.di_subprogram<{{.*}}name = "fn1"{{.*}}>
 // CHECK-DAG: #[[FN2:.*]] = #llvm.di_subprogram<{{.*}}name = "fn2"{{.*}}>
 

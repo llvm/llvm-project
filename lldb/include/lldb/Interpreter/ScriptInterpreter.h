@@ -116,8 +116,12 @@ public:
   ~ScriptInterpreterIORedirect();
 
   lldb::FileSP GetInputFile() const { return m_input_file_sp; }
-  lldb::FileSP GetOutputFile() const { return m_output_file_sp->GetFileSP(); }
-  lldb::FileSP GetErrorFile() const { return m_error_file_sp->GetFileSP(); }
+  lldb::FileSP GetOutputFile() const {
+    return m_output_file_sp->GetUnlockedFileSP();
+  }
+  lldb::FileSP GetErrorFile() const {
+    return m_error_file_sp->GetUnlockedFileSP();
+  }
 
   /// Flush our output and error file handles.
   void Flush();
@@ -128,8 +132,9 @@ private:
   ScriptInterpreterIORedirect(Debugger &debugger, CommandReturnObject *result);
 
   lldb::FileSP m_input_file_sp;
-  lldb::StreamFileSP m_output_file_sp;
-  lldb::StreamFileSP m_error_file_sp;
+  lldb::LockableStreamFileSP m_output_file_sp;
+  lldb::LockableStreamFileSP m_error_file_sp;
+  LockableStreamFile::Mutex m_output_mutex;
   ThreadedCommunication m_communication;
   bool m_disconnect;
 };
@@ -420,6 +425,20 @@ public:
     return std::nullopt;
   }
 
+  virtual StructuredData::DictionarySP
+  HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) {
+    return {};
+  }
+
+  virtual StructuredData::DictionarySP
+  HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
+      size_t char_in_arg) {
+    return {};
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -464,7 +483,7 @@ public:
     dest.clear();
     return false;
   }
-  
+
   virtual StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
@@ -474,9 +493,9 @@ public:
   GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
   }
-  
+
   virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
       llvm::StringRef long_option, llvm::StringRef value) {
     return false;
   }

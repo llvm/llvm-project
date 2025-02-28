@@ -279,7 +279,7 @@ struct WmmaConstantOpToNVVMLowering
         cast<gpu::MMAMatrixType>(subgroupMmaConstantOp.getType()));
     // If the element type is a vector create a vector from the operand.
     if (auto vecType = dyn_cast<VectorType>(type.getBody()[0])) {
-      Value vecCst = rewriter.create<LLVM::UndefOp>(loc, vecType);
+      Value vecCst = rewriter.create<LLVM::PoisonOp>(loc, vecType);
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
         Value idx = rewriter.create<LLVM::ConstantOp>(
             loc, rewriter.getI32Type(), vecEl);
@@ -288,7 +288,7 @@ struct WmmaConstantOpToNVVMLowering
       }
       cst = vecCst;
     }
-    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, type);
+    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, type);
     for (size_t i : llvm::seq(size_t(0), type.getBody().size())) {
       matrixStruct =
           rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, cst, i);
@@ -355,7 +355,7 @@ struct WmmaElementwiseOpToNVVMLowering
     size_t numOperands = adaptor.getOperands().size();
     LLVM::LLVMStructType destType = convertMMAToLLVMType(
         cast<gpu::MMAMatrixType>(subgroupMmaElementwiseOp.getType()));
-    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, destType);
+    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, destType);
     for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
       SmallVector<Value> extractedOperands;
       for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
@@ -388,8 +388,9 @@ LLVM::LLVMStructType mlir::convertMMAToLLVMType(gpu::MMAMatrixType type) {
 }
 
 void mlir::populateGpuWMMAToNVVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
   patterns.add<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
                WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
-               WmmaElementwiseOpToNVVMLowering>(converter);
+               WmmaElementwiseOpToNVVMLowering>(converter, benefit);
 }

@@ -66,10 +66,10 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
     int64_t inputIndex = it.index();
     // Call get<Value>() under the assumption that we're not casting
     // dynamism.
-    Value indexGroupSize = inputShape[inputIndex].get<Value>();
+    Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
     Value indexGroupStaticSizesProduct =
         b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
-    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+    Value dynamicDimSize = b.createOrFold<arith::DivSIOp>(
         loc, indexGroupSize, indexGroupStaticSizesProduct);
     outputShapeValues.push_back(dynamicDimSize);
   }
@@ -355,6 +355,29 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
   return std::accumulate(
       values.begin(), values.end(), one,
       [&arithBuilder](Value acc, Value v) { return arithBuilder.mul(acc, v); });
+}
+
+/// Map strings to float types.
+std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
+  Builder b(ctx);
+  return llvm::StringSwitch<std::optional<FloatType>>(name)
+      .Case("f4E2M1FN", b.getType<Float4E2M1FNType>())
+      .Case("f6E2M3FN", b.getType<Float6E2M3FNType>())
+      .Case("f6E3M2FN", b.getType<Float6E3M2FNType>())
+      .Case("f8E5M2", b.getType<Float8E5M2Type>())
+      .Case("f8E4M3", b.getType<Float8E4M3Type>())
+      .Case("f8E4M3FN", b.getType<Float8E4M3FNType>())
+      .Case("f8E5M2FNUZ", b.getType<Float8E5M2FNUZType>())
+      .Case("f8E4M3FNUZ", b.getType<Float8E4M3FNUZType>())
+      .Case("f8E3M4", b.getType<Float8E3M4Type>())
+      .Case("f8E8M0FNU", b.getType<Float8E8M0FNUType>())
+      .Case("bf16", b.getType<BFloat16Type>())
+      .Case("f16", b.getType<Float16Type>())
+      .Case("f32", b.getType<Float32Type>())
+      .Case("f64", b.getType<Float64Type>())
+      .Case("f80", b.getType<Float80Type>())
+      .Case("f128", b.getType<Float128Type>())
+      .Default(std::nullopt);
 }
 
 } // namespace mlir::arith

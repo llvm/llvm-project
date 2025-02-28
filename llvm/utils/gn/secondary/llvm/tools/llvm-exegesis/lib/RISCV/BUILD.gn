@@ -1,0 +1,22 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("RISCVGenExegesis") {
+  args = [ "-gen-exegesis" ]
+  td_file = "//llvm/lib/Target/RISCV/RISCV.td"
+}
+
+static_library("RISCV") {
+  output_name = "LLVMExegesisRISCV"
+  deps = [
+    ":RISCVGenExegesis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+
+    # Exegesis reaches inside the Target/RISCV tablegen internals and must
+    # depend on these Target/RISCV-internal build targets.
+    "//llvm/lib/Target/RISCV/MCTargetDesc",
+  ]
+  sources = [ "Target.cpp" ]
+  include_dirs = [ "//llvm/lib/Target/RISCV" ]
+}

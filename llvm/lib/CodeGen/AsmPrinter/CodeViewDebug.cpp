@@ -60,7 +60,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -70,7 +69,6 @@
 #include <cassert>
 #include <cctype>
 #include <cstddef>
-#include <iterator>
 #include <limits>
 
 using namespace llvm;
@@ -125,6 +123,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARMNT;
   case Triple::ArchType::aarch64:
     return CPUType::ARM64;
+  case Triple::ArchType::mipsel:
+    return CPUType::MIPS;
   default:
     report_fatal_error("target architecture doesn't map to a CodeView CPUType");
   }
@@ -3406,10 +3406,8 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     OS.emitInt32(getCompleteTypeIndex(DIGV->getType()).getIndex());
     OS.AddComment("DataOffset");
 
-    uint64_t Offset = 0;
-    if (CVGlobalVariableOffsets.contains(DIGV))
-      // Use the offset seen while collecting info on globals.
-      Offset = CVGlobalVariableOffsets[DIGV];
+    // Use the offset seen while collecting info on globals.
+    uint64_t Offset = CVGlobalVariableOffsets.lookup(DIGV);
     OS.emitCOFFSecRel32(GVSym, Offset);
 
     OS.AddComment("Segment");

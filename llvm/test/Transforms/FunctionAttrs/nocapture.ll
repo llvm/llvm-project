@@ -7,7 +7,7 @@
 define ptr @c1(ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define ptr @c1
-; FNATTRS-SAME: (ptr readnone returned [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    ret ptr [[Q]]
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -245,7 +245,7 @@ define i1 @c7(ptr %q, i32 %bitno) {
 define i32 @nc1(ptr %q, ptr %p, i1 %b) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define i32 @nc1
-; FNATTRS-SAME: (ptr [[Q:%.*]], ptr nocapture [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7:[0-9]+]] {
+; FNATTRS-SAME: (ptr [[Q:%.*]], ptr captures(none) [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:  e:
 ; FNATTRS-NEXT:    br label [[L:%.*]]
 ; FNATTRS:       l:
@@ -259,7 +259,7 @@ define i32 @nc1(ptr %q, ptr %p, i1 %b) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; ATTRIBUTOR-LABEL: define i32 @nc1
-; ATTRIBUTOR-SAME: (ptr nofree [[Q:%.*]], ptr nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree [[Q:%.*]], ptr nofree captures(none) [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  e:
 ; ATTRIBUTOR-NEXT:    br label [[L:%.*]]
 ; ATTRIBUTOR:       l:
@@ -286,7 +286,7 @@ l:
 define i32 @nc1_addrspace(ptr %q, ptr addrspace(1) %p, i1 %b) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define i32 @nc1_addrspace
-; FNATTRS-SAME: (ptr [[Q:%.*]], ptr addrspace(1) nocapture [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7]] {
+; FNATTRS-SAME: (ptr [[Q:%.*]], ptr addrspace(1) captures(none) [[P:%.*]], i1 [[B:%.*]]) #[[ATTR7]] {
 ; FNATTRS-NEXT:  e:
 ; FNATTRS-NEXT:    br label [[L:%.*]]
 ; FNATTRS:       l:
@@ -301,7 +301,7 @@ define i32 @nc1_addrspace(ptr %q, ptr addrspace(1) %p, i1 %b) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; ATTRIBUTOR-LABEL: define i32 @nc1_addrspace
-; ATTRIBUTOR-SAME: (ptr nofree [[Q:%.*]], ptr addrspace(1) nocapture nofree [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5]] {
+; ATTRIBUTOR-SAME: (ptr nofree [[Q:%.*]], ptr addrspace(1) nofree captures(none) [[P:%.*]], i1 [[B:%.*]]) #[[ATTR5]] {
 ; ATTRIBUTOR-NEXT:  e:
 ; ATTRIBUTOR-NEXT:    br label [[L:%.*]]
 ; ATTRIBUTOR:       l:
@@ -330,14 +330,14 @@ l:
 define void @nc2(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @nc2
-; FNATTRS-SAME: (ptr nocapture [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR7]] {
+; FNATTRS-SAME: (ptr captures(none) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR7]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call i32 @nc1(ptr [[Q]], ptr [[P]], i1 false)
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; ATTRIBUTOR-LABEL: define void @nc2
-; ATTRIBUTOR-SAME: (ptr nocapture nofree [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR5]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i32 @nc1(ptr nofree [[Q]], ptr nocapture nofree [[P]], i1 false) #[[ATTR18:[0-9]+]]
+; ATTRIBUTOR-SAME: (ptr nofree captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR5]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i32 @nc1(ptr nofree [[Q]], ptr nofree captures(none) [[P]], i1 false) #[[ATTR18:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %1 = call i32 @nc1(ptr %q, ptr %p, i1 0)		; <i32> [#uses=0]
@@ -347,12 +347,12 @@ define void @nc2(ptr %p, ptr %q) {
 
 define void @nc3(ptr %p) {
 ; FNATTRS-LABEL: define void @nc3
-; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void [[P]]()
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @nc3
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[P:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void [[P]]()
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -364,14 +364,14 @@ declare void @external(ptr) readonly nounwind
 define void @nc4(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nounwind memory(read)
 ; FNATTRS-LABEL: define void @nc4
-; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @external(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
 ; ATTRIBUTOR-LABEL: define void @nc4
-; ATTRIBUTOR-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR7:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @external(ptr nocapture readonly [[P]]) #[[ATTR4]]
+; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    call void @external(ptr readonly captures(none) [[P]]) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @external(ptr %p)
@@ -380,15 +380,15 @@ define void @nc4(ptr %p) {
 
 define void @nc5(ptr %f, ptr %p) {
 ; FNATTRS-LABEL: define void @nc5
-; FNATTRS-SAME: (ptr nocapture readonly [[F:%.*]], ptr nocapture [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr captures(none) [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR8:[0-9]+]]
-; FNATTRS-NEXT:    call void [[F]](ptr nocapture [[P]])
+; FNATTRS-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @nc5
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[F:%.*]], ptr nocapture [[P:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr captures(none) [[P:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR6:[0-9]+]]
-; ATTRIBUTOR-NEXT:    call void [[F]](ptr nocapture [[P]])
+; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void %f(ptr %p) readonly nounwind
@@ -400,15 +400,15 @@ define void @nc5(ptr %f, ptr %p) {
 define void @test1_1(ptr %x1_1, ptr %y1_1, i1 %c) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test1_1
-; FNATTRS-SAME: (ptr nocapture readnone [[X1_1:%.*]], ptr [[Y1_1:%.*]], i1 [[C:%.*]]) #[[ATTR10:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[X1_1:%.*]], ptr [[Y1_1:%.*]], i1 [[C:%.*]]) #[[ATTR10:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = call ptr @test1_2(ptr [[X1_1]], ptr [[Y1_1]], i1 [[C]])
 ; FNATTRS-NEXT:    store ptr null, ptr @g, align 8
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define void @test1_1
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X1_1:%.*]], ptr nocapture nofree readnone [[Y1_1:%.*]], i1 [[C:%.*]]) #[[ATTR8:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test1_2(ptr nocapture nofree readnone [[X1_1]], ptr nofree readnone [[Y1_1]], i1 [[C]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X1_1:%.*]], ptr nofree readnone captures(none) [[Y1_1:%.*]], i1 [[C:%.*]]) #[[ATTR8:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test1_2(ptr nofree readnone captures(none) [[X1_1]], ptr nofree readnone [[Y1_1]], i1 [[C]]) #[[ATTR8]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -420,7 +420,7 @@ define void @test1_1(ptr %x1_1, ptr %y1_1, i1 %c) {
 define ptr @test1_2(ptr %x1_2, ptr %y1_2, i1 %c) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define ptr @test1_2
-; FNATTRS-SAME: (ptr nocapture readnone [[X1_2:%.*]], ptr returned [[Y1_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[X1_2:%.*]], ptr returned [[Y1_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; FNATTRS:       t:
 ; FNATTRS-NEXT:    call void @test1_1(ptr [[X1_2]], ptr [[Y1_2]], i1 [[C]])
@@ -431,10 +431,10 @@ define ptr @test1_2(ptr %x1_2, ptr %y1_2, i1 %c) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define ptr @test1_2
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X1_2:%.*]], ptr nofree readnone [[Y1_2:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X1_2:%.*]], ptr nofree readnone [[Y1_2:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; ATTRIBUTOR:       t:
-; ATTRIBUTOR-NEXT:    call void @test1_1(ptr nocapture nofree readnone [[X1_2]], ptr nocapture nofree readnone [[Y1_2]], i1 [[C]]) #[[ATTR8]]
+; ATTRIBUTOR-NEXT:    call void @test1_1(ptr nofree readnone captures(none) [[X1_2]], ptr nofree readnone captures(none) [[Y1_2]], i1 [[C]]) #[[ATTR8]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    br label [[F]]
 ; ATTRIBUTOR:       f:
@@ -452,15 +452,15 @@ f:
 define void @test2(ptr %x2) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test2
-; FNATTRS-SAME: (ptr nocapture readnone [[X2:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[X2:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    call void @test2(ptr [[X2]])
 ; FNATTRS-NEXT:    store ptr null, ptr @g, align 8
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define void @test2
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X2:%.*]]) #[[ATTR8]] {
-; ATTRIBUTOR-NEXT:    call void @test2(ptr nocapture nofree readnone [[X2]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X2:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-NEXT:    call void @test2(ptr nofree readnone captures(none) [[X2]]) #[[ATTR8]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -472,15 +472,15 @@ define void @test2(ptr %x2) {
 define void @test3(ptr %x3, ptr %y3, ptr %z3) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test3
-; FNATTRS-SAME: (ptr nocapture readnone [[X3:%.*]], ptr nocapture readnone [[Y3:%.*]], ptr nocapture readnone [[Z3:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[X3:%.*]], ptr readnone captures(none) [[Y3:%.*]], ptr readnone captures(none) [[Z3:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    call void @test3(ptr [[Z3]], ptr [[Y3]], ptr [[X3]])
 ; FNATTRS-NEXT:    store ptr null, ptr @g, align 8
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define void @test3
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X3:%.*]], ptr nocapture nofree readnone [[Y3:%.*]], ptr nocapture nofree readnone [[Z3:%.*]]) #[[ATTR8]] {
-; ATTRIBUTOR-NEXT:    call void @test3(ptr nocapture nofree readnone [[Z3]], ptr nocapture nofree readnone [[Y3]], ptr nocapture nofree readnone [[X3]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X3:%.*]], ptr nofree readnone captures(none) [[Y3:%.*]], ptr nofree readnone captures(none) [[Z3:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-NEXT:    call void @test3(ptr nofree readnone captures(none) [[Z3]], ptr nofree readnone captures(none) [[Y3]], ptr nofree readnone captures(none) [[X3]]) #[[ATTR8]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -499,8 +499,8 @@ define void @test4_1(ptr %x4_1, i1 %c) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define void @test4_1
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X4_1:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test4_2(ptr nocapture nofree readnone [[X4_1]], ptr nofree readnone [[X4_1]], ptr nocapture nofree readnone [[X4_1]], i1 [[C]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X4_1:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @test4_2(ptr nofree readnone captures(none) [[X4_1]], ptr nofree readnone [[X4_1]], ptr nofree readnone captures(none) [[X4_1]], i1 [[C]]) #[[ATTR8]]
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -512,7 +512,7 @@ define void @test4_1(ptr %x4_1, i1 %c) {
 define ptr @test4_2(ptr %x4_2, ptr %y4_2, ptr %z4_2, i1 %c) {
 ; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define ptr @test4_2
-; FNATTRS-SAME: (ptr nocapture readnone [[X4_2:%.*]], ptr readnone returned [[Y4_2:%.*]], ptr nocapture readnone [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: (ptr readnone captures(none) [[X4_2:%.*]], ptr readnone returned captures(ret: address, provenance) [[Y4_2:%.*]], ptr readnone captures(none) [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; FNATTRS:       t:
 ; FNATTRS-NEXT:    call void @test4_1(ptr null, i1 [[C]])
@@ -523,7 +523,7 @@ define ptr @test4_2(ptr %x4_2, ptr %y4_2, ptr %z4_2, i1 %c) {
 ;
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
 ; ATTRIBUTOR-LABEL: define ptr @test4_2
-; ATTRIBUTOR-SAME: (ptr nocapture nofree readnone [[X4_2:%.*]], ptr nofree readnone [[Y4_2:%.*]], ptr nocapture nofree readnone [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[X4_2:%.*]], ptr nofree readnone [[Y4_2:%.*]], ptr nofree readnone captures(none) [[Z4_2:%.*]], i1 [[C:%.*]]) #[[ATTR8]] {
 ; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; ATTRIBUTOR:       t:
 ; ATTRIBUTOR-NEXT:    call void @test4_1(ptr nofree readnone null, i1 [[C]]) #[[ATTR8]]
@@ -559,14 +559,14 @@ declare void @test6_1(ptr %x6_1, ptr nocapture %y6_1, ...)
 
 define void @test6_2(ptr %x6_2, ptr %y6_2, ptr %z6_2) {
 ; FNATTRS-LABEL: define void @test6_2
-; FNATTRS-SAME: (ptr [[X6_2:%.*]], ptr nocapture [[Y6_2:%.*]], ptr [[Z6_2:%.*]]) {
+; FNATTRS-SAME: (ptr [[X6_2:%.*]], ptr captures(none) [[Y6_2:%.*]], ptr [[Z6_2:%.*]]) {
 ; FNATTRS-NEXT:    call void (ptr, ptr, ...) @test6_1(ptr [[X6_2]], ptr [[Y6_2]], ptr [[Z6_2]])
 ; FNATTRS-NEXT:    store ptr null, ptr @g, align 8
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @test6_2
-; ATTRIBUTOR-SAME: (ptr [[X6_2:%.*]], ptr nocapture [[Y6_2:%.*]], ptr [[Z6_2:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void (ptr, ptr, ...) @test6_1(ptr [[X6_2]], ptr nocapture [[Y6_2]], ptr [[Z6_2]])
+; ATTRIBUTOR-SAME: (ptr [[X6_2:%.*]], ptr captures(none) [[Y6_2:%.*]], ptr [[Z6_2:%.*]]) {
+; ATTRIBUTOR-NEXT:    call void (ptr, ptr, ...) @test6_1(ptr [[X6_2]], ptr captures(none) [[Y6_2]], ptr [[Z6_2]])
 ; ATTRIBUTOR-NEXT:    store ptr null, ptr @g, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -578,13 +578,13 @@ define void @test6_2(ptr %x6_2, ptr %y6_2, ptr %z6_2) {
 define void @test_cmpxchg(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define void @test_cmpxchg
-; FNATTRS-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR11:[0-9]+]] {
+; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_cmpxchg
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -595,13 +595,13 @@ define void @test_cmpxchg(ptr %p) {
 define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define void @test_cmpxchg_ptr
-; FNATTRS-SAME: (ptr nocapture [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR11]] {
+; FNATTRS-SAME: (ptr captures(none) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR11]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_cmpxchg_ptr
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR9]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR9]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -612,13 +612,13 @@ define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
 define void @test_atomicrmw(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define void @test_atomicrmw
-; FNATTRS-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR11]] {
+; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR11]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_atomicrmw
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[P:%.*]]) #[[ATTR9]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR9]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -652,7 +652,7 @@ entry:
 define void @nocaptureLaunder(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define void @nocaptureLaunder
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR13:[0-9]+]] {
+; FNATTRS-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]])
 ; FNATTRS-NEXT:    store i8 42, ptr [[B]], align 1
@@ -660,7 +660,7 @@ define void @nocaptureLaunder(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @nocaptureLaunder
-; ATTRIBUTOR-SAME: (ptr nocapture nofree [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree captures(none) [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[P]]) #[[ATTR19:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    store i8 42, ptr [[B]], align 1
@@ -696,7 +696,7 @@ define void @captureLaunder(ptr %p) {
 define void @nocaptureStrip(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define void @nocaptureStrip
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR15:[0-9]+]] {
+; FNATTRS-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR15:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]])
 ; FNATTRS-NEXT:    store i8 42, ptr [[B]], align 1
@@ -704,7 +704,7 @@ define void @nocaptureStrip(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; ATTRIBUTOR-LABEL: define void @nocaptureStrip
-; ATTRIBUTOR-SAME: (ptr nocapture nofree writeonly [[P:%.*]]) #[[ATTR11:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    [[B:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[P]]) #[[ATTR17]]
 ; ATTRIBUTOR-NEXT:    store i8 42, ptr [[B]], align 1
@@ -740,7 +740,7 @@ define void @captureStrip(ptr %p) {
 define i1 @captureICmp(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @captureICmp
-; FNATTRS-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
@@ -757,7 +757,7 @@ define i1 @captureICmp(ptr %x) {
 define i1 @captureICmpRev(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @captureICmpRev
-; FNATTRS-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr null, [[X]]
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
@@ -771,10 +771,46 @@ define i1 @captureICmpRev(ptr %x) {
   ret i1 %1
 }
 
+define i1 @captureICmpWrongPred(ptr %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @captureICmpWrongPred
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; FNATTRS-NEXT:    ret i1 [[TMP1]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPred
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp slt ptr %x, null
+  ret i1 %1
+}
+
+define i1 @captureICmpWrongPredDereferenceableOrNull(ptr dereferenceable_or_null(1) %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define noundef i1 @captureICmpWrongPredDereferenceableOrNull
+; FNATTRS-SAME: (ptr readnone captures(address) dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; FNATTRS-NEXT:    ret i1 [[TMP1]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @captureICmpWrongPredDereferenceableOrNull
+; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(1) [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp slt ptr [[X]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
+;
+  %1 = icmp slt ptr %x, null
+  ret i1 %1
+}
+
+; We could infer captures(address_is_null) here, but don't bother, because
+; InstCombine will optimize the GEP away.
 define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmp
-; FNATTRS-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP2]]
@@ -794,7 +830,7 @@ define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i1 @nocaptureInboundsGEPICmpRev
-; FNATTRS-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
 ; FNATTRS-NEXT:    ret i1 [[TMP2]]
@@ -811,10 +847,50 @@ define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
   ret i1 %2
 }
 
+define i1 @notInboundsGEPICmp(ptr %x) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @notInboundsGEPICmp
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; FNATTRS-NEXT:    ret i1 [[TMP2]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @notInboundsGEPICmp
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = getelementptr i32, ptr %x, i32 5
+  %2 = icmp eq ptr %1, null
+  ret i1 %2
+}
+
+define i1 @inboundsGEPICmpNullPointerDefined(ptr %x) null_pointer_is_valid {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
+; FNATTRS-LABEL: define i1 @inboundsGEPICmpNullPointerDefined
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]]) #[[ATTR16:[0-9]+]] {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; FNATTRS-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; FNATTRS-NEXT:    ret i1 [[TMP2]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @inboundsGEPICmpNullPointerDefined
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[X]], i32 5
+; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = getelementptr i32, ptr %x, i32 5
+  %2 = icmp eq ptr %1, null
+  ret i1 %2
+}
+
 define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @nocaptureDereferenceableOrNullICmp
-; FNATTRS-SAME: (ptr nocapture readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(none) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
@@ -831,13 +907,13 @@ define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x)
 define i1 @captureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) null_pointer_is_valid {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @captureDereferenceableOrNullICmp
-; FNATTRS-SAME: (ptr readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR16:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR16]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none)
 ; ATTRIBUTOR-LABEL: define i1 @captureDereferenceableOrNullICmp
-; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR12:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree readnone dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR12]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[TMP1]]
 ;
@@ -849,13 +925,13 @@ declare void @capture(ptr)
 
 define void @nocapture_fptr(ptr %f, ptr %p) {
 ; FNATTRS-LABEL: define void @nocapture_fptr
-; FNATTRS-SAME: (ptr nocapture readonly [[F:%.*]], ptr [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call ptr [[F]](ptr [[P]])
 ; FNATTRS-NEXT:    call void @capture(ptr [[RES]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @nocapture_fptr
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[F:%.*]], ptr [[P:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call ptr [[F]](ptr [[P]])
 ; ATTRIBUTOR-NEXT:    call void @capture(ptr [[RES]])
 ; ATTRIBUTOR-NEXT:    ret void
@@ -867,13 +943,13 @@ define void @nocapture_fptr(ptr %f, ptr %p) {
 
 define void @recurse_fptr(ptr %f, ptr %p) {
 ; FNATTRS-LABEL: define void @recurse_fptr
-; FNATTRS-SAME: (ptr nocapture readonly [[F:%.*]], ptr [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call ptr [[F]](ptr [[P]])
 ; FNATTRS-NEXT:    store i8 0, ptr [[RES]], align 1
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @recurse_fptr
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull [[F:%.*]], ptr [[P:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[F:%.*]], ptr [[P:%.*]]) {
 ; ATTRIBUTOR-NEXT:    [[RES:%.*]] = call ptr [[F]](ptr [[P]])
 ; ATTRIBUTOR-NEXT:    store i8 0, ptr [[RES]], align 1
 ; ATTRIBUTOR-NEXT:    ret void
@@ -886,13 +962,13 @@ define void @recurse_fptr(ptr %f, ptr %p) {
 define void @readnone_indirec(ptr %f, ptr %p) {
 ; FNATTRS: Function Attrs: nofree nosync memory(none)
 ; FNATTRS-LABEL: define void @readnone_indirec
-; FNATTRS-SAME: (ptr nocapture readonly [[F:%.*]], ptr readnone [[P:%.*]]) #[[ATTR17:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(none) [[F:%.*]], ptr readnone [[P:%.*]]) #[[ATTR17:[0-9]+]] {
 ; FNATTRS-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR20:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(none)
 ; ATTRIBUTOR-LABEL: define void @readnone_indirec
-; ATTRIBUTOR-SAME: (ptr nocapture nofree nonnull readnone [[F:%.*]], ptr readnone [[P:%.*]]) #[[ATTR13:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull readnone captures(none) [[F:%.*]], ptr readnone [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr [[P]]) #[[ATTR20:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -900,6 +976,190 @@ define void @readnone_indirec(ptr %f, ptr %p) {
   ret void
 }
 
+define ptr @captures_ret_only(ptr %p) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define ptr @captures_ret_only
+; FNATTRS-SAME: (ptr readnone captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; FNATTRS-NEXT:    ret ptr [[GEP]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define ptr @captures_ret_only
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; ATTRIBUTOR-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr i8, ptr %p, i64 8
+  ret ptr %gep
+}
+
+; Even though the ptrtoint is only used in the return value, this should *not*
+; be considered a read-only capture.
+define i64 @captures_not_ret_only(ptr %p) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i64 @captures_not_ret_only
+; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P]] to i64
+; FNATTRS-NEXT:    ret i64 [[INT]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i64 @captures_not_ret_only
+; ATTRIBUTOR-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P]] to i64
+; ATTRIBUTOR-NEXT:    ret i64 [[INT]]
+;
+  %int = ptrtoint ptr %p to i64
+  ret i64 %int
+}
+
+define void @captures_read_provenance(ptr %p) {
+; FNATTRS-LABEL: define void @captures_read_provenance
+; FNATTRS-SAME: (ptr captures(address, read_provenance) [[P:%.*]]) {
+; FNATTRS-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR-LABEL: define void @captures_read_provenance
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @capture(ptr captures(address, read_provenance) %p)
+  ret void
+}
+
+define void @captures_unused_ret(ptr %p) {
+; FNATTRS-LABEL: define void @captures_unused_ret
+; FNATTRS-SAME: (ptr captures(address_is_null) [[P:%.*]]) {
+; FNATTRS-NEXT:    [[TMP1:%.*]] = call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR-LABEL: define void @captures_unused_ret
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) %p)
+  ret void
+}
+
+define ptr @captures_used_ret(ptr %p) {
+; FNATTRS-LABEL: define ptr @captures_used_ret
+; FNATTRS-SAME: (ptr captures(address_is_null, ret: address, provenance) [[P:%.*]]) {
+; FNATTRS-NEXT:    [[RET:%.*]] = call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) [[P]])
+; FNATTRS-NEXT:    ret ptr [[RET]]
+;
+; ATTRIBUTOR-LABEL: define ptr @captures_used_ret
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) [[P]])
+; ATTRIBUTOR-NEXT:    ret ptr [[RET]]
+;
+  %ret = call ptr @capture(ptr captures(address_is_null, ret: address, read_provenance) %p)
+  ret ptr %ret
+}
+
+; Make sure this is does not produce captures(ret: ...). We need to take the
+; return capture components into account when handling argument SCCs.
+define ptr @scc_capture_via_ret(i1 %c, ptr %p) {
+; FNATTRS: Function Attrs: nofree nosync nounwind memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS-LABEL: define ptr @scc_capture_via_ret
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) #[[ATTR10]] {
+; FNATTRS-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; FNATTRS:       if:
+; FNATTRS-NEXT:    [[C_NOT:%.*]] = xor i1 [[C]], true
+; FNATTRS-NEXT:    [[RET:%.*]] = call ptr @scc_capture_via_ret(i1 [[C_NOT]], ptr [[P]])
+; FNATTRS-NEXT:    store ptr [[RET]], ptr @g, align 8
+; FNATTRS-NEXT:    ret ptr [[RET]]
+; FNATTRS:       else:
+; FNATTRS-NEXT:    ret ptr [[P]]
+;
+; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(write)
+; ATTRIBUTOR-LABEL: define ptr @scc_capture_via_ret
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], ptr nofree [[P:%.*]]) #[[ATTR8]] {
+; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; ATTRIBUTOR:       if:
+; ATTRIBUTOR-NEXT:    [[C_NOT:%.*]] = xor i1 [[C]], true
+; ATTRIBUTOR-NEXT:    [[RET:%.*]] = call ptr @scc_capture_via_ret(i1 [[C_NOT]], ptr nofree [[P]]) #[[ATTR8]]
+; ATTRIBUTOR-NEXT:    store ptr [[RET]], ptr @g, align 8
+; ATTRIBUTOR-NEXT:    ret ptr [[RET]]
+; ATTRIBUTOR:       else:
+; ATTRIBUTOR-NEXT:    ret ptr [[P]]
+;
+  br i1 %c, label %if, label %else
+if:
+  %c.not = xor i1 %c, true
+  %ret = call ptr @scc_capture_via_ret(i1 %c.not, ptr %p)
+  store ptr %ret, ptr @g
+  ret ptr %ret
+else:
+  ret ptr %p
+}
+
+define i1 @improve_existing_captures(ptr captures(address) %p) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; FNATTRS-LABEL: define i1 @improve_existing_captures
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], null
+; FNATTRS-NEXT:    ret i1 [[CMP]]
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; ATTRIBUTOR-LABEL: define i1 @improve_existing_captures
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], null
+; ATTRIBUTOR-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq ptr %p, null
+  ret i1 %cmp
+}
+
+define void @dont_increase_existing_captures(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @capture(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @capture(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_trivial_scc(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures_trivial_scc
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; COMMON-NEXT:    call void @dont_increase_existing_captures_trivial_scc(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @capture(ptr captures(address, read_provenance) %p)
+  call void @dont_increase_existing_captures_trivial_scc(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_scc1(ptr captures(address) %p) {
+; COMMON-LABEL: define void @dont_increase_existing_captures_scc1
+; COMMON-SAME: (ptr captures(address) [[P:%.*]]) {
+; COMMON-NEXT:    call void @dont_increase_existing_captures_scc2(ptr [[P]])
+; COMMON-NEXT:    ret void
+;
+  call void @dont_increase_existing_captures_scc2(ptr %p)
+  ret void
+}
+
+define void @dont_increase_existing_captures_scc2(ptr %p) {
+; FNATTRS-LABEL: define void @dont_increase_existing_captures_scc2
+; FNATTRS-SAME: (ptr captures(address, read_provenance) [[P:%.*]]) {
+; FNATTRS-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; FNATTRS-NEXT:    call void @dont_increase_existing_captures_scc1(ptr [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR-LABEL: define void @dont_increase_existing_captures_scc2
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    call void @capture(ptr captures(address, read_provenance) [[P]])
+; ATTRIBUTOR-NEXT:    call void @dont_increase_existing_captures_scc1(ptr [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @capture(ptr captures(address, read_provenance) %p)
+  call void @dont_increase_existing_captures_scc1(ptr %p)
+  ret void
+}
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.strip.invariant.group.p0(ptr)

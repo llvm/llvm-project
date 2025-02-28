@@ -36,7 +36,7 @@ define i15 @test3(i15 %x) {
 ; X + signbit --> X ^ signbit
 define <2 x i5> @test3vec(<2 x i5> %x) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[Y:%.*]] = xor <2 x i5> [[X:%.*]], <i5 -16, i5 -16>
+; CHECK-NEXT:    [[Y:%.*]] = xor <2 x i5> [[X:%.*]], splat (i5 -16)
 ; CHECK-NEXT:    ret <2 x i5> [[Y]]
 ;
   %y = add <2 x i5> %x, <i5 16, i5 16>

@@ -283,7 +283,7 @@ public:
     if (Reg >= MTracker->NumRegs)
       return false;
     for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
-      if (CalleeSavedRegs.test(*RAI))
+      if (CalleeSavedRegs.test((*RAI).id()))
         return true;
     return false;
   };
@@ -1290,6 +1290,27 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
           }
         }
 
+        // https://github.com/llvm/llvm-project/issues/64093
+        // in particular #issuecomment-2531264124. We use variable locations
+        // such as DBG_VALUE $xmm0 as shorthand to refer to "the low lane of
+        // $xmm0", and this is reflected in how DWARF is interpreted too.
+        // However InstrRefBasedLDV tries to be smart and interprets such a
+        // DBG_VALUE as a 128-bit reference. We then issue a DW_OP_deref_size
+        // of 128 bits to the stack, which isn't permitted by DWARF (it's
+        // larger than a pointer).
+        //
+        // Solve this for now by not using DW_OP_deref_size if it would be
+        // illegal. Instead we'll use DW_OP_deref, and the consumer will load
+        // the variable type from the stack, which should be correct.
+        //
+        // There's still a risk of imprecision when LLVM decides to use
+        // smaller or larger value types than the source-variable type, which
+        // manifests as too-little or too-much memory being read from the stack.
+        // However we can't solve that without putting more type information in
+        // debug-info.
+        if (ValueSizeInBits > MF.getTarget().getPointerSizeInBits(0))
+          UseDerefSize = false;
+
         SmallVector<uint64_t, 5> OffsetOps;
         TRI.getOffsetOpcodes(Spill.SpillOffset, OffsetOps);
         bool StackValue = false;
@@ -1345,7 +1366,7 @@ bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
 }
 bool InstrRefBasedLDV::isCalleeSavedReg(Register R) const {
   for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI)
-    if (CalleeSavedRegs.test(*RAI))
+    if (CalleeSavedRegs.test((*RAI).id()))
       return true;
   return false;
 }
@@ -1880,7 +1901,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
-        DeadRegs.insert(*RAI);
+        DeadRegs.insert((*RAI).id());
     } else if (MO.isRegMask()) {
       RegMasks.push_back(MO.getRegMask());
       RegMaskPtrs.push_back(&MO);
@@ -2782,7 +2803,7 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   // Apply IDF calculator to the designated set of location defs, storing
   // required PHIs into PHIBlocks. Uses the dominator tree stored in the
   // InstrRefBasedLDV object.
-  IDFCalculatorBase<MachineBasicBlock, false> IDF(DomTree->getBase());
+  IDFCalculatorBase<MachineBasicBlock, false> IDF(*DomTree);
 
   IDF.setLiveInBlocks(AllBlocks);
   IDF.setDefiningBlocks(DefBlocks);
@@ -2927,7 +2948,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
     SmallVector<LocIdx, 4> NewCandidates;
     std::set_intersection(CandidateLocs.begin(), CandidateLocs.end(),
                           LocVec.begin(), LocVec.end(), std::inserter(NewCandidates, NewCandidates.begin()));
-    CandidateLocs = NewCandidates;
+    CandidateLocs = std::move(NewCandidates);
   }
   if (CandidateLocs.empty())
     return std::nullopt;
@@ -3958,12 +3979,10 @@ public:
   /// For a given MBB, create a wrapper block for it. Stores it in the
   /// LDVSSAUpdater block map.
   LDVSSABlock *getSSALDVBlock(MachineBasicBlock *BB) {
-    auto it = BlockMap.find(BB);
-    if (it == BlockMap.end()) {
-      BlockMap[BB] = new LDVSSABlock(*BB, *this);
-      it = BlockMap.find(BB);
-    }
-    return it->second;
+    auto [It, Inserted] = BlockMap.try_emplace(BB);
+    if (Inserted)
+      It->second = new LDVSSABlock(*BB, *this);
+    return It->second;
   }
 
   /// Find the live-in value number for the given block. Looks up the value at

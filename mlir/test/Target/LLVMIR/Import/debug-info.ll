@@ -169,7 +169,8 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
 ; CHECK-DAG: #[[COMP5:.+]] = #llvm.di_composite_type<{{.*}}, name = "var_elements"{{.*}}elements = #llvm.di_subrange<count = #[[VAR]], stride = #[[GV]]>>
 ; CHECK-DAG: #[[COMP6:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements"{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]], #[[COMP6]]>
+; CHECK-DAG: #[[COMP7:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements2"{{.*}}elements = #llvm.di_generic_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>>>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]], #[[COMP6]], #[[COMP7]]>
 
 @gv = external global i64
 
@@ -184,7 +185,7 @@ define void @composite_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "composite_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8, !9, !10, !18, !22}
+!5 = !{!7, !8, !9, !10, !18, !22, !24}
 !6 = !DIBasicType(name: "int")
 !7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32, baseType: !6)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
@@ -203,6 +204,12 @@ define void @composite_type() !dbg !3 {
 !21 = !{!19}
 !22 = !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements", flags: DIFlagVector, elements: !21, baseType: !6)
 !23 = !DIGlobalVariable(name: "gv", scope: !1, file: !2, line: 3, type: !6, isLocal: false, isDefinition: false)
+!24 = !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements2", elements: !29, baseType: !6)
+!25 = !DIGenericSubrange(count: !26, lowerBound: !27, stride: !28)
+!26 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
+!27 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 24, DW_OP_deref)
+!28 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 32, DW_OP_deref)
+!29 = !{!25}
 
 
 ; // -----
@@ -816,3 +823,78 @@ define void @imp_fn() !dbg !12 {
 ; CHECK-DAG:  #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct{{.*}}<>, isRecSelf = true>
 ; CHECK-DAG: #[[IE:.+]] = #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[M]]{{.*}}>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "imp_fn"{{.*}}retainedNodes = #[[IE]]>
+
+; // -----
+
+; Test that annotations are handled correctly
+
+; CHECK-LABEL: @fn_with_annotations
+
+define void @fn_with_annotations() !dbg !12 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!4}
+
+!2 = !DIModule(scope: !4, name: "mod1", file: !3, line: 1)
+!3 = !DIFile(filename: "test.f90", directory: "")
+!4 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3)
+!8 = !DIModule(scope: !4, name: "mod1", file: !3, line: 5)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+!12 = distinct !DISubprogram(name: "fn_with_annotations", linkageName: "fn_with_annotations", scope: !3, file: !3, line: 10, type: !14, scopeLine: 10, spFlags: DISPFlagDefinition, unit: !4, annotations: !16)
+!14 = !DISubroutineType(cc: DW_CC_program, types: !15)
+!15 = !{}
+!16 = !{!17}
+!17 = !{!"foo", !"bar"}
+
+
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}name = "fn_with_annotations"{{.*}}annotations = #llvm.di_annotation<name = "foo", value = "bar">>
+
+; // -----
+
+@block = common global [4 x i8] zeroinitializer, !dbg !0
+
+define void @test() !dbg !3 {
+  ret void
+}
+
+!llvm.module.flags = !{!10}
+!llvm.dbg.cu = !{!7}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "alpha", scope: !2, file: !4, type: !9)
+!2 = !DICommonBlock(scope: !3, declaration: null, name: "block", file: !4, line: 3)
+!3 = distinct !DISubprogram(name: "test", scope: !4, file: !4, spFlags: DISPFlagDefinition, unit: !7)
+!4 = !DIFile(filename: "test.f90", directory: "")
+!7 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !4)
+!9 = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
+!10 = !{i32 2, !"Debug Info Version", i32 3}
+
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"test.f90" in "">
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
+; CHECK: #llvm.di_common_block<scope = #[[SP]], name = "block", file = #[[FILE]], line = 3>
+
+; // -----
+
+@data = external global i64, !dbg !0, !dbg !5
+
+!llvm.module.flags = !{!8}
+!llvm.dbg.cu = !{!2}
+
+!0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+!1 = distinct !DIGlobalVariable(name: "a", scope: !2, file: !3, line: 2, type: !7)
+!2 = distinct !DICompileUnit(language: DW_LANG_C, file: !3, globals: !4)
+!3 = !DIFile(filename: "test.c", directory: "")
+!4 = !{!0, !5}
+!5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
+!6 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !3, line: 3, type: !7)
+!7 = !DIBasicType(name: "int", size: 32)
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+
+
+; CHECK: #[[VAR1:.+]] =  #llvm.di_global_variable<{{.*}}name = "a"{{.*}}>
+; CHECK: #[[VAR2:.+]] =  #llvm.di_global_variable<{{.*}}name = "b"{{.*}}>
+; CHECK: #[[EXP1:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR1]], expr = <>>
+; CHECK: #[[EXP2:.+]] =  #llvm.di_global_variable_expression<var = #[[VAR2]], expr = <>>
+; CHECK: llvm.mlir.global external @data() {{{.*}}dbg_exprs = [#[[EXP1]], #[[EXP2]]]} : i64

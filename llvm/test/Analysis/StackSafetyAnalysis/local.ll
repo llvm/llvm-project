@@ -1120,5 +1120,21 @@ define void @NonPointer(ptr %p) {
   ret void
 }
 
+@ifunc = dso_local ifunc i64 (ptr), ptr @ifunc_resolver
+
+define dso_local void @CallIfunc(ptr noundef %uaddr) local_unnamed_addr {
+; CHECK-LABEL: @CallIfunc
+; CHECK-NEXT:  args uses:
+; CHECK-NEXT:    uaddr[]: full-set
+entry:
+  tail call i64 @ifunc(ptr noundef %uaddr)
+  ret void
+}
+
+define dso_local ptr @ifunc_resolver() {
+entry:
+  ret ptr null
+}
+
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)

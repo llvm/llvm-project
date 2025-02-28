@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_80 -mattr=+ptx70 | FileCheck -check-prefixes=CHECK,CHECK_PTX32 %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck -check-prefixes=CHECK,CHECK_PTX64 %s
-; RUN: %if ptxas-11.0 && ! ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
-; RUN: %if ptxas-11.0 %{ llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_80 -mattr=+ptx70 | FileCheck -check-prefixes=CHECK,CHECK_PTX32 %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck -check-prefixes=CHECK,CHECK_PTX64 %s
+; RUN: %if ptxas-11.0 && ! ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-11.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | %ptxas-verify -arch=sm_80 %}
 
 declare void @llvm.nvvm.cp.async.wait.group(i32)
 

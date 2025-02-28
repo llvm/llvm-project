@@ -16,9 +16,8 @@ __attribute__((target_clones("default", "arch=+zvkt"))) int foo6(void) { return 
 __attribute__((target_clones("default", "arch=+zbb", "arch=+zba", "arch=+zbb,+zba"))) int foo7(void) { return 2; }
 __attribute__((target_clones("default", "arch=+zbb;priority=2", "arch=+zba;priority=1", "arch=+zbb,+zba;priority=3"))) int foo8(void) { return 2; }
 __attribute__((target_clones("default", "arch=+zbb;priority=1", "priority=2;arch=+zba", "priority=3;arch=+zbb,+zba"))) int foo9(void) { return 2; }
-__attribute__((target_clones("default", "arch=+zbb;priority=-1", "priority=-2;arch=+zba", "priority=3;arch=+zbb,+zba"))) int foo10(void) { return 2; }
 
-int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() + foo8() + foo9() + foo10(); }
+int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() + foo8() + foo9(); }
 
 //.
 // CHECK: @__riscv_feature_bits = external dso_local global { i32, [2 x i64] }
@@ -31,7 +30,6 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK: @_Z4foo7v.ifunc = weak_odr alias i32 (), ptr @_Z4foo7v
 // CHECK: @_Z4foo8v.ifunc = weak_odr alias i32 (), ptr @_Z4foo8v
 // CHECK: @_Z4foo9v.ifunc = weak_odr alias i32 (), ptr @_Z4foo9v
-// CHECK: @_Z5foo10v.ifunc = weak_odr alias i32 (), ptr @_Z5foo10v
 // CHECK: @_Z4foo1v = weak_odr ifunc i32 (), ptr @_Z4foo1v.resolver
 // CHECK: @_Z4foo2v = weak_odr ifunc i32 (), ptr @_Z4foo2v.resolver
 // CHECK: @_Z4foo3v = weak_odr ifunc i32 (), ptr @_Z4foo3v.resolver
@@ -41,7 +39,6 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK: @_Z4foo7v = weak_odr ifunc i32 (), ptr @_Z4foo7v.resolver
 // CHECK: @_Z4foo8v = weak_odr ifunc i32 (), ptr @_Z4foo8v.resolver
 // CHECK: @_Z4foo9v = weak_odr ifunc i32 (), ptr @_Z4foo9v.resolver
-// CHECK: @_Z5foo10v = weak_odr ifunc i32 (), ptr @_Z5foo10v.resolver
 //.
 // CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo1v.default(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -346,57 +343,6 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    ret ptr @_Z4foo9v.default
 //
 //
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z5foo10v.default(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z5foo10v._zbb(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z5foo10v._zba(
-// CHECK-SAME: ) #[[ATTR5]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z5foo10v._zba_zbb(
-// CHECK-SAME: ) #[[ATTR6]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define weak_odr ptr @_Z5foo10v.resolver() comdat {
-// CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 402653184
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 402653184
-// CHECK-NEXT:    br i1 [[TMP2]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z5foo10v._zba_zbb
-// CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 268435456
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 268435456
-// CHECK-NEXT:    br i1 [[TMP5]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @_Z5foo10v._zbb
-// CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr getelementptr inbounds ({ i32, [2 x i64] }, ptr @__riscv_feature_bits, i32 0, i32 1, i32 0), align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], 134217728
-// CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 134217728
-// CHECK-NEXT:    br i1 [[TMP8]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
-// CHECK:       resolver_return3:
-// CHECK-NEXT:    ret ptr @_Z5foo10v._zba
-// CHECK:       resolver_else4:
-// CHECK-NEXT:    ret ptr @_Z5foo10v.default
-//
-//
 // CHECK-LABEL: define dso_local noundef signext i32 @_Z3barv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -417,9 +363,7 @@ int bar() { return foo1() + foo2() + foo3() + foo4() + foo5()+ foo6() + foo7() +
 // CHECK-NEXT:    [[ADD13:%.*]] = add nsw i32 [[ADD11]], [[CALL12]]
 // CHECK-NEXT:    [[CALL14:%.*]] = call noundef signext i32 @_Z4foo9v()
 // CHECK-NEXT:    [[ADD15:%.*]] = add nsw i32 [[ADD13]], [[CALL14]]
-// CHECK-NEXT:    [[CALL16:%.*]] = call noundef signext i32 @_Z5foo10v()
-// CHECK-NEXT:    [[ADD17:%.*]] = add nsw i32 [[ADD15]], [[CALL16]]
-// CHECK-NEXT:    ret i32 [[ADD17]]
+// CHECK-NEXT:    ret i32 [[ADD15]]
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+i,+m,+zmmul" }

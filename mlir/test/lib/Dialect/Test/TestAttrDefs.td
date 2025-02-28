@@ -27,6 +27,8 @@ include "mlir/IR/OpAsmInterface.td"
 class Test_Attr<string name, list<Trait> traits = []>
     : AttrDef<Test_Dialect, name, traits>;
 
+class Test_LocAttr<string name> : LocationAttrDef<Test_Dialect, name, []>;
+
 def SimpleAttrA : Test_Attr<"SimpleA"> {
   let mnemonic = "smpla";
 }
@@ -224,6 +226,12 @@ def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
   let mnemonic = "attr_with_optional_unsigned";
 }
 
+def TestAttrWithOptionalEnum : Test_Attr<"TestAttrWithOptionalEnum"> {
+  let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_enum";
+}
+
 def TestAttrUgly : Test_Attr<"TestAttrUgly"> {
   let parameters = (ins "::mlir::Attribute":$attr);
 
@@ -376,5 +384,25 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
   }];
 }
 
+
+// Test custom location handling.
+def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
+  let mnemonic = "custom_location";
+  let parameters = (ins "mlir::StringAttr":$file, "unsigned":$line);
+
+  // Choose a silly separator token so we know it's hitting this code path
+  // and not another.
+  let assemblyFormat = "`<` $file `*` $line `>`";
+}
+
+// Test OpAsmAttrInterface.
+def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
+    [DeclareAttrInterfaceMethods<OpAsmAttrInterface, ["getAlias"]>]> {
+  let mnemonic = "op_asm_attr_interface";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
 
 #endif // TEST_ATTRDEFS

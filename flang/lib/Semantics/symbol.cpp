@@ -155,6 +155,7 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
 void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
+void AssocEntityDetails::set_isTypeGuard(bool yes) { isTypeGuard_ = yes; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
@@ -177,11 +178,11 @@ ProcEntityDetails::ProcEntityDetails(EntityDetails &&d)
     : EntityDetails(std::move(d)) {}
 
 UseErrorDetails::UseErrorDetails(const UseDetails &useDetails) {
-  add_occurrence(useDetails.location(), *GetUsedModule(useDetails).scope());
+  add_occurrence(useDetails.location(), useDetails.symbol());
 }
 UseErrorDetails &UseErrorDetails::add_occurrence(
-    const SourceName &location, const Scope &module) {
-  occurrences_.push_back(std::make_pair(location, &module));
+    const SourceName &location, const Symbol &used) {
+  occurrences_.push_back(std::make_pair(location, &used));
   return *this;
 }
 
@@ -557,9 +558,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const UseErrorDetails &x) {
             os << " uses:";
             char sep{':'};
-            for (const auto &[location, module] : x.occurrences()) {
-              os << sep << " from " << module->GetName().value() << " at "
-                 << location;
+            for (const auto &[location, sym] : x.occurrences()) {
+              os << sep << " from " << sym->name() << " at " << location;
               sep = ',';
             }
           },

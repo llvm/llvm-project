@@ -21,6 +21,7 @@ namespace clang {
 namespace interp {
 class Block;
 class Record;
+class SourceInfo;
 struct InitMap;
 struct Descriptor;
 enum PrimType : unsigned;
@@ -60,6 +61,11 @@ struct alignas(void *) GlobalInlineDescriptor {
 };
 static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
+enum class Lifetime : uint8_t {
+  Started,
+  Ended,
+};
+
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -95,12 +101,18 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if the field is an element of a composite array.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsArrayElement : 1;
+
+  Lifetime LifeState;
 
   const Descriptor *Desc;
 
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
-        IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+        IsBase(false), IsActive(false), IsFieldMutable(false),
+        IsArrayElement(false), LifeState(Lifetime::Started), Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -194,9 +206,10 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   SourceLocation getLocation() const;
+  SourceInfo getLoc() const;
 
-  const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
-  const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(Source); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(Source); }
   const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
@@ -261,6 +274,7 @@ public:
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
+  void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

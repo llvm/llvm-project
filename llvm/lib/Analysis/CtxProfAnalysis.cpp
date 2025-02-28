@@ -19,7 +19,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "ctx_prof"
@@ -31,48 +30,12 @@ cl::opt<std::string>
 
 static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
     "ctx-profile-printer-level",
-    cl::init(CtxProfAnalysisPrinterPass::PrintMode::JSON), cl::Hidden,
+    cl::init(CtxProfAnalysisPrinterPass::PrintMode::YAML), cl::Hidden,
     cl::values(clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::Everything,
                           "everything", "print everything - most verbose"),
-               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::JSON, "json",
-                          "just the json representation of the profile")),
+               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::YAML, "yaml",
+                          "just the yaml representation of the profile")),
     cl::desc("Verbosity level of the contextual profile printer pass."));
-
-namespace llvm {
-namespace json {
-Value toJSON(const PGOCtxProfContext &P) {
-  Object Ret;
-  Ret["Guid"] = P.guid();
-  Ret["Counters"] = Array(P.counters());
-  if (P.callsites().empty())
-    return Ret;
-  auto AllCS =
-      ::llvm::map_range(P.callsites(), [](const auto &P) { return P.first; });
-  auto MaxIt = ::llvm::max_element(AllCS);
-  assert(MaxIt != AllCS.end() && "We should have a max value because the "
-                                 "callsites collection is not empty.");
-  Array CSites;
-  // Iterate to, and including, the maximum index.
-  for (auto I = 0U, Max = *MaxIt; I <= Max; ++I) {
-    CSites.push_back(Array());
-    Array &Targets = *CSites.back().getAsArray();
-    if (P.hasCallsite(I))
-      for (const auto &[_, Ctx] : P.callsite(I))
-        Targets.push_back(toJSON(Ctx));
-  }
-  Ret["Callsites"] = std::move(CSites);
-
-  return Ret;
-}
-
-Value toJSON(const PGOCtxProfContext::CallTargetMapTy &P) {
-  Array Ret;
-  for (const auto &[_, Ctx] : P)
-    Ret.push_back(toJSON(Ctx));
-  return Ret;
-}
-} // namespace json
-} // namespace llvm
 
 const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
@@ -184,6 +147,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
   Result.Profiles = std::move(*MaybeCtx);
+  Result.initIndex();
   return Result;
 }
 
@@ -213,15 +177,13 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
          << ". MaxCallsiteID: " << FuncInfo.NextCallsiteIndex << "\n";
   }
 
-  const auto JSONed = ::llvm::json::toJSON(C.profiles());
-
   if (Mode == PrintMode::Everything)
     OS << "\nCurrent Profile:\n";
-  OS << formatv("{0:2}", JSONed);
-  if (Mode == PrintMode::JSON)
+  convertCtxProfToYaml(OS, C.profiles());
+  OS << "\n";
+  if (Mode == PrintMode::YAML)
     return PreservedAnalyses::all();
 
-  OS << "\n";
   OS << "\nFlat Profile:\n";
   auto Flat = C.flatten();
   for (const auto &[Guid, Counters] : Flat) {
@@ -254,13 +216,20 @@ InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   return nullptr;
 }
 
+InstrProfIncrementInstStep *
+CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
+  Instruction *Prev = &SI;
+  while ((Prev = Prev->getPrevNode()))
+    if (auto *Step = dyn_cast<InstrProfIncrementInstStep>(Prev))
+      return Step;
+  return nullptr;
+}
+
 template <class ProfilesTy, class ProfTy>
 static void preorderVisit(ProfilesTy &Profiles,
-                          function_ref<void(ProfTy &)> Visitor,
-                          GlobalValue::GUID Match = 0) {
+                          function_ref<void(ProfTy &)> Visitor) {
   std::function<void(ProfTy &)> Traverser = [&](auto &Ctx) {
-    if (!Match || Ctx.guid() == Match)
-      Visitor(Ctx);
+    Visitor(Ctx);
     for (auto &[_, SubCtxSet] : Ctx.callsites())
       for (auto &[__, Subctx] : SubCtxSet)
         Traverser(Subctx);
@@ -269,16 +238,44 @@ static void preorderVisit(ProfilesTy &Profiles,
     Traverser(P);
 }
 
-void PGOContextualProfile::update(Visitor V, const Function *F) {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
+void PGOContextualProfile::initIndex() {
+  // Initialize the head of the index list for each function. We don't need it
+  // after this point.
+  DenseMap<GlobalValue::GUID, PGOCtxProfContext *> InsertionPoints;
+  for (auto &[Guid, FI] : FuncInfo)
+    InsertionPoints[Guid] = &FI.Index;
   preorderVisit<PGOCtxProfContext::CallTargetMapTy, PGOCtxProfContext>(
-      *Profiles, V, G);
+      *Profiles, [&](PGOCtxProfContext &Ctx) {
+        auto InsertIt = InsertionPoints.find(Ctx.guid());
+        if (InsertIt == InsertionPoints.end())
+          return;
+        // Insert at the end of the list. Since we traverse in preorder, it
+        // means that when we iterate the list from the beginning, we'd
+        // encounter the contexts in the order we would have, should we have
+        // performed a full preorder traversal.
+        InsertIt->second->Next = &Ctx;
+        Ctx.Previous = InsertIt->second;
+        InsertIt->second = &Ctx;
+      });
+}
+
+void PGOContextualProfile::update(Visitor V, const Function &F) {
+  assert(isFunctionKnown(F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(F);
+  for (auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<PGOCtxProfContext *>(Node));
 }
 
 void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
-  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                const PGOCtxProfContext>(*Profiles, V, G);
+  if (!F)
+    return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                         const PGOCtxProfContext>(*Profiles, V);
+  assert(isFunctionKnown(*F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(*F);
+  for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<const PGOCtxProfContext *>(Node));
 }
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
@@ -299,4 +296,26 @@ const CtxProfFlatProfile PGOContextualProfile::flatten() const {
           It->second[I] += Ctx.counters()[I];
       });
   return Flat;
+}
+
+void CtxProfAnalysis::collectIndirectCallPromotionList(
+    CallBase &IC, Result &Profile,
+    SetVector<std::pair<CallBase *, Function *>> &Candidates) {
+  const auto *Instr = CtxProfAnalysis::getCallsiteInstrumentation(IC);
+  if (!Instr)
+    return;
+  Module &M = *IC.getParent()->getModule();
+  const uint32_t CallID = Instr->getIndex()->getZExtValue();
+  Profile.visit(
+      [&](const PGOCtxProfContext &Ctx) {
+        const auto &Targets = Ctx.callsites().find(CallID);
+        if (Targets == Ctx.callsites().end())
+          return;
+        for (const auto &[Guid, _] : Targets->second)
+          if (auto Name = Profile.getFunctionName(Guid); !Name.empty())
+            if (auto *Target = M.getFunction(Name))
+              if (Target->hasFnAttribute(Attribute::AlwaysInline))
+                Candidates.insert({&IC, Target});
+      },
+      IC.getCaller());
 }

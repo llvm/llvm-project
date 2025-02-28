@@ -282,7 +282,7 @@ Variants:
 )"));
   EXPECT_TRUE(
       StringRef(Diagnostic)
-          .contains("one of the 'Dir' and 'FatalError' keys must be specified"))
+          .contains("one of the 'Dir' and 'Error' keys must be specified"))
       << Diagnostic;
 
   EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(

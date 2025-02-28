@@ -7,6 +7,8 @@ struct identity {
   using type = T;
 };
 
+template <class> using ElementType = int;
+
 template <class = void> void f() {
 
   static_assert([]<class... Is>(Is... x) {
@@ -46,6 +48,10 @@ template <class = void> void f() {
       using T = identity<Is>::type;
     }(), ...);
   }(1, 2);
+
+  []<class... Is>(Is...) {
+    ([] { using T = ElementType<Is>; }(), ...);
+  }(1);
 
   [](auto ...y) {
     ([y] { }(), ...);
@@ -179,3 +185,57 @@ void foo() {
 }
 
 } // namespace GH99877
+
+namespace GH101754 {
+
+template <typename... Ts> struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+template <typename... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
+
+template <class T, class U>
+concept same_as = __is_same(T, U);  // #same_as
+
+template <typename... Ts> constexpr auto foo() {
+  return Overloaded{[](same_as<Ts> auto value) { return value; }...}; // #lambda
+}
+
+static_assert(foo<int, double>()(123) == 123);
+static_assert(foo<int, double>()(2.718) == 2.718);
+
+static_assert(foo<int, double>()('c'));
+// expected-error@-1 {{no matching function}}
+
+// expected-note@#lambda {{constraints not satisfied}}
+// expected-note@#lambda {{'same_as<char, int>' evaluated to false}}
+// expected-note@#same_as {{evaluated to false}}
+
+// expected-note@#lambda {{constraints not satisfied}}
+// expected-note@#lambda {{'same_as<char, double>' evaluated to false}}
+// expected-note@#same_as {{evaluated to false}}
+
+template <class T, class U, class V>
+concept C = same_as<T, U> && same_as<U, V>; // #C
+
+template <typename... Ts> constexpr auto bar() {
+  return ([]<class Up>() {
+    return Overloaded{[](C<Up, Ts> auto value) { // #bar
+      return value;
+    }...};
+  }.template operator()<Ts>(), ...);
+}
+static_assert(bar<int, float>()(3.14f)); // OK, bar() returns the last overload i.e. <float>.
+
+static_assert(bar<int, float>()(123));
+// expected-error@-1 {{no matching function}}
+// expected-note@#bar {{constraints not satisfied}}
+// expected-note@#bar {{'C<int, float, int>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+
+// expected-note@#bar {{constraints not satisfied}}
+// expected-note@#bar {{'C<int, float, float>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+// expected-note@#same_as 2{{evaluated to false}}
+
+} // namespace GH101754

@@ -21,7 +21,6 @@ define i1 @shl_i1(i1 %0, i1 %1){
 define i8 @shl_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: shl_i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -37,7 +36,6 @@ define i8 @shl_i8(i8 %0, i8 %1){
 define i16 @shl_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: shl_i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsl w0, w0, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -123,7 +121,6 @@ define i8 @ashr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: ashr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxtb w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -141,7 +138,6 @@ define i16 @ashr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: ashr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sxth w8, w0
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    asr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -230,7 +226,6 @@ define i8 @lshr_i8(i8 %0, i8 %1){
 ; CHECK-SD-LABEL: lshr_i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -248,7 +243,6 @@ define i16 @lshr_i16(i16 %0, i16 %1){
 ; CHECK-SD-LABEL: lshr_i16:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    and w8, w0, #0xffff
-; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-SD-NEXT:    lsr w0, w8, w1
 ; CHECK-SD-NEXT:    ret
 ;
@@ -531,35 +525,10 @@ define <4 x i8> @shl_v4i8(<4 x i8> %0, <4 x i8> %1){
 ;
 ; CHECK-GI-LABEL: shl_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov h3, v1.h[1]
-; CHECK-GI-NEXT:    mov h4, v0.h[2]
-; CHECK-GI-NEXT:    mov h5, v0.h[3]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov h2, v1.h[2]
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov h3, v1.h[3]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v1.b[1], w9
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    mov v1.b[2], w9
-; CHECK-GI-NEXT:    fmov w8, s5
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.b[3], w8
-; CHECK-GI-NEXT:    mov v1.b[3], w9
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ushl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %3 = shl <4 x i8> %0, %1
@@ -592,15 +561,9 @@ define <2 x i16> @shl_v2i16(<2 x i16> %0, <2 x i16> %1){
 ;
 ; CHECK-GI-LABEL: shl_v2i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov w8, v0.s[1]
-; CHECK-GI-NEXT:    mov w9, v1.s[1]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -741,36 +704,11 @@ define <4 x i8> @ashr_v4i8(<4 x i8> %0, <4 x i8> %1){
 ;
 ; CHECK-GI-LABEL: ashr_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov h2, v1.h[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h3, v0.h[1]
-; CHECK-GI-NEXT:    mov h4, v1.h[2]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov h2, v1.h[3]
-; CHECK-GI-NEXT:    fmov w9, s4
-; CHECK-GI-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-NEXT:    mov v1.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v1.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v1.b[3], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.b[3], w8
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v1.8b, v1.8b
 ; CHECK-GI-NEXT:    sshl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %3 = ashr <4 x i8> %0, %1
@@ -802,16 +740,10 @@ define <2 x i16> @ashr_v2i16(<2 x i16> %0, <2 x i16> %1){
 ;
 ; CHECK-GI-LABEL: ashr_v2i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov w8, v1.s[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v1.4h, v1.4h
 ; CHECK-GI-NEXT:    sshl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -946,36 +878,11 @@ define <4 x i8> @lshr_v4i8(<4 x i8> %0, <4 x i8> %1){
 ;
 ; CHECK-GI-LABEL: lshr_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov h2, v1.h[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h3, v0.h[1]
-; CHECK-GI-NEXT:    mov h4, v1.h[2]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov h2, v1.h[3]
-; CHECK-GI-NEXT:    fmov w9, s4
-; CHECK-GI-NEXT:    mov h4, v0.h[3]
-; CHECK-GI-NEXT:    mov v1.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov h3, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v1.b[2], w9
-; CHECK-GI-NEXT:    mov v0.b[2], w8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    mov v1.b[3], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v0.b[3], w8
+; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v1.8b, v1.8b
 ; CHECK-GI-NEXT:    ushl v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
     %3 = lshr <4 x i8> %0, %1
@@ -1006,16 +913,10 @@ define <2 x i16> @lshr_v2i16(<2 x i16> %0, <2 x i16> %1){
 ;
 ; CHECK-GI-LABEL: lshr_v2i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov w8, v1.s[1]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v1.4h, v1.4h
 ; CHECK-GI-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

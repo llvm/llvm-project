@@ -72,7 +72,7 @@ define i1 @p3_scalar_shifted2_urem_by_const(i32 %x, i32 %y) {
 
 define <4 x i1> @p4_vector_urem_by_const__splat(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p4_vector_urem_by_const__splat(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 128, i32 128>
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;
@@ -111,7 +111,7 @@ define <4 x i1> @p6_vector_urem_by_const__nonsplat_poison0(<4 x i32> %x, <4 x i3
 
 define <4 x i1> @p7_vector_urem_by_const__nonsplat_poison2(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p7_vector_urem_by_const__nonsplat_poison2(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 128, i32 128>
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], <i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;

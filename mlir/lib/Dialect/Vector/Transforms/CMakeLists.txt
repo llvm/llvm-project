@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   LowerVectorMultiReduction.cpp
   LowerVectorScan.cpp
   LowerVectorShapeCast.cpp
+  LowerVectorStep.cpp
   LowerVectorTransfer.cpp
   LowerVectorTranspose.cpp
   SubsetOpInterfaceImpl.cpp
@@ -35,10 +36,9 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRAffineAnalysis
   MLIRAffineUtils
   MLIRArithDialect
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRGPUDialect
+  MLIRGPUUtils
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect

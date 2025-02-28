@@ -8,9 +8,9 @@
 
 #include "clang/AST/CommentParser.h"
 #include "clang/AST/CommentCommandTraits.h"
-#include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -499,7 +499,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
   if (isTokBlockCommand()) {
     // Block command ahead.  We can't nest block commands, so pretend that this
     // command has an empty argument.
-    ParagraphComment *Paragraph = S.actOnParagraphComment(std::nullopt);
+    ParagraphComment *Paragraph = S.actOnParagraphComment({});
     if (PC) {
       S.actOnParamCommandFinish(PC, Paragraph);
       return PC;
@@ -547,7 +547,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
   ParagraphComment *Paragraph;
   if (EmptyParagraph)
-    Paragraph = S.actOnParagraphComment(std::nullopt);
+    Paragraph = S.actOnParagraphComment({});
   else {
     BlockContentComment *Block = parseParagraphOrBlockCommand();
     // Since we have checked for a block command, we should have parsed a

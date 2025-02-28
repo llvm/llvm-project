@@ -46,7 +46,6 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
                         bool IsRV32Zdinx = false);
   bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
@@ -118,6 +117,8 @@ public:
   template <unsigned ShAmt> bool selectSHXADD_UWOp(SDValue N, SDValue &Val) {
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
+
+  bool selectInvLogicImm(SDValue N, SDValue &Val);
 
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
@@ -202,82 +203,6 @@ public:
   explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
                                    CodeGenOptLevel OptLevel);
 };
-
-namespace RISCV {
-struct VLSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLEPseudo {
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSEPseudo {
-  uint16_t Masked :1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLX_VSXPseudo {
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-#define GET_RISCVVSSEGTable_DECL
-#define GET_RISCVVLSEGTable_DECL
-#define GET_RISCVVLXSEGTable_DECL
-#define GET_RISCVVSXSEGTable_DECL
-#define GET_RISCVVLETable_DECL
-#define GET_RISCVVSETable_DECL
-#define GET_RISCVVLXTable_DECL
-#define GET_RISCVVSXTable_DECL
-} // namespace RISCV
 
 } // namespace llvm
 

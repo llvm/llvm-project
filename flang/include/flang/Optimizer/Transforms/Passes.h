@@ -39,7 +39,9 @@ namespace fir {
 #define GEN_PASS_DECL_ASSUMEDRANKOPCONVERSION
 #define GEN_PASS_DECL_CHARACTERCONVERSION
 #define GEN_PASS_DECL_CFGCONVERSION
-#define GEN_PASS_DECL_CUFIMPLICITDEVICEGLOBAL
+#define GEN_PASS_DECL_CUFADDCONSTRUCTOR
+#define GEN_PASS_DECL_CUFDEVICEGLOBAL
+#define GEN_PASS_DECL_CUFGPUTOLLVMCONVERSION
 #define GEN_PASS_DECL_CUFOPCONVERSION
 #define GEN_PASS_DECL_EXTERNALNAMECONVERSION
 #define GEN_PASS_DECL_MEMREFDATAFLOWOPT
@@ -58,13 +60,14 @@ namespace fir {
 #define GEN_PASS_DECL_FUNCTIONATTR
 #define GEN_PASS_DECL_CONSTANTARGUMENTGLOBALISATIONOPT
 #define GEN_PASS_DECL_COMPILERGENERATEDNAMESCONVERSION
+#define GEN_PASS_DECL_SETRUNTIMECALLATTRIBUTES
+#define GEN_PASS_DECL_GENRUNTIMECALLSFORTEST
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
-std::unique_ptr<mlir::Pass> createCFGConversionPassWithNSW();
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>
@@ -81,7 +84,7 @@ createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
-                                   bool setNSW = false);
+                                   bool setNSW = true);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

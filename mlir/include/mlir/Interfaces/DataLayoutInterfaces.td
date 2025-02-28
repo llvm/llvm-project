@@ -86,7 +86,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let extraClassDeclaration = [{
     /// Returns `true` if the key of this entry is a type.
     bool isTypeEntry() {
-      return getKey().is<::mlir::Type>();
+      return llvm::isa<::mlir::Type>(getKey());
     }
   }];
 }
@@ -276,7 +276,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTI
     /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
     ::mlir::FailureOr<::mlir::Attribute>
     queryHelper(::mlir::DataLayoutEntryKey key) const {
-      if (auto strKey = llvm::dyn_cast<StringAttr>(key))
+      if (auto strKey = ::llvm::dyn_cast<StringAttr>(key))
         if (DataLayoutEntryInterface spec = getSpecForIdentifier(strKey))
           return spec.getValue();
       return ::mlir::failure();
@@ -304,7 +304,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>",
+      /*retTy=*/"::llvm::ArrayRef<DataLayoutEntryInterface>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
@@ -334,7 +334,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
     /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
     ::mlir::FailureOr<::mlir::Attribute>
     queryHelper(::mlir::DataLayoutEntryKey key) const {
-      if (auto strKey = llvm::dyn_cast<::mlir::StringAttr>(key))
+      if (auto strKey = ::llvm::dyn_cast<::mlir::StringAttr>(key))
         if (auto deviceSpec = getDeviceSpecForDeviceID(strKey))
           return *deviceSpec;
       return ::mlir::failure();
@@ -598,7 +598,11 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*retTy=*/"uint64_t",
       /*methodName=*/"getPreferredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params)
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.getABIAlignment(dataLayout, params);
+      }]
     >,
     InterfaceMethod<
       /*description=*/"Returns the bitwidth that should be used when "

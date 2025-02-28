@@ -132,7 +132,8 @@ and optional list of `traits`, a list of `clauses` where all the applicable
 would have to be defined in the operation's body are the `summary` and
 `description`. For the latter, only the operation itself would have to be
 defined, and the description for its clause-inherited arguments is appended
-through the inherited `clausesDescription` property.
+through the inherited `clausesDescription` property. By convention, the list of
+clauses for an operation must be specified in alphabetical order.
 
 If the operation is intended to have a single region, this is better achieved by
 setting the `singleRegion=true` template argument of `OpenMP_Op` rather manually
@@ -285,16 +286,88 @@ argument's type:
   specific `mlir::Attribute` subclass) will be used instead.
   - Other attribute types will be represented with their `storageType`.
 - It will create `<Name>Operands` structure for each operation, which is an
-empty structure subclassing all operand structures defined for the corresponding `OpenMP_Op`'s clauses.
+empty structure subclassing all operand structures defined for the corresponding
+`OpenMP_Op`'s clauses.
+
+### Entry Block Argument-Defining Clauses
+
+In their MLIR representation, certain OpenMP clauses introduce a mapping between
+values defined outside the operation they are applied to and entry block
+arguments for the region of that MLIR operation. This enables, for example, the
+introduction of private copies of the same underlying variable defined outside
+the MLIR operation the clause is attached to. Currently, clauses with this
+property can be classified into three main categories:
+  - Map-like clauses: `host_eval` (compiler internal, not defined by the OpenMP
+  specification: [see more](#host-evaluated-clauses-in-target-regions)), `map`,
+  `use_device_addr` and `use_device_ptr`.
+  - Reduction-like clauses: `in_reduction`, `reduction` and `task_reduction`.
+  - Privatization clauses: `private`.
+
+All three kinds of entry block argument-defining clauses use a similar custom
+assembly format representation, only differing based on the different pieces of
+information attached to each kind. Below, one example of each is shown:
+
+```mlir
+omp.target map_entries(%x -> %x.m, %y -> %y.m : !llvm.ptr, !llvm.ptr) {
+  // Use %x.m, %y.m in place of %x and %y...
+}
+
+omp.wsloop reduction(@add.i32 %x -> %x.r, byref @add.f32 %y -> %y.r : !llvm.ptr, !llvm.ptr) {
+  // Use %x.r, %y.r in place of %x and %y...
+}
+
+omp.parallel private(@x.privatizer %x -> %x.p, @y.privatizer %y -> %y.p : !llvm.ptr, !llvm.ptr) {
+  // Use %x.p, %y.p in place of %x and %y...
+}
+```
+
+As a consequence of parsing and printing the operation's first region entry
+block argument names together with the custom assembly format of these clauses,
+entry block arguments (i.e. the `^bb0(...):` line) must not be explicitly
+defined for these operations. Additionally, it is not possible to implement this
+feature while allowing each clause to be independently parsed and printed,
+because they need to be printed/parsed together with the corresponding
+operation's first region. They must have a well-defined ordering in which
+multiple of these clauses are specified for a given operation, as well.
+
+The parsing/printing of these clauses together with the region provides the
+ability to define entry block arguments directly after the `->`. Forcing a
+specific ordering between these clauses makes the block argument ordering
+well-defined, which is the property used to easily match each clause with the
+entry block arguments defined by it.
+
+Custom printers and parsers for operation regions based on the entry block
+argument-defining clauses they take are implemented based on the
+`{parse,print}BlockArgRegion` functions, which take care of the sorting and
+formatting of each kind of clause, minimizing code duplication resulting from
+this approach. One example of the custom assembly format of an operation taking
+the `private` and `reduction` clauses is the following:
+
+```tablegen
+let assemblyFormat = clausesAssemblyFormat # [{
+  custom<PrivateReductionRegion>($region, $private_vars, type($private_vars),
+      $private_syms, $reduction_vars, type($reduction_vars), $reduction_byref,
+      $reduction_syms) attr-dict
+}];
+```
+
+The `BlockArgOpenMPOpInterface` has been introduced to simplify the addition and
+handling of these kinds of clauses. It holds `num<ClauseName>BlockArgs()`
+functions that by default return 0, to be overriden by each clause through the
+`extraClassDeclaration` property. Based on these functions and the expected
+alphabetical sorting between entry block argument-defining clauses, it
+implements `get<ClauseName>BlockArgs()` functions that are the intended method
+of accessing clause-defined block arguments.
 
 ## Loop-Associated Directives
 
 Loop-associated OpenMP constructs are represented in the dialect as loop wrapper
 operations. These implement the `LoopWrapperInterface`, which enforces a series
 of restrictions upon the operation:
-  - It contains a single region with a single block; and
-  - Its block contains exactly two operations: another loop wrapper or
-`omp.loop_nest` operation and a terminator.
+  - It has the `NoTerminator` and `SingleBlock` traits;
+  - It contains a single region; and
+  - Its only block contains exactly one operation, which must be another loop
+wrapper or `omp.loop_nest` operation.
 
 This approach splits the representation for a loop nest and the loop-associated
 constructs that specify how its iterations are executed, possibly across various
@@ -323,7 +396,6 @@ omp.parallel ... {
       store %sum, %c[%i] : memref<?xf32>
       omp.yield
     }
-    omp.terminator
   }
   ...
   omp.terminator
@@ -420,9 +492,7 @@ omp.distribute ... {
       ...
       omp.yield
     }
-    omp.terminator
   } {omp.composite}
-  omp.terminator
 } {omp.composite}
 ```
 
@@ -448,11 +518,64 @@ omp.parallel ... {
         ...
         omp.yield
       }
-      omp.terminator
     } {omp.composite}
-    omp.terminator
   } {omp.composite}
   ...
   omp.terminator
 } {omp.composite}
+```
+
+## Host-Evaluated Clauses in Target Regions
+
+The `omp.target` operation, which represents the OpenMP `target` construct, is
+marked with the `IsolatedFromAbove` trait. This means that, inside of its
+region, no MLIR values defined outside of the op itself can be used. This is
+consistent with the OpenMP specification of the `target` construct, which
+mandates that all host device values used inside of the `target` region must
+either be privatized (data-sharing) or mapped (data-mapping).
+
+Normally, clauses applied to a construct are evaluated before entering that
+construct. Further, in some cases, the OpenMP specification stipulates that
+clauses be evaluated _on the host device_ on entry to a parent `target`
+construct. In particular, the `num_teams` and `thread_limit` clauses of the
+`teams` construct must be evaluated on the host device if it's nested inside or
+combined with a `target` construct.
+
+Additionally, the runtime library targeted by the MLIR to LLVM IR translation of
+the OpenMP dialect supports the optimized launch of SPMD kernels (i.e.
+`target teams distribute parallel {do,for}` in OpenMP), which requires
+specifying in advance what the total trip count of the loop is. Consequently, it
+is also beneficial to evaluate the trip count on the host device prior to the
+kernel launch.
+
+These host-evaluated values in MLIR would need to be placed outside of the
+`omp.target` region and also attached to the corresponding nested operations,
+which is not possible because of the `IsolatedFromAbove` trait. The solution
+implemented to address this problem has been to introduce the `host_eval`
+argument to the `omp.target` operation. It works similarly to a `map` clause,
+but its only intended use is to forward host-evaluated values to their
+corresponding operation inside of the region. Any uses outside of the previously
+described result in a verifier error.
+
+```mlir
+// Initialize %0, %1, %2, %3...
+omp.target host_eval(%0 -> %nt, %1 -> %lb, %2 -> %ub, %3 -> %step : i32, i32, i32, i32) {
+  omp.teams num_teams(to %nt : i32) {
+    omp.parallel {
+      omp.distribute {
+        omp.wsloop {
+          omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+            // ...
+            omp.yield
+          }
+          omp.terminator
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  }
+  omp.terminator
+}
 ```

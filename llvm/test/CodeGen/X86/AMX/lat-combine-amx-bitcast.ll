@@ -18,14 +18,14 @@ wrapper_entry:
 
 ; Cases where amxcast can be combined across bb
 ; %5 and %6 is combined together since %goodphi's incoming is phi or amxcast
-define void @combine_amx_cast_and_phi() {
+define void @combine_amx_cast_and_phi(i1 %arg) {
 ; CHECK-LABEL: @combine_amx_cast_and_phi(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <560 x i8>, align 64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <616 x i8>, align 64
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <110 x i32>, align 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    store <110 x i32> undef, ptr [[TMP2]], align 512
 ; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP2]], i64 40)
@@ -43,7 +43,7 @@ define void @combine_amx_cast_and_phi() {
 wrapper_entry:
   %0 = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
   %tmp = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %0)
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %1 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> undef)
@@ -62,7 +62,7 @@ for.cond.cleanup.i.i:                             ; preds = %for.body.i.lr.ph.i,
 
 ; Cases where amxcast can't be combined across bb
 ; %5 and %6 is not combined together since %evilphi's incoming is not phi or amxcast
-define void @fail_to_combine_amx_cast_and_phi(<110 x i32> %tmp) {
+define void @fail_to_combine_amx_cast_and_phi(<110 x i32> %tmp, i1 %arg) {
 ; CHECK-LABEL: @fail_to_combine_amx_cast_and_phi(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <110 x i32>, align 64
@@ -71,7 +71,7 @@ define void @fail_to_combine_amx_cast_and_phi(<110 x i32> %tmp) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca <616 x i8>, align 64
 ; CHECK-NEXT:    [[TMP4:%.*]] = alloca <110 x i32>, align 64
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <110 x i32> [[TMP:%.*]], [[TMP]]
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    store <110 x i32> undef, ptr [[TMP4]], align 512
 ; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP4]], i64 40)
@@ -92,7 +92,7 @@ define void @fail_to_combine_amx_cast_and_phi(<110 x i32> %tmp) {
 ;
 wrapper_entry:
   %0 = add <110 x i32> %tmp, %tmp
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %1 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> undef)
@@ -111,7 +111,7 @@ for.cond.cleanup.i.i:                             ; preds = %for.body.i.lr.ph.i,
 
 ; Cases where amxcast can't be combined across bb
 ; %5 and %6 is not combined together since %evilphi's user aka %evilphi2 is not inside phi web.
-define void @fail_to_combine_amx_cast_and_phi2() {
+define void @fail_to_combine_amx_cast_and_phi2(i1 %arg) {
 ; CHECK-LABEL: @fail_to_combine_amx_cast_and_phi2(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <110 x i32>, align 64
@@ -123,7 +123,7 @@ define void @fail_to_combine_amx_cast_and_phi2() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr [[TMP5]], i64 40, x86_amx [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <110 x i32>, ptr [[TMP5]], align 512
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    store <110 x i32> undef, ptr [[TMP4]], align 512
 ; CHECK-NEXT:    [[TMP10:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP4]], i64 40)
@@ -134,13 +134,13 @@ define void @fail_to_combine_amx_cast_and_phi2() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx [[TMP10]], x86_amx [[TMP12]], x86_amx [[TMP14]])
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr [[TMP1]], i64 40, x86_amx [[TMP15]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <110 x i32>, ptr [[TMP1]], align 512
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_COND_CLEANUP_I_I]], label [[EXIT:%.*]]
 ; CHECK:       for.cond.cleanup.i.i:
 ; CHECK-NEXT:    [[GOODPHI:%.*]] = phi <110 x i32> [ [[TMP8]], [[WRAPPER_ENTRY:%.*]] ], [ [[TMP17]], [[FOR_BODY_I_LR_PH_I]] ]
 ; CHECK-NEXT:    store <110 x i32> [[GOODPHI]], ptr [[TMP0]], align 512
 ; CHECK-NEXT:    [[TMP19:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP0]], i64 40)
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx [[TMP19]])
-; CHECK-NEXT:    br i1 undef, label [[EXIT]], label [[FOR_BODY_I_LR_PH_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[EXIT]], label [[FOR_BODY_I_LR_PH_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[EVILPHI2:%.*]] = phi <110 x i32> [ [[GOODPHI]], [[FOR_COND_CLEANUP_I_I]] ], [ [[TMP17]], [[FOR_BODY_I_LR_PH_I]] ]
 ; CHECK-NEXT:    store <110 x i32> [[EVILPHI2]], ptr undef, align 512
@@ -149,7 +149,7 @@ define void @fail_to_combine_amx_cast_and_phi2() {
 wrapper_entry:
   %0 = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
   %tmp = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %0)
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %1 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> undef)
@@ -157,27 +157,27 @@ for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %3 = call x86_amx @llvm.x86.cast.vector.to.tile.v560i8(<560 x i8> undef)
   %4 = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx %1, x86_amx %2, x86_amx %3)
   %5 = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %4)
-  br i1 undef, label %for.cond.cleanup.i.i, label %exit
+  br i1 %arg, label %for.cond.cleanup.i.i, label %exit
 
 for.cond.cleanup.i.i:                             ; preds = %for.body.i.lr.ph.i, %wrapper_entry
   %goodphi = phi <110 x i32> [ %tmp, %wrapper_entry ], [ %5, %for.body.i.lr.ph.i ]
   %6 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> %goodphi)
   call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx %6)
-  br i1 undef, label %exit, label %for.body.i.lr.ph.i
+  br i1 %arg, label %exit, label %for.body.i.lr.ph.i
 exit:
   %evilphi2 = phi <110 x i32> [ %goodphi, %for.cond.cleanup.i.i ], [ %5, %for.body.i.lr.ph.i ]
   store <110 x i32> %evilphi2, ptr undef, align 512
   ret void
 }
 
-define void @fail_to_combine_amx_cast_and_phi_due_to_const_value() {
+define void @fail_to_combine_amx_cast_and_phi_due_to_const_value(i1 %arg) {
 ; CHECK-LABEL: @fail_to_combine_amx_cast_and_phi_due_to_const_value(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <560 x i8>, align 64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <616 x i8>, align 64
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <110 x i32>, align 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 11, i16 40)
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    store <110 x i32> undef, ptr [[TMP2]], align 512
 ; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP2]], i64 40)
@@ -193,7 +193,7 @@ define void @fail_to_combine_amx_cast_and_phi_due_to_const_value() {
 ; CHECK-NEXT:    ret void
 ;
 wrapper_entry:
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %0 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> undef)
@@ -213,14 +213,14 @@ for.cond.cleanup.i.i:                             ; preds = %for.body.i.lr.ph.i,
 ; Cases where amxcast can be combined across bb
 ; When optimizeAMXCastFromPhi process %6 and %goodphi, %goodphi2 is outside the phi-web, so the optimization stop
 ; When optimizeAMXCastFromPhi process %7 and %goodphi2, the optimization continue.
-define void @combine_amx_cast_and_multiple_phi() {
+define void @combine_amx_cast_and_multiple_phi(i1 %arg) {
 ; CHECK-LABEL: @combine_amx_cast_and_multiple_phi(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <560 x i8>, align 64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca <616 x i8>, align 64
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <110 x i32>, align 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    store <110 x i32> undef, ptr [[TMP2]], align 512
 ; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr [[TMP2]], i64 40)
@@ -229,11 +229,11 @@ define void @combine_amx_cast_and_multiple_phi() {
 ; CHECK-NEXT:    store <560 x i8> undef, ptr [[TMP0]], align 1024
 ; CHECK-NEXT:    [[TMP9:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 14, i16 40, ptr [[TMP0]], i64 40)
 ; CHECK-NEXT:    [[TMP10:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx [[TMP5]], x86_amx [[TMP7]], x86_amx [[TMP9]])
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_COND_CLEANUP_I_I]], label [[EXIT:%.*]]
 ; CHECK:       for.cond.cleanup.i.i:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi x86_amx [ [[TMP3]], [[WRAPPER_ENTRY:%.*]] ], [ [[TMP10]], [[FOR_BODY_I_LR_PH_I]] ]
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx [[TMP11]])
-; CHECK-NEXT:    br i1 undef, label [[EXIT]], label [[FOR_BODY_I_LR_PH_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[EXIT]], label [[FOR_BODY_I_LR_PH_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi x86_amx [ [[TMP11]], [[FOR_COND_CLEANUP_I_I]] ], [ [[TMP10]], [[FOR_BODY_I_LR_PH_I]] ]
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx [[TMP12]])
@@ -242,7 +242,7 @@ define void @combine_amx_cast_and_multiple_phi() {
 wrapper_entry:
   %0 = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
   %tmp = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %0)
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %1 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> undef)
@@ -250,13 +250,13 @@ for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %3 = call x86_amx @llvm.x86.cast.vector.to.tile.v560i8(<560 x i8> undef)
   %4 = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx %1, x86_amx %2, x86_amx %3)
   %5 = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %4)
-  br i1 undef, label %for.cond.cleanup.i.i, label %exit
+  br i1 %arg, label %for.cond.cleanup.i.i, label %exit
 
 for.cond.cleanup.i.i:                             ; preds = %for.body.i.lr.ph.i, %wrapper_entry
   %goodphi = phi <110 x i32> [ %tmp, %wrapper_entry ], [ %5, %for.body.i.lr.ph.i ]
   %6 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> %goodphi)
   call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx %6)
-  br i1 undef, label %exit, label %for.body.i.lr.ph.i
+  br i1 %arg, label %exit, label %for.body.i.lr.ph.i
 exit:
   %evilphi2 = phi <110 x i32> [ %goodphi, %for.cond.cleanup.i.i ], [ %5, %for.body.i.lr.ph.i ]
   %7 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> %evilphi2)
@@ -265,7 +265,7 @@ exit:
 }
 
 ; Currently we are not able to delete DeadPHICycle, later we will handle with them
-define void @combine_amx_cast_and_phi_in_a_circle() {
+define void @combine_amx_cast_and_phi_in_a_circle(i1 %arg) {
 ; CHECK-LABEL: @combine_amx_cast_and_phi_in_a_circle(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <110 x i32>, align 64
@@ -284,7 +284,7 @@ define void @combine_amx_cast_and_phi_in_a_circle() {
 ; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx [[TMP6]], x86_amx [[TMP8]], x86_amx [[TMP10]])
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr [[TMP0]], i64 40, x86_amx [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <110 x i32>, ptr [[TMP0]], align 512
-; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi x86_amx [ [[TMP15:%.*]], [[BB3]] ], [ [[TMP11]], [[BB1]] ]
 ; CHECK-NEXT:    [[GOODPHI:%.*]] = phi <110 x i32> [ [[EVILPHI2:%.*]], [[BB3]] ], [ [[TMP13]], [[BB1]] ]
@@ -294,7 +294,7 @@ define void @combine_amx_cast_and_phi_in_a_circle() {
 ; CHECK-NEXT:    [[TMP15]] = phi x86_amx [ [[TMP14]], [[BB2]] ], [ [[TMP11]], [[BB1]] ]
 ; CHECK-NEXT:    [[EVILPHI2]] = phi <110 x i32> [ [[GOODPHI]], [[BB2]] ], [ [[TMP13]], [[BB1]] ]
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx [[TMP15]])
-; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB2]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx [[TMP15]])
 ; CHECK-NEXT:    ret void
@@ -310,7 +310,7 @@ bb1:                               ; preds = %wrapper_entry
   %3 = call x86_amx @llvm.x86.cast.vector.to.tile.v560i8(<560 x i8> undef)
   %4 = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx %1, x86_amx %2, x86_amx %3)
   %5 = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %4)
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb2:                             ; preds = %bb1, %wrapper_entry
   %goodphi = phi <110 x i32> [ %evilphi2, %bb3], [ %5, %bb1 ]
@@ -321,19 +321,19 @@ bb3:
   %evilphi2 = phi <110 x i32> [ %goodphi, %bb2 ], [ %5, %bb1 ]
   %7 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> %evilphi2)
   call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx %7)
-  br i1 undef, label %bb2, label %exit
+  br i1 %arg, label %bb2, label %exit
 exit:
   %8 = call x86_amx @llvm.x86.cast.vector.to.tile.v110i32(<110 x i32> %evilphi2)
   call void @llvm.x86.tilestored64.internal(i16 11, i16 40, ptr undef, i64 undef, x86_amx %8)
   ret void
 }
 
-define void @eliminate_unused_phi_and_cast() {
+define void @eliminate_unused_phi_and_cast(i1 %arg) {
 ; CHECK-LABEL: @eliminate_unused_phi_and_cast(
 ; CHECK-NEXT:  wrapper_entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca <560 x i8>, align 64
 ; CHECK-NEXT:    [[TMP1:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 56, ptr undef, i64 undef)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 14, i16 40, ptr undef, i64 undef)
@@ -349,7 +349,7 @@ define void @eliminate_unused_phi_and_cast() {
 wrapper_entry:
   %0 = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, ptr undef, i64 undef)
   %tmp = call <110 x i32> @llvm.x86.cast.tile.to.vector.v110i32(x86_amx %0)
-  br i1 undef, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
+  br i1 %arg, label %for.cond.cleanup.i.i, label %for.body.i.lr.ph.i
 
 for.body.i.lr.ph.i:                               ; preds = %wrapper_entry
   %1 = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 56, ptr undef, i64 undef)

@@ -57,7 +57,7 @@
 // that, it was never implemented. So just define it to zero.
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
-extern const Elf_Auxinfo *__elf_aux_vector;
+extern const Elf_Auxinfo *__elf_aux_vector __attribute__((weak));
 extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
                                struct sigaction *oldact);
 #  endif
@@ -72,20 +72,6 @@ extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
 #    include <stddef.h>
 #    include <stdlib.h>
 #    include <thread.h>
-#  endif
-
-#  if SANITIZER_ANDROID
-#    include <android/api-level.h>
-#    if !defined(CPU_COUNT) && !defined(__aarch64__)
-#      include <dirent.h>
-#      include <fcntl.h>
-struct __sanitizer::linux_dirent {
-  long d_ino;
-  off_t d_off;
-  unsigned short d_reclen;
-  char d_name[];
-};
-#    endif
 #  endif
 
 #  if !SANITIZER_ANDROID
@@ -217,27 +203,14 @@ static void GetGLibcVersion(int *major, int *minor, int *patch) {
   *minor = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
   *patch = (*p == '.') ? internal_simple_strtoll(p + 1, &p, 10) : 0;
 }
-#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 
-// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
-// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
-// to get the pointer to thread-specific data keys in the thread control block.
-#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
-// sizeof(struct pthread) from glibc.
-static uptr thread_descriptor_size;
-
-// FIXME: Implementation is very GLIBC specific, but it's used by FreeBSD.
 static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || \
         SANITIZER_RISCV64
-#      if SANITIZER_GLIBC
   int major;
   int minor;
   int patch;
   GetGLibcVersion(&major, &minor, &patch);
-#      else   // SANITIZER_GLIBC
-  return 0;
-#      endif  // SANITIZER_GLIBC
 #    endif
 
 #    if defined(__x86_64__) || defined(__i386__) || defined(__arm__)
@@ -304,6 +277,48 @@ static uptr ThreadDescriptorSizeFallback() {
   return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
 }
+#  endif  // SANITIZER_GLIBC && !SANITIZER_GO
+
+#  if SANITIZER_FREEBSD && !SANITIZER_GO
+// FIXME: Implementation is very GLIBC specific, but it's used by FreeBSD.
+static uptr ThreadDescriptorSizeFallback() {
+#    if defined(__s390__) || defined(__sparc__)
+  // The size of a prefix of TCB including pthread::{specific_1stblock,specific}
+  // suffices. Just return offsetof(struct pthread, specific_used), which hasn't
+  // changed since 2007-05. Technically this applies to i386/x86_64 as well but
+  // we call _dl_get_tls_static_info and need the precise size of struct
+  // pthread.
+  return FIRST_32_SECOND_64(524, 1552);
+#    endif
+
+#    if defined(__mips__)
+  // TODO(sagarthakur): add more values as per different glibc versions.
+  return FIRST_32_SECOND_64(1152, 1776);
+#    endif
+
+#    if SANITIZER_LOONGARCH64
+  return 1856;  // from glibc 2.36
+#    endif
+
+#    if defined(__aarch64__)
+  // The sizeof (struct pthread) is the same from GLIBC 2.17 to 2.22.
+  return 1776;
+#    endif
+
+#    if defined(__powerpc64__)
+  return 1776;  // from glibc.ppc64le 2.20-8.fc21
+#    endif
+
+  return 0;
+}
+#  endif  // SANITIZER_FREEBSD && !SANITIZER_GO
+
+#  if (SANITIZER_FREEBSD || SANITIZER_GLIBC) && !SANITIZER_GO
+// On glibc x86_64, ThreadDescriptorSize() needs to be precise due to the usage
+// of g_tls_size. On other targets, ThreadDescriptorSize() is only used by lsan
+// to get the pointer to thread-specific data keys in the thread control block.
+// sizeof(struct pthread) from glibc.
+static uptr thread_descriptor_size;
 
 uptr ThreadDescriptorSize() { return thread_descriptor_size; }
 
@@ -744,11 +759,6 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-#  if SANITIZER_ANDROID && __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#  endif
-
 static bool requiresProcmaps() {
 #  if SANITIZER_ANDROID && __ANDROID_API__ <= 22
   // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
@@ -833,42 +843,6 @@ u32 GetNumberOfCPUs() {
   req[1] = HW_NCPU;
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
-#  elif SANITIZER_ANDROID && !defined(CPU_COUNT) && !defined(__aarch64__)
-  // Fall back to /sys/devices/system/cpu on Android when cpu_set_t doesn't
-  // exist in sched.h. That is the case for toolchains generated with older
-  // NDKs.
-  // This code doesn't work on AArch64 because internal_getdents makes use of
-  // the 64bit getdents syscall, but cpu_set_t seems to always exist on AArch64.
-  uptr fd = internal_open("/sys/devices/system/cpu", O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(fd))
-    return 0;
-  InternalMmapVector<u8> buffer(4096);
-  uptr bytes_read = buffer.size();
-  uptr n_cpus = 0;
-  u8 *d_type;
-  struct linux_dirent *entry = (struct linux_dirent *)&buffer[bytes_read];
-  while (true) {
-    if ((u8 *)entry >= &buffer[bytes_read]) {
-      bytes_read = internal_getdents(fd, (struct linux_dirent *)buffer.data(),
-                                     buffer.size());
-      if (internal_iserror(bytes_read) || !bytes_read)
-        break;
-      entry = (struct linux_dirent *)buffer.data();
-    }
-    d_type = (u8 *)entry + entry->d_reclen - 1;
-    if (d_type >= &buffer[bytes_read] ||
-        (u8 *)&entry->d_name[3] >= &buffer[bytes_read])
-      break;
-    if (entry->d_ino != 0 && *d_type == DT_DIR) {
-      if (entry->d_name[0] == 'c' && entry->d_name[1] == 'p' &&
-          entry->d_name[2] == 'u' && entry->d_name[3] >= '0' &&
-          entry->d_name[3] <= '9')
-        n_cpus++;
-    }
-    entry = (struct linux_dirent *)(((u8 *)entry) + entry->d_reclen);
-  }
-  internal_close(fd);
-  return n_cpus;
 #  elif SANITIZER_SOLARIS
   return sysconf(_SC_NPROCESSORS_ONLN);
 #  else
@@ -911,11 +885,8 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE int __android_log_write(int prio,
 void WriteOneLineToSyslog(const char *s) {
   if (&async_safe_write_log) {
     async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
-  } else if (AndroidGetApiLevel() > ANDROID_KITKAT) {
-    syslog(LOG_INFO, "%s", s);
   } else {
-    CHECK(&__android_log_write);
-    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
+    syslog(LOG_INFO, "%s", s);
   }
 }
 

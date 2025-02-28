@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_AFFINE_IR_VALUEBOUNDSOPINTERFACEIMPL_H
 
 #include "mlir/Support/LLVM.h"
+#include <cstdint>
 
 namespace mlir {
 class DialectRegistry;

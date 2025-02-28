@@ -34,12 +34,39 @@ public:
   }
 };
 
+void getAppleMachODefines(MacroBuilder &Builder, const LangOptions &Opts,
+                          const llvm::Triple &Triple);
+
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                       const llvm::Triple &Triple, StringRef &PlatformName,
                       VersionTuple &PlatformMinVersion);
 
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY DarwinTargetInfo : public OSTargetInfo<Target> {
+class LLVM_LIBRARY_VISIBILITY AppleMachOTargetInfo
+    : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    getAppleMachODefines(Builder, Opts, Triple);
+  }
+
+public:
+  AppleMachOTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {}
+
+  const char *getStaticInitSectionSpecifier() const override {
+    return "__TEXT,__StaticInit,regular,pure_instructions";
+  }
+
+  /// Apple Mach-O does not support protected visibility.  Its "default" is very
+  /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
+  /// declarations that can be dynamically replaced.
+  bool hasProtectedVisibility() const override { return false; }
+};
+
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY DarwinTargetInfo
+    : public AppleMachOTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -49,7 +76,7 @@ protected:
 
 public:
   DarwinTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
+      : AppleMachOTargetInfo<Target>(Triple, Opts) {
     // By default, no TLS, and we list permitted architecture/OS
     // combinations.
     this->TLSSupported = false;
@@ -82,13 +109,8 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     // FIXME: We should return 0 when building kexts.
-    return "__TEXT,__StaticInit,regular,pure_instructions";
+    return AppleMachOTargetInfo<Target>::getStaticInitSectionSpecifier();
   }
-
-  /// Darwin does not support protected visibility.  Darwin's "default"
-  /// is very similar to ELF's "protected";  Darwin requires a "weak"
-  /// attribute on declarations that can be dynamically replaced.
-  bool hasProtectedVisibility() const override { return false; }
 
   unsigned getExnObjectAlignment() const override {
     // Older versions of libc++abi guarantee an alignment of only 8-bytes for
@@ -228,7 +250,7 @@ public:
     case llvm::Triple::arm:
       this->MCountName = "__mcount";
       break;
-    case llvm::Triple::riscv32:
+    case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
       break;
     }
@@ -337,6 +359,10 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+    if (Triple.isTime64ABI()) {
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+      Builder.defineMacro("_TIME_BITS", "64");
+    }
   }
 
 public:
@@ -440,7 +466,6 @@ public:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
-    case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
     }
@@ -469,7 +494,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-n32:64");
+    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
   }
 };
 
@@ -783,7 +808,9 @@ template <typename Target>
 class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {}
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__UEFI__");
+  }
 
 public:
   UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)

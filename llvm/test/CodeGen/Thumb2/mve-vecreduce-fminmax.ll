@@ -43,21 +43,13 @@ define arm_aapcs_vfpcc float @fmin_v8f32(<8 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v8f32:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vcmp.f32 s5, s1
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s4, s0
-; CHECK-NOFP-NEXT:    vselgt.f32 s8, s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s6, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s7, s3
-; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s8
-; CHECK-NOFP-NEXT:    vselgt.f32 s2, s2, s6
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s4, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f32 s8, s1, s5
 ; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s8
+; CHECK-NOFP-NEXT:    vminnm.f32 s2, s2, s6
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vminnm.f32 s2, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %z = call fast float @llvm.vector.reduce.fmin.v8f32(<8 x float> %x)
@@ -129,44 +121,28 @@ define arm_aapcs_vfpcc half @fmin_v16f16(<16 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v16f16:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
-; CHECK-NOFP-NEXT:    vcmp.f16 s8, s10
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s0
-; CHECK-NOFP-NEXT:    vselgt.f16 s8, s10, s8
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s5, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
+; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
+; CHECK-NOFP-NEXT:    vminnm.f16 s8, s10, s8
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s8
-; CHECK-NOFP-NEXT:    vmovx.f16 s8, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s1, s5
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s1, s5
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s5
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s8
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s6, s2
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s8, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s8, s1
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s8, s4
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s2, s6
-; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s2, s6
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s6
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s2
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s7, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s2, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s3, s7
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmovx.f16 s2, s7
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s4, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s4, s2
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
@@ -435,21 +411,13 @@ define arm_aapcs_vfpcc float @fmin_v8f32_acc(<8 x float> %x, float %y) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v8f32_acc:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vcmp.f32 s5, s1
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s4, s0
-; CHECK-NOFP-NEXT:    vselgt.f32 s10, s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s6, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s7, s3
-; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s10
-; CHECK-NOFP-NEXT:    vselgt.f32 s2, s2, s6
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s4, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f32 s10, s1, s5
 ; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s10
+; CHECK-NOFP-NEXT:    vminnm.f32 s2, s2, s6
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vminnm.f32 s2, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f32 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vminnm.f32 s0, s8, s0
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
@@ -547,44 +515,28 @@ define arm_aapcs_vfpcc half @fmin_v16f16_acc(<16 x half> %x, half %y) {
 ;
 ; CHECK-NOFP-LABEL: fmin_v16f16_acc:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmovx.f16 s10, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s12, s0
-; CHECK-NOFP-NEXT:    vcmp.f16 s10, s12
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s0
-; CHECK-NOFP-NEXT:    vselgt.f16 s10, s12, s10
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s5, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s10, s4
+; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
+; CHECK-NOFP-NEXT:    vminnm.f16 s10, s12, s10
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s10
-; CHECK-NOFP-NEXT:    vmovx.f16 s10, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s1, s5
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s1, s5
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s5
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s10
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s6, s2
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s10, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s10, s1
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s10, s4
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s2, s6
-; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s4, s2, s6
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s6
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s2
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s7, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s2, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s3, s7
+; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s3, s7
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmovx.f16 s2, s7
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s4, s2
+; CHECK-NOFP-NEXT:    vminnm.f16 s2, s4, s2
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vminnm.f16 s0, s8, s0
 ; CHECK-NOFP-NEXT:    bx lr
@@ -917,21 +869,13 @@ define arm_aapcs_vfpcc float @fmax_v8f32(<8 x float> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v8f32:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vcmp.f32 s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f32 s8, s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s2, s6
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s3, s7
-; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s8
-; CHECK-NOFP-NEXT:    vselgt.f32 s2, s2, s6
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s4, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s8, s1, s5
 ; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s8
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s2, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %z = call fast float @llvm.vector.reduce.fmax.v8f32(<8 x float> %x)
@@ -1003,44 +947,28 @@ define arm_aapcs_vfpcc half @fmax_v16f16(<16 x half> %x) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v16f16:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s10, s0
-; CHECK-NOFP-NEXT:    vcmp.f16 s10, s8
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s8, s10, s8
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s1, s5
-; CHECK-NOFP-NEXT:    vselgt.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s8, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s8, s10, s8
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s8
-; CHECK-NOFP-NEXT:    vmovx.f16 s8, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s1, s5
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s1, s5
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s5
-; CHECK-NOFP-NEXT:    vcmp.f16 s8, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s6
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s8, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s8, s1
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s8, s4
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s2, s6
-; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s2, s6
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s6
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s3, s7
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s2, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s3, s7
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmovx.f16 s2, s7
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s2
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s4, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s4, s2
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
@@ -1309,21 +1237,13 @@ define arm_aapcs_vfpcc float @fmax_v8f32_acc(<8 x float> %x, float %y) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v8f32_acc:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vcmp.f32 s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f32 s10, s1, s5
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s2, s6
-; CHECK-NOFP-NEXT:    vselgt.f32 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f32 s3, s7
-; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s10
-; CHECK-NOFP-NEXT:    vselgt.f32 s2, s2, s6
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
-; CHECK-NOFP-NEXT:    vselgt.f32 s4, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s10, s1, s5
 ; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s10
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s2, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmaxnm.f32 s0, s8, s0
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
@@ -1421,44 +1341,28 @@ define arm_aapcs_vfpcc half @fmax_v16f16_acc(<16 x half> %x, half %y) {
 ;
 ; CHECK-NOFP-LABEL: fmax_v16f16_acc:
 ; CHECK-NOFP:       @ %bb.0: @ %entry
-; CHECK-NOFP-NEXT:    vmovx.f16 s10, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s12, s0
-; CHECK-NOFP-NEXT:    vcmp.f16 s12, s10
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s10, s12, s10
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s1, s5
-; CHECK-NOFP-NEXT:    vselgt.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s10, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s10, s12, s10
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s10
-; CHECK-NOFP-NEXT:    vmovx.f16 s10, s1
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s1, s5
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s1, s5
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s5
-; CHECK-NOFP-NEXT:    vcmp.f16 s10, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s6
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s10, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP-NEXT:    vmovx.f16 s10, s1
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s10, s4
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
-; CHECK-NOFP-NEXT:    vselgt.f16 s4, s2, s6
-; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s4, s2, s6
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s6
-; CHECK-NOFP-NEXT:    vcmp.f16 s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vcmp.f16 s3, s7
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s2, s4
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmovx.f16 s2, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s2, s4
 ; CHECK-NOFP-NEXT:    vmovx.f16 s4, s3
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s3, s7
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s3, s7
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmovx.f16 s2, s7
-; CHECK-NOFP-NEXT:    vcmp.f16 s4, s2
-; CHECK-NOFP-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP-NEXT:    vselgt.f16 s2, s4, s2
+; CHECK-NOFP-NEXT:    vmaxnm.f16 s2, s4, s2
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s0, s2
 ; CHECK-NOFP-NEXT:    vmaxnm.f16 s0, s8, s0
 ; CHECK-NOFP-NEXT:    bx lr

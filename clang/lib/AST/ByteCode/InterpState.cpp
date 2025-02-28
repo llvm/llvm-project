@@ -17,14 +17,29 @@ using namespace clang::interp;
 
 InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr) {}
+    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame) {}
+
+InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+                         Context &Ctx, const Function *Func)
+    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
+      BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
+      Current(&BottomFrame) {}
+
+bool InterpState::inConstantContext() const {
+  if (ConstantContextOverride)
+    return *ConstantContextOverride;
+
+  return Parent.InConstantContext;
+}
 
 InterpState::~InterpState() {
-  while (Current) {
+  while (Current && !Current->isBottomFrame()) {
     InterpFrame *Next = Current->Caller;
     delete Current;
     Current = Next;
   }
+  BottomFrame.destroyScopes();
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;

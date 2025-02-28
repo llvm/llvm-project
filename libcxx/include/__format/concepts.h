@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _CharT>
 concept __fmt_char_type =
     same_as<_CharT, char>
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     || same_as<_CharT, wchar_t>
 #  endif
     ;
@@ -44,7 +44,7 @@ concept __fmt_char_type =
 // (Note testing for (w)format_context would be a valid choice, but requires
 // selecting the proper one depending on the type of _CharT.)
 template <class _CharT>
-using __fmt_iter_for = _CharT*;
+using __fmt_iter_for _LIBCPP_NODEBUG = _CharT*;
 
 template <class _Tp, class _Context, class _Formatter = typename _Context::template formatter_type<remove_const_t<_Tp>>>
 concept __formattable_with =

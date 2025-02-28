@@ -1350,7 +1350,7 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
 
   // Make sure that we have compatible qualifiers.
   FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
+  if (!ToQuals.compatiblyIncludes(FromQuals, getASTContext()))
     return false;
 
   // Remove qualifiers from the pointee type we're converting from; they
@@ -2259,7 +2259,8 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
 bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
   Sema::FormatStringInfo FSI;
   if ((SemaRef.GetFormatStringType(Format) == Sema::FST_NSString) &&
-      SemaRef.getFormatStringInfo(Format, false, true, &FSI)) {
+      SemaRef.getFormatStringInfo(Format->getFormatIdx(), Format->getFirstArg(),
+                                  false, true, &FSI)) {
     Idx = FSI.FormatIdx;
     return true;
   }

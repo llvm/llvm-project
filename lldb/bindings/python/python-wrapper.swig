@@ -667,6 +667,79 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedComma
   return result.Str().GetString().str();
 }
 
+StructuredData::DictionarySP
+lldb_private::python::SWIGBridge::LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(PyObject *implementor,
+    std::vector<llvm::StringRef> &args_vec, size_t args_pos, size_t pos_in_arg) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("handle_argument_completion");
+  // If this isn't implemented, return an empty dict to signal falling back to default completion:
+  if (!pfunc.IsAllocated())
+    return {};
+
+  PythonList args_list(PyInitialValue::Empty);
+  for (auto elem : args_vec)
+    args_list.AppendItem(PythonString(elem));
+
+  PythonObject result = pfunc(args_list, PythonInteger(args_pos), PythonInteger(pos_in_arg));
+  // Returning None means do the ordinary completion
+  if (result.IsNone())
+    return {};
+
+  // Convert the return dictionary to a DictionarySP.
+  StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
+  if (!result_obj_sp)
+    return {};
+
+  StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary(result_obj_sp));
+  if (dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return {};
+  return dict_sp;
+}
+
+StructuredData::DictionarySP
+lldb_private::python::SWIGBridge::LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(PyObject *implementor,
+    llvm::StringRef &long_option, size_t pos_in_arg) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("handle_option_argument_completion");
+  // If this isn't implemented, return an empty dict to signal falling back to default completion:
+  if (!pfunc.IsAllocated())
+    return {};
+
+  PythonObject result = pfunc(PythonString(long_option), PythonInteger(pos_in_arg));
+  // Returning None means do the ordinary completion
+  if (result.IsNone())
+    return {};
+
+  // Returning a boolean:
+  // True means the completion was handled, but there were no completions
+  // False means that the completion was not handled, again, do the ordinary completion:
+  if (result.GetObjectType() == PyObjectType::Boolean) {
+    if (!result.IsTrue())
+      return {};
+    // Make up a completion dictionary with the right element:
+    StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary());
+    dict_sp->AddBooleanItem("no-completion", true);
+    return dict_sp;
+  }
+
+
+  // Convert the return dictionary to a DictionarySP.
+  StructuredData::ObjectSP result_obj_sp = result.CreateStructuredObject();
+  if (!result_obj_sp)
+    return {};
+
+  StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary(result_obj_sp));
+  if (dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
+    return {};
+  return dict_sp;
+}
+
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
@@ -680,7 +753,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 
@@ -937,6 +1010,26 @@ static void LLDBSwigPythonCallPythonLogOutputCallback(const char *str,
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
+}
+
+// For CommandPrintCallback functions
+static CommandReturnObjectCallbackResult LLDBSwigPythonCallPythonCommandPrintCallback(SBCommandReturnObject& result, void *callback_baton) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject result_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBCommandReturnObject>(result));
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+
+  if (!callable.IsValid())
+    return eCommandReturnObjectPrintCallbackSkipped;
+
+  PythonObject callback_result = callable(result_arg);
+
+  long long ret_val = unwrapOrSetPythonException(As<long long>(callback_result));
+  return (CommandReturnObjectCallbackResult)ret_val;
 }
 
 // For DebuggerTerminateCallback functions

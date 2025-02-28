@@ -147,7 +147,7 @@ subroutine return_complex()
   print *, cplxfoo()
 end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_complex(
-! CHECK:  fir.call @_QPcplxfoo() fastmath<contract> : () -> !fir.complex<4>
+! CHECK:  fir.call @_QPcplxfoo() fastmath<contract> : () -> complex<f32>
 
 subroutine return_char(n)
   integer(8) :: n
@@ -191,11 +191,11 @@ end
 !     Test calls to user procedures with intrinsic interfaces
 ! -----------------------------------------------------------------------------
 
-! CHECK-NAME: func.func @_QPintrinsic_iface()
+! CHECK-LABEL: func.func @_QPintrinsic_iface()
 subroutine intrinsic_iface()
   intrinsic acos
   real :: x
   procedure(acos) :: proc
   x = proc(1.0)
 end subroutine
-! CHECK" fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32
+! CHECK: fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32

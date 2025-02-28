@@ -100,11 +100,6 @@ void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
   tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
-void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-}
-
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
@@ -153,29 +148,29 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
   converter.addSourceMaterialization([ignoreDynamicInfo](
                                          OpBuilder &builder, Type resultType,
                                          ValueRange inputs,
-                                         Location loc) -> std::optional<Value> {
+                                         Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!ignoreDynamicInfo &&
         !tensor::preservesStaticInformation(resultType, input.getType())) {
-      return std::nullopt;
+      return Value();
     }
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
-                                        Location loc) -> std::optional<Value> {
+                                        Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });

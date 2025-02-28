@@ -339,7 +339,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
       if (!sc.block->GetStartAddress(break_addr))
         break_addr.Clear();
     } else if (sc.function) {
-      break_addr = sc.function->GetAddressRange().GetBaseAddress();
+      break_addr = sc.function->GetAddress();
       if (m_skip_prologue && break_addr.IsValid()) {
         const uint32_t prologue_byte_size = sc.function->GetPrologueByteSize();
         if (prologue_byte_size)

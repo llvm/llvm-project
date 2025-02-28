@@ -90,7 +90,7 @@ subroutine assoc()
     type(t2) :: t2x
     type(t2), target :: t2xtarget
     integer, target :: targetIntArr(2)
-    integer, target :: targetIntCoarray[*]
+    integer, target, save :: targetIntCoarray[*]
     integer, pointer :: intPointerArr(:)
     procedure(objPtrFunc), pointer :: objPtrFuncPointer
 

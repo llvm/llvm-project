@@ -81,9 +81,12 @@ private:
 class SWIGBridge {
 public:
   static PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBCommandReturnObject> result_up);
   static PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp);
   static PythonObject ToSWIGWrapper(lldb::TargetSP target_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
+  static PythonObject ToSWIGWrapper(lldb::ModuleSP module_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
   static PythonObject ToSWIGWrapper(Status &&status);
@@ -189,16 +192,24 @@ public:
                                   lldb::DebuggerSP debugger, const char *args,
                                   lldb_private::CommandReturnObject &cmd_retobj,
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);
-  static bool
-  LLDBSwigPythonCallParsedCommandObject(PyObject *implementor,
-                                  lldb::DebuggerSP debugger,  
-                                  StructuredDataImpl &args_impl,
-                                  lldb_private::CommandReturnObject &cmd_retobj,
-                                  lldb::ExecutionContextRefSP exe_ctx_ref_sp);
+  static bool LLDBSwigPythonCallParsedCommandObject(
+      PyObject *implementor, lldb::DebuggerSP debugger,
+      StructuredDataImpl &args_impl,
+      lldb_private::CommandReturnObject &cmd_retobj,
+      lldb::ExecutionContextRefSP exe_ctx_ref_sp);
 
   static std::optional<std::string>
   LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
                                                    std::string &command);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+      PyObject *implementor, std::vector<llvm::StringRef> &args_impl,
+      size_t args_pos, size_t pos_in_arg);
+
+  static StructuredData::DictionarySP
+  LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+      PyObject *implementor, llvm::StringRef &long_option, size_t pos_in_arg);
 
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,

@@ -229,6 +229,13 @@ class LLVM_MemOpPatterns {
       inst->setMetadata(llvm::LLVMContext::MD_nontemporal, metadata);
     }
   }];
+  code setInvariantGroupCode = [{
+    if ($invariantGroup) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(),
+                                                 std::nullopt);
+      inst->setMetadata(llvm::LLVMContext::MD_invariant_group, metadata);
+    }
+  }];
   code setAccessGroupsMetadataCode = [{
     moduleTranslation.setAccessGroupsMetadata(op, inst);
   }];
@@ -291,7 +298,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
                       bit requiresAccessGroup = 0, bit requiresAliasAnalysis = 0,
-                      bit requiresFastmath = 0,
+                      bit requiresFastmath = 0, bit requiresOpBundles = 0,
                       list<int> immArgPositions = [],
                       list<string> immArgAttrNames = []>
     : LLVM_OpBase<dialect, opName, !listconcat(
@@ -313,6 +320,12 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
             (ins )));
+  dag opBundleArgs = !if(!gt(requiresOpBundles, 0),
+                         (ins VariadicOfVariadic<LLVM_Type,
+                                "op_bundle_sizes">:$op_bundle_operands,
+                              DenseI32ArrayAttr:$op_bundle_sizes,
+                              OptionalAttr<ArrayAttr>:$op_bundle_tags),
+                         (ins ));
   string llvmEnumName = enumName;
   string overloadedResultsCpp =  "{" # !interleave(overloadedResults, ", ") # "}";
   string overloadedOperandsCpp =  "{" # !interleave(overloadedOperands, ", ") # "}";
@@ -336,6 +349,8 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
       llvmOperands,
+      llvmOpBundles,
+      }] # !if(!gt(requiresOpBundles, 0), "true", "false") # [{,
       }] # immArgPositionsCpp # [{,
       }] # immArgAttrNamesCpp # [{,
       mlirOperands,
@@ -381,12 +396,14 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
                   bit requiresAliasAnalysis = 0, bit requiresFastmath = 0,
+                  bit requiresOpBundles = 0,
                   list<int> immArgPositions = [],
                   list<string> immArgAttrNames = []>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
-                      requiresFastmath, immArgPositions, immArgAttrNames>;
+                      requiresFastmath, requiresOpBundles, immArgPositions,
+                      immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -406,11 +423,13 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             list<Trait> traits = [],
                             bit requiresAccessGroup = 0,
                             bit requiresAliasAnalysis = 0,
+                            bit requiresOpBundles = 0,
                             list<int> immArgPositions = [],
                             list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
                   requiresAccessGroup, requiresAliasAnalysis,
-                  /*requiresFastMath=*/0, immArgPositions, immArgAttrNames>;
+                  /*requiresFastMath=*/0, requiresOpBundles, immArgPositions,
+                  immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
@@ -422,11 +441,12 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
                            bit requiresFastmath = 0,
-                          list<int> immArgPositions = [],
-                          list<string> immArgAttrNames = []>
+                           list<int> immArgPositions = [],
+                           list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
                   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath, immArgPositions, immArgAttrNames>;
+                  requiresFastmath, /*requiresOpBundles=*/0, immArgPositions,
+                  immArgAttrNames>;
 
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,

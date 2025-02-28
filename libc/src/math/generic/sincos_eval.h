@@ -23,8 +23,8 @@ namespace generic {
 using fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
-LIBC_INLINE void sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
-                             DoubleDouble &cos_u) {
+LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
+                               DoubleDouble &cos_u) {
   // Evaluate sin(y) = sin(x - k * (pi/128))
   // We use the degree-7 Taylor approximation:
   //   sin(y) ~ y - y^3/3! + y^5/5! - y^7/7!
@@ -61,9 +61,19 @@ LIBC_INLINE void sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   //     + u_hi u_lo (-1 + u_hi^2/6)
   // We compute 1 - u_hi^2 accurately:
   //   v_hi + v_lo ~ 1 - u_hi^2/2
-  double v_hi = fputil::multiply_add(u.hi, u.hi * (-0.5), 1.0);
-  double v_lo = 1.0 - v_hi; // Exact
-  v_lo = fputil::multiply_add(u.hi, u.hi * (-0.5), v_lo);
+  // with error <= 2^-105.
+  double u_hi_neg_half = (-0.5) * u.hi;
+  DoubleDouble v;
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+  v.hi = fputil::multiply_add(u.hi, u_hi_neg_half, 1.0);
+  v.lo = 1.0 - v.hi; // Exact
+  v.lo = fputil::multiply_add(u.hi, u_hi_neg_half, v.lo);
+#else
+  DoubleDouble u_hi_sq_neg_half = fputil::exact_mult(u.hi, u_hi_neg_half);
+  v = fputil::exact_add(1.0, u_hi_sq_neg_half.hi);
+  v.lo += u_hi_sq_neg_half.lo;
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
   // r1 ~ -1/720 + u_hi^2 / 40320
   double r1 = fputil::multiply_add(u_hi_sq, 0x1.a01a01a01a01ap-16,
@@ -75,12 +85,15 @@ LIBC_INLINE void sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   // r2 ~ 1/24 + u_hi^2 (-1/720 + u_hi^2 / 40320)
   double r2 = fputil::multiply_add(u_hi_sq, r1, 0x1.5555555555555p-5);
   // s2 ~ v_lo + u_hi * u_lo * (-1 + u_hi^2 / 6)
-  double s2 = fputil::multiply_add(u_hi_u_lo, s1, v_lo);
+  double s2 = fputil::multiply_add(u_hi_u_lo, s1, v.lo);
   double cos_lo = fputil::multiply_add(u_hi_4, r2, s2);
   // Overall, |cos(y) - (v_hi + cos_lo)| < 2*ulp(u_hi^4) < 2^-75.
 
   sin_u = fputil::exact_add(u.hi, sin_lo);
-  cos_u = fputil::exact_add(v_hi, cos_lo);
+  cos_u = fputil::exact_add(v.hi, cos_lo);
+
+  return fputil::multiply_add(fputil::FPBits<double>(u_hi_3).abs().get_val(),
+                              0x1.0p-51, 0x1.0p-105);
 }
 
 LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,

@@ -14,12 +14,16 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
 #include <set>
 #include <string>
@@ -31,11 +35,6 @@ class TargetMachine;
 
 void clearAnnotationCache(const Module *);
 
-bool findOneNVVMAnnotation(const GlobalValue *, const std::string &,
-                           unsigned &);
-bool findAllNVVMAnnotation(const GlobalValue *, const std::string &,
-                           std::vector<unsigned> &);
-
 bool isTexture(const Value &);
 bool isSurface(const Value &);
 bool isSampler(const Value &);
@@ -45,24 +44,25 @@ bool isImageWriteOnly(const Value &);
 bool isImageReadWrite(const Value &);
 bool isManaged(const Value &);
 
-std::string getTextureName(const Value &);
-std::string getSurfaceName(const Value &);
-std::string getSamplerName(const Value &);
+StringRef getTextureName(const Value &);
+StringRef getSurfaceName(const Value &);
+StringRef getSamplerName(const Value &);
 
-std::optional<unsigned> getMaxNTIDx(const Function &);
-std::optional<unsigned> getMaxNTIDy(const Function &);
-std::optional<unsigned> getMaxNTIDz(const Function &);
-std::optional<unsigned> getMaxNTID(const Function &F);
+SmallVector<unsigned, 3> getMaxNTID(const Function &);
+SmallVector<unsigned, 3> getReqNTID(const Function &);
+SmallVector<unsigned, 3> getClusterDim(const Function &);
 
-std::optional<unsigned> getReqNTIDx(const Function &);
-std::optional<unsigned> getReqNTIDy(const Function &);
-std::optional<unsigned> getReqNTIDz(const Function &);
-std::optional<unsigned> getReqNTID(const Function &);
+std::optional<uint64_t> getOverallMaxNTID(const Function &);
+std::optional<uint64_t> getOverallReqNTID(const Function &);
 
-bool getMaxClusterRank(const Function &, unsigned &);
-bool getMinCTASm(const Function &, unsigned &);
-bool getMaxNReg(const Function &, unsigned &);
-bool isKernelFunction(const Function &);
+std::optional<unsigned> getMaxClusterRank(const Function &);
+std::optional<unsigned> getMinCTASm(const Function &);
+std::optional<unsigned> getMaxNReg(const Function &);
+
+inline bool isKernelFunction(const Function &F) {
+  return F.getCallingConv() == CallingConv::PTX_Kernel;
+}
+
 bool isParamGridConstant(const Value &);
 
 MaybeAlign getAlign(const Function &, unsigned);
@@ -74,10 +74,9 @@ Function *getMaybeBitcastedCallee(const CallBase *CB);
 inline unsigned promoteScalarArgumentSize(unsigned size) {
   if (size <= 32)
     return 32;
-  else if (size <= 64)
+  if (size <= 64)
     return 64;
-  else
-    return size;
+  return size;
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
@@ -85,8 +84,21 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
+inline std::string getValidPTXIdentifier(StringRef Name) {
+  std::string ValidName;
+  ValidName.reserve(Name.size() + 4);
+  for (char C : Name)
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
+    if (isAlnum(C) || C == '_' || C == '$')
+      ValidName.push_back(C);
+    else
+      ValidName.append({'_', '$', '_'});
 
-inline std::string OrderingToCString(Ordering Order) {
+  return ValidName;
+}
+
+inline std::string OrderingToString(Ordering Order) {
   switch (Order) {
   case Ordering::NotAtomic:
     return "NotAtomic";
@@ -96,7 +108,8 @@ inline std::string OrderingToCString(Ordering Order) {
     return "Acquire";
   case Ordering::Release:
     return "Release";
-  // case Ordering::AcquireRelease: return "AcquireRelease";
+  case Ordering::AcquireRelease:
+    return "AcquireRelease";
   case Ordering::SequentiallyConsistent:
     return "SequentiallyConsistent";
   case Ordering::Volatile:
@@ -104,11 +117,58 @@ inline std::string OrderingToCString(Ordering Order) {
   case Ordering::RelaxedMMIO:
     return "RelaxedMMIO";
   }
-  report_fatal_error("unknown ordering");
+  report_fatal_error(formatv("Unknown NVPTX::Ordering \"{}\".",
+                             static_cast<OrderingUnderlyingType>(Order)));
 }
 
 inline raw_ostream &operator<<(raw_ostream &O, Ordering Order) {
-  O << OrderingToCString(Order);
+  O << OrderingToString(Order);
+  return O;
+}
+
+inline std::string ScopeToString(Scope S) {
+  switch (S) {
+  case Scope::Thread:
+    return "Thread";
+  case Scope::System:
+    return "System";
+  case Scope::Block:
+    return "Block";
+  case Scope::Cluster:
+    return "Cluster";
+  case Scope::Device:
+    return "Device";
+  }
+  report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
+                             static_cast<ScopeUnderlyingType>(S)));
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, Scope S) {
+  O << ScopeToString(S);
+  return O;
+}
+
+inline std::string AddressSpaceToString(AddressSpace A) {
+  switch (A) {
+  case AddressSpace::Generic:
+    return "generic";
+  case AddressSpace::Global:
+    return "global";
+  case AddressSpace::Const:
+    return "const";
+  case AddressSpace::Shared:
+    return "shared";
+  case AddressSpace::Param:
+    return "param";
+  case AddressSpace::Local:
+    return "local";
+  }
+  report_fatal_error(formatv("Unknown NVPTX::AddressSpace \"{}\".",
+                             static_cast<AddressSpaceUnderlyingType>(A)));
+}
+
+inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
+  O << AddressSpaceToString(A);
   return O;
 }
 

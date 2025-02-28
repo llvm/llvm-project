@@ -13,7 +13,6 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
@@ -22,6 +21,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
@@ -57,8 +57,6 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       [&](fir::ClassType classTy) { return convertBoxType(classTy); });
   addConversion(
       [&](fir::CharacterType charTy) { return convertCharType(charTy); });
-  addConversion(
-      [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
   addConversion([&](fir::FieldType field) {
     // Convert to i32 because of LLVM GEP indexing restriction.
     return mlir::IntegerType::get(field.getContext(), 32);
@@ -84,10 +82,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
   addConversion(
       [&](fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-        return convertRecordType(derived, results);
+        return convertRecordType(derived, results, derived.isPacked());
       });
-  addConversion(
-      [&](fir::RealType real) { return convertRealType(real.getFKind()); });
   addConversion(
       [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
   addConversion([&](fir::SequenceType sequence) {
@@ -137,8 +133,10 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
-    fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
+std::optional<llvm::LogicalResult>
+LLVMTypeConverter::convertRecordType(fir::RecordType derived,
+                                     llvm::SmallVectorImpl<mlir::Type> &results,
+                                     bool isPacked) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
@@ -160,7 +158,7 @@ std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     else
       members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));
   }
-  if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
+  if (mlir::failed(st.setBody(members, isPacked)))
     return mlir::failure();
   results.push_back(st);
   return mlir::success();
@@ -275,13 +273,6 @@ mlir::Type LLVMTypeConverter::convertCharType(fir::CharacterType charTy) const {
   if (charTy.getLen() == fir::CharacterType::unknownLen())
     return iTy;
   return mlir::LLVM::LLVMArrayType::get(iTy, charTy.getLen());
-}
-
-// convert a front-end kind value to either a std or LLVM IR dialect type
-// fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-mlir::Type LLVMTypeConverter::convertRealType(fir::KindTy kind) const {
-  return fir::fromRealTypeID(&getContext(), kindMapping.getRealTypeID(kind),
-                             kind);
 }
 
 // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">

@@ -96,6 +96,8 @@ void Pointer::operator=(const Pointer &P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -132,6 +134,8 @@ void Pointer::operator=(Pointer &&P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -150,6 +154,14 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   if (isFunctionPointer())
     return asFunctionPointer().toAPValue(ASTCtx);
+
+  if (isTypeidPointer()) {
+    TypeInfoLValue TypeInfo(PointeeStorage.Typeid.TypePtr);
+    return APValue(
+        APValue::LValueBase::getTypeInfo(
+            TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
+        CharUnits::Zero(), APValue::NoLValuePath{});
+  }
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -197,32 +209,54 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex));
   };
 
+  bool UsePath = true;
+  if (getType()->isLValueReferenceType())
+    UsePath = false;
+
   // Build the path into the object.
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
+
     if (Ptr.isArrayRoot()) {
-      Path.push_back(APValue::LValuePathEntry(
-          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      // An array root may still be an array element itself.
+      if (Ptr.isArrayElement()) {
+        Ptr = Ptr.expand();
+        const Descriptor *Desc = Ptr.getFieldDesc();
+        unsigned Index = Ptr.getIndex();
+        QualType ElemType = Desc->getElemQualType();
+        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+        if (Ptr.getArray().getType()->isArrayType())
+          Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
+        Ptr = Ptr.getArray();
+      } else {
+        const Descriptor *Desc = Ptr.getFieldDesc();
+        const auto *Dcl = Desc->asDecl();
+        Path.push_back(APValue::LValuePathEntry({Dcl, /*IsVirtual=*/false}));
 
-      if (const auto *FD = dyn_cast<FieldDecl>(Ptr.getFieldDesc()->asDecl()))
-        Offset += getFieldOffset(FD);
+        if (const auto *FD = dyn_cast_if_present<FieldDecl>(Dcl))
+          Offset += getFieldOffset(FD);
 
-      Ptr = Ptr.getBase();
+        Ptr = Ptr.getBase();
+      }
     } else if (Ptr.isArrayElement()) {
+      Ptr = Ptr.expand();
+      const Descriptor *Desc = Ptr.getFieldDesc();
       unsigned Index;
       if (Ptr.isOnePastEnd())
         Index = Ptr.getArray().getNumElems();
       else
         Index = Ptr.getIndex();
 
-      Offset += (Index * ASTCtx.getTypeSizeInChars(Ptr.getType()));
-      Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
+      QualType ElemType = Desc->getElemQualType();
+      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+      if (Ptr.getArray().getType()->isArrayType())
+        Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
+      const Descriptor *Desc = Ptr.getFieldDesc();
       bool IsVirtual = false;
 
       // Create a path entry for the field.
-      const Descriptor *Desc = Ptr.getFieldDesc();
       if (const auto *BaseOrMember = Desc->asDecl()) {
         if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
           Ptr = Ptr.getBase();
@@ -249,19 +283,17 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     }
   }
 
-  // FIXME(perf): We compute the lvalue path above, but we can't supply it
-  // for dummy pointers (that causes crashes later in CheckConstantExpression).
-  if (isDummy())
-    Path.clear();
-
   // We assemble the LValuePath starting from the innermost pointer to the
   // outermost one. SO in a.b.c, the first element in Path will refer to
   // the field 'c', while later code expects it to refer to 'a'.
   // Just invert the order of the elements.
   std::reverse(Path.begin(), Path.end());
 
-  return APValue(Base, Offset, Path, /*IsOnePastEnd=*/isOnePastEnd(),
-                 /*IsNullPtr=*/false);
+  if (UsePath)
+    return APValue(Base, Offset, Path,
+                   /*IsOnePastEnd=*/!isElementPastEnd() && isOnePastEnd());
+
+  return APValue(Base, Offset, APValue::NoLValuePath());
 }
 
 void Pointer::print(llvm::raw_ostream &OS) const {
@@ -295,6 +327,9 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   case Storage::Fn:
     OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
        << " }";
+    break;
+  case Storage::Typeid:
+    OS << "(Typeid)";
   }
 }
 
@@ -402,28 +437,35 @@ void Pointer::activate() const {
   if (!getInlineDesc()->InUnion)
     return;
 
-  getInlineDesc()->IsActive = true;
+  auto activate = [](Pointer &P) -> void {
+    P.getInlineDesc()->IsActive = true;
+  };
+  auto deactivate = [](Pointer &P) -> void {
+    P.getInlineDesc()->IsActive = false;
+  };
 
-  // Get the union, iterate over its fields and DEactivate all others.
+  // Unions might be nested etc., so find the topmost Pointer that's
+  // not in a union anymore.
   Pointer UnionPtr = getBase();
-  while (!UnionPtr.getFieldDesc()->isUnion())
+  while (!UnionPtr.isRoot() && UnionPtr.inUnion())
     UnionPtr = UnionPtr.getBase();
+
+  assert(UnionPtr.getFieldDesc()->isUnion());
 
   const Record *UnionRecord = UnionPtr.getRecord();
   for (const Record::Field &F : UnionRecord->fields()) {
     Pointer FieldPtr = UnionPtr.atField(F.Offset);
     if (FieldPtr == *this) {
     } else {
-      FieldPtr.getInlineDesc()->IsActive = false;
+      deactivate(FieldPtr);
       // FIXME: Recurse.
     }
   }
 
-  Pointer B = getBase();
-  while (!B.isRoot() && B.inUnion()) {
+  Pointer B = *this;
+  while (B != UnionPtr) {
+    activate(B);
     // FIXME: Need to de-activate other fields of parent records.
-    B.getInlineDesc()->IsActive = true;
-    assert(B.isActive());
     B = B.getBase();
   }
 }
@@ -440,6 +482,8 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isIntegralPointer() && B.isIntegralPointer())
     return true;
   if (A.isFunctionPointer() && B.isFunctionPointer())
+    return true;
+  if (A.isTypeidPointer() && B.isTypeidPointer())
     return true;
 
   if (A.isIntegralPointer() || B.isIntegralPointer())
@@ -467,10 +511,10 @@ bool Pointer::pointsToLiteral() const {
   if (isZero() || !isBlockPointer())
     return false;
 
-  const Expr *E = block()->getDescriptor()->asExpr();
   if (block()->isDynamic())
     return false;
 
+  const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
@@ -636,7 +680,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Return the composite type.
   APValue Result;
-  if (!Composite(getType(), *this, Result))
+  if (!Composite(ResultType, *this, Result))
     return std::nullopt;
   return Result;
 }

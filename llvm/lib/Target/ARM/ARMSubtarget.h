@@ -81,6 +81,48 @@ public:
     SingleIssuePlusExtras,
   };
 
+  /// How the push and pop instructions of callee saved general-purpose
+  /// registers should be split.
+  enum PushPopSplitVariation {
+    /// All GPRs can be pushed in a single instruction.
+    /// push {r0-r12, lr}
+    /// vpush {d8-d15}
+    NoSplit,
+
+    /// R7 and LR must be adjacent, because R7 is the frame pointer, and must
+    /// point to a frame record consisting of the previous frame pointer and the
+    /// return address.
+    /// push {r0-r7, lr}
+    /// push {r8-r12}
+    /// vpush {d8-d15}
+    /// Note that Thumb1 changes this layout when the frame pointer is R11,
+    /// using a longer sequence of instructions because R11 can't be used by a
+    /// Thumb1 push instruction. This doesn't currently have a separate enum
+    /// value, and is handled entriely within Thumb1FrameLowering::emitPrologue.
+    SplitR7,
+
+    /// When the stack frame size is not known (because of variable-sized
+    /// objects or realignment), Windows SEH requires the callee-saved registers
+    /// to be stored in three regions, with R11 and LR below the floating-point
+    /// registers.
+    /// push {r0-r10, r12}
+    /// vpush {d8-d15}
+    /// push {r11, lr}
+    SplitR11WindowsSEH,
+
+    /// When generating AAPCS-compilant frame chains, R11 is the frame pointer,
+    /// and must be pushed adjacent to the return address (LR). Normally this
+    /// isn't a problem, because the only register between them is r12, which is
+    /// the intra-procedure-call scratch register, so doesn't need to be saved.
+    /// However, when PACBTI is in use, r12 contains the authentication code, so
+    /// does need to be saved. This means that we need a separate push for R11
+    /// and LR.
+    /// push {r0-r10, r12}
+    /// push {r11, lr}
+    /// vpush {d8-d15}
+    SplitR11AAPCSSignRA,
+  };
+
 protected:
 // Bool members corresponding to the SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -133,7 +175,7 @@ protected:
   int PreISelOperandLatencyAdjustment = 2;
 
   /// What alignment is preferred for loop bodies and functions, in log2(bytes).
-  unsigned PrefLoopLogAlignment = 0;
+  unsigned PreferBranchLogAlignment = 0;
 
   /// The cost factor for MVE instructions, representing the multiple beats an
   // instruction can take. The default is 2, (set in initSubtargetFeatures so
@@ -249,7 +291,9 @@ public:
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
+  bool isCortexM55() const { return ARMProcFamily == CortexM55; }
   bool isCortexM7() const { return ARMProcFamily == CortexM7; }
+  bool isCortexM85() const { return ARMProcFamily == CortexM85; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
@@ -318,7 +362,9 @@ public:
   }
   bool isTargetGNUAEABI() const {
     return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
+            TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64) &&
            !isTargetDarwin() && !isTargetWindows();
   }
   bool isTargetMuslAEABI() const {
@@ -371,19 +417,8 @@ public:
     return ARM::R11;
   }
 
-  /// Returns true if the frame setup is split into two separate pushes (first
-  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
-  /// to lr. This is always required on Thumb1-only targets, as the push and
-  /// pop instructions can't access the high registers.
-  bool splitFramePushPop(const MachineFunction &MF) const {
-    if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress())
-      return true;
-    return (getFramePointerReg() == ARM::R7 &&
-            MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-           isThumb1Only();
-  }
-
-  bool splitFramePointerPush(const MachineFunction &MF) const;
+  enum PushPopSplitVariation
+  getPushPopSplitVariation(const MachineFunction &MF) const;
 
   bool useStride4VFPs() const;
 
@@ -476,7 +511,9 @@ public:
     return isROPI() || !isTargetELF();
   }
 
-  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
+  unsigned getPreferBranchLogAlignment() const {
+    return PreferBranchLogAlignment;
+  }
 
   unsigned
   getMVEVectorCostFactor(TargetTransformInfo::TargetCostKind CostKind) const {
@@ -486,7 +523,7 @@ public:
   }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   unsigned PhysReg) const override;
+                                   MCRegister PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

@@ -345,10 +345,7 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
 
 void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to atexit has a wrong type.");
 
   llvm::FunctionType *atexitTy =
@@ -372,10 +369,7 @@ CodeGenFunction::unregisterGlobalDtorWithUnAtExit(llvm::Constant *dtorStub) {
   // value is returned.
   //
   // extern "C" int unatexit(void (*f)(void));
-  assert(dtorStub->getType() ==
-             llvm::PointerType::get(
-                 llvm::FunctionType::get(CGM.VoidTy, false),
-                 dtorStub->getType()->getPointerAddressSpace()) &&
+  assert(dtorStub->getType()->isPointerTy() &&
          "Argument to unatexit has a wrong type.");
 
   llvm::FunctionType *unatexitTy =
@@ -478,6 +472,10 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
   if (getLangOpts().Sanitize.has(SanitizerKind::MemtagStack) &&
       !isInNoSanitizeList(SanitizerKind::MemtagStack, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
+
+  if (getLangOpts().Sanitize.has(SanitizerKind::Type) &&
+      !isInNoSanitizeList(SanitizerKind::Type, Fn, Loc))
+    Fn->addFnAttr(llvm::Attribute::SanitizeType);
 
   if (getLangOpts().Sanitize.has(SanitizerKind::Thread) &&
       !isInNoSanitizeList(SanitizerKind::Thread, Fn, Loc))
@@ -640,13 +638,13 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
       addUsedGlobal(COMDATKey);
     }
 
-    // If comdats are in use and supported, place the initializer function into
-    // the comdat group of the global. In the MS ABI, initializers are mangled
-    // and have their own comdat, so we don't include them in the group for
-    // consistency with MSVC.
+    // If we used a COMDAT key for the global ctor, the init function can be
+    // discarded if the global ctor entry is discarded.
+    // FIXME: Do we need to restrict this to ELF and Wasm?
     llvm::Comdat *C = Addr->getComdat();
-    if (COMDATKey && C && getTriple().supportsCOMDAT() &&
-        !getTarget().getCXXABI().isMicrosoft()) {
+    if (COMDATKey && C &&
+        (getTarget().getTriple().isOSBinFormatELF() ||
+         getTarget().getTriple().isOSBinFormatWasm())) {
       Fn->setComdat(C);
     }
   } else {
@@ -815,7 +813,10 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   assert(!getLangOpts().CUDA || !getLangOpts().CUDAIsDevice ||
          getLangOpts().GPUAllowDeviceInit);
   if (getLangOpts().HIP && getLangOpts().CUDAIsDevice) {
-    Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    if (getTriple().isSPIRV())
+      Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    else
+      Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
     Fn->addFnAttr("device-init");
   }
 
@@ -973,7 +974,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   assert(!getLangOpts().CUDA || !getLangOpts().CUDAIsDevice ||
          getLangOpts().GPUAllowDeviceInit);
   if (getLangOpts().HIP && getLangOpts().CUDAIsDevice) {
-    Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
+    if (getTriple().isSPIRV())
+      Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+    else
+      Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
     Fn->addFnAttr("device-init");
   }
 

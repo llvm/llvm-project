@@ -18,7 +18,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         exe_file = os.path.join(current_dir, "linux-x86_64.out")
         core_file = os.path.join(current_dir, "linux-x86_64.core")
 
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
         self.attach(exe_file, coreFile=core_file)
 
         expected_frames = [
@@ -58,15 +58,29 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(self.get_stackFrames(), expected_frames)
 
     @skipIfLLVMTargetMissing("X86")
-    def test_core_file_source_mapping(self):
+    def test_core_file_source_mapping_array(self):
         """Test that sourceMap property is correctly applied when loading a core"""
         current_dir = os.path.dirname(__file__)
         exe_file = os.path.join(current_dir, "linux-x86_64.out")
         core_file = os.path.join(current_dir, "linux-x86_64.core")
 
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
 
         source_map = [["/home/labath/test", current_dir]]
+        self.attach(exe_file, coreFile=core_file, sourceMap=source_map)
+
+        self.assertIn(current_dir, self.get_stackFrames()[0]["source"]["path"])
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_core_file_source_mapping_object(self):
+        """Test that sourceMap property is correctly applied when loading a core"""
+        current_dir = os.path.dirname(__file__)
+        exe_file = os.path.join(current_dir, "linux-x86_64.out")
+        core_file = os.path.join(current_dir, "linux-x86_64.core")
+
+        self.create_debug_adapter()
+
+        source_map = {"/home/labath/test": current_dir}
         self.attach(exe_file, coreFile=core_file, sourceMap=source_map)
 
         self.assertIn(current_dir, self.get_stackFrames()[0]["source"]["path"])

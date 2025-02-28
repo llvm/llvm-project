@@ -2730,11 +2730,11 @@ let isCommutable = 0 in {
   defm DIV : basic_sse12_fp_binop_p<0x5E, "div", any_fdiv, SchedWriteFDivSizes>,
              basic_sse12_fp_binop_s<0x5E, "div", any_fdiv, SchedWriteFDivSizes>,
              basic_sse12_fp_binop_s_int<0x5E, "div", null_frag, SchedWriteFDivSizes>;
-  defm MAX : basic_sse12_fp_binop_p<0x5F, "max", X86fmax, SchedWriteFCmpSizes>,
-             basic_sse12_fp_binop_s<0x5F, "max", X86fmax, SchedWriteFCmpSizes>,
+  defm MAX : basic_sse12_fp_binop_p<0x5F, "max", X86any_fmax, SchedWriteFCmpSizes>,
+             basic_sse12_fp_binop_s<0x5F, "max", X86any_fmax, SchedWriteFCmpSizes>,
              basic_sse12_fp_binop_s_int<0x5F, "max", X86fmaxs, SchedWriteFCmpSizes>;
-  defm MIN : basic_sse12_fp_binop_p<0x5D, "min", X86fmin, SchedWriteFCmpSizes>,
-             basic_sse12_fp_binop_s<0x5D, "min", X86fmin, SchedWriteFCmpSizes>,
+  defm MIN : basic_sse12_fp_binop_p<0x5D, "min", X86any_fmin, SchedWriteFCmpSizes>,
+             basic_sse12_fp_binop_s<0x5D, "min", X86any_fmin, SchedWriteFCmpSizes>,
              basic_sse12_fp_binop_s_int<0x5D, "min", X86fmins, SchedWriteFCmpSizes>;
 }
 
@@ -7741,12 +7741,14 @@ let Predicates = [HasAVX2, NoVLX] in {
 
 // AVX1 broadcast patterns
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v8i32 (X86VBroadcastld32 addr:$src)),
-          (VBROADCASTSSYrm addr:$src)>;
-def : Pat<(v4i64 (X86VBroadcastld64 addr:$src)),
-          (VBROADCASTSDYrm addr:$src)>;
-def : Pat<(v4i32 (X86VBroadcastld32 addr:$src)),
-          (VBROADCASTSSrm addr:$src)>;
+  def : Pat<(v8i32 (X86VBroadcastld32 addr:$src)),
+            (VBROADCASTSSYrm addr:$src)>;
+  def : Pat<(v4i64 (X86VBroadcastld64 addr:$src)),
+            (VBROADCASTSDYrm addr:$src)>;
+  def : Pat<(v4i32 (X86VBroadcastld32 addr:$src)),
+            (VBROADCASTSSrm addr:$src)>;
+  def : Pat<(v2i64 (X86VBroadcastld64 addr:$src)),
+            (VMOVDDUPrm addr:$src)>;
 }
 
   // Provide fallback in case the load node that is used in the patterns above
@@ -7795,9 +7797,6 @@ let Predicates = [HasAVX1Only] in {
 
   def : Pat<(v2i64 (X86VBroadcast i64:$src)),
             (VPSHUFDri (VMOV64toPQIrr GR64:$src), 0x44)>;
-  def : Pat<(v2i64 (X86VBroadcastld64 addr:$src)),
-            (VMOVDDUPrm addr:$src)>;
-
   def : Pat<(v4i64 (X86VBroadcast v2i64:$src)),
             (VINSERTF128rri (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)),
               (v2i64 (VPSHUFDri VR128:$src, 0x44)), sub_xmm),
@@ -8079,26 +8078,26 @@ let Predicates = [HasAVX2] in {
     = "@earlyclobber $dst,@earlyclobber $mask_wb, $src1 = $dst, $mask = $mask_wb"
     in {
     defm VPGATHERDQ : avx2_gather<0x90, "vpgatherdq",
-                                  VR256, vx128mem, vx256mem>, REX_W;
+                                  VR256, vx64mem, vx64mem>, REX_W;
     defm VPGATHERQQ : avx2_gather<0x91, "vpgatherqq",
-                                  VR256, vx128mem, vy256mem>, REX_W;
+                                  VR256, vx64mem, vy64mem>, REX_W;
     defm VPGATHERDD : avx2_gather<0x90, "vpgatherdd",
-                                  VR256, vx128mem, vy256mem>;
+                                  VR256, vx32mem, vy32mem>;
     defm VPGATHERQD : avx2_gather<0x91, "vpgatherqd",
-                                  VR128, vx64mem, vy128mem>;
+                                  VR128, vx32mem, vy32mem>;
 
     let ExeDomain = SSEPackedDouble in {
       defm VGATHERDPD : avx2_gather<0x92, "vgatherdpd",
-                                    VR256, vx128mem, vx256mem>, REX_W;
+                                    VR256, vx64mem, vx64mem>, REX_W;
       defm VGATHERQPD : avx2_gather<0x93, "vgatherqpd",
-                                    VR256, vx128mem, vy256mem>, REX_W;
+                                    VR256, vx64mem, vy64mem>, REX_W;
     }
 
     let ExeDomain = SSEPackedSingle in {
       defm VGATHERDPS : avx2_gather<0x92, "vgatherdps",
-                                    VR256, vx128mem, vy256mem>;
+                                    VR256, vx32mem, vy32mem>;
       defm VGATHERQPS : avx2_gather<0x93, "vgatherqps",
-                                    VR128, vx64mem, vy128mem>;
+                                    VR128, vx32mem, vy32mem>;
     }
   }
 }

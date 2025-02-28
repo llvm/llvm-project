@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-patterns="max-iterations=1 top-down=true" \
+// RUN: mlir-opt %s -test-greedy-patterns="max-iterations=1 top-down=true" \
 // RUN:     --split-input-file | FileCheck %s
 
 // Tests for https://github.com/llvm/llvm-project/issues/86765. Ensure

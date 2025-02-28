@@ -338,7 +338,7 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
 
     int64_t srcRank = srcType.getRank();
     int64_t resultRank = resultType.getRank();
-    if (srcType == resultType)
+    if (srcRank == resultRank)
       return failure();
 
     auto srcReassociation = collapseOp.getReassociationIndices();
@@ -388,12 +388,14 @@ private:
           resultShape.slice(resultIndices.front(), resultIndices.size());
 
       if (srcSubShape.size() == resultSubShape.size()) {
-        if (srcSubShape == resultSubShape &&
-            llvm::count_if(srcSubShape, ShapedType::isDynamic) < 2) {
-          composedReassociation.push_back(srcIndices);
-        } else {
+        if (srcSubShape != resultSubShape ||
+            llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2) {
           return std::nullopt;
         }
+        for (auto index : llvm::seq<int64_t>(0, srcSubShape.size())) {
+          composedReassociation.emplace_back(1, srcIndices.front() + index);
+        }
+        continue;
       }
 
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
@@ -403,11 +405,11 @@ private:
         return std::nullopt;
 
       // Remap the subshape indices back to the original srcShape.
-      for (auto &subshape_indices : *subShapeReassociation) {
-        ReassociationIndices shape_indices;
-        for (int64_t index : subshape_indices)
-          shape_indices.push_back(srcIndices.front() + index);
-        composedReassociation.push_back(shape_indices);
+      for (auto &subshapeIndices : *subShapeReassociation) {
+        ReassociationIndices shapeIndices;
+        for (int64_t index : subshapeIndices)
+          shapeIndices.push_back(srcIndices.front() + index);
+        composedReassociation.push_back(shapeIndices);
       }
     }
     return {std::move(composedReassociation)};
@@ -566,6 +568,13 @@ struct PackingMetadata {
 // repeated N^2 counts).
 PackingMetadata computePackingMetadata(int64_t packedRank,
                                        ArrayRef<int64_t> innerDimPos);
+
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
+                                   std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

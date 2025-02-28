@@ -158,6 +158,9 @@ public:
                                  MachineFunction &MF,
                                  const yaml::MachineFunction &YMF);
 
+  bool parseCalledGlobals(PerFunctionMIParsingState &PFS, MachineFunction &MF,
+                          const yaml::MachineFunction &YMF);
+
 private:
   bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
                    const yaml::StringValue &Source);
@@ -178,10 +181,14 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  void computeFunctionProperties(MachineFunction &MF);
+  bool computeFunctionProperties(MachineFunction &MF,
+                                 const yaml::MachineFunction &YamlMF);
 
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
+
+  bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
+                        MachineInstr const *&MI);
 };
 
 } // end namespace llvm
@@ -313,7 +320,7 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
 
-  const LLVMTargetMachine &TM = MMI.getTarget();
+  const TargetMachine &TM = MMI.getTarget();
   YamlMF.MachineFuncInfo = std::unique_ptr<yaml::MachineFunctionInfo>(
       TM.createDefaultFuncInfoYAML());
 
@@ -373,11 +380,13 @@ static bool isSSA(const MachineFunction &MF) {
   return true;
 }
 
-void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
+bool MIRParserImpl::computeFunctionProperties(
+    MachineFunction &MF, const yaml::MachineFunction &YamlMF) {
   MachineFunctionProperties &Properties = MF.getProperties();
 
   bool HasPHI = false;
   bool HasInlineAsm = false;
+  bool HasFakeUses = false;
   bool AllTiedOpsRewritten = true, HasTiedOps = false;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -385,6 +394,8 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
         HasPHI = true;
       if (MI.isInlineAsm())
         HasInlineAsm = true;
+      if (MI.isFakeUse())
+        HasFakeUses = true;
       for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
         const MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg() || !MO.getReg())
@@ -398,41 +409,88 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
       }
     }
   }
-  if (!HasPHI)
-    Properties.set(MachineFunctionProperties::Property::NoPHIs);
+
+  // Helper function to sanity-check and set properties that are computed, but
+  // may be explicitly set from the input MIR
+  auto ComputedPropertyHelper =
+      [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
+                    MachineFunctionProperties::Property P) -> bool {
+    // Prefer explicitly given values over the computed properties
+    if (ExplicitProp.value_or(ComputedProp))
+      Properties.set(P);
+    else
+      Properties.reset(P);
+
+    // Check for conflict between the explicit values and the computed ones
+    return ExplicitProp && *ExplicitProp && !ComputedProp;
+  };
+
+  if (ComputedPropertyHelper(YamlMF.NoPHIs, !HasPHI,
+                             MachineFunctionProperties::Property::NoPHIs)) {
+    return error(MF.getName() +
+                 " has explicit property NoPhi, but contains at least one PHI");
+  }
+
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
     Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
-  if (isSSA(MF))
-    Properties.set(MachineFunctionProperties::Property::IsSSA);
-  else
-    Properties.reset(MachineFunctionProperties::Property::IsSSA);
+  if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
+                             MachineFunctionProperties::Property::IsSSA)) {
+    return error(MF.getName() +
+                 " has explicit property IsSSA, but is not valid SSA");
+  }
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (MRI.getNumVirtRegs() == 0)
-    Properties.set(MachineFunctionProperties::Property::NoVRegs);
+  if (ComputedPropertyHelper(YamlMF.NoVRegs, MRI.getNumVirtRegs() == 0,
+                             MachineFunctionProperties::Property::NoVRegs)) {
+    return error(
+        MF.getName() +
+        " has explicit property NoVRegs, but contains virtual registers");
+  }
+
+  // For hasFakeUses we follow similar logic to the ComputedPropertyHelper,
+  // except for caring about the inverse case only, i.e. when the property is
+  // explicitly set to false and Fake Uses are present; having HasFakeUses=true
+  // on a function without fake uses is harmless.
+  if (YamlMF.HasFakeUses && !*YamlMF.HasFakeUses && HasFakeUses)
+    return error(
+        MF.getName() +
+        " has explicit property hasFakeUses=false, but contains fake uses");
+  MF.setHasFakeUses(YamlMF.HasFakeUses.value_or(HasFakeUses));
+
+  return false;
+}
+
+bool MIRParserImpl::parseMachineInst(MachineFunction &MF,
+                                     yaml::MachineInstrLoc MILoc,
+                                     MachineInstr const *&MI) {
+  if (MILoc.BlockNum >= MF.size()) {
+    return error(Twine(MF.getName()) +
+                 Twine(" instruction block out of range.") +
+                 " Unable to reference bb:" + Twine(MILoc.BlockNum));
+  }
+  auto BB = std::next(MF.begin(), MILoc.BlockNum);
+  if (MILoc.Offset >= BB->size())
+    return error(
+        Twine(MF.getName()) + Twine(" instruction offset out of range.") +
+        " Unable to reference instruction at bb: " + Twine(MILoc.BlockNum) +
+        " at offset:" + Twine(MILoc.Offset));
+  MI = &*std::next(BB->instr_begin(), MILoc.Offset);
+  return false;
 }
 
 bool MIRParserImpl::initializeCallSiteInfo(
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
   SMDiagnostic Error;
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
   for (auto &YamlCSInfo : YamlMF.CallSitesInfo) {
-    yaml::CallSiteInfo::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
-    if (MILoc.BlockNum >= MF.size())
-      return error(Twine(MF.getName()) +
-                   Twine(" call instruction block out of range.") +
-                   " Unable to reference bb:" + Twine(MILoc.BlockNum));
-    auto CallB = std::next(MF.begin(), MILoc.BlockNum);
-    if (MILoc.Offset >= CallB->size())
-      return error(Twine(MF.getName()) +
-                   Twine(" call instruction offset out of range.") +
-                   " Unable to reference instruction at bb: " +
-                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset));
-    auto CallI = std::next(CallB->instr_begin(), MILoc.Offset);
+    yaml::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
+    const MachineInstr *CallI;
+    if (parseMachineInst(MF, MILoc, CallI))
+      return true;
     if (!CallI->isCall(MachineInstr::IgnoreBundle))
       return error(Twine(MF.getName()) +
                    Twine(" call site info should reference call "
@@ -540,9 +598,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
   }
   // Check Basic Block Section Flags.
-  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
-    MF.setBBSectionsType(BasicBlockSection::Labels);
-  } else if (MF.hasBBSections()) {
+  if (MF.hasBBSections()) {
     MF.assignBeginEndSections();
   }
   PFS.SM = &SM;
@@ -575,7 +631,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
 
   if (YamlMF.MachineFuncInfo) {
-    const LLVMTargetMachine &TM = MF.getTarget();
+    const TargetMachine &TM = MF.getTarget();
     // Note this is called after the initial constructor of the
     // MachineFunctionInfo based on the MachineFunction, which may depend on the
     // IR.
@@ -595,16 +651,20 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.freezeReservedRegs();
 
-  computeFunctionProperties(MF);
+  if (computeFunctionProperties(MF, YamlMF))
+    return true;
 
   if (initializeCallSiteInfo(PFS, YamlMF))
-    return false;
+    return true;
+
+  if (parseCalledGlobals(PFS, MF, YamlMF))
+    return true;
 
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
-  MF.verify();
+  MF.verify(nullptr, nullptr, &errs());
   return false;
 }
 
@@ -655,6 +715,16 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
                                  VReg.PreferredRegister.Value, Error))
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
+
+    for (const auto &FlagStringValue : VReg.RegisterFlags) {
+      uint8_t FlagValue;
+      if (Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
+        return error(FlagStringValue.SourceRange.Start,
+                     Twine("use of undefined register flag '") +
+                         FlagStringValue.Value + "'");
+      Info.Flags |= FlagValue;
+    }
+    RegInfo.noteNewVirtualRegister(Info.VReg);
   }
 
   // Parse the liveins.
@@ -1057,6 +1127,37 @@ bool MIRParserImpl::parseMachineMetadataNodes(
     return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
                  "use of undefined metadata '!" +
                      Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
+  return false;
+}
+
+bool MIRParserImpl::parseCalledGlobals(PerFunctionMIParsingState &PFS,
+                                       MachineFunction &MF,
+                                       const yaml::MachineFunction &YMF) {
+  Function &F = MF.getFunction();
+  for (const auto &YamlCG : YMF.CalledGlobals) {
+    yaml::MachineInstrLoc MILoc = YamlCG.CallSite;
+    const MachineInstr *CallI;
+    if (parseMachineInst(MF, MILoc, CallI))
+      return true;
+    if (!CallI->isCall(MachineInstr::IgnoreBundle))
+      return error(Twine(MF.getName()) +
+                   Twine(" called global should reference call "
+                         "instruction. Instruction at bb:") +
+                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                   " is not a call instruction");
+
+    auto Callee =
+        F.getParent()->getValueSymbolTable().lookup(YamlCG.Callee.Value);
+    if (!Callee)
+      return error(YamlCG.Callee.SourceRange.Start,
+                   "use of undefined global '" + YamlCG.Callee.Value + "'");
+    if (!isa<GlobalValue>(Callee))
+      return error(YamlCG.Callee.SourceRange.Start,
+                   "use of non-global value '" + YamlCG.Callee.Value + "'");
+
+    MF.addCalledGlobal(CallI, {cast<GlobalValue>(Callee), YamlCG.Flags});
+  }
+
   return false;
 }
 

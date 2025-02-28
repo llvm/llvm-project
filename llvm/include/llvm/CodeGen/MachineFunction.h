@@ -54,7 +54,7 @@ class DILocation;
 class Function;
 class GISelChangeObserver;
 class GlobalValue;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
@@ -86,6 +86,15 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
     assert(this == &OldList && "never transfer MBBs between functions");
   }
+};
+
+// The hotness of static data tracked by a MachineFunction and not represented
+// as a global object in the module IR / MIR. Typical examples are
+// MachineJumpTableInfo and MachineConstantPool.
+enum class MachineFunctionDataHotness {
+  Unknown,
+  Cold,
+  Hot,
 };
 
 /// MachineFunctionInfo - This class can be derived from and used by targets to
@@ -186,6 +195,7 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
+    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };
@@ -256,7 +266,7 @@ struct LandingPadInfo {
 
 class LLVM_ABI MachineFunction {
   Function &F;
-  const LLVMTargetMachine &Target;
+  const TargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
 
@@ -376,6 +386,7 @@ class LLVM_ABI MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+  bool HasFakeUses = false;
   bool IsOutlined = false;
 
   /// BBID to assign to the next basic block of this function.
@@ -467,7 +478,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -488,6 +498,11 @@ public:
     SmallVector<ArgRegPair, 1> ArgRegPairs;
   };
 
+  struct CalledGlobalInfo {
+    const GlobalValue *Callee;
+    unsigned TargetFlags;
+  };
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
@@ -499,6 +514,11 @@ private:
   /// A helper function that returns call site info for a give call
   /// instruction if debug entry value support is enabled.
   CallSiteInfoMap::iterator getCallSiteInfo(const MachineInstr *MI);
+
+  using CalledGlobalsMap = DenseMap<const MachineInstr *, CalledGlobalInfo>;
+  /// Mapping of call instruction to the global value and target flags that it
+  /// calls, if applicable.
+  CalledGlobalsMap CalledGlobalsInfo;
 
   // Callbacks for insertion and removal.
   void handleInsertion(MachineInstr &MI);
@@ -633,7 +653,7 @@ public:
   /// for instructions that have a stack spill fused into them.
   const static unsigned int DebugOperandMemNumber;
 
-  MachineFunction(Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const TargetMachine &Target,
                   const TargetSubtargetInfo &STI, MCContext &Ctx,
                   unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
@@ -699,11 +719,6 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
-  }
-
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
@@ -711,7 +726,7 @@ public:
   void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const LLVMTargetMachine &getTarget() const { return Target; }
+  const TargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
@@ -872,6 +887,10 @@ public:
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
+
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
@@ -897,13 +916,22 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
+              raw_ostream *OS = nullptr, bool AbortOnError = true) const;
+
+  /// For New Pass Manager: Run the current MachineFunction through the machine
+  /// code verifier, useful for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(MachineFunctionAnalysisManager &MFAM,
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
               bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
+  /// TODO: Add the param for LiveStacks analysis.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
-              const char *Banner = nullptr, bool AbortOnError = true) const;
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
@@ -1010,7 +1038,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() intead.
+  /// TargetInstrInfo::duplicate() instead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,
@@ -1181,6 +1209,24 @@ public:
     CatchretTargets.push_back(Target);
   }
 
+  /// Tries to get the global and target flags for a call site, if the
+  /// instruction is a call to a global.
+  CalledGlobalInfo tryGetCalledGlobal(const MachineInstr *MI) const {
+    return CalledGlobalsInfo.lookup(MI);
+  }
+
+  /// Notes the global and target flags for a call site.
+  void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
+    assert(MI && "MI must not be null");
+    assert(Details.Callee && "Global must not be null");
+    CalledGlobalsInfo.insert({MI, Details});
+  }
+
+  /// Iterates over the full set of call sites and their associated globals.
+  auto getCalledGlobals() const {
+    return llvm::make_range(CalledGlobalsInfo.begin(), CalledGlobalsInfo.end());
+  }
+
   /// \name Exception Handling
   /// \{
 
@@ -1198,6 +1244,9 @@ public:
 
   bool hasEHFunclets() const { return HasEHFunclets; }
   void setHasEHFunclets(bool V) { HasEHFunclets = V; }
+
+  bool hasFakeUses() const { return HasFakeUses; }
+  void setHasFakeUses(bool V) { HasFakeUses = V; }
 
   bool isOutlined() const { return IsOutlined; }
   void setIsOutlined(bool V) { IsOutlined = V; }
@@ -1354,7 +1403,7 @@ public:
 
   /// Start tracking the arguments passed to the call \p CallI.
   void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
-    assert(CallI->isCandidateForCallSiteEntry());
+    assert(CallI->isCandidateForAdditionalCallInfo());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
     (void)Inserted;
@@ -1370,18 +1419,16 @@ public:
 
   /// Erase the call site info for \p MI. It is used to remove a call
   /// instruction from the instruction stream.
-  void eraseCallSiteInfo(const MachineInstr *MI);
+  void eraseAdditionalCallInfo(const MachineInstr *MI);
   /// Copy the call site info from \p Old to \ New. Its usage is when we are
   /// making a copy of the instruction that will be inserted at different point
   /// of the instruction stream.
-  void copyCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void copyAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.
-  void moveCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void moveAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   unsigned getNewDebugInstrNum() {
     return ++DebugInstrNumberingCount;

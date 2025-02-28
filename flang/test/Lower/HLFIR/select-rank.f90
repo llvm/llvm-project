@@ -1,5 +1,5 @@
 ! Test lowering of select rank to HLFIR
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module iface_helpers
 interface
@@ -416,7 +416,7 @@ end subroutine
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QPtest_rank_star_attributes(
-! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x", fir.optional, fir.target}) {
+! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.asynchronous, fir.bindc_name = "x", fir.optional, fir.target}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<asynchronous, optional, target>, uniq_name = "_QFtest_rank_star_attributesEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i8

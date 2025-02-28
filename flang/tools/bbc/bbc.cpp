@@ -14,10 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
-#include "flang/Common/default-kinds.h"
+#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -40,6 +37,11 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
@@ -227,13 +229,25 @@ static llvm::cl::opt<std::string>
                          llvm::cl::desc("Override host target triple"),
                          llvm::cl::init(""));
 
+static llvm::cl::opt<bool> integerWrapAround(
+    "fwrapv",
+    llvm::cl::desc("Treat signed integer overflow as two's complement"),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> initGlobalZero(
+    "finit-global-zero",
+    llvm::cl::desc("Zero initialize globals without default initialization"),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<bool>
-    setNSW("integer-overflow",
-           llvm::cl::desc("add nsw flag to internal operations"),
-           llvm::cl::init(false));
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
 
 #define FLANG_EXCLUDE_CODEGEN
-#include "flang/Tools/CLOptions.inc"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 //===----------------------------------------------------------------------===//
 
@@ -371,14 +385,17 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
-  loweringOptions.setNSWOnLoopVarInc(setNSW);
+  loweringOptions.setIntegerWrapAround(integerWrapAround);
+  loweringOptions.setInitGlobalZero(initGlobalZero);
+  loweringOptions.setReallocateLHS(reallocateLHS);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
-  constexpr const char *tuneCPU = "";
+  Fortran::frontend::TargetOptions targetOpts;
+  Fortran::frontend::CodeGenOptions cgOpts;
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine, tuneCPU);
+      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -441,7 +458,8 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     if (emitFIR && useHLFIR) {
       // lower HLFIR to FIR
-      fir::createHLFIRToFIRPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP,
+                                        llvm::OptimizationLevel::O2);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -456,7 +474,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
-    config.NSWOnLoopVarInc = setNSW;
+    if (enableOpenMP)
+      config.EnableOpenMP = true;
+    config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
@@ -507,6 +527,21 @@ int main(int argc, char **argv) {
   options.predefinitions.emplace_back(
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
 
+  Fortran::common::LangOptions langOpts;
+  langOpts.NoGPULib = setNoGPULib;
+  langOpts.OpenMPVersion = setOpenMPVersion;
+  langOpts.OpenMPIsTargetDevice = enableOpenMPDevice;
+  langOpts.OpenMPIsGPU = enableOpenMPGPU;
+  langOpts.OpenMPForceUSM = enableOpenMPForceUSM;
+  langOpts.OpenMPTargetDebug = setOpenMPTargetDebug;
+  langOpts.OpenMPThreadSubscription = setOpenMPThreadSubscription;
+  langOpts.OpenMPTeamSubscription = setOpenMPTeamSubscription;
+  langOpts.OpenMPNoThreadState = setOpenMPNoThreadState;
+  langOpts.OpenMPNoNestedParallelism = setOpenMPNoNestedParallelism;
+  std::transform(targetTriplesOpenMP.begin(), targetTriplesOpenMP.end(),
+                 std::back_inserter(langOpts.OMPTargetTriples),
+                 [](const std::string &str) { return llvm::Triple(str); });
+
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
@@ -538,7 +573,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allCookedSources};
+      defaultKinds, options.features, langOpts, allCookedSources};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)

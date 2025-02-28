@@ -111,6 +111,19 @@ public:
     return getPointerWidthV(AddrSpace);
   }
 
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The flat address space AS(0) is a superset of all the other address
+    // spaces used by the backend target.
+    return A == B ||
+           ((A == LangAS::Default ||
+             (isTargetAddressSpace(A) &&
+              toTargetAddressSpace(A) == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
+            isTargetAddressSpace(B) &&
+            toTargetAddressSpace(B) >= llvm::AMDGPUAS::FLAT_ADDRESS &&
+            toTargetAddressSpace(B) <= llvm::AMDGPUAS::PRIVATE_ADDRESS &&
+            toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
+  }
+
   uint64_t getMaxPointerWidth() const override {
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
@@ -122,7 +135,7 @@ public:
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return std::nullopt;
+    return {};
   }
 
   /// Accepted register names: (n, m is unsigned integer, n < m)
@@ -244,7 +257,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeatureVec) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
@@ -462,6 +475,14 @@ public:
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
+    // depending on the level of cache and the target architecture. We select
+    // the size that corresponds to the largest L1 cache line for all
+    // architectures.
+    return std::make_pair(128, 128);
+  }
 };
 
 } // namespace targets

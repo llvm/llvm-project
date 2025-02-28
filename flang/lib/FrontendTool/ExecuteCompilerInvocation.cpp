@@ -154,8 +154,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
     clang::driver::getDriverOptTable().printHelp(
-        llvm::outs(), "flang-new -fc1 [options] file...",
-        "LLVM 'Flang' Compiler",
+        llvm::outs(), "flang -fc1 [options] file...", "LLVM 'Flang' Compiler",
         /*ShowHidden=*/false, /*ShowAllAliases=*/false,
         llvm::opt::Visibility(clang::driver::options::FC1Option));
     return true;

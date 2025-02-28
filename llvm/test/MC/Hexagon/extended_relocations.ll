@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -march=hexagon %s -o - | llvm-objdump -r - | FileCheck %s
+; RUN: llc -filetype=obj -mtriple=hexagon %s -o - | llvm-objdump -r - | FileCheck %s
 
 ; CHECK: RELOCATION RECORDS FOR [.text]:
 ; CHECK: 00000000 R_HEX_B22_PCREL printf

@@ -1,0 +1,269 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test-arm64ec.s -o test-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test-x86_64.s -o test-x86_64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-lib -out:test.lib -def:test.def -machine:arm64ec
+
+RUN: lld-link -out:out.dll -debug -machine:arm64ec -dll -noentry test-arm64ec.obj test-x86_64.obj loadconfig-arm64ec.obj test.lib
+RUN: llvm-pdbutil dump out.pdb -all | FileCheck %s
+
+CHECK:                             Streams
+CHECK-NEXT: ============================================================
+CHECK:        Stream 10 ( 104 bytes): [Module "Import:test.dll"]
+CHECK-NEXT:              Blocks: [9]
+CHECK-NEXT:   Stream 11 ({{[ 0-9]+}} bytes): [Module "* Linker *"]
+CHECK-NEXT:              Blocks: [10]
+
+CHECK:                             Module Stats
+CHECK-NEXT: ============================================================
+CHECK-NEXT: Mod 0000 | `{{.*}}test-arm64ec.obj`:
+CHECK-NEXT:   Mod 0 (debug info not present): [{{.*}}test-arm64ec.obj]
+CHECK-NEXT: Mod 0001 | `{{.*}}test-x86_64.obj`:
+CHECK-NEXT:   Mod 1 (debug info not present): [{{.*}}test-x86_64.obj]
+CHECK-NEXT: Mod 0002 | `{{.*}}loadconfig-arm64ec.obj`:
+CHECK-NEXT:   Mod 2 (debug info not present): [{{.*}}loadconfig-arm64ec.obj]
+CHECK-NEXT: Mod 0003 | `test.dll`:
+CHECK-NEXT:   Mod 3 (debug info not present): [test.dll]
+CHECK-NEXT: Mod 0004 | `Import:test.dll`:
+CHECK-NEXT:   Stream 10, 104 bytes
+
+CHECK:                                Modules
+CHECK-NEXT: ============================================================
+CHECK-NEXT:   Mod 0000 | `{{.*}}test-arm64ec.obj`:
+CHECK-NEXT:   SC[.text]  | mod = 0, 0001:0000, size = 8, data crc = 2063330902, reloc crc = 0
+CHECK-NEXT:           IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_EXECUTE |
+CHECK-NEXT:           IMAGE_SCN_MEM_READ
+CHECK-NEXT:   Obj: `{{.*}}test-arm64ec.obj`:
+CHECK-NEXT:   debug stream: 65535, # files: 0, has ec info: false
+CHECK-NEXT:   pdb file ni: 0 ``, src file ni: 0 ``
+CHECK-NEXT: Mod 0001 | `{{.*}}test-x86_64.obj`:
+CHECK-NEXT: SC[.text]  | mod = 1, 0001:4096, size = 0, data crc = 0, reloc crc = 0
+CHECK-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_EXECUTE |
+CHECK-NEXT:         IMAGE_SCN_MEM_READ
+CHECK-NEXT: Obj: `{{.*}}test-x86_64.obj`:
+CHECK-NEXT: debug stream: 65535, # files: 0, has ec info: false
+CHECK-NEXT: pdb file ni: 0 ``, src file ni: 0 ``
+CHECK-NEXT: Mod 0002 | `{{.*}}loadconfig-arm64ec.obj`:
+CHECK-NEXT: SC[.text]  | mod = 2, 0001:0008, size = 0, data crc = 0, reloc crc = 0
+CHECK-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_EXECUTE |
+CHECK-NEXT:         IMAGE_SCN_MEM_READ
+CHECK-NEXT: Obj: `{{.*}}loadconfig-arm64ec.obj`:
+CHECK-NEXT: debug stream: 65535, # files: 0, has ec info: false
+CHECK-NEXT: pdb file ni: 0 ``, src file ni: 0 ``
+CHECK-NEXT: Mod 0003 | `test.dll`:
+CHECK-NEXT: SC[???]  | mod = 65535, 65535:0000, size = -1, data crc = 0, reloc crc = 0
+CHECK-NEXT:         none
+CHECK-NEXT: Obj: `{{.*}}test.lib`:
+CHECK-NEXT: debug stream: 65535, # files: 0, has ec info: false
+CHECK-NEXT: pdb file ni: 0 ``, src file ni: 0 ``
+CHECK-NEXT: Mod 0004 | `Import:test.dll`:
+CHECK-NEXT: SC[.text]  | mod = 4, 0001:4096, size = 6, data crc = 0, reloc crc = 0
+CHECK-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+CHECK-NEXT: Obj: `{{.*}}test.lib`:
+CHECK-NEXT: debug stream: 10, # files: 0, has ec info: false
+CHECK-NEXT: pdb file ni: 0 ``, src file ni: 0 ``
+CHECK-NEXT: Mod 0005 | `* Linker *`:
+CHECK-NEXT: SC[???]  | mod = 65535, 65535:0000, size = -1, data crc = 0, reloc crc = 0
+CHECK-NEXT:         none
+CHECK-NEXT: Obj: ``:
+CHECK-NEXT: debug stream: 11, # files: 0, has ec info: false
+CHECK-NEXT: pdb file ni: 1 `{{.*}}out.pdb`, src file ni: 0 ``
+
+CHECK:                             Public Symbols
+CHECK-NEXT: ============================================================
+CHECK-NEXT:   Records
+CHECK-NEXT:      584 | S_PUB32 [size = 28] `x86_64_sym`
+CHECK-NEXT:            flags = none, addr = 0005:0008
+CHECK-NEXT:      536 | S_PUB32 [size = 28] `arm64ec_sym`
+CHECK-NEXT:            flags = none, addr = 0005:0000
+CHECK-NEXT:      168 | S_PUB32 [size = 44] `__hybrid_auxiliary_iat_copy`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:       96 | S_PUB32 [size = 32] `__chpe_metadata`
+CHECK-NEXT:            flags = none, addr = 0003:0000
+CHECK-NEXT:      456 | S_PUB32 [size = 48] `__x64_code_ranges_to_entry_points`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:        0 | S_PUB32 [size = 20] `#func`
+CHECK-NEXT:            flags = function, addr = 0001:0008
+CHECK-NEXT:      244 | S_PUB32 [size = 40] `__icall_helper_arm64ec`
+CHECK-NEXT:            flags = none, addr = 0001:0000
+CHECK-NEXT:       64 | S_PUB32 [size = 32] `__auximpcopy_func`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:      504 | S_PUB32 [size = 32] `_load_config_used`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:      564 | S_PUB32 [size = 20] `func`
+CHECK-NEXT:            flags = function, addr = 0001:4096
+CHECK-NEXT:      128 | S_PUB32 [size = 40] `__hybrid_auxiliary_iat`
+CHECK-NEXT:            flags = none, addr = 0002:8192
+CHECK-NEXT:      284 | S_PUB32 [size = 32] `__imp_aux_func`
+CHECK-NEXT:            flags = none, addr = 0002:0000
+CHECK-NEXT:      344 | S_PUB32 [size = 28] `__impchk_func`
+CHECK-NEXT:            flags = function, addr = 0001:0020
+CHECK-NEXT:      372 | S_PUB32 [size = 44] `__os_arm64x_dispatch_icall`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:      212 | S_PUB32 [size = 32] `__hybrid_code_map`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:       20 | S_PUB32 [size = 44] `__arm64x_redirection_metadata`
+CHECK-NEXT:            flags = none, addr = 0004:0000
+CHECK-NEXT:      416 | S_PUB32 [size = 40] `__os_arm64x_dispatch_ret`
+CHECK-NEXT:            flags = none, addr = 0002:
+CHECK-NEXT:      316 | S_PUB32 [size = 28] `__imp_func`
+CHECK-NEXT:            flags = none, addr = 0002:8192
+
+CHECK:                                Symbols
+CHECK-NEXT: ============================================================
+CHECK-NEXT:   Mod 0000 | `{{.*}}test-arm64ec.obj`:
+CHECK-NEXT:   Error loading module stream 0.  The specified stream could not be loaded. Module stream not present
+CHECK-NEXT: Mod 0001 | `{{.*}}test-x86_64.obj`:
+CHECK-NEXT: Error loading module stream 1.  The specified stream could not be loaded. Module stream not present
+CHECK-NEXT: Mod 0002 | `{{.*}}loadconfig-arm64ec.obj`:
+CHECK-NEXT: Error loading module stream 2.  The specified stream could not be loaded. Module stream not present
+CHECK-NEXT: Mod 0003 | `test.dll`:
+CHECK-NEXT: Error loading module stream 3.  The specified stream could not be loaded. Module stream not present
+CHECK-NEXT: Mod 0004 | `Import:test.dll`:
+CHECK-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `test.dll`
+CHECK-NEXT:     24 | S_COMPILE3 [size = 40]
+CHECK-NEXT:          machine = arm64ec, Ver = LLVM Linker, language = link
+CHECK-NEXT:          frontend = 0.0.0.0, backend = 14.10.25019.0
+CHECK-NEXT:          flags = none
+CHECK-NEXT:     64 | S_THUNK32 [size = 32] `func`
+CHECK-NEXT:          parent = 0, end = 96, next = 0
+CHECK-NEXT:          kind = thunk, size = 6, addr = 0001:4096
+CHECK-NEXT:     96 | S_END [size = 4]
+CHECK-NEXT: Mod 0005 | `* Linker *`:
+CHECK-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
+CHECK-NEXT:     24 | S_COMPILE3 [size = 40]
+CHECK-NEXT:          machine = arm64x, Ver = LLVM Linker, language = link
+CHECK-NEXT:          frontend = 0.0.0.0, backend = 14.10.25019.0
+CHECK-NEXT:          flags = none
+CHECK-NEXT:     64 | S_ENVBLOCK [size = {{[0-9]+}}]
+CHECK:         {{[0-9]+}} | S_SECTION [size = 28] `.text`
+CHECK-NEXT:          length = 4102, alignment = 12, rva = 4096, section # = 1
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            code
+CHECK-NEXT:            execute permissions
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 24] `.text`
+CHECK-NEXT:          length = 8, addr = 0001:0000
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            code
+CHECK-NEXT:            execute permissions
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_SECTION [size = 28] `.rdata`
+CHECK-NEXT:          length = 8208, alignment = 12, rva = 12288, section # = 2
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$5`
+CHECK-NEXT:          length = 16, addr = 0002:0000
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.00cfg`
+CHECK-NEXT:          length = 456, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$2`
+CHECK-NEXT:          length = 40, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$4`
+CHECK-NEXT:          length = 16, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$6`
+CHECK-NEXT:          length = 8, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$7`
+CHECK-NEXT:          length = 9, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$a`
+CHECK-NEXT:          length = 16, addr = 0002:
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 28] `.idata$9`
+CHECK-NEXT:          length = 16, addr = 0002:8192
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_SECTION [size = 28] `.data`
+CHECK-NEXT:          length = 124, alignment = 12, rva = 24576, section # = 3
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 24] `.data`
+CHECK-NEXT:          length = 124, addr = 0003:0000
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 24] `.bss`
+CHECK-NEXT:          length = 0, addr = 0003:0124
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            uninitialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:            write permissions
+CHECK-NEXT:    {{[0-9]+}} | S_SECTION [size = 28] `.a64xrm`
+CHECK-NEXT:          length = 8, alignment = 12, rva = 28672, section # = 4
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_SECTION [size = 28] `.test`
+CHECK-NEXT:          length = 16, alignment = 12, rva = 32768, section # = 5
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_COFFGROUP [size = 24] `.test`
+CHECK-NEXT:          length = 16, addr = 0005:0000
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            read permissions
+CHECK-NEXT:    {{[0-9]+}} | S_SECTION [size = 28] `.reloc`
+CHECK-NEXT:          length = 32, alignment = 12, rva = 36864, section # = 6
+CHECK-NEXT:          characteristics =
+CHECK-NEXT:            initialized data
+CHECK-NEXT:            discardable
+CHECK-NEXT:            read permissions
+
+#--- test-arm64ec.s
+        .text
+        .globl __icall_helper_arm64ec
+        .p2align 2, 0x0
+__icall_helper_arm64ec:
+        mov w0, #0
+        ret
+
+        .section .test,"dr"
+        .globl arm64ec_sym
+arm64ec_sym:
+        .rva __imp_func
+        .rva __imp_aux_func
+
+#--- test-x86_64.s
+        .section .test,"dr"
+        .globl x86_64_sym
+x86_64_sym:
+        .rva __imp_func
+        .rva __imp_aux_func
+
+#--- test.def
+LIBRARY test.dll
+EXPORTS
+        func

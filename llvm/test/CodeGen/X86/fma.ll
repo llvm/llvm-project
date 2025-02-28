@@ -2096,6 +2096,142 @@ entry:
   ret <8 x double> %call
 }
 
+define float @constant_fold_f32() {
+; FMA32-LABEL: constant_fold_f32:
+; FMA32:       ## %bb.0:
+; FMA32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}} ## encoding: [0xd9,0x05,A,A,A,A]
+; FMA32-NEXT:    ## fixup A - offset: 2, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMA32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMACALL32-LABEL: constant_fold_f32:
+; FMACALL32:       ## %bb.0:
+; FMACALL32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}} ## encoding: [0xd9,0x05,A,A,A,A]
+; FMACALL32-NEXT:    ## fixup A - offset: 2, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMACALL32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMA64-LABEL: constant_fold_f32:
+; FMA64:       ## %bb.0:
+; FMA64-NEXT:    vmovss {{.*#+}} xmm0 = [1.02E+3,0.0E+0,0.0E+0,0.0E+0]
+; FMA64-NEXT:    ## encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; FMA64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMA64-NEXT:    retq ## encoding: [0xc3]
+;
+; FMACALL64-LABEL: constant_fold_f32:
+; FMACALL64:       ## %bb.0:
+; FMACALL64-NEXT:    movss {{.*#+}} xmm0 = [1.02E+3,0.0E+0,0.0E+0,0.0E+0]
+; FMACALL64-NEXT:    ## encoding: [0xf3,0x0f,0x10,0x05,A,A,A,A]
+; FMACALL64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMACALL64-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512-LABEL: constant_fold_f32:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = [1.02E+3,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: constant_fold_f32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = [1.02E+3,0.0E+0,0.0E+0,0.0E+0]
+; AVX512VL-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512VL-NEXT:    retq ## encoding: [0xc3]
+  %r  = call float @llvm.fma.f32(float 5.000000e+01, float 2.000000e+01, float 2.000000e+01)
+  ret float %r
+}
+
+define <4 x float> @constant_fold_v4f32() {
+; FMA32-LABEL: constant_fold_v4f32:
+; FMA32:       ## %bb.0:
+; FMA32-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; FMA32-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMA32-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMA32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMACALL32-LABEL: constant_fold_v4f32:
+; FMACALL32:       ## %bb.0:
+; FMACALL32-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; FMACALL32-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMACALL32-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMACALL32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMA64-LABEL: constant_fold_v4f32:
+; FMA64:       ## %bb.0:
+; FMA64-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; FMA64-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMA64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMA64-NEXT:    retq ## encoding: [0xc3]
+;
+; FMACALL64-LABEL: constant_fold_v4f32:
+; FMACALL64:       ## %bb.0:
+; FMACALL64-NEXT:    movaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
+; FMACALL64-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMACALL64-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512-LABEL: constant_fold_v4f32:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; AVX512-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: constant_fold_v4f32:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,4.9E+2,1.18E+3,2.07E+3]
+; AVX512VL-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512VL-NEXT:    retq ## encoding: [0xc3]
+  %r  = call <4 x float> @llvm.fma.v4f32(<4 x float> <float 0.000000e+01, float 1.000000e+01, float 2.000000e+01, float 3.000000e+01>, <4 x float> <float 4.000000e+01, float 5.000000e+01, float 6.000000e+01, float 7.000000e+01>, <4 x float> <float 0.000000e+01, float -1.000000e+01, float -2.000000e+01, float -3.000000e+01>)
+  ret <4 x float> %r
+}
+
+define <2 x double> @constant_fold_v2f64() {
+; FMA32-LABEL: constant_fold_v2f64:
+; FMA32:       ## %bb.0:
+; FMA32-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; FMA32-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMA32-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMA32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMACALL32-LABEL: constant_fold_v2f64:
+; FMACALL32:       ## %bb.0:
+; FMACALL32-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; FMACALL32-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMACALL32-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; FMACALL32-NEXT:    retl ## encoding: [0xc3]
+;
+; FMA64-LABEL: constant_fold_v2f64:
+; FMA64:       ## %bb.0:
+; FMA64-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; FMA64-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; FMA64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMA64-NEXT:    retq ## encoding: [0xc3]
+;
+; FMACALL64-LABEL: constant_fold_v2f64:
+; FMACALL64:       ## %bb.0:
+; FMACALL64-NEXT:    movaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x05,A,A,A,A]
+; FMACALL64-NEXT:    ## fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; FMACALL64-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512-LABEL: constant_fold_v2f64:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; AVX512-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512VL-LABEL: constant_fold_v2f64:
+; AVX512VL:       ## %bb.0:
+; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+2,1.4E+3]
+; AVX512VL-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512VL-NEXT:    retq ## encoding: [0xc3]
+  %r  = call <2 x double> @llvm.fma.v2f64(<2 x double> <double 1.000000e+01, double 2.000000e+01>, <2 x double> <double 4.000000e+01, double 7.000000e+01>, <2 x double> <double 1.000000e+01, double 0.000000e+01>)
+  ret <2 x double> %r
+}
+
 declare float @llvm.fma.f32(float, float, float)
 declare double @llvm.fma.f64(double, double, double)
 declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80)

@@ -319,7 +319,7 @@ public:
     return get()->getValueAsString(UnpackOptionalCodeFieldName);
   }
 
-  std::vector<llvm::Record*> getBufferElementTypes() const {
+  std::vector<const llvm::Record *> getBufferElementTypes() const {
     return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
   }
 

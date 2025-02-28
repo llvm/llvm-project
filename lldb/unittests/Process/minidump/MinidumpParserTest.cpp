@@ -59,7 +59,6 @@ public:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "convertYAML() failed");
 
-    os.flush();
     auto data_buffer_sp =
         std::make_shared<DataBufferHeap>(data.data(), data.size());
     auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
@@ -85,7 +84,6 @@ Streams:
   )");
 
   ASSERT_TRUE(llvm::yaml::convertYAML(YIn, os, [](const llvm::Twine &Msg){}));
-  os.flush();
   auto data_buffer_sp = std::make_shared<DataBufferHeap>(
       duplicate_streams.data(), duplicate_streams.size());
   ASSERT_THAT_EXPECTED(MinidumpParser::Create(data_buffer_sp), llvm::Failed());
@@ -381,19 +379,23 @@ Streams:
 
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(
-          testing::ElementsAre(
-              MemoryRegionInfo({0x0, 0x10000}, no, no, no, unknown, no, ConstString(),
-                               unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x40000, 0x1000}, yes, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown)),
-          true));
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x0, 0x10000}, no, no, no, unknown,
+                                         no, ConstString(), unknown, 0, unknown,
+                                         unknown, unknown),
+                        MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown),
+                        MemoryRegionInfo({0x40000, 0x1000}, yes, no, no,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown),
+                        MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown),
+                        MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown)),
+                    true));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
@@ -415,13 +417,14 @@ Streams:
 
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(
-          testing::ElementsAre(
-              MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown)),
-          false));
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown),
+                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown)),
+                    false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
@@ -431,13 +434,14 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
   // we don't have a MemoryInfoListStream.
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(
-          testing::ElementsAre(
-              MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, unknown, yes,
-                               ConstString(), unknown, 0, unknown, unknown)),
-          false));
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown),
+                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
+                                         unknown, yes, ConstString(), unknown,
+                                         0, unknown, unknown, unknown)),
+                    false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
@@ -466,17 +470,21 @@ Streams:
       testing::Pair(
           testing::ElementsAre(
               MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes, no, yes,
-                               app_process, unknown, 0, unknown, unknown),
+                               app_process, unknown, 0, unknown, unknown,
+                               unknown),
               MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, no, yes,
-                               app_process, unknown, 0, unknown, unknown),
+                               app_process, unknown, 0, unknown, unknown,
+                               unknown),
               MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no, no, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
+                               ConstString(), unknown, 0, unknown, unknown,
+                               unknown),
               MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, no, yes,
-                               ConstString(), unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, no, yes, linker,
-                               unknown, 0, unknown, unknown),
-              MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes, no, yes, liblog,
-                               unknown, 0, unknown, unknown)),
+                               ConstString(), unknown, 0, unknown, unknown,
+                               unknown),
+              MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, no, yes,
+                               linker, unknown, 0, unknown, unknown, unknown),
+              MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes, no, yes,
+                               liblog, unknown, 0, unknown, unknown, unknown)),
           true));
 }
 
@@ -493,12 +501,12 @@ Streams:
                     llvm::Succeeded());
   // Test that when a /proc/maps region fails to parse
   // we handle the error and continue with the rest.
-  EXPECT_THAT(
-      parser->BuildMemoryRegions(),
-      testing::Pair(testing::ElementsAre(MemoryRegionInfo(
-                        {0x400fc000, 0x1000}, yes, yes, yes, no, yes,
-                        ConstString(nullptr), unknown, 0, unknown, unknown)),
-                    true));
+  EXPECT_THAT(parser->BuildMemoryRegions(),
+              testing::Pair(testing::ElementsAre(MemoryRegionInfo(
+                                {0x400fc000, 0x1000}, yes, yes, yes, no, yes,
+                                ConstString(nullptr), unknown, 0, unknown,
+                                unknown, unknown)),
+                            true));
 }
 
 // Windows Minidump tests

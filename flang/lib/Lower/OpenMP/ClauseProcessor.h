@@ -13,11 +13,11 @@
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "Clauses.h"
-#include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -53,6 +53,8 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBare(mlir::omp::BareClauseOps &result) const;
+  bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
                   mlir::omp::LoopRelatedClauseOps &result,
@@ -62,16 +64,18 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processExclusive(mlir::Location currentLocation,
+                        mlir::omp::ExclusiveClauseOps &result) const;
   bool processFilter(lower::StatementContext &stmtCtx,
                      mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
       mlir::omp::HasDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSymbols) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processInclusive(mlir::Location currentLocation,
+                        mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
@@ -91,6 +95,7 @@ public:
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
+  bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
@@ -104,43 +109,33 @@ public:
                  mlir::omp::IfClauseOps &result) const;
   bool processIsDevicePtr(
       mlir::omp::IsDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSymbols) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
   // This method is used to process a map clause.
-  // The optional parameters - mapSymTypes, mapSymLocs & mapSyms are used to
-  // store the original type, location and Fortran symbol for the map operands.
-  // They may be used later on to create the block_arguments for some of the
-  // target directives that require it.
-  bool processMap(
-      mlir::Location currentLocation, lower::StatementContext &stmtCtx,
-      mlir::omp::MapClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms = nullptr,
-      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+  // The optional parameter mapSyms is used to store the original Fortran symbol
+  // for the map operands. It may be used later on to create the block_arguments
+  // for some of the directives that require it.
+  bool processMap(mlir::Location currentLocation,
+                  lower::StatementContext &stmtCtx,
+                  mlir::omp::MapClauseOps &result,
+                  llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
+                      nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,
                             mlir::omp::MapClauseOps &result);
   bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSyms =
-          nullptr) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
   bool processUseDevicePtr(
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
       llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
 
   // Call this method for these clauses that should be supported but are not
@@ -178,12 +173,10 @@ private:
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
       const omp::ObjectList &objects,
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
-      std::map<const semantics::Symbol *,
-               llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms,
-      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
+      llvm::StringRef mapperIdNameRef = "") const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

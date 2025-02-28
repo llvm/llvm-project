@@ -15,6 +15,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
 using namespace llvm;
 using namespace sampleprof;
@@ -37,7 +38,7 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
              "run stale profile call graph matching."));
 
 static cl::opt<bool> LoadFuncProfileforCGMatching(
-    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
+    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(true),
     cl::desc(
         "Load top-level profiles that the sample reader initially skipped for "
         "the call-graph matching (only meaningful for extended binary "
@@ -194,82 +195,19 @@ LocToLocMap
 SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
                                             const AnchorList &AnchorList2,
                                             bool MatchUnusedFunction) {
-  int32_t Size1 = AnchorList1.size(), Size2 = AnchorList2.size(),
-          MaxDepth = Size1 + Size2;
-  auto Index = [&](int32_t I) { return I + MaxDepth; };
-
-  LocToLocMap EqualLocations;
-  if (MaxDepth == 0)
-    return EqualLocations;
-
-  // Backtrack the SES result.
-  auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
-                       const AnchorList &AnchorList1,
-                       const AnchorList &AnchorList2,
-                       LocToLocMap &EqualLocations) {
-    int32_t X = Size1, Y = Size2;
-    for (int32_t Depth = Trace.size() - 1; X > 0 || Y > 0; Depth--) {
-      const auto &P = Trace[Depth];
-      int32_t K = X - Y;
-      int32_t PrevK = K;
-      if (K == -Depth || (K != Depth && P[Index(K - 1)] < P[Index(K + 1)]))
-        PrevK = K + 1;
-      else
-        PrevK = K - 1;
-
-      int32_t PrevX = P[Index(PrevK)];
-      int32_t PrevY = PrevX - PrevK;
-      while (X > PrevX && Y > PrevY) {
-        X--;
-        Y--;
-        EqualLocations.insert({AnchorList1[X].first, AnchorList2[Y].first});
-      }
-
-      if (Depth == 0)
-        break;
-
-      if (Y == PrevY)
-        X--;
-      else if (X == PrevX)
-        Y--;
-      X = PrevX;
-      Y = PrevY;
-    }
-  };
-
-  // The greedy LCS/SES algorithm.
-
-  // An array contains the endpoints of the furthest reaching D-paths.
-  std::vector<int32_t> V(2 * MaxDepth + 1, -1);
-  V[Index(1)] = 0;
-  // Trace is used to backtrack the SES result.
-  std::vector<std::vector<int32_t>> Trace;
-  for (int32_t Depth = 0; Depth <= MaxDepth; Depth++) {
-    Trace.push_back(V);
-    for (int32_t K = -Depth; K <= Depth; K += 2) {
-      int32_t X = 0, Y = 0;
-      if (K == -Depth || (K != Depth && V[Index(K - 1)] < V[Index(K + 1)]))
-        X = V[Index(K + 1)];
-      else
-        X = V[Index(K - 1)] + 1;
-      Y = X - K;
-      while (X < Size1 && Y < Size2 &&
-             functionMatchesProfile(
-                 AnchorList1[X].second, AnchorList2[Y].second,
-                 !MatchUnusedFunction /* Find matched function only */))
-        X++, Y++;
-
-      V[Index(K)] = X;
-
-      if (X >= Size1 && Y >= Size2) {
-        // Length of an SES is D.
-        Backtrack(Trace, AnchorList1, AnchorList2, EqualLocations);
-        return EqualLocations;
-      }
-    }
-  }
-  // Length of an SES is greater than MaxDepth.
-  return EqualLocations;
+  LocToLocMap MatchedAnchors;
+  llvm::longestCommonSequence<LineLocation, FunctionId>(
+      AnchorList1, AnchorList2,
+      [&](const FunctionId &A, const FunctionId &B) {
+        return functionMatchesProfile(
+            A, B,
+            !MatchUnusedFunction // Find matched function only
+        );
+      },
+      [&](LineLocation A, LineLocation B) {
+        MatchedAnchors.try_emplace(A, B);
+      });
+  return MatchedAnchors;
 }
 
 void SampleProfileMatcher::matchNonCallsiteLocs(
@@ -852,9 +790,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             false /* Match unused functions */);
 
-  Similarity =
-      static_cast<float>(MatchedAnchors.size()) * 2 /
-      (FilteredIRAnchorsList.size() + FilteredProfileAnchorList.size());
+  Similarity = static_cast<float>(MatchedAnchors.size()) /
+               FilteredProfileAnchorList.size();
 
   LLVM_DEBUG(dbgs() << "The similarity between " << IRFunc.getName()
                     << "(IR) and " << ProfFunc << "(profile) is "

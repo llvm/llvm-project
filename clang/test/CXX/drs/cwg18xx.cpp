@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx11-17,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -26,7 +26,7 @@ S<i> V; // #cwg1801-S-i
 // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
 //   cxx98-14-note@#cwg1801-S {{template parameter is declared here}}
 // cxx17-error@#cwg1801-S-i {{non-type template argument refers to subobject '.i'}}
-}
+} // namespace cwg1801
 
 namespace cwg1802 { // cwg1802: 3.1
 #if __cplusplus >= 201103L
@@ -198,13 +198,13 @@ namespace cwg1813 { // cwg1813: 7
   static_assert(!__is_standard_layout(U), "");
 }
 
-namespace cwg1814 { // cwg1814: yes
+namespace cwg1814 { // cwg1814: 3.1
 #if __cplusplus >= 201103L
   void test() {
     auto lam = [](int x = 42) { return x; };
   }
 #endif
-}
+} // namespace cwg1814
 
 namespace cwg1815 { // cwg1815: 20
 #if __cplusplus >= 201402L
@@ -229,7 +229,7 @@ namespace cwg1815 { // cwg1815: 20
   static_assert(f() == 0);
 #endif
 #endif
-}
+} // namespace cwg1815
 
 // cwg1818 is in cwg1818.cpp
 
@@ -274,8 +274,8 @@ void d2() {
 #if __cplusplus >= 201103L
 auto e = [] {
   typedef int cwg1820::A;
-  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
-  // expected-error@-2 {{typedef declarator cannot be qualified}}
+  // since-cxx11-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // since-cxx11-error@-2 {{typedef declarator cannot be qualified}}
 };
 #endif
 } // namespace cwg1820
@@ -296,14 +296,14 @@ struct A {
 };
 } // namespace cwg1821
 
-namespace cwg1822 { // cwg1822: yes
+namespace cwg1822 { // cwg1822: 3.1
 #if __cplusplus >= 201103L
   double a;
   auto x = [] (int a) {
     static_assert(__is_same(decltype(a), int), "should be resolved to lambda parameter");
   };
 #endif
-}
+} // namespace cwg1822
 
 namespace cwg1824 { // cwg1824: 2.7
 template<typename T>
@@ -325,9 +325,9 @@ enum E { // #cwg1832-E
 
 #if __cplusplus >= 201103L
 enum E2: decltype(static_cast<E2>(0), 0) {};
-// expected-error@-1 {{unknown type name 'E2'}}
+// since-cxx11-error@-1 {{unknown type name 'E2'}}
 enum class E3: decltype(static_cast<E3>(0), 0) {};
-// expected-error@-1 {{unknown type name 'E3'}}
+// since-cxx11-error@-1 {{unknown type name 'E3'}}
 #endif
 } // namespace cwg1832
 
@@ -373,7 +373,7 @@ namespace cwg1837 { // cwg1837: 3.3
     };
   };
 #endif
-}
+} // namespace cwg1837
 
 namespace cwg1862 { // cwg1862: no
 template<class T>
@@ -488,17 +488,14 @@ namespace cwg1872 { // cwg1872: 9
   // cxx11-17-error@-1 {{constexpr variable 'y2' must be initialized by a constant expression}}
   //   cxx11-17-note@-2 {{cannot evaluate call to virtual function in a constant expression in C++ standards before C++20}}
 #if __cplusplus >= 202002L
-  static_assert(y == 0);
+  static_assert(y2 == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}a
-#if __cplusplus < 202302L
-  //   since-cxx11-note@-3 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
-#else
-  //   since-cxx23-note@-5 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+  //   cxx11-20-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+  //   since-cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
 #endif
-#endif
-}
+} // namespace cwg1872
 
 namespace cwg1878 { // cwg1878: 18
 #if __cplusplus >= 201402L
@@ -533,7 +530,7 @@ struct S {
 #endif
 };
 #endif
-}
+} // namespace cwg1878
 
 namespace cwg1881 { // cwg1881: 7
   struct A { int a : 4; };
@@ -545,7 +542,9 @@ namespace cwg1881 { // cwg1881: 7
   struct D : C { int : 0; };
   static_assert(__is_standard_layout(C), "");
   static_assert(!__is_standard_layout(D), "");
-}
+} // namespace cwg1881
+
+// cwg1884 is in cwg1884.cpp
 
 namespace cwg1890 { // cwg1890: no drafting 2018-06-04
 // FIXME: current consensus for CWG2335 is that the examples are well-formed.
@@ -583,9 +582,9 @@ void cwg1891() { // cwg1891: 4
   typedef decltype(a) A;
   typedef decltype(b) B;
 
-  static_assert(!__has_trivial_constructor(A), "");
+  static_assert(!__is_trivially_constructible(A), "");
   // since-cxx20-error@-1 {{failed}}
-  static_assert(!__has_trivial_constructor(B), "");
+  static_assert(!__is_trivially_constructible(B), "");
 
   // C++20 allows default construction for non-capturing lambdas (P0624R2).
   A x;
@@ -611,7 +610,7 @@ void cwg1891() { // cwg1891: 4
   // since-cxx11-error-re@-1 {{{{object of type '\(lambda at .+\)' cannot be assigned because its copy assignment operator is implicitly deleted}}}}
   //   since-cxx11-note@#cwg1891-b {{lambda expression begins here}}
 #endif
-}
+} // void cwg1891()
 
 namespace cwg1894 { // cwg1894: 3.8
                    // NB: reusing part of cwg407 test
@@ -639,4 +638,87 @@ namespace H {
   using namespace A;
   struct S s;
 }
-}
+} // namespace cwg1894
+
+namespace cwg1898 { // cwg1898: 2.7
+void e(int) {} // #cwg1898-e
+void e(int) {}
+// expected-error@-1 {{redefinition of 'e'}}
+//   expected-note@#cwg1898-e {{previous definition is here}}
+
+void e2(int) {}
+void e2(long) {} // OK, different type
+
+void f(int) {} // #cwg1898-f
+void f(const int) {}
+// expected-error@-1 {{redefinition of 'f'}}
+//   expected-note@#cwg1898-f {{previous definition is here}}
+
+void g(int) {} // #cwg1898-g
+void g(volatile int) {}
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'volatile int' is deprecated}}
+// expected-error@-2 {{redefinition of 'g'}}
+//   expected-note@#cwg1898-g {{previous definition is here}}
+
+void h(int *) {} // #cwg1898-h
+void h(int[]) {}
+// expected-error@-1 {{redefinition of 'h'}}
+//   expected-note@#cwg1898-h {{previous definition is here}}
+
+void h2(int *) {} // #cwg1898-h2
+void h2(int[2]) {}
+// expected-error@-1 {{redefinition of 'h2'}}
+//   expected-note@#cwg1898-h2 {{previous definition is here}}
+
+void h3(int (*)[2]) {} // #cwg1898-h3
+void h3(int [3][2]) {}
+// expected-error@-1 {{redefinition of 'h3'}}
+//   expected-note@#cwg1898-h3 {{previous definition is here}}
+
+void h4(int (*)[2]) {}
+void h4(int [3][3]) {} // OK, differ in non-top-level extent of array
+
+void i(int *) {}
+void i(const int *) {} // OK, pointee cv-qualification is not discarded
+
+void i2(int *) {} // #cwg1898-i2
+void i2(int * const) {}
+// expected-error@-1 {{redefinition of 'i2'}}
+//   expected-note@#cwg1898-i2 {{previous definition is here}}
+
+void j(void(*)()) {} // #cwg1898-j
+void j(void()) {}
+// expected-error@-1 {{redefinition of 'j'}}
+//   expected-note@#cwg1898-j {{previous definition is here}}
+
+void j2(void(int)) {} // #cwg1898-j2
+void j2(void(const int)) {}
+// expected-error@-1 {{redefinition of 'j2'}}
+//   expected-note@#cwg1898-j2 {{previous definition is here}}
+
+struct A {
+  void k(int) {} // #cwg1898-k
+  void k(int) {}
+  // expected-error@-1 {{class member cannot be redeclared}}
+  //   expected-note@#cwg1898-k {{previous definition is here}}
+};
+
+struct B : A {
+  void k(int) {} // OK, shadows A::k
+};
+
+void l() {}
+void l(...) {}
+
+#if __cplusplus >= 201103L
+template <typename T>
+void m(T) {}
+template <typename... Ts>
+void m(Ts...) {}
+
+template <typename T, typename U>
+void m2(T, U) {}
+template <typename... Ts, typename U>
+void m2(Ts..., U) {}
+#endif
+} // namespace cwg1898

@@ -154,7 +154,7 @@ TEST(DenseSplatTest, IntAttrSplat) {
 
 TEST(DenseSplatTest, F32Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   float value = 10.0;
 
   testSplat(floatTy, value);
@@ -162,7 +162,7 @@ TEST(DenseSplatTest, F32Splat) {
 
 TEST(DenseSplatTest, F64Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF64(&context);
+  FloatType floatTy = Float64Type::get(&context);
   double value = 10.0;
 
   testSplat(floatTy, APFloat(value));
@@ -170,7 +170,7 @@ TEST(DenseSplatTest, F64Splat) {
 
 TEST(DenseSplatTest, FloatAttrSplat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
@@ -178,7 +178,7 @@ TEST(DenseSplatTest, FloatAttrSplat) {
 
 TEST(DenseSplatTest, BF16Splat) {
   MLIRContext context;
-  FloatType floatTy = FloatType::getBF16(&context);
+  FloatType floatTy = BFloat16Type::get(&context);
   Attribute value = FloatAttr::get(floatTy, 10.0);
 
   testSplat(floatTy, value);
@@ -204,7 +204,7 @@ TEST(DenseSplatTest, StringAttrSplat) {
 
 TEST(DenseComplexTest, ComplexFloatSplat) {
   MLIRContext context;
-  ComplexType complexType = ComplexType::get(FloatType::getF32(&context));
+  ComplexType complexType = ComplexType::get(Float32Type::get(&context));
   std::complex<float> value(10.0, 15.0);
   testSplat(complexType, value);
 }
@@ -218,7 +218,7 @@ TEST(DenseComplexTest, ComplexIntSplat) {
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
-  ComplexType complexType = ComplexType::get(FloatType::getF32(&context));
+  ComplexType complexType = ComplexType::get(Float32Type::get(&context));
   std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
   testSplat(complexType, value);
 }
@@ -351,6 +351,21 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   EXPECT_FALSE(isa<DenseBoolResourceElementsAttr>(i32ResourceAttr));
 }
 
+TEST(DenseResourceElementsAttrTest, CheckNotMutableAllocateAndCopy) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  // Create a i32 attribute.
+  std::vector<int32_t> data = {10, 20, 30};
+  auto type = RankedTensorType::get(data.size(), builder.getI32Type());
+  Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
+      type, "resource",
+      HeapAsmResourceBlob::allocateAndCopyInferAlign<int32_t>(
+          data, /*is_mutable=*/false));
+
+  EXPECT_TRUE(isa<DenseI32ResourceElementsAttr>(i32ResourceAttr));
+}
+
 TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   MLIRContext context;
   Builder builder(&context);
@@ -394,7 +409,7 @@ TEST(SparseElementsAttrTest, GetZero) {
   context.allowUnregisteredDialects();
 
   IntegerType intTy = IntegerType::get(&context, 32);
-  FloatType floatTy = FloatType::getF32(&context);
+  FloatType floatTy = Float32Type::get(&context);
   Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);

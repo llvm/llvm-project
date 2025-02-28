@@ -20,7 +20,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -36,7 +35,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
          !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
@@ -103,15 +102,18 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // saved registers.
   SavedRegs.resize(TRI.getNumRegs());
 
-  // When interprocedural register allocation is enabled caller saved registers
-  // are preferred over callee saved registers.
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = nullptr;
+
+  // When interprocedural register allocation is enabled, callee saved register
+  // list should be empty, since caller saved registers are preferred over
+  // callee saved registers. Unless it has some risked CSR to be optimized out.
   if (MF.getTarget().Options.EnableIPRA &&
       isSafeForNoCSROpt(MF.getFunction()) &&
       isProfitableForNoCSROpt(MF.getFunction()))
-    return;
-
-  // Get the callee saved register list...
-  const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+    CSRegs = TRI.getIPRACSRegs(&MF);
+  else
+    CSRegs = MF.getRegInfo().getCalleeSavedRegs();
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)

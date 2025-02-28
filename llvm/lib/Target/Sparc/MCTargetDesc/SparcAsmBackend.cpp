@@ -273,7 +273,7 @@ namespace {
     }
 
     bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
+                               const MCValue &Target, const uint64_t,
                                const MCSubtargetInfo *STI) override {
       if (Fixup.getKind() >= FirstLiteralRelocationKind)
         return true;

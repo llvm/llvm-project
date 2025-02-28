@@ -32,11 +32,11 @@ class Loop;
 class LoopInfo;
 class VPRegionBlock;
 class VPlan;
-class VPlanTestBase;
+class VPlanTestIRBase;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
 class VPlanHCFGBuilder {
-  friend VPlanTestBase;
+  friend VPlanTestIRBase;
 
 private:
   // The outermost loop of the input loop nest considered for vectorization.
@@ -53,6 +53,10 @@ private:
   // are introduced.
   VPDominatorTree VPDomTree;
 
+  /// Map of create VP blocks to their input IR basic blocks, if they have been
+  /// created for a input IR basic block.
+  DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
+
   /// Build plain CFG for TheLoop and connects it to Plan's entry.
   void buildPlainCFG();
 
@@ -62,6 +66,14 @@ public:
 
   /// Build H-CFG for TheLoop and update Plan accordingly.
   void buildHierarchicalCFG();
+
+  /// Return the input IR BasicBlock corresponding to \p VPB. Returns nullptr if
+  /// there is no such corresponding block.
+  /// FIXME: This is a temporary workaround to drive the createBlockInMask.
+  /// Remove once mask creation is done on VPlan.
+  BasicBlock *getIRBBForVPB(const VPBlockBase *VPB) const {
+    return VPB2IRBB.lookup(VPB);
+  }
 };
 } // namespace llvm
 

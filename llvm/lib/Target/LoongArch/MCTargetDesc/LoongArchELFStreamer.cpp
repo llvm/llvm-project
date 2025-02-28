@@ -35,6 +35,11 @@ MCELFStreamer &LoongArchTargetELFStreamer::getStreamer() {
   return static_cast<MCELFStreamer &>(Streamer);
 }
 
+void LoongArchTargetELFStreamer::emitDirectiveOptionPush() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionPop() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionRelax() {}
+void LoongArchTargetELFStreamer::emitDirectiveOptionNoRelax() {}
+
 void LoongArchTargetELFStreamer::finish() {
   LoongArchTargetStreamer::finish();
   ELFObjectWriter &W = getStreamer().getWriter();

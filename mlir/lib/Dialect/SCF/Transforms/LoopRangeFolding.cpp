@@ -72,9 +72,11 @@ void ForLoopRangeFolding::runOnOperation() {
         op.setUpperBound(ubFold->getResult(0));
 
       } else if (isa<arith::MulIOp>(user)) {
+        Operation *lbFold = b.clone(*user, lbMap);
         Operation *ubFold = b.clone(*user, ubMap);
         Operation *stepFold = b.clone(*user, stepMap);
 
+        op.setLowerBound(lbFold->getResult(0));
         op.setUpperBound(ubFold->getResult(0));
         op.setStep(stepFold->getResult(0));
       }

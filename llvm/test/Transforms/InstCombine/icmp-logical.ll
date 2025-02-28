@@ -17,7 +17,7 @@ define i1 @masked_and_notallzeroes(i32 %A) {
 
 define <2 x i1> @masked_and_notallzeroes_splat(<2 x i32> %A) {
 ; CHECK-LABEL: @masked_and_notallzeroes_splat(
-; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i32> [[A:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 7)
 ; CHECK-NEXT:    [[TST1:%.*]] = icmp ne <2 x i32> [[MASK1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TST1]]
 ;
@@ -371,7 +371,7 @@ define i1 @fold_mask_cmps_to_true_logical(i32 %x) {
 
 define <2 x i1> @nomask_splat_and_B_allones(<2 x i32> %A) {
 ; CHECK-LABEL: @nomask_splat_and_B_allones(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 -268435457, i32 -268435457>
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 -268435457)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %tst1 = icmp slt <2 x i32> %A, <i32 0, i32 poison>
@@ -383,8 +383,8 @@ define <2 x i1> @nomask_splat_and_B_allones(<2 x i32> %A) {
 
 define <2 x i1> @nomask_splat_and_B_mixed(<2 x i32> %A) {
 ; CHECK-LABEL: @nomask_splat_and_B_mixed(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -268435456, i32 -268435456>
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 1879048192, i32 1879048192>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 -268435456)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 1879048192)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %tst1 = icmp sgt <2 x i32> %A, <i32 -1, i32 poison>
@@ -476,8 +476,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_1(i32 %x) {
 
 define <2 x i1> @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @masked_icmps_mask_notallzeros_bmask_mixed_1_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
-; CHECK-NEXT:    [[T5:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 9, i32 9>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[T5:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 9)
 ; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t1 = and <2 x i32> %x, <i32 12, i32 12>
@@ -1778,8 +1778,8 @@ define i1 @masked_icmps_bmask_notmixed_or(i32 %A) {
 
 define <2 x i1> @masked_icmps_bmask_notmixed_or_vec(<2 x i8> %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 3, i8 3>
+; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[MASK1]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %mask1 = and <2 x i8> %A, <i8 15, i8 15> ; 0x0f
@@ -1792,9 +1792,9 @@ define <2 x i1> @masked_icmps_bmask_notmixed_or_vec(<2 x i8> %A) {
 
 define <2 x i1> @masked_icmps_bmask_notmixed_or_vec_poison1(<2 x i8> %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or_vec_poison1(
-; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 15)
 ; CHECK-NEXT:    [[TST1:%.*]] = icmp eq <2 x i8> [[MASK1]], <i8 3, i8 poison>
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i8> [[A]], <i8 -13, i8 -13>
+; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i8> [[A]], splat (i8 -13)
 ; CHECK-NEXT:    [[RES:%.*]] = or <2 x i1> [[TST1]], [[TST2]]
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
@@ -1808,8 +1808,8 @@ define <2 x i1> @masked_icmps_bmask_notmixed_or_vec_poison1(<2 x i8> %A) {
 
 define <2 x i1> @masked_icmps_bmask_notmixed_or_vec_poison2(<2 x i8> %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or_vec_poison2(
-; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq <2 x i8> [[MASK1]], <i8 3, i8 3>
+; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[TST1:%.*]] = icmp eq <2 x i8> [[MASK1]], splat (i8 3)
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i8> [[A]], <i8 -13, i8 poison>
 ; CHECK-NEXT:    [[RES:%.*]] = or <2 x i1> [[TST1]], [[TST2]]
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
@@ -1899,4 +1899,29 @@ define i1 @masked_icmps_bmask_notmixed_not_subset_notoptimized(i32 %A) {
   %tst2 = icmp ne i32 %mask2, 252 ; 0xfc
   %res = and i1 %tst1, %tst2
   ret i1 %res
+}
+
+define i1 @pr120361(i8 %x, i8 %y) {
+; CHECK-LABEL: @pr120361(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp1 = icmp samesign eq i8 %x, -1
+  %cmp2 = icmp ne i8 %x, 0
+  %result = select i1 %cmp2, i1 %cmp1, i1 false
+  ret i1 %result
+}
+
+define i1 @pr120361_v2(i32 %x) {
+; CHECK-LABEL: @pr120361_v2(
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X:%.*]], -113
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND2]], 15
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %and1 = and i32 %x, 15
+  %cmp1 = icmp ne i32 %and1, 0
+  %and2 = and i32 %x, -113
+  %cmp2 = icmp samesign eq i32 %and2, 15
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
 }

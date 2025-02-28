@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
 using namespace clang;
 

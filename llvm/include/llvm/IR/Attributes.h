@@ -117,6 +117,11 @@ public:
   static bool canUseAsParamAttr(AttrKind Kind);
   static bool canUseAsRetAttr(AttrKind Kind);
 
+  static bool intersectMustPreserve(AttrKind Kind);
+  static bool intersectWithAnd(AttrKind Kind);
+  static bool intersectWithMin(AttrKind Kind);
+  static bool intersectWithCustom(AttrKind Kind);
+
 private:
   AttributeImpl *pImpl = nullptr;
 
@@ -160,6 +165,7 @@ public:
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
   static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
   static Attribute getWithNoFPClass(LLVMContext &Context, FPClassTest Mask);
+  static Attribute getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -208,8 +214,12 @@ public:
   /// Return true if the target-dependent attribute is present.
   bool hasAttribute(StringRef Val) const;
 
+  /// Returns true if the attribute's kind can be represented as an enum (Enum,
+  /// Integer, Type, ConstantRange, or ConstantRangeList attribute).
+  bool hasKindAsEnum() const { return !isStringAttribute(); }
+
   /// Return the attribute's kind as an enum (Attribute::AttrKind). This
-  /// requires the attribute to be an enum, integer, or type attribute.
+  /// requires the attribute be representable as an enum (see: `hasKindAsEnum`).
   Attribute::AttrKind getKindAsEnum() const;
 
   /// Return the attribute's value as an integer. This requires that the
@@ -275,6 +285,9 @@ public:
   /// Returns memory effects.
   MemoryEffects getMemoryEffects() const;
 
+  /// Returns information from captures attribute.
+  CaptureInfo getCaptureInfo() const;
+
   /// Return the FPClassTest for nofpclass
   FPClassTest getNoFPClass() const;
 
@@ -294,6 +307,9 @@ public:
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
   bool operator!=(Attribute A) const { return pImpl != A.pImpl; }
+
+  /// Used to sort attribute by kind.
+  int cmpKind(Attribute A) const;
 
   /// Less-than operator. Useful for sorting the attributes list.
   bool operator<(Attribute A) const;
@@ -383,6 +399,12 @@ public:
   [[nodiscard]] AttributeSet
   removeAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const;
 
+  /// Try to intersect this AttributeSet with Other. Returns std::nullopt if
+  /// the two lists are inherently incompatible (imply different behavior, not
+  /// just analysis).
+  [[nodiscard]] std::optional<AttributeSet>
+  intersectWith(LLVMContext &C, AttributeSet Other) const;
+
   /// Return the number of attributes in this set.
   unsigned getNumAttributes() const;
 
@@ -418,6 +440,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
@@ -773,7 +796,13 @@ public:
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
-                        const std::optional<unsigned> &NumElemsArg);
+                        const std::optional<unsigned> &NumElemsArg) const;
+
+  /// Try to intersect this AttributeList with Other. Returns std::nullopt if
+  /// the two lists are inherently incompatible (imply different behavior, not
+  /// just analysis).
+  [[nodiscard]] std::optional<AttributeList>
+  intersectWith(LLVMContext &C, AttributeList Other) const;
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors
@@ -922,6 +951,9 @@ public:
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
+
+  /// Get range (or std::nullopt if unknown) of an arg.
+  std::optional<ConstantRange> getParamRange(unsigned ArgNo) const;
 
   /// Get the disallowed floating-point classes of the return value.
   FPClassTest getRetNoFPClass() const;
@@ -1099,6 +1131,10 @@ public:
   /// invalid if the Kind is not present in the builder.
   Attribute getAttribute(StringRef Kind) const;
 
+  /// Retrieve the range if the attribute exists (std::nullopt is returned
+  /// otherwise).
+  std::optional<ConstantRange> getRange() const;
+
   /// Return raw (possibly packed/encoded) value of integer attribute or
   /// std::nullopt if not set.
   std::optional<uint64_t> getRawIntAttr(Attribute::AttrKind Kind) const;
@@ -1229,6 +1265,9 @@ public:
   /// Add memory effect attribute.
   AttrBuilder &addMemoryAttr(MemoryEffects ME);
 
+  /// Add captures attribute.
+  AttrBuilder &addCapturesAttr(CaptureInfo CI);
+
   // Add nofpclass attribute
   AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
 
@@ -1264,11 +1303,17 @@ enum AttributeSafetyKind : uint8_t {
 /// follows the same type rules as FPMathOperator.
 bool isNoFPClassCompatibleType(Type *Ty);
 
-/// Which attributes cannot be applied to a type. The argument \p ASK indicates,
-/// if only attributes that are known to be safely droppable are contained in
-/// the mask; only attributes that might be unsafe to drop (e.g., ABI-related
-/// attributes) are in the mask; or both.
-AttributeMask typeIncompatible(Type *Ty, AttributeSafetyKind ASK = ASK_ALL);
+/// Which attributes cannot be applied to a type. The argument \p AS
+/// is used as a hint for the attributes whose compatibility is being
+/// checked against \p Ty. This does not mean the return will be a
+/// subset of \p AS, just that attributes that have specific dynamic
+/// type compatibilities (i.e `range`) will be checked against what is
+/// contained in \p AS. The argument \p ASK indicates, if only
+/// attributes that are known to be safely droppable are contained in
+/// the mask; only attributes that might be unsafe to drop (e.g.,
+/// ABI-related attributes) are in the mask; or both.
+AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
+                               AttributeSafetyKind ASK = ASK_ALL);
 
 /// Get param/return attributes which imply immediate undefined behavior if an
 /// invalid value is passed. For example, this includes noundef (where undef

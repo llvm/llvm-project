@@ -177,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -256,6 +256,8 @@ Volatile
 The ``null``, ``alignment``, ``object-size``, ``local-bounds``, and ``vptr`` checks do not apply
 to pointers to types with the ``volatile`` qualifier.
 
+.. _minimal-runtime:
+
 Minimal Runtime
 ===============
 
@@ -274,8 +276,8 @@ Stack traces and report symbolization
 If you want UBSan to print symbolized stack trace for each error report, you
 will need to:
 
-#. Compile with ``-g`` and ``-fno-omit-frame-pointer`` to get proper debug
-   information in your binary.
+#. Compile with ``-g``, ``-fno-sanitize-merge`` and ``-fno-omit-frame-pointer``
+   to get proper debug information in your binary.
 #. Run your program with environment variable
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.
@@ -415,6 +417,15 @@ There are several limitations:
   most of UBSan checks are recoverable by default.
 * Check groups (like ``undefined``) can't be used in suppressions file, only
   fine-grained checks are supported.
+
+Security Considerations
+=======================
+
+UndefinedBehaviorSanitizer's runtime is meant for testing purposes and its usage
+in production environment should be carefully considered from security
+perspective as it may compromise the security of the resulting executable.
+For security-sensitive applications consider using :ref:`Minimal Runtime
+<minimal-runtime>` or trap mode for all checks.
 
 Supported Platforms
 ===================

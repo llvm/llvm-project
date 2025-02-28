@@ -26,9 +26,9 @@ struct TestAllSliceOpLoweringPass
     SymbolTableCollection symbolTableCollection;
     mesh::populateAllSliceOpLoweringPatterns(patterns, symbolTableCollection);
     LogicalResult status =
-        applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+        applyPatternsGreedily(getOperation(), std::move(patterns));
     (void)status;
-    assert(succeeded(status) && "applyPatternsAndFoldGreedily failed.");
+    assert(succeeded(status) && "applyPatternsGreedily failed.");
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     mesh::registerAllSliceOpLoweringDialects(registry);
@@ -51,9 +51,9 @@ struct TestMultiIndexOpLoweringPass
     mesh::populateProcessMultiIndexOpLoweringPatterns(patterns,
                                                       symbolTableCollection);
     LogicalResult status =
-        applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+        applyPatternsGreedily(getOperation(), std::move(patterns));
     (void)status;
-    assert(succeeded(status) && "applyPatternsAndFoldGreedily failed.");
+    assert(succeeded(status) && "applyPatternsGreedily failed.");
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     mesh::registerProcessMultiIndexOpLoweringDialects(registry);

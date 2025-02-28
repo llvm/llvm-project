@@ -154,15 +154,15 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   StartCtx = cast<Function>(
       M.getOrInsertFunction(
            CompilerRtAPINames::StartCtx,
-           FunctionType::get(ContextNodeTy->getPointerTo(),
-                             {ContextRootTy->getPointerTo(), /*ContextRoot*/
+           FunctionType::get(PointerTy,
+                             {PointerTy, /*ContextRoot*/
                               I64Ty, /*Guid*/ I32Ty,
                               /*NumCounters*/ I32Ty /*NumCallsites*/},
                              false))
           .getCallee());
   GetCtx = cast<Function>(
       M.getOrInsertFunction(CompilerRtAPINames::GetCtx,
-                            FunctionType::get(ContextNodeTy->getPointerTo(),
+                            FunctionType::get(PointerTy,
                                               {PointerTy, /*Callee*/
                                                I64Ty,     /*Guid*/
                                                I32Ty,     /*NumCounters*/
@@ -170,13 +170,12 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                               false))
           .getCallee());
   ReleaseCtx = cast<Function>(
-      M.getOrInsertFunction(
-           CompilerRtAPINames::ReleaseCtx,
-           FunctionType::get(Type::getVoidTy(M.getContext()),
-                             {
-                                 ContextRootTy->getPointerTo(), /*ContextRoot*/
-                             },
-                             false))
+      M.getOrInsertFunction(CompilerRtAPINames::ReleaseCtx,
+                            FunctionType::get(Type::getVoidTy(M.getContext()),
+                                              {
+                                                  PointerTy, /*ContextRoot*/
+                                              },
+                                              false))
           .getCallee());
 
   // Declare the TLSes we will need to use.
@@ -264,7 +263,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         auto *Index = Builder.CreateAnd(CtxAsInt, Builder.getInt64(1));
         // The GEPs corresponding to that index, in the respective TLS.
         ExpectedCalleeTLSAddr = Builder.CreateGEP(
-            Builder.getInt8Ty()->getPointerTo(),
+            PointerType::getUnqual(F.getContext()),
             Builder.CreateThreadLocalAddress(ExpectedCalleeTLS), {Index});
         CallsiteInfoTLSAddr = Builder.CreateGEP(
             Builder.getInt32Ty(),
@@ -277,7 +276,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // with counters) stays the same.
       RealContext = Builder.CreateIntToPtr(
           Builder.CreateAnd(CtxAsInt, Builder.getInt64(-2)),
-          ThisContextType->getPointerTo());
+          PointerType::getUnqual(F.getContext()));
       I.eraseFromParent();
       break;
     }
@@ -351,4 +350,26 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         "instructions above which to release the context: " +
         F.getName());
   return true;
+}
+
+PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  bool Changed = false;
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (F.hasFnAttribute(Attribute::NoInline))
+      continue;
+    if (!F.isWeakForLinker())
+      continue;
+
+    if (F.hasFnAttribute(Attribute::AlwaysInline))
+      F.removeFnAttr(Attribute::AlwaysInline);
+
+    F.addFnAttr(Attribute::NoInline);
+    Changed = true;
+  }
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }

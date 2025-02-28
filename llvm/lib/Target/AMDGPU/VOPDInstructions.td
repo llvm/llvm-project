@@ -87,12 +87,12 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
   let ReadsModeReg = !or(VDX.ReadsModeReg, VDY.ReadsModeReg);
   let mayRaiseFPException = ReadsModeReg;
 
-  // V_DUAL_FMAC and V_DUAL_DOT2ACC_F32_F16 need a dummy src2 tied to dst for
-  // passes to track its uses. Its presence does not affect VOPD formation rules
-  // because the rules for src2 and dst are the same. src2X and src2Y should not
-  // be encoded.
-  bit hasSrc2AccX = !or(!eq(VDX.Mnemonic, "v_fmac_f32"), !eq(VDX.Mnemonic, "v_dot2c_f32_f16"));
-  bit hasSrc2AccY = !or(!eq(VDY.Mnemonic, "v_fmac_f32"), !eq(VDY.Mnemonic, "v_dot2c_f32_f16"));
+  // V_DUAL_FMAC and V_DUAL_DOT2ACC_F32_F16 and V_DUAL_DOT2ACC_F32_BF16 need a
+  // dummy src2 tied to dst for passes to track its uses. Its presence does not
+  // affect VOPD formation rules because the rules for src2 and dst are the
+  // same. src2X and src2Y should not be encoded.
+  bit hasSrc2AccX = !or(!eq(VDX.Mnemonic, "v_fmac_f32"), !eq(VDX.Mnemonic, "v_dot2c_f32_f16"), !eq(VDX.Mnemonic, "v_dot2c_f32_bf16"));
+  bit hasSrc2AccY = !or(!eq(VDY.Mnemonic, "v_fmac_f32"), !eq(VDY.Mnemonic, "v_dot2c_f32_f16"), !eq(VDY.Mnemonic, "v_dot2c_f32_bf16"));
   string ConstraintsX = !if(hasSrc2AccX, "$src2X = $vdstX", "");
   string ConstraintsY = !if(hasSrc2AccY, "$src2Y = $vdstY", "");
   let Constraints =
@@ -125,20 +125,16 @@ class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
   let FixedSize = 1;
 }
 
-// V_DUAL_DOT2ACC_F32_BF16 is a legal instruction, but V_DOT2ACC_F32_BF16 is
-// not. V_DUAL_DOT2C_F32_BF16 is a legal instruction on GFX12, but
-// V_DOT2C_F32_F16_e32 is not. Since we generate the DUAL form by converting
-// from the normal form we will never generate them.
 defvar VOPDPseudosCommon = [
   "V_FMAC_F32_e32", "V_FMAAK_F32", "V_FMAMK_F32", "V_MUL_F32_e32",
   "V_ADD_F32_e32", "V_SUB_F32_e32", "V_SUBREV_F32_e32", "V_MUL_LEGACY_F32_e32",
-  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32"
+  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32",
+  "V_DOT2C_F32_F16_e32", "V_DOT2C_F32_BF16_e32"
 ];
-defvar VOPDPseudosGFX11 = ["V_DOT2C_F32_F16_e32"];
 defvar VOPDYOnlyPseudosCommon = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32",
                                  "V_AND_B32_e32"];
 
-defvar VOPDXPseudosGFX11 = !listconcat(VOPDPseudosCommon, VOPDPseudosGFX11);
+defvar VOPDXPseudosGFX11 = VOPDPseudosCommon;
 defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon);

@@ -76,7 +76,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <deque>
 
 #ifdef EXPENSIVE_CHECKS
@@ -110,7 +109,7 @@ static cl::opt<unsigned> MaxNumVisitiedPaths(
     "dfa-max-num-visited-paths",
     cl::desc(
         "Max number of blocks visited while enumerating paths around a switch"),
-    cl::Hidden, cl::init(2000));
+    cl::Hidden, cl::init(2500));
 
 static cl::opt<unsigned>
     MaxNumPaths("dfa-max-num-paths",
@@ -194,7 +193,6 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
   BasicBlock *StartBlock = SI->getParent();
-  BasicBlock *EndBlock = SIUse->getParent();
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
 
@@ -202,6 +200,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   assert(SI->hasOneUse());
 
   if (StartBlockTerm->isUnconditional()) {
+    BasicBlock *EndBlock = StartBlock->getUniqueSuccessor();
     // Arbitrarily choose the 'false' side for a new input value to the PHI.
     BasicBlock *NewBlock = BasicBlock::Create(
         SI->getContext(), Twine(SI->getName(), ".si.unfold.false"),
@@ -223,32 +222,44 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
                                       NewBlock->getFirstInsertionPt());
     NewPhi->addIncoming(SIOp2, StartBlock);
 
+    // Update any other PHI nodes in EndBlock.
+    for (PHINode &Phi : EndBlock->phis()) {
+      if (SIUse == &Phi)
+        continue;
+      Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), NewBlock);
+    }
+
+    // Update the phi node of SI, which is its only use.
+    if (EndBlock == SIUse->getParent()) {
+      SIUse->addIncoming(NewPhi, NewBlock);
+      SIUse->replaceUsesOfWith(SI, SIOp1);
+    } else {
+      PHINode *EndPhi = PHINode::Create(SIUse->getType(), pred_size(EndBlock),
+                                        Twine(SI->getName(), ".si.unfold.phi"),
+                                        EndBlock->getFirstInsertionPt());
+      for (BasicBlock *Pred : predecessors(EndBlock)) {
+        if (Pred != StartBlock && Pred != NewBlock)
+          EndPhi->addIncoming(EndPhi, Pred);
+      }
+
+      EndPhi->addIncoming(SIOp1, StartBlock);
+      EndPhi->addIncoming(NewPhi, NewBlock);
+      SIUse->replaceUsesOfWith(SI, EndPhi);
+      SIUse = EndPhi;
+    }
+
     if (auto *OpSi = dyn_cast<SelectInst>(SIOp1))
       NewSIsToUnfold->push_back(SelectInstToUnfold(OpSi, SIUse));
     if (auto *OpSi = dyn_cast<SelectInst>(SIOp2))
       NewSIsToUnfold->push_back(SelectInstToUnfold(OpSi, NewPhi));
 
-    // Update the phi node of SI.
-    for (unsigned Idx = 0; Idx < SIUse->getNumIncomingValues(); ++Idx) {
-      if (SIUse->getIncomingBlock(Idx) == StartBlock)
-        SIUse->setIncomingValue(Idx, SIOp1);
-    }
-    SIUse->addIncoming(NewPhi, NewBlock);
-
-    // Update any other PHI nodes in EndBlock.
-    for (auto II = EndBlock->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-         ++II) {
-      if (Phi != SIUse)
-        Phi->addIncoming(Phi->getIncomingValueForBlock(StartBlock), NewBlock);
-    }
-
-    StartBlockTerm->eraseFromParent();
-
     // Insert the real conditional branch based on the original condition.
+    StartBlockTerm->eraseFromParent();
     BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
     DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
                        {DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
+    BasicBlock *EndBlock = SIUse->getParent();
     BasicBlock *NewBlockT = BasicBlock::Create(
         SI->getContext(), Twine(SI->getName(), ".si.unfold.true"),
         EndBlock->getParent(), EndBlock);
@@ -743,17 +754,15 @@ private:
     return Res;
   }
 
-  /// Walk the use-def chain and collect all the state-defining instructions.
-  ///
-  /// Return an empty map if unpredictable values encountered inside the basic
-  /// blocks of \p LoopPaths.
+  /// Walk the use-def chain and collect all the state-defining blocks and the
+  /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
-    Value *FirstDef = Switch->getOperand(0);
-    assert(isa<PHINode>(FirstDef) && "The first definition must be a phi.");
+    PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
+    assert(FirstDef && "The first definition must be a phi.");
 
     SmallVector<PHINode *, 8> Stack;
-    Stack.push_back(dyn_cast<PHINode>(FirstDef));
+    Stack.push_back(FirstDef);
     SmallSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
@@ -763,18 +772,15 @@ private:
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
-        Value *Incoming = CurPhi->getIncomingValueForBlock(IncomingBB);
-        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
-        if (Incoming == FirstDef || isa<ConstantInt>(Incoming) ||
-            SeenValues.contains(Incoming) || IsOutsideLoops) {
+        PHINode *IncomingPhi =
+            dyn_cast<PHINode>(CurPhi->getIncomingValueForBlock(IncomingBB));
+        if (!IncomingPhi)
           continue;
-        }
+        bool IsOutsideLoops = !SwitchOuterLoop->contains(IncomingBB);
+        if (SeenValues.contains(IncomingPhi) || IsOutsideLoops)
+          continue;
 
-        // Any unpredictable value inside the loops means we must bail out.
-        if (!isa<PHINode>(Incoming))
-          return StateDefMap();
-
-        Stack.push_back(cast<PHINode>(Incoming));
+        Stack.push_back(IncomingPhi);
       }
     }
 

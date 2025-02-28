@@ -568,7 +568,7 @@ void HexagonExpandCondsets::updateLiveness(const std::set<Register> &RegSet,
     // after that.
     if (UpdateKills)
       updateKillFlags(R);
-    LIS->getInterval(R).verify();
+    assert(LIS->getInterval(R).verify());
   }
 }
 
@@ -720,7 +720,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
     }
   }
 
-  // First, create the two invididual conditional transfers, and add each
+  // First, create the two individual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
   // the old instruction from live intervals.
   MachineInstr *TfrT =
@@ -1197,7 +1197,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
 
   updateKillFlags(R1.Reg);
   LLVM_DEBUG(dbgs() << "coalesced: " << L1 << "\n");
-  L1.verify();
+  assert(L1.verify());
 
   return true;
 }

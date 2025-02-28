@@ -245,7 +245,7 @@ public:
   // a match.  But we wouldn't want this to match AnotherA::my_function.  The
   // user is specifying a truncated path, not a truncated set of characters.
   // This function does a language-aware comparison for those purposes.
-  virtual bool DemangledNameContainsPath(llvm::StringRef path, 
+  virtual bool DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const;
 
   // if a language has a custom format for printing variable declarations that
@@ -362,6 +362,17 @@ public:
   virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
     return false;
   }
+
+  /// Returns a boolean indicating whether two symbol contexts are equal for the
+  /// purposes of frame comparison. If the plugin has no opinion, it should
+  /// return nullopt.
+  virtual std::optional<bool>
+  AreEqualForFrameComparison(const SymbolContext &sc1,
+                             const SymbolContext &sc2) const {
+    return {};
+  }
+
+  virtual std::optional<bool> GetBooleanFromString(llvm::StringRef str) const;
 
   /// Returns true if this Language supports exception breakpoints on throw via
   /// a corresponding LanguageRuntime plugin.

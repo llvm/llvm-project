@@ -514,6 +514,7 @@ def CVrrAsmOperand : AsmOperandClass {
   let Name = "RegReg";
   let ParserMethod = "parseRegReg";
   let DiagnosticType = "InvalidRegReg";
+  let DiagnosticString = "operands must be register and register";
 }
 
 def CVrr : Operand<i32>,
@@ -698,7 +699,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
   def : CVStriPat<post_store, CV_SW_ri_inc>;
 
   def : CVStrriPat<post_truncsti8, CV_SB_rr_inc>;
-  def : CVStrriPat<post_truncsti16, CV_SH_ri_inc>;
+  def : CVStrriPat<post_truncsti16, CV_SH_rr_inc>;
   def : CVStrriPat<post_store, CV_SW_rr_inc>;
 
   def : CVStrrPat<truncstorei8, CV_SB_rr>;
@@ -792,17 +793,18 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
   def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
 
   defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
   defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
-  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addn>;
-  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addun>;
-  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addrn>;
-  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_addurn>;
-  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subn>;
-  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subun>;
-  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subrn>;
-  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_suburn>;
+  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addN>;
+  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduN>;
+  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addRN>;
+  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduRN>;
+  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subN>;
+  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuN>;
+  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subRN>;
+  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuRN>;
 } // Predicates = [HasVendorXCValu, IsRV32]
 
 //===----------------------------------------------------------------------===//
@@ -817,7 +819,7 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
-                             (ins GPR:$lhs, simm5:$imm5, ixlenimm:$cc,
+                             (ins GPR:$lhs, simm5:$imm5, cond_code:$cc,
                               GPR:$truev, GPR:$falsev), []>;
 
 

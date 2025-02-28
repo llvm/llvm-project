@@ -1,0 +1,226 @@
+macros:
+  __STDC_VERSION_STDIO_H__:
+    c-definition: '7.23.1'
+  _IOFBF:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  _IOLBF:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  _IONBF:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  BUFSIZ:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  EOF:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  FOPEN_MAX:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  FILENAME_MAX:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  _PRINTF_NAN_LEN_MAX:
+    c-definition: '7.23.1'
+  L_tmpnam:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  L_ctermid:
+    in-latest-posix: ''
+  SEEK_CUR:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  SEEK_END:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  SEEK_SET:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  TMP_MAX:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  stderr:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  stdin:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+  stdout:
+    c-definition: '7.23.1'
+    in-latest-posix: ''
+functions:
+  remove:
+    c-definition: '7.23.4.1'
+    in-latest-posix: ''
+  rename:
+    c-definition: '7.23.4.2'
+    in-latest-posix: ''
+  tmpfile:
+    c-definition: '7.23.4.3'
+    in-latest-posix: ''
+  tmpnam:
+    c-definition: '7.23.4.4'
+    in-latest-posix: ''
+  fclose:
+    c-definition: '7.23.5.1'
+    in-latest-posix: ''
+  fflush:
+    c-definition: '7.23.5.2'
+    in-latest-posix: ''
+  fopen:
+    c-definition: '7.23.5.3'
+    in-latest-posix: ''
+  freopen:
+    c-definition: '7.23.5.4'
+    in-latest-posix: ''
+  setbuf:
+    c-definition: '7.23.5.5'
+    in-latest-posix: ''
+  setvbuf:
+    c-definition: '7.23.5.6'
+    in-latest-posix: ''
+  fprintf:
+    c-definition: '7.23.6.1'
+    in-latest-posix: ''
+  fscanf:
+    c-definition: '7.23.6.2'
+    in-latest-posix: ''
+  printf:
+    c-definition: '7.23.6.3'
+    in-latest-posix: ''
+  scanf:
+    c-definition: '7.23.6.4'
+    in-latest-posix: ''
+  snprintf:
+    c-definition: '7.23.6.5'
+    in-latest-posix: ''
+  sprintf:
+    c-definition: '7.23.6.6'
+    in-latest-posix: ''
+  sscanf:
+    c-definition: '7.23.6.7'
+    in-latest-posix: ''
+  vfprintf:
+    c-definition: '7.23.6.8'
+    in-latest-posix: ''
+  vfscanf:
+    c-definition: '7.23.6.9'
+    in-latest-posix: ''
+  vprintf:
+    c-definition: '7.23.6.10'
+    in-latest-posix: ''
+  vscanf:
+    c-definition: '7.23.6.11'
+    in-latest-posix: ''
+  vsnprintf:
+    c-definition: '7.23.6.12'
+    in-latest-posix: ''
+  vsprintf:
+    c-definition: '7.23.6.13'
+    in-latest-posix: ''
+  vsscanf:
+    c-definition: '7.23.6.14'
+    in-latest-posix: ''
+  fgetc:
+    c-definition: '7.23.7.1'
+    in-latest-posix: ''
+  fgets:
+    c-definition: '7.23.7.2'
+    in-latest-posix: ''
+  fputc:
+    c-definition: '7.23.7.3'
+    in-latest-posix: ''
+  fputs:
+    c-definition: '7.23.7.4'
+    in-latest-posix: ''
+  getc:
+    c-definition: '7.23.7.5'
+    in-latest-posix: ''
+  getchar:
+    c-definition: '7.23.7.6'
+    in-latest-posix: ''
+  putc:
+    c-definition: '7.23.7.7'
+    in-latest-posix: ''
+  putchar:
+    c-definition: '7.23.7.8'
+    in-latest-posix: ''
+  puts:
+    c-definition: '7.23.7.9'
+    in-latest-posix: ''
+  ungetc:
+    c-definition: '7.23.7.10'
+    in-latest-posix: ''
+  fread:
+    c-definition: '7.23.8.1'
+    in-latest-posix: ''
+  fwrite:
+    c-definition: '7.23.8.2'
+    in-latest-posix: ''
+  fgetpos:
+    c-definition: '7.23.9.1'
+    in-latest-posix: ''
+  fseek:
+    c-definition: '7.23.9.2'
+    in-latest-posix: ''
+  fsetpos:
+    c-definition: '7.23.9.3'
+    in-latest-posix: ''
+  ftell:
+    c-definition: '7.23.9.4'
+    in-latest-posix: ''
+  rewind:
+    c-definition: '7.23.9.5'
+    in-latest-posix: ''
+  clearerr:
+    c-definition: '7.23.10.1'
+    in-latest-posix: ''
+  feof:
+    c-definition: '7.23.10.2'
+    in-latest-posix: ''
+  ferror:
+    c-definition: '7.23.10.3'
+    in-latest-posix: ''
+  perror:
+    c-definition: '7.23.10.4'
+    in-latest-posix: ''
+  ctermid:
+    in-latest-posix: ''
+  dprintf:
+    in-latest-posix: ''
+  fdopen:
+    in-latest-posix: ''
+  fileno:
+    in-latest-posix: ''
+  flockfile:
+    in-latest-posix: ''
+  fmemopen:
+    in-latest-posix: ''
+  fseeko:
+    in-latest-posix: ''
+  ftello:
+    in-latest-posix: ''
+  ftrylockfile:
+    in-latest-posix: ''
+  funlockfile:
+    in-latest-posix: ''
+  getdelim:
+    in-latest-posix: ''
+  getline:
+    in-latest-posix: ''
+  open_memstream:
+    in-latest-posix: ''
+  pclose:
+    in-latest-posix: ''
+  popen:
+    in-latest-posix: ''
+  putc_unlocked:
+    in-latest-posix: ''
+  putchar_unlocked:
+    in-latest-posix: ''
+  renameat:
+    in-latest-posix: ''
+  vdprintf:
+    in-latest-posix: ''

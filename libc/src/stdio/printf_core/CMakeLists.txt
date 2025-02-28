@@ -10,6 +10,15 @@ endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
   list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  list(APPEND printf_config_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_FLOAT320")
+endif()
 if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
 endif()
@@ -123,11 +132,12 @@ add_header_library(
   HDRS
     vasprintf_internal.h
   DEPENDS
+    libc.hdr.func.malloc
+    libc.hdr.func.free
+    libc.hdr.func.realloc
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
-    libc.src.stdlib.malloc
-    libc.src.stdlib.realloc
 )
 
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
@@ -141,7 +151,6 @@ add_header_library(
   HDRS
     vfprintf_internal.h
   DEPENDS
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main

@@ -16,13 +16,13 @@
 
 namespace mlir {
 namespace ml_program {
-#define GEN_PASS_DEF_MLPROGRAMPIPELINEGLOBALS
+#define GEN_PASS_DEF_MLPROGRAMPIPELINEGLOBALSPASS
 #include "mlir/Dialect/MLProgram/Transforms/Passes.h.inc"
 
 namespace {
 
 class MLProgramPipelineGlobals
-    : public impl::MLProgramPipelineGlobalsBase<MLProgramPipelineGlobals> {
+    : public impl::MLProgramPipelineGlobalsPassBase<MLProgramPipelineGlobals> {
 public:
   void runOnOperation() override;
 
@@ -148,8 +148,9 @@ void MLProgramPipelineGlobals::processBlock(
     if (auto store = mlir::dyn_cast<GlobalStoreOp>(op)) {
       auto ref = store.getGlobal();
       symbolStore.insert(ref);
-      if (previousStores.contains(ref)) {
-        toDelete.push_back(previousStores.find(ref)->getSecond());
+      auto it = previousStores.find(ref);
+      if (it != previousStores.end()) {
+        toDelete.push_back(it->getSecond());
       }
 
       previousLoads[ref] = store.getValue();
@@ -222,11 +223,6 @@ void MLProgramPipelineGlobals::runOnOperation() {
 }
 
 } // namespace
-
-std::unique_ptr<OperationPass<mlir::ModuleOp>>
-createMLProgramPipelineGlobalsPass() {
-  return std::make_unique<MLProgramPipelineGlobals>();
-}
 
 } // namespace ml_program
 } // namespace mlir

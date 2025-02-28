@@ -9,6 +9,7 @@
 #ifndef LLVM_ANALYSIS_CTXPROFANALYSIS_H
 #define LLVM_ANALYSIS_CTXPROFANALYSIS_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -34,7 +35,7 @@ class PGOContextualProfile {
     uint32_t NextCounterIndex = 0;
     uint32_t NextCallsiteIndex = 0;
     const std::string Name;
-
+    PGOCtxProfContext Index;
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
   std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
@@ -49,6 +50,8 @@ class PGOContextualProfile {
   // its state piecemeal.
   PGOContextualProfile() = default;
 
+  void initIndex();
+
 public:
   PGOContextualProfile(const PGOContextualProfile &) = delete;
   PGOContextualProfile(PGOContextualProfile &&) = default;
@@ -61,6 +64,13 @@ public:
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
+  }
+
+  StringRef getFunctionName(GlobalValue::GUID GUID) const {
+    auto It = FuncInfo.find(GUID);
+    if (It == FuncInfo.end())
+      return "";
+    return It->second.Name;
   }
 
   uint32_t getNumCounters(const Function &F) const {
@@ -86,7 +96,7 @@ public:
   using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
   using Visitor = function_ref<void(PGOCtxProfContext &)>;
 
-  void update(Visitor, const Function *F = nullptr);
+  void update(Visitor, const Function &F);
   void visit(ConstVisitor, const Function *F = nullptr) const;
 
   const CtxProfFlatProfile flatten() const;
@@ -117,12 +127,20 @@ public:
 
   /// Get the instruction instrumenting a BB, or nullptr if not present.
   static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
+
+  /// Get the step instrumentation associated with a `select`
+  static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
+
+  // FIXME: refactor to an advisor model, and separate
+  static void collectIndirectCallPromotionList(
+      CallBase &IC, Result &Profile,
+      SetVector<std::pair<CallBase *, Function *>> &Candidates);
 };
 
 class CtxProfAnalysisPrinterPass
     : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
-  enum class PrintMode { Everything, JSON };
+  enum class PrintMode { Everything, YAML };
   explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

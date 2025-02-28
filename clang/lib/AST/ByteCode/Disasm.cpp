@@ -13,6 +13,7 @@
 #include "Boolean.h"
 #include "Context.h"
 #include "EvaluationResult.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
@@ -32,7 +33,7 @@
 using namespace clang;
 using namespace clang::interp;
 
-template <typename T> inline T ReadArg(Program &P, CodePtr &OpPC) {
+template <typename T> inline static T ReadArg(Program &P, CodePtr &OpPC) {
   if constexpr (std::is_pointer_v<T>) {
     uint32_t ID = OpPC.read<uint32_t>();
     return reinterpret_cast<T>(P.getNativePointer(ID));
@@ -57,6 +58,12 @@ inline IntegralAP<false> ReadArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
 template <>
 inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
+template <> inline FixedPoint ReadArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+  FixedPoint I = FixedPoint::deserialize(*OpPC);
   OpPC += align(I.bytesToSerialize());
   return I;
 }
@@ -126,6 +133,8 @@ static const char *primTypeToString(PrimType T) {
     return "FnPtr";
   case PT_MemberPtr:
     return "MemberPtr";
+  case PT_FixedPoint:
+    return "FixedPoint";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -231,7 +240,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isRecord())
     OS << " record";
   else if (isPrimitive())
-    OS << " primitive";
+    OS << " primitive " << primTypeToString(getPrimType());
 
   if (isZeroSizeArray())
     OS << " zero-size-array";
@@ -240,6 +249,38 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+}
+
+/// Dump descriptor, including all valid offsets.
+LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
+                                           unsigned Indent) const {
+  unsigned Spaces = Indent * 2;
+  llvm::raw_ostream &OS = llvm::errs();
+  OS.indent(Spaces);
+  dump(OS);
+  OS << '\n';
+  OS.indent(Spaces) << "Metadata: " << getMetadataSize() << " bytes\n";
+  OS.indent(Spaces) << "Size: " << getSize() << " bytes\n";
+  OS.indent(Spaces) << "AllocSize: " << getAllocSize() << " bytes\n";
+  Offset += getMetadataSize();
+  if (isCompositeArray()) {
+    OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
+    unsigned FO = Offset;
+    for (unsigned I = 0; I != getNumElems(); ++I) {
+      FO += sizeof(InlineDescriptor);
+      assert(ElemDesc->getMetadataSize() == 0);
+      OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
+      ElemDesc->dumpFull(FO, Indent + 1);
+
+      FO += ElemDesc->getAllocSize();
+    }
+  } else if (isRecord()) {
+    ElemRecord->dump(OS, Indent + 1, Offset);
+  } else if (isPrimitive()) {
+  } else {
+  }
+
+  OS << '\n';
 }
 
 LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
@@ -365,10 +406,10 @@ LLVM_DUMP_METHOD void EvaluationResult::dump() const {
   case LValue: {
     assert(Source);
     QualType SourceType;
-    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+    if (const auto *D = dyn_cast<const Decl *>(Source)) {
       if (const auto *VD = dyn_cast<ValueDecl>(D))
         SourceType = VD->getType();
-    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+    } else if (const auto *E = dyn_cast<const Expr *>(Source)) {
       SourceType = E->getType();
     }
 

@@ -45,23 +45,47 @@ namespace std __attribute__((__visibility__("default"))) {
   isnan(double __x);
   bool
   isnan(long double __x);
-bool
+  bool
   isfinite(float __x);
   bool
   isfinite(double __x);
   bool
   isfinte(long double __x);
- bool
+  bool
   isunordered(float __x, float __y);
   bool
   isunordered(double __x, double __y);
   bool
   isunordered(long double __x, long double __y);
+
+template <class _Ty>
+class numeric_limits {
+public:
+    [[nodiscard]] static constexpr _Ty infinity() noexcept {
+        return _Ty();
+    }
+};
 } // namespace )
 }
 
 #define NAN (__builtin_nanf(""))
 #define INFINITY (__builtin_inff())
+
+template <>
+class std::numeric_limits<float>  {
+public:
+    [[nodiscard]] static constexpr float infinity() noexcept {
+        return __builtin_huge_val();
+    }
+};
+
+template <>
+class std::numeric_limits<double>  {
+public:
+    [[nodiscard]] static constexpr double infinity() noexcept {
+        return __builtin_huge_val();
+    }
+};
 
 template <class _Ty>
 class numeric_limits {
@@ -78,6 +102,7 @@ public:
         return __builtin_huge_val();
     }
 };
+
 template <>
 class numeric_limits<double>  {
 public:
@@ -85,6 +110,8 @@ public:
         return __builtin_huge_val();
     }
 };
+
+double infinity() { return 0; }
 
 int compareit(float a, float b) {
   volatile int i, j, k, l, m, n, o, p;
@@ -225,11 +252,18 @@ int compareit(float a, float b) {
 
 // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
-  double y = i * numeric_limits<double>::infinity();
+  double y = i * std::numeric_limits<double>::infinity();
+
+  y = i * numeric_limits<double>::infinity(); // expected-no-diagnostics
 
 // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
-  j = numeric_limits<float>::infinity();
+  j = std::numeric_limits<float>::infinity();
+
+  j = numeric_limits<float>::infinity(); // expected-no-diagnostics
+
+  y = infinity(); // expected-no-diagnostics
+
   return 0;
 
 }

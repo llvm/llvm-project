@@ -45,6 +45,8 @@ def ProcA78AE   : SubtargetFeature<"cortex-a78ae", "ARMProcFamily", "CortexA78AE
                                    "Cortex-A78AE ARM processors", []>;
 def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
                                    "Cortex-A78C ARM processors", []>;
+def ProcA510    : SubtargetFeature<"cortex-a510", "ARMProcFamily",
+                                   "CortexA510", "Cortex-A510 ARM processors", []>;
 def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
                                    "CortexA710", "Cortex-A710 ARM processors", []>;
 def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
@@ -95,8 +97,12 @@ def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
+def ProcM55      : SubtargetFeature<"m55", "ARMProcFamily", "CortexM55",
+                                   "Cortex-M55 ARM processors", []>;
 def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
                                    "Cortex-M7 ARM processors", []>;
+def ProcM85      : SubtargetFeature<"m85", "ARMProcFamily", "CortexM85",
+                                   "Cortex-M85 ARM processors", []>;
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -324,7 +330,7 @@ def : ProcessorModel<"cortex-r8",   CortexA8Model,      [ARMv7r,
 
 def : ProcessorModel<"cortex-m3",   CortexM4Model,      [ARMv7m,
                                                          ProcM3,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor]>;
 
@@ -335,7 +341,7 @@ def : ProcessorModel<"sc300",       CortexM4Model,      [ARMv7m,
 
 def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureVFP4_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
@@ -344,6 +350,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
+                                                         FeaturePreferBranchAlign64,
                                                          FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
@@ -354,17 +361,29 @@ def : ProcNoItin<"cortex-m23",                          [ARMv8mBaseline,
 def : ProcessorModel<"cortex-m33", CortexM4Model,       [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor,
+                                                         FeatureAvoidMULS,
+                                                         FeatureFixCMSE_CVE_2021_35465]>;
+
+def : ProcessorModel<"star-mc1", CortexM4Model,         [ARMv8mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16_SP,
+                                                         FeaturePreferBranchAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureHasSlowFPVFMx,
+                                                         FeatureUseMISched,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeatureAvoidMULS,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16_SP,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
@@ -372,19 +391,22 @@ def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
+                                                         ProcM55,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
+                                                         ProcM85,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
+                                                         FeaturePreferBranchAlign64,
                                                          FeatureUseMISched,
                                                          HasMVEFloatOps]>;
 
@@ -394,7 +416,7 @@ def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureHasNoBranchPredictor,
                                                          FeaturePACBTI,
                                                          FeatureUseMISched,
-                                                         FeaturePrefLoopAlign32,
+                                                         FeaturePreferBranchAlign32,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureMVEVectorCostFactor1,
                                                          HasMVEFloatOps]>;
@@ -498,6 +520,14 @@ def : ProcNoItin<"cortex-a78c",                         [ARMv82a, ProcA78C,
                                                          FeatureCRC,
                                                          FeatureDotProd,
                                                          FeatureFullFP16]>;
+
+def : ProcNoItin<"cortex-a510",                         [ARMv9a, ProcA710,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureFP16FML,
+                                                         FeatureBF16,
+                                                         FeatureMatMulInt8,
+                                                         FeatureSB]>;
 
 def : ProcNoItin<"cortex-a710",                         [ARMv9a, ProcA710,
                                                          FeatureHWDivThumb,

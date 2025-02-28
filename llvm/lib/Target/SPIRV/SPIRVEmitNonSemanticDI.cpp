@@ -4,6 +4,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
+#include "SPIRVUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -73,6 +74,22 @@ enum BaseTypeAttributeEncoding {
   UnsignedChar = 7
 };
 
+enum SourceLanguage {
+  Unknown = 0,
+  ESSL = 1,
+  GLSL = 2,
+  OpenCL_C = 3,
+  OpenCL_CPP = 4,
+  HLSL = 5,
+  CPP_for_OpenCL = 6,
+  SYCL = 7,
+  HERO_C = 8,
+  NZSL = 9,
+  WGSL = 10,
+  Slang = 11,
+  Zig = 12
+};
+
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   // If this MachineFunction doesn't have any BB repeat procedure
   // for the next
@@ -83,11 +100,12 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
   // Required variables to get from metadata search
   LLVMContext *Context;
-  SmallString<128> FilePath;
-  unsigned SourceLanguage = 0;
+  SmallVector<SmallString<128>> FilePaths;
+  SmallVector<int64_t> LLVMSourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
   SmallPtrSet<DIBasicType *, 12> BasicTypes;
+  SmallPtrSet<DIDerivedType *, 12> PointerDerivedTypes;
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
@@ -101,9 +119,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     for (const auto *Op : DbgCu->operands()) {
       if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
         DIFile *File = CompileUnit->getFile();
-        sys::path::append(FilePath, File->getDirectory(), File->getFilename());
-        SourceLanguage = CompileUnit->getSourceLanguage();
-        break;
+        FilePaths.emplace_back();
+        sys::path::append(FilePaths.back(), File->getDirectory(),
+                          File->getFilename());
+        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
@@ -129,8 +148,21 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
             DILocalVariable *LocalVariable = DVR.getVariable();
             if (auto *BasicType =
-                    dyn_cast<DIBasicType>(LocalVariable->getType()))
+                    dyn_cast<DIBasicType>(LocalVariable->getType())) {
               BasicTypes.insert(BasicType);
+            } else if (auto *DerivedType =
+                           dyn_cast<DIDerivedType>(LocalVariable->getType())) {
+              if (DerivedType->getTag() == dwarf::DW_TAG_pointer_type) {
+                PointerDerivedTypes.insert(DerivedType);
+                // DIBasicType can be unreachable from DbgRecord and only
+                // pointed on from other DI types
+                // DerivedType->getBaseType is null when pointer
+                // is representing a void type
+                if (DerivedType->getBaseType())
+                  BasicTypes.insert(
+                      cast<DIBasicType>(DerivedType->getBaseType()));
+              }
+            }
           }
         }
       }
@@ -160,11 +192,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    // Emit OpString with FilePath which is required by DebugSource
-    const Register FilePathStrReg = EmitOpString(FilePath);
-
     const SPIRVType *VoidTy =
-        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
     const auto EmitDIInstruction =
         [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
@@ -187,33 +217,66 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    // Emit DebugSource which is required by DebugCompilationUnit
-    const Register DebugSourceResIdReg = EmitDIInstruction(
-        SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
-
     const SPIRVType *I32Ty =
-        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
-    // Convert DwarfVersion, DebugInfo and SourceLanguage integers to OpConstant
-    // instructions required by DebugCompilationUnit
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
+
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
-    const Register SourceLanguageReg =
-        GR->buildConstantInt(SourceLanguage, MIRBuilder, I32Ty, false);
 
-    [[maybe_unused]]
-    const Register DebugCompUnitResIdReg =
-        EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
-                          {DebugInfoVersionReg, DwarfVersionReg,
-                           DebugSourceResIdReg, SourceLanguageReg});
+    for (unsigned Idx = 0; Idx < LLVMSourceLanguages.size(); ++Idx) {
+      const Register FilePathStrReg = EmitOpString(FilePaths[Idx]);
+
+      const Register DebugSourceResIdReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
+
+      SourceLanguage SpirvSourceLanguage = SourceLanguage::Unknown;
+      switch (LLVMSourceLanguages[Idx]) {
+      case dwarf::DW_LANG_OpenCL:
+        SpirvSourceLanguage = SourceLanguage::OpenCL_C;
+        break;
+      case dwarf::DW_LANG_OpenCL_CPP:
+        SpirvSourceLanguage = SourceLanguage::OpenCL_CPP;
+        break;
+      case dwarf::DW_LANG_CPP_for_OpenCL:
+        SpirvSourceLanguage = SourceLanguage::CPP_for_OpenCL;
+        break;
+      case dwarf::DW_LANG_GLSL:
+        SpirvSourceLanguage = SourceLanguage::GLSL;
+        break;
+      case dwarf::DW_LANG_HLSL:
+        SpirvSourceLanguage = SourceLanguage::HLSL;
+        break;
+      case dwarf::DW_LANG_SYCL:
+        SpirvSourceLanguage = SourceLanguage::SYCL;
+        break;
+      case dwarf::DW_LANG_Zig:
+        SpirvSourceLanguage = SourceLanguage::Zig;
+      }
+
+      const Register SourceLanguageReg =
+          GR->buildConstantInt(SpirvSourceLanguage, MIRBuilder, I32Ty, false);
+
+      [[maybe_unused]]
+      const Register DebugCompUnitResIdReg =
+          EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugCompilationUnit,
+                            {DebugInfoVersionReg, DwarfVersionReg,
+                             DebugSourceResIdReg, SourceLanguageReg});
+    }
 
     // We aren't extracting any DebugInfoFlags now so we
     // emitting zero to use as <id>Flags argument for DebugBasicType
     const Register I32ZeroReg =
-        GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
+        GR->buildConstantInt(0, MIRBuilder, I32Ty, false, false);
 
+    // We need to store pairs because further instructions reference
+    // the DIBasicTypes and size will be always small so there isn't
+    // need for any kind of map
+    SmallVector<std::pair<const DIBasicType *const, const Register>, 12>
+        BasicTypeRegPairs;
     for (auto *BasicType : BasicTypes) {
       const Register BasicTypeStrReg = EmitOpString(BasicType->getName());
 
@@ -247,11 +310,46 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       const Register AttributeEncodingReg =
           GR->buildConstantInt(AttributeEncoding, MIRBuilder, I32Ty, false);
 
-      [[maybe_unused]]
       const Register BasicTypeReg =
           EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeBasic,
                             {BasicTypeStrReg, ConstIntBitwidthReg,
                              AttributeEncodingReg, I32ZeroReg});
+      BasicTypeRegPairs.emplace_back(BasicType, BasicTypeReg);
+    }
+
+    if (PointerDerivedTypes.size()) {
+      for (const auto *PointerDerivedType : PointerDerivedTypes) {
+
+        assert(PointerDerivedType->getDWARFAddressSpace().has_value());
+        const Register StorageClassReg = GR->buildConstantInt(
+            addressSpaceToStorageClass(
+                PointerDerivedType->getDWARFAddressSpace().value(),
+                *TM->getSubtargetImpl()),
+            MIRBuilder, I32Ty, false);
+
+        // If the Pointer is representing a void type it's getBaseType
+        // is a nullptr
+        const auto *MaybeNestedBasicType =
+            cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
+        if (MaybeNestedBasicType) {
+          for (const auto &BasicTypeRegPair : BasicTypeRegPairs) {
+            const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;
+            if (DefinedBasicType == MaybeNestedBasicType) {
+              [[maybe_unused]]
+              const Register DebugPointerTypeReg = EmitDIInstruction(
+                  SPIRV::NonSemanticExtInst::DebugTypePointer,
+                  {BasicTypeReg, StorageClassReg, I32ZeroReg});
+            }
+          }
+        } else {
+          const Register DebugInfoNoneReg =
+              EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone, {});
+          [[maybe_unused]]
+          const Register DebugPointerTypeReg = EmitDIInstruction(
+              SPIRV::NonSemanticExtInst::DebugTypePointer,
+              {DebugInfoNoneReg, StorageClassReg, I32ZeroReg});
+        }
+      }
     }
   }
   return true;

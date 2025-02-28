@@ -310,7 +310,7 @@ define i16 @vector_binop_and_cast() {
 ; CHECK-LABEL: define i16 @vector_binop_and_cast() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x i16> <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 undef, i32 0
-; CHECK-NEXT:    [[REM:%.*]] = srem <8 x i16> <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>, [[VECINIT7]]
+; CHECK-NEXT:    [[REM:%.*]] = srem <8 x i16> splat (i16 2), [[VECINIT7]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[REM]] to i128
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP1]]

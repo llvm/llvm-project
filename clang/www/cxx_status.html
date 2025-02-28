@@ -225,6 +225,68 @@ C++23, informally referred to as C++26.</p>
   <td><a href="https://wg21.link/P0963R3">P0963R3</a></td>
   <td class="none" align="center">No</td>
  </tr>
+ <!--Poland, Fall 2024-->
+ <tr>
+  <td>constexpr structured bindings</td>
+  <td><a href="https://wg21.link/P2686R5">P2686R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Allowing exception throwing in constant-evaluation</td>
+  <td><a href="https://wg21.link/P3068R6">P3068R6</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Remove Deprecated Array Comparisons from C++26</td>
+  <td><a href="https://wg21.link/P2865R6">P2865R6</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
+ <tr>
+  <td>Structured Bindings can introduce a Pack</td>
+  <td><a href="https://wg21.link/P1061R10">P1061R10</a></td>
+  <td class="unreleased" align="center">Clang 21</td>
+ </tr>
+ <tr>
+  <td>The Oxford variadic comma</td>
+  <td><a href="https://wg21.link/P3176R1">P3176R1</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
+ <!-- Austria, Winter 2025 -->
+ <tr>
+  <td>Trivial unions</td>
+  <td><a href="https://wg21.link/P3074">P3074R7</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Partial program correctness</td>
+  <td><a href="https://wg21.link/P1494">P1494R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Contracts</td>
+  <td><a href="https://wg21.link/P2900">P2900R14</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Defang and deprecate <code>memory_order::consume</code></td>
+  <td><a href="https://wg21.link/P3475">P3475R2</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Concept and variable-template template-parameters</td>
+  <td><a href="https://wg21.link/P2841">P2841R7</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Trivial Relocatability</pre></td>
+  <td><a href="https://wg21.link/P2786">P2786R13</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><pre>#embed</pre></td>
+  <td><a href="https://wg21.link/P1967">P1967R14</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
 </table>
 </details>
 
@@ -413,8 +475,8 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
-      <td><a href="https://wg21.link/P2280R4">P2280R4</a> (<a href="#dr">DR</a>)</td>
-      <td class="none" align="center">No</td>
+      <td><a href="https://wg21.link/P2280R4">P2280R4</a></td>
+      <td class="unreleased" align="center">Clang 20</td>
     </tr>
     <tr>
       <td>static <code>operator()</code></td>
@@ -475,14 +537,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
       <td><a href="https://wg21.link/P2718R0">P2718R0</a></td>
-      <td class="partial" align="center">
-        <details>
-          <summary>Clang 19 (Partial)</summary>
-            The lifetime extension of temporaries bound to member references
-            by default member initializers in aggregate initialization was
-            not supported now.
-        </details>
-      </td>
+      <td class="full" align="center">Clang 20</td>
     </tr>
     <!--Issaquah 2023 papers-->
     <tr>
@@ -1185,8 +1240,8 @@ This is not fully supported during constant expression evaluation until Clang 12
 <span id="p0522">(10): While this feature was initially implemented in Clang 4,
 it was not enabled by default prior to clang 19, but could be enabled with
 <tt>-frelaxed-template-template-args</tt>.
-Starting from Clang 19, the flag is deprecated and will be removed in a future
-version.
+In Clang 19, the flag was deprecated.
+In Clang 21, the flag was removed altogether.
 </span>
 </p>
 </details>

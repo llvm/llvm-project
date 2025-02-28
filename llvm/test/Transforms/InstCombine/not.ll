@@ -73,7 +73,7 @@ define i1 @not_cmp_constant(i32 %a) {
 
 define <2 x i1> @not_cmp_constant_vector(<2 x i32> %a) {
 ; CHECK-LABEL: @not_cmp_constant_vector(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 -43, i32 -43>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A:%.*]], splat (i32 -43)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
@@ -114,7 +114,7 @@ define i8 @not_ashr_const(i8 %x) {
 
 define <2 x i8> @not_ashr_const_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @not_ashr_const_splat(
-; CHECK-NEXT:    [[NOT:%.*]] = lshr <2 x i8> <i8 41, i8 41>, [[X:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = lshr <2 x i8> splat (i8 41), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[NOT]]
 ;
   %shr = ashr <2 x i8> <i8 -42, i8 -42>, %x
@@ -147,7 +147,7 @@ define i8 @not_lshr_const(i8 %x) {
 
 define <2 x i8> @not_lshr_const_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @not_lshr_const_splat(
-; CHECK-NEXT:    [[NOT:%.*]] = ashr <2 x i8> <i8 -43, i8 -43>, [[X:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = ashr <2 x i8> splat (i8 -43), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[NOT]]
 ;
   %shr = lshr <2 x i8> <i8 42, i8 42>, %x
@@ -180,7 +180,7 @@ define i32 @not_sub_extra_use(i32 %y, ptr %p) {
 
 define <2 x i32> @not_sub_splat(<2 x i32> %y) {
 ; CHECK-LABEL: @not_sub_splat(
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y:%.*]], <i32 -124, i32 -124>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y:%.*]], splat (i32 -124)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = sub <2 x i32> <i32 123, i32 123>, %y
@@ -190,9 +190,9 @@ define <2 x i32> @not_sub_splat(<2 x i32> %y) {
 
 define <2 x i32> @not_sub_extra_use_splat(<2 x i32> %y, ptr %p) {
 ; CHECK-LABEL: @not_sub_extra_use_splat(
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i32> <i32 123, i32 123>, [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = sub <2 x i32> splat (i32 123), [[Y:%.*]]
 ; CHECK-NEXT:    store <2 x i32> [[S]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y]], <i32 -124, i32 -124>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[Y]], splat (i32 -124)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = sub <2 x i32> <i32 123, i32 123>, %y
@@ -238,7 +238,7 @@ define i32 @not_add(i32 %x) {
 
 define <2 x i32> @not_add_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @not_add_splat(
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> <i32 -124, i32 -124>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i32> splat (i32 -124), [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add <2 x i32> %x, <i32 123, i32 123>
@@ -424,8 +424,8 @@ define i8 @not_or_neg(i8 %x, i8 %y)  {
 define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
 ; CHECK-LABEL: @not_or_neg_commute_vec(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <3 x i5> [[P:%.*]], <i5 1, i5 2, i5 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i5> [[X:%.*]], <i5 -1, i5 -1, i5 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i5> [[Y]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i5> [[X:%.*]], splat (i5 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i5> [[Y]], splat (i5 -1)
 ; CHECK-NEXT:    [[NOT:%.*]] = and <3 x i5> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
@@ -527,8 +527,8 @@ define i1 @not_select_bool_const4(i1 %x, i1 %y) {
 
 define <2 x i1> @not_logicalAnd_not_op0(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_logicalAnd_not_op0(
-; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[NOTAND:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y_NOT]]
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[NOTAND:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[Y_NOT]]
 ; CHECK-NEXT:    ret <2 x i1> [[NOTAND]]
 ;
   %notx = xor <2 x i1> %x, <i1 true, i1 true>
@@ -583,7 +583,7 @@ define i1 @not_logicalAnd_not_op0_use2(i1 %x, i1 %y) {
 
 define <2 x i1> @not_logicalOr_not_op0(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_logicalOr_not_op0(
-; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <2 x i1> [[Y:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[NOTOR:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y_NOT]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[NOTOR]]
 ;
@@ -641,7 +641,7 @@ define i1 @not_logicalOr_not_op0_use2(i1 %x, i1 %y) {
 
 define <2 x i64> @bitcast_to_wide_elts_sext_bool(<4 x i1> %b) {
 ; CHECK-LABEL: @bitcast_to_wide_elts_sext_bool(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[NOT:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[NOT]]
@@ -654,7 +654,7 @@ define <2 x i64> @bitcast_to_wide_elts_sext_bool(<4 x i1> %b) {
 
 define <8 x i16> @bitcast_to_narrow_elts_sext_bool(<4 x i1> %b) {
 ; CHECK-LABEL: @bitcast_to_narrow_elts_sext_bool(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[NOT:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[NOT]]
@@ -680,7 +680,7 @@ define <2 x i16> @bitcast_to_vec_sext_bool(i1 %b) {
 
 define i128 @bitcast_to_scalar_sext_bool(<4 x i1> %b) {
 ; CHECK-LABEL: @bitcast_to_scalar_sext_bool(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[B:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[NOT:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
 ; CHECK-NEXT:    ret i128 [[NOT]]
@@ -698,7 +698,7 @@ define <2 x i4> @bitcast_to_vec_sext_bool_use1(i1 %b) {
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[SEXT]])
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i8 [[SEXT]] to <2 x i4>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[BC]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[BC]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i4> [[NOT]]
 ;
   %sext = sext i1 %b to i8

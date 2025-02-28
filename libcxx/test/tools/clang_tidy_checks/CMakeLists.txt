@@ -1,4 +1,3 @@
-
 # The find_package changes these variables. This leaves the build in an odd
 # state. Calling cmake a second time tries to write site config information in
 # the system's libc++. Restoring these setting after testing fixes this issue.
@@ -92,8 +91,9 @@ set(SOURCES
     abi_tag_on_virtual.cpp
     header_exportable_declarations.cpp
     hide_from_abi.cpp
+    internal_ftm_use.cpp
+    nodebug_on_aliases.cpp
     proper_version_checks.cpp
-    qualify_declval.cpp
     robust_against_adl.cpp
     uglify_attributes.cpp
 

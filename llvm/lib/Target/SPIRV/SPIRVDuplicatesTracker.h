@@ -26,6 +26,7 @@
 
 namespace llvm {
 namespace SPIRV {
+class SPIRVInstrInfo;
 // NOTE: using MapVector instead of DenseMap because it helps getting
 // everything ordered in a stable manner for a price of extra (NumKeys)*PtrSize
 // memory and expensive removals which do not happen anyway.
@@ -35,8 +36,9 @@ class DTSortableEntry : public MapVector<const MachineFunction *, Register> {
   struct FlagsTy {
     unsigned IsFunc : 1;
     unsigned IsGV : 1;
+    unsigned IsConst : 1;
     // NOTE: bit-field default init is a C++20 feature.
-    FlagsTy() : IsFunc(0), IsGV(0) {}
+    FlagsTy() : IsFunc(0), IsGV(0), IsConst(0) {}
   };
   FlagsTy Flags;
 
@@ -45,8 +47,10 @@ public:
   // require hoisting of params as well.
   bool getIsFunc() const { return Flags.IsFunc; }
   bool getIsGV() const { return Flags.IsGV; }
+  bool getIsConst() const { return Flags.IsConst; }
   void setIsFunc(bool V) { Flags.IsFunc = V; }
   void setIsGV(bool V) { Flags.IsGV = V; }
+  void setIsConst(bool V) { Flags.IsConst = V; }
 
   const SmallVector<DTSortableEntry *, 2> &getDeps() const { return Deps; }
   void addDep(DTSortableEntry *E) { Deps.push_back(E); }
@@ -103,13 +107,15 @@ make_descr_image(const Type *SampledTy, unsigned Dim, unsigned Depth,
 inline SpecialTypeDescriptor
 make_descr_sampled_image(const Type *SampledTy, const MachineInstr *ImageTy) {
   assert(ImageTy->getOpcode() == SPIRV::OpTypeImage);
+  unsigned AC = AccessQualifier::AccessQualifier::None;
+  if (ImageTy->getNumOperands() > 8)
+    AC = ImageTy->getOperand(8).getImm();
   return std::make_tuple(
       SampledTy,
       ImageAttrs(
           ImageTy->getOperand(2).getImm(), ImageTy->getOperand(3).getImm(),
           ImageTy->getOperand(4).getImm(), ImageTy->getOperand(5).getImm(),
-          ImageTy->getOperand(6).getImm(), ImageTy->getOperand(7).getImm(),
-          ImageTy->getOperand(8).getImm())
+          ImageTy->getOperand(6).getImm(), ImageTy->getOperand(7).getImm(), AC)
           .Val,
       SpecialTypeKind::STK_SampledImage);
 }
@@ -148,18 +154,23 @@ public:
     if (find(V, MF).isValid())
       return;
 
-    Storage[V][MF] = R;
+    auto &S = Storage[V];
+    S[MF] = R;
     if (std::is_same<Function,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>() ||
         std::is_same<Argument,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsFunc(true);
+      S.setIsFunc(true);
     if (std::is_same<GlobalVariable,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsGV(true);
+      S.setIsGV(true);
+    if (std::is_same<Constant,
+                     typename std::remove_const<
+                         typename std::remove_pointer<KeyTy>::type>::type>())
+      S.setIsConst(true);
   }
 
   Register find(KeyTy V, const MachineFunction *MF) const {
@@ -201,22 +212,7 @@ class SPIRVGeneralDuplicatesTracker {
   SPIRVDuplicatesTracker<MachineInstr> MT;
   SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
 
-  // NOTE: using MOs instead of regs to get rid of MF dependency to be able
-  // to use flat data structure.
-  // NOTE: replacing DenseMap with MapVector doesn't affect overall correctness
-  // but makes LITs more stable, should prefer DenseMap still due to
-  // significant perf difference.
-  using SPIRVReg2EntryTy =
-      MapVector<MachineOperand *, SPIRV::DTSortableEntry *>;
-
-  template <typename T>
-  void prebuildReg2Entry(SPIRVDuplicatesTracker<T> &DT,
-                         SPIRVReg2EntryTy &Reg2Entry);
-
 public:
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      MachineModuleInfo *MMI);
-
   void add(const Type *Ty, const MachineFunction *MF, Register R) {
     TT.add(unifyPtrType(Ty), MF, R);
   }

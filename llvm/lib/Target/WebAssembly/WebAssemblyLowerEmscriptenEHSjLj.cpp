@@ -318,7 +318,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   // Map of <function signature string, invoke_ wrappers>
   StringMap<Function *> InvokeWrappers;
   // Set of allowed function names for exception handling
-  std::set<std::string> EHAllowlistSet;
+  std::set<std::string, std::less<>> EHAllowlistSet;
   // Functions that contains calls to setjmp
   SmallPtrSet<Function *, 8> SetjmpUsers;
 
@@ -349,8 +349,8 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
 
   bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
   bool supportsException(const Function *F) const {
-    return EnableEmEH && (areAllExceptionsAllowed() ||
-                          EHAllowlistSet.count(std::string(F->getName())));
+    return EnableEmEH &&
+           (areAllExceptionsAllowed() || EHAllowlistSet.count(F->getName()));
   }
   void replaceLongjmpWith(Function *LongjmpF, Function *NewF);
 
@@ -440,22 +440,25 @@ static std::string getSignature(FunctionType *FTy) {
   return Sig;
 }
 
-static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
-                                       Module *M) {
-  Function* F = Function::Create(Ty, GlobalValue::ExternalLinkage, Name, M);
+static Function *getFunction(FunctionType *Ty, const Twine &Name, Module *M) {
+  return Function::Create(Ty, GlobalValue::ExternalLinkage, Name, M);
+}
+
+static void markAsImported(Function *F) {
   // Tell the linker that this function is expected to be imported from the
-  // 'env' module.
+  // 'env' module. This is necessary for functions that do not have fixed names
+  // (e.g. __import_xyz).  These names cannot be provided by any kind of shared
+  // or static library as instead we mark them explictly as imported.
   if (!F->hasFnAttribute("wasm-import-module")) {
-    llvm::AttrBuilder B(M->getContext());
+    llvm::AttrBuilder B(F->getParent()->getContext());
     B.addAttribute("wasm-import-module", "env");
     F->addFnAttrs(B);
   }
   if (!F->hasFnAttribute("wasm-import-name")) {
-    llvm::AttrBuilder B(M->getContext());
+    llvm::AttrBuilder B(F->getParent()->getContext());
     B.addAttribute("wasm-import-name", F->getName());
     F->addFnAttrs(B);
   }
-  return F;
 }
 
 // Returns an integer type for the target architecture's address space.
@@ -493,8 +496,9 @@ WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
   PointerType *Int8PtrTy = PointerType::getUnqual(M.getContext());
   SmallVector<Type *, 16> Args(NumClauses, Int8PtrTy);
   FunctionType *FTy = FunctionType::get(Int8PtrTy, Args, false);
-  Function *F = getEmscriptenFunction(
+  Function *F = getFunction(
       FTy, "__cxa_find_matching_catch_" + Twine(NumClauses + 2), &M);
+  markAsImported(F);
   FindMatchingCatches[NumClauses] = F;
   return F;
 }
@@ -575,17 +579,19 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
   FunctionType *CalleeFTy = CI->getFunctionType();
 
   std::string Sig = getSignature(CalleeFTy);
-  if (InvokeWrappers.contains(Sig))
-    return InvokeWrappers[Sig];
+  auto It = InvokeWrappers.find(Sig);
+  if (It != InvokeWrappers.end())
+    return It->second;
 
   // Put the pointer to the callee as first argument
-  ArgTys.push_back(PointerType::getUnqual(CalleeFTy));
+  ArgTys.push_back(PointerType::getUnqual(CI->getContext()));
   // Add argument types
   ArgTys.append(CalleeFTy->param_begin(), CalleeFTy->param_end());
 
   FunctionType *FTy = FunctionType::get(CalleeFTy->getReturnType(), ArgTys,
                                         CalleeFTy->isVarArg());
-  Function *F = getEmscriptenFunction(FTy, "__invoke_" + Sig, M);
+  Function *F = getFunction(FTy, "__invoke_" + Sig, M);
+  markAsImported(F);
   InvokeWrappers[Sig] = F;
   return F;
 }
@@ -926,11 +932,11 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   // exception handling and setjmp/longjmp handling
   ThrewGV = getGlobalVariable(M, getAddrIntType(&M), TM, "__THREW__");
   ThrewValueGV = getGlobalVariable(M, IRB.getInt32Ty(), TM, "__threwValue");
-  GetTempRet0F = getEmscriptenFunction(
-      FunctionType::get(IRB.getInt32Ty(), false), "getTempRet0", &M);
-  SetTempRet0F = getEmscriptenFunction(
-      FunctionType::get(IRB.getVoidTy(), IRB.getInt32Ty(), false),
-      "setTempRet0", &M);
+  GetTempRet0F = getFunction(FunctionType::get(IRB.getInt32Ty(), false),
+                             "getTempRet0", &M);
+  SetTempRet0F =
+      getFunction(FunctionType::get(IRB.getVoidTy(), IRB.getInt32Ty(), false),
+                  "setTempRet0", &M);
   GetTempRet0F->setDoesNotThrow();
   SetTempRet0F->setDoesNotThrow();
 
@@ -941,13 +947,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     // Register __resumeException function
     FunctionType *ResumeFTy =
         FunctionType::get(IRB.getVoidTy(), IRB.getPtrTy(), false);
-    ResumeF = getEmscriptenFunction(ResumeFTy, "__resumeException", &M);
+    ResumeF = getFunction(ResumeFTy, "__resumeException", &M);
     ResumeF->addFnAttr(Attribute::NoReturn);
 
     // Register llvm_eh_typeid_for function
     FunctionType *EHTypeIDTy =
         FunctionType::get(IRB.getInt32Ty(), IRB.getPtrTy(), false);
-    EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
+    EHTypeIDF = getFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
   }
 
   // Functions that contains calls to setjmp but don't have other longjmpable
@@ -987,14 +993,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       // Register emscripten_longjmp function
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {getAddrIntType(&M), IRB.getInt32Ty()}, false);
-      EmLongjmpF = getEmscriptenFunction(FTy, "emscripten_longjmp", &M);
+      EmLongjmpF = getFunction(FTy, "emscripten_longjmp", &M);
       EmLongjmpF->addFnAttr(Attribute::NoReturn);
     } else { // EnableWasmSjLj
       Type *Int8PtrTy = IRB.getPtrTy();
       // Register __wasm_longjmp function, which calls __builtin_wasm_longjmp.
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {Int8PtrTy, IRB.getInt32Ty()}, false);
-      WasmLongjmpF = getEmscriptenFunction(FTy, "__wasm_longjmp", &M);
+      WasmLongjmpF = getFunction(FTy, "__wasm_longjmp", &M);
       WasmLongjmpF->addFnAttr(Attribute::NoReturn);
     }
 
@@ -1008,15 +1014,15 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       FunctionType *FTy = FunctionType::get(
           IRB.getVoidTy(), {SetjmpFTy->getParamType(0), Int32Ty, Int32PtrTy},
           false);
-      WasmSetjmpF = getEmscriptenFunction(FTy, "__wasm_setjmp", &M);
+      WasmSetjmpF = getFunction(FTy, "__wasm_setjmp", &M);
 
       // Register __wasm_setjmp_test function
       FTy = FunctionType::get(Int32Ty, {Int32PtrTy, Int32PtrTy}, false);
-      WasmSetjmpTestF = getEmscriptenFunction(FTy, "__wasm_setjmp_test", &M);
+      WasmSetjmpTestF = getFunction(FTy, "__wasm_setjmp_test", &M);
 
       // wasm.catch() will be lowered down to wasm 'catch' instruction in
       // instruction selection.
-      CatchF = Intrinsic::getDeclaration(&M, Intrinsic::wasm_catch);
+      CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
       // Type for struct __WasmLongjmpArgs
       LongjmpArgsTy = StructType::get(Int8PtrTy, // env
                                       Int32Ty    // val
@@ -1198,7 +1204,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
 
   // Look for orphan landingpads, can occur in blocks with no predecessors
   for (BasicBlock &BB : F) {
-    Instruction *I = BB.getFirstNonPHI();
+    BasicBlock::iterator I = BB.getFirstNonPHIIt();
     if (auto *LPI = dyn_cast<LandingPadInst>(I))
       LandingPads.insert(LPI);
   }
@@ -1738,7 +1744,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
 
   SmallVector<Instruction *, 16> ToErase;
   for (auto &BB : F) {
-    if (auto *CSI = dyn_cast<CatchSwitchInst>(BB.getFirstNonPHI())) {
+    if (auto *CSI = dyn_cast<CatchSwitchInst>(BB.getFirstNonPHIIt())) {
       if (CSI != CatchSwitchLongjmp && CSI->unwindsToCaller()) {
         IRB.SetInsertPoint(CSI);
         ToErase.push_back(CSI);

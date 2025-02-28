@@ -154,6 +154,8 @@ class ProfileAnnotator final {
 
     bool hasCount() const { return Count.has_value(); }
 
+    uint64_t getCount() const { return *Count; }
+
     bool trySetSingleUnknownInEdgeCount() {
       if (UnknownCountInEdges == 1) {
         setSingleUnknownEdgeCount(InEdges);
@@ -266,6 +268,21 @@ class ProfileAnnotator final {
     return HitExit;
   }
 
+  bool allNonColdSelectsHaveProfile() const {
+    for (const auto &BB : F) {
+      if (getBBInfo(BB).getCount() > 0) {
+        for (const auto &I : BB) {
+          if (const auto *SI = dyn_cast<SelectInst>(&I)) {
+            if (!SI->getMetadata(LLVMContext::MD_prof)) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+    return true;
+  }
+
 public:
   ProfileAnnotator(Function &F, const SmallVectorImpl<uint64_t> &Counters,
                    InstrProfSummaryBuilder &PB)
@@ -315,6 +332,32 @@ public:
            "populated, because we need pointers to its contents to be stable");
   }
 
+  void setProfileForSelectInstructions(BasicBlock &BB, const BBInfo &BBInfo) {
+    if (BBInfo.getCount() == 0)
+      return;
+
+    for (auto &I : BB) {
+      if (auto *SI = dyn_cast<SelectInst>(&I)) {
+        if (auto *Step = CtxProfAnalysis::getSelectInstrumentation(*SI)) {
+          auto Index = Step->getIndex()->getZExtValue();
+          assert(Index < Counters.size() &&
+                 "The index of the step instruction must be inside the "
+                 "counters vector by "
+                 "construction - tripping this assertion indicates a bug in "
+                 "how the contextual profile is managed by IPO transforms");
+          auto TotalCount = BBInfo.getCount();
+          auto TrueCount = Counters[Index];
+          auto FalseCount =
+              (TotalCount > TrueCount ? TotalCount - TrueCount : 0U);
+          setProfMetadata(F.getParent(), SI, {TrueCount, FalseCount},
+                          std::max(TrueCount, FalseCount));
+          PB.addInternalCount(TrueCount);
+          PB.addInternalCount(FalseCount);
+        }
+      }
+    }
+  }
+
   /// Assign branch weights and function entry count. Also update the PSI
   /// builder.
   void assignProfileData() {
@@ -324,12 +367,14 @@ public:
     PB.addEntryCount(Counters[0]);
 
     for (auto &BB : F) {
+      const auto &BBInfo = getBBInfo(BB);
+      setProfileForSelectInstructions(BB, BBInfo);
       if (succ_size(&BB) < 2)
         continue;
       auto *Term = BB.getTerminator();
       SmallVector<uint64_t, 2> EdgeCounts(Term->getNumSuccessors(), 0);
       uint64_t MaxCount = 0;
-      const auto &BBInfo = getBBInfo(BB);
+
       for (unsigned SuccIdx = 0, Size = BBInfo.getNumOutEdges(); SuccIdx < Size;
            ++SuccIdx) {
         uint64_t EdgeCount = BBInfo.getEdgeCount(SuccIdx);
@@ -343,12 +388,15 @@ public:
         setProfMetadata(F.getParent(), Term, EdgeCounts, MaxCount);
     }
     assert(allCountersAreAssigned() &&
-           "Expected all counters have been assigned.");
+           "[ctx-prof] Expected all counters have been assigned.");
     assert(allTakenPathsExit() &&
            "[ctx-prof] Encountered a BB with more than one successor, where "
            "all outgoing edges have a 0 count. This occurs in non-exiting "
            "functions (message pumps, usually) which are not supported in the "
            "contextual profiling case");
+    assert(allNonColdSelectsHaveProfile() &&
+           "[ctx-prof] All non-cold select instructions were expected to have "
+           "a profile.");
   }
 };
 

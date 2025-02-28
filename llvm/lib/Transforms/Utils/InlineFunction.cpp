@@ -34,6 +34,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -59,6 +60,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -179,8 +181,20 @@ namespace {
       }
     }
   };
-
 } // end anonymous namespace
+
+static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
+  BasicBlock::iterator It = BB.getFirstNonPHIIt();
+  while (It != BB.end()) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(It)) {
+      if (IntrinsicCall->isEntry()) {
+        return IntrinsicCall;
+      }
+    }
+    It = std::next(It);
+  }
+  return nullptr;
+}
 
 /// Get or create a target for the branch from ResumeInsts.
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
@@ -262,7 +276,7 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
     Value *UnwindDestToken = nullptr;
     if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(CurrentPad)) {
       if (CatchSwitch->hasUnwindDest()) {
-        UnwindDestToken = CatchSwitch->getUnwindDest()->getFirstNonPHI();
+        UnwindDestToken = &*CatchSwitch->getUnwindDest()->getFirstNonPHIIt();
       } else {
         // Catchswitch doesn't have a 'nounwind' variant, and one might be
         // annotated as "unwinds to caller" when really it's nounwind (see
@@ -274,7 +288,8 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
                   HE = CatchSwitch->handler_end();
              HI != HE && !UnwindDestToken; ++HI) {
           BasicBlock *HandlerBlock = *HI;
-          auto *CatchPad = cast<CatchPadInst>(HandlerBlock->getFirstNonPHI());
+          auto *CatchPad =
+              cast<CatchPadInst>(&*HandlerBlock->getFirstNonPHIIt());
           for (User *Child : CatchPad->users()) {
             // Intentionally ignore invokes here -- since the catchswitch is
             // marked "unwind to caller", it would be a verifier error if it
@@ -312,14 +327,14 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
       for (User *U : CleanupPad->users()) {
         if (auto *CleanupRet = dyn_cast<CleanupReturnInst>(U)) {
           if (BasicBlock *RetUnwindDest = CleanupRet->getUnwindDest())
-            UnwindDestToken = RetUnwindDest->getFirstNonPHI();
+            UnwindDestToken = &*RetUnwindDest->getFirstNonPHIIt();
           else
             UnwindDestToken = ConstantTokenNone::get(CleanupPad->getContext());
           break;
         }
         Value *ChildUnwindDestToken;
         if (auto *Invoke = dyn_cast<InvokeInst>(U)) {
-          ChildUnwindDestToken = Invoke->getUnwindDest()->getFirstNonPHI();
+          ChildUnwindDestToken = &*Invoke->getUnwindDest()->getFirstNonPHIIt();
         } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U)) {
           Instruction *ChildPad = cast<Instruction>(U);
           auto Memo = MemoMap.find(ChildPad);
@@ -508,14 +523,13 @@ static Value *getUnwindDestToken(Instruction *EHPad,
     if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UselessPad)) {
       assert(CatchSwitch->getUnwindDest() == nullptr && "Expected useless pad");
       for (BasicBlock *HandlerBlock : CatchSwitch->handlers()) {
-        auto *CatchPad = HandlerBlock->getFirstNonPHI();
+        auto *CatchPad = &*HandlerBlock->getFirstNonPHIIt();
         for (User *U : CatchPad->users()) {
-          assert(
-              (!isa<InvokeInst>(U) ||
-               (getParentPad(
-                    cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
-                CatchPad)) &&
-              "Expected useless pad");
+          assert((!isa<InvokeInst>(U) ||
+                  (getParentPad(&*cast<InvokeInst>(U)
+                                      ->getUnwindDest()
+                                      ->getFirstNonPHIIt()) == CatchPad)) &&
+                 "Expected useless pad");
           if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
             Worklist.push_back(cast<Instruction>(U));
         }
@@ -524,11 +538,12 @@ static Value *getUnwindDestToken(Instruction *EHPad,
       assert(isa<CleanupPadInst>(UselessPad));
       for (User *U : UselessPad->users()) {
         assert(!isa<CleanupReturnInst>(U) && "Expected useless pad");
-        assert((!isa<InvokeInst>(U) ||
-                (getParentPad(
-                     cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
-                 UselessPad)) &&
-               "Expected useless pad");
+        assert(
+            (!isa<InvokeInst>(U) ||
+             (getParentPad(
+                  &*cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHIIt()) ==
+              UselessPad)) &&
+            "Expected useless pad");
         if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
           Worklist.push_back(cast<Instruction>(U));
       }
@@ -664,7 +679,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   BasicBlock *UnwindDest = II->getUnwindDest();
   Function *Caller = FirstNewBlock->getParent();
 
-  assert(UnwindDest->getFirstNonPHI()->isEHPad() && "unexpected BasicBlock!");
+  assert(UnwindDest->getFirstNonPHIIt()->isEHPad() && "unexpected BasicBlock!");
 
   // If there are PHI nodes in the unwind destination block, we need to keep
   // track of which values came into them from the invoke before removing the
@@ -709,7 +724,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
       }
     }
 
-    Instruction *I = BB->getFirstNonPHI();
+    BasicBlock::iterator I = BB->getFirstNonPHIIt();
     if (!I->isEHPad())
       continue;
 
@@ -758,7 +773,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
     }
 
     if (Replacement) {
-      Replacement->takeName(I);
+      Replacement->takeName(&*I);
       I->replaceAllUsesWith(Replacement);
       I->eraseFromParent();
       UpdatePHINodes(&*BB);
@@ -1298,8 +1313,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false,
-                                        /* StoreCaptures */ false, I, &DT))
+            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
           NoAliases.push_back(NewScopes[A]);
       }
 
@@ -1358,18 +1372,36 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   auto &Context = CalledFunction->getContext();
 
   // Collect valid attributes for all params.
-  SmallVector<AttrBuilder> ValidParamAttrs;
+  SmallVector<AttrBuilder> ValidObjParamAttrs, ValidExactParamAttrs;
   bool HasAttrToPropagate = false;
 
+  // Attributes we can only propagate if the exact parameter is forwarded.
+  // We can propagate both poison generating and UB generating attributes
+  // without any extra checks. The only attribute that is tricky to propagate
+  // is `noundef` (skipped for now) as that can create new UB where previous
+  // behavior was just using a poison value.
+  static const Attribute::AttrKind ExactAttrsToPropagate[] = {
+      Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
+      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
-    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    ValidExactParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
     // Access attributes can be propagated to any param with the same underlying
     // object as the argument.
     if (CB.paramHasAttr(I, Attribute::ReadNone))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+      ValidObjParamAttrs.back().addAttribute(Attribute::ReadOnly);
+
+    for (Attribute::AttrKind AK : ExactAttrsToPropagate) {
+      Attribute Attr = CB.getParamAttr(I, AK);
+      if (Attr.isValid())
+        ValidExactParamAttrs.back().addAttribute(Attr);
+    }
+
+    HasAttrToPropagate |= ValidObjParamAttrs.back().hasAttributes();
+    HasAttrToPropagate |= ValidExactParamAttrs.back().hasAttributes();
   }
 
   // Won't be able to propagate anything.
@@ -1391,22 +1423,63 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
 
       AttributeList AL = NewInnerCB->getAttributes();
       for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
+        // It's unsound or requires special handling to propagate
+        // attributes to byval arguments. Even if CalledFunction
+        // doesn't e.g. write to the argument (readonly), the call to
+        // NewInnerCB may write to its by-value copy.
+        if (NewInnerCB->paramHasAttr(I, Attribute::ByVal))
+          continue;
+
+        // Don't bother propagating attrs to constants.
+        if (match(NewInnerCB->getArgOperand(I),
+                  llvm::PatternMatch::m_ImmConstant()))
+          continue;
+
         // Check if the underlying value for the parameter is an argument.
-        const Value *UnderlyingV =
-            getUnderlyingObject(InnerCB->getArgOperand(I));
-        const Argument *Arg = dyn_cast<Argument>(UnderlyingV);
-        if (!Arg)
+        const Argument *Arg = dyn_cast<Argument>(InnerCB->getArgOperand(I));
+        unsigned ArgNo;
+        if (Arg) {
+          ArgNo = Arg->getArgNo();
+          // For dereferenceable, dereferenceable_or_null, align, etc...
+          // we don't want to propagate if the existing param has the same
+          // attribute with "better" constraints. So  remove from the
+          // new AL if the region of the existing param is larger than
+          // what we can propagate.
+          AttrBuilder NewAB{
+              Context, AttributeSet::get(Context, ValidExactParamAttrs[ArgNo])};
+          if (AL.getParamDereferenceableBytes(I) >
+              NewAB.getDereferenceableBytes())
+            NewAB.removeAttribute(Attribute::Dereferenceable);
+          if (AL.getParamDereferenceableOrNullBytes(I) >
+              NewAB.getDereferenceableOrNullBytes())
+            NewAB.removeAttribute(Attribute::DereferenceableOrNull);
+          if (AL.getParamAlignment(I).valueOrOne() >
+              NewAB.getAlignment().valueOrOne())
+            NewAB.removeAttribute(Attribute::Alignment);
+          if (auto ExistingRange = AL.getParamRange(I)) {
+            if (auto NewRange = NewAB.getRange()) {
+              ConstantRange CombinedRange =
+                  ExistingRange->intersectWith(*NewRange);
+              NewAB.removeAttribute(Attribute::Range);
+              NewAB.addRangeAttr(CombinedRange);
+            }
+          }
+          AL = AL.addParamAttributes(Context, I, NewAB);
+        } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
+          // Check if the underlying value for the parameter is an argument.
+          const Value *UnderlyingV =
+              getUnderlyingObject(InnerCB->getArgOperand(I));
+          Arg = dyn_cast<Argument>(UnderlyingV);
+          if (!Arg)
+            continue;
+          ArgNo = Arg->getArgNo();
+        } else {
           continue;
+        }
 
-        if (AL.hasParamAttr(I, Attribute::ByVal))
-          // It's unsound to propagate memory attributes to byval arguments.
-          // Even if CalledFunction doesn't e.g. write to the argument,
-          // the call to NewInnerCB may write to its by-value copy.
-          continue;
-
-        unsigned ArgNo = Arg->getArgNo();
         // If so, propagate its access attributes.
-        AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+        AL = AL.addParamAttributes(Context, I, ValidObjParamAttrs[ArgNo]);
+
         // We can have conflicting attributes from the inner callsite and
         // to-be-inlined callsite. In that case, choose the most
         // restrictive.
@@ -1703,9 +1776,8 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
 // Check whether this Value is used by a lifetime intrinsic.
 static bool isUsedByLifetimeMarker(Value *V) {
   for (User *U : V->users())
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
-      if (II->isLifetimeStartOrEnd())
-        return true;
+    if (isa<LifetimeIntrinsic>(U))
+      return true;
   return false;
 }
 
@@ -2057,7 +2129,6 @@ void llvm::updateProfileCallee(
 static void
 inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
                            const SmallVectorImpl<ReturnInst *> &Returns) {
-  Module *Mod = CB.getModule();
   assert(objcarc::isRetainOrClaimRV(RVCallKind) && "unexpected ARC function");
   bool IsRetainRV = RVCallKind == objcarc::ARCInstKind::RetainRV,
        IsUnsafeClaimRV = !IsRetainRV;
@@ -2089,9 +2160,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Function *IFn =
-              Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-          Builder.CreateCall(IFn, RetOpnd, "");
+          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2125,8 +2194,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
-      Builder.CreateCall(IFn, RetOpnd, "");
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
     }
   }
 }
@@ -2219,11 +2287,25 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
       // this may be the entryblock from the inlined callee, coming into a BB
       // that didn't have instrumentation because of MST decisions. Let's make
       // sure it's placed accordingly. This is a noop elsewhere.
-      BBID->moveBefore(&*BB->getFirstInsertionPt());
+      BBID->moveBefore(BB->getFirstInsertionPt());
     }
     for (auto &I : llvm::make_early_inc_range(*BB)) {
       if (auto *Inc = dyn_cast<InstrProfIncrementInst>(&I)) {
-        if (Inc != BBID) {
+        if (isa<InstrProfIncrementInstStep>(Inc)) {
+          // Step instrumentation is used for select instructions. Inlining may
+          // have propagated a constant resulting in the condition of the select
+          // being resolved, case in which function cloning resolves the value
+          // of the select, and elides the select instruction. If that is the
+          // case, the step parameter of the instrumentation will reflect that.
+          // We can delete the instrumentation in that case.
+          if (isa<Constant>(Inc->getStep())) {
+            assert(!Inc->getNextNode() || !isa<SelectInst>(Inc->getNextNode()));
+            Inc->eraseFromParent();
+          } else {
+            assert(isa_and_nonnull<SelectInst>(Inc->getNextNode()));
+            RewriteInstrIfNeeded(*Inc);
+          }
+        } else if (Inc != BBID) {
           // If we're here it means that the BB had more than 1 IDs, presumably
           // some coming from the callee. We "made up our mind" to keep the
           // first one (which may or may not have been originally the caller's).
@@ -2361,7 +2443,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     assert(Deleted);
     (void)Deleted;
   };
-  CtxProf.update(Updater, &Caller);
+  CtxProf.update(Updater, Caller);
   return Ret;
 }
 
@@ -2428,15 +2510,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // fully implements convergence control tokens, there is no mixing of
   // controlled and uncontrolled convergent operations in the whole program.
   if (CB.isConvergent()) {
-    auto *I = CalledFunc->getEntryBlock().getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        if (!ConvergenceControlToken) {
-          return InlineResult::failure(
-              "convergent call needs convergencectrl operand");
-        }
-      }
+    if (!ConvergenceControlToken &&
+        getConvergenceEntry(CalledFunc->getEntryBlock())) {
+      return InlineResult::failure(
+          "convergent call needs convergencectrl operand");
     }
   }
 
@@ -2503,7 +2580,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
             // Ok, the call site is within a cleanuppad.  Let's check the callee
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
-              if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHI()))
+              if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHIIt()))
                 return InlineResult::failure("catch in cleanup funclet");
             }
           }
@@ -2727,13 +2804,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   if (ConvergenceControlToken) {
-    auto *I = FirstNewBlock->getFirstNonPHI();
-    if (auto *IntrinsicCall = dyn_cast<IntrinsicInst>(I)) {
-      if (IntrinsicCall->getIntrinsicID() ==
-          Intrinsic::experimental_convergence_entry) {
-        IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
-        IntrinsicCall->eraseFromParent();
-      }
+    IntrinsicInst *IntrinsicCall = getConvergenceEntry(*FirstNewBlock);
+    if (IntrinsicCall) {
+      IntrinsicCall->replaceAllUsesWith(ConvergenceControlToken);
+      IntrinsicCall->eraseFromParent();
     }
   }
 
@@ -2954,7 +3028,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // rewriting the "parent pad" links.
   if (auto *II = dyn_cast<InvokeInst>(&CB)) {
     BasicBlock *UnwindDest = II->getUnwindDest();
-    Instruction *FirstNonPHI = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator FirstNonPHI = UnwindDest->getFirstNonPHIIt();
     if (isa<LandingPadInst>(FirstNonPHI)) {
       HandleInlinedLandingPad(II, &*FirstNewBlock, InlinedFunctionInfo);
     } else {
@@ -2980,7 +3054,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         if (CleanupRet->unwindsToCaller() && EHPadForCallUnwindsLocally)
           changeToUnreachable(CleanupRet);
 
-      Instruction *I = BB->getFirstNonPHI();
+      BasicBlock::iterator I = BB->getFirstNonPHIIt();
       if (!I->isEHPad())
         continue;
 
@@ -3007,7 +3081,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       });
     } else {
       SmallVector<ReturnInst *, 8> NormalReturns;
-      Function *NewDeoptIntrinsic = Intrinsic::getDeclaration(
+      Function *NewDeoptIntrinsic = Intrinsic::getOrInsertDeclaration(
           Caller->getParent(), Intrinsic::experimental_deoptimize,
           {Caller->getReturnType()});
 
@@ -3047,8 +3121,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         else
           Builder.CreateRet(NewDeoptCall);
         // Since the ret type is changed, remove the incompatible attributes.
-        NewDeoptCall->removeRetAttrs(
-            AttributeFuncs::typeIncompatible(NewDeoptCall->getType()));
+        NewDeoptCall->removeRetAttrs(AttributeFuncs::typeIncompatible(
+            NewDeoptCall->getType(), NewDeoptCall->getRetAttributes()));
       }
 
       // Leave behind the normal returns so we can merge control flow.

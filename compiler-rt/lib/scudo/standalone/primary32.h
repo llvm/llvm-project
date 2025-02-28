@@ -387,7 +387,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr RangesReleased;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     u64 LastReleaseAtNs;
   };
@@ -880,14 +880,14 @@ private:
           BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
     }
     const uptr AvailableChunks = Sci->AllocatedUser / BlockSize;
-    Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu avail: %6zu releases: %6zu last released: %6zuK "
-                "latest pushed bytes: %6zuK\n",
-                ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
-                Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks,
-                InUse, AvailableChunks, Sci->ReleaseInfo.RangesReleased,
-                Sci->ReleaseInfo.LastReleasedBytes >> 10,
-                PushedBytesDelta >> 10);
+    Str->append(
+        "  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+        "inuse: %6zu avail: %6zu releases attempted: %6zu last released: %6zuK "
+        "latest pushed bytes: %6zuK\n",
+        ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
+        Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks, InUse,
+        AvailableChunks, Sci->ReleaseInfo.NumReleasesAttempted,
+        Sci->ReleaseInfo.LastReleasedBytes >> 10, PushedBytesDelta >> 10);
   }
 
   void getSizeClassFragmentationInfo(SizeClassInfo *Sci, uptr ClassId,
@@ -972,6 +972,10 @@ private:
     const uptr Base = First * RegionSize;
     const uptr NumberOfRegions = Last - First + 1U;
 
+    // The following steps contribute to the majority time spent in page
+    // releasing thus we increment the counter here.
+    ++Sci->ReleaseInfo.NumReleasesAttempted;
+
     // ==================================================================== //
     // 2. Mark the free blocks and we can tell which pages are in-use by
     //    querying `PageReleaseContext`.
@@ -991,9 +995,8 @@ private:
     };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
-    if (Recorder.getReleasedRangesCount() > 0) {
+    if (Recorder.getReleasedBytes() > 0) {
       Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Sci->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
       TotalReleasedBytes += Sci->ReleaseInfo.LastReleasedBytes;
     }

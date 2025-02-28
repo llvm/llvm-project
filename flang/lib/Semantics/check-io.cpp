@@ -9,7 +9,9 @@
 #include "check-io.h"
 #include "definable.h"
 #include "flang/Common/format.h"
+#include "flang/Common/indirection.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Parser/characters.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
@@ -232,8 +234,8 @@ void IoChecker::Enter(const parser::Format &spec) {
               if (!IsVariable(*expr)) {
                 context_.Say(format.source,
                     "Assigned format label must be a scalar variable"_err_en_US);
-              } else if (context_.ShouldWarn(common::LanguageFeature::Assign)) {
-                context_.Say(format.source,
+              } else {
+                context_.Warn(common::LanguageFeature::Assign, format.source,
                     "Assigned format labels are deprecated"_port_en_US);
               }
               return;
@@ -245,11 +247,9 @@ void IoChecker::Enter(const parser::Format &spec) {
                     common::LanguageFeature::NonCharacterFormat)) {
               // Legacy extension: using non-character variables, typically
               // DATA-initialized with Hollerith, as format expressions.
-              if (context_.ShouldWarn(
-                      common::LanguageFeature::NonCharacterFormat)) {
-                context_.Say(format.source,
-                    "Non-character format expression is not standard"_port_en_US);
-              }
+              context_.Warn(common::LanguageFeature::NonCharacterFormat,
+                  format.source,
+                  "Non-character format expression is not standard"_port_en_US);
             } else if (!type ||
                 type->kind() !=
                     context_.defaultKinds().GetDefaultKind(type->category())) {
@@ -578,8 +578,9 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
           std::move(mutableVar.u))};
       newExpr.source = source;
       newExpr.typedExpr = std::move(typedExpr);
-      mutableSpec.u = parser::FileUnitNumber{
-          parser::ScalarIntExpr{parser::IntExpr{std::move(newExpr)}}};
+      mutableSpec.u = common::Indirection<parser::Expr>{std::move(newExpr)};
+      SetSpecifier(IoSpecKind::Unit);
+      flags_.set(Flag::NumberUnit);
     } else if (!dyType || dyType->category() != TypeCategory::Character) {
       SetSpecifier(IoSpecKind::Unit);
       context_.Say(parser::FindSourceLocation(*var),
@@ -600,6 +601,26 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
   } else if (std::get_if<parser::Star>(&spec.u)) {
     SetSpecifier(IoSpecKind::Unit);
     flags_.set(Flag::StarUnit);
+  } else if (const common::Indirection<parser::Expr> *pexpr{
+                 std::get_if<common::Indirection<parser::Expr>>(&spec.u)}) {
+    const auto *expr{GetExpr(context_, *pexpr)};
+    std::optional<evaluate::DynamicType> dyType;
+    if (expr) {
+      dyType = expr->GetType();
+    }
+    if (!expr || !dyType) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit must be a character variable or scalar integer expression"_err_en_US);
+    } else if (dyType->category() != TypeCategory::Integer) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit must be a character variable or a scalar integer expression, but is an expression of type %s"_err_en_US,
+          parser::ToUpperCaseLetters(dyType->AsFortran()));
+    } else if (expr->Rank() != 0) {
+      context_.Say(parser::FindSourceLocation(*pexpr),
+          "I/O unit number must be scalar"_err_en_US);
+    }
+    SetSpecifier(IoSpecKind::Unit);
+    flags_.set(Flag::NumberUnit);
   }
 }
 
@@ -862,6 +883,8 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
 
 void IoChecker::LeaveReadWrite() const {
   CheckForRequiredSpecifier(IoSpecKind::Unit); // C1211
+  CheckForRequiredSpecifier(flags_.test(Flag::InternalUnit),
+      "UNIT=internal-file", flags_.test(Flag::FmtOrNml), "FMT or NML");
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Rec); // C1216
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Fmt); // C1216
   CheckForProhibitedSpecifier(
@@ -920,7 +943,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Decimal, {"COMMA", "POINT"}},
       {IoSpecKind::Delim, {"APOSTROPHE", "NONE", "QUOTE"}},
       {IoSpecKind::Encoding, {"DEFAULT", "UTF-8"}},
-      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED"}},
+      {IoSpecKind::Form, {"FORMATTED", "UNFORMATTED", "BINARY"}},
       {IoSpecKind::Pad, {"NO", "YES"}},
       {IoSpecKind::Position, {"APPEND", "ASIS", "REWIND"}},
       {IoSpecKind::Round,
@@ -936,11 +959,8 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
   auto upper{Normalize(value)};
   if (specValues.at(specKind).count(upper) == 0) {
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
-      if (context_.ShouldWarn(common::LanguageFeature::OpenAccessAppend)) {
-        context_.Say(source,
-            "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value,
-            upper);
-      }
+      context_.Warn(common::LanguageFeature::OpenAccessAppend, source,
+          "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value, upper);
     } else {
       context_.Say(source, "Invalid %s value '%s'"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);

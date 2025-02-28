@@ -710,7 +710,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
 
     MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    auto ValSrc = Src1;
+    auto *ValSrc = Src1;
     auto Imm = foldToImm(*Src0);
 
     if (!Imm) {
@@ -962,8 +962,11 @@ bool isConvertibleToSDWA(MachineInstr &MI,
                          const SIInstrInfo* TII) {
   // Check if this is already an SDWA instruction
   unsigned Opc = MI.getOpcode();
-  if (TII->isSDWA(Opc))
-    return true;
+  if (TII->isSDWA(Opc)) {
+    // FIXME: Reenable after fixing selection handling.
+    // Cf. llvm/test/CodeGen/AMDGPU/sdwa-peephole-instr-combine-sel.ll
+    return false;
+  }
 
   // Check if this instruction has opcode that supports SDWA
   if (AMDGPU::getSDWAOp(Opc) == -1)
@@ -1151,7 +1154,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   }
 
   // Check for a preserved register that needs to be copied.
-  auto DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
+  auto *DstUnused = TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   if (DstUnused &&
       DstUnused->getImm() == AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE) {
     // We expect, if we are here, that the instruction was already in it's SDWA form,

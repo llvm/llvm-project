@@ -14,6 +14,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
+#include <cstdint>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 extern llvm::cl::opt<bool> enableDelayedPrivatization;
@@ -34,6 +35,7 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+class StatementContext;
 namespace pft {
 struct Evaluation;
 }
@@ -49,38 +51,98 @@ using DeclareTargetCapturePair =
 // and index data when lowering OpenMP map clauses. Keeps track of the
 // placement of the component in the derived type hierarchy it rests within,
 // alongside the generated mlir::omp::MapInfoOp for the mapped component.
-struct OmpMapMemberIndicesData {
+//
+// As an example of what the contents of this data structure may be like,
+// when provided the following derived type and map of that type:
+//
+// type :: bottom_layer
+//   real(8) :: i2
+//   real(4) :: array_i2(10)
+//   real(4) :: array_j2(10)
+// end type bottom_layer
+//
+// type :: top_layer
+//   real(4) :: i
+//   integer(4) :: array_i(10)
+//   real(4) :: j
+//   type(bottom_layer) :: nested
+//   integer, allocatable :: array_j(:)
+//   integer(4) :: k
+// end type top_layer
+//
+// type(top_layer) :: top_dtype
+//
+// map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%array_i2)
+//
+// We would end up with an OmpMapParentAndMemberData populated like below:
+//
+// memberPlacementIndices:
+//  Vector 1: 3, 0
+//  Vector 2: 5
+//  Vector 3: 3, 1
+//
+// memberMap:
+// Entry 1: omp.map.info for "top_dtype%nested%i2"
+// Entry 2: omp.map.info for "top_dtype%k"
+// Entry 3: omp.map.info for "top_dtype%nested%array_i2"
+//
+// And this OmpMapParentAndMemberData would be accessed via the parent
+// symbol for top_dtype. Other parent derived type instances that have
+// members mapped would have there own OmpMapParentAndMemberData entry
+// accessed via their own symbol.
+struct OmpMapParentAndMemberData {
   // The indices representing the component members placement in its derived
   // type parents hierarchy.
-  llvm::SmallVector<int> memberPlacementIndices;
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
 
   // Placement of the member in the member vector.
-  mlir::omp::MapInfoOp memberMap;
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMap;
+
+  bool isDuplicateMemberMapInfo(llvm::SmallVectorImpl<int64_t> &memberIndices) {
+    return llvm::find_if(memberPlacementIndices, [&](auto &memberData) {
+             return llvm::equal(memberIndices, memberData);
+           }) != memberPlacementIndices.end();
+  }
+
+  void addChildIndexAndMapToParent(const omp::Object &object,
+                                   mlir::omp::MapInfoOp &mapOp,
+                                   semantics::SemanticsContext &semaCtx);
 };
 
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::ArrayRef<mlir::Value> bounds,
-                mlir::ArrayRef<mlir::Value> members,
-                mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
+                mlir::Value baseAddr, mlir::Value varPtrPtr,
+                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
+                llvm::ArrayRef<mlir::Value> members,
+                mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false);
-
-void addChildIndexAndMapToParent(
-    const omp::Object &object,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx);
+                bool partialMap = false,
+                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 void insertChildMapInfoIntoParent(
-    lower::AbstractConverter &converter,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx,
+    std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
+    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
+
+void generateMemberPlacementIndices(
+    const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
+    Fortran::semantics::SemanticsContext &semaCtx);
+
+bool isMemberOrParentAllocatableOrPointer(
+    const Object &object, Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value createParentSymAndGenIntermediateMaps(
+    mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
+    omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
+    OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits);
+
+omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
+                                semantics::SemanticsContext &semaCtx);
 
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
@@ -94,11 +156,12 @@ void gatherFuncAndVarSyms(
 
 int64_t getCollapseValue(const List<Clause> &clauses);
 
-semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject);
-
 void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
+
+void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
+                                     mlir::Location loc);
 
 } // namespace omp
 } // namespace lower

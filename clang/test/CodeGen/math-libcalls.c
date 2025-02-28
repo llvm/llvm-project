@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 %s | FileCheck %s --check-prefixes=COMMON,NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefixes=COMMON,HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefixes=COMMON,HAS_MAYTRAP
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
@@ -23,19 +23,19 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   atan2(f,f);    atan2f(f,f) ;  atan2l(f, f);
 
-  // NO__ERRNO: declare double @atan2(double noundef, double noundef) [[READNONE:#[0-9]+]]
-  // NO__ERRNO: declare float @atan2f(float noundef, float noundef) [[READNONE]]
-  // NO__ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+  // NO__ERRNO: declare double @llvm.atan2.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+  // NO__ERRNO: declare float @llvm.atan2.f32(float, float) [[READNONE_INTRINSIC]]
+  // NO__ERRNO: declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
   // HAS_ERRNO: declare double @atan2(double noundef, double noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @atan2(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
-  // HAS_MAYTRAP: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @llvm.experimental.constrained.atan2.f64(
+  // HAS_MAYTRAP: declare float @llvm.experimental.constrained.atan2.f32(
+  // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.atan2.f80(
 
   copysign(f,f); copysignf(f,f);copysignl(f,f);
 
-  // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
+  // NO__ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC]]
   // NO__ERRNO: declare float @llvm.copysign.f32(float, float) [[READNONE_INTRINSIC]]
   // NO__ERRNO: declare x86_fp80 @llvm.copysign.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
   // HAS_ERRNO: declare double @llvm.copysign.f64(double, double) [[READNONE_INTRINSIC:#[0-9]+]]
@@ -65,13 +65,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   // HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
   // HAS_MAYTRAP: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 
   ldexp(f,f);    ldexpf(f,f);   ldexpl(f,f);
 
-  // NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
+  // NO__ERRNO: declare double @ldexp(double noundef, i32 noundef) [[READNONE:#[0-9]+]]
   // NO__ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
   // NO__ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[READNONE]]
   // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
@@ -372,6 +372,18 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.minnum.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.minnum.f80(
 
+  fmaximum_num(*d,*d);       fmaximum_numf(f,f);      fmaximum_numl(*l,*l);
+
+// COMMON: declare double @llvm.maximumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.maximumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+
+  fminimum_num(*d,*d);       fminimum_numf(f,f);      fminimum_numl(*l,*l);
+
+// COMMON: declare double @llvm.minimumnum.f64(double, double) [[READNONE_INTRINSIC]]
+// COMMON: declare float @llvm.minimumnum.f32(float, float) [[READNONE_INTRINSIC]]
+// COMMON: declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) [[READNONE_INTRINSIC]]
+
   hypot(f,f);      hypotf(f,f);     hypotl(f,f);
 
 // NO__ERRNO: declare double @hypot(double noundef, double noundef) [[READNONE]]
@@ -648,6 +660,17 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_MAYTRAP: declare float @llvm.experimental.constrained.sinh.f32(
 // HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.sinh.f80(
 
+sincos(f, d, d);       sincosf(f, fp, fp);        sincosl(f, l, l);
+
+// NO__ERRNO: declare { double, double } @llvm.sincos.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { float, float } @llvm.sincos.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.sincos.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare void @sincos(double noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare void @sincosf(float noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare void @sincosl(x86_fp80 noundef, ptr noundef, ptr noundef) [[NOT_READNONE]]
 
   sqrt(f);       sqrtf(f);      sqrtl(f);
 
@@ -707,9 +730,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare x86_fp80 @llvm.trunc.f80(x86_fp80) [[READNONE_INTRINSIC]]
 };
 
-// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[READNONE_INTRINSIC]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
+// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[READONLY]] = { {{.*}}memory(read){{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }

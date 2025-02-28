@@ -229,7 +229,7 @@ func.func @forward_dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 // final `vector.transfer_write` should be preserved as:
 //         vector.transfer_write %2, %subview
 
-// CHECK-LABEL:  func.func @collapse_shape
+// CHECK-LABEL:  func.func @collapse_shape_and_read_from_source
 //       CHECK:    scf.for {{.*}} {
 //       CHECK:      vector.transfer_read
 //       CHECK:      vector.transfer_write
@@ -237,7 +237,7 @@ func.func @forward_dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 //       CHECK:      vector.transfer_read
 //       CHECK:      vector.transfer_write
 
-func.func @collapse_shape(%in_0: memref<1x20x1xi32>, %vec: vector<4xi32>) {
+func.func @collapse_shape_and_read_from_source(%in_0: memref<1x20x1xi32>, %vec: vector<4xi32>) {
   %c0_i32 = arith.constant 0 : i32
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
@@ -252,6 +252,98 @@ func.func @collapse_shape(%in_0: memref<1x20x1xi32>, %vec: vector<4xi32>) {
     vector.transfer_write %1, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32>
     vector.transfer_write %vec, %collapse_shape[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
     %2 = vector.transfer_read %alloca[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32>, vector<1x4x1xi32>
+    vector.transfer_write %2, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+  }
+  return
+}
+
+// The same regression test for expand_shape.
+
+// CHECK-LABEL:  func.func @expand_shape_and_read_from_source
+//       CHECK:    scf.for {{.*}} {
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+
+func.func @expand_shape_and_read_from_source(%in_0: memref<20xi32>, %vec: vector<1x4x1xi32>) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c20 = arith.constant 20 : index
+
+  %alloca = memref.alloca() {alignment = 64 : i64} : memref<4xi32>
+  %expand_shape = memref.expand_shape %alloca [[0, 1, 2]] output_shape [1, 4, 1] : memref<4xi32> into memref<1x4x1xi32>
+  scf.for %arg0 = %c0 to %c20 step %c4 {
+    %subview = memref.subview %in_0[%arg0] [4] [1] : memref<20xi32> to memref<4xi32, strided<[1], offset: ?>>
+    %1 = vector.transfer_read %subview[%c0], %c0_i32 {in_bounds = [true]} : memref<4xi32, strided<[1], offset: ?>>, vector<4xi32>
+    // $alloca and $expand_shape alias
+    vector.transfer_write %1, %alloca[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
+    vector.transfer_write %vec, %expand_shape[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32>
+    %2 = vector.transfer_read %alloca[%c0], %c0_i32 {in_bounds = [true]} : memref<4xi32>, vector<4xi32>
+    vector.transfer_write %2, %subview[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32, strided<[1], offset: ?>>
+  }
+  return
+}
+
+// The same regression test, but the initial write is to the collapsed memref,
+// and the subsequent unforwardable read is from the collapse shape.
+
+// CHECK-LABEL:  func.func @collapse_shape_and_read_from_collapse
+//       CHECK:    scf.for {{.*}} {
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+
+func.func @collapse_shape_and_read_from_collapse(%in_0: memref<20xi32>, %vec: vector<1x4x1xi32>) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c20 = arith.constant 20 : index
+
+  %alloca = memref.alloca() {alignment = 64 : i64} : memref<1x4x1xi32>
+  %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x4x1xi32> into memref<4xi32>
+  scf.for %arg0 = %c0 to %c20 step %c4 {
+    %subview = memref.subview %in_0[%arg0] [4] [1] : memref<20xi32> to memref<4xi32, strided<[1], offset: ?>>
+    %1 = vector.transfer_read %subview[%c0], %c0_i32 {in_bounds = [true]} : memref<4xi32, strided<[1], offset: ?>>, vector<4xi32>
+    vector.transfer_write %1, %collapse_shape[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
+    // $alloca and $collapse_shape alias
+    vector.transfer_write %vec, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32>
+    %2 = vector.transfer_read %collapse_shape[%c0], %c0_i32 {in_bounds = [true]} : memref<4xi32>, vector<4xi32>
+    vector.transfer_write %2, %subview[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32, strided<[1], offset: ?>>
+  }
+  return
+}
+
+// The same test except writing to the expanded source first (same as the
+// previous collapse test but for expand).
+
+// CHECK-LABEL:  func.func @expand_shape_and_read_from_expand
+//       CHECK:    scf.for {{.*}} {
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_write
+//       CHECK:      vector.transfer_read
+//       CHECK:      vector.transfer_write
+
+func.func @expand_shape_and_read_from_expand(%in_0: memref<1x20x1xi32>, %vec: vector<4xi32>) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c20 = arith.constant 20 : index
+
+  %alloca = memref.alloca() {alignment = 64 : i64} : memref<4xi32>
+  %expand_shape = memref.expand_shape %alloca [[0, 1, 2]] output_shape [1, 4, 1] : memref<4xi32> into memref<1x4x1xi32>
+  scf.for %arg0 = %c0 to %c20 step %c4 {
+    %subview = memref.subview %in_0[0, %arg0, 0] [1, 4, 1] [1, 1, 1] : memref<1x20x1xi32> to memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
+    %1 = vector.transfer_read %subview[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>, vector<1x4x1xi32>
+    vector.transfer_write %1, %expand_shape[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32>
+    // $alloca and $expand_shape alias
+    vector.transfer_write %vec, %alloca[%c0] {in_bounds = [true]} : vector<4xi32>, memref<4xi32>
+    %2 = vector.transfer_read %expand_shape[%c0, %c0, %c0], %c0_i32 {in_bounds = [true, true, true]} : memref<1x4x1xi32>, vector<1x4x1xi32>
     vector.transfer_write %2, %subview[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x4x1xi32>, memref<1x4x1xi32, strided<[20, 1, 1], offset: ?>>
   }
   return

@@ -23,7 +23,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
@@ -34,6 +33,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 
 #include "BlockPointer.h"
 #include "CPlusPlusNameParser.h"
@@ -641,7 +641,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
@@ -1204,7 +1204,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetSkipPointers(false)
       .SetSkipReferences(false)
       .SetDontShowChildren(true)
-      .SetDontShowValue(true)
+      .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 

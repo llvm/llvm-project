@@ -20,8 +20,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::NE;
@@ -31,7 +31,7 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   constexpr char FILENAME[] = "testdata/simple_operations.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
-  ASSERT_EQ(LIBC_NAMESPACE::fileno(file), 3);
+  ASSERT_GE(LIBC_NAMESPACE::fileno(file), 0);
   constexpr char CONTENT[] = "1234567890987654321";
   ASSERT_EQ(sizeof(CONTENT) - 1,
             LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT) - 1, file));

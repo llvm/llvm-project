@@ -59,7 +59,7 @@ protected:
 
 // Check that we don't accept egregiously incorrect prototypes.
 TEST_F(TargetLibraryInfoTest, InvalidProto) {
-  parseAssembly("%foo = type { %foo }\n");
+  parseAssembly("%foo = type opaque\n");
 
   auto *StructTy = StructType::getTypeByName(Context, "foo");
   auto *InvalidFTy = FunctionType::get(StructTy, /*isVarArg=*/false);
@@ -249,6 +249,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare %struct* @getpwnam(i8*)\n"
       "declare i8* @gets(i8*)\n"
       "declare i32 @gettimeofday(%struct*, i8*)\n"
+      "declare double @hypot(double, double)\n"
+      "declare float @hypotf(float, float)\n"
+      "declare x86_fp80 @hypotl(x86_fp80, x86_fp80)\n"
       "declare i32 @_Z7isasciii(i32)\n"
       "declare i32 @_Z7isdigiti(i32)\n"
       "declare i64 @labs(i64)\n"
@@ -266,6 +269,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @log2(double)\n"
       "declare float @log2f(float)\n"
       "declare x86_fp80 @log2l(x86_fp80)\n"
+      "declare i32 @ilogb(double)\n"
+      "declare i32 @ilogbf(float)\n"
+      "declare i32 @ilogbl(x86_fp80)\n"
       "declare double @logb(double)\n"
       "declare float @logbf(float)\n"
       "declare x86_fp80 @logbl(x86_fp80)\n"
@@ -300,6 +306,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @erf(double)\n"
       "declare float @erff(float)\n"
       "declare x86_fp80 @erfl(x86_fp80)\n"
+      "declare double @tgamma(double)\n"
+      "declare float @tgammaf(float)\n"
+      "declare x86_fp80 @tgammal(x86_fp80)\n"
       "declare i32 @printf(i8*, ...)\n"
       "declare i32 @putc(i32, %struct*)\n"
       "declare i32 @putc_unlocked(i32, %struct*)\n"
@@ -309,6 +318,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)*)\n"
       "declare i64 @readlink(i8*, i8*, i64)\n"
       "declare i8* @realloc(i8*, i64)\n"
+      "declare i8* @reallocarray(i8*, i64, i64)\n"
       "declare i8* @reallocf(i8*, i64)\n"
       "declare double @remainder(double, double)\n"
       "declare float @remainderf(float, float)\n"
@@ -332,6 +342,12 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @roundeven(double)\n"
       "declare float @roundevenf(float)\n"
       "declare x86_fp80 @roundevenl(x86_fp80)\n"
+      "declare double @scalbln(double, i64)\n"
+      "declare float @scalblnf(float, i64)\n"
+      "declare x86_fp80 @scalblnl(x86_fp80, i64)\n"
+      "declare double @scalbn(double, i32)\n"
+      "declare float @scalbnf(float, i32)\n"
+      "declare x86_fp80 @scalbnl(x86_fp80, i32)\n"
       "declare i32 @scanf(i8*, ...)\n"
       "declare void @setbuf(%struct*, i8*)\n"
       "declare i32 @setitimer(i32, %struct*, %struct*)\n"

@@ -29,7 +29,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -47,7 +46,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <iterator>
@@ -625,8 +623,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
+  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true, I, DT,
                                  /* include Object */ true))
     return ModRefInfo::ModRef;
 
@@ -638,9 +635,13 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     // Only look at the no-capture or byval pointer arguments.  If this
     // pointer were passed to arguments that were neither of these, then it
     // couldn't be no-capture.
-    if (!(*CI)->getType()->isPointerTy() ||
-        (!Call->doesNotCapture(ArgNo) && ArgNo < Call->arg_size() &&
-         !Call->isByValArgument(ArgNo)))
+    if (!(*CI)->getType()->isPointerTy())
+      continue;
+
+    // Make sure we still check captures(ret: address, provenance) arguments,
+    // as these wouldn't be treated as a capture at the call-site.
+    CaptureInfo Captures = Call->getCaptureInfo(ArgNo);
+    if (!capturesNothing(Captures.getOtherComponents()))
       continue;
 
     AliasResult AR =
@@ -830,10 +831,24 @@ bool llvm::isIdentifiedFunctionLocal(const Value *V) {
   return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasOrByValArgument(V);
 }
 
+bool llvm::isBaseOfObject(const Value *V) {
+  // TODO: We can handle other cases here
+  // 1) For GC languages, arguments to functions are often required to be
+  //    base pointers.
+  // 2) Result of allocation routines are often base pointers.  Leverage TLI.
+  return (isa<AllocaInst>(V) || isa<GlobalVariable>(V));
+}
+
 bool llvm::isEscapeSource(const Value *V) {
-  if (auto *CB = dyn_cast<CallBase>(V))
-    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
-                                                                        true);
+  if (auto *CB = dyn_cast<CallBase>(V)) {
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
+      return false;
+
+    // The return value of a function with a captures(ret: address, provenance)
+    // attribute is not necessarily an escape source. The return value may
+    // alias with a non-escaping object.
+    return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
+  }
 
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
@@ -847,6 +862,12 @@ bool llvm::isEscapeSource(const Value *V) {
   // escaping, and objects located at well-known addresses via platform-specific
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
+    return true;
+
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
     return true;
 
   // Same for inttoptr constant expressions.
@@ -892,7 +913,10 @@ bool llvm::isWritableObject(const Value *Object,
     return true;
 
   if (auto *A = dyn_cast<Argument>(Object)) {
-    if (A->hasAttribute(Attribute::Writable)) {
+    // Also require noalias, otherwise writability at function entry cannot be
+    // generalized to writability at other program points, even if the pointer
+    // does not escape.
+    if (A->hasAttribute(Attribute::Writable) && A->hasNoAliasAttr()) {
       ExplicitlyDereferenceableOnly = true;
       return true;
     }

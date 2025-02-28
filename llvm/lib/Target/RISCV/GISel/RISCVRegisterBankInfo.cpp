@@ -149,6 +149,9 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
+  case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
@@ -324,19 +327,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
 
     // Check if that load feeds fp instructions.
     // In that case, we want the default mapping to be on FPR
     // instead of blind map every scalar to GPR.
-    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI))
+    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI)) {
       // If we have at least one direct use in a FP instruction,
       // assume this was a floating point load in the IR. If it was
       // not, we would have had a bitcast before reaching that
       // instruction.
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
+      break;
+    }
 
     break;
   }
@@ -432,6 +437,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
   }
+  case RISCV::G_FCVT_W_RV64:
+  case RISCV::G_FCVT_WU_RV64:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case RISCV::G_FCLASS: {
@@ -476,6 +483,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = GPRValueMapping;
       OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
     }
+    break;
+  }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    OpdsMapping[0] = getVRBValueMapping(MRI.getType(MI.getOperand(0).getReg())
+                                            .getSizeInBits()
+                                            .getKnownMinValue());
+
+    LLT ScalarTy = MRI.getType(MI.getOperand(1).getReg());
+    MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((GPRSize == 32 && ScalarTy.getSizeInBits() == 64) ||
+        onlyDefinesFP(*DefMI, MRI, TRI)) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
+    } else
+      OpdsMapping[1] = GPRValueMapping;
     break;
   }
   default:

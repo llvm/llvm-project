@@ -3,6 +3,8 @@
 
 ; CHECK-DAG: 1 elf-object-writer - Total size of SHF_ALLOC text sections
 ; CHECK-DAG: 1 elf-object-writer - Total size of SHF_ALLOC read-write sections
+; CHECK-DAG: 512 elf-object-writer - Total size of section headers table
+; CHECK-DAG: 64 elf-object-writer - Total size of ELF headers
 
 target triple = "x86_64-unknown-linux-gnu"
 

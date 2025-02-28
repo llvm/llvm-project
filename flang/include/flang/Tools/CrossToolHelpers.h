@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 // A header file for containing functionallity that is used across Flang tools,
 // such as helper functions which apply or generate information needed accross
-// tools like bbc and flang-new.
+// tools like bbc and flang.
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
-#include "flang/Frontend/LangOptions.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -122,7 +122,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
-  bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
+  bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenMP = false; ///< Enable OpenMP lowering.
 };
 
 struct OffloadModuleOpts {
@@ -145,7 +146,7 @@ struct OffloadModuleOpts {
         OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
         NoGPULib(NoGPULib) {}
 
-  OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
+  OffloadModuleOpts(Fortran::common::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
         OpenMPTeamSubscription(Opts.OpenMPTeamSubscription),
         OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),
@@ -173,7 +174,7 @@ struct OffloadModuleOpts {
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
 [[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
-    mlir::ModuleOp &module, OffloadModuleOpts Opts) {
+    mlir::ModuleOp module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
@@ -197,7 +198,7 @@ struct OffloadModuleOpts {
 }
 
 [[maybe_unused]] static void setOpenMPVersionAttribute(
-    mlir::ModuleOp &module, int64_t version) {
+    mlir::ModuleOp module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));

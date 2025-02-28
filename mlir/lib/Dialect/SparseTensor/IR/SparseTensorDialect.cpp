@@ -1142,16 +1142,18 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
       auto pos = dimOp.getPosition();
       if (binOp.getKind() == AffineExprKind::FloorDiv) {
         // Expect only one floordiv for each dimension.
-        if (coeffientMap.find(pos) != coeffientMap.end())
+        auto [it, inserted] = coeffientMap.try_emplace(pos);
+        if (!inserted)
           return false;
         // Record coefficient of the floordiv.
-        coeffientMap[pos] = conOp.getValue();
+        it->second = conOp.getValue();
       } else if (binOp.getKind() == AffineExprKind::Mod) {
         // Expect floordiv before mod.
-        if (coeffientMap.find(pos) == coeffientMap.end())
+        auto it = coeffientMap.find(pos);
+        if (it == coeffientMap.end())
           return false;
         // Expect mod to have the same coefficient as floordiv.
-        if (conOp.getValue() != coeffientMap[pos])
+        if (conOp.getValue() != it->second)
           return false;
         hasBlock = true;
       } else {
@@ -1160,9 +1162,8 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
     } else if (auto dimOp = dyn_cast<AffineDimExpr>(result)) {
       auto pos = dimOp.getPosition();
       // Expect dim to be unset.
-      if (coeffientMap.find(pos) != coeffientMap.end())
+      if (!coeffientMap.try_emplace(pos, 0).second)
         return false;
-      coeffientMap[pos] = 0;
     } else {
       return false;
     }
@@ -1310,7 +1311,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     // The coordinates should be in shape of <? x rank>
     unsigned expCOORank = stt.getLvlRank() - cooStartLvl;
     if (cooTp.getRank() != 2 || expCOORank != cooTp.getShape().back()) {
-      op->emitError("input/output trailing COO level-ranks don't match");
+      return op->emitError("input/output trailing COO level-ranks don't match");
     }
   }
 
@@ -1350,7 +1351,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
 }
 
 LogicalResult AssembleOp::verify() {
-  const auto valuesTp = getRankedTensorType(getValues());
+  RankedTensorType valuesTp = getValues().getType();
   const auto lvlsTp = getLevels().getTypes();
   const auto resTp = getSparseTensorType(getResult());
   return verifyPackUnPack(*this, true, resTp, valuesTp, lvlsTp);
@@ -1364,34 +1365,31 @@ LogicalResult DisassembleOp::verify() {
     if (ot.getType() != rt.getType())
       return emitError("output levels and return levels type mismatch");
 
-  const auto valuesTp = getRankedTensorType(getRetValues());
+  RankedTensorType valuesTp = getRetValues().getType();
   const auto lvlsTp = getRetLevels().getTypes();
   const auto srcTp = getSparseTensorType(getTensor());
   return verifyPackUnPack(*this, false, srcTp, valuesTp, lvlsTp);
 }
 
 LogicalResult ConvertOp::verify() {
-  if (auto tp1 = llvm::dyn_cast<RankedTensorType>(getSource().getType())) {
-    if (auto tp2 = llvm::dyn_cast<RankedTensorType>(getDest().getType())) {
-      if (tp1.getRank() != tp2.getRank())
-        return emitError("unexpected conversion mismatch in rank");
-      auto dstEnc =
-          llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(tp2.getEncoding());
-      if (dstEnc && dstEnc.isSlice())
-        return emitError("cannot convert to a sparse tensor slice");
+  RankedTensorType tp1 = getSource().getType();
+  RankedTensorType tp2 = getDest().getType();
+  if (tp1.getRank() != tp2.getRank())
+    return emitError("unexpected conversion mismatch in rank");
+  auto dstEnc =
+      llvm::dyn_cast_or_null<SparseTensorEncodingAttr>(tp2.getEncoding());
+  if (dstEnc && dstEnc.isSlice())
+    return emitError("cannot convert to a sparse tensor slice");
 
-      auto shape1 = tp1.getShape();
-      auto shape2 = tp2.getShape();
-      // Accept size matches between the source and the destination type
-      // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
-      // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
-      for (Dimension d = 0, dimRank = tp1.getRank(); d < dimRank; d++)
-        if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamic)
-          return emitError("unexpected conversion mismatch in dimension ") << d;
-      return success();
-    }
-  }
-  return emitError("unexpected type in convert");
+  auto shape1 = tp1.getShape();
+  auto shape2 = tp2.getShape();
+  // Accept size matches between the source and the destination type
+  // (e.g. 10 vs. 10, 10 vs. ?, or ? vs. ?), but reject direct mismatches or
+  // matches that would need a runtime assert (e.g. 10 vs. 20 or ? vs. 10).
+  for (Dimension d = 0, dimRank = tp1.getRank(); d < dimRank; d++)
+    if (shape1[d] != shape2[d] && shape2[d] != ShapedType::kDynamic)
+      return emitError("unexpected conversion mismatch in dimension ") << d;
+  return success();
 }
 
 OpFoldResult ConvertOp::fold(FoldAdaptor adaptor) {
@@ -1495,7 +1493,8 @@ LogicalResult LvlOp::verify() {
   if (std::optional<uint64_t> lvl = getConstantLvlIndex()) {
     auto stt = getSparseTensorType(getSource());
     if (static_cast<uint64_t>(lvl.value()) >= stt.getLvlRank())
-      emitError("Level index exceeds the rank of the input sparse tensor");
+      return emitError(
+          "Level index exceeds the rank of the input sparse tensor");
   }
   return success();
 }
@@ -1697,14 +1696,14 @@ LogicalResult ToValuesOp::inferReturnTypes(MLIRContext *ctx,
 }
 
 LogicalResult ToSliceOffsetOp::verify() {
-  auto rank = getRankedTensorType(getSlice()).getRank();
+  auto rank = getSlice().getType().getRank();
   if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
     return emitError("requested dimension out of bound");
   return success();
 }
 
 LogicalResult ToSliceStrideOp::verify() {
-  auto rank = getRankedTensorType(getSlice()).getRank();
+  auto rank = getSlice().getType().getRank();
   if (rank <= getDim().getSExtValue() || getDim().getSExtValue() < 0)
     return emitError("requested dimension out of bound");
   return success();
@@ -1986,15 +1985,16 @@ LogicalResult ForeachOp::verify() {
   const auto iTp = IndexType::get(getContext());
   for (Dimension d = 0; d < dimRank; d++)
     if (args[d].getType() != iTp)
-      emitError(
+      return emitError(
           llvm::formatv("Expecting Index type for argument at index {0}", d));
 
   const auto elemTp = t.getElementType();
   const auto valueTp = args[dimRank].getType();
   if (elemTp != valueTp)
-    emitError(llvm::formatv("Unmatched element type between input tensor and "
-                            "block argument, expected:{0}, got: {1}",
-                            elemTp, valueTp));
+    return emitError(
+        llvm::formatv("Unmatched element type between input tensor and "
+                      "block argument, expected:{0}, got: {1}",
+                      elemTp, valueTp));
   return success();
 }
 
@@ -2011,15 +2011,15 @@ LogicalResult ReorderCOOOp::verify() {
   SparseTensorType dstStt = getSparseTensorType(getResultCoo());
 
   if (!srcStt.isCOOType() || !dstStt.isCOOType())
-    emitError("Expected COO sparse tensors only");
+    return emitError("Expected COO sparse tensors only");
 
   if (!srcStt.hasSameDimToLvl(dstStt))
-    emitError("Unmatched dim2lvl map between input and result COO");
+    return emitError("Unmatched dim2lvl map between input and result COO");
 
   if (srcStt.getPosType() != dstStt.getPosType() ||
       srcStt.getCrdType() != dstStt.getCrdType() ||
       srcStt.getElementType() != dstStt.getElementType())
-    emitError("Unmatched storage format between input and result COO");
+    return emitError("Unmatched storage format between input and result COO");
 
   return success();
 }
@@ -2044,10 +2044,11 @@ LogicalResult SortOp::verify() {
   AffineMap xPerm = getPermMap();
   uint64_t nx = xPerm.getNumDims();
   if (nx < 1)
-    emitError(llvm::formatv("Expected rank(perm_map) > 1, got {0}", nx));
+    return emitError(llvm::formatv("Expected rank(perm_map) > 1, got {0}", nx));
 
   if (!xPerm.isPermutation())
-    emitError(llvm::formatv("Expected a permutation map, got {0}", xPerm));
+    return emitError(
+        llvm::formatv("Expected a permutation map, got {0}", xPerm));
 
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
@@ -2056,19 +2057,24 @@ LogicalResult SortOp::verify() {
     return success();
 
   // Verify dimensions.
-  const auto checkDim = [&](Value v, Size minSize, const char *message) {
+  const auto checkDim = [&](Value v, Size minSize,
+                            const char *message) -> LogicalResult {
     const Size sh = getMemRefType(v).getShape()[0];
     if (!ShapedType::isDynamic(sh) && sh < minSize)
-      emitError(llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
+      return emitError(
+          llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
+    return success();
   };
   uint64_t n = cn.value();
   uint64_t ny = 0;
   if (auto nyAttr = getNyAttr())
     ny = nyAttr.getInt();
-  checkDim(getXy(), n * (nx + ny),
-           "Expected dimension(xy) >= n * (rank(perm_map) + ny)");
+  if (failed(checkDim(getXy(), n * (nx + ny),
+                      "Expected dimension(xy) >= n * (rank(perm_map) + ny)")))
+    return failure();
   for (Value opnd : getYs())
-    checkDim(opnd, n, "Expected dimension(y) >= n");
+    if (failed(checkDim(opnd, n, "Expected dimension(y) >= n")))
+      return failure();
 
   return success();
 }
@@ -2101,8 +2107,8 @@ static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
   }
 
   if (lvlHi <= lvlLo)
-    parser.emitError(parser.getNameLoc(),
-                     "expect larger level upper bound than lower bound");
+    return parser.emitError(parser.getNameLoc(),
+                            "expect larger level upper bound than lower bound");
 
   return success();
 }

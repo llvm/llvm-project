@@ -213,12 +213,12 @@ static unsigned canModifyToInlineImmOp32(const SIInstrInfo *TII,
     // that SCC is not live as S_NOT_B32 clobbers it. It's probably not worth
     // it, as the reasonable values are already covered by s_movk_i32.
     ModifiedImm = ~SrcImm;
-    if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+    if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
       return AMDGPU::V_NOT_B32_e32;
   }
 
   ModifiedImm = reverseBits<int32_t>(SrcImm);
-  if (TII->isInlineConstant(APInt(32, ModifiedImm)))
+  if (TII->isInlineConstant(APInt(32, ModifiedImm, true)))
     return Scalar ? AMDGPU::S_BREV_B32 : AMDGPU::V_BFREV_B32_e32;
 
   return 0;
@@ -455,8 +455,13 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
-                                          : AMDGPU::V_FMAAK_F16;
+      NewOpcode = AMDGPU::V_FMAAK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
       break;
     }
   }
@@ -484,8 +489,13 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
-                                          : AMDGPU::V_FMAMK_F16;
+      NewOpcode = AMDGPU::V_FMAMK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
       break;
     }
   }
@@ -752,13 +762,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineBasicBlock &MBB = *MovT.getParent();
     SmallVector<MachineInstr *, 4> Swaps;
     if (Size == 2) {
-      auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                         TII->get(AMDGPU::V_SWAP_B16))
-                     .addDef(X)
-                     .addDef(Y)
-                     .addReg(Y)
-                     .addReg(X)
-                     .getInstr();
+      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                          TII->get(AMDGPU::V_SWAP_B16))
+                      .addDef(X)
+                      .addDef(Y)
+                      .addReg(Y)
+                      .addReg(X)
+                      .getInstr();
       Swaps.push_back(MIB);
     } else {
       assert(Size > 0 && Size % 4 == 0);
@@ -766,13 +776,13 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         TargetInstrInfo::RegSubRegPair X1, Y1;
         X1 = getSubRegForIndex(X, Xsub, I);
         Y1 = getSubRegForIndex(Y, Ysub, I);
-        auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
-                           TII->get(AMDGPU::V_SWAP_B32))
-                       .addDef(X1.Reg, 0, X1.SubReg)
-                       .addDef(Y1.Reg, 0, Y1.SubReg)
-                       .addReg(Y1.Reg, 0, Y1.SubReg)
-                       .addReg(X1.Reg, 0, X1.SubReg)
-                       .getInstr();
+        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                            TII->get(AMDGPU::V_SWAP_B32))
+                        .addDef(X1.Reg, 0, X1.SubReg)
+                        .addDef(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(Y1.Reg, 0, Y1.SubReg)
+                        .addReg(X1.Reg, 0, X1.SubReg)
+                        .getInstr();
         Swaps.push_back(MIB);
       }
     }
@@ -956,7 +966,9 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64) {
         shrinkMadFma(MI);
         continue;
       }

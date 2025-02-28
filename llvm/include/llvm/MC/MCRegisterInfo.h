@@ -129,6 +129,9 @@ struct MCRegisterDesc {
 
   // Is true for constant registers.
   bool IsConstant;
+
+  // Is true for artificial registers.
+  bool IsArtificial;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -268,6 +271,8 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
+  virtual ~MCRegisterInfo() {}
+
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
   void InitMCRegisterInfo(const MCRegisterDesc *D, unsigned NR, unsigned RA,
@@ -394,6 +399,16 @@ public:
   /// Returns true if the given register is constant.
   bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 
+  /// Returns true if the given register is artificial, which means it
+  /// represents a regunit that is not separately addressable but still needs to
+  /// be modelled, such as the top 16-bits of a 32-bit GPR.
+  bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
+
+  /// Returns true when the given register unit is considered artificial.
+  /// Register units are considered artificial when at least one of the
+  /// root registers is artificial.
+  bool isArtificialRegUnit(MCRegUnit Unit) const;
+
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
   unsigned getNumRegs() const {
@@ -418,15 +433,15 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
-  std::optional<MCRegister> getLLVMRegNum(unsigned RegNum, bool isEH) const;
+  std::optional<MCRegister> getLLVMRegNum(uint64_t RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.
-  int getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const;
+  int64_t getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const;
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
@@ -515,7 +530,7 @@ public:
 
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -585,7 +600,7 @@ public:
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -631,8 +646,7 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    assert(Reg && "Null register has no regunits");
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);

@@ -12,5 +12,5 @@ void main(unsigned GI : SV_GroupIndex) {}
 //CHECK-NEXT: entry:
 //CHECK-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructors.hlsl()
 //CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-//CHECK-NEXT:   call void @"?main@@YAXI@Z"(i32 %0)
+//CHECK-NEXT:   call void @_Z4mainj(i32 %0)
 //CHECK-NEXT:   ret void

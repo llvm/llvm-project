@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-17
 
 // <utility>
 
 // LWG-3382 NTTP for pair and array:
 // pair<T, U> is a structural type ([temp.param]) if T and U are both structural types.
+
+// This deprecated ABI switch makes pair a non-structural type.
+// XFAIL: libcpp-deprecated-abi-disable-pair-trivial-copy-ctor
 
 #include <utility>
 

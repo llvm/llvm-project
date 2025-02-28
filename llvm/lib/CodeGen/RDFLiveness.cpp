@@ -895,7 +895,7 @@ void Liveness::computeLiveIns() {
 void Liveness::resetLiveIns() {
   for (auto &B : DFG.getMF()) {
     // Remove all live-ins.
-    std::vector<unsigned> T;
+    std::vector<MCRegister> T;
     for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
       T.push_back(LI.PhysReg);
     for (auto I : T)
@@ -917,7 +917,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
     for (auto I : B->liveins()) {
       MCSubRegIndexIterator S(I.PhysReg, &TRI);
       if (!S.isValid()) {
-        LV.set(I.PhysReg);
+        LV.set(I.PhysReg.id());
         continue;
       }
       do {
@@ -960,7 +960,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
         continue;
       bool IsLive = false;
       for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {
-        if (!Live[*AR])
+        if (!Live[(*AR).id()])
           continue;
         IsLive = true;
         break;

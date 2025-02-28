@@ -22,9 +22,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -34,6 +31,9 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 
 #define DEFINE_REG_NAME(reg_num)      ConstString(#reg_num).GetCString()
 #define DEFINE_REG_NAME_STR(reg_name) ConstString(reg_name).GetCString()
@@ -555,29 +555,23 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
                                         value, ConstString(""));
 }
 
-bool ABISysV_arc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arc::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value.
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
 
-  // The previous PC is in the BLINK.
+  // The previous PC is in the BLINK, all other registers are the same.
   row->SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-  unwind_plan.SetSourceName("arc at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arc at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_arc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  return false;
-}
+UnwindPlanSP ABISysV_arc::CreateDefaultUnwindPlan() { return nullptr; }
 
 bool ABISysV_arc::RegisterIsVolatile(const RegisterInfo *reg_info) {
   if (nullptr == reg_info)

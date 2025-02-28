@@ -476,6 +476,9 @@ cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
 Check for double-free and use-after-free problems. Traces memory managed by new/delete.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
 
@@ -484,6 +487,9 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
 Check for memory leaks. Traces memory managed by new/delete.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: cpp
 
@@ -1008,6 +1014,241 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
+
+optin.taint
+^^^^^^^^^^^
+
+Checkers implementing
+`taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
+
+.. _optin-taint-GenericTaint:
+
+optin.taint.GenericTaint (C, C++)
+"""""""""""""""""""""""""""""""""
+
+Taint analysis identifies potential security vulnerabilities where the
+attacker can inject malicious data to the program to execute an attack
+(privilege escalation, command injection, SQL injection etc.).
+
+The malicious data is injected at the taint source (e.g. ``getenv()`` call)
+which is then propagated through function calls and being used as arguments of
+sensitive operations, also called as taint sinks (e.g. ``system()`` call).
+
+One can defend against this type of vulnerability by always checking and
+sanitizing the potentially malicious, untrusted user input.
+
+The goal of the checker is to discover and show to the user these potential
+taint source-sink pairs and the propagation call chain.
+
+The most notable examples of taint sources are:
+
+  - data from network
+  - files or standard input
+  - environment variables
+  - data from databases
+
+Let us examine a practical example of a Command Injection attack.
+
+.. code-block:: c
+
+  // Command Injection Vulnerability Example
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
+    strcat(cmd, filename);
+    system(cmd); // Warning: Untrusted data is passed to a system call
+  }
+
+The program prints the content of any user specified file.
+Unfortunately the attacker can execute arbitrary commands
+with shell escapes. For example with the following input the `ls` command is also
+executed after the contents of `/etc/shadow` is printed.
+`Input: /etc/shadow ; ls /`
+
+The analysis implemented in this checker points out this problem.
+
+One can protect against such attack by for example checking if the provided
+input refers to a valid file and removing any invalid user input.
+
+.. code-block:: c
+
+  // No vulnerability anymore, but we still get the warning
+  void sanitizeFileName(char* filename){
+    if (access(filename,F_OK)){// Verifying user input
+      printf("File does not exist\n");
+      filename[0]='\0';
+      }
+  }
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
+    sanitizeFileName(filename);// filename is safe after this point
+    if (!filename[0])
+      return -1;
+    strcat(cmd, filename);
+    system(cmd); // Superfluous Warning: Untrusted data is passed to a system call
+  }
+
+Unfortunately, the checker cannot discover automatically that the programmer
+have performed data sanitation, so it still emits the warning.
+
+One can get rid of this superfluous warning by telling by specifying the
+sanitation functions in the taint configuration file (see
+:doc:`user-docs/TaintAnalysisConfiguration`).
+
+.. code-block:: YAML
+
+  Filters:
+  - Name: sanitizeFileName
+    Args: [0]
+
+The clang invocation to pass the configuration file location:
+
+.. code-block:: bash
+
+  clang  --analyze -Xclang -analyzer-config  -Xclang optin.taint.TaintPropagation:Config=`pwd`/taint_config.yml ...
+
+If you are validating your inputs instead of sanitizing them, or don't want to
+mention each sanitizing function in our configuration,
+you can use a more generic approach.
+
+Introduce a generic no-op `csa_mark_sanitized(..)` function to
+tell the Clang Static Analyzer
+that the variable is safe to be used on that analysis path.
+
+.. code-block:: c
+
+  // Marking sanitized variables safe.
+  // No vulnerability anymore, no warning.
+
+  // User csa_mark_sanitize function is for the analyzer only
+  #ifdef __clang_analyzer__
+    void csa_mark_sanitized(const void *);
+  #endif
+
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename);
+    if (access(filename,F_OK)){// Verifying user input
+      printf("File does not exist\n");
+      return -1;
+    }
+    #ifdef __clang_analyzer__
+      csa_mark_sanitized(filename); // Indicating to CSA that filename variable is safe to be used after this point
+    #endif
+    strcat(cmd, filename);
+    system(cmd); // No warning
+  }
+
+Similarly to the previous example, you need to
+define a `Filter` function in a `YAML` configuration file
+and add the `csa_mark_sanitized` function.
+
+.. code-block:: YAML
+
+  Filters:
+  - Name: csa_mark_sanitized
+    Args: [0]
+
+Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
+be used after this point, because its contents are verified. It is the
+responsibility of the programmer to ensure that this verification was indeed
+correct. Please note that `csa_mark_sanitized` function is only declared and
+used during Clang Static Analysis and skipped in (production) builds.
+
+Further examples of injection vulnerabilities this checker can find.
+
+.. code-block:: c
+
+  void test() {
+    char x = getchar(); // 'x' marked as tainted
+    system(&x); // warn: untrusted data is passed to a system call
+  }
+
+  // note: compiler internally checks if the second param to
+  // sprintf is a string literal or not.
+  // Use -Wno-format-security to suppress compiler warning.
+  void test() {
+    char s[10], buf[10];
+    fscanf(stdin, "%s", s); // 's' marked as tainted
+
+    sprintf(buf, s); // warn: untrusted data used as a format string
+  }
+
+There are built-in sources, propagations and sinks even if no external taint
+configuration is provided.
+
+Default sources:
+ ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``,
+ ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``,
+ ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``,
+ ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``,
+ ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
+
+Default propagations rules:
+ ``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``,
+ ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``,
+ ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``,
+ ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``,
+ ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``,
+ ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``,
+ ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
+ ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
+ ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
+ ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
+ ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
+ ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
+ ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
+
+Default sinks:
+ ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
+ ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
+
+Please note that there are no built-in filter functions.
+
+One can configure their own taint sources, sinks, and propagation rules by
+providing a configuration file via checker option
+``optin.taint.TaintPropagation:Config``. The configuration file is in
+`YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The
+taint-related options defined in the config file extend but do not override the
+built-in sources, rules, sinks. The format of the external taint configuration
+file is not stable, and could change without any notice even in a non-backward
+compatible way.
+
+For a more detailed description of configuration options, please see the
+:doc:`user-docs/TaintAnalysisConfiguration`. For an example see
+:ref:`clangsa-taint-configuration-example`.
+
+**Configuration**
+
+* `Config`  Specifies the name of the YAML configuration file. The user can
+  define their own taint sources and sinks.
+
+**Related Guidelines**
+
+* `CWE Data Neutralization Issues
+  <https://cwe.mitre.org/data/definitions/137.html>`_
+* `SEI Cert STR02-C. Sanitize data passed to complex subsystems
+  <https://wiki.sei.cmu.edu/confluence/display/c/STR02-C.+Sanitize+data+passed+to+complex+subsystems>`_
+* `SEI Cert ENV33-C. Do not call system()
+  <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152177>`_
+* `ENV03-C. Sanitize the environment when invoking external programs
+  <https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs>`_
+
+**Limitations**
+
+* The taintedness property is not propagated through function calls which are
+  unknown (or too complex) to the analyzer, unless there is a specific
+  propagation rule built-in to the checker or given in the YAML configuration
+  file. This causes potential true positive findings to be lost.
+
+
 .. _optin-taint-TaintedAlloc:
 
 optin.taint.TaintedAlloc (C, C++)
@@ -1026,7 +1267,10 @@ covers the SEI Cert coding standard rule `INT04-C
 
 You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
-:ref:`alpha-security-taint-GenericTaint` checker for an example.
+:ref:`optin-taint-GenericTaint` checker for an example.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1053,6 +1297,34 @@ by explicitly marking the ``size`` parameter as sanitized. See the
     delete[] ptr;
   }
 
+.. _optin-taint-TaintedDiv:
+
+optin.taint.TaintedDiv (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""
+This checker warns when the denominator in a division
+operation is a tainted (potentially attacker controlled) value.
+If the attacker can set the denominator to 0, a runtime error can
+be triggered. The checker warns when the denominator is a tainted
+value and the analyzer cannot prove that it is not 0. This warning
+is more pessimistic than the :ref:`core-DivideZero` checker
+which warns only when it can prove that the denominator is 0.
+
+.. code-block:: c
+
+  int vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    return n / size; // warn: Division by a tainted value, possibly zero
+  }
+
+  int not_vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (!size)
+      return 0;
+    return n / size; // no warning
+  }
+
 .. _security-checkers:
 
 security
@@ -1060,10 +1332,69 @@ security
 
 Security related checkers.
 
+.. _security-ArrayBound:
+
+security.ArrayBound (C, C++)
+""""""""""""""""""""""""""""
+Report out of bounds access to memory that is before the start or after the end
+of the accessed region (array, heap-allocated region, string literal etc.).
+This usually means incorrect indexing, but the checker also detects access via
+the operators ``*`` and ``->``.
+
+.. code-block:: c
+
+ void test_underflow(int x) {
+   int buf[100][100];
+   if (x < 0)
+     buf[0][x] = 1; // warn
+ }
+
+ void test_overflow() {
+   int buf[100];
+   int *p = buf + 100;
+   *p = 1; // warn
+ }
+
+If checkers like :ref:`unix-Malloc` or :ref:`cplusplus-NewDelete` are enabled
+to model the behavior of ``malloc()``, ``operator new`` and similar
+allocators), then this checker can also reports out of bounds access to
+dynamically allocated memory:
+
+.. code-block:: cpp
+
+ int *test_dynamic() {
+   int *mem = new int[100];
+   mem[-1] = 42; // warn
+   return mem;
+ }
+
+In uncertain situations (when the checker can neither prove nor disprove that
+overflow occurs), the checker assumes that the the index (more precisely, the
+memory offeset) is within bounds.
+
+However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
+tainted (i.e. it is influenced by an untrusted souce), then this checker
+reports the potential out of bounds access:
+
+.. code-block:: c
+
+ void test_with_tainted_index() {
+   char s[] = "abc";
+   int x = getchar();
+   char c = s[x]; // warn: potential out of bounds access with tainted index
+ }
+
+.. note::
+
+  This checker is an improved and renamed version of the checker that was
+  previously known as ``alpha.security.ArrayBoundV2``. The old checker
+  ``alpha.security.ArrayBound`` was removed when the (previously
+  "experimental") V2 variant became stable enough for regular use.
+
 .. _security-cert-env-InvalidPtr:
 
 security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""
 
 Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
 
@@ -1309,6 +1640,49 @@ Warn on ``mmap()`` calls with both writable and executable access.
    //       code
  }
 
+.. _security-PointerSub:
+
+security.PointerSub (C)
+"""""""""""""""""""""""
+Check for pointer subtractions on two pointers pointing to different memory
+chunks. According to the C standard §6.5.6 only subtraction of pointers that
+point into (or one past the end) the same array object is valid (for this
+purpose non-array variables are like arrays of size 1). This checker only
+searches for different memory objects at subtraction, but does not check if the
+array index is correct. Furthermore, only cases are reported where
+stack-allocated objects are involved (no warnings on pointers to memory
+allocated by `malloc`).
+
+.. code-block:: c
+
+ void test() {
+   int a, b, c[10], d[10];
+   int x = &c[3] - &c[1];
+   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
+   x = (&a + 1) - &a;
+   x = &b - &a; // warn: 'a' and 'b' are different variables
+ }
+
+ struct S {
+   int x[10];
+   int y[10];
+ };
+
+ void test1() {
+   struct S a[10];
+   struct S b;
+   int d = &a[4] - &a[6];
+   d = &a[0].x[3] - &a[0].x[1];
+   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
+   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
+   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
+ }
+
+There may be existing applications that use code like above for calculating
+offsets of members in a structure, using pointer subtractions. This is still
+undefined behavior according to the standard and code like this can be replaced
+with the `offsetof` macro.
+
 .. _security-putenv-stack-array:
 
 security.PutenvStackArray (C)
@@ -1444,6 +1818,37 @@ Critical section handling functions modeled by this checker:
    }
  }
 
+.. _unix-Chroot:
+
+unix.Chroot (C)
+"""""""""""""""
+Check improper use of chroot described by SEI Cert C recommendation `POS05-C.
+Limit access to files by creating a jail
+<https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
+The checker finds usage patterns where ``chdir("/")`` is not called immediately
+after a call to ``chroot(path)``.
+
+.. code-block:: c
+
+ void f();
+
+ void test_bad() {
+   chroot("/usr/local");
+   f(); // warn: no call of chdir("/") immediately after chroot
+ }
+
+  void test_bad_path() {
+    chroot("/usr/local");
+    chdir("/usr"); // warn: no call of chdir("/") immediately after chroot
+    f();
+  }
+
+ void test_good() {
+   chroot("/usr/local");
+   chdir("/"); // no warning
+   f();
+ }
+
 .. _unix-Errno:
 
 unix.Errno (C)
@@ -1520,6 +1925,9 @@ unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
 
@@ -1528,6 +1936,9 @@ Check for memory leaks, double free, and use-after-free problems. Traces memory 
 unix.MallocSizeof (C)
 """""""""""""""""""""
 Check for dubious ``malloc`` arguments involving ``sizeof``.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1543,6 +1954,9 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
@@ -1591,6 +2005,29 @@ Check the size argument passed into C string functions for common erroneous patt
    char dest[3];
    strncat(dest, """""""""""""""""""""""""*", sizeof(dest));
      // warn: potential buffer overflow
+ }
+
+.. _unix-cstring-NotNullTerminated:
+
+unix.cstring.NotNullTerminated (C)
+""""""""""""""""""""""""""""""""""
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
+
+.. code-block:: c
+
+ void test1() {
+   int l = strlen((char *)&test1); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
  }
 
 .. _unix-cstring-NullArg:
@@ -2482,36 +2919,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-IdenticalExpr:
-
-alpha.core.IdenticalExpr (C, C++)
-"""""""""""""""""""""""""""""""""
-Warn about unintended use of identical expressions in operators.
-
-.. code-block:: cpp
-
- // C
- void test() {
-   int a = 5;
-   int b = a | 4 | a; // warn: identical expr on both sides
- }
-
- // C++
- bool f(void);
-
- void test(bool b) {
-   int i = 10;
-   if (f()) { // warn: true and false branches are identical
-     do {
-       i--;
-     } while (f());
-   } else {
-     do {
-       i--;
-     } while (f());
-   }
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -2525,49 +2932,6 @@ Check for pointer arithmetic on locations other than array elements.
    int *p;
    p = &x + 1; // warn
  }
-
-.. _alpha-core-PointerSub:
-
-alpha.core.PointerSub (C)
-"""""""""""""""""""""""""
-Check for pointer subtractions on two pointers pointing to different memory
-chunks. According to the C standard §6.5.6 only subtraction of pointers that
-point into (or one past the end) the same array object is valid (for this
-purpose non-array variables are like arrays of size 1). This checker only
-searches for different memory objects at subtraction, but does not check if the
-array index is correct. Furthermore, only cases are reported where
-stack-allocated objects are involved (no warnings on pointers to memory
-allocated by `malloc`).
-
-.. code-block:: c
-
- void test() {
-   int a, b, c[10], d[10];
-   int x = &c[3] - &c[1];
-   x = &d[4] - &c[1]; // warn: 'c' and 'd' are different arrays
-   x = (&a + 1) - &a;
-   x = &b - &a; // warn: 'a' and 'b' are different variables
- }
-
- struct S {
-   int x[10];
-   int y[10];
- };
-
- void test1() {
-   struct S a[10];
-   struct S b;
-   int d = &a[4] - &a[6];
-   d = &a[0].x[3] - &a[0].x[1];
-   d = a[0].y - a[0].x; // warn: 'S.b' and 'S.a' are different objects
-   d = (char *)&b.y - (char *)&b.x; // warn: different members of the same object
-   d = (char *)&b.y - (char *)&b; // warn: object of type S is not the same array as a member of it
- }
-
-There may be existing applications that use code like above for calculating
-offsets of members in a structure, using pointer subtractions. This is still
-undefined behavior according to the standard and code like this can be replaced
-with the `offsetof` macro.
 
 .. _alpha-core-StackAddressAsyncEscape:
 
@@ -2911,78 +3275,6 @@ Warns against using one vs. many plural pattern in code when generating localize
 alpha.security
 ^^^^^^^^^^^^^^
 
-.. _alpha-security-ArrayBound:
-
-alpha.security.ArrayBound (C)
-"""""""""""""""""""""""""""""
-Warn about buffer overflows (older checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- struct seven_words {
-   int c[7];
- };
-
- void test() {
-   struct seven_words a, *p;
-   p = &a;
-   p[0] = a;
-   p[1] = a;
-   p[2] = a; // warn
- }
-
- // note: requires unix.Malloc or
- // alpha.unix.MallocWithAnnotations checks enabled.
- void test() {
-   int *p = malloc(12);
-   p[3] = 4; // warn
- }
-
- void test() {
-   char a[2];
-   int *b = (int*)a;
-   b[1] = 3; // warn
- }
-
-.. _alpha-security-ArrayBoundV2:
-
-alpha.security.ArrayBoundV2 (C)
-"""""""""""""""""""""""""""""""
-Warn about buffer overflows (newer checker).
-
-.. code-block:: c
-
- void test() {
-   char *s = "";
-   char c = s[1]; // warn
- }
-
- void test() {
-   int buf[100];
-   int *p = buf;
-   p = p + 99;
-   p[1] = 1; // warn
- }
-
- // note: compiler has internal check for this.
- // Use -Wno-array-bounds to suppress compiler warning.
- void test() {
-   int buf[100][100];
-   buf[0][-1] = 1; // warn
- }
-
- // note: requires alpha.security.taint check turned on.
- void test() {
-   char s[] = "abc";
-   int x = getchar();
-   char c = s[x]; // warn: index is tainted
- }
-
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -3009,256 +3301,8 @@ alpha.security.cert
 
 SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
 
-alpha.security.taint
-^^^^^^^^^^^^^^^^^^^^
-
-Checkers implementing
-`taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
-
-.. _alpha-security-taint-GenericTaint:
-
-alpha.security.taint.GenericTaint (C, C++)
-""""""""""""""""""""""""""""""""""""""""""
-
-Taint analysis identifies potential security vulnerabilities where the
-attacker can inject malicious data to the program to execute an attack
-(privilege escalation, command injection, SQL injection etc.).
-
-The malicious data is injected at the taint source (e.g. ``getenv()`` call)
-which is then propagated through function calls and being used as arguments of
-sensitive operations, also called as taint sinks (e.g. ``system()`` call).
-
-One can defend against this type of vulnerability by always checking and
-sanitizing the potentially malicious, untrusted user input.
-
-The goal of the checker is to discover and show to the user these potential
-taint source-sink pairs and the propagation call chain.
-
-The most notable examples of taint sources are:
-
-  - data from network
-  - files or standard input
-  - environment variables
-  - data from databases
-
-Let us examine a practical example of a Command Injection attack.
-
-.. code-block:: c
-
-  // Command Injection Vulnerability Example
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
-    strcat(cmd, filename);
-    system(cmd); // Warning: Untrusted data is passed to a system call
-  }
-
-The program prints the content of any user specified file.
-Unfortunately the attacker can execute arbitrary commands
-with shell escapes. For example with the following input the `ls` command is also
-executed after the contents of `/etc/shadow` is printed.
-`Input: /etc/shadow ; ls /`
-
-The analysis implemented in this checker points out this problem.
-
-One can protect against such attack by for example checking if the provided
-input refers to a valid file and removing any invalid user input.
-
-.. code-block:: c
-
-  // No vulnerability anymore, but we still get the warning
-  void sanitizeFileName(char* filename){
-    if (access(filename,F_OK)){// Verifying user input
-      printf("File does not exist\n");
-      filename[0]='\0';
-      }
-  }
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
-    sanitizeFileName(filename);// filename is safe after this point
-    if (!filename[0])
-      return -1;
-    strcat(cmd, filename);
-    system(cmd); // Superfluous Warning: Untrusted data is passed to a system call
-  }
-
-Unfortunately, the checker cannot discover automatically that the programmer
-have performed data sanitation, so it still emits the warning.
-
-One can get rid of this superfluous warning by telling by specifying the
-sanitation functions in the taint configuration file (see
-:doc:`user-docs/TaintAnalysisConfiguration`).
-
-.. code-block:: YAML
-
-  Filters:
-  - Name: sanitizeFileName
-    Args: [0]
-
-The clang invocation to pass the configuration file location:
-
-.. code-block:: bash
-
-  clang  --analyze -Xclang -analyzer-config  -Xclang alpha.security.taint.TaintPropagation:Config=`pwd`/taint_config.yml ...
-
-If you are validating your inputs instead of sanitizing them, or don't want to
-mention each sanitizing function in our configuration,
-you can use a more generic approach.
-
-Introduce a generic no-op `csa_mark_sanitized(..)` function to
-tell the Clang Static Analyzer
-that the variable is safe to be used on that analysis path.
-
-.. code-block:: c
-
-  // Marking sanitized variables safe.
-  // No vulnerability anymore, no warning.
-
-  // User csa_mark_sanitize function is for the analyzer only
-  #ifdef __clang_analyzer__
-    void csa_mark_sanitized(const void *);
-  #endif
-
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename);
-    if (access(filename,F_OK)){// Verifying user input
-      printf("File does not exist\n");
-      return -1;
-    }
-    #ifdef __clang_analyzer__
-      csa_mark_sanitized(filename); // Indicating to CSA that filename variable is safe to be used after this point
-    #endif
-    strcat(cmd, filename);
-    system(cmd); // No warning
-  }
-
-Similarly to the previous example, you need to
-define a `Filter` function in a `YAML` configuration file
-and add the `csa_mark_sanitized` function.
-
-.. code-block:: YAML
-
-  Filters:
-  - Name: csa_mark_sanitized
-    Args: [0]
-
-Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
-be used after this point, because its contents are verified. It is the
-responsibility of the programmer to ensure that this verification was indeed
-correct. Please note that `csa_mark_sanitized` function is only declared and
-used during Clang Static Analysis and skipped in (production) builds.
-
-Further examples of injection vulnerabilities this checker can find.
-
-.. code-block:: c
-
-  void test() {
-    char x = getchar(); // 'x' marked as tainted
-    system(&x); // warn: untrusted data is passed to a system call
-  }
-
-  // note: compiler internally checks if the second param to
-  // sprintf is a string literal or not.
-  // Use -Wno-format-security to suppress compiler warning.
-  void test() {
-    char s[10], buf[10];
-    fscanf(stdin, "%s", s); // 's' marked as tainted
-
-    sprintf(buf, s); // warn: untrusted data used as a format string
-  }
-
-There are built-in sources, propagations and sinks even if no external taint
-configuration is provided.
-
-Default sources:
- ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``,
- ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``,
- ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``,
- ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``,
- ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
-
-Default propagations rules:
- ``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``,
- ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``,
- ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``,
- ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``,
- ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``,
- ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``,
- ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
- ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
- ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
- ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
- ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
- ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
- ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
-
-Default sinks:
- ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
- ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
-
-Please note that there are no built-in filter functions.
-
-One can configure their own taint sources, sinks, and propagation rules by
-providing a configuration file via checker option
-``alpha.security.taint.TaintPropagation:Config``. The configuration file is in
-`YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The
-taint-related options defined in the config file extend but do not override the
-built-in sources, rules, sinks. The format of the external taint configuration
-file is not stable, and could change without any notice even in a non-backward
-compatible way.
-
-For a more detailed description of configuration options, please see the
-:doc:`user-docs/TaintAnalysisConfiguration`. For an example see
-:ref:`clangsa-taint-configuration-example`.
-
-**Configuration**
-
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
-
-**Related Guidelines**
-
-* `CWE Data Neutralization Issues
-  <https://cwe.mitre.org/data/definitions/137.html>`_
-* `SEI Cert STR02-C. Sanitize data passed to complex subsystems
-  <https://wiki.sei.cmu.edu/confluence/display/c/STR02-C.+Sanitize+data+passed+to+complex+subsystems>`_
-* `SEI Cert ENV33-C. Do not call system()
-  <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152177>`_
-* `ENV03-C. Sanitize the environment when invoking external programs
-  <https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs>`_
-
-**Limitations**
-
-* The taintedness property is not propagated through function calls which are
-  unknown (or too complex) to the analyzer, unless there is a specific
-  propagation rule built-in to the checker or given in the YAML configuration
-  file. This causes potential true positive findings to be lost.
-
 alpha.unix
 ^^^^^^^^^^
-
-.. _alpha-unix-Chroot:
-
-alpha.unix.Chroot (C)
-"""""""""""""""""""""
-Check improper use of chroot.
-
-.. code-block:: c
-
- void f();
-
- void test() {
-   chroot("/usr/local");
-   f(); // warn: no call of chdir("/") immediately after chroot
- }
 
 .. _alpha-unix-PthreadLock:
 
@@ -3337,18 +3381,6 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
    memcpy(a + 2, a + 1, 8); // warn
  }
 
-.. _alpha-unix-cstring-NotNullTerminated:
-
-alpha.unix.cstring.NotNullTerminated (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat, wcslen, wcsnlen``.
-
-.. code-block:: c
-
- void test() {
-   int y = strlen((char *)&test); // warn
- }
-
 .. _alpha-unix-cstring-OutOfBounds:
 
 alpha.unix.cstring.OutOfBounds (C)
@@ -3406,39 +3438,54 @@ Limitations:
 
      More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
 
-.. _alpha-nondeterminism-PointerIteration:
-
-alpha.nondeterminism.PointerIteration (C++)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by iterating unordered containers of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::unordered_set<int *> UnorderedPtrSet = {&a, &b};
-
-  for (auto i : UnorderedPtrSet) // warn
-    f(i);
- }
-
-.. _alpha-nondeterminism-PointerSorting:
-
-alpha.nondeterminism.PointerSorting (C++)
-"""""""""""""""""""""""""""""""""""""""""
-Check for non-determinism caused by sorting of pointers.
-
-.. code-block:: c
-
- void test() {
-  int a = 1, b = 2;
-  std::vector<int *> V = {&a, &b};
-  std::sort(V.begin(), V.end()); // warn
- }
-
-
 alpha.WebKit
 ^^^^^^^^^^^^
+
+.. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.MemoryUnsafeCastChecker
+""""""""""""""""""""""""""""""""""""""
+Check for all casts from a base type to its derived type as these might be memory-unsafe.
+
+Example:
+
+.. code-block:: cpp
+
+    class Base { };
+    class Derived : public Base { };
+
+    void f(Base* base) {
+        Derived* derived = static_cast<Derived*>(base); // ERROR
+    }
+
+For all cast operations (C-style casts, static_cast, reinterpret_cast, dynamic_cast), if the source type a `Base*` and the destination type is `Derived*`, where `Derived` inherits from `Base`, the static analyzer should signal an error.
+
+This applies to:
+
+- C structs, C++ structs and classes, and Objective-C classes and protocols.
+- Pointers and references.
+- Inside template instantiations and macro expansions that are visible to the compiler.
+
+For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
+
+alpha.webkit.NoUncheckedPtrMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
+
+.. code-block:: cpp
+
+ struct CheckableObj {
+   void incrementCheckedPtrCount() {}
+   void decrementCheckedPtrCount() {}
+ };
+
+ struct Foo {
+   CheckableObj* ptr; // warn
+   CheckableObj& ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
 .. _alpha-webkit-UncountedCallArgsChecker:
 
@@ -3529,6 +3576,12 @@ We also define a set of safe transformations which if passed a safe value as an 
 - casts
 - unary operators like ``&`` or ``*``
 
+alpha.webkit.UncheckedCallArgsChecker
+"""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
+
+The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
@@ -3553,7 +3606,7 @@ These are examples of cases that we consider safe:
       RefCountable* uncounted = this; // ok
     }
 
-Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that an argument is safe or it's considered if not a bug then bug-prone.
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
 
   .. code-block:: cpp
 
@@ -3572,11 +3625,93 @@ Here are some examples of situations that we warn about as they *might* be poten
       RefCountable* uncounted = counted.get(); // warn
     }
 
-We don't warn about these cases - we don't consider them necessarily safe but since they are very common and usually safe we'd introduce a lot of false positives otherwise:
-- variable defined in condition part of an ```if``` statement
-- variable defined in init statement condition of a ```for``` statement
+alpha.webkit.UncheckedLocalVarsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any unchecked local variable is backed by a CheckedPtr or CheckedRef with lifetime that is strictly larger than the scope of the unchecked local variable. To be on the safe side we require the scope of an unchecked variable to be embedded in the scope of CheckedPtr/CheckRef object that backs it.
 
-For the time being we also don't warn about uninitialized uncounted local variables.
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      CheckedPtr<RefCountable> counted;
+      // The scope of uncounted is EMBEDDED in the scope of counted.
+      {
+        RefCountable* uncounted = counted.get(); // ok
+      }
+    }
+
+    void foo2(CheckedPtr<RefCountable> counted_param) {
+      RefCountable* uncounted = counted_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      RefCountable* uncounted = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefCountable* uncounted = new RefCountable; // warn
+    }
+
+    RefCountable* global_uncounted;
+    void foo2() {
+      RefCountable* uncounted = global_uncounted; // warn
+    }
+
+    void foo3() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is not EMBEDDED in the scope of counted.
+      RefCountable* uncounted = counted.get(); // warn
+    }
+
+alpha.webkit.UnretainedLocalVarsChecker
+"""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is EMBEDDED in the scope of retained.
+      {
+        NSObject* unretained = retained.get(); // ok
+      }
+    }
+
+    void foo2(RetainPtr<NSObject> retained_param) {
+      NSObject* unretained = retained_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      NSObject* unretained = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that a local variable is safe or it's considered unsafe.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      NSObject* unretained = [[NSObject alloc] init]; // warn
+    }
+
+    NSObject* global_unretained;
+    void foo2() {
+      NSObject* unretained = global_unretained; // warn
+    }
+
+    void foo3() {
+      RetainPtr<NSObject> retained;
+      // The scope of unretained is not EMBEDDED in the scope of retained.
+      NSObject* unretained = retained.get(); // warn
+    }
 
 Debug Checkers
 ---------------

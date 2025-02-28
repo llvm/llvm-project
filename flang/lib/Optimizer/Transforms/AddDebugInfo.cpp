@@ -12,16 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTypeGenerator.h"
-#include "flang/Common/Version.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Support/Version.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -58,10 +59,19 @@ public:
 
 private:
   llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
+  llvm::StringMap<mlir::LLVM::DICommonBlockAttr> commonBlockMap;
+  // List of GlobalVariableExpressionAttr that are attached to a given global
+  // that represents the storage for common block.
+  llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
+      globalToGlobalExprsMap;
 
   mlir::LLVM::DIModuleAttr getOrCreateModuleAttr(
       const std::string &name, mlir::LLVM::DIFileAttr fileAttr,
       mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
+  mlir::LLVM::DICommonBlockAttr
+  getOrCreateCommonBlockAttr(llvm::StringRef name,
+                             mlir::LLVM::DIFileAttr fileAttr,
+                             mlir::LLVM::DIScopeAttr scope, unsigned line);
 
   void handleGlobalOp(fir::GlobalOp glocalOp, mlir::LLVM::DIFileAttr fileAttr,
                       mlir::LLVM::DIScopeAttr scope,
@@ -72,6 +82,12 @@ private:
                     mlir::LLVM::DICompileUnitAttr cuAttr,
                     fir::DebugTypeGenerator &typeGen,
                     mlir::SymbolTable *symbolTable);
+  bool createCommonBlockGlobal(fir::cg::XDeclareOp declOp,
+                               const std::string &name,
+                               mlir::LLVM::DIFileAttr fileAttr,
+                               mlir::LLVM::DIScopeAttr scopeAttr,
+                               fir::DebugTypeGenerator &typeGen,
+                               mlir::SymbolTable *symbolTable);
   std::optional<mlir::LLVM::DIModuleAttr>
   getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
                             mlir::LLVM::DIFileAttr fileAttr,
@@ -89,6 +105,67 @@ bool debugInfoIsAlreadySet(mlir::Location loc) {
 
 } // namespace
 
+bool AddDebugInfoPass::createCommonBlockGlobal(
+    fir::cg::XDeclareOp declOp, const std::string &name,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scopeAttr,
+    fir::DebugTypeGenerator &typeGen, mlir::SymbolTable *symbolTable) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::OpBuilder builder(context);
+  std::optional<std::int64_t> optint;
+  mlir::Operation *op = declOp.getMemref().getDefiningOp();
+
+  if (auto conOp = mlir::dyn_cast_if_present<fir::ConvertOp>(op))
+    op = conOp.getValue().getDefiningOp();
+
+  if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
+    optint = fir::getIntIfConstant(cordOp.getOperand(1));
+    if (!optint)
+      return false;
+    op = cordOp.getRef().getDefiningOp();
+    if (auto conOp2 = mlir::dyn_cast_if_present<fir::ConvertOp>(op))
+      op = conOp2.getValue().getDefiningOp();
+
+    if (auto addrOfOp = mlir::dyn_cast_if_present<fir::AddrOfOp>(op)) {
+      mlir::SymbolRefAttr sym = addrOfOp.getSymbol();
+      if (auto global =
+              symbolTable->lookup<fir::GlobalOp>(sym.getRootReference())) {
+
+        unsigned line = getLineFromLoc(global.getLoc());
+        llvm::StringRef commonName(sym.getRootReference());
+        // FIXME: We are trying to extract the name of the common block from the
+        // name of the global. As part of mangling, GetCommonBlockObjectName can
+        // add a trailing _ in the name of that global. The demangle function
+        // does not seem to handle such cases. So the following hack is used to
+        // remove the trailing '_'.
+        if (commonName != Fortran::common::blankCommonObjectName &&
+            commonName.back() == '_')
+          commonName = commonName.drop_back();
+        mlir::LLVM::DICommonBlockAttr commonBlock =
+            getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
+        mlir::LLVM::DITypeAttr diType = typeGen.convertType(
+            fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
+        line = getLineFromLoc(declOp.getLoc());
+        auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
+            context, commonBlock, mlir::StringAttr::get(context, name),
+            declOp.getUniqName(), fileAttr, line, diType,
+            /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
+        mlir::LLVM::DIExpressionAttr expr;
+        if (*optint != 0) {
+          llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
+          ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(
+              context, llvm::dwarf::DW_OP_plus_uconst, *optint));
+          expr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+        }
+        auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+            global.getContext(), gvAttr, expr);
+        globalToGlobalExprsMap[global].push_back(dbgExpr);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
@@ -100,15 +177,20 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
-  // If this DeclareOp actually represents a global then treat it as such.
-  if (auto global = symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
-    handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
-    return;
-  }
 
-  // Only accept local variables.
-  if (result.second.procs.empty())
+  if (createCommonBlockGlobal(declOp, result.second.name, fileAttr, scopeAttr,
+                              typeGen, symbolTable))
     return;
+
+  // If this DeclareOp actually represents a global then treat it as such.
+  mlir::Operation *defOp = declOp.getMemref().getDefiningOp();
+  if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
+    if (auto global =
+            symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
+      handleGlobalOp(global, fileAttr, scopeAttr, typeGen, symbolTable, declOp);
+      return;
+    }
+  }
 
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
@@ -120,9 +202,9 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // constant attribute of [hl]fir.declare/fircg.ext_declare operation that has
   // a dummy_scope operand).
   unsigned argNo = 0;
-  if (fir::isDummyArgument(declOp.getMemref())) {
-    auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
-    argNo = arg.getArgNumber() + 1;
+  if (declOp.getDummyScope()) {
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
+      argNo = arg.getArgNumber() + 1;
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
@@ -133,6 +215,22 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
       fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
       tyAttr, mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+}
+
+mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
+    llvm::StringRef name, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, unsigned line) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::LLVM::DICommonBlockAttr cbAttr;
+  if (auto iter{commonBlockMap.find(name)}; iter != commonBlockMap.end()) {
+    cbAttr = iter->getValue();
+  } else {
+    cbAttr = mlir::LLVM::DICommonBlockAttr::get(
+        context, scope, nullptr, mlir::StringAttr::get(context, name), fileAttr,
+        line);
+    commonBlockMap[name] = cbAttr;
+  }
+  return cbAttr;
 }
 
 // The `module` does not have a first class representation in the `FIR`. We
@@ -210,10 +308,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
 
-  // Discard entries that describe a derived type. Usually start with '.c.',
-  // '.dt.' or '.n.'. It would be better if result of the deconstruct had a flag
-  // for such values so that we dont have to look at string values.
-  if (!result.second.name.empty() && result.second.name[0] == '.')
+  if (fir::NameUniquer::isSpecialSymbol(result.second.name))
     return;
 
   unsigned line = getLineFromLoc(globalOp.getLoc());
@@ -229,7 +324,10 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
       diType, /*isLocalToUnit*/ false,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
-  globalOp->setLoc(builder.getFusedLoc({globalOp->getLoc()}, gvAttr));
+  auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
+      globalOp.getContext(), gvAttr, nullptr);
+  auto arrayAttr = mlir::ArrayAttr::get(context, {dbgExpr});
+  globalOp->setLoc(builder.getFusedLoc({globalOp.getLoc()}, arrayAttr));
 }
 
 void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
@@ -265,6 +363,16 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   auto result = fir::NameUniquer::deconstruct(funcName);
   funcName = mlir::StringAttr::get(context, result.second.name);
 
+  // try to use a better function name than _QQmain for the program statement
+  bool isMain = false;
+  if (funcName == fir::NameUniquer::doProgramEntry()) {
+    isMain = true;
+    mlir::StringAttr bindcName =
+        funcOp->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
+    if (bindcName)
+      funcName = bindcName;
+  }
+
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
   for (auto resTy : funcOp.getResultTypes()) {
     auto tyAttr =
@@ -293,6 +401,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       mlir::LLVM::DISubprogramFlags{};
   if (isOptimized)
     subprogramFlags = mlir::LLVM::DISubprogramFlags::Optimized;
+  if (isMain)
+    subprogramFlags =
+        subprogramFlags | mlir::LLVM::DISubprogramFlags::MainSubprogram;
   if (!funcOp.isExternal()) {
     // Place holder and final function have to have different IDs, otherwise
     // translation code will reject one of them.
@@ -330,7 +441,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
-        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{});
+        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
+        /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
     return;
   }
@@ -354,7 +466,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   auto spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope, funcName,
       fullName, funcFileAttr, line, line, subprogramFlags, subTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
 
   // There is no direct information in the IR for any 'use' statement in the
   // function. We have to extract that information from the DeclareOp. We do
@@ -387,16 +499,17 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/false, id2, compilationUnit, Scope,
       funcName, fullName, funcFileAttr, line, line, subprogramFlags,
-      subTypeAttr, entities);
+      subTypeAttr, entities, /*annotations=*/{});
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    // FIXME: We currently dont handle variables that are not in the entry
-    // blocks of the fuctions. These may be variable or arguments used in the
-    // OpenMP target regions.
-    if (&funcOp.front() == declOp->getBlock())
-      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
+    handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
   });
+  // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
+  // the same name in one function. But it is ok (rather required) to create
+  // them in different functions if common block of the same name has been used
+  // there.
+  commonBlockMap.clear();
 }
 
 void AddDebugInfoPass::runOnOperation() {
@@ -406,7 +519,7 @@ void AddDebugInfoPass::runOnOperation() {
   llvm::StringRef fileName;
   std::string filePath;
   std::optional<mlir::DataLayout> dl =
-      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
+      fir::support::getOrSetMLIRDataLayout(module, /*allowDefaultLayout=*/true);
   if (!dl) {
     mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
     signalPassFailure();
@@ -449,6 +562,13 @@ void AddDebugInfoPass::runOnOperation() {
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);
   });
+  mlir::OpBuilder builder(context);
+  // We have processed all function. Attach common block variables to the
+  // global that represent the storage.
+  for (auto [global, exprs] : globalToGlobalExprsMap) {
+    auto arrayAttr = mlir::ArrayAttr::get(context, exprs);
+    global->setLoc(builder.getFusedLoc({global.getLoc()}, arrayAttr));
+  }
   // Process any global which was not processed through DeclareOp.
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     // Process 'GlobalOp' only if full debug info is requested.

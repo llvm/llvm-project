@@ -42,6 +42,11 @@ static cl::opt<bool>
 cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
                                   cl::desc("Show detailed warning message."));
 
+static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
+    "csprof-max-unsymbolized-context-depth", cl::init(-1),
+    cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
+             "means no depth limit."));
+
 extern cl::opt<std::string> PerfTraceFilename;
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -172,7 +177,19 @@ std::shared_ptr<AddrBasedCtxKey> AddressStack::getContextKey() {
   std::shared_ptr<AddrBasedCtxKey> KeyStr = std::make_shared<AddrBasedCtxKey>();
   KeyStr->Context = Stack;
   CSProfileGenerator::compressRecursionContext<uint64_t>(KeyStr->Context);
-  CSProfileGenerator::trimContext<uint64_t>(KeyStr->Context);
+  // MaxContextDepth(--csprof-max-context-depth) is used to trim both symbolized
+  // and unsymbolized profile context. Sometimes we want to at least preserve
+  // the inlinings for the leaf frame(the profiled binary inlining),
+  // --csprof-max-context-depth may not be flexible enough, in this case,
+  // --csprof-max-unsymbolized-context-depth is used to limit the context for
+  // unsymbolized profile. If both are set, use the minimum of them.
+  int Depth = CSProfileGenerator::MaxContextDepth != -1
+                  ? CSProfileGenerator::MaxContextDepth
+                  : KeyStr->Context.size();
+  Depth = CSProfMaxUnsymbolizedCtxDepth != -1
+              ? std::min(static_cast<int>(CSProfMaxUnsymbolizedCtxDepth), Depth)
+              : Depth;
+  CSProfileGenerator::trimContext<uint64_t>(KeyStr->Context, Depth);
   return KeyStr;
 }
 

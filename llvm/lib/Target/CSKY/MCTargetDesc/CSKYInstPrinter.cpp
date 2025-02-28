@@ -82,7 +82,7 @@ void CSKYInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void CSKYInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   if (PrintBranchImmAsAddress)
     O << getRegisterName(Reg, ABIRegNames ? CSKY::ABIRegAltName
                                           : CSKY::NoRegAltName);

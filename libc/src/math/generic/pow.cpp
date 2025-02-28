@@ -228,12 +228,21 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
                     x_u >= FPBits::inf().uintval() ||
                     x_u < FPBits::min_normal().uintval())) {
     // Exceptional exponents.
-    switch (y_a) {
-    case 0: // y = +-0.0
+    if (y == 0.0)
       return 1.0;
-    case 0x3fe0'0000'0000'0000: // y = +-0.5
+
+    switch (y_a) {
+    case 0x3fe0'0000'0000'0000: { // y = +-0.5
       // TODO: speed up x^(-1/2) with rsqrt(x) when available.
+      if (LIBC_UNLIKELY(
+              (x == 0.0 || x_u == FPBits::inf(Sign::NEG).uintval()))) {
+        // pow(-0, 1/2) = +0
+        // pow(-inf, 1/2) = +inf
+        // Make sure it works correctly for FTZ/DAZ.
+        return y_sign ? 1.0 / (x * x) : (x * x);
+      }
       return y_sign ? (1.0 / fputil::sqrt<double>(x)) : fputil::sqrt<double>(x);
+    }
     case 0x3ff0'0000'0000'0000: // y = +-1.0
       return y_sign ? (1.0 / x) : x;
     case 0x4000'0000'0000'0000: // y = +-2.0;
@@ -262,7 +271,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
           return 1.0;
         }
 
-        if (x_a == 0 && y_sign) {
+        if (x == 0.0 && y_sign) {
           // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
           fputil::set_errno_if_required(EDOM);
           fputil::raise_except_if_required(FE_DIVBYZERO);
@@ -291,7 +300,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 
     // TODO: Speed things up with pow(2, y) = exp2(y) and pow(10, y) = exp10(y).
 
-    if (x_a == 0) {
+    if (x == 0.0) {
       bool out_is_neg = x_sign && is_odd_integer(y);
       if (y_sign) {
         // pow(0, negative number) = inf
@@ -391,7 +400,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
 #else
   double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   dx = fputil::multiply_add(RD[idx_x], m_x.get_val() - c, CD[idx_x]); // Exact
-  dx_c0 = fputil::exact_mult<true>(COEFFS[0], dx);
+  dx_c0 = fputil::exact_mult<double, 28>(dx, COEFFS[0]);              // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
   double dx2 = dx * dx;

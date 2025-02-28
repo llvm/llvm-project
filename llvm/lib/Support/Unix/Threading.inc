@@ -33,6 +33,13 @@
 #include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
+// Must be included after Threading.inc to provide definition for llvm::thread
+// because FreeBSD's condvar.h (included by user.h) misuses the "thread"
+// keyword.
+#ifndef __FreeBSD__
+#include "llvm/Support/thread.h"
+#endif
+
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <errno.h>
 #include <sys/cpuset.h>
@@ -134,7 +141,7 @@ uint64_t llvm::get_threadid() {
 #elif defined(__ANDROID__)
   return uint64_t(gettid());
 #elif defined(__linux__)
-  return uint64_t(syscall(SYS_gettid));
+  return uint64_t(syscall(__NR_gettid));
 #else
   return uint64_t(pthread_self());
 #endif
@@ -237,14 +244,14 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   char Buffer[len] = {'\0'}; // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
     Name.append(Buffer, Buffer + strlen(Buffer));
-#elif defined(HAVE_PTHREAD_GET_NAME_NP)
+#elif defined(HAVE_PTHREAD_GET_NAME_NP) && HAVE_PTHREAD_GET_NAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char buf[len];
   ::pthread_get_name_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
 
-#elif defined(HAVE_PTHREAD_GETNAME_NP)
+#elif defined(HAVE_PTHREAD_GETNAME_NP) && HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char buf[len];
   ::pthread_getname_np(::pthread_self(), buf, len);
@@ -380,7 +387,7 @@ static int computeHostNumPhysicalCores() {
 static int computeHostNumPhysicalCores() {
   return sysconf(_SC_NPROCESSORS_ONLN);
 }
-#elif defined(__linux__) && !defined(__ANDROID__)
+#elif defined(__linux__)
 static int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
   if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)

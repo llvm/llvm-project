@@ -99,6 +99,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS, G_FCOSH, G_FACOS,
+                               G_FSIN, G_FSINH, G_FASIN, G_FTAN, G_FTANH,
+                               G_FATAN, G_FATAN2})
+      .libcall();
+
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
@@ -448,10 +453,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typePairInSet(0, 1, {{s8, s32}})(Query)) ||
-               (HasSSE2 && typePairInSet(0, 1, {{s8, s64}})(Query));
-      })
+      .legalFor(HasSSE1 || UseX87, {s8, s32})
+      .legalFor(HasSSE2 || UseX87, {s8, s64})
+      .legalFor(UseX87, {s8, s80})
       .clampScalar(0, s8, s8)
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
@@ -496,6 +500,62 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sMaxScalar)
+      .widenScalarToNextPow2(1);
+
+  // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize types
+  // <= s32 manually. Otherwise, in custom handler there is no way to
+  // understand whether s32 is an original type and we need to promote it to
+  // s64 or s32 is obtained after widening and we shouldn't widen it to s64.
+  //
+  // For AVX512 we simply widen types as there is direct mapping from opcodes
+  // to asm instructions.
+  getActionDefinitionsBuilder(G_UITOFP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
+               typeInSet(1, {s32, s64})(Query);
+      })
+      .customIf([=](const LegalityQuery &Query) {
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(0, s32)(Query)) ||
+                (HasSSE2 && typeIs(0, s64)(Query))) &&
+               scalarNarrowerThan(1, Is64Bit ? 64 : 32)(Query);
+      })
+      .lowerIf([=](const LegalityQuery &Query) {
+        // Lower conversions from s64
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(0, s32)(Query)) ||
+                (HasSSE2 && typeIs(0, s64)(Query))) &&
+               (Is64Bit && typeIs(1, s64)(Query));
+      })
+      .clampScalar(0, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0)
+      .clampScalar(1, s32, sMaxScalar)
+      .widenScalarToNextPow2(1);
+
+  getActionDefinitionsBuilder(G_FPTOUI)
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
+               typeInSet(1, {s32, s64})(Query);
+      })
+      .customIf([=](const LegalityQuery &Query) {
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(1, s32)(Query)) ||
+                (HasSSE2 && typeIs(1, s64)(Query))) &&
+               scalarNarrowerThan(0, Is64Bit ? 64 : 32)(Query);
+      })
+      // TODO: replace with customized legalization using
+      // specifics of cvttsd2si. The selection of this node requires
+      // a vector type. Either G_SCALAR_TO_VECTOR is needed or more advanced
+      // support of G_BUILD_VECTOR/G_INSERT_VECTOR_ELT is required beforehand.
+      .lowerIf([=](const LegalityQuery &Query) {
+        return !HasAVX512 &&
+               ((HasSSE1 && typeIs(1, s32)(Query)) ||
+                (HasSSE2 && typeIs(1, s64)(Query))) &&
+               (Is64Bit && typeIs(0, s64)(Query));
+      })
+      .clampScalar(0, s32, sMaxScalar)
+      .widenScalarToNextPow2(0)
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
 
   // vector ops
@@ -590,6 +650,10 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_FPTOUI:
+    return legalizeFPTOUI(MI, MRI, Helper);
+  case TargetOpcode::G_UITOFP:
+    return legalizeUITOFP(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -643,6 +707,45 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   MIRBuilder.buildLoad(Dst, Addr, *MMO);
   MI.eraseFromParent();
   return true;
+}
+
+bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+  unsigned DstSizeInBits = DstTy.getScalarSizeInBits();
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  // Simply reuse FPTOSI when it is possible to widen the type
+  if (DstSizeInBits <= 32) {
+    auto Casted = MIRBuilder.buildFPTOSI(DstTy == s32 ? s64 : s32, Src);
+    MIRBuilder.buildTrunc(Dst, Casted);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  // Simply reuse SITOFP when it is possible to widen the type
+  if (SrcTy.getSizeInBits() <= 32) {
+    auto Ext = MIRBuilder.buildZExt(SrcTy == s32 ? s64 : s32, Src);
+    MIRBuilder.buildSITOFP(Dst, Ext);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

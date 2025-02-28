@@ -1,4 +1,4 @@
-//=== ASTTableGen.cpp - Helper functions for working with AST records -----===//
+//===-- ASTTableGen.cpp - Helper functions for working with AST records ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTTableGen.h"
-#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/Error.h"
-#include <optional>
+#include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 using namespace clang;

@@ -27,16 +27,16 @@ function test_complex4(x)
   test_complex4 = atan(x)
 end function
 
-! CHECK-RUNTIME: {{%[A-Za-z0-9._]+}} = fir.call @catanf({{.*}}) {{.*}}: (!fir.complex<4>) -> !fir.complex<4>
-! CHECK-NORMAL: {{%[A-Za-z0-9._]+}} = fir.call @catanf({{.*}}) {{.*}}: (!fir.complex<4>) -> !fir.complex<4>
+! CHECK-RUNTIME: {{%[A-Za-z0-9._]+}} = fir.call @catanf({{.*}}) {{.*}}: (complex<f32>) -> complex<f32>
+! CHECK-NORMAL: {{%[A-Za-z0-9._]+}} = fir.call @catanf({{.*}}) {{.*}}: (complex<f32>) -> complex<f32>
 
 function test_complex8(x)
   complex(kind=8) :: x, test_complex8
   test_complex8 = atan(x)
 end function
 
-! CHECK-RUNTIME: {{%[A-Za-z0-9._]+}} = fir.call @catan({{.*}}) {{.*}}: (!fir.complex<8>) -> !fir.complex<8>
-! CHECK-NORMAL: {{%[A-Za-z0-9._]+}} = fir.call @catan({{.*}}) {{.*}}: (!fir.complex<8>) -> !fir.complex<8>
+! CHECK-RUNTIME: {{%[A-Za-z0-9._]+}} = fir.call @catan({{.*}}) {{.*}}: (complex<f64>) -> complex<f64>
+! CHECK-NORMAL: {{%[A-Za-z0-9._]+}} = fir.call @catan({{.*}}) {{.*}}: (complex<f64>) -> complex<f64>
 
 function test_real4_2(y, x)
   real :: y, x, test_real4_2

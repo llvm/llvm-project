@@ -2,25 +2,25 @@
 ! TODO: Add checks when actual codegen is possible for this family
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang -fsyntax-only -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=NOOPTION
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang -fsyntax-only -fdefault-real-8 -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=REAL8
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang -fsyntax-only -fdefault-real-8 -fdefault-double-8 -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=DOUBLE8
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang -fsyntax-only -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=NOOPTION
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang -fsyntax-only -fdefault-real-8 -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=REAL8
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang -fsyntax-only -fdefault-real-8 -fdefault-double-8 -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=DOUBLE8
 ! RUN: not %flang -fsyntax-only -fdefault-double-8 %s  2>&1 | FileCheck %s --check-prefix=ERROR
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang_fc1 -fsyntax-only -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=NOOPTION
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang_fc1 -fsyntax-only -fdefault-real-8 -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=REAL8
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang_fc1 -fsyntax-only -fdefault-real-8 -fdefault-double-8 -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=DOUBLE8
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang_fc1 -fsyntax-only -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=NOOPTION
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang_fc1 -fsyntax-only -fdefault-real-8 -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=REAL8
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang_fc1 -fsyntax-only -fdefault-real-8 -fdefault-double-8 -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=DOUBLE8
 ! RUN: not %flang_fc1 -fsyntax-only -fdefault-double-8 %s  2>&1 | FileCheck %s --check-prefix=ERROR
 
 ! NOOPTION: integer(4),parameter::real_kind=4_4

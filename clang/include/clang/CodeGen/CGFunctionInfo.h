@@ -206,8 +206,8 @@ public:
   static ABIArgInfo getIgnore() {
     return ABIArgInfo(Ignore);
   }
-  static ABIArgInfo getIndirect(CharUnits Alignment, bool ByVal = true,
-                                bool Realign = false,
+  static ABIArgInfo getIndirect(CharUnits Alignment, unsigned AddrSpace,
+                                bool ByVal = true, bool Realign = false,
                                 llvm::Type *Padding = nullptr) {
     auto AI = ABIArgInfo(Indirect);
     AI.setIndirectAlign(Alignment);
@@ -215,6 +215,7 @@ public:
     AI.setIndirectRealign(Realign);
     AI.setSRetAfterThis(false);
     AI.setPaddingType(Padding);
+    AI.setIndirectAddrSpace(AddrSpace);
     return AI;
   }
 
@@ -232,7 +233,7 @@ public:
 
   static ABIArgInfo getIndirectInReg(CharUnits Alignment, bool ByVal = true,
                                      bool Realign = false) {
-    auto AI = getIndirect(Alignment, ByVal, Realign);
+    auto AI = getIndirect(Alignment, 0, ByVal, Realign);
     AI.setInReg(true);
     return AI;
   }
@@ -271,12 +272,8 @@ public:
     // in the unpadded type.
     unsigned unpaddedIndex = 0;
     for (auto eltType : coerceToType->elements()) {
-      if (isPaddingForCoerceAndExpand(eltType)) continue;
-      if (unpaddedStruct) {
-        assert(unpaddedStruct->getElementType(unpaddedIndex) == eltType);
-      } else {
-        assert(unpaddedIndex == 0 && unpaddedCoerceToType == eltType);
-      }
+      if (isPaddingForCoerceAndExpand(eltType))
+        continue;
       unpaddedIndex++;
     }
 
@@ -295,12 +292,8 @@ public:
   }
 
   static bool isPaddingForCoerceAndExpand(llvm::Type *eltType) {
-    if (eltType->isArrayTy()) {
-      assert(eltType->getArrayElementType()->isIntegerTy(8));
-      return true;
-    } else {
-      return false;
-    }
+    return eltType->isArrayTy() &&
+           eltType->getArrayElementType()->isIntegerTy(8);
   }
 
   Kind getKind() const { return TheKind; }
@@ -430,12 +423,12 @@ public:
   }
 
   unsigned getIndirectAddrSpace() const {
-    assert(isIndirectAliased() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     return IndirectAttr.AddrSpace;
   }
 
   void setIndirectAddrSpace(unsigned AddrSpace) {
-    assert(isIndirectAliased() && "Invalid kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
     IndirectAttr.AddrSpace = AddrSpace;
   }
 

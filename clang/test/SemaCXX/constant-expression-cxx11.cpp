@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -std=c++20 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx20_23,pre-cxx23 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 // RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs -fsyntax-only -verify=expected,cxx11_20,cxx11,pre-cxx23    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
+// This macro forces its argument to be constant-folded, even if it's not
+// otherwise a constant expression.
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
 namespace StaticAssertFoldTest {
 
 int x;
@@ -358,12 +362,53 @@ struct Str {
 
 extern char externalvar[];
 constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
-constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}}
-// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
-// cxx20_23-warning@-2 {{comparison between two arrays is deprecated}}
 static_assert(0 != "foo", "");
 
+// OK: These string literals cannot possibly overlap.
+static_assert(+"foo" != +"bar", "");
+static_assert("xfoo" + 1 != "yfoo" + 1, "");
+static_assert(+"foot" != +"foo", "");
+static_assert(+"foo\0bar" != +"foo\0baz", "");
+
+// These can't overlap because the null terminator for UTF-16 is two bytes wide.
+static_assert(fold((const char*)u"A" != (const char*)"\0A\0x"), "");
+static_assert(fold((const char*)u"A" != (const char*)"A\0\0x"), "");
+
+constexpr const char *string = "hello";
+constexpr const char *also_string = string;
+static_assert(string == string, "");
+static_assert(string == also_string, "");
+
+// These strings may overlap, and so the result of the comparison is unknown.
+constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+
+// These may overlap even though they have different encodings.
+// One of these two comparisons is non-constant, but due to endianness we don't
+// know which one.
+constexpr bool may_overlap_different_encoding[] =
+  {fold((const char*)u"A" != (const char*)"xA\0\0\0x" + 1), fold((const char*)u"A" != (const char*)"x\0A\0\0x" + 1)};
+  // expected-error@-2 {{}} expected-note@-1 {{addresses of potentially overlapping literals}}
+
 }
+
+constexpr const char *getStr() {
+  return "abc"; // expected-note {{repeated evaluation of the same literal expression can produce different objects}}
+}
+constexpr int strMinus() {
+  (void)(getStr() - getStr()); // expected-note {{arithmetic on addresses of potentially overlapping literals has unspecified value}} \
+                               // cxx11-warning {{C++14 extension}}
+  return 0;
+}
+static_assert(strMinus() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                    // expected-note {{in call to}}
+
+constexpr int a = 0;
+constexpr int b = 1;
+constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
 
 namespace MaterializeTemporary {
 
@@ -1417,7 +1462,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // expected-note 2{{declared here}}
+  extern int &n; // pre-cxx23-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1426,9 +1471,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
-    eo = (m + // expected-error {{not a constant expression}}
-          n // expected-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    eo = (m + // pre-cxx23-error {{not a constant expression}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-error {{not a constant expression}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1543,15 +1588,9 @@ namespace MutableMembers {
 
 namespace Fold {
 
-  // This macro forces its argument to be constant-folded, even if it's not
-  // otherwise a constant expression.
-  #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-
   constexpr int n = (long)(char*)123; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
   constexpr int m = fold((long)(char*)123); // ok
   static_assert(m == 123, "");
-
-  #undef fold
 
 }
 
@@ -1968,7 +2007,8 @@ namespace ConstexprConstructorRecovery {
 
 namespace Lifetime {
   void f() {
-    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}} expected-warning {{not yet bound to a value}}
+    constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
+                          // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
     constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   }
 
@@ -2388,15 +2428,15 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // expected-note 2{{declared here}}
-    constexpr int k = t.size(); // expected-error 2{{constant}} expected-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) { // cxx11_20-note 2{{declared here}}
+    constexpr int k = t.size();  // cxx11_20-error 2{{constexpr variable 'k' must be initialized by a constant expression}} cxx11_20-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
   }
   void g(array<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{in instantiation of function template}}
     f3(a);
   }
 
@@ -2405,8 +2445,9 @@ namespace array_size {
   };
   void h(array_nonstatic<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{instantiation of}}
   }
+  //static_assert(f2(array_size::array<3>{}));
 }
 
 namespace flexible_array {
@@ -2541,3 +2582,13 @@ GH50055::E2 GlobalInitNotCE2 = GH50055::testDefaultArgForParam(); // ok, not a c
 constexpr GH50055::E2 GlobalInitCE = (GH50055::E2)-1;
 // expected-error@-1 {{constexpr variable 'GlobalInitCE' must be initialized by a constant expression}}
 // expected-note@-2 {{integer value -1 is outside the valid range of values [0, 7] for the enumeration type 'E2'}}
+
+namespace GH112140 {
+struct S {
+  constexpr S(const int &a = ) { } // expected-error {{expected expression}}
+};
+
+void foo() {
+  constexpr S s[2] = { }; // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
+}
+}

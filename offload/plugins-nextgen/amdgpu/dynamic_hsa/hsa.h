@@ -50,6 +50,14 @@ typedef struct hsa_agent_s {
   uint64_t handle;
 } hsa_agent_t;
 
+typedef struct hsa_loaded_code_object_s {
+  uint64_t handle;
+} hsa_loaded_code_object_t;
+
+typedef struct hsa_code_object_reader_s {
+  uint64_t handle;
+} hsa_code_object_reader_t;
+
 typedef enum {
   HSA_DEVICE_TYPE_CPU = 0,
   HSA_DEVICE_TYPE_GPU = 1,
@@ -363,6 +371,18 @@ hsa_status_t hsa_amd_signal_async_handler(hsa_signal_t signal,
                                           hsa_signal_value_t value,
                                           hsa_amd_signal_handler handler,
                                           void *arg);
+
+hsa_status_t hsa_code_object_reader_create_from_memory(
+    const void *code_object, size_t size,
+    hsa_code_object_reader_t *code_object_reader);
+
+hsa_status_t
+hsa_code_object_reader_destroy(hsa_code_object_reader_t code_object_reader);
+
+hsa_status_t hsa_executable_load_agent_code_object(
+    hsa_executable_t executable, hsa_agent_t agent,
+    hsa_code_object_reader_t code_object_reader, const char *options,
+    hsa_loaded_code_object_t *loaded_code_object);
 
 #ifdef __cplusplus
 }

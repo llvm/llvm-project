@@ -69,7 +69,7 @@ PGO:
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
 
-vectorization:
+vectorizers:
   - llvm/lib/Transforms/Vectorize/**/*
   - llvm/include/llvm/Transforms/Vectorize/**/*
 
@@ -499,6 +499,7 @@ clang:static analyzer:
   - clang/tools/scan-build/**
   - clang/utils/analyzer/**
   - clang/docs/analyzer/**
+  - clang/test/Analysis/**
 
 pgo:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -587,6 +588,12 @@ llvm:ir:
   - llvm/docs/LangRef.rst
   - llvm/unittests/IR/**
 
+llvm:SandboxIR:
+  - llvm/lib/SandboxIR/**
+  - llvm/include/llvm/SandboxIR/**
+  - llvm/docs/SandboxIR.md
+  - llvm/unittests/SandboxIR/**
+
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
@@ -604,6 +611,14 @@ llvm:transforms:
   - llvm/include/llvm/Transforms/**
   - llvm/test/Transforms/**
   - llvm/unittests/Transforms/**
+
+llvm:instcombine:
+  - llvm/lib/Analysis/InstructionSimplify.cpp
+  - llvm/lib/Transforms/InstCombine/**
+  - llvm/include/llvm/Transforms/InstCombine/
+  - llvm/include/llvm/Analysis/InstructionSimplify.h
+  - llvm/test/Transforms/InstCombine/**
+  - llvm/test/Transforms/InstSimplify/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -647,6 +662,11 @@ backend:DirectX:
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
+  - clang/lib/Sema/SemaSPIRV.cpp
+  - clang/include/clang/Sema/SemaSPIRV.h
+  - clang/include/clang/Basic/BuiltinsSPIRV.td
+  - clang/test/CodeGenSPIRV/**
+  - clang/test/SemaSPIRV/**
   - llvm/lib/Target/SPIRV/**
   - llvm/test/CodeGen/SPIRV/**
   - llvm/test/Frontend/HLSL/**
@@ -711,6 +731,9 @@ llvm:regalloc:
 lldb:
   - lldb/**
 
+lldb-dap:
+  - lldb/tools/lldb-dap/**
+
 backend:AMDGPU:
   - '**/*amdgpu*'
   - '**/*AMDGPU*'
@@ -732,6 +755,12 @@ backend:RISC-V:
   - clang/**/*RISCV*
   - llvm/**/*riscv*
   - llvm/**/*RISCV*
+
+backend:Xtensa:
+  - clang/**/*xtensa*
+  - clang/**/*Xtensa*
+  - llvm/**/*xtensa*
+  - llvm/**/*Xtensa*
 
 lld:coff:
   - lld/**/COFF/**

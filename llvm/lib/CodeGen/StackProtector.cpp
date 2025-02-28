@@ -275,6 +275,10 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       if (AI == cast<AtomicCmpXchgInst>(I)->getNewValOperand())
         return true;
       break;
+    case Instruction::AtomicRMW:
+      if (AI == cast<AtomicRMWInst>(I)->getValOperand())
+        return true;
+      break;
     case Instruction::PtrToInt:
       if (AI == cast<PtrToIntInst>(I)->getOperand(0))
         return true;
@@ -327,13 +331,9 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       break;
     }
     case Instruction::Load:
-    case Instruction::AtomicRMW:
     case Instruction::Ret:
       // These instructions take an address operand, but have load-like or
       // other innocuous behavior that should not trigger a stack protector.
-      // atomicrmw conceptually has both load and store semantics, but the
-      // value being stored must be integer; so if a pointer is being stored,
-      // we'll catch it in the PtrToInt case above.
       break;
     default:
       // Conservatively return true for any instruction that takes an address
@@ -519,7 +519,7 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
   if (SupportsSelectionDAGSP)
     *SupportsSelectionDAGSP = true;
   TLI->insertSSPDeclarations(*M);
-  return B.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackguard));
+  return B.CreateIntrinsic(Intrinsic::stackguard, {}, {});
 }
 
 /// Insert code into the entry block that stores the stack guard
@@ -540,8 +540,7 @@ static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
   Value *GuardSlot = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
-  B.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackprotector),
-               {GuardSlot, AI});
+  B.CreateIntrinsic(Intrinsic::stackprotector, {}, {GuardSlot, AI});
   return SupportsSelectionDAGSP;
 }
 
@@ -705,7 +704,7 @@ BasicBlock *CreateFailBB(Function *F, const Triple &Trip) {
     StackChkFail = M->getOrInsertFunction("__stack_smash_handler",
                                           Type::getVoidTy(Context),
                                           PointerType::getUnqual(Context));
-    Args.push_back(B.CreateGlobalStringPtr(F->getName(), "SSH"));
+    Args.push_back(B.CreateGlobalString(F->getName(), "SSH"));
   } else {
     StackChkFail =
         M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));

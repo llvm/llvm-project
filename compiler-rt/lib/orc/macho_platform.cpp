@@ -17,6 +17,7 @@
 #include "error.h"
 #include "interval_map.h"
 #include "jit_dispatch.h"
+#include "record_section_tracker.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
@@ -168,93 +169,6 @@ private:
 
   using AtExitsVector = std::vector<AtExitEntry>;
 
-  /// Used to manage sections of fixed-sized metadata records (e.g. pointer
-  /// sections, selector refs, etc.)
-  template <typename RecordElement> class RecordSectionsTracker {
-  public:
-    /// Add a section to the "new" list.
-    void add(span<RecordElement> Sec) { New.push_back(std::move(Sec)); }
-
-    /// Returns true if there are new sections to process.
-    bool hasNewSections() const { return !New.empty(); }
-
-    /// Returns the number of new sections to process.
-    size_t numNewSections() const { return New.size(); }
-
-    /// Process all new sections.
-    template <typename ProcessSectionFunc>
-    std::enable_if_t<std::is_void_v<
-        std::invoke_result_t<ProcessSectionFunc, span<RecordElement>>>>
-    processNewSections(ProcessSectionFunc &&ProcessSection) {
-      for (auto &Sec : New)
-        ProcessSection(Sec);
-      moveNewToProcessed();
-    }
-
-    /// Proces all new sections with a fallible handler.
-    ///
-    /// Successfully handled sections will be moved to the Processed
-    /// list.
-    template <typename ProcessSectionFunc>
-    std::enable_if_t<
-        std::is_same_v<Error, std::invoke_result_t<ProcessSectionFunc,
-                                                   span<RecordElement>>>,
-        Error>
-    processNewSections(ProcessSectionFunc &&ProcessSection) {
-      for (size_t I = 0; I != New.size(); ++I) {
-        if (auto Err = ProcessSection(New[I])) {
-          for (size_t J = 0; J != I; ++J)
-            Processed.push_back(New[J]);
-          New.erase(New.begin(), New.begin() + I);
-          return Err;
-        }
-      }
-      moveNewToProcessed();
-      return Error::success();
-    }
-
-    /// Move all sections back to New for reprocessing.
-    void reset() {
-      moveNewToProcessed();
-      New = std::move(Processed);
-    }
-
-    /// Remove the section with the given range.
-    bool removeIfPresent(ExecutorAddrRange R) {
-      if (removeIfPresent(New, R))
-        return true;
-      return removeIfPresent(Processed, R);
-    }
-
-  private:
-    void moveNewToProcessed() {
-      if (Processed.empty())
-        Processed = std::move(New);
-      else {
-        Processed.reserve(Processed.size() + New.size());
-        std::copy(New.begin(), New.end(), std::back_inserter(Processed));
-        New.clear();
-      }
-    }
-
-    bool removeIfPresent(std::vector<span<RecordElement>> &V,
-                         ExecutorAddrRange R) {
-      auto RI = std::find_if(
-          V.rbegin(), V.rend(),
-          [RS = R.toSpan<RecordElement>()](const span<RecordElement> &E) {
-            return E.data() == RS.data();
-          });
-      if (RI != V.rend()) {
-        V.erase(std::next(RI).base());
-        return true;
-      }
-      return false;
-    }
-
-    std::vector<span<RecordElement>> Processed;
-    std::vector<span<RecordElement>> New;
-  };
-
   struct UnwindSections {
     UnwindSections(const UnwindSectionInfo &USI)
         : DwarfSection(USI.DwarfSection.toSpan<char>()),
@@ -331,7 +245,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
-  int dlupdate(void *DSOHandle, int Mode);
+  int dlupdate(void *DSOHandle);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, const char *Symbol);
 
@@ -381,7 +295,7 @@ private:
   Error dlopenInitialize(std::unique_lock<std::mutex> &JDStatesLock,
                          JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
-  Error dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateImpl(void *DSOHandle);
   Error dlupdateFull(std::unique_lock<std::mutex> &JDStatesLock,
                      JITDylibState &JDS);
   Error dlupdateInitialize(std::unique_lock<std::mutex> &JDStatesLock,
@@ -643,6 +557,12 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     return make_error<StringError>(ErrStream.str());
   }
 
+  ORC_RT_DEBUG({
+    printdbg("  UnwindInfo: %s, UseCallbackStyleUnwindInfo: %s\n",
+             UnwindInfo ? "true" : "false",
+             UseCallbackStyleUnwindInfo ? "true" : "false");
+  });
+
   if (UnwindInfo && UseCallbackStyleUnwindInfo) {
     ORC_RT_DEBUG({
       printdbg("  Registering new-style unwind info for:\n"
@@ -796,13 +716,13 @@ void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
-int MachOPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
+int MachOPlatformRuntimeState::dlupdate(void *DSOHandle) {
   ORC_RT_DEBUG({
     std::string S;
     printdbg("MachOPlatform::dlupdate(%p) (%s)\n", DSOHandle, S.c_str());
   });
   std::lock_guard<std::recursive_mutex> Lock(DyldAPIMutex);
-  if (auto Err = dlupdateImpl(DSOHandle, Mode)) {
+  if (auto Err = dlupdateImpl(DSOHandle)) {
     // FIXME: Make dlerror thread safe.
     DLFcnError = toString(std::move(Err));
     return -1;
@@ -1265,7 +1185,7 @@ Error MachOPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
+Error MachOPlatformRuntimeState::dlupdateImpl(void *DSOHandle) {
   std::unique_lock<std::mutex> Lock(JDStatesMutex);
 
   // Try to find JITDylib state by DSOHandle.
@@ -1599,8 +1519,8 @@ void *__orc_rt_macho_jit_dlopen(const char *path, int mode) {
   return MachOPlatformRuntimeState::get().dlopen(path, mode);
 }
 
-int __orc_rt_macho_jit_dlupdate(void *dso_handle, int mode) {
-  return MachOPlatformRuntimeState::get().dlupdate(dso_handle, mode);
+int __orc_rt_macho_jit_dlupdate(void *dso_handle) {
+  return MachOPlatformRuntimeState::get().dlupdate(dso_handle);
 }
 
 int __orc_rt_macho_jit_dlclose(void *dso_handle) {

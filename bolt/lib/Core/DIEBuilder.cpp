@@ -57,11 +57,9 @@ getDWOName(llvm::DWARFUnit &CU,
          "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exist.");
   if (DwarfOutputPath) {
     DWOName = std::string(sys::path::filename(DWOName));
-    auto Iter = NameToIndexMap.find(DWOName);
-    if (Iter == NameToIndexMap.end())
-      Iter = NameToIndexMap.insert({DWOName, 0}).first;
-    DWOName.append(std::to_string(Iter->second));
-    ++Iter->second;
+    uint32_t &Index = NameToIndexMap[DWOName];
+    DWOName.append(std::to_string(Index));
+    ++Index;
   }
   DWOName.append(".dwo");
   return DWOName;
@@ -283,8 +281,7 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
     for (auto &Row : TUIndex.getRows()) {
       uint64_t Signature = Row.getSignature();
       // manually populate TypeUnit to UnitVector
-      DwarfContext->getTypeUnitForHash(DwarfContext->getMaxVersion(), Signature,
-                                       true);
+      DwarfContext->getTypeUnitForHash(Signature, true);
     }
   }
   const unsigned int CUNum = getCUNum(DwarfContext, isDWO());
@@ -625,7 +622,7 @@ DWARFDie DIEBuilder::resolveDIEReference(
 }
 
 void DIEBuilder::cloneDieOffsetReferenceAttribute(
-    DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
+    DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref) {
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;
@@ -657,7 +654,7 @@ void DIEBuilder::cloneDieOffsetReferenceAttribute(
     // Adding referenced DIE to DebugNames to be used when entries are created
     // that contain cross cu references.
     if (DebugNamesTable.canGenerateEntryWithCrossCUReference(U, Die, AttrSpec))
-      DebugNamesTable.addCrossCUDie(DieInfo.Die);
+      DebugNamesTable.addCrossCUDie(&U, DieInfo.Die);
     // no matter forward reference or backward reference, we are supposed
     // to calculate them in `finish` due to the possible modification of
     // the DIE.

@@ -9,6 +9,7 @@
 #ifndef LLD_COFF_CONFIG_H
 #define LLD_COFF_CONFIG_H
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +28,7 @@ namespace lld::coff {
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
 using llvm::StringRef;
+class COFFLinkerContext;
 class DefinedAbsolute;
 class StringChunk;
 class Symbol;
@@ -113,11 +115,12 @@ struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
+  std::unique_ptr<MemoryBuffer> dosStub;
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
+  bool machineInferred = false;
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
-  Symbol *entry = nullptr;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;
@@ -159,14 +162,11 @@ struct Configuration {
   bool dll = false;
   StringRef implib;
   bool noimplib = false;
-  std::vector<Export> exports;
-  bool hadExplicitExports;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
-  Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
-  bool saveTemps = false;
+  llvm::DenseSet<llvm::StringRef> saveTempsArgs;
 
   // /guard:cf
   int guardCF = GuardCFLevel::Off;
@@ -219,9 +219,6 @@ struct Configuration {
 
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
-
-  // Used for /alternatename.
-  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;
@@ -330,6 +327,48 @@ struct Configuration {
   bool allowDuplicateWeak = false;
   BuildIDHash buildIDHash = BuildIDHash::None;
 };
+
+struct COFFSyncStream : SyncStream {
+  COFFLinkerContext &ctx;
+  COFFSyncStream(COFFLinkerContext &ctx, DiagLevel level);
+};
+
+template <typename T>
+std::enable_if_t<!std::is_pointer_v<std::remove_reference_t<T>>,
+                 const COFFSyncStream &>
+operator<<(const COFFSyncStream &s, T &&v) {
+  s.os << std::forward<T>(v);
+  return s;
+}
+
+inline const COFFSyncStream &operator<<(const COFFSyncStream &s,
+                                        const char *v) {
+  s.os << v;
+  return s;
+}
+
+inline const COFFSyncStream &operator<<(const COFFSyncStream &s, Error v) {
+  s.os << llvm::toString(std::move(v));
+  return s;
+}
+
+// Report a log if -verbose is specified.
+COFFSyncStream Log(COFFLinkerContext &ctx);
+
+// Print a message to stdout.
+COFFSyncStream Msg(COFFLinkerContext &ctx);
+
+// Report a warning. Upgraded to an error if /WX is specified.
+COFFSyncStream Warn(COFFLinkerContext &ctx);
+
+// Report an error that will suppress the output file generation.
+COFFSyncStream Err(COFFLinkerContext &ctx);
+
+// Report a fatal error that exits immediately. This should generally be avoided
+// in favor of Err.
+COFFSyncStream Fatal(COFFLinkerContext &ctx);
+
+uint64_t errCount(COFFLinkerContext &ctx);
 
 } // namespace lld::coff
 

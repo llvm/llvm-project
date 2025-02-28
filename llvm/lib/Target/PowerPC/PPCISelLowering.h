@@ -36,14 +36,11 @@ namespace llvm {
 
   namespace PPCISD {
 
-    // When adding a NEW PPCISD node please add it to the correct position in
-    // the enum. The order of elements in this enum matters!
-    // Values that are added after this entry:
-    //     STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE
-    // are considered memory opcodes and are treated differently than entries
-    // that come before it. For example, ADD or MUL should be placed before
-    // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
-    // after it.
+  // When adding a NEW PPCISD node please add it to the correct position in
+  // the enum. The order of elements in this enum matters!
+  // Values that are added between FIRST_MEMORY_OPCODE and LAST_MEMORY_OPCODE
+  // are considered memory opcodes and are treated differently than other
+  // entries.
   enum NodeType : unsigned {
     // Start the numbering where the builtin ops and target ops leave off.
     FIRST_NUMBER = ISD::BUILTIN_OP_END,
@@ -487,7 +484,8 @@ namespace llvm {
     XXMFACC,
 
     // Constrained conversion from floating point to int
-    STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCTIDZ = FIRST_STRICTFP_OPCODE,
     STRICT_FCTIWZ,
     STRICT_FCTIDUZ,
     STRICT_FCTIWUZ,
@@ -500,6 +498,13 @@ namespace llvm {
 
     /// Constrained floating point add in round-to-zero mode.
     STRICT_FADDRTZ,
+    LAST_STRICTFP_OPCODE = STRICT_FADDRTZ,
+
+    /// SETBC - The ISA 3.1 (P10) SETBC instruction.
+    SETBC,
+
+    /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
+    SETBCR,
 
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
@@ -510,7 +515,8 @@ namespace llvm {
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
     /// i32.
-    STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    STBRX = FIRST_MEMORY_OPCODE,
 
     /// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
     /// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
@@ -601,7 +607,8 @@ namespace llvm {
     /// GPRC = TOC_ENTRY GA, TOC
     /// Loads the entry for GA from the TOC, where the TOC base is given by
     /// the last operand.
-    TOC_ENTRY
+    TOC_ENTRY,
+    LAST_MEMORY_OPCODE = TOC_ENTRY,
   };
 
   } // end namespace PPCISD
@@ -979,10 +986,8 @@ namespace llvm {
                                  StringRef Constraint, MVT VT) const override;
 
     /// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-    /// function arguments in the caller parameter area.  This is the actual
-    /// alignment, not its logarithm.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    /// function arguments in the caller parameter area.
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
     /// vector.  If it is invalid, don't add anything to Ops.
@@ -1137,7 +1142,7 @@ namespace llvm {
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
     /// Override to support customized stack guard loading.
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
 
@@ -1221,8 +1226,6 @@ namespace llvm {
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
-    void spliceIntoChain(SDValue ResChain, SDValue NewResChain,
-                         SelectionDAG &DAG) const;
 
     void LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
                                 SelectionDAG &DAG, const SDLoc &dl) const;
@@ -1277,7 +1280,9 @@ namespace llvm {
     SDValue LowerGlobalTLSAddressLinux(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUaddo(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
@@ -1366,7 +1371,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

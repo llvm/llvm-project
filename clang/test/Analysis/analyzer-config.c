@@ -9,8 +9,8 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
-// CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: apply-fixits = false
+// CHECK-NEXT: assume-at-least-one-iteration = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
 // CHECK-NEXT: c++-allocator-inlining = true
@@ -41,9 +41,10 @@
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
-// CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 700
-// CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 400000
-// CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 300
+// CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 0
+// CHECK-NEXT: crosscheck-with-z3-max-attempts-per-query = 3
+// CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 0
+// CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 15000
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-cpp-threshold = 8
 // CHECK-NEXT: ctu-import-threshold = 24
@@ -111,9 +112,11 @@
 // CHECK-NEXT: optin.cplusplus.VirtualCall:ShowFixIts = false
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24
+// CHECK-NEXT: optin.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
+// CHECK-NEXT: region-store-max-binding-fanout = 128
 // CHECK-NEXT: region-store-small-array-limit = 5
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false

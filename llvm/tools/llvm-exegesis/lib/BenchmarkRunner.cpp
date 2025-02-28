@@ -396,7 +396,12 @@ private:
 // platforms have different definitions for some of the libc functions that
 // cause buildtime failures. Additionally, the subprocess executor mode (the
 // sole mode where this is supported) currently only supports x86_64.
-#if defined(__x86_64__)
+
+// Also check that we have the SYS_getcpu macro defined, meaning the syscall
+// actually exists within the build environment. We manually use the syscall
+// rather than the libc wrapper given the wrapper for getcpu is only available
+// in glibc 2.29 and later.
+#if defined(__x86_64__) && defined(SYS_getcpu)
     // Set the CPU affinity for the child process, so that we ensure that if
     // the user specified a CPU the process should run on, the benchmarking
     // process is running on that CPU.
@@ -413,12 +418,13 @@ private:
     // Check (if assertions are enabled) that we are actually running on the
     // CPU that was specified by the user.
     [[maybe_unused]] unsigned int CurrentCPU;
-    assert(getcpu(&CurrentCPU, nullptr) == 0 &&
+    assert(syscall(SYS_getcpu, &CurrentCPU, nullptr) == 0 &&
            "Expected getcpu call to succeed.");
     assert(static_cast<int>(CurrentCPU) == CPUToUse &&
            "Expected current CPU to equal the CPU requested by the user");
-#endif // defined(__x86_64__)
+#else
     exit(ChildProcessExitCodeE::SetCPUAffinityFailed);
+#endif // defined(__x86_64__) && defined(SYS_getcpu)
   }
 
   Error createSubProcessAndRunBenchmark(

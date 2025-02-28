@@ -1130,3 +1130,42 @@ module {
     return %1 : tensor<?x1x61x1xf32>
   }
 }
+
+// -----
+
+func.func @no_fold_empty_tensor_dim_out_of_bounds(%arg0: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst7 = arith.constant 7 : index
+  %dim = tensor.dim %arg0, %cst7 : tensor<1x?x10xf32>
+  %0 = tensor.empty(%dim) : tensor<1x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?xf32>) -> tensor<1x?xf32>
+  return %1 : tensor<1x?xf32>
+}
+// CHECK-LABEL: func.func @no_fold_empty_tensor_dim_out_of_bounds
+//  CHECK-SAME:                 %[[ARG0:.*]]: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+//       CHECK:   %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[C7:.*]] = arith.constant 7
+//       CHECK:   %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C7]] : tensor<1x?x10xf32>
+//       CHECK:   %[[VAL_0:.*]] = tensor.empty(%[[DIM]]) : tensor<1x?xf32>
+//       CHECK:   %[[VAL_1:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[VAL_0]] : tensor<1x?xf32>) -> tensor<1x?xf32>
+//       CHECK:   return %[[VAL_1]] : tensor<1x?xf32>
+//       CHECK: }
+
+// -----
+
+func.func @fold_empty_tensor_dim_op(%arg0: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst2 = index.constant 2
+  %dim10 = tensor.dim %arg0, %cst2 : tensor<1x?x10xf32>
+  %0 = tensor.empty(%dim10) : tensor<1x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?xf32>) -> tensor<1x?xf32>
+  return %1 : tensor<1x?xf32>
+}
+// CHECK-LABEL: func.func @fold_empty_tensor_dim_op
+//  CHECK-SAME:                 %[[ARG0:.*]]: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+//       CHECK:   %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[VAL_0:.*]] = tensor.empty() : tensor<1x10xf32>
+//       CHECK:   %[[VAL_1:.*]] = tensor.cast %[[VAL_0]] : tensor<1x10xf32> to tensor<1x?xf32>
+//       CHECK:   %[[VAL_2:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[VAL_1]] : tensor<1x?xf32>) -> tensor<1x?xf32>
+//       CHECK:   return %[[VAL_2]] : tensor<1x?xf32>
+//       CHECK: }

@@ -12,7 +12,7 @@
 # It is distributed as a static library only.
 # Fortran programs/libraries that end up linking any of the provided
 # will have a dependency on the third-party library that is being
-# used for building this FortranFloat128Math library.
+# used for building this flang_rt.quadmath library.
 
 include(CheckLibraryExists)
 
@@ -47,9 +47,11 @@ set(sources
   mod-real.cpp
   modulo-real.cpp
   nearest.cpp
+  nearbyint.cpp
   norm2.cpp
   pow.cpp
   random.cpp
+  remainder.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp
@@ -66,6 +68,7 @@ set(sources
   y1.cpp
   yn.cpp
   )
+runtime_source_files(sources SUBDIR "quadmath")
 
 include_directories(AFTER "${CMAKE_CURRENT_SOURCE_DIR}/..")
 add_library(FortranFloat128MathILib INTERFACE)
@@ -91,20 +94,20 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       )
   endif()
 
-  add_flang_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
+  add_flang_library(flang_rt.quadmath STATIC INSTALL_WITH_TOOLCHAIN
     ${sources})
 
   if (DEFINED MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-    add_flang_library(FortranFloat128Math.static STATIC INSTALL_WITH_TOOLCHAIN
+    add_flang_library(flang_rt.quadmath.static STATIC INSTALL_WITH_TOOLCHAIN
       ${sources}
       )
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-    add_flang_library(FortranFloat128Math.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
+    add_flang_library(flang_rt.quadmath.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
       ${sources}
       )
-    add_dependencies(FortranFloat128Math FortranFloat128Math.static
-      FortranFloat128Math.static_dbg
+    add_dependencies(flang_rt.quadmath flang_rt.quadmath.static
+      flang_rt.quadmath.static_dbg
       )
   endif()
 elseif (HAVE_LDBL_MANT_DIG_113)
@@ -116,7 +119,7 @@ elseif (HAVE_LDBL_MANT_DIG_113)
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
   else()
-    message(FATAL_ERROR "FortranRuntime cannot build without libm")
+    message(FATAL_ERROR "flang_rt.quadmath cannot build without libm")
   endif()
 else()
   # We can use '__float128' version from libc, if it has them.

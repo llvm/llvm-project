@@ -24,12 +24,13 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
@@ -49,6 +50,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
@@ -750,7 +752,7 @@ int main(int argc, char **argv, char * const *envp) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static struct jit_code_entry *
 findNextDebugDescriptorEntry(struct jit_code_entry *Latest) {
@@ -1029,14 +1031,10 @@ int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator([&P](orc::ExecutionSession &ES,
-                                              const Triple &TT) {
-      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES);
-      if (P != LLJITPlatform::ExecutorNative)
-        L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
-      return L;
-    });
+    Builder.setObjectLinkingLayerCreator(
+        [&](orc::ExecutionSession &ES, const Triple &TT) {
+          return std::make_unique<orc::ObjectLinkingLayer>(ES);
+        });
   }
 
   auto J = ExitOnErr(Builder.create());
@@ -1060,7 +1058,7 @@ int runOrcJIT(const char *ProgName) {
   }
 
   if (PerModuleLazy)
-    J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
+    J->setPartitionFunction(orc::IRPartitionLayer::compileWholeModule);
 
   auto IRDump = createIRDebugDumper();
   J->getIRTransformLayer().setTransform(

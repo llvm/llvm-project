@@ -10,9 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CoroInstr.h"
 #include "CoroInternal.h"
-#include "CoroShape.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -28,6 +26,9 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
@@ -51,7 +52,8 @@ coro::LowererBase::LowererBase(Module &M)
 CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
                                            Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
-  auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
+  auto *Fn =
+      Intrinsic::getOrInsertDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
   assert(Index >= CoroSubFnInst::IndexFirst &&
          Index < CoroSubFnInst::IndexLast &&
@@ -67,11 +69,11 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.context.dealloc",
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
-    "llvm.coro.async.store_resume",
     "llvm.coro.await.suspend.bool",
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
+    "llvm.coro.begin.custom.abi",
     "llvm.coro.destroy",
     "llvm.coro.done",
     "llvm.coro.end",
@@ -97,7 +99,7 @@ static const char *const CoroIntrinsics[] = {
 
 #ifndef NDEBUG
 static bool isCoroutineIntrinsicName(StringRef Name) {
-  return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
+  return llvm::binary_search(CoroIntrinsics, Name);
 }
 #endif
 
@@ -107,7 +109,6 @@ bool coro::isSuspendBlock(BasicBlock *BB) {
 
 bool coro::declaresAnyIntrinsic(const Module &M) {
   for (StringRef Name : CoroIntrinsics) {
-    assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
       return true;
   }
@@ -180,7 +181,7 @@ void coro::suppressCoroAllocs(LLVMContext &Context,
 static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
                                     CoroSuspendInst *SuspendInst) {
   Module *M = SuspendInst->getModule();
-  auto *Fn = Intrinsic::getDeclaration(M, Intrinsic::coro_save);
+  auto *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic::coro_save);
   auto *SaveInst = cast<CoroSaveInst>(
       CallInst::Create(Fn, CoroBegin, "", SuspendInst->getIterator()));
   assert(!SuspendInst->getCoroSave());
@@ -245,7 +246,8 @@ void coro::Shape::analyze(Function &F,
         }
         break;
       }
-      case Intrinsic::coro_begin: {
+      case Intrinsic::coro_begin:
+      case Intrinsic::coro_begin_custom_abi: {
         auto CB = cast<CoroBeginInst>(II);
 
         // Ignore coro id's that aren't pre-split.
@@ -348,18 +350,18 @@ void coro::Shape::invalidateCoroutine(
   assert(!CoroBegin);
   {
     // Replace coro.frame which are supposed to be lowered to the result of
-    // coro.begin with undef.
-    auto *Undef = UndefValue::get(PointerType::get(F.getContext(), 0));
+    // coro.begin with poison.
+    auto *Poison = PoisonValue::get(PointerType::get(F.getContext(), 0));
     for (CoroFrameInst *CF : CoroFrames) {
-      CF->replaceAllUsesWith(Undef);
+      CF->replaceAllUsesWith(Poison);
       CF->eraseFromParent();
     }
     CoroFrames.clear();
 
-    // Replace all coro.suspend with undef and remove related coro.saves if
+    // Replace all coro.suspend with poison and remove related coro.saves if
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
-      CS->replaceAllUsesWith(UndefValue::get(CS->getType()));
+      CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
       CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
@@ -372,11 +374,10 @@ void coro::Shape::invalidateCoroutine(
   }
 }
 
-// Perform semantic checking and initialization of the ABI
-void coro::Shape::initABI() {
-  switch (ABI) {
-  case coro::ABI::Switch: {
-    for (auto *AnySuspend : CoroSuspends) {
+void coro::SwitchABI::init() {
+  assert(Shape.ABI == coro::ABI::Switch);
+  {
+    for (auto *AnySuspend : Shape.CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendInst>(AnySuspend);
       if (!Suspend) {
 #ifndef NDEBUG
@@ -386,21 +387,22 @@ void coro::Shape::initABI() {
       }
 
       if (!Suspend->getCoroSave())
-        createCoroSave(CoroBegin, Suspend);
+        createCoroSave(Shape.CoroBegin, Suspend);
     }
-    break;
   }
-  case coro::ABI::Async: {
-    break;
-  };
-  case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce: {
+}
+
+void coro::AsyncABI::init() { assert(Shape.ABI == coro::ABI::Async); }
+
+void coro::AnyRetconABI::init() {
+  assert(Shape.ABI == coro::ABI::Retcon || Shape.ABI == coro::ABI::RetconOnce);
+  {
     // Determine the result value types, and make sure they match up with
     // the values passed to the suspends.
-    auto ResultTys = getRetconResultTypes();
-    auto ResumeTys = getRetconResumeTypes();
+    auto ResultTys = Shape.getRetconResultTypes();
+    auto ResumeTys = Shape.getRetconResumeTypes();
 
-    for (auto *AnySuspend : CoroSuspends) {
+    for (auto *AnySuspend : Shape.CoroSuspends) {
       auto Suspend = dyn_cast<CoroSuspendRetconInst>(AnySuspend);
       if (!Suspend) {
 #ifndef NDEBUG
@@ -427,7 +429,7 @@ void coro::Shape::initABI() {
 
 #ifndef NDEBUG
           Suspend->dump();
-          RetconLowering.ResumePrototype->getFunctionType()->dump();
+          Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
           report_fatal_error("argument to coro.suspend.retcon does not "
                              "match corresponding prototype function result");
@@ -436,7 +438,7 @@ void coro::Shape::initABI() {
       if (SI != SE || RI != RE) {
 #ifndef NDEBUG
         Suspend->dump();
-        RetconLowering.ResumePrototype->getFunctionType()->dump();
+        Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
         report_fatal_error("wrong number of arguments to coro.suspend.retcon");
       }
@@ -455,7 +457,7 @@ void coro::Shape::initABI() {
       if (SuspendResultTys.size() != ResumeTys.size()) {
 #ifndef NDEBUG
         Suspend->dump();
-        RetconLowering.ResumePrototype->getFunctionType()->dump();
+        Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
         report_fatal_error("wrong number of results from coro.suspend.retcon");
       }
@@ -463,15 +465,13 @@ void coro::Shape::initABI() {
         if (SuspendResultTys[I] != ResumeTys[I]) {
 #ifndef NDEBUG
           Suspend->dump();
-          RetconLowering.ResumePrototype->getFunctionType()->dump();
+          Shape.RetconLowering.ResumePrototype->getFunctionType()->dump();
 #endif
           report_fatal_error("result from coro.suspend.retcon does not "
                              "match corresponding prototype function param");
         }
       }
     }
-    break;
-  }
   }
 }
 

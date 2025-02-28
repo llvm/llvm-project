@@ -413,8 +413,9 @@ TEST_F(IRBuilderTest, ConstrainedFPIntrinsics) {
 
   Builder.setDefaultConstrainedExcept(fp::ebStrict);
   Builder.setDefaultConstrainedRounding(RoundingMode::TowardZero);
-  Function *Fn = Intrinsic::getDeclaration(M.get(),
-      Intrinsic::experimental_constrained_roundeven, { Type::getDoubleTy(Ctx) });
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M.get(), Intrinsic::experimental_constrained_roundeven,
+      {Type::getDoubleTy(Ctx)});
   V = Builder.CreateConstrainedFPCall(Fn, { VDouble });
   CII = cast<ConstrainedFPIntrinsic>(V);
   EXPECT_EQ(Intrinsic::experimental_constrained_roundeven, CII->getIntrinsicID());
@@ -880,12 +881,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
     if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(First.is<DbgRecord *>());
+      EXPECT_TRUE(isa<DbgRecord *>(First));
       EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), First.get<DbgRecord *>());
+      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
     } else {
-      EXPECT_TRUE(First.is<Instruction *>());
-      EXPECT_EQ(&*std::prev(Second), First.get<Instruction *>());
+      EXPECT_TRUE(isa<Instruction *>(First));
+      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
     }
   };
 
@@ -922,12 +923,13 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
-      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
+      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I->getIterator()),
+                  I->getIterator());
 
       // We should be able to insert at the end of the block, even if there's
       // no terminator yet. Note that in RemoveDIs mode this record won't get
       // inserted into the block untill another instruction is added.
-      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
+      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
       // Specifically do not insert a terminator, to check this works. `I`
       // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -944,7 +946,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
       ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I),
+                                              VarLoc, I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
@@ -954,7 +956,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
     { /* dbg.declare | DbgVariableRecord::Declare */
-      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
+      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc,
+                                    I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarYDeclare =
@@ -1142,12 +1145,12 @@ TEST_F(IRBuilderTest, InsertExtractElement) {
   EXPECT_EQ(Elt2, X2);
 }
 
-TEST_F(IRBuilderTest, CreateGlobalStringPtr) {
+TEST_F(IRBuilderTest, CreateGlobalString) {
   IRBuilder<> Builder(BB);
 
-  auto String1a = Builder.CreateGlobalStringPtr("TestString", "String1a");
-  auto String1b = Builder.CreateGlobalStringPtr("TestString", "String1b", 0);
-  auto String2 = Builder.CreateGlobalStringPtr("TestString", "String2", 1);
+  auto String1a = Builder.CreateGlobalString("TestString", "String1a");
+  auto String1b = Builder.CreateGlobalString("TestString", "String1b", 0);
+  auto String2 = Builder.CreateGlobalString("TestString", "String2", 1);
   auto String3 = Builder.CreateGlobalString("TestString", "String3", 2);
 
   EXPECT_TRUE(String1a->getType()->getPointerAddressSpace() == 0);

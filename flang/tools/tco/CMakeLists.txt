@@ -17,7 +17,13 @@ target_link_libraries(tco PRIVATE
   FIRBuilder
   HLFIRDialect
   HLFIRTransforms
+  flangPasses
+  FIROpenACCSupport
   FlangOpenMPTransforms
+  FortranSupport
+)
+
+mlir_target_link_libraries(tco PRIVATE
   ${dialect_libs}
   ${extension_libs}
   MLIRIR

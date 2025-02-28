@@ -19,12 +19,18 @@ class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
   let mnemonic = attrMnemonic;
 }
 
-def XeGPU_TensorDescAttr: XeGPUAttr<"TensorDesc", "tdesc_attr"> {
+class XeGPU_TensorDescAttr<string name, string attrMnemonic, list<Trait> traits = [],
+                         string baseCppClass = "::mlir::Attribute">
+    : XeGPUAttr<name, attrMnemonic, traits, baseCppClass> {
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_tdesc_attr"> {
   let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{`TensorDescAttr` (or `tdesc_attr`) is a composite
+  let description = [{`BlockTensorDesc` (or `block_tdesc_attr`) is a composite
     attribute defined for `TensorDescType` for describing following
     properties of a `TensorDesc`.
-    1. `memory_scope`: It describes where the data block described by the
+    1. `memory_space`: It describes where the data block described by the
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
     2. `array_length`: It describes how many horizontally consecutive blocks
@@ -33,43 +39,75 @@ def XeGPU_TensorDescAttr: XeGPUAttr<"TensorDesc", "tdesc_attr"> {
         8x32. Its default value is 1.
     3. `boundary_check`: It is used to indicates the hardware whether to do
         out-of-boundary check. The default value is true.
-    4. `scattered`: It is used to differenciate TensorDescs created from
-       `create_nd_tdesc` vs from `create_tdesc`.
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemoryScopeAttr">: $memory_scope,
+    OptionalParameter<"MemorySpaceAttr">: $memory_space,
     OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check,
-    OptionalParameter<"BoolAttr", "false">: $scattered
+    OptionalParameter<"BoolAttr", "true">: $boundary_check
   );
 
   let builders = [
     AttrBuilder<(ins
-      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
       CArg<"int", "1">:$array_length,
-      CArg<"bool", "true">: $boundary_check,
-      CArg<"bool", "false">: $scattered
+      CArg<"bool", "true">: $boundary_check
     )>
   ];
 
-  let assemblyFormat = "`<` struct(params) `>`";
 }
+
+def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
+  let summary = [{a composite attribute for `TensorDescType`}];
+  let description = [{
+    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
+    for describing following properties of a `TensorDesc`:
+
+    1. `memory_space`: It describes where the data block described by the
+        TensorDesc is located, `Global` device memory or `Shared` local memory.
+        It is default to `Global`.
+
+    2.  `chunk_size`: indicates number of contiguous elements accessed for each
+        offset, default is 1. It is used with `scattered` attr only.
+  }];
+
+  let parameters = (ins
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location"
+    >: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of contiguous elements"
+    >: $chunk_size
+  );
+
+  let builders = [
+    AttrBuilder<(ins
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
+      CArg<"int", "1">: $chunk_size
+    )>
+  ];
+
+  let genVerifyDecl = 1;
+ }
 
 //===----------------------------------------------------------------------===//
 // XeGPU Memory Scope Enums.
 //===----------------------------------------------------------------------===//
-def XeGPU_MemoryScopeGlobal: I32EnumAttrCase<"Global", 0, "global">;
-def XeGPU_MemoryScopeShared: I32EnumAttrCase<"SLM", 1, "slm">;
-def XeGPU_MemoryScope: I32EnumAttr<"MemoryScope",
+def XeGPU_MemorySpaceGlobal: I32EnumAttrCase<"Global", 0, "global">;
+def XeGPU_MemorySpaceShared: I32EnumAttrCase<"SLM", 3, "slm">;
+def XeGPU_MemorySpace: I32EnumAttr<"MemorySpace",
       "The address space of the memory the tensor descritor is created for",
-      [XeGPU_MemoryScopeGlobal, XeGPU_MemoryScopeShared]> {
+      [XeGPU_MemorySpaceGlobal, XeGPU_MemorySpaceShared]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::xegpu";
 }
 
-def XeGPU_MemoryScopeAttr:
-  EnumAttr<XeGPU_Dialect, XeGPU_MemoryScope, "memory_scope"> {
+def XeGPU_MemorySpaceAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_MemorySpace, "memory_space"> {
     let summary = [{Describe the location of data described by a `TensorDesc`:
                  Global device memory (`Global`) or Shared local memory (`SLM`).}];
     let assemblyFormat = "$value";
@@ -114,6 +152,36 @@ def XeGPU_FenceScopeAttr:
                     "workgroup" means that the scope is within each work group.
                     "gpu" means the scope is across work groups within the gpu.}];
     let assemblyFormat = "$value";
+}
+
+def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+  let summary = [{
+    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+  }];
+  let description = [{
+    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
+    attribute at the tensor description creation time.
+    Within the `sg_map`, `wi_layout` specifies the layout of work items,
+    describing the mapping of work items to the tensor.
+    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
+    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+
+    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
+    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
+    each accessing 1 element as specified by wi_data=[1, 1].
+
+    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
+    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
+    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+  }];
+  let parameters = (ins
+    ArrayRefParameter<"uint32_t">:$wi_layout,
+    ArrayRefParameter<"uint32_t">:$wi_data
+  );
+
+
+  let hasCustomAssemblyFormat = 1;
+  let genVerifyDecl = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

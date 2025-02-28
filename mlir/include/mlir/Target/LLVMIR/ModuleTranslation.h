@@ -23,12 +23,13 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 class BasicBlock;
-class IRBuilderBase;
 class Function;
+class IRBuilderBase;
+class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
 
@@ -167,6 +168,12 @@ public:
   /// attribute.
   void setLoopMetadata(Operation *op, llvm::Instruction *inst);
 
+  /// Sets the disjoint flag attribute for the exported instruction `value`
+  /// given the original operation `op`. Asserts if the operation does
+  /// not implement the disjoint flag interface, and asserts if the value
+  /// is an instruction that implements the disjoint flag.
+  void setDisjointFlag(Operation *op, llvm::Value *value);
+
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
 
@@ -180,6 +187,12 @@ public:
   /// defining a global value.
   llvm::GlobalValue *lookupGlobal(Operation *op) {
     return globalsMapping.lookup(op);
+  }
+
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining a global alias value.
+  llvm::GlobalValue *lookupAlias(Operation *op) {
+    return aliasesMapping.lookup(op);
   }
 
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
@@ -221,6 +234,11 @@ public:
     return convertBlockImpl(bb, ignoreArguments, builder,
                             /*recordInsertions=*/false);
   }
+
+  /// Translates parameter attributes of a call and adds them to the returned
+  /// AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(CallOpInterface callOp,
+                                                     DictionaryAttr paramAttrs);
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
@@ -272,13 +290,12 @@ public:
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
-  WalkResult
-  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+  WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
     static_assert(std::is_base_of<StackFrame, T>::value,
                   "expected T derived from StackFrame");
     if (!callback)
       return WalkResult::skip();
-    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
       if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
         WalkResult result = callback(*ptr);
         if (result.wasInterrupted())
@@ -315,7 +332,13 @@ private:
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
-  LogicalResult convertGlobals();
+
+  /// Handle conversion for both globals and global aliases.
+  ///
+  /// - Create named global variables that correspond to llvm.mlir.global
+  /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
+  /// - Create global alias that correspond to llvm.mlir.alias.
+  LogicalResult convertGlobalsAndAliases();
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,
@@ -332,13 +355,16 @@ private:
   /// Process the ident LLVM Metadata, if it exists.
   LogicalResult createIdentMetadata();
 
+  /// Process the llvm.commandline LLVM Metadata, if it exists.
+  LogicalResult createCommandlineMetadata();
+
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
   convertDialectAttributes(Operation *op,
                            ArrayRef<llvm::Instruction *> instructions);
 
-  /// Translates parameter attributes and adds them to the returned AttrBuilder.
-  /// Returns failure if any of the translations failed.
+  /// Translates parameter attributes of a function and adds them to the
+  /// returned AttrBuilder. Returns failure if any of the translations failed.
   FailureOr<llvm::AttrBuilder>
   convertParameterAttrs(LLVMFuncOp func, int argIdx, DictionaryAttr paramAttrs);
 
@@ -356,6 +382,10 @@ private:
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// Mappings between llvm.mlir.alias definitions and corresponding global
+  /// aliases.
+  DenseMap<Operation *, llvm::GlobalValue *> aliasesMapping;
 
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;

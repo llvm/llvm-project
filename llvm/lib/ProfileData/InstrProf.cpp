@@ -483,16 +483,16 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO), AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
-    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO), AddCanonical))
       return E;
   }
 
@@ -630,7 +630,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   return PGOName;
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
+                                       bool AddCanonical) {
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
@@ -639,6 +640,9 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   };
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
+
+  if (!AddCanonical)
+    return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
   if (CanonicalFuncName != PGOFuncName)
@@ -1072,7 +1076,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     // BalancedPartitioning more effective.
     for (auto &[Id, UNs] : IdToUNs)
       llvm::erase_if(UNs, [&](auto &UN) {
-        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+        unsigned Freq = UNFrequency[UN];
+        return Freq <= 1 || 2 * Freq > IdToUNs.size();
       });
   }
 

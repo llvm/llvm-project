@@ -1,5 +1,5 @@
 # UNSUPPORTED: target={{.*-windows.*}}
-# RUN: not llvm-mc -triple=riscv64 -riscv-no-aliases < %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=riscv64 -M no-aliases < %s -o /dev/null 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple=riscv64 < %s 2>&1 -o /dev/null | FileCheck %s
 
 li t5, 0x10000000000000000 # CHECK: :[[@LINE]]:8: error: unknown operand

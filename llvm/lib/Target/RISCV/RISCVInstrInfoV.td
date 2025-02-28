@@ -48,6 +48,15 @@ def VMaskAsmOperand : AsmOperandClass {
   let IsOptional = 1;
   let DefaultMethod = "defaultMaskRegOp";
   let DiagnosticType = "InvalidVMaskRegister";
+  let DiagnosticString = "operand must be v0.t";
+}
+
+def VMaskCarryInAsmOperand : AsmOperandClass {
+  let Name = "RVVMaskCarryInRegOpOperand";
+  let RenderMethod = "addRegOperands";
+  let PredicateMethod = "isV0Reg";
+  let DiagnosticType = "InvalidVMaskCarryInRegister";
+  let DiagnosticString = "operand must be v0";
 }
 
 def VMaskOp : RegisterOperand<VMV0> {
@@ -55,6 +64,11 @@ def VMaskOp : RegisterOperand<VMV0> {
   let PrintMethod = "printVMaskReg";
   let EncoderMethod = "getVMaskReg";
   let DecoderMethod = "decodeVMaskReg";
+}
+
+def VMaskCarryInOp : RegisterOperand<VMV0> {
+  let ParserMatchClass = VMaskCarryInAsmOperand;
+  let EncoderMethod = "getVMaskReg";
 }
 
 def simm5 : RISCVSImmLeafOp<5> {
@@ -66,15 +80,9 @@ def simm5 : RISCVSImmLeafOp<5> {
   }];
 }
 
-def SImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "SImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidSImm5Plus1";
-}
-
 def simm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
-  let ParserMatchClass = SImm5Plus1AsmOperand;
+  let ParserMatchClass = SImmAsmOperand<5, "Plus1">;
   let OperandType = "OPERAND_SIMM5_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -104,13 +112,28 @@ class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
                   string mx = "WorstCase", int sew = 0, bit forceMasked = 0,
                   bit forcePassthruRead = 0> : Sched<[]> {
   defvar isMasked = !ne(!find(NAME, "_MASK"), -1);
+  defvar isTied = !ne(!find(NAME, "_TIED"), -1);
   defvar isMaskedOrForceMasked = !or(forceMasked, isMasked);
+  defvar isTiedMasked = !and(isMaskedOrForceMasked, isTied);
   defvar passthruRead = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
                             !cast<SchedRead>("ReadVPassthru_" # mx),
                             !cast<SchedRead>("ReadVPassthru_" # mx # "_E" #sew));
-  defvar needsPassthruRead = !or(isMaskedOrForceMasked, forcePassthruRead);
+  // We don't need passthru operand if it's already _TIED without mask.
+  defvar needsForcePassthruRead = !and(forcePassthruRead, !not(isTied));
+  defvar needsPassthruRead = !or(isMaskedOrForceMasked, needsForcePassthruRead);
+  // If this is a _TIED + masked operation, $rs2 (i.e. the first operand) is
+  // merged with the mask.
+  // NOTE: the following if statement is written in such a weird way because
+  // should we want to write something like
+  // `!if(!and(!not(!empty(reads), isTiedMasked), !tail(reads), reads)`
+  // since `!if` doesn't have a proper short-circuit behavior, if the
+  // condition of this `!if` cannot be resolved right away, `!tail(reads)` will
+  // be immediately evaluated anyway even when `reads` is empty, which leads to
+  // an assertion failure.
+  defvar readsWithTiedMask =
+      !if(isTiedMasked, !if(!not(!empty(reads)), !tail(reads), reads), reads);
   defvar readsWithMask =
-      !if(isMaskedOrForceMasked, !listconcat(reads, [ReadVMask]), reads);
+      !if(isMaskedOrForceMasked, !listconcat(readsWithTiedMask, [ReadVMask]), reads);
   defvar allReads =
       !if(needsPassthruRead, !listconcat([passthruRead], readsWithMask), reads);
   let SchedRW = !listconcat(writes, allReads);
@@ -433,10 +456,8 @@ class VALUVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 // op vd, vs2, vs1, v0 (without mask, use v0 as carry input)
 class VALUmVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd),
-                (ins VR:$vs2, VR:$vs1, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $vs1, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, VR:$vs1, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $vs1, $vm">;
 
 // op vd, vs1, vs2, vm (reverse the order of vs1 and vs2)
 class VALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
@@ -465,10 +486,8 @@ class VALUVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 // op vd, vs2, rs1, v0 (without mask, use v0 as carry input)
 class VALUmVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVX<funct6, opv, (outs VR:$vd),
-                (ins VR:$vs2, GPR:$rs1, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $rs1, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, GPR:$rs1, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $rs1, $vm">;
 
 // op vd, rs1, vs2, vm (reverse the order of rs1 and vs2)
 class VALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
@@ -497,10 +516,8 @@ class VALUVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
 // op vd, vs2, imm, v0 (without mask, use v0 as carry input)
 class VALUmVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : RVInstIVI<funct6, (outs VR:$vd),
-                (ins VR:$vs2, optype:$imm, VMV0:$v0),
-                opcodestr, "$vd, $vs2, $imm, v0"> {
-  let vm = 0;
-}
+                (ins VR:$vs2, optype:$imm, VMaskCarryInOp:$vm),
+                opcodestr, "$vd, $vs2, $imm, $vm">;
 
 // op vd, vs2, imm, vm
 class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
@@ -630,31 +647,37 @@ multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VALUm_IV_V_X<string opcodestr, bits<6> funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WritePrefix = !if(funct6{0}, "WriteVICALUM", "WriteVICALU");
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
-           SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV">;
+           SchedBinaryMC<WritePrefix#"V", "ReadVICALUV", "ReadVICALUV">;
   def XM : VALUmVX<funct6, OPIVX, opcodestr # ".vxm">,
-           SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX">;
+           SchedBinaryMC<WritePrefix#"X", "ReadVICALUV", "ReadVICALUX">;
 }
 
 multiclass VALUm_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VALUm_IV_V_X<opcodestr, funct6> {
+  // if LSB of funct6 is 1, it's a mask-producing instruction that
+  // uses a different scheduling class.
+  defvar WriteSched = !if(funct6{0}, "WriteVICALUMI", "WriteVICALUI");
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
-           SchedUnaryMC<"WriteVICALUI", "ReadVICALUV">;
+           SchedUnaryMC<WriteSched, "ReadVICALUV">;
 }
 
 multiclass VALUNoVm_IV_V_X<string opcodestr, bits<6> funct6> {
   def V : VALUVVNoVm<funct6, OPIVV, opcodestr # ".vv">,
-          SchedBinaryMC<"WriteVICALUV", "ReadVICALUV", "ReadVICALUV",
+          SchedBinaryMC<"WriteVICALUMV", "ReadVICALUV", "ReadVICALUV",
                         forceMasked=0>;
   def X : VALUVXNoVm<funct6, OPIVX, opcodestr # ".vx">,
-          SchedBinaryMC<"WriteVICALUX", "ReadVICALUV", "ReadVICALUX",
+          SchedBinaryMC<"WriteVICALUMX", "ReadVICALUV", "ReadVICALUX",
                         forceMasked=0>;
 }
 
 multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
   def I : VALUVINoVm<funct6, opcodestr # ".vi">,
-          SchedUnaryMC<"WriteVICALUI", "ReadVICALUV", forceMasked=0>;
+          SchedUnaryMC<"WriteVICALUMI", "ReadVICALUV", forceMasked=0>;
 }
 
 multiclass VALU_FV_F<string opcodestr, bits<6> funct6> {
@@ -1142,13 +1165,11 @@ defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
-let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
-defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
-defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 defm VSBC_V : VALUm_IV_V_X<"vsbc", 0b010010>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint,
     DestEEW = EEW1 in {
+defm VMADC_V : VALUm_IV_V_X_I<"vmadc", 0b010001>;
+defm VMADC_V : VALUNoVm_IV_V_X_I<"vmadc", 0b010001>;
 defm VMSBC_V : VALUm_IV_V_X<"vmsbc", 0b010011>;
 defm VMSBC_V : VALUNoVm_IV_V_X<"vmsbc", 0b010011>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, DestEEW = EEW1
@@ -1337,7 +1358,7 @@ defm VNCLIP_W : VNCLP_IV_V_X_I<"vnclip", 0b101111>;
 
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Add/Subtract Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFADD_V : VALU_FV_V_F<"vfadd", 0b000000>;
 defm VFSUB_V : VALU_FV_V_F<"vfsub", 0b000010>;
 defm VFRSUB_V : VALU_FV_F<"vfrsub", 0b100111>;
@@ -1345,7 +1366,7 @@ defm VFRSUB_V : VALU_FV_F<"vfrsub", 0b100111>;
 
 // Vector Widening Floating-Point Add/Subtract Instructions
 let Constraints = "@earlyclobber $vd",
-    Uses = [FRM],
+    Uses = [FRM, VL, VTYPE],
     mayRaiseFPException = true,
     DestEEW = EEWSEWx2 in {
 let RVVConstraint = WidenV in {
@@ -1360,10 +1381,10 @@ let RVVConstraint = WidenW in {
 defm VFWADD_W : VWALU_FV_V_F<"vfwadd", 0b110100, "w">;
 defm VFWSUB_W : VWALU_FV_V_F<"vfwsub", 0b110110, "w">;
 } // RVVConstraint = WidenW
-} // Constraints = "@earlyclobber $vd", Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Multiply/Divide Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFMUL_V : VMUL_FV_V_F<"vfmul", 0b100100>;
 defm VFDIV_V : VDIV_FV_V_F<"vfdiv", 0b100000>;
 defm VFRDIV_V : VDIV_FV_F<"vfrdiv", 0b100001>;
@@ -1371,12 +1392,12 @@ defm VFRDIV_V : VDIV_FV_F<"vfrdiv", 0b100001>;
 
 // Vector Widening Floating-Point Multiply
 let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
-    Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 defm VFWMUL_V : VWMUL_FV_V_F<"vfwmul", 0b111000>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFMACC_V : VMAC_FV_V_F<"vfmacc", 0b101100>;
 defm VFNMACC_V : VMAC_FV_V_F<"vfnmacc", 0b101101>;
 defm VFMSAC_V : VMAC_FV_V_F<"vfmsac", 0b101110>;
@@ -1388,15 +1409,15 @@ defm VFNMSUB_V : VMAC_FV_V_F<"vfnmsub", 0b101011>;
 }
 
 // Vector Widening Floating-Point Fused Multiply-Add Instructions
-let Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 defm VFWMACC_V : VWMAC_FV_V_F<"vfwmacc", 0b111100>;
 defm VFWNMACC_V : VWMAC_FV_V_F<"vfwnmacc", 0b111101>;
 defm VFWMSAC_V : VWMAC_FV_V_F<"vfwmsac", 0b111110>;
 defm VFWNMSAC_V : VWMAC_FV_V_F<"vfwnmsac", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Floating-Point Square-Root Instruction
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFSQRT_V : VSQR_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
 defm VFREC7_V : VRCP_FV_VS2<"vfrec7.v", 0b010011, 0b00101>;
 }
@@ -1445,10 +1466,9 @@ defm VFCLASS_V : VCLS_FV_VS2<"vfclass.v", 0b010011, 0b10000>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 // Vector Floating-Point Merge Instruction
-let vm = 0 in
 def VFMERGE_VFM : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
-                           (ins VR:$vs2, FPR32:$rs1, VMV0:$v0),
-                           "vfmerge.vfm", "$vd, $vs2, $rs1, v0">,
+                           (ins VR:$vs2, FPR32:$rs1, VMaskCarryInOp:$vm),
+                           "vfmerge.vfm", "$vd, $vs2, $rs1, $vm">,
                   SchedBinaryMC<"WriteVFMergeV", "ReadVFMergeV", "ReadVFMergeF">;
 
 // Vector Floating-Point Move Instruction
@@ -1462,13 +1482,13 @@ def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 
 // Single-Width Floating-Point/Integer Type-Convert Instructions
 let mayRaiseFPException = true in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
 defm VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
 }
 defm VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
 defm VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
 defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 }
@@ -1477,7 +1497,7 @@ defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 // Widening Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
     mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
 defm VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
 }
@@ -1490,13 +1510,13 @@ defm VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
 defm VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
 }
 defm VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
 defm VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
-let Uses = [FRM] in {
+let Uses = [FRM, VL, VTYPE] in {
 defm VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
 defm VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
 defm VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
@@ -1534,7 +1554,7 @@ defm VWREDSUM : VWRED_IV_V<"vwredsum", 0b110001>;
 let Predicates = [HasVInstructionsAnyF] in {
 // Vector Single-Width Floating-Point Reduction Instructions
 let RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFREDOSUM : VREDO_FV_V<"vfredosum", 0b000011>;
 defm VFREDUSUM : VRED_FV_V<"vfredusum", 0b000001>;
 }
@@ -1553,7 +1573,7 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDep
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
-let Uses = [FRM], mayRaiseFPException = true in {
+let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
 defm VFWREDOSUM : VWREDO_FV_V<"vfwredosum", 0b110011>;
 defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }
@@ -1707,7 +1727,7 @@ foreach n = [1, 2, 4, 8] in {
   def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
                            (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
                    VMVRSched<n> {
-    let Uses = [];
+    let Uses = [VTYPE];
     let vm = 1;
   }
 }

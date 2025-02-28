@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_STRINGREF_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
 #error This .def file is expected to be included in translation units where \
-"llvm/ADT/StringRef.h" is already included!
+"clang/StaticAnalyzer/Core/AnalyzerOptions.h" is already included!
 #endif
 
 #ifdef ANALYZER_OPTION
@@ -189,20 +189,40 @@ ANALYZER_OPTION(
     "crosscheck-with-z3-eqclass-timeout-threshold",
     "Set a timeout for bug report equivalence classes in milliseconds. "
     "If we exhaust this threshold, we will drop the bug report eqclass "
-    "instead of doing more Z3 queries. Set 0 for no timeout.", 700)
+    "instead of doing more Z3 queries. Setting this to 700 ms in conjunction "
+    "with \"crosscheck-with-z3-timeout-threshold\" of 300 ms, would nicely "
+    "guarantee that no bug report equivalence class can take longer than "
+    "1 second, effectively mitigating Z3 hangs during refutation. "
+    "If there were Z3 retries, only the minimum query time is considered "
+    "when accumulating query times within a report equivalence class. "
+    "Set 0 for no timeout.", 0)
 
 ANALYZER_OPTION(
     unsigned, Z3CrosscheckTimeoutThreshold,
     "crosscheck-with-z3-timeout-threshold",
     "Set a timeout for individual Z3 queries in milliseconds. "
-    "Set 0 for no timeout.", 300)
+    "On fast machines, 300 worked well in some cases. "
+    "The lower it is, the higher the chances of having flaky issues. "
+    "Having no timeout may hang the analyzer indefinitely. "
+    "Set 0 for no timeout.", 15'000)
 
 ANALYZER_OPTION(
     unsigned, Z3CrosscheckRLimitThreshold,
     "crosscheck-with-z3-rlimit-threshold",
-    "Set the Z3 resource limit threshold. This sets a deterministic cutoff "
-    "point for Z3 queries, as longer queries usually consume more resources. "
-    "Set 0 for unlimited.", 400'000)
+    "Set the Z3 resource limit threshold. This sets a supposedly deterministic "
+    "cutoff point for Z3 queries, as longer queries usually consume more "
+    "resources. "
+    "400'000 should on average make Z3 queries run for up to 100ms on modern "
+    "hardware. Set 0 for unlimited.", 0)
+
+ANALYZER_OPTION(
+    PositiveAnalyzerOption, Z3CrosscheckMaxAttemptsPerQuery,
+    "crosscheck-with-z3-max-attempts-per-query",
+    "Set how many times the oracle is allowed to run a Z3 query. "
+    "This must be a positive value. Set 1 to not allow any retry attempts. "
+    "Increasing the number of attempts is often more effective at reducing "
+    "the number of nondeterministic diagnostics than "
+    "\"crosscheck-with-z3-timeout-threshold\" in practice.", 3)
 
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
@@ -275,6 +295,16 @@ ANALYZER_OPTION(
     "Whether the analysis should try to unroll loops with known bounds.", false)
 
 ANALYZER_OPTION(
+    bool, ShouldAssumeAtLeastOneIteration, "assume-at-least-one-iteration",
+    "Whether the analyzer should always assume at least one iteration in "
+    "loops where the loop condition is opaque (i.e. the analyzer cannot "
+    "determine if it's true or false). Setting this to true eliminates some "
+    "false positives (where e.g. a structure is nonempty, but the analyzer "
+    "does not notice this); but it also eliminates some true positives (e.g. "
+    "cases where a structure can be empty and this causes buggy behavior).",
+    false)
+
+ANALYZER_OPTION(
     bool, ShouldDisplayNotesAsEvents, "notes-as-events",
     "Whether the bug reporter should transparently treat extra note diagnostic "
     "pieces as event diagnostic pieces. Useful when the diagnostic consumer "
@@ -299,13 +329,12 @@ ANALYZER_OPTION(
 
 ANALYZER_OPTION(
     bool, ShouldEagerlyAssume, "eagerly-assume",
-    "Whether we should eagerly assume evaluations of conditionals, thus, "
-    "bifurcating the path. This indicates how the engine should handle "
-    "expressions such as: 'x = (y != 0)'. When this is true then the "
-    "subexpression 'y != 0' will be eagerly assumed to be true or false, thus "
-    "evaluating it to the integers 0 or 1 respectively. The upside is that "
-    "this can increase analysis precision until we have a better way to lazily "
-    "evaluate such logic. The downside is that it eagerly bifurcates paths.",
+    "If this is enabled (the default behavior), when the analyzer encounters "
+    "a comparison operator or logical negation, it immediately splits the "
+    "state to separate the case when the expression is true and the case when "
+    "it's false. The upside is that this can increase analysis precision until "
+    "we have a better way to lazily evaluate such logic; the downside is that "
+    "it eagerly bifurcates paths.",
     true)
 
 ANALYZER_OPTION(
@@ -453,6 +482,14 @@ ANALYZER_OPTION(
     "a LazyCompoundVal on bind. To disable all small-array-dependent "
     "behavior, set the option to 0.",
     5)
+
+ANALYZER_OPTION(
+    unsigned, RegionStoreMaxBindingFanOut, "region-store-max-binding-fanout",
+    "This option limits how many sub-bindings a single binding operation can "
+    "scatter into. For example, binding an array would scatter into binding "
+    "each individual element. Setting this to zero means unlimited, but then "
+    "modelling large array initializers may take proportional time to their "
+    "size.", 128)
 
 //===----------------------------------------------------------------------===//
 // String analyzer options.

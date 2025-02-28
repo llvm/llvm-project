@@ -11,7 +11,7 @@ end module m
 !CHECK-DAG: %[[S0:.*]] = llvm.intr.stacksave : !llvm.ptr
 !CHECK-DAG: fir.call @test_proc() proc_attrs<bind_c> fastmath<contract> : () -> ()
 !CHECK-DAG: llvm.intr.stackrestore %[[S0]] : !llvm.ptr
-!CHECK-DAG: func.func private @test_proc() attributes {fir.bindc_name = "test_proc"}
+!CHECK-DAG: func.func private @test_proc() attributes {fir.bindc_name = "test_proc", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 subroutine test
     BLOCK
         use m

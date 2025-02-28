@@ -103,7 +103,7 @@ float defined_func_f32(float a, float b, float c) {
 // CFINITEONLY-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// CFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // CFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -111,7 +111,7 @@ float defined_func_f32(float a, float b, float c) {
 // CLFINITEONLY-SAME: (<2 x double> noundef nofpclass(nan inf) [[A:%.*]], <2 x double> noundef nofpclass(nan inf) [[B:%.*]], <2 x double> noundef nofpclass(nan inf) [[C:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[C]])
-// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], <double 4.000000e+00, double 4.000000e+00>
+// CLFINITEONLY-NEXT:    [[ADD:%.*]] = fadd nnan ninf <2 x double> [[TMP0]], splat (double 4.000000e+00)
 // CLFINITEONLY-NEXT:    ret <2 x double> [[ADD]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
@@ -128,7 +128,7 @@ float defined_func_f32(float a, float b, float c) {
 // NONANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NONANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NONANS-NEXT:    [[TMP3:%.*]] = call nnan <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NONANS-NEXT:    [[ADD:%.*]] = fadd nnan <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NONANS-NEXT:    ret <2 x double> [[ADD]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
@@ -145,7 +145,7 @@ float defined_func_f32(float a, float b, float c) {
 // NOINFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16
 // NOINFS-NEXT:    [[TMP3:%.*]] = call ninf <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]], <2 x double> [[TMP2]])
-// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], <double 4.000000e+00, double 4.000000e+00>
+// NOINFS-NEXT:    [[ADD:%.*]] = fadd ninf <2 x double> [[TMP3]], splat (double 4.000000e+00)
 // NOINFS-NEXT:    ret <2 x double> [[ADD]]
 //
 double2 defined_func_v2f64(double2 a, double2 b, double2 c) {
@@ -519,7 +519,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 }
 
 // CFINITEONLY: Function Attrs: noinline nounwind optnone
-// CFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// CFINITEONLY-LABEL: define dso_local nofpclass(nan inf) { double, double } @defined_complex_func_f64_ret
 // CFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // CFINITEONLY-NEXT:  entry:
 // CFINITEONLY-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -548,7 +548,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan ninf uno double [[MUL_I]], [[MUL_I]]
 // CFINITEONLY-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // CFINITEONLY:       complex_mul_libcall:
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // CFINITEONLY-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -563,7 +563,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    ret { double, double } [[TMP4]]
 //
 // CLFINITEONLY: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-// CLFINITEONLY-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) { double, double } @defined_complex_func_f64_ret
 // CLFINITEONLY-SAME: (double noundef nofpclass(nan inf) [[C_COERCE0:%.*]], double noundef nofpclass(nan inf) [[C_COERCE1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[MUL_AD:%.*]] = fmul nnan ninf double [[C_COERCE0]], [[C_COERCE1]]
@@ -576,7 +576,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CLFINITEONLY-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // NONANS: Function Attrs: noinline nounwind optnone
-// NONANS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// NONANS-LABEL: define dso_local nofpclass(nan) { double, double } @defined_complex_func_f64_ret
 // NONANS-SAME: (double noundef nofpclass(nan) [[C_COERCE0:%.*]], double noundef nofpclass(nan) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NONANS-NEXT:  entry:
 // NONANS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -605,7 +605,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan uno double [[MUL_I]], [[MUL_I]]
 // NONANS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NONANS:       complex_mul_libcall:
-// NONANS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan nofpclass(nan) { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NONANS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NONANS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NONANS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -620,7 +620,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    ret { double, double } [[TMP4]]
 //
 // NOINFS: Function Attrs: noinline nounwind optnone
-// NOINFS-LABEL: define dso_local { double, double } @defined_complex_func_f64_ret
+// NOINFS-LABEL: define dso_local nofpclass(inf) { double, double } @defined_complex_func_f64_ret
 // NOINFS-SAME: (double noundef nofpclass(inf) [[C_COERCE0:%.*]], double noundef nofpclass(inf) [[C_COERCE1:%.*]]) #[[ATTR0]] {
 // NOINFS-NEXT:  entry:
 // NOINFS-NEXT:    [[RETVAL:%.*]] = alloca { double, double }, align 8
@@ -649,7 +649,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NOINFS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp ninf uno double [[MUL_I]], [[MUL_I]]
 // NOINFS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NOINFS:       complex_mul_libcall:
-// NOINFS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf nofpclass(inf) { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NOINFS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NOINFS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NOINFS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -679,14 +679,14 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CFINITEONLY-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
 // CFINITEONLY-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CFINITEONLY-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
-// CFINITEONLY-NEXT:    [[EXT:%.*]] = fpext half [[C_REAL]] to float
-// CFINITEONLY-NEXT:    [[EXT1:%.*]] = fpext half [[C_IMAG]] to float
+// CFINITEONLY-NEXT:    [[EXT:%.*]] = fpext nnan ninf half [[C_REAL]] to float
+// CFINITEONLY-NEXT:    [[EXT1:%.*]] = fpext nnan ninf half [[C_IMAG]] to float
 // CFINITEONLY-NEXT:    [[C_REALP2:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CFINITEONLY-NEXT:    [[C_REAL3:%.*]] = load half, ptr [[C_REALP2]], align 2
 // CFINITEONLY-NEXT:    [[C_IMAGP4:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CFINITEONLY-NEXT:    [[C_IMAG5:%.*]] = load half, ptr [[C_IMAGP4]], align 2
-// CFINITEONLY-NEXT:    [[EXT6:%.*]] = fpext half [[C_REAL3]] to float
-// CFINITEONLY-NEXT:    [[EXT7:%.*]] = fpext half [[C_IMAG5]] to float
+// CFINITEONLY-NEXT:    [[EXT6:%.*]] = fpext nnan ninf half [[C_REAL3]] to float
+// CFINITEONLY-NEXT:    [[EXT7:%.*]] = fpext nnan ninf half [[C_IMAG5]] to float
 // CFINITEONLY-NEXT:    [[MUL_AC:%.*]] = fmul nnan ninf float [[EXT]], [[EXT6]]
 // CFINITEONLY-NEXT:    [[MUL_BD:%.*]] = fmul nnan ninf float [[EXT1]], [[EXT7]]
 // CFINITEONLY-NEXT:    [[MUL_AD:%.*]] = fmul nnan ninf float [[EXT]], [[EXT7]]
@@ -709,8 +709,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CFINITEONLY:       complex_mul_cont:
 // CFINITEONLY-NEXT:    [[REAL_MUL_PHI:%.*]] = phi nnan ninf float [ [[MUL_R]], [[ENTRY:%.*]] ], [ [[MUL_R]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_REAL]], [[COMPLEX_MUL_LIBCALL]] ]
 // CFINITEONLY-NEXT:    [[IMAG_MUL_PHI:%.*]] = phi nnan ninf float [ [[MUL_I]], [[ENTRY]] ], [ [[MUL_I]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_IMAG]], [[COMPLEX_MUL_LIBCALL]] ]
-// CFINITEONLY-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[REAL_MUL_PHI]] to half
-// CFINITEONLY-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc float [[IMAG_MUL_PHI]] to half
+// CFINITEONLY-NEXT:    [[UNPROMOTION:%.*]] = fptrunc nnan ninf float [[REAL_MUL_PHI]] to half
+// CFINITEONLY-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc nnan ninf float [[IMAG_MUL_PHI]] to half
 // CFINITEONLY-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // CFINITEONLY-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // CFINITEONLY-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
@@ -723,16 +723,16 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // CLFINITEONLY-SAME: (<2 x half> noundef nofpclass(nan inf) [[C_COERCE:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[C_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x half> [[C_COERCE]], i64 0
-// CLFINITEONLY-NEXT:    [[EXT:%.*]] = fpext half [[C_SROA_0_0_VEC_EXTRACT]] to float
+// CLFINITEONLY-NEXT:    [[EXT:%.*]] = fpext nnan ninf half [[C_SROA_0_0_VEC_EXTRACT]] to float
 // CLFINITEONLY-NEXT:    [[C_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <2 x half> [[C_COERCE]], i64 1
-// CLFINITEONLY-NEXT:    [[EXT1:%.*]] = fpext half [[C_SROA_0_2_VEC_EXTRACT]] to float
+// CLFINITEONLY-NEXT:    [[EXT1:%.*]] = fpext nnan ninf half [[C_SROA_0_2_VEC_EXTRACT]] to float
 // CLFINITEONLY-NEXT:    [[MUL_AD:%.*]] = fmul nnan ninf float [[EXT]], [[EXT1]]
 // CLFINITEONLY-NEXT:    [[MUL_I:%.*]] = fadd nnan ninf float [[MUL_AD]], [[MUL_AD]]
 // CLFINITEONLY-NEXT:    [[MUL_AC:%.*]] = fmul nnan ninf float [[EXT]], [[EXT]]
 // CLFINITEONLY-NEXT:    [[MUL_BD:%.*]] = fmul nnan ninf float [[EXT1]], [[EXT1]]
 // CLFINITEONLY-NEXT:    [[MUL_R:%.*]] = fsub nnan ninf float [[MUL_AC]], [[MUL_BD]]
-// CLFINITEONLY-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[MUL_R]] to half
-// CLFINITEONLY-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc float [[MUL_I]] to half
+// CLFINITEONLY-NEXT:    [[UNPROMOTION:%.*]] = fptrunc nnan ninf float [[MUL_R]] to half
+// CLFINITEONLY-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc nnan ninf float [[MUL_I]] to half
 // CLFINITEONLY-NEXT:    [[RETVAL_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x half> poison, half [[UNPROMOTION]], i64 0
 // CLFINITEONLY-NEXT:    [[RETVAL_SROA_0_2_VEC_INSERT:%.*]] = insertelement <2 x half> [[RETVAL_SROA_0_0_VEC_INSERT]], half [[UNPROMOTION9]], i64 1
 // CLFINITEONLY-NEXT:    ret <2 x half> [[RETVAL_SROA_0_2_VEC_INSERT]]
@@ -749,14 +749,14 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NONANS-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
 // NONANS-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // NONANS-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
-// NONANS-NEXT:    [[EXT:%.*]] = fpext half [[C_REAL]] to float
-// NONANS-NEXT:    [[EXT1:%.*]] = fpext half [[C_IMAG]] to float
+// NONANS-NEXT:    [[EXT:%.*]] = fpext nnan half [[C_REAL]] to float
+// NONANS-NEXT:    [[EXT1:%.*]] = fpext nnan half [[C_IMAG]] to float
 // NONANS-NEXT:    [[C_REALP2:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // NONANS-NEXT:    [[C_REAL3:%.*]] = load half, ptr [[C_REALP2]], align 2
 // NONANS-NEXT:    [[C_IMAGP4:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // NONANS-NEXT:    [[C_IMAG5:%.*]] = load half, ptr [[C_IMAGP4]], align 2
-// NONANS-NEXT:    [[EXT6:%.*]] = fpext half [[C_REAL3]] to float
-// NONANS-NEXT:    [[EXT7:%.*]] = fpext half [[C_IMAG5]] to float
+// NONANS-NEXT:    [[EXT6:%.*]] = fpext nnan half [[C_REAL3]] to float
+// NONANS-NEXT:    [[EXT7:%.*]] = fpext nnan half [[C_IMAG5]] to float
 // NONANS-NEXT:    [[MUL_AC:%.*]] = fmul nnan float [[EXT]], [[EXT6]]
 // NONANS-NEXT:    [[MUL_BD:%.*]] = fmul nnan float [[EXT1]], [[EXT7]]
 // NONANS-NEXT:    [[MUL_AD:%.*]] = fmul nnan float [[EXT]], [[EXT7]]
@@ -779,8 +779,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NONANS:       complex_mul_cont:
 // NONANS-NEXT:    [[REAL_MUL_PHI:%.*]] = phi nnan float [ [[MUL_R]], [[ENTRY:%.*]] ], [ [[MUL_R]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_REAL]], [[COMPLEX_MUL_LIBCALL]] ]
 // NONANS-NEXT:    [[IMAG_MUL_PHI:%.*]] = phi nnan float [ [[MUL_I]], [[ENTRY]] ], [ [[MUL_I]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_IMAG]], [[COMPLEX_MUL_LIBCALL]] ]
-// NONANS-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[REAL_MUL_PHI]] to half
-// NONANS-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc float [[IMAG_MUL_PHI]] to half
+// NONANS-NEXT:    [[UNPROMOTION:%.*]] = fptrunc nnan float [[REAL_MUL_PHI]] to half
+// NONANS-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc nnan float [[IMAG_MUL_PHI]] to half
 // NONANS-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // NONANS-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // NONANS-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
@@ -800,14 +800,14 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NOINFS-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
 // NOINFS-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // NOINFS-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
-// NOINFS-NEXT:    [[EXT:%.*]] = fpext half [[C_REAL]] to float
-// NOINFS-NEXT:    [[EXT1:%.*]] = fpext half [[C_IMAG]] to float
+// NOINFS-NEXT:    [[EXT:%.*]] = fpext ninf half [[C_REAL]] to float
+// NOINFS-NEXT:    [[EXT1:%.*]] = fpext ninf half [[C_IMAG]] to float
 // NOINFS-NEXT:    [[C_REALP2:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // NOINFS-NEXT:    [[C_REAL3:%.*]] = load half, ptr [[C_REALP2]], align 2
 // NOINFS-NEXT:    [[C_IMAGP4:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // NOINFS-NEXT:    [[C_IMAG5:%.*]] = load half, ptr [[C_IMAGP4]], align 2
-// NOINFS-NEXT:    [[EXT6:%.*]] = fpext half [[C_REAL3]] to float
-// NOINFS-NEXT:    [[EXT7:%.*]] = fpext half [[C_IMAG5]] to float
+// NOINFS-NEXT:    [[EXT6:%.*]] = fpext ninf half [[C_REAL3]] to float
+// NOINFS-NEXT:    [[EXT7:%.*]] = fpext ninf half [[C_IMAG5]] to float
 // NOINFS-NEXT:    [[MUL_AC:%.*]] = fmul ninf float [[EXT]], [[EXT6]]
 // NOINFS-NEXT:    [[MUL_BD:%.*]] = fmul ninf float [[EXT1]], [[EXT7]]
 // NOINFS-NEXT:    [[MUL_AD:%.*]] = fmul ninf float [[EXT]], [[EXT7]]
@@ -830,8 +830,8 @@ _Complex double defined_complex_func_f64_ret(_Complex double c) {
 // NOINFS:       complex_mul_cont:
 // NOINFS-NEXT:    [[REAL_MUL_PHI:%.*]] = phi ninf float [ [[MUL_R]], [[ENTRY:%.*]] ], [ [[MUL_R]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_REAL]], [[COMPLEX_MUL_LIBCALL]] ]
 // NOINFS-NEXT:    [[IMAG_MUL_PHI:%.*]] = phi ninf float [ [[MUL_I]], [[ENTRY]] ], [ [[MUL_I]], [[COMPLEX_MUL_IMAG_NAN]] ], [ [[COERCE_IMAG]], [[COMPLEX_MUL_LIBCALL]] ]
-// NOINFS-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[REAL_MUL_PHI]] to half
-// NOINFS-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc float [[IMAG_MUL_PHI]] to half
+// NOINFS-NEXT:    [[UNPROMOTION:%.*]] = fptrunc ninf float [[REAL_MUL_PHI]] to half
+// NOINFS-NEXT:    [[UNPROMOTION9:%.*]] = fptrunc ninf float [[IMAG_MUL_PHI]] to half
 // NOINFS-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0
 // NOINFS-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 1
 // NOINFS-NEXT:    store half [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 2
@@ -879,7 +879,7 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // CFINITEONLY-NEXT:    store <2 x half> [[V2F162]], ptr [[V2F16_ADDR]], align 4
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// CFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[TMP3]] to double
+// CFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[TMP3]] to double
 // CFINITEONLY-NEXT:    [[TMP4:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // CFINITEONLY-NEXT:    [[TMP5:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // CFINITEONLY-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8
@@ -920,10 +920,10 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
 // CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic
-// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef readonly byval({ half, half }) align 8 captures(none) [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca { double, double }, align 8
-// CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
+// CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[F32]] to double
 // CLFINITEONLY-NEXT:    [[CF16_REAL:%.*]] = load half, ptr [[CF16]], align 8
 // CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds nuw i8, ptr [[CF16]], i64 2
 // CLFINITEONLY-NEXT:    [[CF16_IMAG:%.*]] = load half, ptr [[CF16_IMAGP]], align 2
@@ -973,7 +973,7 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // NONANS-NEXT:    store <2 x half> [[V2F162]], ptr [[V2F16_ADDR]], align 4
 // NONANS-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // NONANS-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// NONANS-NEXT:    [[CONV:%.*]] = fpext float [[TMP3]] to double
+// NONANS-NEXT:    [[CONV:%.*]] = fpext nnan float [[TMP3]] to double
 // NONANS-NEXT:    [[TMP4:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // NONANS-NEXT:    [[TMP5:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // NONANS-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8
@@ -1048,7 +1048,7 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // NOINFS-NEXT:    store <2 x half> [[V2F162]], ptr [[V2F16_ADDR]], align 4
 // NOINFS-NEXT:    [[TMP2:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // NOINFS-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// NOINFS-NEXT:    [[CONV:%.*]] = fpext float [[TMP3]] to double
+// NOINFS-NEXT:    [[CONV:%.*]] = fpext ninf float [[TMP3]] to double
 // NOINFS-NEXT:    [[TMP4:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // NOINFS-NEXT:    [[TMP5:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // NOINFS-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8
@@ -1132,7 +1132,7 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FPTR_ADDR]], align 8
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // CFINITEONLY-NEXT:    [[TMP4:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// CFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[TMP4]] to double
+// CFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[TMP4]] to double
 // CFINITEONLY-NEXT:    [[TMP5:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // CFINITEONLY-NEXT:    [[TMP6:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // CFINITEONLY-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8
@@ -1173,10 +1173,10 @@ float call_variadic(float f32, double f64, _Float16 f16,
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
 // CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic_indirect
-// CLFINITEONLY-SAME: (ptr nocapture noundef readonly [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-SAME: (ptr noundef readonly captures(none) [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef readonly byval({ half, half }) align 8 captures(none) [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca { double, double }, align 8
-// CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
+// CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[F32]] to double
 // CLFINITEONLY-NEXT:    [[CF16_REAL:%.*]] = load half, ptr [[CF16]], align 8
 // CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds nuw i8, ptr [[CF16]], i64 2
 // CLFINITEONLY-NEXT:    [[CF16_IMAG:%.*]] = load half, ptr [[CF16_IMAGP]], align 2
@@ -1229,7 +1229,7 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // NONANS-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FPTR_ADDR]], align 8
 // NONANS-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // NONANS-NEXT:    [[TMP4:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// NONANS-NEXT:    [[CONV:%.*]] = fpext float [[TMP4]] to double
+// NONANS-NEXT:    [[CONV:%.*]] = fpext nnan float [[TMP4]] to double
 // NONANS-NEXT:    [[TMP5:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // NONANS-NEXT:    [[TMP6:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // NONANS-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8
@@ -1307,7 +1307,7 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // NOINFS-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FPTR_ADDR]], align 8
 // NOINFS-NEXT:    [[TMP3:%.*]] = load float, ptr [[F32_ADDR]], align 4
 // NOINFS-NEXT:    [[TMP4:%.*]] = load float, ptr [[F32_ADDR]], align 4
-// NOINFS-NEXT:    [[CONV:%.*]] = fpext float [[TMP4]] to double
+// NOINFS-NEXT:    [[CONV:%.*]] = fpext ninf float [[TMP4]] to double
 // NOINFS-NEXT:    [[TMP5:%.*]] = load double, ptr [[F64_ADDR]], align 8
 // NOINFS-NEXT:    [[TMP6:%.*]] = load half, ptr [[F16_ADDR]], align 2
 // NOINFS-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[V2F32_ADDR]], align 8

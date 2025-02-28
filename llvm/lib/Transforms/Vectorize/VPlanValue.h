@@ -33,23 +33,28 @@ namespace llvm {
 class raw_ostream;
 class Value;
 class VPDef;
+struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
+class VPInterleaveRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR, instructions which VPlan will generate if executed
-// and live-outs which the VPlan will need to fix accordingly.
+// coming from the input IR and instructions which VPlan will generate if
+// executed.
 class VPValue {
   friend class VPBuilder;
   friend class VPDef;
+  friend struct VPDoubleValueDef;
   friend class VPInstruction;
+  friend class VPInterleaveRecipe;
   friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
+  friend class VPlan;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -64,6 +69,13 @@ protected:
   VPDef *Def;
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+
+  /// Create a live-in VPValue.
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a VPValue for a \p Def which is a subclass of VPValue.
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  /// Create a VPValue for a \p Def which defines multiple values.
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -84,12 +96,6 @@ public:
     VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
   };
 
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
-  /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
-  /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
@@ -135,7 +141,7 @@ public:
   }
 
   /// Returns true if the value has more than one unique user.
-  bool hasMoreThanOneUniqueUser() {
+  bool hasMoreThanOneUniqueUser() const {
     if (getNumUsers() == 0)
       return false;
 
@@ -198,17 +204,7 @@ raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser {
-public:
-  /// Subclass identifier (for isa/dyn_cast).
-  enum class VPUserID {
-    Recipe,
-    LiveOut,
-  };
-
-private:
   SmallVector<VPValue *, 2> Operands;
-
-  VPUserID ID;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -216,16 +212,15 @@ protected:
   void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
 
-  VPUser(ArrayRef<VPValue *> Operands, VPUserID ID) : ID(ID) {
+  VPUser(ArrayRef<VPValue *> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
 
-  VPUser(std::initializer_list<VPValue *> Operands, VPUserID ID)
-      : VPUser(ArrayRef<VPValue *>(Operands), ID) {}
+  VPUser(std::initializer_list<VPValue *> Operands)
+      : VPUser(ArrayRef<VPValue *>(Operands)) {}
 
-  template <typename IterT>
-  VPUser(iterator_range<IterT> Operands, VPUserID ID) : ID(ID) {
+  template <typename IterT> VPUser(iterator_range<IterT> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
@@ -238,8 +233,6 @@ public:
     for (VPValue *Op : operands())
       Op->removeUser(*this);
   }
-
-  VPUserID getVPUserID() const { return ID; }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);
@@ -342,22 +335,25 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
+    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
+    VPReverseVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
+    VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
+    VPHistogramSC,
     // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,
@@ -369,6 +365,7 @@ public:
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
+    VPScalarPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
@@ -435,41 +432,6 @@ public:
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 #endif
-};
-
-class VPlan;
-class VPBasicBlock;
-
-/// This class can be used to assign names to VPValues. For VPValues without
-/// underlying value, assign consecutive numbers and use those as names (wrapped
-/// in vp<>). Otherwise, use the name from the underlying value (wrapped in
-/// ir<>), appending a .V version number if there are multiple uses of the same
-/// name. Allows querying names for VPValues for printing, similar to the
-/// ModuleSlotTracker for IR values.
-class VPSlotTracker {
-  /// Keep track of versioned names assigned to VPValues with underlying IR
-  /// values.
-  DenseMap<const VPValue *, std::string> VPValue2Name;
-  /// Keep track of the next number to use to version the base name.
-  StringMap<unsigned> BaseName2Version;
-
-  /// Number to assign to the next VPValue without underlying value.
-  unsigned NextSlot = 0;
-
-  void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
-  void assignNames(const VPBasicBlock *VPBB);
-
-public:
-  VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
-      assignNames(*Plan);
-  }
-
-  /// Returns the name assigned to \p V, if there is one, otherwise try to
-  /// construct one from the underlying value, if there's one; else return
-  /// <badref>.
-  std::string getOrCreateName(const VPValue *V) const;
 };
 
 } // namespace llvm

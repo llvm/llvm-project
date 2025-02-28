@@ -90,12 +90,35 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         env = self.dap_server.request_evaluate("foo")["body"]["result"]
         self.assertIn("bar", env)
 
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_runInTerminalWithObjectEnv(self):
+        if not self.isTestSupported():
+            return
+        """
+            Tests the "runInTerminal" reverse request. It makes sure that the IDE can
+            launch the inferior with the correct environment variables using an object.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, runInTerminal=True, env={"FOO": "BAR"})
+
+        self.assertEqual(
+            len(self.dap_server.reverse_requests),
+            1,
+            "make sure we got a reverse request",
+        )
+
+        request = self.dap_server.reverse_requests[0]
+        request_envs = request["arguments"]["env"]
+
+        self.assertIn("FOO", request_envs)
+        self.assertEqual("BAR", request_envs["FOO"])
+
     @skipIfWindows
     @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
             return
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         response = self.launch(
             "INVALIDPROGRAM",
             runInTerminal=True,
@@ -224,4 +247,4 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.readPidMessage(comm_file)
 
         _, stderr = proc.communicate()
-        self.assertIn("Timed out trying to get messages from the debug adaptor", stderr)
+        self.assertIn("Timed out trying to get messages from the debug adapter", stderr)

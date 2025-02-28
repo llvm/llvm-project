@@ -12,7 +12,6 @@
 
 #include "MipsInstPrinter.h"
 #include "Mips.h"
-#include "MipsMCExpr.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -72,7 +71,7 @@ const char* Mips::MipsFCCToString(Mips::CondCode CC) {
   llvm_unreachable("Impossible condition code!");
 }
 
-void MipsInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void MipsInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register)
       << '$' << StringRef(getRegisterName(Reg)).lower();
 }

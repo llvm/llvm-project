@@ -155,7 +155,7 @@ LogicalResult spirv::Deserializer::processHeader() {
 LogicalResult
 spirv::Deserializer::processCapability(ArrayRef<uint32_t> operands) {
   if (operands.size() != 1)
-    return emitError(unknownLoc, "OpMemoryModel must have one parameter");
+    return emitError(unknownLoc, "OpCapability must have one parameter");
 
   auto cap = spirv::symbolizeCapability(operands[0]);
   if (!cap)
@@ -223,6 +223,28 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
                      opBuilder.getAttr<spirv::MemoryModelAttr>(
                          static_cast<spirv::MemoryModel>(operands.back())));
 
+  return success();
+}
+
+template <typename AttrTy, typename EnumAttrTy, typename EnumTy>
+LogicalResult deserializeCacheControlDecoration(
+    Location loc, OpBuilder &opBuilder,
+    DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
+    StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
+  if (words.size() != 4) {
+    return emitError(loc, "OpDecoration with ")
+           << decorationName << "needs a cache control integer literal and a "
+           << cacheControlKind << " cache control literal";
+  }
+  unsigned cacheLevel = words[2];
+  auto cacheControlAttr = static_cast<EnumTy>(words[3]);
+  auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
+  SmallVector<Attribute> attrs;
+  if (auto attrList =
+          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+    llvm::append_range(attrs, attrList);
+  attrs.push_back(value);
+  decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
   return success();
 }
 
@@ -319,6 +341,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -338,6 +361,24 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     decorations[words[0]].set(
         symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
+  case spirv::Decoration::CacheControlLoadINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlLoadINTELAttr, LoadCacheControlAttr, LoadCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "load");
+    if (failed(res))
+      return res;
+    break;
+  }
+  case spirv::Decoration::CacheControlStoreINTEL: {
+    LogicalResult res = deserializeCacheControlDecoration<
+        CacheControlStoreINTELAttr, StoreCacheControlAttr, StoreCacheControl>(
+        unknownLoc, opBuilder, decorations, words, symbol, decorationName,
+        "store");
+    if (failed(res))
+      return res;
+    break;
+  }
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
   }
@@ -1286,7 +1327,8 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
       } words = {operands[2], operands[3]};
       value = APInt(64, llvm::bit_cast<uint64_t>(words), /*isSigned=*/true);
     } else if (bitwidth <= 32) {
-      value = APInt(bitwidth, operands[2], /*isSigned=*/true);
+      value = APInt(bitwidth, operands[2], /*isSigned=*/true,
+                    /*implicitTrunc=*/true);
     }
 
     auto attr = opBuilder.getIntegerAttr(intType, value);
@@ -2116,6 +2158,53 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
+LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+  // Create a copy, so we can modify keys in the original.
+  BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
+  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
+       it != e; ++it) {
+    auto &[block, mergeInfo] = *it;
+
+    // Skip processing loop regions. For loop regions continueBlock is non-null.
+    if (mergeInfo.continueBlock)
+      continue;
+
+    if (!block->mightHaveTerminator())
+      continue;
+
+    Operation *terminator = block->getTerminator();
+    assert(terminator);
+
+    if (!isa<spirv::BranchConditionalOp>(terminator))
+      continue;
+
+    // Do not split blocks that only contain a conditional branch, i.e., block
+    // size is <= 1.
+    if (block->begin() != block->end() &&
+        std::next(block->begin()) != block->end()) {
+      Block *newBlock = block->splitBlock(terminator);
+      OpBuilder builder(block, block->end());
+      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+
+      // If the split block was a merge block of another region we need to
+      // update the map.
+      for (auto it = blockMergeInfo.begin(); it != blockMergeInfo.end(); ++it) {
+        auto &[ignore, mergeInfo] = *it;
+        if (mergeInfo.mergeBlock == block) {
+          mergeInfo.mergeBlock = newBlock;
+        }
+      }
+
+      // After splitting we need to update the map to use the new block as a
+      // header.
+      blockMergeInfo.erase(block);
+      blockMergeInfo.try_emplace(newBlock, mergeInfo);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
   LLVM_DEBUG({
     logger.startLine()
@@ -2123,6 +2212,18 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.indent();
   });
 
+  LLVM_DEBUG({
+    logger.startLine() << "[cf] split conditional blocks\n";
+    logger.startLine() << "\n";
+  });
+
+  if (failed(splitConditionalBlocks())) {
+    return failure();
+  }
+
+  // TODO: This loop is non-deterministic. Iteration order may vary between runs
+  // for the same shader as the key to the map is a pointer. See:
+  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;

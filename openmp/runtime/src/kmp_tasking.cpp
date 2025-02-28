@@ -714,22 +714,6 @@ static void __kmp_task_start(kmp_int32 gtid, kmp_task_t *task,
 
 #if OMPT_SUPPORT
 //------------------------------------------------------------------------------
-// __ompt_task_init:
-//   Initialize OMPT fields maintained by a task. This will only be called after
-//   ompt_start_tool, so we already know whether ompt is enabled or not.
-
-static inline void __ompt_task_init(kmp_taskdata_t *task, int tid) {
-  // The calls to __ompt_task_init already have the ompt_enabled condition.
-  task->ompt_task_info.task_data.value = 0;
-  task->ompt_task_info.frame.exit_frame = ompt_data_none;
-  task->ompt_task_info.frame.enter_frame = ompt_data_none;
-  task->ompt_task_info.frame.exit_frame_flags =
-      ompt_frame_runtime | ompt_frame_framepointer;
-  task->ompt_task_info.frame.enter_frame_flags =
-      ompt_frame_runtime | ompt_frame_framepointer;
-  task->ompt_task_info.dispatch_chunk.start = 0;
-  task->ompt_task_info.dispatch_chunk.iterations = 0;
-}
 
 // __ompt_task_start:
 //   Build and trigger task-begin event
@@ -804,7 +788,7 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
           taskdata->ompt_task_info.frame.exit_frame.ptr = frame_address;
       current_task->ompt_task_info.frame.enter_frame_flags =
           taskdata->ompt_task_info.frame.exit_frame_flags =
-              ompt_frame_application | ompt_frame_framepointer;
+              OMPT_FRAME_FLAGS_APP;
     }
     if (ompt_enabled.ompt_callback_task_create) {
       ompt_task_info_t *parent_info = &(current_task->ompt_task_info);
@@ -1268,8 +1252,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
     ompt_frame_t *ompt_frame;
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = ompt_data_none;
-    ompt_frame->enter_frame_flags =
-        ompt_frame_runtime | ompt_frame_framepointer;
+    ompt_frame->enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
   }
 #endif
 
@@ -2010,6 +1993,7 @@ kmp_int32 __kmpc_omp_task_parts(ident_t *loc_ref, kmp_int32 gtid,
 #if OMPT_SUPPORT
   if (UNLIKELY(ompt_enabled.enabled)) {
     parent->ompt_task_info.frame.enter_frame = ompt_data_none;
+    parent->ompt_task_info.frame.enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
   }
 #endif
   return TASK_CURRENT_NOT_QUEUED;
@@ -5491,7 +5475,8 @@ static kmp_tdg_info_t *__kmp_find_tdg(kmp_int32 tdg_id) {
 
 // __kmp_print_tdg_dot: prints the TDG to a dot file
 // tdg:    ID of the TDG
-void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg) {
+// gtid:   Global Thread ID
+void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   kmp_int32 tdg_id = tdg->tdg_id;
   KA_TRACE(10, ("__kmp_print_tdg_dot(enter): T#%d tdg_id=%d \n", gtid, tdg_id));
 
@@ -5693,7 +5678,7 @@ void __kmp_end_record(kmp_int32 gtid, kmp_tdg_info_t *tdg) {
   KMP_ATOMIC_ST_RLX(&__kmp_tdg_task_id, 0);
 
   if (__kmp_tdg_dot)
-    __kmp_print_tdg_dot(tdg);
+    __kmp_print_tdg_dot(tdg, gtid);
 }
 
 // __kmpc_end_record_task: wrapper around __kmp_end_record to mark

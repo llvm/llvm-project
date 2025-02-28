@@ -80,8 +80,8 @@ end subroutine
 ! CHECK: fir.embox {{.*}} {allocator_idx = 1 : i32}
 ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub3Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
 ! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsub3Eplog"}
-! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %5 {uniq_name = "_QFsub3Eplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK-2: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsub3Eplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK-COUNT-2: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> pinned(%[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>) {data_attr = #cuf.cuda<pinned>} -> i32
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
@@ -97,7 +97,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub4()
 ! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub4Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[ISTREAM:.*]] = fir.alloca i32 {bindc_name = "istream", uniq_name = "_QFsub4Eistream"}
 ! CHECK: %[[ISTREAM_DECL:.*]]:2 = hlfir.declare %[[ISTREAM]] {uniq_name = "_QFsub4Eistream"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
@@ -173,7 +173,7 @@ end subroutine
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
 
 ! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
-! CHECK: %[[STAT:.*]] = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%15 : !fir.box<!fir.char<1,50>>) {data_attr = #cuf.cuda<device>, hasStat} -> i32
+! CHECK: %[[STAT:.*]] = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%{{.*}} : !fir.box<!fir.char<1,50>>) {data_attr = #cuf.cuda<device>, hasStat} -> i32
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
@@ -196,3 +196,30 @@ end subroutine
 ! CHECK: %[[BOX:.*]] = fir.load %[[A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[BOXADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
 ! CHECK: fir.freemem %[[BOXADDR]] : !fir.heap<!fir.array<?xf32>>
+
+subroutine setpinned()
+  integer, allocatable :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinned()  
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>
+
+subroutine setpinnedpointer()
+  integer, pointer :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinnedpointer()
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedpointerEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedpointerEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: fir.call @_FortranAPointerAllocate
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>

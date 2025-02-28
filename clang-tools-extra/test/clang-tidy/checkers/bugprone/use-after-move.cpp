@@ -33,6 +33,19 @@ struct weak_ptr {
   bool expired() const;
 };
 
+template <typename T>
+struct optional {
+  optional();
+  T& operator*();
+  const T& operator*() const;
+  void reset();
+};
+
+struct any {
+  any();
+  void reset();
+};
+
 template <typename T1, typename T2>
 struct pair {};
 
@@ -256,6 +269,14 @@ void standardSmartPtr() {
     ptr->foo();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    A val = *opt;
+    (void)val;
+    // CHECK-NOTES: [[@LINE-2]]:14: warning: 'opt' used after it was moved
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
   {
     // std::weak_ptr<> cannot be dereferenced directly, so we only check that
@@ -994,10 +1015,10 @@ void standardContainerAssignIsReinit() {
   }
 }
 
-// Resetting the standard smart pointer types using reset() is treated as a
+// Resetting the standard smart owning types using reset() is treated as a
 // re-initialization. (We don't test std::weak_ptr<> because it can't be
 // dereferenced directly.)
-void standardSmartPointerResetIsReinit() {
+void resetIsReinit() {
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
@@ -1009,6 +1030,20 @@ void standardSmartPointerResetIsReinit() {
     std::move(ptr);
     ptr.reset(new A);
     *ptr;
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    opt.reset();
+    std::optional<A> opt2 = opt;
+    (void)opt2;
+  }
+  {
+    std::any a;
+    std::move(a);
+    a.reset();
+    std::any a2 = a;
+    (void)a2;
   }
 }
 

@@ -14,7 +14,7 @@ define void @PR53842() {
 ; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm2, %ymm2
 ; CHECK-NEXT:    vpcmpeqq %ymm3, %ymm1, %ymm1
 ; CHECK-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-expand-condsets=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-expand-condsets=0 -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ;
 ; Expand-condsets eliminates the "mux" instruction, which is what this
 ; testcase is checking.

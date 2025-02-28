@@ -323,26 +323,24 @@ TEST(RandomIRBuilderTest, createStackMemory) {
   Type *DoubleTy = Type::getDoubleTy(Ctx);
   Constant *Double_0 =
       ConstantFP::get(Ctx, APFloat::getZero(DoubleTy->getFltSemantics()));
-  std::array<Type *, 8> Types = {
+  std::array<Type *, 7> Types = {
       Int32Ty,
       Int64Ty,
       DoubleTy,
       PointerType::get(Ctx, 0),
-      PointerType::get(Int32Ty, 0),
       VectorType::get(Int32Ty, 4, false),
       StructType::create({Int32Ty, DoubleTy, Int64Ty}),
       ArrayType::get(Int64Ty, 4),
   };
-  std::array<Value *, 8> Inits = {
+  std::array<Value *, 7> Inits = {
       Int32_1,
       Int64_42,
       Double_0,
       UndefValue::get(Types[3]),
-      UndefValue::get(Types[4]),
       ConstantVector::get({Int32_1, Int32_1, Int32_1, Int32_1}),
-      ConstantStruct::get(cast<StructType>(Types[6]),
+      ConstantStruct::get(cast<StructType>(Types[5]),
                           {Int32_1, Double_0, Int64_42}),
-      ConstantArray::get(cast<ArrayType>(Types[7]),
+      ConstantArray::get(cast<ArrayType>(Types[6]),
                          {Int64_42, Int64_42, Int64_42, Int64_42}),
   };
   ASSERT_EQ(Types.size(), Inits.size());
@@ -487,7 +485,7 @@ TEST(RandomIRBuilderTest, findSourceAndSink) {
     ASSERT_TRUE(DT.dominates(Insts[IP - 1], Sink));
   }
 }
-TEST(RandomIRBuilderTest, sinkToInstrinsic) {
+TEST(RandomIRBuilderTest, sinkToIntrinsic) {
   const char *Source = "\n\
         declare double @llvm.sqrt.f64(double %Val)  \n\
         declare void   @llvm.ubsantrap(i8 immarg) cold noreturn nounwind  \n\

@@ -53,8 +53,7 @@
 // CHECK-SAME: "-targets={{.*}},hip-spirv64----generic"
 // CHECK-SAME: "-input=/dev/null" "-input=[[AB_SPIRV]]"
 // CHECK-SAME: "-output=[[AB_FATBIN:.*hipfb]]"
-// CHECK: {{".*llvm-mc.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
-// CHECK-SAME: "--filetype=obj"
+// CHECK: {{".*clang.*"}} "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // Output the executable
 // CHECK: {{".*ld.*"}} {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]

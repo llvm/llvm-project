@@ -6,7 +6,7 @@ Contributing to LLVM
 Thank you for your interest in contributing to LLVM! There are multiple ways to
 contribute, and we appreciate all contributions. In case you have questions,
 you can either use the `Forum`_ or, for a more interactive chat, go to our
-`Discord server`_ or the IRC #llvm channel on `irc.oftc.net`_.
+`Discord server`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
 
@@ -73,14 +73,32 @@ recent commit:
 
   % git clang-format HEAD~1
 
-Note that this modifies the files, but doesn't commit them -- you'll likely want
-to run
+.. note::
+  For some patches, formatting them may add changes that obscure the intent of
+  the patch. For example, adding to an enum that was not previously formatted
+  may result in the entire enum being reformatted. This happens because not all
+  of the LLVM Project conforms to LLVM's clang-format style at this time.
+
+  If you think that this might be the case for your changes, or are unsure, we
+  recommend that you add the formatting changes as a **separate commit** within
+  the Pull Request.
+
+  Reviewers may request that this formatting commit be made into a separate Pull
+  Request that will be merged before your actual changes.
+
+  This means that if the formatting changes are the first commit, you will have
+  an easier time doing this. If they are not, that is ok too, but you will have
+  to do a bit more work to separate it out.
+
+Note that ``git clang-format`` modifies the files, but does not commit them --
+you will likely want to run one of the following to add the changes to a commit:
 
 .. code-block:: console
 
+  # To create a new commit.
+  % git commit -a
+  # To add to the most recent commit.
   % git commit --amend -a
-
-in order to update the last commit with all pending changes.
 
 .. note::
   If you don't already have ``clang-format`` or ``git clang-format`` installed
@@ -94,29 +112,36 @@ For more information about the workflow of using GitHub Pull Requests see our
 `LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
-and add them to your patch when requesting a review. Suitable reviewers are the
-maintainers (see ``Maintainers.rst``) and other people doing work in the area your
-patch touches. Github will normally suggest some reviewers based on rules or
-people that have worked on the code before. If you are a new contributor, you
-will not be able to select reviewers in such a way, in which case you can still
-get the attention of potential reviewers by CC'ing them in a comment -- just
-@name them.
+and add them to your patch when requesting a review.
 
-A reviewer may request changes or ask questions during the review. If you are
-uncertain on how to provide test cases, documentation, etc., feel free to ask
-for guidance during the review. Please address the feedback and re-post an
-updated version of your patch. This cycle continues until all requests and comments
-have been addressed and a reviewer accepts the patch with a `Looks good to me` or `LGTM`.
-Once that is done the change can be committed. If you do not have commit
-access, please let people know during the review and someone should commit it
-on your behalf.
+Suitable reviewers are the maintainers of the project you are modifying, and
+anyone else working in the area your patch touches. To find maintainers, look for
+the ``Maintainers.md`` or ``Maintainers.rst`` file in the root of the project's
+sub-directory. For example, LLVM's is ``llvm/Maintainers.md`` and Clang's is
+``clang/Maintainers.rst``.
+
+If you are a new contributor, you will not be able to select reviewers in such a
+way, in which case you can still get the attention of potential reviewers by CC'ing
+them in a comment -- just @name them.
 
 If you have received no comments on your patch for a week, you can request a
-review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
-is once a week. Please remember that you are asking for valuable time from other
-professional developers.
+review by 'ping'ing the GitHub PR with "Ping" in a comment. The common courtesy 'ping' rate
+is once a week. Please remember that you are asking for valuable time from
+other professional developers.
 
-For more information on LLVM's code-review process, please see :doc:`CodeReview`.
+After your PR is approved, ensure that:
+
+  * The PR title and description describe the final changes. These will be used
+    as the title and message of the final squashed commit. The titles and
+    messages of commits in the PR will **not** be used.
+  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
+
+Now you can merge your PR. If you do not have the ability to merge the PR, ask your
+reviewers to merge it on your behalf. You must do this explicitly, as reviewers'
+default assumption is that you are able to merge your own PR.
+
+For more information on LLVM's code-review process, please see
+:doc:`CodeReview`.
 
 .. _commit_from_git:
 
@@ -124,12 +149,24 @@ For developers to commit changes from Git
 -----------------------------------------
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
-GitHub web interface. You might need to rebase your change before pushing
-it to the repo.
+GitHub web interface.
 
-LLVM currently has a linear-history policy, which means that merge commits are
-not allowed. The `llvm-project` repo on github is configured to reject pushes
-that include merges, so the `git rebase` step above is required.
+When pushing directly from the command-line to the ``main`` branch, you will need
+to rebase your change. LLVM has a linear-history policy, which means
+that merge commits are not allowed and the ``main`` branch is configured to reject
+pushes that include merges.
+
+GitHub will display a message that looks like this:
+
+.. code-block:: console
+
+  remote: Bypassed rule violations for refs/heads/main:
+  remote:
+  remote: - Required status check “buildkite/github-pull-requests” is expected.
+
+This can seem scary, but this is just an artifact of the GitHub setup: it is
+intended as a warning for people merging pull-requests with failing CI. We can't
+disable it for people pushing on the command-line.
 
 Please ask for help if you're having trouble with your particular git workflow.
 
@@ -181,8 +218,8 @@ of LLVM's high-level design, as well as its internals:
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _good first issue: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
-.. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
-.. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
+.. _clang-format-diff.py: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/clang-format-diff.py
+.. _git-clang-format: https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's GitHub: https://github.com/llvm/llvm-project
 .. _LLVM's Phabricator (read-only): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what

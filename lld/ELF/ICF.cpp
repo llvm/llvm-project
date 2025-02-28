@@ -97,6 +97,7 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class ICF {
 public:
+  ICF(Ctx &ctx) : ctx(ctx) {}
   void run();
 
 private:
@@ -120,6 +121,7 @@ private:
 
   void forEachClass(llvm::function_ref<void(size_t, size_t)> fn);
 
+  Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
 
   // We repeat the main loop while `Repeat` is true.
@@ -457,20 +459,8 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
   isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
 }
 
-static void print(const Twine &s) {
-  if (ctx.arg.printIcfSections)
-    message(s);
-}
-
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
-  // Compute isPreemptible early. We may add more symbols later, so this loop
-  // cannot be merged with the later computeIsPreemptible() pass which is used
-  // by scanRelocations().
-  if (ctx.arg.hasDynSymTab)
-    for (Symbol *sym : symtab.getSymbols())
-      sym->isPreemptible = computeIsPreemptible(*sym);
-
   // Two text sections may have identical content and relocations but different
   // LSDA, e.g. the two functions may have catch blocks of different types. If a
   // text section is referenced by a .eh_frame FDE with LSDA, it is not
@@ -540,15 +530,18 @@ template <class ELFT> void ICF<ELFT>::run() {
     });
   } while (repeat);
 
-  log("ICF needed " + Twine(cnt) + " iterations");
+  Log(ctx) << "ICF needed " << cnt << " iterations";
 
+  auto print = [&ctx = ctx]() -> ELFSyncStream {
+    return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
+  };
   // Merge sections by the equivalence class.
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
     if (end - begin == 1)
       return;
-    print("selected section " + toString(sections[begin]));
+    print() << "selected section " << sections[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      print("  removing identical section " + toString(sections[i]));
+      print() << "  removing identical section " << sections[i];
       sections[begin]->replace(sections[i]);
 
       // At this point we know sections merged are fully identical and hence
@@ -568,7 +561,7 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     fold(sym);
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
@@ -586,12 +579,12 @@ template <class ELFT> void ICF<ELFT>::run() {
 }
 
 // ICF entry point function.
-template <class ELFT> void elf::doIcf() {
+template <class ELFT> void elf::doIcf(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("ICF");
-  ICF<ELFT>().run();
+  ICF<ELFT>(ctx).run();
 }
 
-template void elf::doIcf<ELF32LE>();
-template void elf::doIcf<ELF32BE>();
-template void elf::doIcf<ELF64LE>();
-template void elf::doIcf<ELF64BE>();
+template void elf::doIcf<ELF32LE>(Ctx &);
+template void elf::doIcf<ELF32BE>(Ctx &);
+template void elf::doIcf<ELF64LE>(Ctx &);
+template void elf::doIcf<ELF64BE>(Ctx &);

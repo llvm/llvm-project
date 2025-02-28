@@ -1,5 +1,5 @@
-; RUN: llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -O0 -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -O0 -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func callee(
 ; CHECK-NEXT: .param .align 16 .b8 callee_param_0[16],
@@ -30,9 +30,9 @@ start:
 
   ; CHECK:      { // callseq [[CALLSEQ_ID:[0-9]]], 0
 	; CHECK:      .param .align 16 .b8 param0[16];
-	; CHECK-NEXT: st.param.v2.b64 	[param0+0], {%[[REG0]], %[[REG1]]}
+	; CHECK-NEXT: st.param.v2.b64 	[param0], {%[[REG0]], %[[REG1]]}
 	; CHECK:      .param .align 16 .b8 param1[16];
-	; CHECK-NEXT: st.param.v2.b64 	[param1+0], {%[[REG2]], %[[REG3]]}
+	; CHECK-NEXT: st.param.v2.b64 	[param1], {%[[REG2]], %[[REG3]]}
 	; CHECK:      } // callseq [[CALLSEQ_ID]]
   call void @callee(i128 %0, i128 %1, ptr %2)
 
@@ -49,9 +49,9 @@ start:
 
   ; CHECK: { // callseq [[CALLSEQ_ID:[0-9]]], 0
 	; CHECK: .param .align 16 .b8 param0[16];
-	; CHECK: st.param.v2.b64 	[param0+0], {%[[REG0]], %[[REG1]]}
+	; CHECK: st.param.v2.b64 	[param0], {%[[REG0]], %[[REG1]]}
 	; CHECK: .param .align 16 .b8 param1[16];
-  ; CHECK: st.param.v2.b64 	[param1+0], {%[[REG2]], %[[REG3]]}
+  ; CHECK: st.param.v2.b64 	[param1], {%[[REG2]], %[[REG3]]}
 	; CHECK: } // callseq [[CALLSEQ_ID]]
   call void @callee(i128 %0, i128 %1, ptr %2)
 

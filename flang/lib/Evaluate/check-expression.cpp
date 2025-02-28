@@ -412,6 +412,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           symbol.owner().context().ShouldWarn(
               common::LanguageFeature::LogicalIntegerAssignment)) {
         context.messages().Say(
+            common::LanguageFeature::LogicalIntegerAssignment,
             "nonstandard usage: initialization of %s with %s"_port_en_US,
             symTS->type().AsFortran(), x.GetType().value().AsFortran());
       }
@@ -431,7 +432,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
                 symbol.name(), symRank, folded.Rank());
           }
-        } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+        } else if (auto extents{AsConstantExtents(context, symTS->shape())};
+            extents && !HasNegativeExtent(*extents)) {
           if (folded.Rank() == 0 && symRank == 0) {
             // symbol and constant are both scalars
             return {std::move(folded)};
@@ -565,7 +567,7 @@ public:
       if (!scope_.IsModuleFile() &&
           context_.languageFeatures().ShouldWarn(
               common::LanguageFeature::SavedLocalInSpecExpr)) {
-        context_.messages().Say(
+        context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
             "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
             ultimate.name().ToString());
       }
@@ -831,7 +833,10 @@ class IsContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsContiguousHelper, Result>;
-  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  explicit IsContiguousHelper(
+      FoldingContext &c, bool namedConstantSectionsAreContiguous)
+      : Base{*this}, context_{c}, namedConstantSectionsAreContiguous_{
+                                      namedConstantSectionsAreContiguous} {}
   using Base::operator();
 
   template <typename T> Result operator()(const Constant<T> &) const {
@@ -853,6 +858,11 @@ public:
                    ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       // RANK(*) associating entity is contiguous.
       if (details->IsAssumedSize()) {
+        return true;
+      } else if (!IsVariable(details->expr()) &&
+          (namedConstantSectionsAreContiguous_ ||
+              !ExtractDataRef(details->expr(), true, true))) {
+        // Selector is associated to an expression value.
         return true;
       } else {
         return Base::operator()(ultimate); // use expr
@@ -907,7 +917,58 @@ public:
   Result operator()(const ComplexPart &x) const {
     return x.complex().Rank() == 0;
   }
-  Result operator()(const Substring &) const { return std::nullopt; }
+  Result operator()(const Substring &x) const {
+    if (x.Rank() == 0) {
+      return true; // scalar substring always contiguous
+    }
+    // Substrings with rank must have DataRefs as their parents
+    const DataRef &parentDataRef{DEREF(x.GetParentIf<DataRef>())};
+    std::optional<std::int64_t> len;
+    if (auto lenExpr{parentDataRef.LEN()}) {
+      len = ToInt64(Fold(context_, std::move(*lenExpr)));
+      if (len) {
+        if (*len <= 0) {
+          return true; // empty substrings
+        } else if (*len == 1) {
+          // Substrings can't be incomplete; is base array contiguous?
+          return (*this)(parentDataRef);
+        }
+      }
+    }
+    std::optional<std::int64_t> upper;
+    bool upperIsLen{false};
+    if (auto upperExpr{x.upper()}) {
+      upper = ToInt64(Fold(context_, common::Clone(*upperExpr)));
+      if (upper) {
+        if (*upper < 1) {
+          return true; // substring(n:0) empty
+        }
+        upperIsLen = len && *upper >= *len;
+      } else if (const auto *inquiry{
+                     UnwrapConvertedExpr<DescriptorInquiry>(*upperExpr)};
+                 inquiry && inquiry->field() == DescriptorInquiry::Field::Len) {
+        upperIsLen =
+            &parentDataRef.GetLastSymbol() == &inquiry->base().GetLastSymbol();
+      }
+    } else {
+      upperIsLen = true; // substring(n:)
+    }
+    if (auto lower{ToInt64(Fold(context_, x.lower()))}) {
+      if (*lower == 1 && upperIsLen) {
+        // known complete substring; is base contiguous?
+        return (*this)(parentDataRef);
+      } else if (upper) {
+        if (*upper < *lower) {
+          return true; // empty substring(3:2)
+        } else if (*lower > 1) {
+          return false; // known incomplete substring
+        } else if (len && *upper < *len) {
+          return false; // known incomplete substring
+        }
+      }
+    }
+    return std::nullopt; // contiguity not known
+  }
 
   Result operator()(const ProcedureRef &x) const {
     if (auto chars{characteristics::Procedure::Characterize(
@@ -1060,22 +1121,34 @@ private:
   }
 
   FoldingContext &context_;
+  bool namedConstantSectionsAreContiguous_{false};
 };
 
 template <typename A>
-std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
-  return IsContiguousHelper{context}(x);
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
+    bool namedConstantSectionsAreContiguous) {
+  if (!IsVariable(x) &&
+      (namedConstantSectionsAreContiguous || !ExtractDataRef(x, true, true))) {
+    return true;
+  } else {
+    return IsContiguousHelper{context, namedConstantSectionsAreContiguous}(x);
+  }
 }
 
+template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ComplexPart &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
 template std::optional<bool> IsContiguous(
-    const Expr<SomeType> &, FoldingContext &);
-template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
-template std::optional<bool> IsContiguous(
-    const ComplexPart &, FoldingContext &);
-template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
+    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {
@@ -1102,44 +1175,53 @@ class StmtFunctionChecker
 public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
+
+  static constexpr auto feature{
+      common::LanguageFeature::StatementFunctionExtensions};
+
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
       : Base{*this}, sf_{sf}, context_{context} {
-    if (!context_.languageFeatures().IsEnabled(
-            common::LanguageFeature::StatementFunctionExtensions)) {
+    if (!context_.languageFeatures().IsEnabled(feature)) {
       severity_ = parser::Severity::Error;
-    } else if (context_.languageFeatures().ShouldWarn(
-                   common::LanguageFeature::StatementFunctionExtensions)) {
+    } else if (context_.languageFeatures().ShouldWarn(feature)) {
       severity_ = parser::Severity::Portability;
     }
   }
   using Base::operator();
 
+  Result Return(parser::Message &&msg) const {
+    if (severity_) {
+      msg.set_severity(*severity_);
+      if (*severity_ != parser::Severity::Error) {
+        msg.set_languageFeature(feature);
+      }
+    }
+    return std::move(msg);
+  }
+
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain an array constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain an array constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const StructureConstructor &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a structure constructor"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a structure constructor"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
   }
   Result operator()(const TypeParamInquiry &) const {
     if (severity_) {
-      auto msg{
-          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
-      msg.set_severity(*severity_);
-      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      return Return(parser::Message{sf_.name(),
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+          sf_.name()});
     } else {
       return std::nullopt;
     }
@@ -1161,21 +1243,18 @@ public:
               proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
-            auto msg{
-                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
-            msg.set_severity(*severity_);
-            return parser::Message{
-                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+            return Return(parser::Message{sf_.name(),
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+                sf_.name(), symbol->name()});
           }
         }
       }
     }
     if (proc.Rank() > 0) {
       if (severity_) {
-        auto msg{
-            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
-        msg.set_severity(*severity_);
-        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        return Return(parser::Message{sf_.name(),
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+            sf_.name()});
       }
     }
     return std::nullopt;
@@ -1187,10 +1266,9 @@ public:
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
         if (severity_) {
-          auto msg{
-              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
-          msg.set_severity(*severity_);
-          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+          return Return(parser::Message{sf_.name(),
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+              sf_.name()});
         }
       }
     }

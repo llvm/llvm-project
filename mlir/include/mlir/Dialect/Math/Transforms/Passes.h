@@ -31,7 +31,6 @@ void populateExpandAsinhPattern(RewritePatternSet &patterns);
 void populateExpandAcoshPattern(RewritePatternSet &patterns);
 void populateExpandAtanhPattern(RewritePatternSet &patterns);
 void populateExpandFmaFPattern(RewritePatternSet &patterns);
-void populateExpandFloorFPattern(RewritePatternSet &patterns);
 void populateExpandCeilFPattern(RewritePatternSet &patterns);
 void populateExpandExp2FPattern(RewritePatternSet &patterns);
 void populateExpandPowFPattern(RewritePatternSet &patterns);
@@ -48,7 +47,27 @@ struct MathPolynomialApproximationOptions {
 
 void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
+void populatePolynomialApproximateErfcPattern(RewritePatternSet &patterns);
 
+// Adds patterns to convert to f32 around math functions for which `predicate`
+// returns true.
+void populateMathF32ExpansionPatterns(
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate);
+
+// Adds patterns to enable polynomial approximations for math functions for
+// which `predicate` returns true.
+void populateMathPolynomialApproximationPatterns(
+    RewritePatternSet &patterns, llvm::function_ref<bool(StringRef)> predicate);
+
+// Legacy. Calls both populateMathF32ExpansionPatterns and
+// populateMathPolynomialApproximationPatterns with predicates enabling a
+// certain set of math function rewrites, that probably can't be changed for
+// compatibility reasons. Notice that unlike
+// populateMathPolynomialApproximationPatterns(patterns, predicate), this
+// overload also calls populateMathF32ExpansionPatterns.
+// Prefer calling these functions directly:
+// * populateMathF32ExpansionPatterns(patterns, predicate)
+// * populateMathPolynomialApproximationPatterns(patterns, predicate)
 void populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options = {});
@@ -56,11 +75,13 @@ void populateMathPolynomialApproximationPatterns(
 void populateUpliftToFMAPatterns(RewritePatternSet &patterns);
 
 namespace math {
-void populateLegalizeToF32TypeConverter(TypeConverter &typeConverter);
-void populateLegalizeToF32ConversionTarget(ConversionTarget &target,
-                                           TypeConverter &typeConverter);
-void populateLegalizeToF32Patterns(RewritePatternSet &patterns,
-                                   TypeConverter &typeConverter);
+void populateExtendToSupportedTypesTypeConverter(
+    TypeConverter &typeConverter, const SetVector<Type> &sourceTypes,
+    Type targetType);
+void populateExtendToSupportedTypesConversionTarget(
+    ConversionTarget &target, TypeConverter &typeConverter);
+void populateExtendToSupportedTypesPatterns(RewritePatternSet &patterns,
+                                            const TypeConverter &typeConverter);
 } // namespace math
 } // namespace mlir
 

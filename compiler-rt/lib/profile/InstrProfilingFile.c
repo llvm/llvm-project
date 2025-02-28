@@ -77,6 +77,7 @@ typedef struct lprofFilename {
   char Hostname[COMPILER_RT_MAX_HOSTLEN];
   unsigned NumPids;
   unsigned NumHosts;
+  unsigned NumBinaryIds;
   /* When in-process merging is enabled, this parameter specifies
    * the total number of profile data files shared by all the processes
    * spawned from the same binary. By default the value is 1. If merging
@@ -88,8 +89,8 @@ typedef struct lprofFilename {
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-static lprofFilename lprofCurFilename = {0,   0, 0, {0}, NULL,
-                                         {0}, 0, 0, 0,   PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0, {0}, NULL,       {0},
+                                         0, 0, 0, 0,   PNS_unknown};
 
 static int ProfileMergeRequested = 0;
 static int getProfileFileSizeForMerging(FILE *ProfileFile,
@@ -196,7 +197,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   }
   return 0;
 }
-#elif defined(__ELF__) || defined(_WIN32)
+#elif defined(__ELF__) || defined(_WIN32) || defined(_AIX)
 
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR                            \
   INSTR_PROF_CONCAT(INSTR_PROF_PROFILE_COUNTER_BIAS_VAR, _default)
@@ -540,6 +541,17 @@ static FILE *getFileObject(const char *OutputName) {
   return fopen(OutputName, "ab");
 }
 
+static void closeFileObject(FILE *OutputFile) {
+  if (OutputFile == getProfileFile()) {
+    fflush(OutputFile);
+    if (doMerging() && !__llvm_profile_is_continuous_mode_enabled()) {
+      lprofUnlockFileHandle(OutputFile);
+    }
+  } else {
+    fclose(OutputFile);
+  }
+}
+
 /* Write profile data to file \c OutputName.  */
 static int writeFile(const char *OutputName) {
   int RetVal;
@@ -561,15 +573,7 @@ static int writeFile(const char *OutputName) {
   initFileWriter(&fileWriter, OutputFile);
   RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader(), MergeDone);
 
-  if (OutputFile == getProfileFile()) {
-    fflush(OutputFile);
-    if (doMerging() && !__llvm_profile_is_continuous_mode_enabled()) {
-      lprofUnlockFileHandle(OutputFile);
-    }
-  } else {
-    fclose(OutputFile);
-  }
-
+  closeFileObject(OutputFile);
   return RetVal;
 }
 
@@ -790,7 +794,7 @@ static int checkBounds(int Idx, int Strlen) {
  * lprofcurFilename structure. */
 static int parseFilenamePattern(const char *FilenamePat,
                                 unsigned CopyFilenamePat) {
-  int NumPids = 0, NumHosts = 0, I;
+  int NumPids = 0, NumHosts = 0, NumBinaryIds = 0, I;
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
   int MergingEnabled = 0;
@@ -855,6 +859,16 @@ static int parseFilenamePattern(const char *FilenamePat,
                     FilenamePat);
           return -1;
         }
+      } else if (FilenamePat[I] == 'b') {
+        if (!NumBinaryIds++) {
+          /* Check if binary ID does not exist or if its size is 0. */
+          if (__llvm_write_binary_ids(NULL) <= 0) {
+            PROF_WARN("Unable to get binary ID for filename pattern %s. Using "
+                      "the default name.",
+                      FilenamePat);
+            return -1;
+          }
+        }
       } else if (FilenamePat[I] == 'c') {
         if (__llvm_profile_is_continuous_mode_enabled()) {
           PROF_WARN("%%c specifier can only be specified once in %s.\n",
@@ -862,7 +876,7 @@ static int parseFilenamePattern(const char *FilenamePat,
           __llvm_profile_disable_continuous_mode();
           return -1;
         }
-#if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32)
+#if defined(__APPLE__) || defined(__ELF__) || defined(_WIN32) || defined(_AIX)
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
 #else
@@ -887,6 +901,7 @@ static int parseFilenamePattern(const char *FilenamePat,
 
   lprofCurFilename.NumPids = NumPids;
   lprofCurFilename.NumHosts = NumHosts;
+  lprofCurFilename.NumBinaryIds = NumBinaryIds;
   return 0;
 }
 
@@ -934,22 +949,51 @@ static void parseAndSetFilename(const char *FilenamePat,
  * filename with PID and hostname substitutions. */
 /* The length to hold uint64_t followed by 3 digits pool id including '_' */
 #define SIGLEN 24
+/* The length to hold 160-bit hash in hexadecimal form */
+#define BINARY_ID_LEN 40
 static int getCurFilenameLength(void) {
   int Len;
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize))
+        lprofCurFilename.NumBinaryIds || lprofCurFilename.TmpDir ||
+        lprofCurFilename.MergePoolSize))
     return strlen(lprofCurFilename.FilenamePat);
 
   Len = strlen(lprofCurFilename.FilenamePat) +
         lprofCurFilename.NumPids * (strlen(lprofCurFilename.PidChars) - 2) +
         lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2) +
+        lprofCurFilename.NumBinaryIds * BINARY_ID_LEN +
         (lprofCurFilename.TmpDir ? (strlen(lprofCurFilename.TmpDir) - 1) : 0);
   if (lprofCurFilename.MergePoolSize)
     Len += SIGLEN;
   return Len;
+}
+
+typedef struct lprofBinaryIdsBuffer {
+  char String[BINARY_ID_LEN + 1];
+  int Length;
+} lprofBinaryIdsBuffer;
+
+/* Reads binary ID length and then its data, writes it into lprofBinaryIdsBuffer
+ * in hexadecimal form. */
+static uint32_t binaryIdsStringWriter(ProfDataWriter *This,
+                                      ProfDataIOVec *IOVecs,
+                                      uint32_t NumIOVecs) {
+  if (NumIOVecs < 2 || IOVecs[0].ElmSize != sizeof(uint64_t))
+    return -1;
+  uint64_t BinaryIdLen = *(const uint64_t *)IOVecs[0].Data;
+  if (IOVecs[1].ElmSize != sizeof(uint8_t) || IOVecs[1].NumElm != BinaryIdLen)
+    return -1;
+  const uint8_t *BinaryIdData = (const uint8_t *)IOVecs[1].Data;
+  lprofBinaryIdsBuffer *Data = (lprofBinaryIdsBuffer *)This->WriterCtx;
+  for (uint64_t I = 0; I < BinaryIdLen; I++) {
+    Data->Length +=
+        snprintf(Data->String + Data->Length, BINARY_ID_LEN + 1 - Data->Length,
+                 "%02hhx", BinaryIdData[I]);
+  }
+  return 0;
 }
 
 /* Return the pointer to the current profile file name (after substituting
@@ -965,7 +1009,8 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
     return 0;
 
   if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
-        lprofCurFilename.TmpDir || lprofCurFilename.MergePoolSize ||
+        lprofCurFilename.NumBinaryIds || lprofCurFilename.TmpDir ||
+        lprofCurFilename.MergePoolSize ||
         __llvm_profile_is_continuous_mode_enabled())) {
     if (!ForceUseBuf)
       return lprofCurFilename.FilenamePat;
@@ -992,6 +1037,12 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
         memcpy(FilenameBuf + J, lprofCurFilename.TmpDir, TmpDirLength);
         FilenameBuf[J + TmpDirLength] = DIR_SEPARATOR;
         J += TmpDirLength + 1;
+      } else if (FilenamePat[I] == 'b') {
+        lprofBinaryIdsBuffer Data = {{0}, 0};
+        ProfDataWriter Writer = {binaryIdsStringWriter, &Data};
+        __llvm_write_binary_ids(&Writer);
+        memcpy(FilenameBuf + J, Data.String, Data.Length);
+        J += Data.Length;
       } else {
         if (!getMergePoolSize(FilenamePat, &I))
           continue;
@@ -1309,6 +1360,107 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
     setProfileMergeRequested(EnableMerge);
   }
   return 0;
+}
+
+COMPILER_RT_USED int __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
+  int ReturnValue = 0, FilenameLength, TargetLength;
+  char *FilenameBuf, *TargetFilename;
+  const char *Filename;
+
+  /* Save old profile data */
+  FILE *oldFile = getProfileFile();
+
+  // Temporarily suspend getting SIGKILL when the parent exits.
+  int PDeathSig = lprofSuspendSigKill();
+
+  if (lprofProfileDumped() || __llvm_profile_is_continuous_mode_enabled()) {
+    PROF_NOTE("Profile data not written to file: %s.\n", "already written");
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return 0;
+  }
+
+  /* Check if there is llvm/runtime version mismatch.  */
+  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
+    PROF_ERR("Runtime and instrumentation version mismatch : "
+             "expected %d, but get %d\n",
+             INSTR_PROF_RAW_VERSION,
+             (int)GET_VERSION(__llvm_profile_get_version()));
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  /* Get current filename */
+  FilenameLength = getCurFilenameLength();
+  FilenameBuf = (char *)COMPILER_RT_ALLOCA(FilenameLength + 1);
+  Filename = getCurFilename(FilenameBuf, 0);
+
+  /* Check the filename. */
+  if (!Filename) {
+    PROF_ERR("Failed to write file : %s\n", "Filename not set");
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  /* Allocate new space for our target-specific PGO filename */
+  TargetLength = strlen(Target);
+  TargetFilename =
+      (char *)COMPILER_RT_ALLOCA(FilenameLength + TargetLength + 2);
+
+  /* Find file basename and path sizes */
+  int32_t DirEnd = FilenameLength - 1;
+  while (DirEnd >= 0 && !IS_DIR_SEPARATOR(Filename[DirEnd])) {
+    DirEnd--;
+  }
+  uint32_t DirSize = DirEnd + 1, BaseSize = FilenameLength - DirSize;
+
+  /* Prepend "TARGET." to current filename */
+  if (DirSize > 0) {
+    memcpy(TargetFilename, Filename, DirSize);
+  }
+  memcpy(TargetFilename + DirSize, Target, TargetLength);
+  TargetFilename[TargetLength + DirSize] = '.';
+  memcpy(TargetFilename + DirSize + 1 + TargetLength, Filename + DirSize,
+         BaseSize);
+  TargetFilename[FilenameLength + 1 + TargetLength] = 0;
+
+  /* Open and truncate target-specific PGO file */
+  FILE *OutputFile = fopen(TargetFilename, "w");
+  setProfileFile(OutputFile);
+
+  if (!OutputFile) {
+    PROF_ERR("Failed to open file : %s\n", TargetFilename);
+    if (PDeathSig == 1)
+      lprofRestoreSigKill();
+    return -1;
+  }
+
+  FreeHook = &free;
+  setupIOBuffer();
+
+  /* Write custom data */
+  ProfDataWriter fileWriter;
+  initFileWriter(&fileWriter, OutputFile);
+
+  /* Write custom data to the file */
+  ReturnValue = lprofWriteDataImpl(
+      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
+      lprofGetVPDataReader(), NULL, NULL, NULL, NULL, NamesBegin, NamesEnd, 0);
+  closeFileObject(OutputFile);
+
+  // Restore SIGKILL.
+  if (PDeathSig == 1)
+    lprofRestoreSigKill();
+
+  /* Restore old profiling file */
+  setProfileFile(oldFile);
+
+  return ReturnValue;
 }
 
 #endif

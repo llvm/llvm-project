@@ -63,9 +63,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <tuple>
 #include <utility>
@@ -276,8 +274,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   InsertPtsMap.reserve(Orders.size() + 1);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &InsertPts = InsertPtsMap[Node].first;
-    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -533,25 +530,6 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
   }
 }
 
-// This helper function is necessary to deal with values that have different
-// bit widths (APInt Operator- does not like that). If the value cannot be
-// represented in uint64 we return an "empty" APInt. This is then interpreted
-// as the value is not in range.
-static std::optional<APInt> calculateOffsetDiff(const APInt &V1,
-                                                const APInt &V2) {
-  std::optional<APInt> Res;
-  unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
-                V1.getBitWidth() : V2.getBitWidth();
-  uint64_t LimVal1 = V1.getLimitedValue();
-  uint64_t LimVal2 = V2.getLimitedValue();
-
-  if (LimVal1 == ~0ULL || LimVal2 == ~0ULL)
-    return Res;
-
-  uint64_t Diff = LimVal1 - LimVal2;
-  return APInt(BW, Diff, true);
-}
-
 // From a list of constants, one needs to picked as the base and the other
 // constants will be transformed into an offset from that base constant. The
 // question is which we can pick best? For example, consider these constants
@@ -608,16 +586,13 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
-        std::optional<APInt> Diff = calculateOffsetDiff(
-            C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
-        if (Diff) {
-          const InstructionCost ImmCosts =
-              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, *Diff, Ty);
-          Cost -= ImmCosts;
-          LLVM_DEBUG(dbgs() << "Offset " << *Diff << " "
-                            << "has penalty: " << ImmCosts << "\n"
-                            << "Adjusted cost: " << Cost << "\n");
-        }
+        APInt Diff = C2->ConstInt->getValue() - ConstCand->ConstInt->getValue();
+        const InstructionCost ImmCosts =
+            TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff, Ty);
+        Cost -= ImmCosts;
+        LLVM_DEBUG(dbgs() << "Offset " << Diff << " "
+                          << "has penalty: " << ImmCosts << "\n"
+                          << "Adjusted cost: " << Cost << "\n");
       }
     }
     LLVM_DEBUG(dbgs() << "Cumulative cost: " << Cost << "\n");
@@ -800,7 +775,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     if (!ClonedCastInst) {
       ClonedCastInst = CastInst->clone();
       ClonedCastInst->setOperand(0, Mat);
-      ClonedCastInst->insertAfter(CastInst);
+      ClonedCastInst->insertAfter(CastInst->getIterator());
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
       LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'
@@ -953,8 +928,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
-  this->OptForSize = Entry.getParent()->hasOptSize() ||
-                     llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
+  this->OptForSize = llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
                                                  PGSOQueryType::IRPass);
 
   // Collect all constant candidates.

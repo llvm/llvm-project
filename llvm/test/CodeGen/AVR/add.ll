@@ -1,4 +1,4 @@
-; RUN: llc -mattr=addsubiw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=addsubiw < %s -mtriple=avr | FileCheck %s
 
 define i8 @add8_reg_reg(i8 %a, i8 %b) {
 ; CHECK-LABEL: add8_reg_reg:

@@ -16,12 +16,12 @@ subroutine test_val_2(x)
   call val2(%val(x))
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_val_2(
-! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.complex<4>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_val_2Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.complex<4>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.heap<!fir.complex<4>>>>)
-! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.complex<4>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.complex<4>>>) -> !fir.heap<!fir.complex<4>>
-! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.heap<!fir.complex<4>>
-! CHECK:           fir.call @_QPval2(%[[VAL_4]]) fastmath<contract> : (!fir.complex<4>) -> ()
+! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<complex<f32>>>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_val_2Ex"} : (!fir.ref<!fir.box<!fir.heap<complex<f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<complex<f32>>>>, !fir.ref<!fir.box<!fir.heap<complex<f32>>>>)
+! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<complex<f32>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<complex<f32>>>) -> !fir.heap<complex<f32>>
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.heap<complex<f32>>
+! CHECK:           fir.call @_QPval2(%[[VAL_4]]) fastmath<contract> : (complex<f32>) -> ()
 
 subroutine test_ref_char(x)
   ! There must be not extra length argument. Only the address is
@@ -50,12 +50,12 @@ subroutine test_ref_2(x)
   call ref2(%ref(x))
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_ref_2(
-! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_ref_2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>)
-! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.complex<4>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.complex<4>>>) -> !fir.ptr<!fir.complex<4>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
-! CHECK:           fir.call @_QPref2(%[[VAL_4]]) fastmath<contract> : (!fir.ref<!fir.complex<4>>) -> ()
+! CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<complex<f32>>>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_ref_2Ex"} : (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<complex<f32>>>>, !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>)
+! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<complex<f32>>>) -> !fir.ptr<complex<f32>>
+! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<complex<f32>>) -> !fir.ref<complex<f32>>
+! CHECK:           fir.call @_QPref2(%[[VAL_4]]) fastmath<contract> : (!fir.ref<complex<f32>>) -> ()
 
 subroutine test_skip_copy_in_out(x)
   real :: x(:)

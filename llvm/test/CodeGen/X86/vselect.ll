@@ -796,3 +796,29 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
   ret i64 %4
 }
 
+; Tests the scalarizeBinOp code in DAGCombiner
+define void @scalarize_binop(<1 x i1> %a) {
+; SSE-LABEL: scalarize_binop:
+; SSE:       # %bb.0: # %bb0
+; SSE-NEXT:    .p2align 4
+; SSE-NEXT:  .LBB35_1: # %bb1
+; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    jmp .LBB35_1
+;
+; AVX-LABEL: scalarize_binop:
+; AVX:       # %bb.0: # %bb0
+; AVX-NEXT:    .p2align 4
+; AVX-NEXT:  .LBB35_1: # %bb1
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    jmp .LBB35_1
+bb0:
+  br label %bb1
+
+bb1:
+  %b = select <1 x i1> %a, <1 x i1> zeroinitializer, <1 x i1> splat (i1 true)
+  br label %bb2
+
+bb2:
+  %c = extractelement <1 x i1> %b, i32 0
+  br label %bb1
+}

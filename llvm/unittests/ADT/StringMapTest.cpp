@@ -381,6 +381,9 @@ struct MoveOnly {
     return *this;
   }
 
+  bool operator==(const MoveOnly &RHS) const { return i == RHS.i; }
+  bool operator!=(const MoveOnly &RHS) const { return i != RHS.i; }
+
 private:
   MoveOnly(const MoveOnly &) = delete;
   MoveOnly &operator=(const MoveOnly &) = delete;
@@ -549,6 +552,26 @@ TEST_F(StringMapTest, StructuredBindings) {
   for (auto &[Key, Value] : A) {
     EXPECT_EQ("a", Key);
     EXPECT_EQ(42, Value);
+  }
+
+  for (const auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(42, Value);
+  }
+}
+
+TEST_F(StringMapTest, StructuredBindingsMoveOnly) {
+  StringMap<MoveOnly> A;
+  A.insert(std::make_pair("a", MoveOnly(42)));
+
+  for (auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(MoveOnly(42), Value);
+  }
+
+  for (const auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(MoveOnly(42), Value);
   }
 }
 

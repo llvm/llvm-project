@@ -88,6 +88,8 @@
                                                             201902L [C++20]
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
+    __cpp_lib_flat_map                                      202207L [C++23]
+    __cpp_lib_flat_set                                      202207L [C++23]
     __cpp_lib_format                                        202110L [C++20]
     __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
@@ -125,6 +127,7 @@
     __cpp_lib_is_aggregate                                  201703L [C++17]
     __cpp_lib_is_constant_evaluated                         201811L [C++20]
     __cpp_lib_is_final                                      201402L [C++14]
+    __cpp_lib_is_implicit_lifetime                          202302L [C++23]
     __cpp_lib_is_invocable                                  201703L [C++17]
     __cpp_lib_is_layout_compatible                          201907L [C++20]
     __cpp_lib_is_nothrow_convertible                        201806L [C++20]
@@ -155,8 +158,10 @@
     __cpp_lib_node_extract                                  201606L [C++17]
     __cpp_lib_nonmember_container_access                    201411L [C++17]
     __cpp_lib_not_fn                                        201603L [C++17]
+                                                            202306L [C++26]
     __cpp_lib_null_iterators                                201304L [C++14]
     __cpp_lib_optional                                      201606L [C++17]
+                                                            202106L [C++20]
                                                             202110L [C++23]
     __cpp_lib_optional_range_support                        202406L [C++26]
     __cpp_lib_out_ptr                                       202106L [C++23]
@@ -243,6 +248,8 @@
     __cpp_lib_unreachable                                   202202L [C++23]
     __cpp_lib_unwrap_ref                                    201811L [C++20]
     __cpp_lib_variant                                       202102L [C++17]
+                                                            202106L [C++20]
+                                                            202306L [C++26]
     __cpp_lib_void_t                                        201411L [C++17]
 */
 
@@ -523,6 +530,14 @@
 #   error "__cpp_lib_filesystem should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
 # endif
@@ -669,6 +684,10 @@
 
 # ifdef __cpp_lib_is_final
 #   error "__cpp_lib_is_final should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_invocable
@@ -1390,6 +1409,14 @@
 #   error "__cpp_lib_filesystem should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
 # endif
@@ -1548,6 +1575,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++14"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_is_invocable
@@ -1710,7 +1741,7 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++14"
 #   endif
@@ -1719,7 +1750,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
@@ -1853,7 +1884,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should not be defined before c++17"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++14"
 #   endif
@@ -1862,7 +1893,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2364,7 +2395,7 @@
 #   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++17"
 #   endif
@@ -2373,8 +2404,16 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_format
@@ -2562,6 +2601,10 @@
 # endif
 # if __cpp_lib_is_final != 201402L
 #   error "__cpp_lib_is_final should have the value 201402L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_is_invocable
@@ -2781,7 +2824,7 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++17"
 #   endif
@@ -2790,7 +2833,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
@@ -2906,7 +2949,7 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_scoped_lock
 #     error "__cpp_lib_scoped_lock should be defined in c++17"
 #   endif
@@ -2915,7 +2958,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_scoped_lock
-#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2927,7 +2970,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++17"
 #   endif
@@ -2936,7 +2979,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2954,7 +2997,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++17"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++17"
 #   endif
@@ -2963,7 +3006,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -3239,17 +3282,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++20"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++20"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++20"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -3310,7 +3347,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_barrier
 #     error "__cpp_lib_barrier should be defined in c++20"
 #   endif
@@ -3319,7 +3356,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_barrier
-#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -3621,7 +3658,7 @@
 #   error "__cpp_lib_expected should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++20"
 #   endif
@@ -3630,15 +3667,29 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++20"
+# ifdef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should not be defined before c++23"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++20"
+
+# ifdef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should not be defined before c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++20"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -3842,6 +3893,10 @@
 #   error "__cpp_lib_is_final should have the value 201402L in c++20"
 # endif
 
+# ifdef __cpp_lib_is_implicit_lifetime
+#   error "__cpp_lib_is_implicit_lifetime should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should be defined in c++20"
 # endif
@@ -3908,7 +3963,7 @@
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++20"
 #   endif
@@ -3917,11 +3972,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_latch
 #     error "__cpp_lib_latch should be defined in c++20"
 #   endif
@@ -3930,7 +3985,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_latch
-#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -4070,8 +4125,8 @@
 # ifndef __cpp_lib_optional
 #   error "__cpp_lib_optional should be defined in c++20"
 # endif
-# if __cpp_lib_optional != 201606L
-#   error "__cpp_lib_optional should have the value 201606L in c++20"
+# if __cpp_lib_optional != 202106L
+#   error "__cpp_lib_optional should have the value 202106L in c++20"
 # endif
 
 # ifdef __cpp_lib_optional_range_support
@@ -4116,7 +4171,7 @@
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++20"
 #   endif
@@ -4125,7 +4180,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
@@ -4247,7 +4302,7 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_scoped_lock
 #     error "__cpp_lib_scoped_lock should be defined in c++20"
 #   endif
@@ -4256,11 +4311,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_scoped_lock
-#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_semaphore
 #     error "__cpp_lib_semaphore should be defined in c++20"
 #   endif
@@ -4269,7 +4324,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_semaphore
-#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -4277,7 +4332,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++20"
 #   endif
@@ -4286,7 +4341,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4304,7 +4359,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++20"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++20"
 #   endif
@@ -4313,7 +4368,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4324,17 +4379,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++20"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++20"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -4419,7 +4468,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++20"
 #   endif
@@ -4428,7 +4477,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -4552,8 +4601,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++20"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++20"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -4652,17 +4701,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++23"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++23"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++23"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -4723,7 +4766,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_barrier
 #     error "__cpp_lib_barrier should be defined in c++23"
 #   endif
@@ -4732,7 +4775,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_barrier
-#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -5064,7 +5107,7 @@
 #   error "__cpp_lib_expected should have the value 202211L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++23"
 #   endif
@@ -5073,15 +5116,41 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++23"
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++23"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++23"
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++23"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++23"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++23"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -5306,6 +5375,19 @@
 #   error "__cpp_lib_is_final should have the value 201402L in c++23"
 # endif
 
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++23"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should be defined in c++23"
 # endif
@@ -5375,7 +5457,7 @@
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++23"
 #   endif
@@ -5384,11 +5466,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_latch
 #     error "__cpp_lib_latch should be defined in c++23"
 #   endif
@@ -5397,7 +5479,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_latch
-#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -5597,14 +5679,20 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_print
-#   error "__cpp_lib_print should be defined in c++23"
-# endif
-# if __cpp_lib_print != 202207L
-#   error "__cpp_lib_print should have the value 202207L in c++23"
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++23"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++23"
 #   endif
@@ -5613,7 +5701,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
@@ -5819,7 +5907,7 @@
 #   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_scoped_lock
 #     error "__cpp_lib_scoped_lock should be defined in c++23"
 #   endif
@@ -5828,11 +5916,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_scoped_lock
-#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_semaphore
 #     error "__cpp_lib_semaphore should be defined in c++23"
 #   endif
@@ -5841,7 +5929,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_semaphore
-#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -5849,7 +5937,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++23"
 #   endif
@@ -5858,7 +5946,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -5876,7 +5964,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++23"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++23"
 #   endif
@@ -5885,7 +5973,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -5896,17 +5984,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++23"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++23"
 # endif
 
 # ifdef __cpp_lib_smart_ptr_owner_equality
@@ -6018,7 +6100,7 @@
 #   error "__cpp_lib_submdspan should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++23"
 #   endif
@@ -6027,7 +6109,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -6166,8 +6248,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++23"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++23"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -6275,17 +6357,11 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++26"
-#   endif
-#   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_float
+#   error "__cpp_lib_atomic_float should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_float != 201711L
+#   error "__cpp_lib_atomic_float should have the value 201711L in c++26"
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -6355,7 +6431,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_barrier
 #     error "__cpp_lib_barrier should be defined in c++26"
 #   endif
@@ -6364,7 +6440,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_barrier
-#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_barrier should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -6744,7 +6820,7 @@
 #   error "__cpp_lib_expected should have the value 202211L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)
 #   ifndef __cpp_lib_filesystem
 #     error "__cpp_lib_filesystem should be defined in c++26"
 #   endif
@@ -6753,15 +6829,41 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY)' is not met!"
 #   endif
 # endif
 
-# ifndef __cpp_lib_format
-#   error "__cpp_lib_format should be defined in c++26"
+# ifndef __cpp_lib_flat_map
+#   error "__cpp_lib_flat_map should be defined in c++26"
 # endif
-# if __cpp_lib_format != 202110L
-#   error "__cpp_lib_format should have the value 202110L in c++26"
+# if __cpp_lib_flat_map != 202207L
+#   error "__cpp_lib_flat_map should have the value 202207L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should be defined in c++26"
+#   endif
+#   if __cpp_lib_flat_set != 202207L
+#     error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_flat_set
+#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_format
+#     error "__cpp_lib_format should be defined in c++26"
+#   endif
+#   if __cpp_lib_format != 202110L
+#     error "__cpp_lib_format should have the value 202110L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_format
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6915,7 +7017,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION)
 #   ifndef __cpp_lib_fstream_native_handle
 #     error "__cpp_lib_fstream_native_handle should be defined in c++26"
 #   endif
@@ -6924,7 +7026,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_fstream_native_handle
-#     error "__cpp_lib_fstream_native_handle should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (!defined(_LIBCPP_HAS_NO_FILESYSTEM) && !defined(_LIBCPP_HAS_NO_LOCALIZATION))' is not met!"
+#     error "__cpp_lib_fstream_native_handle should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION)' is not met!"
 #   endif
 # endif
 
@@ -7112,6 +7214,19 @@
 #   error "__cpp_lib_is_final should have the value 201402L in c++26"
 # endif
 
+# if __has_builtin(__builtin_is_implicit_lifetime)
+#   ifndef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_implicit_lifetime != 202302L
+#     error "__cpp_lib_is_implicit_lifetime should have the value 202302L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_is_implicit_lifetime
+#     error "__cpp_lib_is_implicit_lifetime should not be defined when the requirement '__has_builtin(__builtin_is_implicit_lifetime)' is not met!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_is_invocable
 #   error "__cpp_lib_is_invocable should be defined in c++26"
 # endif
@@ -7199,7 +7314,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_jthread
 #     error "__cpp_lib_jthread should be defined in c++26"
 #   endif
@@ -7208,11 +7323,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_jthread
-#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_latch
 #     error "__cpp_lib_latch should be defined in c++26"
 #   endif
@@ -7221,7 +7336,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_latch
-#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_latch should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -7371,8 +7486,8 @@
 # ifndef __cpp_lib_not_fn
 #   error "__cpp_lib_not_fn should be defined in c++26"
 # endif
-# if __cpp_lib_not_fn != 201603L
-#   error "__cpp_lib_not_fn should have the value 201603L in c++26"
+# if __cpp_lib_not_fn != 202306L
+#   error "__cpp_lib_not_fn should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_null_iterators
@@ -7448,14 +7563,20 @@
 #   endif
 # endif
 
-# ifndef __cpp_lib_print
-#   error "__cpp_lib_print should be defined in c++26"
-# endif
-# if __cpp_lib_print != 202207L
-#   error "__cpp_lib_print should have the value 202207L in c++26"
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++26"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
+#   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #   ifndef __cpp_lib_quoted_string_io
 #     error "__cpp_lib_quoted_string_io should be defined in c++26"
 #   endif
@@ -7464,7 +7585,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_quoted_string_io
-#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
 #   endif
 # endif
 
@@ -7697,7 +7818,7 @@
 #   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_scoped_lock
 #     error "__cpp_lib_scoped_lock should be defined in c++26"
 #   endif
@@ -7706,11 +7827,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_scoped_lock
-#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_scoped_lock should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)
+# if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
 #   ifndef __cpp_lib_semaphore
 #     error "__cpp_lib_semaphore should be defined in c++26"
 #   endif
@@ -7719,7 +7840,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_semaphore
-#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#     error "__cpp_lib_semaphore should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -7736,7 +7857,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++26"
 #   endif
@@ -7745,7 +7866,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -7763,7 +7884,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++26"
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_THREADS)
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++26"
 #   endif
@@ -7772,7 +7893,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_THREADS)' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -7783,17 +7904,11 @@
 #   error "__cpp_lib_shift should have the value 201806L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
-#   endif
-#   if __cpp_lib_smart_ptr_for_overwrite != 202002L
-#     error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_smart_ptr_for_overwrite
-#     error "__cpp_lib_smart_ptr_for_overwrite should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_smart_ptr_for_overwrite
+#   error "__cpp_lib_smart_ptr_for_overwrite should be defined in c++26"
+# endif
+# if __cpp_lib_smart_ptr_for_overwrite != 202002L
+#   error "__cpp_lib_smart_ptr_for_overwrite should have the value 202002L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7932,7 +8047,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #   ifndef __cpp_lib_syncbuf
 #     error "__cpp_lib_syncbuf should be defined in c++26"
 #   endif
@@ -7941,7 +8056,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_syncbuf
-#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM)' is not met!"
+#     error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
 #   endif
 # endif
 
@@ -8098,8 +8213,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++26"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++26"
+# if __cpp_lib_variant != 202306L
+#   error "__cpp_lib_variant should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_void_t

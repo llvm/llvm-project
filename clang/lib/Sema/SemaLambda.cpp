@@ -21,9 +21,11 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -423,11 +425,11 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   // is an empty cast path for the method stored in the context (signalling that
   // we've already diagnosed it) and then just not building the call, but that
   // doesn't really seem any simpler than diagnosing it at the call site...
-  if (auto It = Context.LambdaCastPaths.find(Method);
-      It != Context.LambdaCastPaths.end())
+  auto [It, Inserted] = Context.LambdaCastPaths.try_emplace(Method);
+  if (!Inserted)
     return It->second.empty();
 
-  CXXCastPath &Path = Context.LambdaCastPaths[Method];
+  CXXCastPath &Path = It->second;
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
   if (!IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType,
@@ -909,8 +911,8 @@ getDummyLambdaType(Sema &S, SourceLocation Loc = SourceLocation()) {
   QualType DefaultTypeForNoTrailingReturn = S.getLangOpts().CPlusPlus14
                                                 ? S.Context.getAutoDeductType()
                                                 : S.Context.DependentTy;
-  QualType MethodTy = S.Context.getFunctionType(DefaultTypeForNoTrailingReturn,
-                                                std::nullopt, EPI);
+  QualType MethodTy =
+      S.Context.getFunctionType(DefaultTypeForNoTrailingReturn, {}, EPI);
   return S.Context.getTrivialTypeSourceInfo(MethodTy, Loc);
 }
 
@@ -1454,6 +1456,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
 
+  if (Context.getTargetInfo().getTriple().isAArch64())
+    ARM().CheckSMEFunctionDefAttributes(Method);
+
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
     CUDA().SetLambdaAttrs(Method);
@@ -1681,8 +1686,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
   ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
-  QualType ConvTy =
-      S.Context.getFunctionType(PtrToFunctionTy, std::nullopt, ConvExtInfo);
+  QualType ConvTy = S.Context.getFunctionType(PtrToFunctionTy, {}, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName ConversionName
@@ -1864,8 +1868,7 @@ static void addBlockPointerConversion(Sema &S,
           /*IsVariadic=*/false, /*IsCXXMethod=*/true));
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
-  QualType ConvTy =
-      S.Context.getFunctionType(BlockPtrTy, std::nullopt, ConversionEPI);
+  QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, {}, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name
@@ -1950,7 +1953,12 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
+
+  if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
+    SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
+
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
+
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
@@ -2231,18 +2239,18 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   Cleanup.mergeFrom(LambdaCleanup);
 
-  LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
-                                          CaptureDefault, CaptureDefaultLoc,
-                                          ExplicitParams, ExplicitResultType,
-                                          CaptureInits, EndLoc,
-                                          ContainsUnexpandedParameterPack);
+  LambdaExpr *Lambda =
+      LambdaExpr::Create(Context, Class, IntroducerRange, CaptureDefault,
+                         CaptureDefaultLoc, ExplicitParams, ExplicitResultType,
+                         CaptureInits, EndLoc, ContainsUnexpandedParameterPack);
+
   // If the lambda expression's call operator is not explicitly marked constexpr
-  // and we are not in a dependent context, analyze the call operator to infer
+  // and is not dependent, analyze the call operator to infer
   // its constexpr-ness, suppressing diagnostics while doing so.
   if (getLangOpts().CPlusPlus17 && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
-      !Class->getDeclContext()->isDependentContext()) {
+      !Class->isDependentContext()) {
     CallOperator->setConstexprKind(
         CheckConstexprFunctionDefinition(CallOperator,
                                          CheckConstexprKind::CheckValid)
@@ -2283,6 +2291,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     case ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
       break;
     }
+    maybeAddDeclWithEffects(LSI->CallOperator);
   }
 
   return MaybeBindToTemporary(Lambda);
@@ -2350,7 +2359,10 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Block->setBody(new (Context) CompoundStmt(ConvLocation));
 
   // Create the block literal expression.
-  Expr *BuildBlock = new (Context) BlockExpr(Block, Conv->getConversionType());
+  // TODO: Do we ever get here if we have unexpanded packs in the lambda???
+  Expr *BuildBlock =
+      new (Context) BlockExpr(Block, Conv->getConversionType(),
+                              /*ContainsUnexpandedParameterPack=*/false);
   ExprCleanupObjects.push_back(Block);
   Cleanup.setExprNeedsCleanups(true);
 
@@ -2396,35 +2408,31 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   if (!ShouldAddDeclsFromParentScope)
     return;
 
-  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
-      ParentInstantiations;
-  while (true) {
+      InstantiationAndPatterns;
+  while (FDPattern && FD) {
+    InstantiationAndPatterns.emplace_back(FDPattern, FD);
+
     FDPattern =
         dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
     FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
-
-    if (!FDPattern || !FD)
-      break;
-
-    ParentInstantiations.emplace_back(FDPattern, FD);
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the
   // outermost lambda to the innermost lambda. This ordering ensures that
-  // parameters in inner lambdas can correctly depend on those defined
-  // in outer lambdas, e.g. auto L = [](auto... x) {
-  //   return [](decltype(x)... y) { }; // `y` depends on `x`
-  // };
+  // the outer instantiations can be found when referenced from within inner
+  // lambdas.
+  //
+  //   auto L = [](auto... x) {
+  //     return [](decltype(x)... y) { }; // Instantiating y needs x
+  //   };
+  //
 
-  for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
+  for (auto [FDPattern, FD] : llvm::reverse(InstantiationAndPatterns)) {
     SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
     SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
 
     if (isLambdaCallOperator(FD))
       SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
   }
-
-  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
-                                         MLTAL);
 }

@@ -44,7 +44,6 @@ cpp::enable_if_t<(cpp::is_integral_v<T> && (sizeof(T) > sizeof(uint64_t))) ||
                      is_big_int_v<T>,
                  cpp::string>
 describeValue(T Value) {
-  static_assert(sizeof(T) % 8 == 0, "Unsupported size of UInt");
   const IntegerToString<T, radix::Hex::WithPrefix> buffer(Value);
   return buffer.view();
 }
@@ -224,6 +223,7 @@ TEST_SPECIALIZATION(int);
 TEST_SPECIALIZATION(long);
 TEST_SPECIALIZATION(long long);
 
+TEST_SPECIALIZATION(signed char);
 TEST_SPECIALIZATION(unsigned char);
 TEST_SPECIALIZATION(unsigned short);
 TEST_SPECIALIZATION(unsigned int);
@@ -242,6 +242,7 @@ TEST_SPECIALIZATION(__uint128_t);
 
 TEST_SPECIALIZATION(LIBC_NAMESPACE::Int<128>);
 
+TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<96>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<128>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<192>);
 TEST_SPECIALIZATION(LIBC_NAMESPACE::UInt<256>);

@@ -10,7 +10,7 @@ import lit.formats
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -153,12 +153,16 @@ if config.asan_dynamic:
 if platform.system() == "Windows":
     # MSVC-specific tests might also use the clang-cl.exe driver.
     if target_is_msvc:
-        clang_cl_cxxflags = [
-            "-Wno-deprecated-declarations",
-            "-WX",
-            "-D_HAS_EXCEPTIONS=0",
-            "-Zi",
-        ] + target_cflags
+        clang_cl_cxxflags = (
+            [
+                "-WX",
+                "-D_HAS_EXCEPTIONS=0",
+            ]
+            + config.debug_info_flags
+            + target_cflags
+        )
+        if config.compiler_id != "MSVC":
+            clang_cl_cxxflags = ["-Wno-deprecated-declarations"] + clang_cl_cxxflags
         clang_cl_asan_cxxflags = ["-fsanitize=address"] + clang_cl_cxxflags
         if config.asan_dynamic:
             clang_cl_asan_cxxflags.append("-MD")
@@ -179,6 +183,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", "-MD"))
         config.substitutions.append(("%MT", "-MT"))
         config.substitutions.append(("%Gw", "-Gw"))
+        config.substitutions.append(("%Oy-", "-Oy-"))
 
         base_lib = os.path.join(
             config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix
@@ -216,6 +221,7 @@ if platform.system() == "Windows":
         config.substitutions.append(("%MD", ""))
         config.substitutions.append(("%MT", ""))
         config.substitutions.append(("%Gw", "-fdata-sections"))
+        config.substitutions.append(("%Oy-", "-fno-omit-frame-pointer"))
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
@@ -284,6 +290,12 @@ if (
 if config.host_os == "Windows":
     os.environ["PATH"] = os.path.pathsep.join(
         [config.compiler_rt_libdir, os.environ.get("PATH", "")]
+    )
+
+# msvc needs to be instructed where the compiler-rt libraries are
+if config.compiler_id == "MSVC":
+    config.environment["LIB"] = os.path.pathsep.join(
+        [config.compiler_rt_libdir, config.environment.get("LIB", "")]
     )
 
 # Default test suffixes.

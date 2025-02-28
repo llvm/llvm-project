@@ -1,6 +1,6 @@
 ! Test assumed-rank dummy argument that is not present in
 ! all ENTRY statements.
-! RUN: bbc -emit-hlfir -allow-assumed-rank -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_main_entry(x)
   real :: x(..)

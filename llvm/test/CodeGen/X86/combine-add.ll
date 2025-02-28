@@ -265,8 +265,8 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [10,10,10,10,10,10,10,10]
 ; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [3,3,3,3,3,3,3,3]
-; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -501,10 +501,8 @@ define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: PR51238:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addb %dl, %cl
-; CHECK-NEXT:    adcb $1, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
    %ny = xor i8 %y, -1
    %nz = xor i8 %z, -1

@@ -10,6 +10,7 @@ add_lldb_library(lldbPluginGNUstepObjCRuntime PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginExpressionParserClang
     lldbPluginTypeSystemClang
   CLANG_LIBS

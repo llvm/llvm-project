@@ -1,8 +1,9 @@
 if (FLANG_CUF_RUNTIME)
 
 add_flang_unittest(FlangCufRuntimeTests
-  Allocatable.cpp
-  AllocatorCUF.cpp
+  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/Allocatable.cpp
+  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/AllocatorCUF.cpp
+  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/Memory.cpp
 )
 
 if (BUILD_SHARED_LIBS)
@@ -14,8 +15,8 @@ endif()
 target_link_libraries(FlangCufRuntimeTests
   PRIVATE
   ${CUDA_RT_TARGET}
-  CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR}
-  FortranRuntime
+  flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR}
+  flang_rt.runtime
 )
 
 target_include_directories(FlangCufRuntimeTests PRIVATE ${CUDAToolkit_INCLUDE_DIRS})

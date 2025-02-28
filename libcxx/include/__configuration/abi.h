@@ -23,11 +23,11 @@
 // that Windows compilers pretending to be MSVC++ target the Microsoft ABI,
 // and allow the user to explicitly specify the ABI to handle cases where this
 // heuristic falls short.
-#if defined(_LIBCPP_ABI_FORCE_ITANIUM) && defined(_LIBCPP_ABI_FORCE_MICROSOFT)
-#  error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be defined"
-#elif defined(_LIBCPP_ABI_FORCE_ITANIUM)
+#if _LIBCPP_ABI_FORCE_ITANIUM && _LIBCPP_ABI_FORCE_MICROSOFT
+#  error "Only one of _LIBCPP_ABI_FORCE_ITANIUM and _LIBCPP_ABI_FORCE_MICROSOFT can be true"
+#elif _LIBCPP_ABI_FORCE_ITANIUM
 #  define _LIBCPP_ABI_ITANIUM
-#elif defined(_LIBCPP_ABI_FORCE_MICROSOFT)
+#elif _LIBCPP_ABI_FORCE_MICROSOFT
 #  define _LIBCPP_ABI_MICROSOFT
 #else
 #  if defined(_WIN32) && defined(_MSC_VER)
@@ -57,8 +57,6 @@
 // because it changes the mangling of the virtual function located in the vtable, which
 // changes how it gets signed.
 #  define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-// Enable optimized version of __do_get_(un)signed which avoids redundant copies.
-#  define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 // Give reverse_iterator<T> one data member of type T, not two.
 // Also, in C++17 and later, don't derive iterator types from std::iterator.
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES
@@ -176,10 +174,25 @@
 // ABI impact: changes the iterator type of `vector` (except `vector<bool>`).
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
 
+// Changes the iterator type of `array` to a bounded iterator that keeps track of whether it's within the bounds of the
+// container and asserts it on every dereference and when performing iterator arithmetic.
+//
+// ABI impact: changes the iterator type of `array`, its size and its layout.
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY
+
 // [[msvc::no_unique_address]] seems to mostly affect empty classes, so the padding scheme for Itanium doesn't work.
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING)
 #  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 #endif
+
+// Tracks the bounds of the array owned by std::unique_ptr<T[]>, allowing it to trap when accessed out-of-bounds.
+// Note that limited bounds checking is also available outside of this ABI configuration, but only some categories
+// of types can be checked.
+//
+// ABI impact: This causes the layout of std::unique_ptr<T[]> to change and its size to increase.
+//             This also affects the representation of a few library types that use std::unique_ptr
+//             internally, such as the unordered containers.
+// #define _LIBCPP_ABI_BOUNDED_UNIQUE_PTR
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if defined(__APPLE__)

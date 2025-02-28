@@ -12,7 +12,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include <optional>
 using namespace llvm;
@@ -182,6 +181,18 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
                               AATags);
+      return MemoryLocation::getAfter(Arg, AATags);
+
+    case Intrinsic::experimental_memset_pattern:
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for memory intrinsic");
+      if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
+        return MemoryLocation(
+            Arg,
+            LocationSize::precise(
+                LenCI->getZExtValue() *
+                DL.getTypeAllocSize(II->getArgOperand(1)->getType())),
+            AATags);
       return MemoryLocation::getAfter(Arg, AATags);
 
     case Intrinsic::lifetime_start:

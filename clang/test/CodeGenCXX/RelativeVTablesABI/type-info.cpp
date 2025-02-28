@@ -5,12 +5,12 @@
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
 
+// CHECK: @_ZTI1A ={{.*}} constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i32 8), ptr @_ZTS1A }, align 8
 // CHECK: @_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
 // CHECK: @_ZTS1A ={{.*}} constant [3 x i8] c"1A\00", align 1
-// CHECK: @_ZTI1A ={{.*}} constant { ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i32 8), ptr @_ZTS1A }, align 8
+// CHECK: @_ZTI1B ={{.*}} constant { ptr, ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i32 8), ptr @_ZTS1B, ptr @_ZTI1A }, align 8
 // CHECK: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 // CHECK: @_ZTS1B ={{.*}} constant [3 x i8] c"1B\00", align 1
-// CHECK: @_ZTI1B ={{.*}} constant { ptr, ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i32 8), ptr @_ZTS1B, ptr @_ZTI1A }, align 8
 // CHECK: @_ZTI1A.rtti_proxy = linkonce_odr hidden unnamed_addr constant ptr @_ZTI1A, comdat
 // CHECK: @_ZTI1B.rtti_proxy = linkonce_odr hidden unnamed_addr constant ptr @_ZTI1B, comdat
 
@@ -24,7 +24,7 @@
 // CHECK-NEXT:   ret ptr @_ZTS1A
 // CHECK-NEXT: }
 
-// CHECK:      define{{.*}} i1 @_Z5equalP1A(ptr noundef readonly %a) local_unnamed_addr
+// CHECK:      define{{.*}} i1 @_Z5equalP1A(ptr noundef readonly captures(address_is_null) %a) local_unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[isnull:%[0-9]+]] = icmp eq ptr %a, null
 // CHECK-NEXT:   br i1 [[isnull]], label %[[bad_typeid:[a-z0-9._]+]], label %[[end:[a-z0-9.+]+]]

@@ -50,6 +50,9 @@ class Attr<Pred condition, string summary = ""> :
 
   // Default value for attribute.
   // Requires a constBuilderCall defined.
+  //
+  // Format: `$_builder` will be expanded to the relevant builder, e.g. to allow
+  //         access to the current context.
   string defaultValue = ?;
 
   // The value type of this attribute. This corresponds to the mlir::Type that
@@ -178,6 +181,7 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
         summary)> {
     let returnType = cppType;
     let convertFromStorage = fromStorage;
+    list<Attr> allowedAttributes = allowedAttrs;
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
@@ -333,17 +337,19 @@ class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {
   let valueType = NoneType;
 }
 
-def StrAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                              "string attribute">;
+def StrAttrPred : CPred<"::llvm::isa<::mlir::StringAttr>($_self)">;
+
+def StrAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // A string attribute that represents the name of a symbol.
-def SymbolNameAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                                     "string attribute">;
+def SymbolNameAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // String attribute that has a specific value type.
 class TypedStrAttr<Type ty>
-    : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                            "string attribute"> {
+    : StringBasedAttr<And<[StrAttrPred,
+        SubstLeaves<"$_self", "::mlir::cast<StringAttr>($_self).getType()",
+                    ty.predicate>]>,
+        "string attribute of " # ty.summary> {
   let valueType = ty;
 }
 
@@ -557,6 +563,15 @@ CPred<"::llvm::isa<::mlir::AffineMapAttr>($_self)">, "AffineMap attribute"> {
   let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
 }
 
+// Attributes containing integer sets.
+def IntegerSetAttr : Attr<
+CPred<"::llvm::isa<::mlir::IntegerSetAttr>($_self)">, "IntegerSet attribute"> {
+  let storageType = [{::mlir::IntegerSetAttr }];
+  let returnType = [{ ::mlir::IntegerSet }];
+  let valueType = NoneType;
+  let constBuilderCall = "::mlir::IntegerSetAttr::get($0)";
+}
+
 // Base class for array attributes.
 class ArrayAttrBase<Pred condition, string summary> : Attr<condition, summary> {
   let storageType = [{ ::mlir::ArrayAttr }];
@@ -743,6 +758,8 @@ class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
   let isOptional = attr.isOptional;
 
   let baseAttr = attr;
+
+  list<AttrConstraint> attrConstraints = constraints;
 }
 
 // An AttrConstraint that holds if all attr constraints specified in

@@ -784,7 +784,8 @@ private:
                                              bool IsALeakCheck = false) const;
   ///@}
   static bool SummarizeValue(raw_ostream &os, SVal V);
-  static bool SummarizeRegion(raw_ostream &os, const MemRegion *MR);
+  static bool SummarizeRegion(ProgramStateRef State, raw_ostream &os,
+                              const MemRegion *MR);
 
   void HandleNonHeapDealloc(CheckerContext &C, SVal ArgVal, SourceRange Range,
                             const Expr *DeallocExpr,
@@ -1091,12 +1092,15 @@ static bool isStandardDelete(const FunctionDecl *FD) {
   if (Kind != OO_Delete && Kind != OO_Array_Delete)
     return false;
 
+  bool HasBody = FD->hasBody(); // Prefer using the definition.
+
   // This is standard if and only if it's not defined in a user file.
   SourceLocation L = FD->getLocation();
+
   // If the header for operator delete is not included, it's still defined
   // in an invalid source location. Check to make sure we don't crash.
-  return !L.isValid() ||
-         FD->getASTContext().getSourceManager().isInSystemHeader(L);
+  const auto &SM = FD->getASTContext().getSourceManager();
+  return L.isInvalid() || (!HasBody && SM.isInSystemHeader(L));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1811,9 +1815,9 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallEvent &Call,
   if (!Att->args().empty()) {
     return MallocMemAux(C, Call,
                         Call.getArgExpr(Att->args_begin()->getASTIndex()),
-                        UndefinedVal(), State, Family);
+                        UnknownVal(), State, Family);
   }
-  return MallocMemAux(C, Call, UnknownVal(), UndefinedVal(), State, Family);
+  return MallocMemAux(C, Call, UnknownVal(), UnknownVal(), State, Family);
 }
 
 ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
@@ -2199,11 +2203,9 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
     return nullptr;
   }
 
-  const MemSpaceRegion *MS = R->getMemorySpace();
-
   // Parameters, locals, statics, globals, and memory returned by
   // __builtin_alloca() shouldn't be freed.
-  if (!isa<UnknownSpaceRegion, HeapSpaceRegion>(MS)) {
+  if (!R->hasMemorySpace<UnknownSpaceRegion, HeapSpaceRegion>(State)) {
     // Regions returned by malloc() are represented by SymbolicRegion objects
     // within HeapSpaceRegion. Of course, free() can work on memory allocated
     // outside the current function, so UnknownSpaceRegion is also a
@@ -2381,7 +2383,7 @@ bool MallocChecker::SummarizeValue(raw_ostream &os, SVal V) {
   return true;
 }
 
-bool MallocChecker::SummarizeRegion(raw_ostream &os,
+bool MallocChecker::SummarizeRegion(ProgramStateRef State, raw_ostream &os,
                                     const MemRegion *MR) {
   switch (MR->getKind()) {
   case MemRegion::FunctionCodeRegionKind: {
@@ -2400,7 +2402,7 @@ bool MallocChecker::SummarizeRegion(raw_ostream &os,
     os << "a block";
     return true;
   default: {
-    const MemSpaceRegion *MS = MR->getMemorySpace();
+    const MemSpaceRegion *MS = MR->getMemorySpace(State);
 
     if (isa<StackLocalsSpaceRegion>(MS)) {
       const VarRegion *VR = dyn_cast<VarRegion>(MR);
@@ -2486,8 +2488,8 @@ void MallocChecker::HandleNonHeapDealloc(CheckerContext &C, SVal ArgVal,
       os << "deallocator";
 
     os << " is ";
-    bool Summarized = MR ? SummarizeRegion(os, MR)
-                         : SummarizeValue(os, ArgVal);
+    bool Summarized =
+        MR ? SummarizeRegion(C.getState(), os, MR) : SummarizeValue(os, ArgVal);
     if (Summarized)
       os << ", which is not memory allocated by ";
     else

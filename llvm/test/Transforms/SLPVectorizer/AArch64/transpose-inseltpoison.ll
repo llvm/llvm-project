@@ -200,9 +200,9 @@ define i32 @reduction_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 7, i32 2>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 1, i32 4, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr <4 x i32> [[TMP5]], <i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], <i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw <4 x i32> [[TMP7]], <i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr <4 x i32> [[TMP5]], splat (i32 15)
+; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw <4 x i32> [[TMP7]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i32> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])

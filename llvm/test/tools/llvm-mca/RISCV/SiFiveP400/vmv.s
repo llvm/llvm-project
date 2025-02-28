@@ -293,12 +293,12 @@ vfmv.f.s f7, v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      280
-# CHECK-NEXT: Total Cycles:      523
+# CHECK-NEXT: Total Cycles:      524
 # CHECK-NEXT: Total uOps:        280
 
 # CHECK:      Dispatch Width:    3
-# CHECK-NEXT: uOps Per Cycle:    0.54
-# CHECK-NEXT: IPC:               0.54
+# CHECK-NEXT: uOps Per Cycle:    0.53
+# CHECK-NEXT: IPC:               0.53
 # CHECK-NEXT: Block RThroughput: 512.0
 
 # CHECK:      Instruction Info:

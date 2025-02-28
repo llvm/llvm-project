@@ -22,7 +22,7 @@ omp.declare_reduction @add_reduction_byref_box_heap_i32 : !llvm.ptr init {
   omp.yield
 }
 llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !llvm.ptr {fir.bindc_name = "y"}) attributes {fir.internal_name = "_QPmissordered_blocks", frame_pointer = #llvm.framePointerKind<"non-leaf">, target_cpu = "generic", target_features = #llvm.target_features<["+outline-atomics", "+v8a", "+fp-armv8", "+neon"]>} {
-  omp.parallel reduction(byref @add_reduction_byref_box_heap_i32 %arg0 -> %arg2 : !llvm.ptr, byref @add_reduction_byref_box_heap_i32 %arg1 -> %arg3 : !llvm.ptr) {
+  omp.parallel reduction(byref @add_reduction_byref_box_heap_i32 %arg0 -> %arg2, byref @add_reduction_byref_box_heap_i32 %arg1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -44,7 +44,7 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         br label %[[VAL_10:.*]]
 // CHECK:       omp.par.exit.split:                               ; preds = %[[VAL_9]]
 // CHECK:         ret void
-// CHECK:       omp.par.entry:
+// CHECK:       [[PAR_ENTRY:omp.par.entry]]:
 // CHECK:         %[[VAL_11:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_12:.*]], i32 0, i32 0
 // CHECK:         %[[VAL_13:.*]] = load ptr, ptr %[[VAL_11]], align 8
 // CHECK:         %[[VAL_14:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_12]], i32 0, i32 1
@@ -56,10 +56,14 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         %[[VAL_20:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_22:.*]] = alloca [2 x ptr], align 8
-// CHECK:         br label %[[VAL_23:.*]]
-// CHECK:       omp.reduction.init:                               ; preds = %[[VAL_24:.*]]
-// CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.reduction.neutral:                            ; preds = %[[VAL_23]]
+// CHECK:         br label %[[AFTER_ALLOC:omp.region.after_alloca]]
+// CHECK:       [[AFTER_ALLOC]]:                                   ; preds = %[[PAR_ENTRY]]
+// CHECK:         br label %[[VAL_23:omp.par.region]]
+// CHECK:       [[VAL_23]]:                                   ; preds = %[[AFTER_ALLOC]]
+// CHECK:         br label %[[VAL_42:.*]]
+// CHECK:       [[RED_INIT:omp.reduction.init]]:
+// CHECK:         br label %[[VAL_25:omp.reduction.neutral]]
+// CHECK:       [[VAL_25]]:                            ; preds = %[[RED_INIT]]
 // CHECK:         %[[VAL_26:.*]] = ptrtoint ptr %[[VAL_13]] to i64
 // CHECK:         %[[VAL_27:.*]] = icmp eq i64 %[[VAL_26]], 0
 // CHECK:         br i1 %[[VAL_27]], label %[[VAL_28:.*]], label %[[VAL_29:.*]]
@@ -79,15 +83,13 @@ llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.reduction.neutral8:                           ; preds = %[[VAL_36]], %[[VAL_37]]
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp.region.cont4:                                 ; preds = %[[VAL_38]]
+// CHECK:       [[VAL_39]]:                                 ; preds = %[[VAL_38]]
 // CHECK:         %[[VAL_40:.*]] = phi ptr [ %[[VAL_15]], %[[VAL_38]] ]
 // CHECK:         store ptr %[[VAL_40]], ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_41:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[VAL_39]]
-// CHECK:         br label %[[VAL_42:.*]]
-// CHECK:       omp.par.region10:                                 ; preds = %[[VAL_41]]
+// CHECK:       omp.par.region10:                                 ; preds = %[[VAL_39]]
 // CHECK:         br label %[[VAL_43:.*]]
-// CHECK:       omp.region.cont9:                                 ; preds = %[[VAL_42]]
+// CHECK:       omp.region.cont9:                                 ; preds = %[[VAL_41]]
 // CHECK:         %[[VAL_44:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_22]], i64 0, i64 0
 // CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_44]], align 8
 // CHECK:         %[[VAL_45:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_22]], i64 0, i64 1

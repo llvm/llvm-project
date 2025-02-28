@@ -149,7 +149,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
       tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(),
       tosaConv2DOp.getPadAttr(), tosaConv2DOp.getStrideAttr(),
-      tosaConv2DOp.getDilationAttr());
+      tosaConv2DOp.getDilationAttr(), tosaConv2DOp.getAccTypeAttr());
 
   // Create rescale to quantized type
   double inputScale = inputQType.getScale();
@@ -197,7 +197,7 @@ void TosaTestQuantUtilAPI::runOnOperation() {
 
   patterns.add<ConvertTosaNegateOp>(ctx);
   patterns.add<ConvertTosaConv2DOp>(ctx);
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsGreedily(func, std::move(patterns));
 }
 
 } // namespace

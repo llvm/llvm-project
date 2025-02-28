@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "CodeGenModule.h"
+#include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/Type.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -24,24 +29,59 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const override;
+  llvm::Type *getHLSLType(
+      CodeGenModule &CGM, const Type *T,
+      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
 };
 
-llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                  const Type *Ty) const {
-  auto *BuiltinTy = dyn_cast<BuiltinType>(Ty);
-  if (!BuiltinTy || BuiltinTy->getKind() != BuiltinType::HLSLResource)
+llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<unsigned> *Packoffsets) const {
+  auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
+  if (!ResType)
     return nullptr;
 
   llvm::LLVMContext &Ctx = CGM.getLLVMContext();
-  // FIXME: translate __hlsl_resource_t to target("dx.TypedBuffer", <4 x float>,
-  // 1, 0, 0) only for now (RWBuffer<float4>); more work us needed to determine
-  // the target ext type and its parameters based on the handle type
-  // attributes (not yet implemented)
-  llvm::FixedVectorType *ElemType =
-      llvm::FixedVectorType::get(llvm::Type::getFloatTy(Ctx), 4);
-  unsigned Flags[] = {/*IsWriteable*/ 1, /*IsROV*/ 0, /*IsSigned*/ 0};
-  return llvm::TargetExtType::get(Ctx, "dx.TypedBuffer", {ElemType}, Flags);
+  const HLSLAttributedResourceType::Attributes &ResAttrs = ResType->getAttrs();
+  switch (ResAttrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+  case llvm::dxil::ResourceClass::SRV: {
+    // TypedBuffer and RawBuffer both need element type
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull())
+      return nullptr;
+
+    // convert element type
+    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+
+    llvm::StringRef TypeName =
+        ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
+    SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
+                                         llvm::dxil::ResourceClass::UAV,
+                                     /*IsROV*/ ResAttrs.IsROV};
+    if (!ResAttrs.RawBuffer)
+      Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
+
+    return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
+  }
+  case llvm::dxil::ResourceClass::CBuffer: {
+    QualType ContainedTy = ResType->getContainedType();
+    if (ContainedTy.isNull() || !ContainedTy->isStructureType())
+      return nullptr;
+
+    llvm::Type *BufferLayoutTy =
+        HLSLBufferLayoutBuilder(CGM, "dx.Layout")
+            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+    if (!BufferLayoutTy)
+      return nullptr;
+
+    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {BufferLayoutTy});
+  }
+  case llvm::dxil::ResourceClass::Sampler:
+    llvm_unreachable("dx.Sampler handles are not implemented yet");
+    break;
+  }
+  llvm_unreachable("Unknown llvm::dxil::ResourceClass enum");
 }
 
 } // namespace

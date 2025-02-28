@@ -829,7 +829,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       lldb::user_id_t func_uid = m_functions.size();
       FunctionSP function_sp = std::make_shared<Function>(
           &cu, func_uid, function_type_uid, symbol->GetMangled(), type_sp.get(),
-          func_range);
+          symbol->GetAddress(), AddressRanges{func_range});
       m_functions.emplace_back(function_sp);
       cu.AddFunction(function_sp);
     }
@@ -946,8 +946,10 @@ uint32_t SymbolFileCTF::ResolveSymbolContext(const Address &so_addr,
   // Resolve functions.
   if (resolve_scope & eSymbolContextFunction) {
     for (FunctionSP function_sp : m_functions) {
-      if (function_sp->GetAddressRange().ContainsFileAddress(
-              so_addr.GetFileAddress())) {
+      if (llvm::any_of(
+              function_sp->GetAddressRanges(), [&](const AddressRange range) {
+                return range.ContainsFileAddress(so_addr.GetFileAddress());
+              })) {
         sc.function = function_sp.get();
         resolved_flags |= eSymbolContextFunction;
         break;

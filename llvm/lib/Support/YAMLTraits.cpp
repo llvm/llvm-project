@@ -21,7 +21,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -751,6 +750,8 @@ void Output::scalarTag(std::string &Tag) {
 void Output::setError(const Twine &message) {
 }
 
+std::error_code Output::error() { return {}; }
+
 bool Output::canElideEmptySequence() {
   // Normally, with an optional key/value where the value is an empty sequence,
   // the whole key/value can be not written.  But, that produces wrong yaml
@@ -838,26 +839,40 @@ void Output::newLineCheck(bool EmptySequence) {
     return;
 
   unsigned Indent = StateStack.size() - 1;
-  bool OutputDash = false;
+  bool PossiblyNestedSeq = false;
+  auto I = StateStack.rbegin(), E = StateStack.rend();
 
-  if (StateStack.back() == inSeqFirstElement ||
-      StateStack.back() == inSeqOtherElement) {
-    OutputDash = true;
-  } else if ((StateStack.size() > 1) &&
-             ((StateStack.back() == inMapFirstKey) ||
-              inFlowSeqAnyElement(StateStack.back()) ||
-              (StateStack.back() == inFlowMapFirstKey)) &&
-             inSeqAnyElement(StateStack[StateStack.size() - 2])) {
-    --Indent;
-    OutputDash = true;
+  if (inSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true; // Not possibly but always.
+    ++Indent;
+  } else if (*I == inMapFirstKey || *I == inFlowMapFirstKey ||
+             inFlowSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true;
+    ++I; // Skip back().
   }
 
-  for (unsigned i = 0; i < Indent; ++i) {
+  unsigned OutputDashCount = 0;
+  if (PossiblyNestedSeq) {
+    // Count up consecutive inSeqFirstElement from the end, unless
+    // inSeqFirstElement is the top of nested sequence.
+    while (I != E) {
+      // Don't count the top of nested sequence.
+      if (!inSeqAnyElement(*I))
+        break;
+
+      ++OutputDashCount;
+
+      // Stop counting if consecutive inSeqFirstElement ends.
+      if (*I++ != inSeqFirstElement)
+        break;
+    }
+  }
+
+  for (unsigned I = OutputDashCount; I < Indent; ++I)
     output("  ");
-  }
-  if (OutputDash) {
+
+  for (unsigned I = 0; I < OutputDashCount; ++I)
     output("- ");
-  }
 }
 
 void Output::paddedKey(StringRef key) {

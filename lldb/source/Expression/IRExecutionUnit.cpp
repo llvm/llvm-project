@@ -167,8 +167,10 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
 
   const char *plugin_name = nullptr;
   const char *flavor_string = nullptr;
-  lldb::DisassemblerSP disassembler_sp =
-      Disassembler::FindPlugin(arch, flavor_string, plugin_name);
+  const char *cpu_string = nullptr;
+  const char *features_string = nullptr;
+  lldb::DisassemblerSP disassembler_sp = Disassembler::FindPlugin(
+      arch, flavor_string, cpu_string, features_string, plugin_name);
 
   if (!disassembler_sp) {
     ret = Status::FromErrorStringWithFormat(
@@ -276,6 +278,12 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
                                                       : llvm::Reloc::Static)
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
       .setOptLevel(llvm::CodeGenOptLevel::Less);
+
+  // Resulted jitted code can be placed too far from the code in the binary
+  // and thus can contain more than +-2GB jumps, that are not available
+  // in RISC-V without large code model.
+  if (triple.isRISCV64())
+    builder.setCodeModel(llvm::CodeModel::Large);
 
   llvm::StringRef mArch;
   llvm::StringRef mCPU;
@@ -723,8 +731,7 @@ public:
 
       // If that didn't work, try the function.
       if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
-        Address addr =
-            candidate_sc.function->GetAddressRange().GetBaseAddress();
+        Address addr = candidate_sc.function->GetAddress();
         load_address = m_target->GetProcessSP() ? addr.GetLoadAddress(m_target)
                                                 : addr.GetFileAddress();
       }
@@ -774,6 +781,10 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
     return LLDB_INVALID_ADDRESS;
   }
 
+  ModuleList non_local_images = target->GetImages();
+  // We'll process module_sp separately, before the other modules.
+  non_local_images.Remove(sc.module_sp);
+
   LoadAddressResolver resolver(target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
@@ -781,6 +792,11 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   function_options.include_inlines = false;
 
   for (const ConstString &name : names) {
+    // The lookup order here is as follows:
+    // 1) Functions in `sc.module_sp`
+    // 2) Functions in the other modules
+    // 3) Symbols in `sc.module_sp`
+    // 4) Symbols in the other modules
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),
@@ -790,18 +806,26 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
         return *load_addr;
     }
 
-    if (sc.target_sp) {
+    {
       SymbolContextList sc_list;
-      sc.target_sp->GetImages().FindFunctions(name, lldb::eFunctionNameTypeFull,
-                                              function_options, sc_list);
+      non_local_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
+                                     function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
 
-    if (sc.target_sp) {
+    if (sc.module_sp) {
       SymbolContextList sc_list;
-      sc.target_sp->GetImages().FindSymbolsWithNameAndType(
-          name, lldb::eSymbolTypeAny, sc_list);
+      sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                               sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
+      non_local_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                                  sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }

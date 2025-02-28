@@ -16,7 +16,6 @@
 #include "llvm-c/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -680,22 +679,22 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return reinterpret_cast<const storage_type *>(&TStorage);
+    return &TStorage;
   }
 
   error_type *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   const error_type *getErrorStorage() const {
     assert(HasError && "Cannot get error when a value exists!");
-    return reinterpret_cast<const error_type *>(&ErrorStorage);
+    return &ErrorStorage;
   }
 
   // Used by ExpectedAsOutParameter to reset the checked flag.
@@ -727,8 +726,8 @@ private:
   }
 
   union {
-    AlignedCharArrayUnion<storage_type> TStorage;
-    AlignedCharArrayUnion<error_type> ErrorStorage;
+    storage_type TStorage;
+    error_type ErrorStorage;
   };
   bool HasError : 1;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -1129,10 +1128,15 @@ inline bool errorToBool(Error Err) {
 /// function.
 class ErrorAsOutParameter {
 public:
+
   ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
+  }
+
+  ErrorAsOutParameter(Error &Err) : Err(&Err) {
+    (void)!!Err;
   }
 
   ~ErrorAsOutParameter() {
@@ -1397,6 +1401,23 @@ inline Error createFileError(const Twine &F, std::error_code EC) {
 /// std::error_code to form an Error object.
 inline Error createFileError(const Twine &F, size_t Line, std::error_code EC) {
   return createFileError(F, Line, errorCodeToError(EC));
+}
+
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             const Twine &S) {
+  Error E = createStringError(EC, S);
+  return createFileError(F, std::move(E));
+}
+
+/// Create a StringError with the specified error code and prepend the file path
+/// to it.
+template <typename... Ts>
+inline Error createFileError(const Twine &F, std::error_code EC,
+                             char const *Fmt, const Ts &...Vals) {
+  Error E = createStringError(EC, Fmt, Vals...);
+  return createFileError(F, std::move(E));
 }
 
 Error createFileError(const Twine &F, ErrorSuccess) = delete;

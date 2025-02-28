@@ -22,7 +22,7 @@ module m
 
   ! CHECK-LABEL: @_QMmPwftd
   subroutine wftd(dtv, unit, iotype, v_list, iostat, iomsg)
-    type(t), intent(in) :: dtv
+    class(t), intent(in) :: dtv
     integer, intent(in) :: unit
     character(*), intent(in) :: iotype
     integer, intent(in) :: v_list(:)
@@ -51,7 +51,7 @@ module m
       ! CHECK:   fir.store %c2{{.*}} to %[[V_36]] : !fir.ref<i32>
       ! CHECK:   %[[V_37:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
       ! CHECK:   %[[V_38:[0-9]+]] = fir.convert %[[V_37]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
-      ! CHECK:   %[[V_39:[0-9]+]] = fir.address_of(@default.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+      ! CHECK:   %[[V_39:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
       ! CHECK:   %[[V_40:[0-9]+]] = fir.convert %[[V_39]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
       ! CHECK:   %[[V_41:[0-9]+]] = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[V_38]], %[[V_40]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
       print *, 'test1 block, should not call wft: ', t(2)
@@ -65,7 +65,7 @@ module m
     ! CHECK:   fir.store %c3{{.*}} to %[[V_14]] : !fir.ref<i32>
     ! CHECK:   %[[V_15:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
     ! CHECK:   %[[V_16:[0-9]+]] = fir.convert %[[V_15]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
-    ! CHECK:   %[[V_17:[0-9]+]] = fir.address_of(@default.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
+    ! CHECK:   %[[V_17:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
     ! CHECK:   %[[V_18:[0-9]+]] = fir.convert %[[V_17]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
     ! CHECK:   %[[V_19:[0-9]+]] = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[V_16]], %[[V_18]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
 
@@ -91,13 +91,13 @@ module m
     ! CHECK:     %[[V_10:[0-9]+]] = fir.box_addr %arg0 : (!fir.boxproc<() -> ()>) -> !fir.ref<none>
     ! CHECK:     %[[V_11:[0-9]+]] = fir.insert_value %[[V_9]], %[[V_10]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>, !fir.ref<none>) -> !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
     ! CHECK:     %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c2{{.*}}, [0 : index, 2 : index] : (!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>, i32) -> !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
-    ! CHECK:     %[[V_13:[0-9]+]] = fir.insert_value %[[V_12]], %false, [0 : index, 3 : index] : (!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>, i1) -> !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
+    ! CHECK:     %[[V_13:[0-9]+]] = fir.insert_value %[[V_12]], %true, [0 : index, 3 : index] : (!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>, i1) -> !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
     ! CHECK:     fir.store %[[V_13]] to %[[V_5]] : !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>
     ! CHECK:     %[[V_14:[0-9]+]] = fir.alloca tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
     ! CHECK:     %[[V_15:[0-9]+]] = fir.undefined tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
     ! CHECK:     %[[V_16:[0-9]+]] = fir.insert_value %[[V_15]], %c1{{.*}}, [0 : index] : (tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>, i64) -> tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
     ! CHECK:     %[[V_17:[0-9]+]] = fir.insert_value %[[V_16]], %[[V_5]], [1 : index] : (tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>) -> tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
-    ! CHECK:     %[[V_18:[0-9]+]] = fir.insert_value %[[V_17]], %true, [2 : index] : (tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>, i1) -> tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
+    ! CHECK:     %[[V_18:[0-9]+]] = fir.insert_value %[[V_17]], %true_0, [2 : index] : (tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>, i1) -> tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
     ! CHECK:     fir.store %[[V_18]] to %[[V_14]] : !fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
     ! CHECK:     %[[V_19:[0-9]+]] = fir.convert %[[V_14]] : (!fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>) -> !fir.ref<none>
     ! CHECK:     %[[V_20:[0-9]+]] = fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[V_4]], %[[V_19]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
@@ -131,6 +131,6 @@ end
 
 ! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable.list constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
 ! CHECK: fir.global linkonce @_QQMmFtest1.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
-! CHECK: fir.global linkonce @default.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
+! CHECK: fir.global linkonce @_QQdefault.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>
 ! CHECK: fir.global linkonce @_QQF.nonTbpDefinedIoTable.list constant : !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
 ! CHECK: fir.global linkonce @_QQF.nonTbpDefinedIoTable constant : tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>

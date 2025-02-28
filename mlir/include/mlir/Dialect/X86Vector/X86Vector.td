@@ -35,17 +35,20 @@ class AVX512_Op<string mnemonic, list<Trait> traits = []> :
   Op<X86Vector_Dialect, "avx512." # mnemonic, traits> {}
 
 // Intrinsic operation used during lowering to LLVM IR.
-class AVX512_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
+class AVX512_IntrOp<string mnemonic, int numResults,
+                    list<Trait> traits = [],
+                    string extension = ""> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
-                  "x86_avx512_" # !subst(".", "_", mnemonic),
+                  !subst("EXT", extension, "x86_avx512EXT_") # !subst(".", "_", mnemonic),
                   [], [], traits, numResults>;
 
 // Defined by first result overload. May have to be extended for other
 // instructions in the future.
 class AVX512_IntrOverloadedOp<string mnemonic,
-                              list<Trait> traits = []> :
+                              list<Trait> traits = [],
+                              string extension = ""> :
   LLVM_IntrOpBase<X86Vector_Dialect, "avx512.intr." # mnemonic,
-                  "x86_avx512_" # !subst(".", "_", mnemonic),
+                  !subst("EXT", extension, "x86_avx512EXT_") # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/[0],
                   /*list<int> overloadedOperands=*/[],
                   traits, /*numResults=*/1>;
@@ -269,6 +272,113 @@ def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
   Pure]> {
   let arguments = (ins VectorOfLengthAndType<[8], [I64]>:$a,
                    VectorOfLengthAndType<[8], [I64]>:$b);
+}
+
+//----------------------------------------------------------------------------//
+// Dot BF16
+//----------------------------------------------------------------------------//
+
+def DotBF16Op : AVX512_Op<"dot", [Pure,
+  AllTypesMatch<["a", "b"]>,
+  AllTypesMatch<["src", "dst"]>,
+  TypesMatchWith<"`a` has twice an many elements as `src`",
+                 "src", "a",
+                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 2}, "
+                 "BFloat16Type::get($_self.getContext()))">]> {
+  let summary = "Dot BF16 op";
+  let description = [{
+    The `dot` op is an AVX512-BF16 specific op that can lower to the proper
+    LLVMAVX512BF16 operation `llvm.dpbf16ps` depending on the width of MLIR
+    vectors it is applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Compute dot-product of BF16 (16-bit) floating-point pairs in `a` and `b`,
+    accumulating the intermediate single-precision (32-bit) floating-point
+    elements with elements in `src`, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %0 = x86vector.avx512.dot %src, %a, %b : vector<32xbf16> -> vector<16xf32>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[4, 8, 16], [F32]>:$src,
+                   VectorOfLengthAndType<[8, 16, 32], [BF16]>:$a,
+                   VectorOfLengthAndType<[8, 16, 32], [BF16]>:$b
+                   );
+  let results = (outs VectorOfLengthAndType<[4, 8, 16], [F32]>:$dst);
+  let assemblyFormat =
+    "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
+}
+
+def DotBF16Ps128IntrOp : AVX512_IntrOp<"dpbf16ps.128", 1, [Pure,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "res"]>],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[4], [F32]>:$src,
+                       VectorOfLengthAndType<[8], [BF16]>:$a,
+                       VectorOfLengthAndType<[8], [BF16]>:$b);
+  let results = (outs VectorOfLengthAndType<[4], [F32]>:$res);
+}
+
+def DotBF16Ps256IntrOp : AVX512_IntrOp<"dpbf16ps.256", 1, [Pure,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "res"]>],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$src,
+                       VectorOfLengthAndType<[16], [BF16]>:$a,
+                       VectorOfLengthAndType<[16], [BF16]>:$b);
+  let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
+}
+
+def DotBF16Ps512IntrOp : AVX512_IntrOp<"dpbf16ps.512", 1, [Pure,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "res"]>],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$src,
+                       VectorOfLengthAndType<[32], [BF16]>:$a,
+                       VectorOfLengthAndType<[32], [BF16]>:$b);
+  let results = (outs VectorOfLengthAndType<[16], [F32]>:$res);
+}
+
+//----------------------------------------------------------------------------//
+// Convert packed F32 to packed BF16
+//----------------------------------------------------------------------------//
+
+def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
+  AllElementCountsMatch<["a", "dst"]>]> {
+  let summary = "Convert packed F32 to packed BF16 Data.";
+  let description = [{
+    The `convert_f32_to_bf16` op is an AVX512-BF16 specific op that can lower
+    to the proper LLVMAVX512BF16 operation `llvm.cvtneps2bf16` depending on
+    the width of MLIR vectors it is applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed single-precision (32-bit) floating-point elements in `a` to
+    packed BF16 (16-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx512.cvt.packed.f32_to_bf16 %a : vector<8xf32> -> vector<8xbf16>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[8, 16], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[8, 16], [BF16]>:$dst);
+  let assemblyFormat =
+    "$a attr-dict `:` type($a) `->` type($dst)";
+}
+
+def CvtNeF32ToBF16Ps256IntrOp : AVX512_IntrOp<"cvtneps2bf16.256", 1, [Pure],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[8], [BF16]>:$res);
+}
+
+def CvtNeF32ToBF16Ps512IntrOp : AVX512_IntrOp<"cvtneps2bf16.512", 1, [Pure],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[16], [BF16]>:$res);
 }
 
 //===----------------------------------------------------------------------===//

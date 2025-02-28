@@ -129,16 +129,16 @@ Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
   Module *M = Builder.GetInsertBlock()->getModule();
   switch (Opc) {
   case Instruction::Add:
-    F = Intrinsic::getDeclaration(M, Intrinsic::sadd_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::sadd_with_overflow,
+                                          {LHS->getType()});
     break;
   case Instruction::Sub:
-    F = Intrinsic::getDeclaration(M, Intrinsic::ssub_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::ssub_with_overflow,
+                                          {LHS->getType()});
     break;
   case Instruction::Mul:
-    F = Intrinsic::getDeclaration(M, Intrinsic::smul_with_overflow,
-                                  {LHS->getType()});
+    F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::smul_with_overflow,
+                                          {LHS->getType()});
     break;
   default:
     llvm_unreachable("No overflow intrinsic for binary operator found!");
@@ -789,4 +789,11 @@ Value *IslExprBuilder::create(__isl_take isl_ast_expr *Expr) {
   }
 
   llvm_unreachable("Unexpected enum value");
+}
+
+llvm::Value *IslExprBuilder::createBool(__isl_take isl_ast_expr *Expr) {
+  Value *Result = create(Expr);
+  if (!Result->getType()->isIntegerTy(1))
+    Result = Builder.CreateICmpNE(Result, Builder.getInt1(false));
+  return Result;
 }

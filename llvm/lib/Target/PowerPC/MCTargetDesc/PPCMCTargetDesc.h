@@ -47,8 +47,8 @@ const char *stripRegisterPrefix(const char *RegName);
 /// The operand number argument will be useful when we need to extend this
 /// to instructions that use both Altivec and VSX numbering (for different
 /// operands).
-unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
-                             unsigned OpNo);
+MCRegister getRegNumForOperand(const MCInstrDesc &Desc, MCRegister Reg,
+                               unsigned OpNo);
 
 } // namespace PPC
 
@@ -171,7 +171,9 @@ enum {
   /// This instruction produced a sign extended result.
   SExt32To64 = 0x1 << (NewDef_Shift + 2),
   /// This instruction produced a zero extended result.
-  ZExt32To64 = 0x1 << (NewDef_Shift + 3)
+  ZExt32To64 = 0x1 << (NewDef_Shift + 3),
+  /// This instruction takes a register+immediate memory operand.
+  MemriOp = 0x1 << (NewDef_Shift + 4)
 };
 } // end namespace PPCII
 

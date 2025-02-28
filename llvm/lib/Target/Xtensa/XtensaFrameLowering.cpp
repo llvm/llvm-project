@@ -12,6 +12,7 @@
 
 #include "XtensaFrameLowering.h"
 #include "XtensaInstrInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -27,7 +28,7 @@ XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
                           Align(4)),
       TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
-bool XtensaFrameLowering::hasFP(const MachineFunction &MF) const {
+bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects();
@@ -82,10 +83,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
       if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register DstReg = MBBI->getOperand(0).getReg();
         Register Reg = MBBI->getOperand(1).getReg();
-        IsStoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsStoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
-        IsStoreInst = (Reg == Info.getReg()) && (StoreFI == FI);
+        IsStoreInst = Reg.asMCReg() == Info.getReg() && StoreFI == FI;
       }
       assert(IsStoreInst &&
              "Unexpected callee-saved register store instruction");
@@ -97,7 +99,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (const auto &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
 
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
           nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
@@ -167,10 +169,11 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
       if (I->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
         Register Reg = I->getOperand(0).getReg();
         Register DstReg = I->getOperand(1).getReg();
-        IsRestoreInst = (Info.getDstReg() == DstReg) && (Info.getReg() == Reg);
+        IsRestoreInst =
+            Info.getDstReg() == DstReg && Info.getReg() == Reg.asMCReg();
       } else {
         Register Reg = TII.isLoadFromStackSlot(*I, LoadFI);
-        IsRestoreInst = (Info.getReg() == Reg) && (LoadFI == FI);
+        IsRestoreInst = Info.getReg() == Reg.asMCReg() && LoadFI == FI;
       }
       assert(IsRestoreInst &&
              "Unexpected callee-saved register restore instruction");
@@ -202,7 +205,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
     // method XtensaTargetLowering::LowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = CSI[i].getReg();
+    MCRegister Reg = CSI[i].getReg();
     bool IsA0AndRetAddrIsTaken =
         (Reg == Xtensa::A0) && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsA0AndRetAddrIsTaken)
@@ -260,14 +263,26 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   // Set scavenging frame index if necessary.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t MaxSPOffset = MFI.estimateStackSize(MF);
+  auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
+  unsigned ScavSlotsNum = 0;
 
-  if (isInt<12>(MaxSPOffset))
-    return;
+  if (!isInt<12>(MaxSPOffset))
+    ScavSlotsNum = 1;
+
+  // Far branches over 18-bit offset require a spill slot for scratch register.
+  bool IsLargeFunction = !isInt<18>(MF.estimateFunctionSizeInBytes());
+  if (IsLargeFunction)
+    ScavSlotsNum = std::max(ScavSlotsNum, 1u);
 
   const TargetRegisterClass &RC = Xtensa::ARRegClass;
   unsigned Size = TRI->getSpillSize(RC);
   Align Alignment = TRI->getSpillAlign(RC);
-  int FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false);
+  for (unsigned I = 0; I < ScavSlotsNum; I++) {
+    int FI = MFI.CreateSpillStackObject(Size, Alignment);
+    RS->addScavengingFrameIndex(FI);
 
-  RS->addScavengingFrameIndex(FI);
+    if (IsLargeFunction &&
+        XtensaFI->getBranchRelaxationScratchFrameIndex() == -1)
+      XtensaFI->setBranchRelaxationScratchFrameIndex(FI);
+  }
 }

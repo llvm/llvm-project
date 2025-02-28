@@ -22,7 +22,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -39,6 +38,7 @@ using StackVector = SmallVector<StackEntry, 16>;
 
 class SIAnnotateControlFlow {
 private:
+  Function *F;
   UniformityInfo *UA;
 
   Type *Boolean;
@@ -51,18 +51,18 @@ private:
   UndefValue *BoolUndef;
   Constant *IntMaskZero;
 
-  Function *If;
-  Function *Else;
-  Function *IfBreak;
-  Function *Loop;
-  Function *EndCf;
+  Function *If = nullptr;
+  Function *Else = nullptr;
+  Function *IfBreak = nullptr;
+  Function *Loop = nullptr;
+  Function *EndCf = nullptr;
 
   DominatorTree *DT;
   StackVector Stack;
 
   LoopInfo *LI;
 
-  void initialize(Module &M, const GCNSubtarget &ST);
+  void initialize(const GCNSubtarget &ST);
 
   bool isUniform(BranchInst *T);
 
@@ -90,21 +90,27 @@ private:
 
   bool closeControlFlow(BasicBlock *BB);
 
-public:
-  SIAnnotateControlFlow(Module &M, const GCNSubtarget &ST, DominatorTree &DT,
-                        LoopInfo &LI, UniformityInfo &UA)
-      : UA(&UA), DT(&DT), LI(&LI) {
-    initialize(M, ST);
+  Function *getDecl(Function *&Cache, Intrinsic::ID ID, ArrayRef<Type *> Tys) {
+    if (!Cache)
+      Cache = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, Tys);
+    return Cache;
   }
 
-  bool run(Function &F);
+public:
+  SIAnnotateControlFlow(Function &F, const GCNSubtarget &ST, DominatorTree &DT,
+                        LoopInfo &LI, UniformityInfo &UA)
+      : F(&F), UA(&UA), DT(&DT), LI(&LI) {
+    initialize(ST);
+  }
+
+  bool run();
 };
 
 } // end anonymous namespace
 
 /// Initialize all the types and constants used in the pass
-void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
-  LLVMContext &Context = M.getContext();
+void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
+  LLVMContext &Context = F->getContext();
 
   Void = Type::getVoidTy(Context);
   Boolean = Type::getInt1Ty(Context);
@@ -116,14 +122,6 @@ void SIAnnotateControlFlow::initialize(Module &M, const GCNSubtarget &ST) {
   BoolFalse = ConstantInt::getFalse(Context);
   BoolUndef = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
-
-  If = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if, { IntMask });
-  Else = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_else,
-                                   { IntMask, IntMask });
-  IfBreak = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_if_break,
-                                      { IntMask });
-  Loop = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_loop, { IntMask });
-  EndCf = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_end_cf, { IntMask });
 }
 
 /// Is the branch condition uniform or did the StructurizeCFG pass
@@ -189,7 +187,8 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
     return false;
 
   IRBuilder<> IRB(Term);
-  Value *IfCall = IRB.CreateCall(If, {Term->getCondition()});
+  Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, IntMask),
+                                 {Term->getCondition()});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
   Term->setCondition(Cond);
@@ -204,7 +203,8 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   }
 
   IRBuilder<> IRB(Term);
-  Value *ElseCall = IRB.CreateCall(Else, {popSaved()});
+  Value *ElseCall = IRB.CreateCall(
+      getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}), {popSaved()});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
   Term->setCondition(Cond);
@@ -217,16 +217,22 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
     Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term) {
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
-    return IRBuilder<>(I).CreateCall(IfBreak, {Cond, Broken});
+    return IRBuilder<>(I).CreateCall(
+        getDecl(IfBreak, Intrinsic::amdgcn_if_break, IntMask), {Cond, Broken});
   };
 
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
     Instruction *Insert;
-    if (L->contains(Inst)) {
+    if (LI->getLoopFor(Parent) == L) {
+      // Insert IfBreak in the same BB as Cond, which can help
+      // SILowerControlFlow to know that it does not have to insert an
+      // AND with EXEC.
       Insert = Parent->getTerminator();
+    } else if (L->contains(Inst)) {
+      Insert = Term;
     } else {
-      Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+      Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
 
     return CreateBreak(Insert);
@@ -241,7 +247,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   }
 
   if (isa<Argument>(Cond)) {
-    Instruction *Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     return CreateBreak(Insert);
   }
 
@@ -278,7 +284,8 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     Broken->addIncoming(PHIValue, Pred);
   }
 
-  CallInst *LoopCall = IRBuilder<>(Term).CreateCall(Loop, {Arg});
+  CallInst *LoopCall = IRBuilder<>(Term).CreateCall(
+      getDecl(Loop, Intrinsic::amdgcn_loop, IntMask), {Arg});
   Term->setCondition(LoopCall);
 
   push(Term->getSuccessor(0), Arg);
@@ -323,7 +330,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
     // condition, for now just avoid copying these DebugLocs so that stepping
     // out of the then/else block in a debugger doesn't step to the condition.
     IRB.SetCurrentDebugLocation(DebugLoc());
-    IRB.CreateCall(EndCf, {Exec});
+    IRB.CreateCall(getDecl(EndCf, Intrinsic::amdgcn_end_cf, IntMask), {Exec});
   }
 
   return true;
@@ -331,11 +338,12 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 
 /// Annotate the control flow with intrinsics so the backend can
 /// recognize if/then/else and loops.
-bool SIAnnotateControlFlow::run(Function &F) {
+bool SIAnnotateControlFlow::run() {
   bool Changed = false;
 
-  for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
-       E = df_end(&F.getEntryBlock()); I != E; ++I) {
+  for (df_iterator<BasicBlock *> I = df_begin(&F->getEntryBlock()),
+                                 E = df_end(&F->getEntryBlock());
+       I != E; ++I) {
     BasicBlock *BB = *I;
     BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
 
@@ -385,12 +393,11 @@ PreservedAnalyses SIAnnotateControlFlowPass::run(Function &F,
   UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
 
-  SIAnnotateControlFlow Impl(*F.getParent(), ST, DT, LI, UI);
+  SIAnnotateControlFlow Impl(F, ST, DT, LI, UI);
 
-  // FIXME: We introduce dead declarations of intrinsics even if never used.
-  bool Changed = Impl.run(F);
+  bool Changed = Impl.run();
   if (!Changed)
-    return PreservedAnalyses::none();
+    return PreservedAnalyses::all();
 
   // TODO: Is LoopInfo preserved?
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -425,8 +432,8 @@ public:
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
     const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
-    SIAnnotateControlFlow Impl(*F.getParent(), ST, DT, LI, UI);
-    return Impl.run(F);
+    SIAnnotateControlFlow Impl(F, ST, DT, LI, UI);
+    return Impl.run();
   }
 };
 

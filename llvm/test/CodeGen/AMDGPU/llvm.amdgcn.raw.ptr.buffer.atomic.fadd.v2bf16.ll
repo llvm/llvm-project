@@ -10,7 +10,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen offset:128 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen offset:128 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 128
@@ -26,7 +26,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s6 offset:92 th:TH_ATOMIC_NT_RETURN
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 2)
@@ -41,7 +41,7 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen offset:128
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s16 offen offset:128
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 128
   %unused = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -56,7 +56,7 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__0_voff
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s6 offset:92 th:TH_ATOMIC_NT
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s16 offset:92 th:TH_ATOMIC_NT
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %unused = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 2)
   ret void
@@ -78,15 +78,14 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX12-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v6
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[1:2]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[3:4]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cmp_eq_u32_e64 s1, s3, v6
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_and_b32 s0, s0, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
@@ -95,13 +94,11 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__vgpr_rsrc__
 ; GFX12-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr6
 ; GFX12-NEXT:    ; implicit-def: $vgpr5
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB4_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 128
   %ret = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 %soffset, i32 0)

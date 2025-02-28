@@ -207,6 +207,14 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     return getTaintedSymbolsImpl(State, Sym, Kind, returnFirstOnly);
   if (const MemRegion *Reg = V.getAsRegion())
     return getTaintedSymbolsImpl(State, Reg, Kind, returnFirstOnly);
+
+  if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
+    StoreManager &StoreMgr = State->getStateManager().getStoreManager();
+    if (auto DefaultVal = StoreMgr.getDefaultBinding(*LCV)) {
+      return getTaintedSymbolsImpl(State, *DefaultVal, Kind, returnFirstOnly);
+    }
+  }
+
   return {};
 }
 

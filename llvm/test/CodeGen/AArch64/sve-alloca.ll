@@ -61,9 +61,8 @@ define void @foo(<vscale x 4 x i64> %dst, i1 %cond) {
 ; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    and x0, x8, #0xffffffffffffffe0
 ; CHECK-NEXT:    mov sp, x0
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    addvl sp, x29, #-18
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload

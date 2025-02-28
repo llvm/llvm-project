@@ -172,6 +172,9 @@ struct PointerAuthOptions {
   /// Do indirect goto label addresses need to be authenticated?
   bool IndirectGotos = false;
 
+  /// Use hardened lowering for jump-table dispatch?
+  bool AArch64JumpTableHardening = false;
+
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
 

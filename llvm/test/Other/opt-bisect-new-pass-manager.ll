@@ -101,23 +101,23 @@
 
 declare i32 @g()
 
-define void @f1() {
+define void @f1(i1 %arg) {
 entry:
   br label %loop.0
 loop.0:
-  br i1 undef, label %loop.0.0, label %loop.1
+  br i1 %arg, label %loop.0.0, label %loop.1
 loop.0.0:
-  br i1 undef, label %loop.0.0, label %loop.0.1
+  br i1 %arg, label %loop.0.0, label %loop.0.1
 loop.0.1:
-  br i1 undef, label %loop.0.1, label %loop.0
+  br i1 %arg, label %loop.0.1, label %loop.0
 loop.1:
-  br i1 undef, label %loop.1, label %loop.1.bb1
+  br i1 %arg, label %loop.1, label %loop.1.bb1
 loop.1.bb1:
-  br i1 undef, label %loop.1, label %loop.1.bb2
+  br i1 %arg, label %loop.1, label %loop.1.bb2
 loop.1.bb2:
-  br i1 undef, label %end, label %loop.1.0
+  br i1 %arg, label %end, label %loop.1.0
 loop.1.0:
-  br i1 undef, label %loop.1.0, label %loop.1
+  br i1 %arg, label %loop.1.0, label %loop.1
 end:
   ret void
 }
@@ -141,14 +141,14 @@ bb.false:
 
 ; This function is here to verify that opt-bisect can skip all passes for
 ; functions that contain lifetime intrinsics.
-define void @f4() {
+define void @f4(i1 %arg) {
 entry:
   %i = alloca i32, align 4
   call void @llvm.lifetime.start(i64 4, ptr %i)
   br label %for.cond
 
 for.cond:
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.body:
   br label %for.cond

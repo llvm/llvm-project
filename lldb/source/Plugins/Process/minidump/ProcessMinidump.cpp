@@ -21,11 +21,13 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -34,6 +36,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
@@ -273,8 +276,16 @@ void ProcessMinidump::RefreshStateAfterStop() {
         // No stop.
         return;
       }
+      const char *description = nullptr;
+      if (exception_stream.ExceptionRecord.ExceptionFlags ==
+          llvm::minidump::Exception::LLDB_FLAG)
+        description = reinterpret_cast<const char *>(
+            exception_stream.ExceptionRecord.ExceptionInformation);
 
-      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo);
+      llvm::StringRef description_str(description,
+                                      Exception::MaxParameterBytes);
+      stop_info = StopInfo::CreateStopReasonWithSignal(
+          *stop_thread, signo, description_str.str().c_str());
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
           *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,
@@ -333,6 +344,32 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
+DataExtractor ProcessMinidump::GetAuxvData() {
+  std::optional<llvm::ArrayRef<uint8_t>> auxv =
+      m_minidump_parser->GetStream(StreamType::LinuxAuxv);
+  if (!auxv)
+    return DataExtractor();
+
+  return DataExtractor(auxv->data(), auxv->size(), GetByteOrder(),
+                       GetAddressByteSize(), GetAddressByteSize());
+}
+
+bool ProcessMinidump::IsLLDBMinidump() {
+  std::optional<llvm::ArrayRef<uint8_t>> lldb_generated_section =
+      m_minidump_parser->GetRawStream(StreamType::LLDBGenerated);
+  return lldb_generated_section.has_value();
+}
+
+DynamicLoader *ProcessMinidump::GetDynamicLoader() {
+  // This is a workaround for the dynamic loader not playing nice in issue
+  // #119598. The specific reason we use the dynamic loader is to get the TLS
+  // info sections, which we can assume are not being written to the minidump
+  // unless it's an LLDB generate minidump.
+  if (IsLLDBMinidump())
+    return PostMortemProcess::GetDynamicLoader();
+  return nullptr;
+}
+
 void ProcessMinidump::BuildMemoryRegions() {
   if (m_memory_regions)
     return;
@@ -346,12 +383,12 @@ void ProcessMinidump::BuildMemoryRegions() {
 
   MemoryRegionInfos to_add;
   ModuleList &modules = GetTarget().GetImages();
-  SectionLoadList &load_list = GetTarget().GetSectionLoadList();
+  Target &target = GetTarget();
   modules.ForEach([&](const ModuleSP &module_sp) {
     SectionList *sections = module_sp->GetSectionList();
     for (size_t i = 0; i < sections->GetSize(); ++i) {
       SectionSP section_sp = sections->GetSectionAtIndex(i);
-      addr_t load_addr = load_list.GetSectionLoadAddress(section_sp);
+      addr_t load_addr = target.GetSectionLoadAddress(section_sp);
       if (load_addr == LLDB_INVALID_ADDRESS)
         continue;
       MemoryRegionInfo::RangeType section_range(load_addr,
@@ -534,7 +571,12 @@ void ProcessMinidump::ReadModuleList() {
 
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
-      GetTarget().GetImages().Append(module_sp, true /* notify */);
+      // If we haven't loaded a main executable yet, set the first module to be
+      // main executable
+      if (!GetTarget().GetExecutableModule())
+        GetTarget().SetExecutableModule(module_sp);
+      else
+        GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;

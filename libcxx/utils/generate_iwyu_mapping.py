@@ -10,6 +10,7 @@ import typing
 
 def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
     ignore = [
+        "__cxx03/.+",
         "__debug_utils/.+",
         "__fwd/get[.]h",
         "__pstl/.+",
@@ -71,7 +72,7 @@ def main(argv: typing.List[str]):
 
     mappings = []  # Pairs of (header, public_header)
     for header in libcxx.header_information.all_headers:
-        public_headers = IWYU_mapping(header)
+        public_headers = IWYU_mapping(str(header))
         if public_headers is not None:
             mappings.extend((header, public) for public in public_headers)
 

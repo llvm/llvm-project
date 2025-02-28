@@ -7,7 +7,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-set -ex
+set -e
 set -o pipefail
 unset LANG
 unset LC_ALL
@@ -28,10 +28,6 @@ ${PROGNAME} [options] <BUILDER>
 --build-dir <DIR>   The directory to use for building the library. By default,
                     this is '<llvm-root>/build/<builder>'.
 
---osx-roots <DIR>   Path to pre-downloaded macOS dylibs. By default, we download
-                    them from Green Dragon. This is only relevant at all when
-                    running back-deployment testing if one wants to override
-                    the old dylibs we use to run the tests with different ones.
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is optional.
@@ -64,10 +60,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-dir)
             BUILD_DIR="${2}"
-            shift; shift
-            ;;
-        --osx-roots)
-            OSX_ROOTS="${2}"
             shift; shift
             ;;
         *)
@@ -104,12 +96,39 @@ if [ -z "${CMAKE}" ]; then
     fi
 fi
 
+function step() {
+  endstep
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]]; then
+    echo "::group::$1"
+    export IN_GROUP=1
+  else
+    echo "--- $1"
+  fi
+  set -x
+}
+
+function endstep() {
+  set +x
+  if [[ ! -z ${GITHUB_ACTIONS+x} ]] && [[ ! -z ${IN_GROUP+x} ]]; then
+    echo "::endgroup::"
+    unset IN_GROUP
+  fi
+  set -x
+}
+
+function error() {
+    echo "::error::$1"
+}
+
 function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
 function generate-cmake-base() {
-    echo "--- Generating CMake"
+    step "Generating CMake"
+
+    # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
@@ -119,6 +138,7 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
+          -DCMAKE_INSTALL_MESSAGE=NEVER \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
@@ -146,30 +166,28 @@ function generate-cmake-android() {
 }
 
 function check-runtimes() {
-    echo "+++ Running the libc++ tests"
+    step "Building libc++ test dependencies"
+    ${NINJA} -vC "${BUILD_DIR}" cxx-test-depends
+
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
-    echo "+++ Running the libc++abi tests"
+    step "Running the libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 
-    echo "+++ Running the libunwind tests"
+    step "Running the libunwind tests"
     ${NINJA} -vC "${BUILD_DIR}" check-unwind
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
-    echo "+++ Running the libc++ ABI list test"
+    step "Running the libc++ ABI list test"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-abilist || (
-        echo "+++ Generating the libc++ ABI list after failed check"
+        error "Generating the libc++ ABI list after failed check"
         ${NINJA} -vC "${BUILD_DIR}" generate-cxx-abilist
         false
     )
-}
-
-function check-cxx-benchmarks() {
-    echo "--- Running the benchmarks"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
 function test-armv7m-picolibc() {
@@ -178,12 +196,13 @@ function test-armv7m-picolibc() {
     # To make it easier to get this builder up and running, build picolibc
     # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
     # This could be optimised by building picolibc into the Docker container.
+    step "Building picolibc from source"
     ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
         --build-dir "${BUILD_DIR}" \
         --install-dir "${INSTALL_DIR}" \
         --target armv7m-none-eabi
 
-    echo "--- Generating CMake"
+    step "Generating CMake for compiler-rt"
     flags="--sysroot=${INSTALL_DIR}"
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/compiler-rt" \
@@ -195,6 +214,8 @@ function test-armv7m-picolibc() {
         -DCMAKE_CXX_FLAGS="${flags}" \
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
         "${@}"
+
+    step "Generating CMake for libc++"
     generate-cmake \
         -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
         -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
@@ -203,6 +224,7 @@ function test-armv7m-picolibc() {
         -DCMAKE_CXX_FLAGS="${flags}" \
         "${@}"
 
+    step "Installing compiler-rt"
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
 
     # Prior to clang 19, armv7m-none-eabi normalised to armv7m-none-unknown-eabi.
@@ -216,9 +238,9 @@ function test-armv7m-picolibc() {
 }
 
 # Print the version of a few tools to aid diagnostics in some cases
+step "Diagnose tools in use"
 ${CMAKE} --version
 ${NINJA} --version
-
 if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
 
 case "${BUILDER}" in
@@ -228,10 +250,9 @@ check-generated-output)
     clean
     generate-cmake
 
-    set +x # Printing all the commands below just creates extremely confusing output
-
     # Reject patches that forgot to re-run the generator scripts.
-    echo "+++ Making sure the generator scripts were run"
+    step "Making sure the generator scripts were run"
+    set +x # Printing all the commands below just creates extremely confusing output
     ${NINJA} -vC "${BUILD_DIR}" libcxx-generate-files
     git diff | tee ${BUILD_DIR}/generated_output.patch
     git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
@@ -243,10 +264,9 @@ check-generated-output)
         false
     fi
 
-    # Reject patches that introduce non-ASCII characters or hard tabs.
-    # Depends on LC_COLLATE set at the top of this script.
-    set -x
-    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+    # This depends on LC_COLLATE set at the top of this script.
+    step "Reject patches that introduce non-ASCII characters or hard tabs."
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \
            --exclude '*.dat' \
            --exclude '*unicode*.cpp' \
            --exclude '*print*.sh.cpp' \
@@ -264,6 +284,12 @@ check-generated-output)
 #
 # Various Standard modes
 #
+frozen-cxx03-headers)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03-frozen.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-cxx03)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
@@ -353,7 +379,7 @@ generic-ubsan)
 bootstrapping-build)
     clean
 
-    echo "--- Generating CMake"
+    step "Generating CMake"
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
@@ -370,14 +396,15 @@ bootstrapping-build)
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
-    echo "+++ Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
-
-    echo "--- Running the libc++ and libc++abi tests"
+    step "Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
-    echo "+++ Installing libc++ and libc++abi to a fake location"
+    step "Installing libc++ and libc++abi to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
+
+    step "Running the LLDB libc++ data formatter tests"
+    ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
+    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     ccache -s
 ;;
@@ -509,6 +536,7 @@ generic-optimized-speed)
 apple-configuration)
     clean
 
+    step "Installing libc++ with the Apple system configuration"
     arch="$(uname -m)"
     xcrun --sdk macosx                                              \
         ${MONOREPO_ROOT}/libcxx/utils/ci/apple-install-libcxx.sh    \
@@ -519,88 +547,58 @@ apple-configuration)
             --architectures "${arch}"                               \
             --version "999.99"
 
+    step "Running tests against Apple-configured libc++"
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
-apple-system-backdeployment-hardened-*)
+apple-system|apple-system-hardened)
     clean
-
-    if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
-        OSX_ROOTS="${BUILD_DIR}/macos-roots"
-        mkdir -p "${OSX_ROOTS}"
-        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
-    fi
-
-    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-hardened-}"
-
-    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
-    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
-    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
-    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
-       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
-    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
-       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
 
     arch="$(uname -m)"
-    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
-    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
-    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
-    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";hardening_mode=fast"
-
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
-                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
-                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
-                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
-
-    check-runtimes
-;;
-apple-system-backdeployment-*)
-    clean
-
-    if [[ "${OSX_ROOTS}" == "" ]]; then
-        echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
-        OSX_ROOTS="${BUILD_DIR}/macos-roots"
-        mkdir -p "${OSX_ROOTS}"
-        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+    version="$(sw_vers --productVersion)"
+    params="target_triple=${arch}-apple-macosx${version}"
+    if [[ "${BUILDER}" == *-hardened ]]; then
+        params+=";hardening_mode=fast"
     fi
 
-    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-}"
+    # In the Apple system configuration, we build libc++ and libunwind separately.
+    step "Installing libc++ and libc++abi in Apple-system configuration"
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/cxx" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+        -DLIBCXX_CXX_ABI=libcxxabi \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+        -DLIBCXX_TEST_CONFIG="apple-libc++-system.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-system.cfg.in" \
+        -DLIBCXX_TEST_PARAMS="${params}" \
+        -DLIBCXXABI_TEST_PARAMS="${params}"
 
-    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
-    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
-    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
-    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
-       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
-    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
-       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
+    step "Installing libunwind in Apple-system configuration"
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/runtimes" \
+        -B "${BUILD_DIR}/unwind" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
+        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+        -DLLVM_ENABLE_RUNTIMES="libunwind" \
+        -DLIBUNWIND_TEST_CONFIG="apple-libunwind-system.cfg.in" \
+        -DLIBUNWIND_TEST_PARAMS="${params}" \
+        -DCMAKE_INSTALL_NAME_DIR="/usr/lib/system"
 
-    arch="$(uname -m)"
-    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
-    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
-    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
-    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
+    step "Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxx
 
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
-                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
-                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
-                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
+    step "Running the libc++abi tests"
+    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxxabi
 
-    check-runtimes
-;;
-benchmarks)
-    clean
-    generate-cmake
-    check-cxx-benchmarks
+    step "Running the libunwind tests"
+    ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
 ;;
 aarch64)
     clean
@@ -657,13 +655,13 @@ clang-cl-dll)
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static)
     clean
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-no-vcruntime)
@@ -674,14 +672,14 @@ clang-cl-no-vcruntime)
     # exceptions enabled.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
                               -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-debug)
     clean
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
                               -DCMAKE_BUILD_TYPE=Debug
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static-crt)
@@ -690,7 +688,7 @@ clang-cl-static-crt)
     # the static CRT, as opposed to "MultiThreadedDLL" which is the default).
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF \
                               -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 mingw-dll)
@@ -736,6 +734,7 @@ mingw-incomplete-sysroot)
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     # Only test that building succeeds; there's not much extra value in running
     # the tests here, as it would be equivalent to the mingw-dll config above.
+    step "Building the runtimes"
     ${NINJA} -vC "${BUILD_DIR}"
 ;;
 aix)
@@ -753,7 +752,7 @@ android-ndk-*)
     ANDROID_EMU_IMG="${BUILDER#android-ndk-}"
     . "${MONOREPO_ROOT}/libcxx/utils/ci/vendor/android/emulator-functions.sh"
     if ! validate_emu_img "${ANDROID_EMU_IMG}"; then
-        echo "error: android-ndk suffix must be a valid emulator image (${ANDROID_EMU_IMG})" >&2
+        error "android-ndk suffix must be a valid emulator image (${ANDROID_EMU_IMG})" >&2
         exit 1
     fi
     ARCH=$(arch_of_emu_img ${ANDROID_EMU_IMG})
@@ -785,9 +784,9 @@ android-ndk-*)
     # directories.
     adb shell mkdir -p /data/local/tmp/adb_run
     adb push "${BUILD_DIR}/lib/libc++_shared.so" /data/local/tmp/libc++/libc++_shared.so
-    echo "+++ Running the libc++ tests"
+    step "Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
-    echo "+++ Running the libc++abi tests"
+    step "Running the libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 ;;
 #################################################################
@@ -803,3 +802,5 @@ android-ndk-*)
     exit 1
 ;;
 esac
+
+endstep # Make sure we close any still-open output group

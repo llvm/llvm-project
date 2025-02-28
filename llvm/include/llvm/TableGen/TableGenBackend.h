@@ -23,8 +23,7 @@ class RecordKeeper;
 class raw_ostream;
 
 namespace TableGen::Emitter {
-// Supports const and non-const forms of callback functions.
-using FnT = function_ref<void(RecordKeeper &Records, raw_ostream &OS)>;
+using FnT = function_ref<void(const RecordKeeper &Records, raw_ostream &OS)>;
 
 /// Creating an `Opt` object registers the command line option \p Name with
 /// TableGen backend and associates the callback \p CB with that option. If
@@ -37,7 +36,9 @@ struct Opt {
 /// Convienence wrapper around `Opt` that registers `EmitterClass::run` as the
 /// callback.
 template <class EmitterC> class OptClass : Opt {
-  static void run(RecordKeeper &RK, raw_ostream &OS) { EmitterC(RK).run(OS); }
+  static void run(const RecordKeeper &RK, raw_ostream &OS) {
+    EmitterC(RK).run(OS);
+  }
 
 public:
   OptClass(StringRef Name, StringRef Desc) : Opt(Name, run, Desc) {}
@@ -45,7 +46,7 @@ public:
 
 /// Apply callback for any command line option registered above. Returns false
 /// is no callback was applied.
-bool ApplyCallback(RecordKeeper &Records, raw_ostream &OS);
+bool ApplyCallback(const RecordKeeper &Records, raw_ostream &OS);
 
 } // namespace TableGen::Emitter
 

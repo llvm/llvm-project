@@ -13,7 +13,7 @@
 
 #include "src/__support/common.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 #include <sys/stat.h>
 
 namespace LIBC_NAMESPACE_DECL {

@@ -24,7 +24,6 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -150,11 +149,17 @@ std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
 
   llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
   // TODO: This only works if the `RedirectingFileSystem`s were all created by
-  //       `createVFSFromOverlayFiles`.
+  //       `createVFSFromOverlayFiles`. But at least exclude the ones with null
+  //       OverlayFileDir.
   RootFS.visit([&](llvm::vfs::FileSystem &FS) {
     if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
-      VFSUsage.push_back(RFS->hasBeenUsed());
-      RFS->clearHasBeenUsed();
+      // Skip a `RedirectingFileSystem` with null OverlayFileDir which indicates
+      // that they aren't created by createVFSFromOverlayFiles from the overlays
+      // in HeaderSearchOption::VFSOverlayFiles.
+      if (!RFS->getOverlayFileDir().empty()) {
+        VFSUsage.push_back(RFS->hasBeenUsed());
+        RFS->clearHasBeenUsed();
+      }
     }
   });
   assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
@@ -227,7 +232,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
                                           ".pcm");
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
-    if (getFileMgr().getFile(Result.str()))
+    if (getFileMgr().getOptionalFileRef(Result))
       return std::string(Result);
   }
 
@@ -246,7 +251,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
-    if (!FileName.empty() && getFileMgr().getFile(FileName))
+    if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
       return FileName;
   }
   return {};
@@ -655,7 +660,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     ++NumFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
-    auto Dir = FileMgr.getDirectory(FrameworkName);
+    auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkName);
     if (!Dir)
       return std::nullopt;
 
@@ -718,7 +723,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     bool FoundFramework = false;
     do {
       // Determine whether this directory exists.
-      auto Dir = FileMgr.getDirectory(FrameworkPath);
+      auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkPath);
       if (!Dir)
         break;
 
@@ -974,13 +979,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         const HeaderFileInfo *FromHFI = getExistingFileInfo(*Includer);
         assert(FromHFI && "includer without file info");
         unsigned DirInfo = FromHFI->DirInfo;
-        bool IndexHeaderMapHeader = FromHFI->IndexHeaderMapHeader;
-        StringRef Framework = FromHFI->Framework;
 
         HeaderFileInfo &ToHFI = getFileInfo(*FE);
         ToHFI.DirInfo = DirInfo;
-        ToHFI.IndexHeaderMapHeader = IndexHeaderMapHeader;
-        ToHFI.Framework = Framework;
 
         if (SearchPath) {
           StringRef SearchPathRef(IncluderAndDir.second.getName());
@@ -1122,23 +1123,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       }
     }
 
-    // Set the `Framework` info if this file is in a header map with framework
-    // style include spelling or found in a framework dir. The header map case
-    // is possible when building frameworks which use header maps.
-    if (CurDir->isHeaderMap() && isAngled) {
-      size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos)
-        HFI.Framework =
-            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
-      if (CurDir->isIndexHeaderMap())
-        HFI.IndexHeaderMapHeader = 1;
-    } else if (CurDir->isFramework()) {
-      size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos)
-        HFI.Framework =
-            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
-    }
-
     if (checkMSVCHeaderSearch(Diags, MSFE, &File->getFileEntry(), IncludeLoc)) {
       if (SuggestedModule)
         *SuggestedModule = MSSuggestedModule;
@@ -1154,41 +1138,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     // Remember this location for the next lookup we do.
     cacheLookupSuccess(CacheLookup, It, IncludeLoc);
     return File;
-  }
-
-  // If we are including a file with a quoted include "foo.h" from inside
-  // a header in a framework that is currently being built, and we couldn't
-  // resolve "foo.h" any other way, change the include to <Foo/foo.h>, where
-  // "Foo" is the name of the framework in which the including header was found.
-  if (!Includers.empty() && Includers.front().first && !isAngled &&
-      !Filename.contains('/')) {
-    const HeaderFileInfo *IncludingHFI =
-        getExistingFileInfo(*Includers.front().first);
-    assert(IncludingHFI && "includer without file info");
-    if (IncludingHFI->IndexHeaderMapHeader) {
-      SmallString<128> ScratchFilename;
-      ScratchFilename += IncludingHFI->Framework;
-      ScratchFilename += '/';
-      ScratchFilename += Filename;
-
-      OptionalFileEntryRef File = LookupFile(
-          ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir, &CurDir,
-          Includers.front(), SearchPath, RelativePath, RequestingModule,
-          SuggestedModule, IsMapped, /*IsFrameworkFound=*/nullptr);
-
-      if (checkMSVCHeaderSearch(Diags, MSFE,
-                                File ? &File->getFileEntry() : nullptr,
-                                IncludeLoc)) {
-        if (SuggestedModule)
-          *SuggestedModule = MSSuggestedModule;
-        return MSFE;
-      }
-
-      cacheLookupSuccess(LookupFileCache[Filename],
-                         LookupFileCache[ScratchFilename].HitIt, IncludeLoc);
-      // FIXME: SuggestedModule.
-      return File;
-    }
   }
 
   if (checkMSVCHeaderSearch(Diags, MSFE, nullptr, IncludeLoc)) {
@@ -1358,10 +1307,6 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
   HFI.DirInfo = OtherHFI.DirInfo;
   HFI.External = (!HFI.IsValid || HFI.External);
   HFI.IsValid = true;
-  HFI.IndexHeaderMapHeader = OtherHFI.IndexHeaderMapHeader;
-
-  if (HFI.Framework.empty())
-    HFI.Framework = OtherHFI.Framework;
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
@@ -1582,7 +1527,6 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     }
   }
 
-  FileInfo.IsLocallyIncluded = true;
   IsFirstIncludeOfFile = PP.markIncluded(File);
   return true;
 }

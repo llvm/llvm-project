@@ -559,7 +559,7 @@ declare void @f.param.sret(ptr sret(i8))
 declare void @f.param.noalias(ptr noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(ptr nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(ptr nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare ptr @f.param.returned(ptr returned)
@@ -1122,6 +1122,68 @@ define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <
   ret void
 }
 
+declare { float, float } @fmf_struct_f32()
+declare { double, double, double } @fmf_struct_f64()
+declare { <4 x double> } @fmf_struct_v4f64()
+
+; CHECK-LABEL: fastMathFlagsForStructCalls(
+define void @fastMathFlagsForStructCalls() {
+  %call.fast = call fast { float, float } @fmf_struct_f32()
+  ; CHECK: %call.fast = call fast { float, float } @fmf_struct_f32()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fpext(
+define void @fastmathflags_fpext(float %op1) {
+  %f.nnan = fpext nnan float %op1 to double
+  ; CHECK: %f.nnan = fpext nnan float %op1 to double
+  %f.ninf = fpext ninf float %op1 to double
+  ; CHECK: %f.ninf = fpext ninf float %op1 to double
+  %f.nsz = fpext nsz float %op1 to double
+  ; CHECK: %f.nsz = fpext nsz float %op1 to double
+  %f.arcp = fpext arcp float %op1 to double
+  ; CHECK: %f.arcp = fpext arcp float %op1 to double
+  %f.contract = fpext contract float %op1 to double
+  ; CHECK: %f.contract = fpext contract float %op1 to double
+  %f.afn = fpext afn float %op1 to double
+  ; CHECK: %f.afn = fpext afn float %op1 to double
+  %f.reassoc = fpext reassoc float %op1 to double
+  ; CHECK: %f.reassoc = fpext reassoc float %op1 to double
+  %f.fast = fpext fast float %op1 to double
+  ; CHECK: %f.fast = fpext fast float %op1 to double
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_fptrunc(
+define void @fastmathflags_fptrunc(float %op1) {
+  %f.nnan = fptrunc nnan float %op1 to half
+  ; CHECK: %f.nnan = fptrunc nnan float %op1 to half
+  %f.ninf = fptrunc ninf float %op1 to half
+  ; CHECK: %f.ninf = fptrunc ninf float %op1 to half
+  %f.nsz = fptrunc nsz float %op1 to half
+  ; CHECK: %f.nsz = fptrunc nsz float %op1 to half
+  %f.arcp = fptrunc arcp float %op1 to half
+  ; CHECK: %f.arcp = fptrunc arcp float %op1 to half
+  %f.contract = fptrunc contract float %op1 to half
+  ; CHECK: %f.contract = fptrunc contract float %op1 to half
+  %f.afn = fptrunc afn float %op1 to half
+  ; CHECK: %f.afn = fptrunc afn float %op1 to half
+  %f.reassoc = fptrunc reassoc float %op1 to half
+  ; CHECK: %f.reassoc = fptrunc reassoc float %op1 to half
+  %f.fast = fptrunc fast float %op1 to half
+  ; CHECK: %f.fast = fptrunc fast float %op1 to half
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {
@@ -1305,6 +1367,14 @@ terminate:
 
 continue:
   ret i32 0
+}
+
+declare void @instructions.bundles.callee(i32)
+define void @instructions.bundles.metadata(i32 %x) {
+entry:
+  call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+; CHECK: call void @instructions.bundles.callee(i32 %x) [ "foo"(i32 42, metadata !"abc"), "bar"(metadata !"abcde", metadata !"qwerty") ]
+  ret void
 }
 
 ; Instructions -- Unary Operations
@@ -2020,8 +2090,8 @@ declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
 declare void @f.sanitize_realtime() sanitize_realtime
 ; CHECK: declare void @f.sanitize_realtime() #52
 
-declare void @f.sanitize_realtime_unsafe() sanitize_realtime_unsafe
-; CHECK: declare void @f.sanitize_realtime_unsafe() #53
+declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
+; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
@@ -2077,9 +2147,14 @@ declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
 ; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
 declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
 
+; CHECK: declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+
 declare float @unknown_fpclass_func(float)
 
-define float @nofpclass_callsites(float %arg) {
+declare { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float })
+
+define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
   %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
 
@@ -2088,6 +2163,10 @@ define float @nofpclass_callsites(float %arg) {
 
   ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
   %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+
+  ; CHECK: %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+  %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+
   %add0 = fadd float %call0, %call1
   %add1 = fadd float %add0, %call2
   ret float %add1
@@ -2146,7 +2225,7 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
-; CHECK: attributes #53 = { sanitize_realtime_unsafe }
+; CHECK: attributes #53 = { sanitize_realtime_blocking }
 ; CHECK: attributes #54 = { builtin }
 
 ;; Metadata

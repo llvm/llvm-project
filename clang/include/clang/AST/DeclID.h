@@ -71,20 +71,14 @@ enum PredefinedDeclIDs {
   /// The extern "C" context.
   PREDEF_DECL_EXTERN_C_CONTEXT_ID,
 
-  /// The internal '__make_integer_seq' template.
-  PREDEF_DECL_MAKE_INTEGER_SEQ_ID,
-
   /// The internal '__NSConstantString' typedef.
   PREDEF_DECL_CF_CONSTANT_STRING_ID,
 
   /// The internal '__NSConstantString' tag type.
   PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
-  /// The internal '__type_pack_element' template.
-  PREDEF_DECL_TYPE_PACK_ELEMENT_ID,
-
-  /// The internal '__builtin_common_type' template.
-  PREDEF_DECL_COMMON_TYPE_ID,
+#define BuiltinTemplate(BTName) PREDEF_DECL##BTName##_ID,
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// The number of declaration IDs that are predefined.
   NUM_PREDEF_DECL_IDS
@@ -189,6 +183,7 @@ class LocalDeclID : public DeclIDBase {
   // Every Decl ID is a local decl ID to the module being writing in ASTWriter.
   friend class ASTWriter;
   friend class GlobalDeclID;
+  friend struct llvm::DenseMapInfo<clang::LocalDeclID>;
 
 public:
   LocalDeclID() : Base() {}
@@ -263,6 +258,27 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
+    return L == R;
+  }
+};
+
+template <> struct DenseMapInfo<clang::LocalDeclID> {
+  using LocalDeclID = clang::LocalDeclID;
+  using DeclID = LocalDeclID::DeclID;
+
+  static LocalDeclID getEmptyKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static LocalDeclID getTombstoneKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const LocalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
+  }
+
+  static bool isEqual(const LocalDeclID &L, const LocalDeclID &R) {
     return L == R;
   }
 };

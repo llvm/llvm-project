@@ -115,7 +115,8 @@ LogicalResult NextAccessAnalysis::visitOperation(Operation *op,
     std::optional<Value> underlyingValue =
         UnderlyingValueAnalysis::getMostUnderlyingValue(
             value, [&](Value value) {
-              return getOrCreateFor<UnderlyingValueLattice>(op, value);
+              return getOrCreateFor<UnderlyingValueLattice>(
+                  getProgramPointBefore(op), value);
             });
 
     // If the underlying value is not known yet, don't propagate.
@@ -151,7 +152,7 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
           UnderlyingValueAnalysis::getMostUnderlyingValue(
               operand, [&](Value value) {
                 return getOrCreateFor<UnderlyingValueLattice>(
-                    call.getOperation(), value);
+                    getProgramPointBefore(call.getOperation()), value);
               });
       if (!underlyingValue)
         return;
@@ -283,9 +284,8 @@ struct TestNextAccessPass
       if (!tag)
         return;
 
-      const NextAccess *nextAccess = solver.lookupState<NextAccess>(
-          op->getNextNode() == nullptr ? ProgramPoint(op->getBlock())
-                                       : op->getNextNode());
+      const NextAccess *nextAccess =
+          solver.lookupState<NextAccess>(solver.getProgramPointAfter(op));
       op->setAttr(kNextAccessAttrName,
                   makeNextAccessAttribute(op, solver, nextAccess));
 
@@ -300,9 +300,8 @@ struct TestNextAccessPass
         if (!successor.getSuccessor() || successor.getSuccessor()->empty())
           continue;
         Block &successorBlock = successor.getSuccessor()->front();
-        ProgramPoint successorPoint = successorBlock.empty()
-                                          ? ProgramPoint(&successorBlock)
-                                          : &successorBlock.front();
+        ProgramPoint *successorPoint =
+            solver.getProgramPointBefore(&successorBlock);
         entryPointNextAccess.push_back(makeNextAccessAttribute(
             op, solver, solver.lookupState<NextAccess>(successorPoint)));
       }

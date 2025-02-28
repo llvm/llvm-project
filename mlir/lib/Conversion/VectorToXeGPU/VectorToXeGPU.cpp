@@ -33,6 +33,7 @@ using namespace mlir;
 
 namespace {
 
+// Return true if value represents a zero constant.
 static bool isZeroConstant(Value val) {
   auto constant = val.getDefiningOp<arith::ConstantOp>();
   if (!constant)
@@ -46,6 +47,17 @@ static bool isZeroConstant(Value val) {
       .Default([](auto) { return false; });
 }
 
+static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
+                                            Operation *op, VectorType vecTy) {
+  // Validate only vector as the basic vector store and load ops guarantee
+  // XeGPU-compatible memref source.
+  unsigned vecRank = vecTy.getRank();
+  if (!(vecRank == 1 || vecRank == 2))
+    return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
+
+  return success();
+}
+
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
                                            VectorTransferOpInterface xferOp) {
   if (xferOp.getMask())
@@ -55,17 +67,23 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   auto srcTy = dyn_cast<MemRefType>(xferOp.getShapedType());
   if (!srcTy)
     return rewriter.notifyMatchFailure(xferOp, "Expects memref source");
-  VectorType vecTy = xferOp.getVectorType();
-  unsigned vecRank = vecTy.getRank();
-  if (!(vecRank == 1 || vecRank == 2))
-    return rewriter.notifyMatchFailure(xferOp, "Expects 1D or 2D vector");
 
+  // Perform common data transfer checks.
+  VectorType vecTy = xferOp.getVectorType();
+  if (failed(storeLoadPreconditions(rewriter, xferOp, vecTy)))
+    return failure();
+
+  // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(srcTy, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
+
+  unsigned vecRank = vecTy.getRank();
+  if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
+    return rewriter.notifyMatchFailure(
+        xferOp, "Boundary check is available only for block instructions.");
 
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
@@ -86,7 +104,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
                    Operation::operand_range offsets) {
   MemRefType srcTy = src.getType();
-  auto [strides, offset] = getStridesAndOffset(srcTy);
+  auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
@@ -106,7 +124,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
       std::optional<int64_t> staticVal = getConstantIntValue(offset);
       if (!staticVal)
         dynOffsets.push_back(offset);
-      constOffsets.push_back(staticVal ? *staticVal : ShapedType::kDynamic);
+      constOffsets.push_back(staticVal.value_or(ShapedType::kDynamic));
     }
 
     SmallVector<Value> dynShapes;
@@ -161,16 +179,15 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad &&
         elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
       return rewriter.notifyMatchFailure(
-          readOp, "Unsupported data type for tranposition");
+          readOp, "Unsupported data type for transposition");
 
     // If load is transposed, get the base shape for the tensor descriptor.
-    SmallVector<int64_t> descShape{vecTy.getShape()};
+    SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
-        descShape, elementType, /*scattered=*/false, /*array_length=*/1,
-        xegpu::MemoryScope::Global,
-        /*boundary_check=*/isOutOfBounds);
+        descShape, elementType, /*array_length=*/1,
+        /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
 
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
@@ -204,9 +221,6 @@ struct TransferWriteLowering
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
 
-    if (writeOp.hasOutOfBoundsDim())
-      return rewriter.notifyMatchFailure(writeOp,
-                                         "Unsupported out-of-bounds write");
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
@@ -214,8 +228,8 @@ struct TransferWriteLowering
     VectorType vecTy = writeOp.getVectorType();
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(),
-        /*scattered=*/false, /*array_length=*/1, xegpu::MemoryScope::Global,
-        /*boundary_check=*/false);
+        /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
+        xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType,
         dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),
@@ -233,13 +247,77 @@ struct TransferWriteLowering
   }
 };
 
+struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
+  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = loadOp.getLoc();
+
+    VectorType vecTy = loadOp.getResult().getType();
+    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy)))
+      return failure();
+
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
+        boundaryCheck, xegpu::MemorySpace::Global);
+    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+        rewriter, loc, descType, loadOp.getBase(), loadOp.getIndices());
+
+    // By default, no specific caching policy is assigned.
+    xegpu::CachePolicyAttr hint = nullptr;
+    auto loadNdOp = rewriter.create<xegpu::LoadNdOp>(
+        loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
+        /*l1_hint=*/hint,
+        /*l2_hint=*/hint, /*l3_hint=*/hint);
+    rewriter.replaceOp(loadOp, loadNdOp);
+
+    return success();
+  }
+};
+
+struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = storeOp.getLoc();
+
+    TypedValue<VectorType> vector = storeOp.getValueToStore();
+    VectorType vecTy = vector.getType();
+    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy)))
+      return failure();
+
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(),
+        /*array_length=*/1, boundaryCheck, xegpu::MemorySpace::Global);
+    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+        rewriter, loc, descType, storeOp.getBase(), storeOp.getIndices());
+
+    // By default, no specific caching policy is assigned.
+    xegpu::CachePolicyAttr hint = nullptr;
+    auto storeNdOp =
+        rewriter.create<xegpu::StoreNdOp>(loc, vector, ndDesc,
+                                          /*l1_hint=*/hint,
+                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+    rewriter.replaceOp(storeOp, storeNdOp);
+
+    return success();
+  }
+};
+
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -248,10 +326,6 @@ struct ConvertVectorToXeGPUPass
 
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<TransferReadLowering, TransferWriteLowering>(
-      patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
+  patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
+               StoreLowering>(patterns.getContext());
 }

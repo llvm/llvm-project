@@ -186,6 +186,30 @@ const PassPipelineInfo *mlir::PassPipelineInfo::lookup(StringRef pipelineArg) {
 // PassOptions
 //===----------------------------------------------------------------------===//
 
+/// Attempt to find the next occurance of character 'c' in the string starting
+/// from the `index`-th position , omitting any occurances that appear within
+/// intervening ranges or literals.
+static size_t findChar(StringRef str, size_t index, char c) {
+  for (size_t i = index, e = str.size(); i < e; ++i) {
+    if (str[i] == c)
+      return i;
+    // Check for various range characters.
+    if (str[i] == '{')
+      i = findChar(str, i + 1, '}');
+    else if (str[i] == '(')
+      i = findChar(str, i + 1, ')');
+    else if (str[i] == '[')
+      i = findChar(str, i + 1, ']');
+    else if (str[i] == '\"')
+      i = str.find_first_of('\"', i + 1);
+    else if (str[i] == '\'')
+      i = str.find_first_of('\'', i + 1);
+    if (i == StringRef::npos)
+      return StringRef::npos;
+  }
+  return StringRef::npos;
+}
+
 /// Extract an argument from 'options' and update it to point after the arg.
 /// Returns the cleaned argument string.
 static StringRef extractArgAndUpdateOptions(StringRef &options,
@@ -194,18 +218,27 @@ static StringRef extractArgAndUpdateOptions(StringRef &options,
   options = options.drop_front(argSize).ltrim();
 
   // Early exit if there's no escape sequence.
-  if (str.size() <= 2)
+  if (str.size() <= 1)
     return str;
 
   const auto escapePairs = {std::make_pair('\'', '\''),
-                            std::make_pair('"', '"'), std::make_pair('{', '}')};
+                            std::make_pair('"', '"')};
   for (const auto &escape : escapePairs) {
     if (str.front() == escape.first && str.back() == escape.second) {
       // Drop the escape characters and trim.
-      str = str.drop_front().drop_back().trim();
       // Don't process additional escape sequences.
-      break;
+      return str.drop_front().drop_back().trim();
     }
+  }
+
+  // Arguments may be wrapped in `{...}`. Unlike the quotation markers that
+  // denote literals, we respect scoping here. The outer `{...}` should not
+  // be stripped in cases such as "arg={...},{...}", which can be used to denote
+  // lists of nested option structs.
+  if (str.front() == '{') {
+    unsigned match = findChar(str, 1, '}');
+    if (match == str.size() - 1)
+      str = str.drop_front().drop_back().trim();
   }
 
   return str;
@@ -214,27 +247,8 @@ static StringRef extractArgAndUpdateOptions(StringRef &options,
 LogicalResult detail::pass_options::parseCommaSeparatedList(
     llvm::cl::Option &opt, StringRef argName, StringRef optionStr,
     function_ref<LogicalResult(StringRef)> elementParseFn) {
-  // Functor used for finding a character in a string, and skipping over
-  // various "range" characters.
-  llvm::unique_function<size_t(StringRef, size_t, char)> findChar =
-      [&](StringRef str, size_t index, char c) -> size_t {
-    for (size_t i = index, e = str.size(); i < e; ++i) {
-      if (str[i] == c)
-        return i;
-      // Check for various range characters.
-      if (str[i] == '{')
-        i = findChar(str, i + 1, '}');
-      else if (str[i] == '(')
-        i = findChar(str, i + 1, ')');
-      else if (str[i] == '[')
-        i = findChar(str, i + 1, ']');
-      else if (str[i] == '\"')
-        i = str.find_first_of('\"', i + 1);
-      else if (str[i] == '\'')
-        i = str.find_first_of('\'', i + 1);
-    }
-    return StringRef::npos;
-  };
+  if (optionStr.empty())
+    return success();
 
   size_t nextElePos = findChar(optionStr, 0, ',');
   while (nextElePos != StringRef::npos) {

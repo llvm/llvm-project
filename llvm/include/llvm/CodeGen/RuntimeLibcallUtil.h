@@ -62,6 +62,18 @@ Libcall getLDEXP(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 Libcall getFREXP(EVT RetVT);
 
+/// getSINCOS - Return the SINCOS_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+Libcall getSINCOS(EVT RetVT);
+
+/// getSINCOSPI - Return the SINCOSPI_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+Libcall getSINCOSPI(EVT RetVT);
+
+/// getMODF - Return the MODF_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+Libcall getMODF(EVT RetVT);
+
 /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
 /// UNKNOWN_LIBCALL if there is none.
 Libcall getSYNC(unsigned Opc, MVT VT);

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Type.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Context.h"
 
 using namespace llvm::sandboxir;
 
@@ -36,10 +36,14 @@ Type *Type::getDoubleTy(Context &Ctx) {
 Type *Type::getFloatTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getFloatTy(Ctx.LLVMCtx));
 }
-PointerType *PointerType::get(Type *ElementType, unsigned AddressSpace) {
-  return cast<PointerType>(ElementType->getContext().getType(
-      llvm::PointerType::get(ElementType->LLVMTy, AddressSpace)));
+
+#ifndef NDEBUG
+void Type::dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }
+void Type::dump() {
+  dumpOS(dbgs());
+  dbgs() << "\n";
 }
+#endif
 
 PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {
   return cast<PointerType>(

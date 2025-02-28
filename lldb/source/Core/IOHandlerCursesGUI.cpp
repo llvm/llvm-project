@@ -25,13 +25,13 @@
 #include <string>
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/ValueObject/ValueObjectUpdater.h"
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -42,8 +42,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -56,6 +54,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #endif
 
 #include "llvm/ADT/StringRef.h"
@@ -94,6 +94,7 @@ using llvm::StringRef;
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
 #define KEY_ALT_ENTER (KEY_MAX + 2)
 
+namespace lldb_private {
 namespace curses {
 class Menu;
 class MenuDelegate;
@@ -4479,8 +4480,9 @@ protected:
 };
 
 } // namespace curses
+} // namespace lldb_private
 
-using namespace curses;
+using namespace lldb_private::curses;
 
 struct Row {
   ValueObjectUpdater value;
@@ -7573,12 +7575,14 @@ IOHandlerCursesGUI::IOHandlerCursesGUI(Debugger &debugger)
 
 void IOHandlerCursesGUI::Activate() {
   IOHandler::Activate();
-  if (!m_app_ap) {
-    m_app_ap = std::make_unique<Application>(GetInputFILE(), GetOutputFILE());
+  if (!m_app_up) {
+    m_app_up = std::make_unique<Application>(
+        m_input_sp ? m_input_sp->GetStream() : nullptr,
+        m_output_sp ? m_input_sp->GetStream() : nullptr);
 
     // This is both a window and a menu delegate
     std::shared_ptr<ApplicationDelegate> app_delegate_sp(
-        new ApplicationDelegate(*m_app_ap, m_debugger));
+        new ApplicationDelegate(*m_app_up, m_debugger));
 
     MenuDelegateSP app_menu_delegate_sp =
         std::static_pointer_cast<MenuDelegate>(app_delegate_sp);
@@ -7652,8 +7656,8 @@ void IOHandlerCursesGUI::Activate() {
     help_menu_sp->AddSubmenu(MenuSP(new Menu(
         "GUI Help", nullptr, 'g', ApplicationDelegate::eMenuID_HelpGUIHelp)));
 
-    m_app_ap->Initialize();
-    WindowSP &main_window_sp = m_app_ap->GetMainWindow();
+    m_app_up->Initialize();
+    WindowSP &main_window_sp = m_app_up->GetMainWindow();
 
     MenuSP menubar_sp(new Menu(Menu::Type::Bar));
     menubar_sp->AddSubmenu(lldb_menu_sp);
@@ -7734,10 +7738,10 @@ void IOHandlerCursesGUI::Activate() {
   }
 }
 
-void IOHandlerCursesGUI::Deactivate() { m_app_ap->Terminate(); }
+void IOHandlerCursesGUI::Deactivate() { m_app_up->Terminate(); }
 
 void IOHandlerCursesGUI::Run() {
-  m_app_ap->Run(m_debugger);
+  m_app_up->Run(m_debugger);
   SetIsDone(true);
 }
 
@@ -7752,7 +7756,7 @@ bool IOHandlerCursesGUI::Interrupt() {
 void IOHandlerCursesGUI::GotEOF() {}
 
 void IOHandlerCursesGUI::TerminalSizeChanged() {
-  m_app_ap->TerminalSizeChanged();
+  m_app_up->TerminalSizeChanged();
 }
 
 #endif // LLDB_ENABLE_CURSES

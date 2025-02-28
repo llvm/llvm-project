@@ -789,7 +789,7 @@ for.exit2:
 
 ; test with two exiting and three exit blocks.
 ; the non-latch exiting block has a switch.
-define void @test3(i64 %trip, i64 %add) {
+define void @test3(i64 %trip, i64 %add, i1 %arg) {
 ; EPILOG-LABEL: @test3(
 ; EPILOG-NEXT:  entry:
 ; EPILOG-NEXT:    %0 = freeze i64 %trip
@@ -804,7 +804,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    %iv = phi i64 [ 0, %entry.new ], [ %iv_next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %sum = phi i64 [ 0, %entry.new ], [ %sum.next.7, %loop_latch.7 ]
 ; EPILOG-NEXT:    %niter = phi i64 [ 0, %entry.new ], [ %niter.next.7, %loop_latch.7 ]
-; EPILOG-NEXT:    br i1 undef, label %loop_latch, label %loop_exiting_bb1
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch, label %loop_exiting_bb1
 ; EPILOG:       loop_exiting_bb1:
 ; EPILOG-NEXT:    switch i64 %sum, label %loop_latch [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -818,7 +818,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ret void
 ; EPILOG:       loop_latch:
 ; EPILOG-NEXT:    %sum.next = add i64 %sum, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.1, label %loop_exiting_bb1.1
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.1, label %loop_exiting_bb1.1
 ; EPILOG:       loop_exiting_bb1.1:
 ; EPILOG-NEXT:    switch i64 %sum.next, label %loop_latch.1 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -826,7 +826,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.1:
 ; EPILOG-NEXT:    %sum.next.1 = add i64 %sum.next, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.2, label %loop_exiting_bb1.2
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.2, label %loop_exiting_bb1.2
 ; EPILOG:       loop_exiting_bb1.2:
 ; EPILOG-NEXT:    switch i64 %sum.next.1, label %loop_latch.2 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -834,7 +834,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.2:
 ; EPILOG-NEXT:    %sum.next.2 = add i64 %sum.next.1, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.3, label %loop_exiting_bb1.3
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.3, label %loop_exiting_bb1.3
 ; EPILOG:       loop_exiting_bb1.3:
 ; EPILOG-NEXT:    switch i64 %sum.next.2, label %loop_latch.3 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -842,7 +842,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.3:
 ; EPILOG-NEXT:    %sum.next.3 = add i64 %sum.next.2, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.4, label %loop_exiting_bb1.4
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.4, label %loop_exiting_bb1.4
 ; EPILOG:       loop_exiting_bb1.4:
 ; EPILOG-NEXT:    switch i64 %sum.next.3, label %loop_latch.4 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -850,7 +850,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.4:
 ; EPILOG-NEXT:    %sum.next.4 = add i64 %sum.next.3, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.5, label %loop_exiting_bb1.5
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.5, label %loop_exiting_bb1.5
 ; EPILOG:       loop_exiting_bb1.5:
 ; EPILOG-NEXT:    switch i64 %sum.next.4, label %loop_latch.5 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -858,7 +858,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.5:
 ; EPILOG-NEXT:    %sum.next.5 = add i64 %sum.next.4, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.6, label %loop_exiting_bb1.6
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.6, label %loop_exiting_bb1.6
 ; EPILOG:       loop_exiting_bb1.6:
 ; EPILOG-NEXT:    switch i64 %sum.next.5, label %loop_latch.6 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -866,7 +866,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    ]
 ; EPILOG:       loop_latch.6:
 ; EPILOG-NEXT:    %sum.next.6 = add i64 %sum.next.5, %add
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.7, label %loop_exiting_bb1.7
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.7, label %loop_exiting_bb1.7
 ; EPILOG:       loop_exiting_bb1.7:
 ; EPILOG-NEXT:    switch i64 %sum.next.6, label %loop_latch.7 [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit
@@ -899,7 +899,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-NEXT:    %iv.epil = phi i64 [ %iv.unr, %loop_header.epil.preheader ], [ %iv_next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %sum.epil = phi i64 [ %sum.unr, %loop_header.epil.preheader ], [ %sum.next.epil, %loop_latch.epil ]
 ; EPILOG-NEXT:    %epil.iter = phi i64 [ 0, %loop_header.epil.preheader ], [ %epil.iter.next, %loop_latch.epil ]
-; EPILOG-NEXT:    br i1 undef, label %loop_latch.epil, label %loop_exiting_bb1.epil
+; EPILOG-NEXT:    br i1 %arg, label %loop_latch.epil, label %loop_exiting_bb1.epil
 ; EPILOG:       loop_exiting_bb1.epil:
 ; EPILOG-NEXT:    switch i64 %sum.epil, label %loop_latch.epil [
 ; EPILOG-NEXT:      i64 24, label %exit1.loopexit1
@@ -931,7 +931,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-BLOCK-NEXT:    %iv = phi i64 [ 0, %entry.new ], [ %iv_next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %sum = phi i64 [ 0, %entry.new ], [ %sum.next.1, %loop_latch.1 ]
 ; EPILOG-BLOCK-NEXT:    %niter = phi i64 [ 0, %entry.new ], [ %niter.next.1, %loop_latch.1 ]
-; EPILOG-BLOCK-NEXT:    br i1 undef, label %loop_latch, label %loop_exiting_bb1
+; EPILOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch, label %loop_exiting_bb1
 ; EPILOG-BLOCK:       loop_exiting_bb1:
 ; EPILOG-BLOCK-NEXT:    switch i64 %sum, label %loop_latch [
 ; EPILOG-BLOCK-NEXT:      i64 24, label %exit1.loopexit
@@ -943,7 +943,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-BLOCK-NEXT:    ret void
 ; EPILOG-BLOCK:       loop_latch:
 ; EPILOG-BLOCK-NEXT:    %sum.next = add i64 %sum, %add
-; EPILOG-BLOCK-NEXT:    br i1 undef, label %loop_latch.1, label %loop_exiting_bb1.1
+; EPILOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch.1, label %loop_exiting_bb1.1
 ; EPILOG-BLOCK:       loop_exiting_bb1.1:
 ; EPILOG-BLOCK-NEXT:    switch i64 %sum.next, label %loop_latch.1 [
 ; EPILOG-BLOCK-NEXT:      i64 24, label %exit1.loopexit
@@ -969,7 +969,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; EPILOG-BLOCK:       loop_header.epil.preheader:
 ; EPILOG-BLOCK-NEXT:    br label %loop_header.epil
 ; EPILOG-BLOCK:       loop_header.epil:
-; EPILOG-BLOCK-NEXT:    br i1 undef, label %loop_latch.epil, label %loop_exiting_bb1.epil
+; EPILOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch.epil, label %loop_exiting_bb1.epil
 ; EPILOG-BLOCK:       loop_exiting_bb1.epil:
 ; EPILOG-BLOCK-NEXT:    switch i64 %sum.unr, label %loop_latch.epil [
 ; EPILOG-BLOCK-NEXT:      i64 24, label %exit1
@@ -993,7 +993,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    %iv.prol = phi i64 [ 0, %loop_header.prol.preheader ], [ %iv_next.prol, %loop_latch.prol ]
 ; PROLOG-NEXT:    %sum.prol = phi i64 [ 0, %loop_header.prol.preheader ], [ %sum.next.prol, %loop_latch.prol ]
 ; PROLOG-NEXT:    %prol.iter = phi i64 [ 0, %loop_header.prol.preheader ], [ %prol.iter.next, %loop_latch.prol ]
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.prol, label %loop_exiting_bb1.prol
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.prol, label %loop_exiting_bb1.prol
 ; PROLOG:       loop_exiting_bb1.prol:
 ; PROLOG-NEXT:    switch i64 %sum.prol, label %loop_latch.prol [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit1
@@ -1020,7 +1020,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG:       loop_header:
 ; PROLOG-NEXT:    %iv = phi i64 [ %iv.unr, %entry.new ], [ %iv_next.7, %loop_latch.7 ]
 ; PROLOG-NEXT:    %sum = phi i64 [ %sum.unr, %entry.new ], [ %sum.next.7, %loop_latch.7 ]
-; PROLOG-NEXT:    br i1 undef, label %loop_latch, label %loop_exiting_bb1
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch, label %loop_exiting_bb1
 ; PROLOG:       loop_exiting_bb1:
 ; PROLOG-NEXT:    switch i64 %sum, label %loop_latch [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1034,7 +1034,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ret void
 ; PROLOG:       loop_latch:
 ; PROLOG-NEXT:    %sum.next = add i64 %sum, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.1, label %loop_exiting_bb1.1
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.1, label %loop_exiting_bb1.1
 ; PROLOG:       loop_exiting_bb1.1:
 ; PROLOG-NEXT:    switch i64 %sum.next, label %loop_latch.1 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1042,7 +1042,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.1:
 ; PROLOG-NEXT:    %sum.next.1 = add i64 %sum.next, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.2, label %loop_exiting_bb1.2
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.2, label %loop_exiting_bb1.2
 ; PROLOG:       loop_exiting_bb1.2:
 ; PROLOG-NEXT:    switch i64 %sum.next.1, label %loop_latch.2 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1050,7 +1050,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.2:
 ; PROLOG-NEXT:    %sum.next.2 = add i64 %sum.next.1, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.3, label %loop_exiting_bb1.3
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.3, label %loop_exiting_bb1.3
 ; PROLOG:       loop_exiting_bb1.3:
 ; PROLOG-NEXT:    switch i64 %sum.next.2, label %loop_latch.3 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1058,7 +1058,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.3:
 ; PROLOG-NEXT:    %sum.next.3 = add i64 %sum.next.2, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.4, label %loop_exiting_bb1.4
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.4, label %loop_exiting_bb1.4
 ; PROLOG:       loop_exiting_bb1.4:
 ; PROLOG-NEXT:    switch i64 %sum.next.3, label %loop_latch.4 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1066,7 +1066,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.4:
 ; PROLOG-NEXT:    %sum.next.4 = add i64 %sum.next.3, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.5, label %loop_exiting_bb1.5
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.5, label %loop_exiting_bb1.5
 ; PROLOG:       loop_exiting_bb1.5:
 ; PROLOG-NEXT:    switch i64 %sum.next.4, label %loop_latch.5 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1074,7 +1074,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.5:
 ; PROLOG-NEXT:    %sum.next.5 = add i64 %sum.next.4, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.6, label %loop_exiting_bb1.6
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.6, label %loop_exiting_bb1.6
 ; PROLOG:       loop_exiting_bb1.6:
 ; PROLOG-NEXT:    switch i64 %sum.next.5, label %loop_latch.6 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1082,7 +1082,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-NEXT:    ]
 ; PROLOG:       loop_latch.6:
 ; PROLOG-NEXT:    %sum.next.6 = add i64 %sum.next.5, %add
-; PROLOG-NEXT:    br i1 undef, label %loop_latch.7, label %loop_exiting_bb1.7
+; PROLOG-NEXT:    br i1 %arg, label %loop_latch.7, label %loop_exiting_bb1.7
 ; PROLOG:       loop_exiting_bb1.7:
 ; PROLOG-NEXT:    switch i64 %sum.next.6, label %loop_latch.7 [
 ; PROLOG-NEXT:      i64 24, label %exit1.loopexit
@@ -1114,7 +1114,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-BLOCK:       loop_header.prol.preheader:
 ; PROLOG-BLOCK-NEXT:    br label %loop_header.prol
 ; PROLOG-BLOCK:       loop_header.prol:
-; PROLOG-BLOCK-NEXT:    br i1 undef, label %loop_latch.prol, label %loop_exiting_bb1.prol
+; PROLOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch.prol, label %loop_exiting_bb1.prol
 ; PROLOG-BLOCK:       loop_exiting_bb1.prol:
 ; PROLOG-BLOCK-NEXT:    switch i64 0, label %loop_latch.prol [
 ; PROLOG-BLOCK-NEXT:      i64 24, label %exit1
@@ -1132,7 +1132,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-BLOCK:       loop_header:
 ; PROLOG-BLOCK-NEXT:    %iv = phi i64 [ %iv.unr, %entry.new ], [ %iv_next.1, %loop_latch.1 ]
 ; PROLOG-BLOCK-NEXT:    %sum = phi i64 [ %sum.unr, %entry.new ], [ %sum.next.1, %loop_latch.1 ]
-; PROLOG-BLOCK-NEXT:    br i1 undef, label %loop_latch, label %loop_exiting_bb1
+; PROLOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch, label %loop_exiting_bb1
 ; PROLOG-BLOCK:       loop_exiting_bb1:
 ; PROLOG-BLOCK-NEXT:    switch i64 %sum, label %loop_latch [
 ; PROLOG-BLOCK-NEXT:      i64 24, label %exit1.loopexit
@@ -1144,7 +1144,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG-BLOCK-NEXT:    ret void
 ; PROLOG-BLOCK:       loop_latch:
 ; PROLOG-BLOCK-NEXT:    %sum.next = add i64 %sum, %add
-; PROLOG-BLOCK-NEXT:    br i1 undef, label %loop_latch.1, label %loop_exiting_bb1.1
+; PROLOG-BLOCK-NEXT:    br i1 %arg, label %loop_latch.1, label %loop_exiting_bb1.1
 ; PROLOG-BLOCK:       loop_exiting_bb1.1:
 ; PROLOG-BLOCK-NEXT:    switch i64 %sum.next, label %loop_latch.1 [
 ; PROLOG-BLOCK-NEXT:      i64 24, label %exit1.loopexit
@@ -1171,7 +1171,7 @@ entry:
 loop_header:
   %iv = phi i64 [ 0, %entry ], [ %iv_next, %loop_latch ]
   %sum = phi i64 [ 0, %entry ], [ %sum.next, %loop_latch ]
-  br i1 undef, label %loop_latch, label %loop_exiting_bb1
+  br i1 %arg, label %loop_latch, label %loop_exiting_bb1
 
 loop_exiting_bb1:
   switch i64 %sum, label %loop_latch [
@@ -4514,7 +4514,7 @@ define void @test8() {
 ; EPILOG-NEXT:    %i4.7 = add nuw nsw i64 %i3, 8
 ; EPILOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; EPILOG:       latch.7:
-; EPILOG-NEXT:    %niter.next.7 = add i64 %niter, 8
+; EPILOG-NEXT:    %niter.next.7 = add nuw nsw i64 %niter, 8
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i64 %niter.next.7, %unroll_iter
 ; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %innerH, label %exit.unr-lcssa.loopexit
 ; EPILOG:       exit.unr-lcssa.loopexit:

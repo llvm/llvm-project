@@ -1,4 +1,4 @@
-//===-- Interface for freelist_malloc -------------------------------------===//
+//===-- Interface for freelist --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,200 +9,80 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 #define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
-#include "src/__support/CPP/array.h"
-#include "src/__support/CPP/cstddef.h"
-#include "src/__support/CPP/new.h"
-#include "src/__support/CPP/span.h"
-#include "src/__support/fixedvector.h"
-#include "src/__support/macros/config.h"
+#include "block.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-using cpp::span;
-
-/// Basic [freelist](https://en.wikipedia.org/wiki/Free_list) implementation
-/// for an allocator. This implementation buckets by chunk size, with a list
-/// of user-provided buckets. Each bucket is a linked list of storage chunks.
-/// Because this freelist uses the added chunks themselves as list nodes, there
-/// is a lower bound of `sizeof(FreeList.FreeListNode)` bytes for chunks which
-/// can be added to this freelist. There is also an implicit bucket for
-/// "everything else", for chunks which do not fit into a bucket.
+/// A circularly-linked FIFO list storing free Blocks. All Blocks on a list
+/// are the same size. The blocks are referenced by Nodes in the list; the list
+/// refers to these, but it does not own them.
 ///
-/// Each added chunk will be added to the smallest bucket under which it fits.
-/// If it does not fit into any user-provided bucket, it will be added to the
-/// default bucket.
-///
-/// As an example, assume that the `FreeList` is configured with buckets of
-/// sizes {64, 128, 256, and 512} bytes. The internal state may look like the
-/// following:
-///
-/// @code{.unparsed}
-/// bucket[0] (64B) --> chunk[12B] --> chunk[42B] --> chunk[64B] --> NULL
-/// bucket[1] (128B) --> chunk[65B] --> chunk[72B] --> NULL
-/// bucket[2] (256B) --> NULL
-/// bucket[3] (512B) --> chunk[312B] --> chunk[512B] --> chunk[416B] --> NULL
-/// bucket[4] (implicit) --> chunk[1024B] --> chunk[513B] --> NULL
-/// @endcode
-///
-/// Note that added chunks should be aligned to a 4-byte boundary.
-template <size_t NUM_BUCKETS = 6> class FreeList {
+/// Allocating free blocks in FIFO order maximizes the amount of time before a
+/// free block is reused. This in turn maximizes the number of opportunities for
+/// it to be coalesced with an adjacent block, which tends to reduce heap
+/// fragmentation.
+class FreeList {
 public:
-  // Remove copy/move ctors
-  FreeList(const FreeList &other) = delete;
-  FreeList(FreeList &&other) = delete;
-  FreeList &operator=(const FreeList &other) = delete;
-  FreeList &operator=(FreeList &&other) = delete;
+  class Node {
+  public:
+    /// @returns The block containing this node.
+    LIBC_INLINE const Block *block() const {
+      return Block::from_usable_space(this);
+    }
 
-  /// Adds a chunk to this freelist.
-  bool add_chunk(cpp::span<cpp::byte> chunk);
+    /// @returns The block containing this node.
+    LIBC_INLINE Block *block() { return Block::from_usable_space(this); }
 
-  /// Finds an eligible chunk for an allocation of size `size`.
-  ///
-  /// @note This returns the first allocation possible within a given bucket;
-  /// It does not currently optimize for finding the smallest chunk.
-  ///
-  /// @returns
-  /// * On success - A span representing the chunk.
-  /// * On failure (e.g. there were no chunks available for that allocation) -
-  ///   A span with a size of 0.
-  cpp::span<cpp::byte> find_chunk(size_t size) const;
+    /// @returns The inner size of blocks in the list containing this node.
+    LIBC_INLINE size_t size() const { return block()->inner_size(); }
 
-  template <typename Cond> cpp::span<cpp::byte> find_chunk_if(Cond op) const;
-
-  /// Removes a chunk from this freelist.
-  bool remove_chunk(cpp::span<cpp::byte> chunk);
-
-  /// For a given size, find which index into chunks_ the node should be written
-  /// to.
-  constexpr size_t find_chunk_ptr_for_size(size_t size, bool non_null) const;
-
-  struct FreeListNode {
-    FreeListNode *next;
-    size_t size;
+  private:
+    // Circularly linked pointers to adjacent nodes.
+    Node *prev;
+    Node *next;
+    friend class FreeList;
   };
 
-  constexpr void set_freelist_node(FreeListNode &node,
-                                   cpp::span<cpp::byte> chunk);
+  LIBC_INLINE constexpr FreeList() : FreeList(nullptr) {}
+  LIBC_INLINE constexpr FreeList(Node *begin) : begin_(begin) {}
 
-  constexpr explicit FreeList(const cpp::array<size_t, NUM_BUCKETS> &sizes)
-      : chunks_(NUM_BUCKETS + 1, 0), sizes_(sizes.begin(), sizes.end()) {}
+  LIBC_INLINE bool empty() const { return !begin_; }
+
+  /// @returns The inner size of blocks in the list.
+  LIBC_INLINE size_t size() const {
+    LIBC_ASSERT(begin_ && "empty lists have no size");
+    return begin_->size();
+  }
+
+  /// @returns The first node in the list.
+  LIBC_INLINE Node *begin() { return begin_; }
+
+  /// @returns The first block in the list.
+  LIBC_INLINE Block *front() { return begin_->block(); }
+
+  /// Push a block to the back of the list.
+  /// The block must be large enough to contain a node.
+  LIBC_INLINE void push(Block *block) {
+    LIBC_ASSERT(!block->used() &&
+                "only free blocks can be placed on free lists");
+    LIBC_ASSERT(block->inner_size_free() >= sizeof(FreeList) &&
+                "block too small to accomodate free list node");
+    push(new (block->usable_space()) Node);
+  }
+
+  /// Push an already-constructed node to the back of the list.
+  /// This allows pushing derived node types with additional data.
+  void push(Node *node);
+
+  /// Pop the first node from the list.
+  LIBC_INLINE void pop() { remove(begin_); }
+
+  /// Remove an arbitrary node from the list.
+  void remove(Node *node);
 
 private:
-  FixedVector<FreeList::FreeListNode *, NUM_BUCKETS + 1> chunks_;
-  FixedVector<size_t, NUM_BUCKETS> sizes_;
+  Node *begin_;
 };
-
-template <size_t NUM_BUCKETS>
-constexpr void FreeList<NUM_BUCKETS>::set_freelist_node(FreeListNode &node,
-                                                        span<cpp::byte> chunk) {
-  // Add it to the correct list.
-  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), false);
-  node.size = chunk.size();
-  node.next = chunks_[chunk_ptr];
-  chunks_[chunk_ptr] = &node;
-}
-
-template <size_t NUM_BUCKETS>
-bool FreeList<NUM_BUCKETS>::add_chunk(span<cpp::byte> chunk) {
-  // Check that the size is enough to actually store what we need
-  if (chunk.size() < sizeof(FreeListNode))
-    return false;
-
-  FreeListNode *node = ::new (chunk.data()) FreeListNode;
-  set_freelist_node(*node, chunk);
-
-  return true;
-}
-
-template <size_t NUM_BUCKETS>
-template <typename Cond>
-span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk_if(Cond op) const {
-  for (FreeListNode *node : chunks_) {
-    while (node != nullptr) {
-      span<cpp::byte> chunk(reinterpret_cast<cpp::byte *>(node), node->size);
-      if (op(chunk))
-        return chunk;
-
-      node = node->next;
-    }
-  }
-
-  return {};
-}
-
-template <size_t NUM_BUCKETS>
-span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk(size_t size) const {
-  if (size == 0)
-    return span<cpp::byte>();
-
-  size_t chunk_ptr = find_chunk_ptr_for_size(size, true);
-
-  // Check that there's data. This catches the case where we run off the
-  // end of the array
-  if (chunks_[chunk_ptr] == nullptr)
-    return span<cpp::byte>();
-
-  // Now iterate up the buckets, walking each list to find a good candidate
-  for (size_t i = chunk_ptr; i < chunks_.size(); i++) {
-    FreeListNode *node = chunks_[static_cast<unsigned short>(i)];
-
-    while (node != nullptr) {
-      if (node->size >= size)
-        return span<cpp::byte>(reinterpret_cast<cpp::byte *>(node), node->size);
-
-      node = node->next;
-    }
-  }
-
-  // If we get here, we've checked every block in every bucket. There's
-  // nothing that can support this allocation.
-  return span<cpp::byte>();
-}
-
-template <size_t NUM_BUCKETS>
-bool FreeList<NUM_BUCKETS>::remove_chunk(span<cpp::byte> chunk) {
-  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), true);
-
-  // Check head first.
-  if (chunks_[chunk_ptr] == nullptr)
-    return false;
-
-  FreeListNode *node = chunks_[chunk_ptr];
-  if (reinterpret_cast<cpp::byte *>(node) == chunk.data()) {
-    chunks_[chunk_ptr] = node->next;
-    return true;
-  }
-
-  // No? Walk the nodes.
-  node = chunks_[chunk_ptr];
-
-  while (node->next != nullptr) {
-    if (reinterpret_cast<cpp::byte *>(node->next) == chunk.data()) {
-      // Found it, remove this node out of the chain
-      node->next = node->next->next;
-      return true;
-    }
-
-    node = node->next;
-  }
-
-  return false;
-}
-
-template <size_t NUM_BUCKETS>
-constexpr size_t
-FreeList<NUM_BUCKETS>::find_chunk_ptr_for_size(size_t size,
-                                               bool non_null) const {
-  size_t chunk_ptr = 0;
-  for (chunk_ptr = 0u; chunk_ptr < sizes_.size(); chunk_ptr++) {
-    if (sizes_[chunk_ptr] >= size &&
-        (!non_null || chunks_[chunk_ptr] != nullptr)) {
-      break;
-    }
-  }
-
-  return chunk_ptr;
-}
 
 } // namespace LIBC_NAMESPACE_DECL
 

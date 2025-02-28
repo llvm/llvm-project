@@ -16,7 +16,6 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

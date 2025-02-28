@@ -19,12 +19,12 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -134,7 +134,7 @@ namespace {
     AliasAnalysis *AA = nullptr;               // Alias analysis info.
     MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
     MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
-    MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
+    MachineDomTreeUpdater *MDTU = nullptr;     // Wraps current dominator tree
 
     // State that is updated as we process loops
     bool Changed = false;           // True if a loop is changed.
@@ -148,13 +148,13 @@ namespace {
     DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
 
     bool isExitBlock(MachineLoop *CurLoop, const MachineBasicBlock *MBB) {
-      if (ExitBlockMap.contains(CurLoop))
-        return is_contained(ExitBlockMap[CurLoop], MBB);
-
-      SmallVector<MachineBasicBlock *, 8> ExitBlocks;
-      CurLoop->getExitBlocks(ExitBlocks);
-      ExitBlockMap[CurLoop] = ExitBlocks;
-      return is_contained(ExitBlocks, MBB);
+      auto [It, Inserted] = ExitBlockMap.try_emplace(CurLoop);
+      if (Inserted) {
+        SmallVector<MachineBasicBlock *, 8> ExitBlocks;
+        CurLoop->getExitBlocks(ExitBlocks);
+        It->second = std::move(ExitBlocks);
+      }
+      return is_contained(It->second, MBB);
     }
 
     // Track 'estimated' register pressure.
@@ -239,7 +239,7 @@ namespace {
 
     bool IsCheapInstruction(MachineInstr &MI) const;
 
-    bool CanCauseHighRegPressure(const DenseMap<unsigned, int> &Cost,
+    bool CanCauseHighRegPressure(const SmallDenseMap<unsigned, int> &Cost,
                                  bool Cheap);
 
     void UpdateBackTraceRegPressure(const MachineInstr *MI);
@@ -264,9 +264,9 @@ namespace {
 
     void InitRegPressure(MachineBasicBlock *BB);
 
-    DenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
-                                             bool ConsiderSeen,
-                                             bool ConsiderUnseenAsDef);
+    SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
+                                                  bool ConsiderSeen,
+                                                  bool ConsiderUnseenAsDef);
 
     void UpdateRegPressure(const MachineInstr *MI,
                            bool ConsiderUnseenAsDef = false);
@@ -376,7 +376,9 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
                   .getManager()
                   .getResult<AAManager>(MF.getFunction())
            : &LegacyPass->getAnalysis<AAResultsWrapperPass>().getAAResults();
-  DT = GET_RESULT(MachineDominatorTree, getDomTree, );
+  MachineDomTreeUpdater DTU(GET_RESULT(MachineDominatorTree, getDomTree, ),
+                            MachineDomTreeUpdater::UpdateStrategy::Lazy);
+  MDTU = &DTU;
   MLI = GET_RESULT(MachineLoop, getLI, Info);
   MBFI = DisableHoistingToHotterBlocks != UseBFI::None
              ? GET_RESULT(MachineBlockFrequency, getMBFI, Info)
@@ -391,12 +393,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
 
-  // FIXME: Remove this assignment or convert to an assert? (dead variable PreRegAlloc)
-  // MachineLICM and PostRAMachineLICM were distinguished by introducing
-  // EarlyMachineLICM and MachineLICM respectively to avoid "using an unreliable
-  // MRI::isSSA() check to determine whether register allocation has happened"
-  // (See 4a7c8e7).
-  PreRegAlloc = MRI->isSSA();
   HasProfileData = MF.getFunction().hasProfileData();
 
   if (PreRegAlloc)
@@ -428,7 +424,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
-      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
+      MachineDomTreeNode *N = MDTU->getDomTree().getNode(CurLoop->getHeader());
       FirstInLoop = true;
       HoistOutOfLoop(N, CurLoop, CurPreheader);
       CSEMap.clear();
@@ -771,7 +767,7 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
     SmallVector<MachineBasicBlock*, 8> CurrentLoopExitingBlocks;
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
-      if (!DT->dominates(BB, CurrentLoopExitingBlock)) {
+      if (!MDTU->getDomTree().dominates(BB, CurrentLoopExitingBlock)) {
         SpeculationState = SpeculateTrue;
         return false;
       }
@@ -977,10 +973,10 @@ void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
 /// If 'ConsiderSeen' is true, updates 'RegSeen' and uses the information to
 /// figure out which usages are live-ins.
 /// FIXME: Figure out a way to consider 'RegSeen' from all code paths.
-DenseMap<unsigned, int>
+SmallDenseMap<unsigned, int>
 MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
                                   bool ConsiderUnseenAsDef) {
-  DenseMap<unsigned, int> Cost;
+  SmallDenseMap<unsigned, int> Cost;
   if (MI->isImplicitDef())
     return Cost;
   for (unsigned i = 0, e = MI->getDesc().getNumOperands(); i != e; ++i) {
@@ -1010,12 +1006,8 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (RCCost == 0)
       continue;
     const int *PS = TRI->getRegClassPressureSets(RC);
-    for (; *PS != -1; ++PS) {
-      if (!Cost.contains(*PS))
-        Cost[*PS] = RCCost;
-      else
-        Cost[*PS] += RCCost;
-    }
+    for (; *PS != -1; ++PS)
+      Cost[*PS] += RCCost;
   }
   return Cost;
 }
@@ -1248,7 +1240,7 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// Visit BBs from header to current BB, check if hoisting an instruction of the
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
-    const DenseMap<unsigned, int> &Cost, bool CheapInstr) {
+    const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
   for (const auto &RPIdAndCost : Cost) {
     if (RPIdAndCost.second <= 0)
       continue;
@@ -1381,7 +1373,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                }) &&
         IsLoopInvariantInst(MI, CurLoop) &&
         any_of(MRI->use_nodbg_instructions(DefReg),
-               [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
+               [&CurLoop, this, DefReg,
+                Cost = std::move(Cost)](MachineInstr &UseMI) {
                  if (!CurLoop->contains(&UseMI))
                    return false;
 
@@ -1466,9 +1459,9 @@ MachineInstr *MachineLICMImpl::ExtractHoistableLoad(MachineInstr *MI,
 
   // Otherwise we successfully unfolded a load that we can hoist.
 
-  // Update the call site info.
-  if (MI->shouldUpdateCallSiteInfo())
-    MF.eraseCallSiteInfo(MI);
+  // Update the call info.
+  if (MI->shouldUpdateAdditionalCallInfo())
+    MF.eraseAdditionalCallInfo(MI);
 
   MI->eraseFromParent();
   return NewMIs[0];
@@ -1511,7 +1504,7 @@ void MachineLICMImpl::InitializeLoadsHoistableLoops() {
       if (!AllowedToHoistLoads[Loop])
         continue;
       for (auto &MI : *MBB) {
-        if (!MI.mayStore() && !MI.isCall() &&
+        if (!MI.isLoadFoldBarrier() && !MI.mayStore() && !MI.isCall() &&
             !(MI.mayLoad() && MI.hasOrderedMemoryRef()))
           continue;
         for (MachineLoop *L = Loop; L != nullptr; L = L->getParentLoop())
@@ -1610,7 +1603,7 @@ bool MachineLICMImpl::MayCSE(MachineInstr *MI) {
   unsigned Opcode = MI->getOpcode();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
-    if (DT->dominates(Map.first, MI->getParent())) {
+    if (MDTU->getDomTree().dominates(Map.first, MI->getParent())) {
       DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
           Map.second.find(Opcode);
       // Do not CSE implicit_def so ProcessImplicitDefs can properly propagate
@@ -1678,7 +1671,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
   bool HasCSEDone = false;
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.
-    if (DT->dominates(Map.first, MI->getParent())) {
+    if (MDTU->getDomTree().dominates(Map.first, MI->getParent())) {
       DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
           Map.second.find(Opcode);
       if (CI != Map.second.end()) {
@@ -1742,7 +1735,7 @@ MachineLICMImpl::getCurPreheader(MachineLoop *CurLoop,
       }
 
       CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), LegacyPass,
-                                             MFAM, nullptr);
+                                             MFAM, nullptr, MDTU);
       if (!CurPreheader) {
         CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
         return nullptr;
@@ -1773,9 +1766,6 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();

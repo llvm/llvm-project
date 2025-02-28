@@ -15,12 +15,13 @@
 
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Frontend/LangOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/LangOptions.h"
+#include "mlir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Option/ArgList.h"
@@ -84,7 +85,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   Fortran::frontend::CodeGenOptions codeGenOpts;
 
   /// Options controlling language dialect.
-  Fortran::frontend::LangOptions langOpts;
+  Fortran::common::LangOptions langOpts;
 
   // The original invocation of the compiler driver.
   // This string will be set as the return value from the COMPILER_OPTIONS
@@ -143,6 +144,10 @@ class CompilerInvocation : public CompilerInvocationBase {
       },
   };
 
+  /// Whether to time the invocation. Set when -ftime-report or -ftime-report=
+  /// is enabled.
+  bool enableTimers;
+
 public:
   CompilerInvocation() = default;
 
@@ -158,8 +163,8 @@ public:
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
 
-  LangOptions &getLangOpts() { return langOpts; }
-  const LangOptions &getLangOpts() const { return langOpts; }
+  Fortran::common::LangOptions &getLangOpts() { return langOpts; }
+  const Fortran::common::LangOptions &getLangOpts() const { return langOpts; }
 
   Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
   const Fortran::lower::LoweringOptions &getLoweringOpts() const {
@@ -221,6 +226,8 @@ public:
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
   }
+
+  bool getEnableTimers() const { return enableTimers; }
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
