@@ -396,7 +396,7 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
         if ((resolved & eSymbolContextLineEntry) &&
             !m_sc.line_entry.IsValid()) {
           m_sc.line_entry = sc.line_entry;
-          m_sc.line_entry.ApplyFileMappings(m_sc.target_sp);
+          m_sc.line_entry.ApplyFileMappings(m_sc.target_sp, m_sc.module_sp);
         }
       }
     } else {
