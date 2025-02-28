@@ -107,7 +107,8 @@ public:
       return nullptr;
 
     llvm::Type *Ty = V->getType();
-    if (Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()) {
+    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy() ||
+        Ty->isFP128Ty()) {
       llvm::Module &M = CGM.getModule();
       auto &Ctx = M.getContext();
       llvm::Function *TDCFunc = llvm::Intrinsic::getOrInsertDeclaration(

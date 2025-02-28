@@ -580,6 +580,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       // Special treatment.
       setOperationAction(ISD::IS_FPCLASS, VT, Custom);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
 
       // Handle constrained floating-point operations.
       setOperationAction(ISD::STRICT_FADD, VT, Legal);
@@ -2759,13 +2760,21 @@ static SDNode *emitIntrinsicWithCCAndChain(SelectionDAG &DAG, SDValue Op,
 static SDNode *emitIntrinsicWithCC(SelectionDAG &DAG, SDValue Op,
                                    unsigned Opcode) {
   // Copy all operands except the intrinsic ID.
+  SDLoc DL(Op);
   unsigned NumOps = Op.getNumOperands();
   SmallVector<SDValue, 6> Ops;
   Ops.reserve(NumOps - 1);
-  for (unsigned I = 1; I < NumOps; ++I)
-    Ops.push_back(Op.getOperand(I));
+  for (unsigned I = 1; I < NumOps; ++I) {
+    SDValue CurrOper = Op.getOperand(I);
+    if (CurrOper.getValueType() == MVT::f16) {
+      assert((Op.getConstantOperandVal(0) == Intrinsic::s390_tdc && I == 1) &&
+             "Unhandled intrinsic with f16 operand.");
+      CurrOper = DAG.getFPExtendOrRound(CurrOper, DL, MVT::f32);
+    }
+    Ops.push_back(CurrOper);
+  }
 
-  SDValue Intr = DAG.getNode(Opcode, SDLoc(Op), Op->getVTList(), Ops);
+  SDValue Intr = DAG.getNode(Opcode, DL, Op->getVTList(), Ops);
   return Intr.getNode();
 }
 
@@ -6695,6 +6704,21 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
   return getCCResult(DAG, Intr);
 }
 
+SDValue SystemZTargetLowering::lowerFCOPYSIGN(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue SignArg = Op.getOperand(1);
+  if (SignArg.getSimpleValueType() != MVT::f16)
+    return Op; // Legal
+
+  // f16: Extend SignArg f32. The DAGCombiner removes the fpext without
+  // asking, but it is needed as there is no target instruction handling f16.
+  SDValue SignArgF32 =
+      DAG.getFPExtendOrRound(SignArg, SDLoc(SignArg), MVT::f32);
+  return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(),
+                     {Op.getOperand(0), SignArgF32});
+}
+
 SDValue SystemZTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -6864,6 +6888,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerStoreF16(Op, DAG);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
+  case ISD::FCOPYSIGN:
+    return lowerFCOPYSIGN(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::READCYCLECOUNTER:

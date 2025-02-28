@@ -742,6 +742,7 @@ private:
   SDValue lowerStoreF16(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
