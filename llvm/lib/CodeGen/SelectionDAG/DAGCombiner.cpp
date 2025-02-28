@@ -12510,14 +12510,15 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   SDLoc DL(N);
 
-  SDValue Op0 = N->getOperand(0);
+  SDValue Acc = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  SDValue Op2 = N->getOperand(2);
 
   if (Op1->getOpcode() != ISD::MUL)
     return SDValue();
 
   APInt ConstantOne;
-  if (!ISD::isConstantSplatVector(N->getOperand(2).getNode(), ConstantOne) ||
+  if (!ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
       !ConstantOne.isOne())
     return SDValue();
 
@@ -12542,9 +12543,16 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (LHSIsSigned != RHSIsSigned)
     return SDValue();
 
+  bool NodeIsSigned = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
+  EVT AccElemVT = Acc.getValueType().getVectorElementType();
+  if (LHSIsSigned != NodeIsSigned &&
+      (Op1.getValueType().getVectorElementType() != AccElemVT ||
+       Op2.getValueType().getVectorElementType() != AccElemVT))
+    return SDValue();
+
   unsigned NewOpcode =
       LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Op0, LHSExtOp,
+  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
                      RHSExtOp);
 }
 
