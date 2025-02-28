@@ -685,25 +685,24 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.discard.*``' semantically behaves like a weak write of an *unstable indeterminate value*: 
-reads of memory locations with *unstable indeterminate values* may return different 
-bit patterns each time until the memory is overwritten.
-This operation *hints* to the implementation that data in the specified cache ``.level`` 
-can be destructively discarded without writing it back to memory. The operand ``size`` is an 
-integer constant that specifies the length in bytes of the address range ``[a, a + size)`` to write 
-*unstable indeterminate values* into. The only supported value for the ``size`` operand is ``128``. 
-If no state space is specified then `generic-addressing` is used. If the specified address does 
-not fall within the address window of ``.global`` state space then the behavior is undefined.
+The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a non-atomic non-volatile ``llvm.memset`` that writes ``undef`` to the destination address range ``[%ptr, %ptr + immarg)``. 
+Subsequent reads from the address range may read ``undef`` until the memory is overwritten with a different value.
+These operations *hint* the implementation that data in the L2 cache can be destructively discarded without writing it back to memory. 
+The operand ``immarg`` is an integer constant that specifies the length in bytes of the address range ``[%ptr, %ptr + immarg)`` to write ``undef`` into. 
+The only supported value for the ``immarg`` operand is ``128``. 
+If generic addressing is used and the specified address does not fall within the address window of global memory (``addrspace(1)``) the behavior is undefined.
 
-LLVM does not define anywhere what an *unstable indeterminate values* is, and the closest concept 
-LLVM has breaks the example below:
-
-.. code-block:: text
-  
-  discard.global.L2 [ptr], 128;
-  ld.weak.u32 r0, [ptr];
-  ld.weak.u32 r1, [ptr];
-  // The values in r0 and r1 may differ!
+.. code-block:: llvm
+ 
+   call void @llvm.nvvm.discard.L2(ptr %p, i64 128)  ;; writes `undef` to [p, p+128)
+   %a = load i64, ptr %p. ;; loads 8 bytes containing undef
+   %b = load i64, ptr %p  ;; loads 8 bytes containing undef
+   ;; comparing %a and %b compares `undef` values!
+   %fa = freeze i64 %a  ;; freezes undef to stable bit-pattern
+   %fb = freeze i64 %b  ;; freezes undef to stable bit-pattern
+   ;; %fa may compare different to %fb!
+   
+For more information, refer to the  `CUDA C++ discard documentation <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__ and the `PTX ISA discard documentation <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
 
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`_.
