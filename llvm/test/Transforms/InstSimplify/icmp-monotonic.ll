@@ -216,3 +216,140 @@ define i1 @lshr_add_ule_non_monotonic(i32 %x, i32 %y, i32 %z) {
   %cmp = icmp ule i32 %op1, %op2
   ret i1 %cmp
 }
+
+define i1 @mul_nuw_nonzero_rhs_monotonic(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @mul_nuw_nonzero_rhs_monotonic(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[PROD:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[PROD]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nonzero_rhs_monotonic_inverse_predicate(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @mul_nuw_nonzero_rhs_monotonic_inverse_predicate(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[PROD:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[PROD]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp ult i8 %prod, %x
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nonzero_lhs_monotonic(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @mul_nuw_nonzero_lhs_monotonic(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[PROD:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[PROD]], [[C]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %c
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nonzero_lhs_rhs_monotonic(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @mul_nuw_nonzero_lhs_rhs_monotonic(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[X_NONZERO:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NONZERO]])
+; CHECK-NEXT:    [[PROD:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[PROD]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %x_nonzero = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %x_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
+
+
+define i1 @negative_mul_non_nsw(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @negative_mul_non_nsw(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[X3:%.*]] = mul i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X3]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul i8 %x, %c
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
+
+define i1 @negative_mul_no_nonzero(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @negative_mul_no_nonzero(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[X3:%.*]] = mul nsw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X3]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %prod = mul nsw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
+
+define i1 @negative_mul_lhs_maybe_zero(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @negative_mul_lhs_maybe_zero(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[X3:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X3]], [[C]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %c
+  ret i1 %cmp
+}
+
+define i1 @negative_mul_rhs_maybe_zero(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @negative_mul_rhs_maybe_zero(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    [[X3:%.*]] = mul nuw i8 [[X]], [[C]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X3]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %c_nonzero = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %x, %c
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
