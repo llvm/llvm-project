@@ -777,7 +777,7 @@ private:
     mlir::Value source = sourceExpr ? fir::getBase(sourceExv) : nullptr;
 
     // Keep return type the same as a standard AllocatableAllocate call.
-    mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+    mlir::Type retTy = fir::runtime::getModel<int>()(builder);
     return builder
         .create<cuf::AllocateOp>(
             loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
@@ -846,7 +846,7 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
           : errorManager.errMsgAddr;
 
   // Keep return type the same as a standard AllocatableAllocate call.
-  mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+  mlir::Type retTy = fir::runtime::getModel<int>()(builder);
   return builder
       .create<cuf::DeallocateOp>(
           loc, retTy, box.getAddr(), errmsg, cudaAttr,

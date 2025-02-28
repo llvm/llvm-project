@@ -32,13 +32,15 @@ namespace {
 struct ForcedRandomNumberReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(RandomNumber16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
-    return [](mlir::MLIRContext *ctx) {
+    return [](const fir::FirOpBuilder &builder) {
       auto boxTy =
-          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
-      auto strTy = fir::runtime::getModel<const char *>()(ctx);
-      auto intTy = fir::runtime::getModel<int>()(ctx);
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(
+              builder);
+      auto strTy = fir::runtime::getModel<const char *>()(builder);
+      auto intTy = fir::runtime::getModel<int>()(builder);
       ;
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy}, {});
+      return mlir::FunctionType::get(builder.getContext(),
+                                     {boxTy, strTy, intTy}, {});
     };
   }
 };

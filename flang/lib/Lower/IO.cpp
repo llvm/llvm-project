@@ -267,9 +267,9 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type sizeTy =
-      fir::runtime::getModel<std::size_t>()(builder.getContext());
-  mlir::Type intTy = fir::runtime::getModel<int>()(builder.getContext());
-  mlir::Type boolTy = fir::runtime::getModel<bool>()(builder.getContext());
+      fir::runtime::getModel<std::size_t>()(builder);
+  mlir::Type intTy = fir::runtime::getModel<int>()(builder);
+  mlir::Type boolTy = fir::runtime::getModel<bool>()(builder);
   mlir::Type listTy = fir::SequenceType::get(
       definedIoProcMap.size(),
       mlir::TupleType::get(context, {refTy, refTy, intTy, boolTy}));
@@ -427,7 +427,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type sizeTy =
-      fir::runtime::getModel<std::size_t>()(builder.getContext());
+      fir::runtime::getModel<std::size_t>()(builder);
   mlir::Type charRefTy = fir::ReferenceType::get(builder.getIntegerType(8));
   mlir::Type descRefTy =
       fir::ReferenceType::get(fir::BoxType::get(mlir::NoneType::get(context)));
