@@ -110,16 +110,16 @@ static constexpr MCPhysReg SPReg = RISCV::X2;
 // The register used to hold the return address.
 static constexpr MCPhysReg RAReg = RISCV::X1;
 
-// Offsets which need to be scale by XLen representing locations of CSRs which
-// are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
-static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
-    {/*ra*/ RAReg, -1},       {/*s0*/ FPReg, -2},
-    {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
-    {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
-    {/*s5*/ RISCV::X21, -7},  {/*s6*/ RISCV::X22, -8},
-    {/*s7*/ RISCV::X23, -9},  {/*s8*/ RISCV::X24, -10},
-    {/*s9*/ RISCV::X25, -11}, {/*s10*/ RISCV::X26, -12},
-    {/*s11*/ RISCV::X27, -13}};
+// LIst of CSRs that are given a fixed location by save/restore libcalls or
+// Zcmp/Xqccmp Push/Pop. The order in this table indicates the order the
+// registers are saved on the stack. Zcmp uses the reverse order of save/restore
+// and Xqccmp on the stack, but this is handled when offsets are calculated.
+static const MCPhysReg FixedCSRFIMap[] = {
+    /*ra*/ RAReg,      /*s0*/ FPReg,      /*s1*/ RISCV::X9,
+    /*s2*/ RISCV::X18, /*s3*/ RISCV::X19, /*s4*/ RISCV::X20,
+    /*s5*/ RISCV::X21, /*s6*/ RISCV::X22, /*s7*/ RISCV::X23,
+    /*s8*/ RISCV::X24, /*s9*/ RISCV::X25, /*s10*/ RISCV::X26,
+    /*s11*/ RISCV::X27};
 
 // For now we use x3, a.k.a gp, as pointer to shadow call stack.
 // User should not use x3 in their asm.
@@ -371,8 +371,8 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
                                  const std::vector<CalleeSavedInfo> &CSI) {
   MCRegister MaxPushPopReg;
   for (auto &CS : CSI) {
-    if (llvm::find_if(FixedCSRFIMap, [&](auto P) {
-          return P.first == CS.getReg();
+    if (llvm::find_if(FixedCSRFIMap, [&](MCPhysReg P) {
+          return P == CS.getReg();
         }) != std::end(FixedCSRFIMap))
       MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
   }
@@ -488,7 +488,7 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
 
   for (const auto &CS : CSI) {
     const auto *FII = llvm::find_if(
-        FixedCSRFIMap, [&](auto P) { return P.first == CS.getReg(); });
+        FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
     if (FII != std::end(FixedCSRFIMap))
       PushOrLibCallsCSI.push_back(CS);
   }
@@ -1813,13 +1813,15 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     // This might need a fixed stack slot.
     if (RVFI->useSaveRestoreLibCalls(MF) || RVFI->isPushable(MF)) {
       const auto *FII = llvm::find_if(
-          FixedCSRFIMap, [&](auto P) { return P.first == CS.getReg(); });
+          FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
+      unsigned RegNum = std::distance(std::begin(FixedCSRFIMap), FII);
+
       if (FII != std::end(FixedCSRFIMap)) {
         int64_t Offset;
         if (RVFI->isPushable(MF))
-          Offset = -((FII->second + RVFI->getRVPushRegs() + 1) * (int64_t)Size);
+          Offset = -int64_t(RVFI->getRVPushRegs() - RegNum) * Size;
         else
-          Offset = FII->second * (int64_t)Size;
+          Offset = -int64_t(RegNum + 1) * Size;
 
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
         assert(FrameIdx < 0);
@@ -1888,7 +1890,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       PushBuilder.addImm(0);
 
       for (unsigned i = 0; i < PushedRegNum; i++)
-        PushBuilder.addUse(FixedCSRFIMap[i].first, RegState::Implicit);
+        PushBuilder.addUse(FixedCSRFIMap[i], RegState::Implicit);
     }
   } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
     // Add spill libcall via non-callee-saved register t0.
@@ -2043,7 +2045,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       PopBuilder.addImm(0);
 
       for (unsigned i = 0; i < RVFI->getRVPushRegs(); i++)
-        PopBuilder.addDef(FixedCSRFIMap[i].first, RegState::ImplicitDefine);
+        PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
   } else {
     const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);
