@@ -327,6 +327,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM26,
+  OPERAND_SIMM32,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -483,8 +484,8 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  const char *Name;
-  unsigned Value;
+  char Name[10];
+  uint8_t Value;
 };
 
 #define GET_RISCVOpcodesList_DECL
@@ -652,6 +653,18 @@ inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
+
+namespace RISCVVInversePseudosTable {
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+  uint8_t VLMul;
+  uint8_t SEW;
+};
+
+#define GET_RISCVVInversePseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
 
 } // namespace llvm
 

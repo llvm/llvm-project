@@ -19,6 +19,8 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
+#include "../LLVMCommon/MemRefDescriptor.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 
@@ -29,6 +31,11 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::amdgpu;
+
+// Define commonly used chipsets versions for convenience.
+constexpr Chipset kGfx908 = Chipset(9, 0, 8);
+constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
+constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
@@ -76,11 +83,166 @@ static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
   return index ? index : createI32Constant(rewriter, loc, 0);
 }
 
+/// Compute the contents of the `num_records` field for a given memref
+/// descriptor - that is, the number of bytes that's one element past the
+/// greatest possible valid index into the memref.
+static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
+                           MemRefType memrefType,
+                           MemRefDescriptor &memrefDescriptor,
+                           ArrayRef<int64_t> strides,
+                           uint32_t elementByteWidth) {
+  if (memrefType.hasStaticShape() &&
+      !llvm::any_of(strides, ShapedType::isDynamic)) {
+    int64_t size = memrefType.getRank() == 0 ? 1 : 0;
+    ArrayRef<int64_t> shape = memrefType.getShape();
+    for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
+      size = std::max(shape[i] * strides[i], size);
+    size = size * elementByteWidth;
+    assert(size < std::numeric_limits<uint32_t>::max() &&
+           "the memref buffer is too large");
+    return createI32Constant(rewriter, loc, static_cast<int32_t>(size));
+  }
+  Value maxIndex;
+  for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
+    Value size = memrefDescriptor.size(rewriter, loc, i);
+    Value stride = memrefDescriptor.stride(rewriter, loc, i);
+    Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
+    maxIndex = maxIndex
+                   ? rewriter.create<LLVM::UMaxOp>(loc, maxIndex, maxThisDim)
+                   : maxThisDim;
+  }
+  Value maxIndexI32 = convertUnsignedToI32(rewriter, loc, maxIndex);
+  Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
+  return rewriter.create<LLVM::MulOp>(loc, maxIndexI32, byteWidthConst);
+}
+
+static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
+                            Value basePointer, Value numRecords,
+                            bool boundsCheck, amdgpu::Chipset chipset,
+                            Value cacheSwizzleStride = nullptr,
+                            unsigned addressSpace = 8) {
+  // The stride value is generally 0. However, on MI-300 and onward, you can
+  // enable a cache swizzling mode by setting bit 14 of the stride field
+  // and setting that stride to a cache stride.
+  Type i16 = rewriter.getI16Type();
+  Value stride;
+  if (chipset.majorVersion == 9 && chipset >= kGfx942 && cacheSwizzleStride) {
+    Value cacheStrideZext =
+        rewriter.create<LLVM::ZExtOp>(loc, i16, cacheSwizzleStride);
+    Value swizzleBit = rewriter.create<LLVM::ConstantOp>(
+        loc, i16, rewriter.getI16IntegerAttr(1 << 14));
+    stride = rewriter.create<LLVM::OrOp>(loc, cacheStrideZext, swizzleBit,
+                                         /*isDisjoint=*/true);
+  } else {
+    stride = rewriter.create<LLVM::ConstantOp>(loc, i16,
+                                               rewriter.getI16IntegerAttr(0));
+  }
+  // Get the number of elements.
+  // Flag word:
+  // bits 0-11: dst sel, ignored by these intrinsics
+  // bits 12-14: data format (ignored, must be nonzero, 7=float)
+  // bits 15-18: data format (ignored, must be nonzero, 4=32bit)
+  // bit 19: In nested heap (0 here)
+  // bit 20: Behavior on unmap (0 means  "return 0 / ignore")
+  // bits 21-22: Index stride for swizzles (N/A)
+  // bit 23: Add thread ID (0)
+  // bit 24: Reserved to 1 (RDNA) or 0 (CDNA)
+  // bits 25-26: Reserved (0)
+  // bit 27: Buffer is non-volatile (CDNA only)
+  // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
+  //  none, 3 = either swizzles or testing against offset field) RDNA only
+  // bits 30-31: Type (must be 0)
+  uint32_t flags = (7 << 12) | (4 << 15);
+  if (chipset.majorVersion >= 10) {
+    flags |= (1 << 24);
+    uint32_t oob = boundsCheck ? 3 : 2;
+    flags |= (oob << 28);
+  }
+  Value flagsConst = createI32Constant(rewriter, loc, flags);
+  Type rsrcType =
+      LLVM::LLVMPointerType::get(rewriter.getContext(), addressSpace);
+  Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
+      loc, rsrcType, basePointer, stride, numRecords, flagsConst);
+  return resource;
+}
+
 namespace {
-// Define commonly used chipsets versions for convenience.
-constexpr Chipset kGfx908 = Chipset(9, 0, 8);
-constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
-constexpr Chipset kGfx942 = Chipset(9, 4, 2);
+struct FatRawBufferCastLowering
+    : public ConvertOpToLLVMPattern<FatRawBufferCastOp> {
+  FatRawBufferCastLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<FatRawBufferCastOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(FatRawBufferCastOp op, FatRawBufferCastOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value memRef = adaptor.getSource();
+    Value unconvertedMemref = op.getSource();
+    MemRefType memrefType = cast<MemRefType>(unconvertedMemref.getType());
+    MemRefDescriptor descriptor(memRef);
+
+    DataLayout dataLayout = DataLayout::closest(op);
+    int64_t elementByteWidth =
+        dataLayout.getTypeSizeInBits(memrefType.getElementType()) / 8;
+
+    int64_t unusedOffset = 0;
+    SmallVector<int64_t, 5> strideVals;
+    if (failed(memrefType.getStridesAndOffset(strideVals, unusedOffset)))
+      return op.emitOpError("Can't lower non-stride-offset memrefs");
+
+    Value numRecords = adaptor.getValidBytes();
+    if (!numRecords)
+      numRecords = getNumRecords(rewriter, loc, memrefType, descriptor,
+                                 strideVals, elementByteWidth);
+
+    Value basePointer =
+        adaptor.getResetOffset()
+            ? descriptor.bufferPtr(rewriter, loc, *getTypeConverter(),
+                                   memrefType)
+            : descriptor.alignedPtr(rewriter, loc);
+
+    Value offset = adaptor.getResetOffset()
+                       ? rewriter.create<LLVM::ConstantOp>(
+                             loc, getIndexType(), rewriter.getIndexAttr(0))
+                       : descriptor.offset(rewriter, loc);
+
+    bool hasSizes = memrefType.getRank() > 0;
+    // No need to unpack() and pack() all the individual sizes and strides,
+    // so we'll just extract the arrays.
+    Value sizes = hasSizes ? rewriter.create<LLVM::ExtractValueOp>(
+                                 loc, descriptor, kSizePosInMemRefDescriptor)
+                           : Value{};
+    Value strides = hasSizes
+                        ? rewriter.create<LLVM::ExtractValueOp>(
+                              loc, descriptor, kStridePosInMemRefDescriptor)
+                        : Value{};
+
+    Value fatPtr = makeBufferRsrc(
+        rewriter, loc, basePointer, numRecords, adaptor.getBoundsCheck(),
+        chipset, adaptor.getCacheSwizzleStride(), /*addressSpace=*/7);
+
+    Value result = MemRefDescriptor::poison(
+        rewriter, loc,
+        getTypeConverter()->convertType(op.getResult().getType()));
+    result = rewriter.create<LLVM::InsertValueOp>(
+        loc, result, fatPtr, kAllocatedPtrPosInMemRefDescriptor);
+    result = rewriter.create<LLVM::InsertValueOp>(
+        loc, result, fatPtr, kAlignedPtrPosInMemRefDescriptor);
+    result = rewriter.create<LLVM::InsertValueOp>(loc, result, offset,
+                                                  kOffsetPosInMemRefDescriptor);
+    if (hasSizes) {
+      result = rewriter.create<LLVM::InsertValueOp>(loc, result, sizes,
+                                                    kSizePosInMemRefDescriptor);
+      result = rewriter.create<LLVM::InsertValueOp>(
+          loc, result, strides, kStridePosInMemRefDescriptor);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
 
 /// Define lowering patterns for raw buffer ops
 template <typename GpuOp, typename Intrinsic>
@@ -122,7 +284,6 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Type llvmWantedDataType = this->typeConverter->convertType(wantedDataType);
 
     Type i32 = rewriter.getI32Type();
-    Type i16 = rewriter.getI16Type();
 
     // Get the type size in bytes.
     DataLayout dataLayout = DataLayout::closest(gpuOp);
@@ -167,6 +328,12 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         }
       }
     }
+    if (auto vecType = dyn_cast<VectorType>(llvmBufferValType)) {
+      // Buffer intrinsics doesn't support 1-element vectors, cast them to
+      // scalars.
+      if (vecType.getNumElements() == 1)
+        llvmBufferValType = vecType.getElementType();
+    }
 
     SmallVector<Value, 6> args;
     if (storeData) {
@@ -199,60 +366,10 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     Value ptr = memrefDescriptor.bufferPtr(
         rewriter, loc, *this->getTypeConverter(), memrefType);
-    // The stride value is always 0 for raw buffers. This also disables
-    // swizling.
-    Value stride = rewriter.create<LLVM::ConstantOp>(
-        loc, i16, rewriter.getI16IntegerAttr(0));
-    // Get the number of elements.
-    Value numRecords;
-    if (memrefType.hasStaticShape() &&
-        !llvm::any_of(strides, ShapedType::isDynamic)) {
-      int64_t size = memrefType.getRank() == 0 ? 1 : 0;
-      ArrayRef<int64_t> shape = memrefType.getShape();
-      for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
-        size = std::max(shape[i] * strides[i], size);
-      size = size * elementByteWidth;
-      assert(size < std::numeric_limits<uint32_t>::max() &&
-             "the memref buffer is too large");
-      numRecords = createI32Constant(rewriter, loc, static_cast<int32_t>(size));
-    } else {
-      Value maxIndex;
-      for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
-        Value size = memrefDescriptor.size(rewriter, loc, i);
-        Value stride = memrefDescriptor.stride(rewriter, loc, i);
-        Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
-        maxIndex =
-            maxIndex ? rewriter.create<LLVM::UMaxOp>(loc, maxIndex, maxThisDim)
-                     : maxThisDim;
-      }
-      numRecords = rewriter.create<LLVM::MulOp>(
-          loc, convertUnsignedToI32(rewriter, loc, maxIndex), byteWidthConst);
-    }
-
-    // Flag word:
-    // bits 0-11: dst sel, ignored by these intrinsics
-    // bits 12-14: data format (ignored, must be nonzero, 7=float)
-    // bits 15-18: data format (ignored, must be nonzero, 4=32bit)
-    // bit 19: In nested heap (0 here)
-    // bit 20: Behavior on unmap (0 means  "return 0 / ignore")
-    // bits 21-22: Index stride for swizzles (N/A)
-    // bit 23: Add thread ID (0)
-    // bit 24: Reserved to 1 (RDNA) or 0 (CDNA)
-    // bits 25-26: Reserved (0)
-    // bit 27: Buffer is non-volatile (CDNA only)
-    // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
-    //  none, 3 = either swizzles or testing against offset field) RDNA only
-    // bits 30-31: Type (must be 0)
-    uint32_t flags = (7 << 12) | (4 << 15);
-    if (chipset.majorVersion >= 10) {
-      flags |= (1 << 24);
-      uint32_t oob = adaptor.getBoundsCheck() ? 3 : 2;
-      flags |= (oob << 28);
-    }
-    Value flagsConst = createI32Constant(rewriter, loc, flags);
-    Type rsrcType = LLVM::LLVMPointerType::get(rewriter.getContext(), 8);
-    Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
-        loc, rsrcType, ptr, stride, numRecords, flagsConst);
+    Value numRecords = getNumRecords(
+        rewriter, loc, memrefType, memrefDescriptor, strides, elementByteWidth);
+    Value resource = makeBufferRsrc(rewriter, loc, ptr, numRecords,
+                                    adaptor.getBoundsCheck(), chipset);
     args.push_back(resource);
 
     // Indexing (voffset)
@@ -397,8 +514,11 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
 /// Push an input operand. If it is a float type, nothing to do. If it is
 /// an integer type, then we need to also push its signdness (1 for signed, 0
 /// for unsigned) and we need to pack the input 16xi8 vector into a 4xi32
-/// vector. We also need to convert bfloat inputs to i16 to account for the lack
-/// of bfloat support in the WMMA intrinsics themselves.
+/// vector (or the 8xi8 vector into a 2xi32 one for gfx12+).
+/// We also need to convert bfloat inputs to i16 to account for the bfloat
+/// intrinsics having been defined before the AMD backend supported bfloat. We
+/// similarly need to pack 8-bit float types into integers as if they were i8
+/// (which they are for the backend's purposes).
 static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  Location loc,
                                  const TypeConverter *typeConverter,
@@ -407,12 +527,16 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
                                  SmallVector<Value, 4> &operands) {
   Type inputType = llvmInput.getType();
   auto vectorType = dyn_cast<VectorType>(inputType);
+  if (!vectorType) {
+    operands.push_back(llvmInput);
+    return;
+  }
   Type elemType = vectorType.getElementType();
 
   if (elemType.isBF16())
     llvmInput = rewriter.create<LLVM::BitcastOp>(
         loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
-  if (!elemType.isInteger(8)) {
+  if (elemType.getIntOrFloatBitWidth() > 8) {
     operands.push_back(llvmInput);
     return;
   }
@@ -421,26 +545,34 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
   // for int8. This is because, in LLVM, fp8 type is converted to int8, so the
   // fp8/int8 information is lost during the conversion process.
   auto mlirInputType = cast<VectorType>(mlirInput.getType());
-  bool isInputInt8 = mlirInputType.getElementType().isInteger(8);
-  if (isInputInt8) {
+  bool isInputInteger = mlirInputType.getElementType().isInteger();
+  if (isInputInteger) {
     // if element type is 8-bit signed or unsigned, ignore the isUnsigned flag
     bool localIsUnsigned = isUnsigned;
-    if (elemType.isUnsignedInteger(8)) {
+    if (elemType.isUnsignedInteger()) {
       localIsUnsigned = true;
-    } else if (elemType.isSignedInteger(8)) {
+    } else if (elemType.isSignedInteger()) {
       localIsUnsigned = false;
     }
     Value sign = createI1Constant(rewriter, loc, !localIsUnsigned);
     operands.push_back(sign);
   }
 
-  int64_t numBytes = vectorType.getNumElements();
+  int64_t numBits =
+      vectorType.getNumElements() * elemType.getIntOrFloatBitWidth();
   Type i32 = rewriter.getI32Type();
-  VectorType vectorType32bits = VectorType::get(numBytes * 8 / 32, i32);
-  auto llvmVectorType32bits = typeConverter->convertType(vectorType32bits);
-  Value result = rewriter.createOrFold<LLVM::BitcastOp>(
-      loc, llvmVectorType32bits, llvmInput);
-  operands.push_back(result);
+  Type intrinsicInType = numBits <= 32
+                             ? (Type)rewriter.getIntegerType(numBits)
+                             : (Type)VectorType::get(numBits / 32, i32);
+  auto llvmIntrinsicInType = typeConverter->convertType(intrinsicInType);
+  Value castInput = rewriter.createOrFold<LLVM::BitcastOp>(
+      loc, llvmIntrinsicInType, llvmInput);
+  // The wave64-mode 16x16x16 intrinsics that take 4-bit integers only need
+  // (256 / 64) * 4 = 16 bits of input (on gfx12+) but take i32 arguments.
+  // Add in the zeros here.
+  if (numBits < 32)
+    castInput = rewriter.create<LLVM::ZExtOp>(loc, i32, castInput);
+  operands.push_back(castInput);
 }
 
 /// Push the output operand. For many cases this is only pushing the output in
@@ -448,7 +580,8 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
 /// since the same numbers of VGPRs is used, we need to decide if to store the
 /// result in the upper 16 bits of the VGPRs or in the lower part. To store the
 /// result in the lower 16 bits, set subwordOffset to 1, otherwise result will
-/// be stored it in the upper part
+/// be stored it in the upper part. The subwordOffset must not be set for gfx12,
+/// as the instructions have been changed to return fewer registers instead.
 static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
                                   Location loc,
                                   const TypeConverter *typeConverter,
@@ -611,8 +744,10 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
 static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                                   Chipset chipset) {
   auto sourceVectorType = dyn_cast<VectorType>(wmma.getSourceA().getType());
+  auto sourceBVectorType = dyn_cast<VectorType>(wmma.getSourceB().getType());
   auto destVectorType = dyn_cast<VectorType>(wmma.getDestC().getType());
   auto elemSourceType = sourceVectorType.getElementType();
+  auto elemBSourceType = sourceBVectorType.getElementType();
   auto elemDestType = destVectorType.getElementType();
 
   if (elemSourceType.isF16() && elemDestType.isF32())
@@ -625,10 +760,33 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
   if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
     return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-  if (isa<Float8E4M3FNType>(elemSourceType) && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_fp8::getOperationName();
-  if (isa<Float8E5M2Type>(elemSourceType) && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_bf8::getOperationName();
+  if (chipset.majorVersion == 11) {
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+  }
+  if (chipset.majorVersion >= 12) {
+    if (isa<Float8E4M3FNType>(elemSourceType) &&
+        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
+    if (isa<Float8E4M3FNType>(elemSourceType) &&
+        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_fp8_bf8::getOperationName();
+    if (isa<Float8E5M2Type>(elemSourceType) &&
+        isa<Float8E5M2Type>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_bf8::getOperationName();
+    if (isa<Float8E5M2Type>(elemSourceType) &&
+        isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32)) {
+      bool isWave64 = destVectorType.getNumElements() == 4;
+      // This is the ambiguous case. 8 inputs to the wave64 version means that
+      // we want the 16x16x32 version, but for wave32 they mean the short form.
+      bool has8Inputs = sourceVectorType.getNumElements() == 8;
+      if ((isWave64 && has8Inputs) || (!isWave64 && !has8Inputs))
+        return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+    }
+  }
   return std::nullopt;
 }
 
@@ -705,6 +863,9 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     if (!maybeIntrinsic.has_value())
       return op.emitOpError("no intrinsic matching WMMA on the given chipset");
+
+    if (chipset.majorVersion >= 12 && op.getSubwordOffset() != 0)
+      return op.emitOpError("subwordOffset not supported on gfx12+");
 
     OperationState loweredOp(loc, *maybeIntrinsic);
     loweredOp.addTypes(rawOutType);
@@ -1062,11 +1223,32 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateAMDGPUToROCDLConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    Chipset chipset) {
+void mlir::populateAMDGPUMemorySpaceAttributeConversions(
+    TypeConverter &typeConverter) {
+  typeConverter.addTypeAttributeConversion(
+      [](BaseMemRefType type, amdgpu::AddressSpaceAttr as)
+          -> TypeConverter::AttributeConversionResult {
+        MLIRContext *ctx = as.getContext();
+        Type i64 = IntegerType::get(ctx, 64);
+        switch (as.getValue()) {
+        case amdgpu::AddressSpace::FatRawBuffer:
+          return IntegerAttr::get(i64, 7);
+        case amdgpu::AddressSpace::BufferRsrc:
+          return IntegerAttr::get(i64, 8);
+        case amdgpu::AddressSpace::FatStructuredBuffer:
+          return IntegerAttr::get(i64, 9);
+        }
+        return TypeConverter::AttributeConversionResult::abort();
+      });
+}
+
+void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
+                                                   RewritePatternSet &patterns,
+                                                   Chipset chipset) {
+  populateAMDGPUMemorySpaceAttributeConversions(converter);
   patterns
-      .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
+      .add<FatRawBufferCastLowering,
+           RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
            RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
            RawBufferOpLowering<RawBufferAtomicFaddOp,
                                ROCDL::RawPtrBufferAtomicFaddOp>,
