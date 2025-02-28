@@ -20,10 +20,10 @@ The command line interface for DTLTO is:
   If specified, ThinLTO backend compilations will be distributed.
 
 - ``-mllvm -thinlto-remote-compiler=<path>``
-  Specifies the path to the tool that the distributor process will use for
+  Specifies the path to the compiler that the distributor process will use for
   backend compilations.
 
-  The remote optimisation tool invoked must match the version of LLD.
+  The compiler invoked must match the version of LLD.
 
   Currently `Clang` is used on remote machines to perform optimization. The
   design permits this to be swapped out later without affecting distributors.
@@ -34,18 +34,16 @@ The command line interface for DTLTO is:
   Specifies `<arg>` on the command line when invoking the distributor.  
 
 - ``-mllvm -thinlto-remote-compiler-arg=<arg>``
-  Specifies `<arg>` on the command line to the remote optimisation tool. These
-  arguments are appended to the end of the command line for the remote 
-  optimisation tool.
+  Specifies `<arg>` on the command line to the remote compiler. These arguments
+  are appended to the end of the command line for the remote compiler.
 
-Remote optimisation tool options that imply an additional input or output file 
-dependency are unsupported and may result in miscompilation depending on the
-properties of the distribution system (as such additional input/output files may
-not be pushed to or fetched from distribution system nodes correctly). If such 
-options are required, then the distributor can be modified to accept switches 
-that specify additional input/output dependencies, and 
-``-mllvm -thinlto-distributor-arg=`` can be used to pass such options through to
-the distributor.
+Remote compiler options that imply an additional input or output file dependency
+are unsupported and may result in miscompilation depending on the properties of
+the distribution system (as such additional input/output files may not be pushed
+to or fetched from distribution system nodes correctly). If such options are
+required, then the distributor can be modified to accept switches that specify
+additional input/output dependencies, and ``-mllvm -thinlto-distributor-arg=``
+can be used to pass such options through to the distributor.
 
 Some LLD LTO options (e.g., ``--lto-sample-profile=<file>``) are supported. 
 Currently, other options are silently accepted but do not have the desired 

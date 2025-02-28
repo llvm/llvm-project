@@ -267,9 +267,9 @@ Examples:
    - ``clang -flto=thin -fthinlto-distributor=incredibuild.exe -Xthinlto-distributor=--verbose,--j10 -fuse-ld=lld``
    - ``clang -flto=thin -fthinlto-distributor=$(which python) -Xthinlto-distributor=incredibuild.py -fuse-ld=lld``
 
-If ``-fthinlto-distributor=`` is specified Clang supplies the path to a
-distributable optimization and code generation tool to LLD. Currently this tool
-is Clang itself.
+If ``-fthinlto-distributor=`` is specified Clang supplies the path to a compiler
+to be exectuted remotely to perform the ThinLTO backend compilations. Currently
+this is Clang itself.
 
 See `DTLTO <https://lld.llvm.org/dtlto.html>`_ for more information.
 

@@ -91,10 +91,6 @@ JSON file provides the following information to the distributor:
      contribute. Distributors can use this to label build jobs for informational
      purposes.
 
-- **Linker's version string**.
-   - Distributors can use this to determine if the invoked remote optimisation
-     tool is compatible.
-
 - The list of **imports** required for each job.
    - The per-job list of bitcode files from which importing will occur. This is
      the same information that is emitted into import files for ThinLTO.
@@ -175,8 +171,8 @@ Key Features of the Schema
 - **Command-Line Template**: Command-line options are stored in a common
   template to avoid duplication for each job. The template consists of an array
   of strings and arrays. The arrays are placeholders which reference per-job
-  paths. This allows the remote optimisation tool to be changed without updating
-  the distributors.
+  paths. This allows the remote compiler and its arguments to be changed without
+  updating the distributors.
 
 Command-Line Expansion Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,14 +192,14 @@ The example above generates the following backend compilation command for
         -o dtlto.1.51232.native.o -c -x ir dtlto.o \
         -fthinlto-index=dtlto.1.51232.native.o.thinlto.bc --target=x86_64-sie-ps5
 
-This expansion scheme allows the remote optimization tool to be changed without
-updating the distributors. For example, if the "args" field in the above example
-was replaced with:
+This expansion scheme allows the remote compiler to be changed without updating
+the distributors. For example, if the "args" field in the above example was
+replaced with:
 
 .. code-block:: json
 
     "args": [
-        "custom-codgen-tool",
+        "custom-compiler",
         "-opt-level=2",
         "-profile-instrument-use-path=my.profdata",
         "-output", ["primary_output", 0],
@@ -216,7 +212,7 @@ Then distributors can expand the command line without needing to be updated:
 
 .. code-block:: console
 
-    custom-codgen-tool -opt-level=2 -profile-instrument-use-path=my.profdata \
+    custom-compiler -opt-level=2 -profile-instrument-use-path=my.profdata \
         -output dtlto.1.51232.native.o -input dtlto.o \
         -thinlto-index dtlto.1.51232.native.o.thinlto.bc -triple x86_64-sie-ps5
 
