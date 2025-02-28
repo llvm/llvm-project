@@ -39,8 +39,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP12]]
 ; VLENUNK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP14]], i32 0
 ; VLENUNK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP15]], i32 4, <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> poison)
-; VLENUNK-NEXT:    [[TMP16:%.*]] = xor <vscale x 4 x i1> [[TMP13]], splat (i1 true)
-; VLENUNK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP16]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_LOAD]]
+; VLENUNK-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> zeroinitializer
 ; VLENUNK-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[PREDPHI]], [[BROADCAST_SPLAT]]
 ; VLENUNK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP12]]
 ; VLENUNK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i32 0

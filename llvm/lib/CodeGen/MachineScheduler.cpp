@@ -779,8 +779,11 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // it. Perhaps it still needs to be bundled.
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
-      // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      // Skip empty scheduling regions but include single-MI regions; we want
+      // those to be scheduled so that backends which move MIs across regions
+      // during scheduling can reason about and schedule those regions
+      // correctly.
+      if (I == RegionEnd) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();

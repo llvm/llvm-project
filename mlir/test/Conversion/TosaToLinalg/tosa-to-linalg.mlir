@@ -951,7 +951,7 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.mulf
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %2 = tosa.reduce_product %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant 3.40282347E+38 : f32
   // CHECK: linalg.fill
@@ -1027,7 +1027,7 @@ func.func @reduce_float_dyn_nonzero_batch(%arg0: tensor<5x?x4xf32>) -> () {
   // CHECK: %[[DIM_1:.+]] = tensor.dim %[[REDUCE]], %[[C1_0]] : tensor<5x?xf32>
   // CHECK: %[[C1_2:.+]] = arith.constant 1 : index
   // CHECK: tensor.expand_shape %[[REDUCE]] {{\[}}[0], [1, 2]] output_shape [5, %[[DIM_1]], 1] : tensor<5x?xf32> into tensor<5x?x1xf32>
-  %0 = tosa.reduce_prod %arg0 {axis = 2 : i32} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
+  %0 = tosa.reduce_product %arg0 {axis = 2 : i32} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
   return
 }
 
@@ -1085,7 +1085,7 @@ func.func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.muli
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %2 = tosa.reduce_product %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
 
   // CHECK: arith.constant 2147483647 : i32
   // CHECK: linalg.fill

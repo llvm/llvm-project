@@ -1003,6 +1003,18 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
+
+  // Custom lowering for tcgen05.ld vector operands
+  setOperationAction(ISD::INTRINSIC_W_CHAIN,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
+
+  // Custom lowering for tcgen05.st vector operands
+  setOperationAction(ISD::INTRINSIC_VOID,
+                     {MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32},
+                     Custom);
 }
 
 const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -2660,6 +2672,84 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
+static SDValue LowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  SmallVector<SDValue, 32> Ops;
+
+  // split the vector argument
+  for (size_t I = 0; I < N->getNumOperands(); I++) {
+    SDValue Val = N->getOperand(I);
+    EVT ValVT = Val.getValueType();
+    if (ValVT.isVector()) {
+      EVT EltVT = ValVT.getVectorElementType();
+      for (unsigned J = 0, NElts = ValVT.getVectorNumElements(); J < NElts; J++)
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                                  DAG.getIntPtrConstant(J, DL)));
+    } else
+      Ops.push_back(Val);
+  }
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue Tcgen05StNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, N->getVTList(), Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  return Tcgen05StNode;
+}
+
+static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDValue Intrin = N->getOperand(1);
+  SDLoc DL(N);
+
+  // Get the intrinsic ID
+  unsigned IntrinNo = cast<ConstantSDNode>(Intrin.getNode())->getZExtValue();
+  switch (IntrinNo) {
+  default:
+    break;
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+    return LowerTcgen05St(Op, DAG);
+  }
+  return Op;
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2673,6 +2763,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return Op;
+  case ISD::INTRINSIC_VOID:
+    return LowerIntrinsicVoid(Op, DAG);
   case ISD::BUILD_VECTOR:
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::BITCAST:
@@ -4283,6 +4375,224 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags = MachineMemOperand::MOLoad;
     Info.align = Align(16);
     return true;
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v1i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v8i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v16i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v32i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v64i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
+
+  case Intrinsic::nvvm_tcgen05_st_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
+  case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::v128i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    return true;
+  }
   }
   return false;
 }
@@ -5383,6 +5693,54 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   Results.push_back(LoadChain);
 }
 
+// Lower vector return type of tcgen05.ld intrinsics
+static void ReplaceTcgen05Ld(SDNode *N, SelectionDAG &DAG,
+                             SmallVectorImpl<SDValue> &Results,
+                             bool hasOffset = false) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  if (!ResVT.isVector())
+    return; // already legalized.
+
+  const unsigned NumElts = ResVT.getVectorNumElements();
+
+  // Create the return type of the instructions
+  SmallVector<EVT, 5> ListVTs;
+  for (unsigned i = 0; i < NumElts; ++i)
+    ListVTs.push_back(MVT::i32);
+
+  ListVTs.push_back(N->getValueType(1)); // Chain
+
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  SmallVector<SDValue, 8> Ops{N->getOperand(0), N->getOperand(1),
+                              N->getOperand(2)};
+
+  if (hasOffset) {
+    Ops.push_back(N->getOperand(3)); // offset
+    Ops.push_back(N->getOperand(4)); // Pack flag
+  } else
+    Ops.push_back(N->getOperand(3)); // Pack flag
+
+  MemIntrinsicSDNode *MemSD = cast<MemIntrinsicSDNode>(N);
+  SDValue NewNode =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTs, Ops,
+                              MemSD->getMemoryVT(), MemSD->getMemOperand());
+
+  // split the vector result
+  SmallVector<SDValue, 4> ScalarRes;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Res = NewNode.getValue(i);
+    ScalarRes.push_back(Res);
+  }
+
+  SDValue Chain = NewNode.getValue(NumElts);
+  SDValue BuildVector = DAG.getNode(ISD::BUILD_VECTOR, DL, ResVT, ScalarRes);
+  Results.push_back(BuildVector); // Build Vector
+  Results.push_back(Chain);       // Chain
+  return;
+}
+
 static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
                                      SmallVectorImpl<SDValue> &Results) {
   SDValue Chain = N->getOperand(0);
@@ -5488,7 +5846,46 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
                                     NewLD.getValue(0)));
       Results.push_back(NewLD.getValue(1));
     }
+    return;
   }
+
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x64b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_32x32b_x128:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x128b_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x1:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x256b_x32:
+    return ReplaceTcgen05Ld(N, DAG, Results);
+
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128:
+    return ReplaceTcgen05Ld(N, DAG, Results, /* Offset */ true);
   }
 }
 

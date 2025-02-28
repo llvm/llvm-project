@@ -444,5 +444,10 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
 
+void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                                 unsigned MinWC, unsigned ContinuedOpcode,
+                                 ArrayRef<Register> Args,
+                                 Register ReturnRegister, Register TypeID);
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
