@@ -120,11 +120,11 @@ struct Config {
   llvm::StringSet<> exportedSymbols;
   std::vector<llvm::StringRef> requiredExports;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
+  llvm::SmallVector<llvm::StringRef, 0> rpath;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
-  llvm::SmallVector<llvm::StringRef, 0> rpath;
 };
 
 // The Ctx object hold all other (non-configuration) global state.
