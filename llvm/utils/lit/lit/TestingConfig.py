@@ -69,6 +69,10 @@ class TestingConfig(object):
             "HOME",
         ]
 
+        # These are required in case we need to download dotslashes from CAS
+        # during test execution - e.g., when auto-attaching debugpy:
+        pass_vars += ["THRIFT_TLS_CL_CERT_PATH", "THRIFT_TLS_CL_KEY_PATH"]
+
         if sys.platform.startswith("aix"):
             pass_vars += ["LIBPATH"]
         elif sys.platform == "win32":
