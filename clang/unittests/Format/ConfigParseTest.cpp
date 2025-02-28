@@ -1443,7 +1443,8 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   // Test 9.8: use inheritance from a file without BasedOnStyle
   ASSERT_TRUE(FS.addFile(
       "/e/withoutbase/.clang-format", 0,
-      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2")));
+      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+                                       "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
                  llvm::MemoryBuffer::getMemBuffer(
@@ -1454,6 +1455,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
     Style.BracedInitializerIndentWidth = 2;
+    Style.ColumnLimit = 123;
     return Style;
   }());
 
@@ -1462,6 +1464,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
     Style.BracedInitializerIndentWidth = 2;
+    Style.ColumnLimit = 123;
     Style.IndentWidth = 7;
     return Style;
   }());
