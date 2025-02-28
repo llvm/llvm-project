@@ -1,22 +1,8 @@
-/*
-0: Operation Name
-1: Operation CppName
-2: Dialect Name
-3: Operand count
-4: Operand names
-5: Result count
-6: Result names
-7: Build declarations
-
-8: open namespace
-9: close namespace
-10: namespace path
-*/
-
 R"(
 __NAMESPACE_OPEN__
 
 namespace detail {
+
 class __OP_CPP_NAME__GenericAdaptorBase {
 public:
 protected:
@@ -24,18 +10,20 @@ protected:
   ::std::optional<::mlir::OperationName> odsOpName;
   ::mlir::RegionRange odsRegions;
 public:
-  __OP_CPP_NAME__GenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions) {  if (odsAttrs)
+  __OP_CPP_NAME__GenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions) {
+    if (odsAttrs)
       odsOpName.emplace("__DIALECT_NAME__.__OP_NAME__", odsAttrs.getContext());
   }
 
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize);
+
   ::mlir::DictionaryAttr getAttributes() {
     return odsAttrs;
   }
-
 };
+
 } // namespace detail
 
 template <typename RangeT>
@@ -141,10 +129,6 @@ public:
     return {std::next(getOperation()->result_begin(), valueRange.first),
              std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
-
-  // ::mlir::TypedValue<::mlir::irdl::AttributeType> getOutput() {
-  //   return ::llvm::cast<::mlir::TypedValue<::mlir::irdl::AttributeType>>(*getODSResults(0).begin());
-  // }
 
   __OP_BUILD_DECLS__
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});

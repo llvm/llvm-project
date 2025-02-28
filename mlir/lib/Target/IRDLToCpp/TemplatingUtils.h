@@ -1,3 +1,11 @@
+//===- TemplatingUtils.h - Templater for text templates -----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef IRDLTOCPP_TEMPLATE_UTILS_H
 #define IRDLTOCPP_TEMPLATE_UTILS_H
 

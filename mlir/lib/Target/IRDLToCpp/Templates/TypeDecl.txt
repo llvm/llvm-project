@@ -1,14 +1,3 @@
-/*
-{0}: Type Name
-{1}: Type CppName
-{2}: Dialect Name
-{3}: Dialect BaseTypeName
-
-{4}: Namespace open 
-{5}: Namespace close 
-{6}: Namespace path
-*/
-
 R"(
 
 __NAMESPACE_OPEN__
