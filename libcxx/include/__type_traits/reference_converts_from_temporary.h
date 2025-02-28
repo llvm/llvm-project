@@ -18,7 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY
+#if _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY
 
 template <class _Tp, class _Up>
 const bool __reference_converts_from_temporary_v = __reference_converts_from_temporary(_Tp, _Up);
