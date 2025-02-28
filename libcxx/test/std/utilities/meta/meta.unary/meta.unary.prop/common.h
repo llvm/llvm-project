@@ -44,4 +44,43 @@ class Abstract
     virtual ~Abstract() = 0;
 };
 
+// Types for reference_{constructs/converts}_from_temporary
+
+struct NonPOD {
+  NonPOD(int);
+};
+enum Enum { EV };
+struct POD {
+  Enum e;
+  int i;
+  float f;
+  NonPOD* p;
+};
+// Not PODs
+struct Derives : POD {};
+
+template <class T, class RefType = T&>
+class ConvertsToRef {
+public:
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+template <class T, class RefType = T&>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
+class ExplicitConversionRvalueRef {
+public:
+  operator int();
+  explicit operator int&&();
+};
+
+class ExplicitConversionRef {
+public:
+  operator int();
+  explicit operator int&();
+};
+
 #endif // TEST_META_UNARY_COMP_COMMON_H

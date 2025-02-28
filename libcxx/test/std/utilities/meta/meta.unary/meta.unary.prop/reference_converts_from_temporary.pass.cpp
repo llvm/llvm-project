@@ -22,41 +22,8 @@
 #include <cassert>
 #include <type_traits>
 
+#include "common.h"
 #include "test_macros.h"
-
-struct NonPOD {
-  NonPOD(int);
-};
-enum Enum { EV };
-struct POD {
-  Enum e;
-  int i;
-  float f;
-  NonPOD* p;
-};
-// Not PODs
-struct Derives : POD {};
-
-template <class T, class RefType = T&>
-struct ConvertsToRef {
-  operator RefType() const { return static_cast<RefType>(obj); }
-  mutable T obj = 42;
-};
-template <class T, class RefType = T&>
-class ConvertsToRefPrivate {
-  operator RefType() const { return static_cast<RefType>(obj); }
-  mutable T obj = 42;
-};
-
-struct ExplicitConversionRvalueRef {
-  operator int();
-  explicit operator int&&();
-};
-
-struct ExplicitConversionRef {
-  operator int();
-  explicit operator int&();
-};
 
 template <typename T, typename U, bool Expected>
 constexpr void test_reference_converts_from_temporary() {
@@ -79,22 +46,17 @@ constexpr bool test() {
   test_reference_converts_from_temporary<const int&, long&&, true>();
   test_reference_converts_from_temporary<int&&, long&, true>();
 
-  using LRef    = ConvertsToRef<int, int&>;
-  using RRef    = ConvertsToRef<int, int&&>;
-  using CLRef   = ConvertsToRef<int, const int&>;
-  using LongRef = ConvertsToRef<long, long&>;
+  assert((std::is_constructible_v<int&, ConvertsToRef<int, int&>>));
+  test_reference_converts_from_temporary<int&, ConvertsToRef<int, int&>, false>();
 
-  assert((std::is_constructible_v<int&, LRef>));
-  test_reference_converts_from_temporary<int&, LRef, false>();
+  assert((std::is_constructible_v<int&&, ConvertsToRef<int, int&&>>));
+  test_reference_converts_from_temporary<int&&, ConvertsToRef<int, int&&>, false>();
 
-  assert((std::is_constructible_v<int&&, RRef>));
-  test_reference_converts_from_temporary<int&&, RRef, false>();
+  assert((std::is_constructible_v<const int&, ConvertsToRef<int, const int&>>));
+  test_reference_converts_from_temporary<int&&, ConvertsToRef<int, const int&>, false>();
 
-  assert((std::is_constructible_v<const int&, CLRef>));
-  test_reference_converts_from_temporary<int&&, CLRef, false>();
-
-  assert((std::is_constructible_v<const int&, LongRef>));
-  test_reference_converts_from_temporary<const int&, LongRef, true>();
+  assert((std::is_constructible_v<const int&, ConvertsToRef<long, long&>>));
+  test_reference_converts_from_temporary<const int&, ConvertsToRef<long, long&>, true>();
 #ifndef TEST_COMPILER_GCC
   test_reference_converts_from_temporary<const int&, ConvertsToRefPrivate<long, long&>, false>();
 #endif
@@ -105,7 +67,7 @@ constexpr bool test() {
   test_reference_converts_from_temporary<const int&, long, true>();
 
   // Additional checks
-  test_reference_converts_from_temporary<POD const&, Derives, true>();
+  test_reference_converts_from_temporary<const POD&, Derives, true>();
   test_reference_converts_from_temporary<int&&, int, true>();
   test_reference_converts_from_temporary<const int&, int, true>();
   test_reference_converts_from_temporary<int&&, int&&, false>();
