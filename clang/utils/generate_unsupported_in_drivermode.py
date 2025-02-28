@@ -45,10 +45,16 @@ VISIBILITY_FLANG = "FlangOption"
 SLASH_SLASH = "// "
 EXCLAMATION = "! "
 
-# Invalid usage of the driver options below causes unique output, so skip testing
 exceptions_sequence = [
+    # Invalid usage of the driver options below causes unique output, so skip testing
     "cc1",
     "cc1as",
+    # There is currently a bug with "_no_warnings", i.e. --no-warnings. Diagnostic related options
+    # are parsed first, and always with CC1 visibility. They're used to set up the diagnostic
+    # engine, which parses "_no_warnings" (and its alias "w", i.e. -w) and sets an internal flag
+    # that suppresses all warnings.
+    "_no_warnings",
+    "w",
 ]
 
 
@@ -377,15 +383,13 @@ for visibility in options_dictionary["!instanceof"]["OptionVisibility"]:
 # Iterate the options list and find which drivers shouldn't be visible to each option
 for option in options_dictionary["!instanceof"]["Option"]:
     kind = options_dictionary[option]["Kind"]["def"]
-    tmp_visibility_set = set(())
     option_name = options_dictionary[option]["Name"]
 
     # There are a few conditions that make an option unsuitable to test in this script
     # Options of kind KIND_INPUT & KIND_UNKNOWN don't apply to this test. For example,
     # Option "INPUT" with name "<input>".
     if (
-        option in exceptions_sequence
-        or options_dictionary[option]["Name"] is None
+        options_dictionary[option]["Name"] is None
         or kind == "KIND_INPUT"
         or kind == "KIND_UNKNOWN"
     ):
@@ -407,25 +411,7 @@ for option in options_dictionary["!instanceof"]["Option"]:
         #     error: unknown argument: '-AI'
         prefix = "-" if prefix == "/" else prefix
 
-    tmp_visibility_set.update(get_visibility(option))
-
-    # Check visibility of direct and indirect aliases
-    # A given option may list only one "primary" alias, but that alias
-    # may be listed by other options as well, hence indirect aliases
-    alias_sequence = options_dictionary["!instanceof"]["Alias"]
-
-    if options_dictionary[option]["Alias"] is not None:
-        primary_alias = options_dictionary[option]["Alias"]["def"]
-
-        tmp_visibility_set.update(get_visibility(primary_alias))
-
-        for alias in alias_sequence:
-            if options_dictionary[alias]["Alias"]["def"] == primary_alias:
-                tmp_visibility_set.update(get_visibility(alias))
-
-    for alias in alias_sequence:
-        if options_dictionary[alias]["Alias"]["def"] == option:
-            tmp_visibility_set.update(get_visibility(alias))
+    visibility_set = get_visibility(option)
 
     # *JOINED* options that are supported need to be saved for checking
     # which options cannot be validated with this script
@@ -433,7 +419,7 @@ for option in options_dictionary["!instanceof"]["Option"]:
 
     # Append to the unsupported list, and the various supported lists
     for driver in driver_sequence:
-        if driver not in tmp_visibility_set:
+        if driver not in visibility_set and option not in exceptions_sequence:
             unsupported_sequence.append(
                 UnsupportedDriverOption(driver, option, option_name, prefix)
             )
