@@ -324,6 +324,53 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1, i8 %arg) {
   EXPECT_TRUE(Sched.trySchedule({L0, L1}));
 }
 
+// Make sure that instructions in  SchedBundles are always scheduled
+// back-to-back
+TEST_F(SchedulerTest, SchedBundleBackToBack) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i16 %arg) {
+  %gep0 = getelementptr i32, ptr %ptr, i64 0
+  %gep1 = getelementptr i32, ptr %ptr, i64 1
+  %zextX = zext i16 0 to i32
+  %zext1 = zext i16 0 to i32
+  %zext0 = zext i16 %arg to i32
+  %shl1 = shl i32 %zextX, 0
+  %shl0 = shl i32 %zext1, 0
+  %sub1 = sub i32 %zext1, %shl1
+  %sub0 = sub i32 %zext0, %shl0
+  store i32 %sub1, ptr %gep1
+  store i32 %sub0, ptr %gep0
+  ret void
+})IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *ZextX = cast<sandboxir::CastInst>(&*It++);
+  auto *Zext1 = cast<sandboxir::CastInst>(&*It++);
+  auto *Zext0 = cast<sandboxir::CastInst>(&*It++);
+  auto *Shl1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Shl0 = cast<sandboxir::BinaryOperator>(&*It++);
+  [[maybe_unused]] auto *Sub1 = cast<sandboxir::BinaryOperator>(&*It++);
+  [[maybe_unused]] auto *Sub0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+  EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+  EXPECT_TRUE(Sched.trySchedule({Zext0, Zext1}));
+  EXPECT_TRUE(Sched.trySchedule({Shl0, Shl1}));
+  auto BackToBack = [](sandboxir::Instruction *I1, sandboxir::Instruction *I2) {
+    return I1->getNextNode() == I2 || I2->getNextNode() == I1;
+  };
+  EXPECT_TRUE(BackToBack(S0, S1));
+  EXPECT_TRUE(BackToBack(Zext0, Zext1));
+  EXPECT_TRUE(BackToBack(Shl0, Shl1));
+}
+
 // Test that an instruction can't belong in two bundles!
 TEST_F(SchedulerTest, CheckBundles) {
   parseIR(C, R"IR(
