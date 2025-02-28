@@ -1095,3 +1095,16 @@ gpu.module @test_module_54 {
     return %0, %1, %2, %3, %4, %5 : i1, i1, i1, i1, i1, i1
   }
 }
+
+gpu.module @test_module_55 {
+  // CHECK: llvm.func @__nv_erfcf(f32) -> f32
+  // CHECK: llvm.func @__nv_erfc(f64) -> f64
+  // CHECK-LABEL: func @gpu_erf
+  func.func @gpu_erfc(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.erfc %arg_f32 : f32
+    // CHECK: llvm.call @__nv_erfcf(%{{.*}}) : (f32) -> f32
+    %result64 = math.erfc %arg_f64 : f64
+    // CHECK: llvm.call @__nv_erfc(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
