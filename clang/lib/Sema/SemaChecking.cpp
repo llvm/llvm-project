@@ -2760,8 +2760,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_minnum:
+  case Builtin::BI__builtin_maxnum: {
+    if (BuiltinMaxNumMinNumMath(TheCall))
+      return ExprError();
+    break;
+  }
+
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_minnum:
+  case Builtin::BI__builtin_elementwise_maxnum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximum:
   case Builtin::BI__builtin_elementwise_atan2:
@@ -15275,6 +15284,42 @@ bool Sema::PrepareBuiltinElementwiseMathOneArgCall(
     return true;
 
   TheCall->setType(TyA);
+  return false;
+}
+
+bool Sema::BuiltinMaxNumMinNumMath(CallExpr *TheCall) {
+  if (checkArgCount(TheCall, 2))
+    return true;
+
+  ExprResult OrigArg0 = TheCall->getArg(0);
+  ExprResult OrigArg1 = TheCall->getArg(1);
+
+  // Do standard promotions between the two arguments, returning their common
+  // type.
+  QualType Res = UsualArithmeticConversions(
+      OrigArg0, OrigArg1, TheCall->getExprLoc(), ACK_Comparison);
+  if (OrigArg0.isInvalid() || OrigArg1.isInvalid())
+    return true;
+
+  // Make sure any conversions are pushed back into the call; this is
+  // type safe since unordered compare builtins are declared as "_Bool
+  // foo(...)".
+  TheCall->setArg(0, OrigArg0.get());
+  TheCall->setArg(1, OrigArg1.get());
+
+  if (!OrigArg0.get()->isTypeDependent() && OrigArg1.get()->isTypeDependent())
+    return true;
+
+  // If the common type isn't a real floating type, then the arguments were
+  // invalid for this operation.
+  if (Res.isNull() || !Res->isRealFloatingType())
+    return Diag(OrigArg0.get()->getBeginLoc(),
+                diag::err_typecheck_call_invalid_ordered_compare)
+           << OrigArg0.get()->getType() << OrigArg1.get()->getType()
+           << SourceRange(OrigArg0.get()->getBeginLoc(),
+                          OrigArg1.get()->getEndLoc());
+
+  TheCall->setType(Res);
   return false;
 }
 

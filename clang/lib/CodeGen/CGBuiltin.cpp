@@ -2629,6 +2629,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    Intrinsic::minnum,
                                    Intrinsic::experimental_constrained_minnum));
 
+    case Builtin::BI__builtin_maxnum:
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::maxnum,
+          Intrinsic::experimental_constrained_maxnum));
+
+    case Builtin::BI__builtin_minnum:
+      return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::minnum,
+          Intrinsic::experimental_constrained_minnum));
+
     case Builtin::BIfmaximum_num:
     case Builtin::BIfmaximum_numf:
     case Builtin::BIfmaximum_numl:
@@ -3815,6 +3825,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_maxnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::maxnum, Op0,
+                                                  Op1, nullptr, "elt.maxnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::minnum, Op0,
+                                                  Op1, nullptr, "elt.minnum");
     return RValue::get(Result);
   }
 
