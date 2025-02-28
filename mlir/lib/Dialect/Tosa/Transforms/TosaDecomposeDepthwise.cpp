@@ -48,33 +48,10 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
-    // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
-    ArrayRef<int64_t> inputShape = inputType.getShape();
-    llvm::SmallVector<int64_t, 2> revisedInputShape{
-        inputShape[0], inputShape[1], inputShape[2], inputShape[3], 1};
-    inputType = RankedTensorType::get(
-        revisedInputShape,
-        dyn_cast<RankedTensorType>(input.getType()).getElementType());
-    auto revisedInputShapeValue =
-        getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
-    input = rewriter
-                .create<tosa::ReshapeOp>(op.getLoc(), inputType, input,
-                                         revisedInputShapeValue)
-                .getResult();
-
     Type inputETy = inputType.getElementType();
     Type weightETy = weightType.getElementType();
-    Type resultETy = resultType.getElementType();
-
-    if (inputETy != resultETy) {
-      inputType = inputType.clone(resultETy);
-      input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
-    }
-
-    if (weightETy != resultETy) {
-      weightType = weightType.clone(resultETy);
-      weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
-    }
+    if (!inputETy.isIntOrFloat() || !weightETy.isIntOrFloat())
+      return rewriter.notifyMatchFailure(op, "unsupported type");
 
     // Get and verify zero points.
     int64_t iZp;
@@ -89,6 +66,32 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         op.verifyWeightZeroPoint(wZp).failed())
       return rewriter.notifyMatchFailure(
           op, "zero point must be zero for non-int8 integer types");
+
+    // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
+    ArrayRef<int64_t> inputShape = inputType.getShape();
+    llvm::SmallVector<int64_t, 2> revisedInputShape{
+        inputShape[0], inputShape[1], inputShape[2], inputShape[3], 1};
+    inputType = RankedTensorType::get(
+        revisedInputShape,
+        dyn_cast<RankedTensorType>(input.getType()).getElementType());
+    auto revisedInputShapeValue =
+        getTosaConstShape(rewriter, op.getLoc(), revisedInputShape);
+    input = rewriter
+                .create<tosa::ReshapeOp>(op.getLoc(), inputType, input,
+                                         revisedInputShapeValue)
+                .getResult();
+
+    Type resultETy = resultType.getElementType();
+
+    if (inputETy != resultETy) {
+      inputType = inputType.clone(resultETy);
+      input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
+    }
+
+    if (weightETy != resultETy) {
+      weightType = weightType.clone(resultETy);
+      weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
+    }
 
     if (iZp != 0 || wZp != 0) {
 
