@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++23
 
 // These compilers don't support std::reference_converts_from_temporary yet.
-// UNSUPPORTED: android && clang-19.0, apple-clang-15, apple-clang-16
+// UNSUPPORTED: apple-clang-15, apple-clang-16
 
 // <type_traits>
 
