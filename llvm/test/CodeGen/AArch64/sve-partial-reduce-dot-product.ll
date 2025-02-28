@@ -259,6 +259,8 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z3.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    addvl sp, sp, #2
 ; CHECK-NEWLOWERING-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEWLOWERING-NEXT:    udot z0.d, z5.h, z4.h
+; CHECK-NEWLOWERING-NEXT:    udot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -293,6 +295,8 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z4.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z5.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sdot z0.d, z5.h, z4.h
+; CHECK-NEWLOWERING-NEXT:    sdot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z6.s, z4.h

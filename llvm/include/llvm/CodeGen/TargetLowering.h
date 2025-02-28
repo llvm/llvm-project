@@ -1668,6 +1668,12 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
+  /// legal for this target.
+  bool isPartialReduceMLALegal(EVT AccVT, EVT InputVT) const {
+    return getPartialReduceMLAAction(AccVT, InputVT) == Legal;
+  }
+
   /// If the action for this operation is to promote, this method returns the
   /// ValueType to promote to.
   MVT getTypeToPromoteTo(unsigned Op, MVT VT) const {
