@@ -662,6 +662,7 @@ class CVLoad_ri<bits<3> funct3, string opcodestr>
 
 let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0, 
     mayLoad = 1, mayStore = 0 in {
+  def PseudoCV_ELW : PseudoLoad<"cv.elw">;
   // Event load
   def CV_ELW : CVLoad_ri<0b011, "cv.elw">;
 }
@@ -705,6 +706,12 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
   def : CVStrrPat<truncstorei8, CV_SB_rr>;
   def : CVStrrPat<truncstorei16, CV_SH_rr>;
   def : CVStrrPat<store, CV_SW_rr>;
+}
+
+let Predicates = [HasVendorXCVelw, IsRV32] in {
+  def : Pat<(int_riscv_cv_elw_elw (XLenVT GPR:$rs1)), (PseudoCV_ELW GPR:$rs1)>;
+  def : Pat<(int_riscv_cv_elw_elw (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
+            (CV_ELW GPR:$rs1, simm12:$imm12)>;
 }
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
