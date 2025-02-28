@@ -111,25 +111,6 @@ static bool isSMovRel(unsigned Opcode) {
   }
 }
 
-static bool isDGEMM(unsigned Opcode) {
-  return AMDGPU::getMAIIsDGEMM(Opcode);
-}
-
-static bool isXDL(const GCNSubtarget &ST, const MachineInstr &MI) {
-  unsigned Opcode = MI.getOpcode();
-
-  if (!SIInstrInfo::isMAI(MI) ||
-      isDGEMM(Opcode) ||
-      Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
-      Opcode == AMDGPU::V_ACCVGPR_READ_B32_e64)
-    return false;
-
-  if (!ST.hasGFX940Insts())
-    return true;
-
-  return AMDGPU::getMAIIsGFX940XDL(Opcode);
-}
-
 static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
                                     const MachineInstr &MI) {
   if (TII.isAlwaysGDS(MI.getOpcode()))
@@ -2401,7 +2382,8 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
     unsigned Opc1 = MI1->getOpcode();
     int NeedWaitStates = 0;
     if (OpNo == SrcCIdx) {
-      if (!isDGEMM(Opc) && (!ST.hasGFX940Insts() && isDGEMM(Opc1))) {
+      if (!SIInstrInfo::isDGEMM(Opc) &&
+          (!ST.hasGFX940Insts() && SIInstrInfo::isDGEMM(Opc1))) {
         NeedWaitStates = 0;
       } else if (FullReg) {
         if ((Opc == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
@@ -2418,7 +2400,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
         case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
         case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
         case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-          if (!isXDL(ST, *MI))
+          if (!TII.isXDL(*MI))
             NeedWaitStates =
                 ST.hasGFX950Insts()
                     ? GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates
@@ -2426,18 +2408,18 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
           break;
         case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
         case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
-          if (!isXDL(ST, *MI))
+          if (!TII.isXDL(*MI))
             NeedWaitStates = DMFMA4x4WritesVGPROverlappedSrcCWaitStates;
           break;
         default:
           int NumPasses = TSchedModel.computeInstrLatency(MI1);
           if (ST.hasGFX940Insts()) {
-            if (isXDL(ST, *MI) && !isXDL(ST, *MI1))
+            if (TII.isXDL(*MI) && !TII.isXDL(*MI1))
               break;
 
             NeedWaitStates =
-                isXDL(ST, *MI1)
-                    ? (isXDL(ST, *MI)
+                TII.isXDL(*MI1)
+                    ? (TII.isXDL(*MI)
                            ? GFX940_XDL_N_PassWritesVGPROverlappedXDLOrSMFMASrcCWaitStates(
                                  NumPasses, ST.hasGFX950Insts())
                            : GFX940_XDL_N_PassWritesVGPROverlappedSGEMMDGEMMSrcCWaitStates(
@@ -2450,18 +2432,19 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
           switch (NumPasses) {
           case 2:
             NeedWaitStates =
-                isDGEMM(Opc) ? SMFMA4x4WritesVGPROverlappedDMFMASrcCWaitStates
-                             : SMFMA4x4WritesVGPROverlappedSMFMASrcCWaitStates;
+                SIInstrInfo::isDGEMM(Opc)
+                    ? SMFMA4x4WritesVGPROverlappedDMFMASrcCWaitStates
+                    : SMFMA4x4WritesVGPROverlappedSMFMASrcCWaitStates;
             break;
           case 8:
             NeedWaitStates =
-                isDGEMM(Opc)
+                SIInstrInfo::isDGEMM(Opc)
                     ? SMFMA16x16WritesVGPROverlappedDMFMASrcCWaitStates
                     : SMFMA16x16WritesVGPROverlappedSMFMASrcCWaitStates;
             break;
           case 16:
             NeedWaitStates =
-                isDGEMM(Opc)
+                SIInstrInfo::isDGEMM(Opc)
                     ? SMFMA32x32WritesVGPROverlappedDMFMASrcCWaitStates
                     : SMFMA32x32WritesVGPROverlappedSMFMASrcCWaitStates;
             break;
@@ -2490,7 +2473,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 
         if (ST.hasGFX940Insts()) {
           NeedWaitStates =
-              isXDL(ST, *MI1)
+              TII.isXDL(*MI1)
                   ? GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
                         NumPasses, ST.hasGFX950Insts())
                   : GFX940_SMFMA_N_PassWritesVGPROverlappedSrcABWaitStates(
@@ -2657,7 +2640,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
     return 0;
 
   auto IsDGEMMFn = [](const MachineInstr &MI) -> bool {
-    return isDGEMM(MI.getOpcode());
+    return SIInstrInfo::isDGEMM(MI.getOpcode());
   };
 
   // This is checked in checkMAIHazards90A()
@@ -2696,7 +2679,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
   bool DGEMMAfterVALUWrite = false;
   auto IsDGEMMHazard = [&DGEMMAfterVALUWrite, this](const MachineInstr &MI) {
     // Found DGEMM on reverse traversal to def.
-    if (isDGEMM(MI.getOpcode()))
+    if (SIInstrInfo::isDGEMM(MI.getOpcode()))
       DGEMMAfterVALUWrite = true;
 
     // Only hazard if register is defined by a VALU and a DGEMM is found after
@@ -2771,7 +2754,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
       int NumPasses = HazardDefLatency;
       int NeedWaitStates = MaxWaitStates;
 
-      if (isDGEMM(MFMA->getOpcode())) {
+      if (SIInstrInfo::isDGEMM(MFMA->getOpcode())) {
         switch (HazardDefLatency) {
         case 4:
           NeedWaitStates = IsMemOrExport ? DMFMA4x4WriteVgprMemExpReadWaitStates
@@ -2791,7 +2774,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
         }
       } else if (ST.hasGFX940Insts()) {
         NeedWaitStates =
-            isXDL(ST, *MFMA)
+            TII.isXDL(*MFMA)
                 ? GFX940_XDL_N_PassWriteVgprVALUMemExpReadWaitStates(
                       NumPasses, ST.hasGFX950Insts())
                 : GFX940_SMFMA_N_PassWriteVgprVALUMemExpReadWaitStates(
@@ -2864,7 +2847,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
       int NeedWaitStates = MaxWaitStates;
       int NumPasses = TSchedModel.computeInstrLatency(MFMA);
 
-      if (isDGEMM(MFMA->getOpcode())) {
+      if (SIInstrInfo::isDGEMM(MFMA->getOpcode())) {
         switch (NumPasses) {
         case 4:
           NeedWaitStates = DMFMA4x4WriteVgprVALUWriteWaitStates;
@@ -2878,7 +2861,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
         }
       } else if (ST.hasGFX940Insts()) {
         NeedWaitStates =
-            isXDL(ST, *MFMA)
+            TII.isXDL(*MFMA)
                 ? GFX940_XDL_N_PassWriteVgprVALUWawWaitStates(
                       NumPasses, ST.hasGFX950Insts())
                 : GFX940_SMFMA_N_PassWriteVgprVALUWawWaitStates(NumPasses);
@@ -2906,11 +2889,11 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
     }
 
     auto IsSMFMAReadAsCFn = [&Reg, &MFMA, this](const MachineInstr &MI) {
-      if (!SIInstrInfo::isMFMA(MI) || isDGEMM(MI.getOpcode()) ||
+      if (!SIInstrInfo::isMFMA(MI) || SIInstrInfo::isDGEMM(MI.getOpcode()) ||
           !MI.readsRegister(Reg, &TRI))
         return false;
 
-      if (ST.hasGFX940Insts() && !isXDL(ST, MI))
+      if (ST.hasGFX940Insts() && !TII.isXDL(MI))
         return false;
 
       const MachineOperand *SrcC =
