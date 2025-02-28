@@ -27,8 +27,7 @@
 #include <string>
 #include <variant>
 
-namespace lldb_dap {
-namespace protocol {
+namespace lldb_dap::protocol {
 
 // MARK: Base Protocol
 
@@ -151,9 +150,6 @@ struct Response {
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
 
-// A void response body for any response without a specific value.
-using VoidResponseBody = std::nullptr_t;
-
 // "ProtocolMessage": {
 //   "type": "object",
 //   "title": "Base Protocol",
@@ -181,7 +177,6 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
-} // namespace protocol
-} // namespace lldb_dap
+} // namespace lldb_dap::protocol
 
 #endif
