@@ -983,10 +983,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Xqxxmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
     // to update it again, but we do need to emit the `.cfi_def_cfa` below.
-    if (RVFI->getPushPopKind(MF) != RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
-      RI->adjustReg(MBB, MBBI, DL, FPReg, SPReg,
-                    StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
-                    MachineInstr::FrameSetup, getStackAlign());
+    if (RVFI->getPushPopKind(MF) !=
+        RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
+      RI->adjustReg(
+          MBB, MBBI, DL, FPReg, SPReg,
+          StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
+          MachineInstr::FrameSetup, getStackAlign());
     }
 
     // Emit ".cfi_def_cfa $fp, RVFI->getVarArgsSaveSize()"
