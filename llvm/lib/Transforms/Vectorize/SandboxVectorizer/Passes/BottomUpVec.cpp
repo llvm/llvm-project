@@ -32,6 +32,12 @@ static cl::opt<unsigned long>
            cl::desc("Vectorize if the invocation count is < than this. 0 "
                     "disables vectorization."));
 
+static constexpr const unsigned long StopBundleDisabled =
+    std::numeric_limits<unsigned long>::max();
+static cl::opt<unsigned long>
+    StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
+               cl::desc("Vectorize up to this many bundles."));
+
 namespace sandboxir {
 
 static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
@@ -270,7 +276,10 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
 
 Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
                                   ArrayRef<Value *> UserBndl, unsigned Depth) {
-  const auto &LegalityRes = Legality->canVectorize(Bndl);
+  bool StopForDebug =
+      DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
+  const auto &LegalityRes = StopForDebug ? Legality->getForcedPackForDebugging()
+                                         : Legality->canVectorize(Bndl);
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
   SmallVector<Action *> Operands;
@@ -469,6 +478,7 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   DeadInstrCandidates.clear();
   Legality->clear();
   Actions.clear();
+  DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0);
   emitVectors();
   tryEraseDeadInstrs();
