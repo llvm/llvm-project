@@ -126,9 +126,8 @@ void printCFGContinuityStats(raw_ostream &OS,
       const unsigned BBIndex = Queue.front();
       const BinaryBasicBlock *BB = Layout.getBlock(BBIndex);
       Queue.pop();
-      for (const auto &Tuple : llvm::zip(BB->successors(), BB->branch_info())) {
-        const auto *Succ = std::get<0>(Tuple);
-        const auto &BI = std::get<1>(Tuple);
+      for (const auto &[Succ, BI] :
+           llvm::zip(BB->successors(), BB->branch_info())) {
         const uint64_t Count = BI.Count;
         if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0 ||
             !Visited.insert(Succ->getLayoutIndex()).second)
@@ -272,7 +271,9 @@ void printCFGFlowConservationStats(raw_ostream &OS,
   std::vector<double> CFGGapsWeightedAvg;
   std::vector<double> CFGGapsWorst;
   std::vector<uint64_t> CFGGapsWorstAbs;
-
+  // We only consider blocks with execution counts > MinBlockCount when
+  // reporting the distribution of worst gaps.
+  const uint16_t MinBlockCount = 500;
   for (const BinaryFunction *Function : Functions) {
     if (Function->size() <= 1 || !Function->isSimple())
       continue;
@@ -305,11 +306,12 @@ void printCFGFlowConservationStats(raw_ostream &OS,
       Weight = log(Weight);
       WeightedGapSum += Gap * Weight;
       WeightSum += Weight;
-      if (BB.getKnownExecutionCount() > 500 && Gap > WorstGap) {
+      if (BB.getKnownExecutionCount() > MinBlockCount && Gap > WorstGap) {
         WorstGap = Gap;
         BBWorstGap = &BB;
       }
-      if (BB.getKnownExecutionCount() > 500 && Max - Min > WorstGapAbs) {
+      if (BB.getKnownExecutionCount() > MinBlockCount &&
+          Max - Min > WorstGapAbs) {
         WorstGapAbs = Max - Min;
         BBWorstGapAbs = &BB;
       }
@@ -351,7 +353,8 @@ void printCFGFlowConservationStats(raw_ostream &OS,
   if (opts::Verbosity >= 1) {
     OS << "distribution of weighted CFG flow conservation gaps\n";
     printDistribution(OS, CFGGapsWeightedAvg, /*Fraction=*/true);
-    OS << "Consider only blocks with execution counts > 500:\n"
+    OS << format("Consider only blocks with execution counts > %zu:\n",
+                 MinBlockCount)
        << "distribution of worst block flow conservation gap per "
           "function \n";
     printDistribution(OS, CFGGapsWorst, /*Fraction=*/true);
@@ -379,9 +382,8 @@ void computeFlowMappings(const BinaryContext &BC, FlowInfo &TotalFlowMap) {
       continue;
     for (const BinaryBasicBlock &BB : *Function) {
       uint64_t TotalOutgoing = 0ULL;
-      for (const auto &Tuple : llvm::zip(BB.successors(), BB.branch_info())) {
-        const auto *Succ = std::get<0>(Tuple);
-        const auto &BI = std::get<1>(Tuple);
+      for (const auto &[Succ, BI] :
+           llvm::zip(BB.successors(), BB.branch_info())) {
         const uint64_t Count = BI.Count;
         if (Count == BinaryBasicBlock::COUNT_NO_PROFILE || Count == 0)
           continue;
