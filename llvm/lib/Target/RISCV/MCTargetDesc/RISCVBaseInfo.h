@@ -716,7 +716,7 @@ struct VLEPseudo {
 };
 
 struct VSEPseudo {
-  uint16_t Masked :1;
+  uint16_t Masked : 1;
   uint16_t Strided : 1;
   uint16_t Log2SEW : 3;
   uint16_t LMUL : 3;
