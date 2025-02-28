@@ -145,8 +145,6 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (args.size() > 8)
     return false;
 
-  // Do this first, as it's got the most chance of failing (though still very
-  // low).
   if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
     Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
     // If we could not manage the GCS, the expression will certainly fail,
