@@ -1013,3 +1013,15 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     ASSERT_FALSE(maybe_signature.has_value());
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, Error) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::ErrorType, "Fatal Error"));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
+    ASSERT_TRUE(m_swift_ts->ContainsError(opaque));
+  }
+}

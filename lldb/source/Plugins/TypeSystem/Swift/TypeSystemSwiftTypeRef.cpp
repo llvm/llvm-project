@@ -2291,6 +2291,10 @@ void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type,
   if (m_dangerous_types.count(key))
     return nullptr;
 
+  // This can crash SwiftASTContext.
+  if (ContainsError(type))
+    return nullptr;
+
   auto swift_ast_context = GetSwiftASTContext(GetSymbolContext(exe_ctx));
   if (!swift_ast_context || swift_ast_context->HasFatalErrors())
     return nullptr;
@@ -2894,11 +2898,25 @@ bool TypeSystemSwiftTypeRef::IsExpressionEvaluatorDefined(
   const auto *mangled_name = AsMangledName(type);
   Demangler dem;
   NodePointer node = GetDemangledType(dem, mangled_name);
-  return swift_demangle::FindIf(node, [](NodePointer node) -> NodePointer {
+  return swift_demangle::FindIf(node, [](NodePointer node) -> bool {
     if (node->getKind() == Node::Kind::Module &&
         node->getText().starts_with("__lldb_expr"))
-      return node;
-    return nullptr;
+      return true;
+    return false;
+  });
+}
+
+bool TypeSystemSwiftTypeRef::ContainsError(
+    lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  const auto *mangled_name = AsMangledName(type);
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, mangled_name);
+  return swift_demangle::FindIf(node, [](NodePointer node) -> bool {
+    // This node is an in-band error, not a Swift.Error type, which is a protocol.
+    if (node->getKind() == Node::Kind::ErrorType)
+      return true;
+    return false;
   });
 }
 
