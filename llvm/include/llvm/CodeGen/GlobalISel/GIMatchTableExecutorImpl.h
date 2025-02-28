@@ -1485,15 +1485,28 @@ bool GIMatchTableExecutor::executeMatchTable(
       propagateFlags();
       return true;
     }
-    case GIR_MakeTempReg: {
+    case GIR_MakeGenericTempReg: {
       uint64_t TempRegID = readULEB();
       int TypeID = readS8();
 
       State.TempRegisters[TempRegID] =
           MRI.createGenericVirtualRegister(getTypeFromIdx(TypeID));
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
-                             << "] = GIR_MakeTempReg(" << TypeID << ")\n");
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
+               << "] = GIR_MakeGenericTempReg(" << TypeID << ")\n";
+      });
+      break;
+    }
+    case GIR_MakeVirtualTempReg: {
+      uint64_t TempRegID = readULEB();
+
+      Register Reg = MRI.createIncompleteVirtualRegister();
+      MRI.noteNewVirtualRegister(Reg);
+      State.TempRegisters[TempRegID] = Reg;
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
+               << "] = GIR_MakeVirtualTempReg()\n";
+      });
       break;
     }
     case GIR_ReplaceReg: {
