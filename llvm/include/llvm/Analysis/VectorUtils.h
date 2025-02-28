@@ -203,15 +203,6 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                             const APInt &DemandedElts, APInt &DemandedLHS,
                             APInt &DemandedRHS, bool AllowUndefElts = false);
 
-/// Does this shuffle mask represent either one slide shuffle or a pair of
-/// two slide shuffles, combined with a select on some constant vector mask?
-/// A slide is a shuffle mask which shifts some set of elements up or down
-/// the vector, with all other elements being undefined.  An identity shuffle
-/// will be matched a slide by 0.  The output parameter provides the source
-/// (-1 means no source), and slide direction for each slide.
-bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
-                       std::array<std::pair<int, int>, 2> &SrcInfo);
-
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.
