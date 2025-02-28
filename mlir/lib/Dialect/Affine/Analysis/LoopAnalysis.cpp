@@ -12,8 +12,6 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
-#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
@@ -21,6 +19,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -33,7 +32,6 @@
 
 using namespace mlir;
 using namespace mlir::affine;
-using namespace mlir::dataflow;
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -88,69 +86,37 @@ void mlir::affine::getTripCountMapAndOperands(
                             tripCountValueMap.getOperands().end());
 }
 
-/// By running `IntegerRangeAnalysis` to get the ranges of operand, then fill
-/// the `symReplacements` with range. If `replaceByMin` is set to true,
-/// construct `replacement` using the smallest value.By default, the largest
-/// value will be used for constructing `replacement`.
-static void replaceOperandByRange(AffineForOp forOp,
-                                  SmallVectorImpl<Value> &operands,
-                                  SmallVectorImpl<AffineExpr> &symReplacements,
-                                  unsigned numDim, bool replaceByMin = false) {
-  DataFlowSolver solver;
-  solver.load<DeadCodeAnalysis>();
-  solver.load<IntegerRangeAnalysis>();
-  if (failed(solver.initializeAndRun(
-          forOp->getParentOfType<FunctionOpInterface>())))
-    return;
-
-  // `b` is used to create affineExpr
-  Builder b(forOp.getContext());
-  for (unsigned i = numDim, e = operands.size(); i < e; ++i) {
-    Value operand = operands[i];
-    auto lattice =
-        solver.lookupState<dataflow::IntegerValueRangeLattice>(operand);
-    if (!lattice) {
-      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
-      continue;
-    }
-
-    if (lattice->getValue().isUninitialized()) {
-      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
-      continue;
-    }
-
-    ConstantIntRanges range = lattice->getValue().getValue();
-    APInt max = range.smax();
-    APInt min = range.smin();
-    unsigned bitNums = max.getBitWidth();
-
-    if (APInt::getSignedMaxValue(bitNums) == max &&
-        APInt::getSignedMinValue(bitNums) == min) {
-      symReplacements.push_back(b.getAffineSymbolExpr(i - numDim));
-      continue;
-    }
-
-    if (!replaceByMin)
-      symReplacements.push_back(b.getAffineConstantExpr(max.getZExtValue()));
-    else
-      symReplacements.push_back(b.getAffineConstantExpr(min.getZExtValue()));
-  }
-  return;
-}
-
 /// Take the min if all trip counts are constant.
 static std::optional<uint64_t>
-getConstantTripCountFromAffineMap(AffineMap map) {
+getConstantTripCountFromAffineMap(AffineMap map,
+                                  SmallVectorImpl<Value> &operands,
+                                  presburger::BoundType type) {
   std::optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
-    auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr);
-    if (!constExpr)
+    AffineMap subMap =
+        AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
+    ValueBoundsConstraintSet::Variable var(subMap, operands);
+    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::LB, var);
+    auto ubBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::UB, var, nullptr, true);
+    if (failed(lbBound) || failed(ubBound))
       return std::nullopt;
-    if (tripCount.has_value())
-      tripCount =
-          std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
-    else
-      tripCount = constExpr.getValue();
+    if (type == presburger::BoundType::LB) {
+      if (tripCount.has_value())
+        tripCount =
+            std::min(*tripCount, static_cast<uint64_t>(lbBound.value()));
+      else
+        tripCount = lbBound.value();
+    } else if (type == presburger::BoundType::UB) {
+      if (tripCount.has_value())
+        tripCount =
+            std::min(*tripCount, static_cast<uint64_t>(ubBound.value()));
+      else
+        tripCount = ubBound.value();
+    } else {
+      return std::nullopt;
+    }
   }
   return tripCount;
 }
@@ -166,11 +132,8 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
 
   if (!map)
     return std::nullopt;
-  SmallVector<AffineExpr, 4> symReplacements;
-  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims());
-  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
-                                  map.getNumSymbols());
-  return getConstantTripCountFromAffineMap(map);
+  return getConstantTripCountFromAffineMap(map, operands,
+                                           presburger::BoundType::LB);
 }
 
 /// Returns the maximum trip count when the operand of forOp has a range. If the
@@ -184,12 +147,8 @@ mlir::affine::getUpperBoundOnTripCount(AffineForOp forOp) {
 
   if (!map)
     return std::nullopt;
-  SmallVector<AffineExpr, 4> symReplacements;
-  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims(),
-                        true);
-  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
-                                  map.getNumSymbols());
-  return getConstantTripCountFromAffineMap(map);
+  return getConstantTripCountFromAffineMap(map, operands,
+                                           presburger::BoundType::UB);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine
@@ -202,18 +161,20 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
 
   if (!map)
     return 1;
-  SmallVector<AffineExpr, 4> symReplacements;
-  replaceOperandByRange(forOp, operands, symReplacements, map.getNumDims());
-  map = map.replaceDimsAndSymbols({}, symReplacements, map.getNumDims(),
-                                  map.getNumSymbols());
+
   // The largest divisor of the trip count is the GCD of the individual largest
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
   std::optional<uint64_t> gcd;
   for (auto resultExpr : map.getResults()) {
     uint64_t thisGcd;
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      uint64_t tripCount = constExpr.getValue();
+    AffineMap subMap =
+        AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
+    ValueBoundsConstraintSet::Variable var(subMap, operands);
+    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::LB, var);
+    if (!failed(lbBound)) {
+      uint64_t tripCount = lbBound.value();
       // 0 iteration loops (greatest divisor is 2^64 - 1).
       if (tripCount == 0)
         thisGcd = std::numeric_limits<uint64_t>::max();

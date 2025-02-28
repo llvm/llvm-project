@@ -250,34 +250,26 @@ void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                  SetIntRangeFn setResultRange) {
   auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
-                      Value idxResult, Value size) {
+                      Value idxResult) {
     if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
       return;
-    APInt sizeInt;
-    if (matchPattern(size, m_ConstantInt(&sizeInt))) {
-      ConstantIntRanges dimRange = ConstantIntRanges::constant(sizeInt);
-      setResultRange(dimResult, dimRange);
-      ConstantIntRanges idxRange = getIndexRange(0, sizeInt.getZExtValue() - 1);
-      setResultRange(idxResult, idxRange);
-    } else {
-      ConstantIntRanges dimRange =
-          argRange.intersection(getIndexRange(1, kMaxDim));
-      setResultRange(dimResult, dimRange);
-      ConstantIntRanges idxRange =
-          getIndexRange(0, dimRange.umax().getZExtValue() - 1);
-      setResultRange(idxResult, idxRange);
-    }
+    ConstantIntRanges dimRange =
+        argRange.intersection(getIndexRange(1, kMaxDim));
+    setResultRange(dimResult, dimRange);
+    ConstantIntRanges idxRange =
+        getIndexRange(0, dimRange.umax().getZExtValue() - 1);
+    setResultRange(idxResult, idxRange);
   };
 
   argRanges = argRanges.drop_front(getAsyncDependencies().size());
   KernelDim3 gridDims = getGridSize();
   KernelDim3 blockIds = getBlockIds();
-  setRange(argRanges[0], gridDims.x, blockIds.x, getGridSizeX());
-  setRange(argRanges[1], gridDims.y, blockIds.y, getGridSizeY());
-  setRange(argRanges[2], gridDims.z, blockIds.z, getGridSizeZ());
+  setRange(argRanges[0], gridDims.x, blockIds.x);
+  setRange(argRanges[1], gridDims.y, blockIds.y);
+  setRange(argRanges[2], gridDims.z, blockIds.z);
   KernelDim3 blockDims = getBlockSize();
   KernelDim3 threadIds = getThreadIds();
-  setRange(argRanges[3], blockDims.x, threadIds.x, getBlockSizeX());
-  setRange(argRanges[4], blockDims.y, threadIds.y, getBlockSizeY());
-  setRange(argRanges[5], blockDims.z, threadIds.z, getBlockSizeZ());
+  setRange(argRanges[3], blockDims.x, threadIds.x);
+  setRange(argRanges[4], blockDims.y, threadIds.y);
+  setRange(argRanges[5], blockDims.z, threadIds.z);
 }

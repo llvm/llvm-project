@@ -646,7 +646,8 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   // Compute constant bound for `valueDim`.
   int64_t ubAdjustment = closedUB ? 0 : 1;
   if (auto bound = cstr.cstr.getConstantBound64(type, pos))
-    return type == BoundType::UB ? *bound + ubAdjustment : *bound;
+    if (bound.has_value())
+      return type == BoundType::UB ? *bound + ubAdjustment : *bound;
   return failure();
 }
 
