@@ -33,6 +33,9 @@ public:
                     lldb::addr_t module_addr);
   void OnUnloadModule(lldb::addr_t module_addr);
 
+  void FillCoreLoaderData(lldb_private::DataExtractor &data,
+          uint64_t loader_offset, uint64_t loader_size); 
+
   void DidAttach() override;
   void DidLaunch() override;
   Status CanLoadImage() override;
@@ -48,6 +51,9 @@ protected:
 
   /// Loads Module from inferior process.
   void ResolveExecutableModule(lldb::ModuleSP &module_sp);
+
+  /// Returns true if the process is for a core file.
+  bool IsCoreFile() const;
 
 private:
   std::map<lldb::ModuleSP, lldb::addr_t> m_loaded_modules;
