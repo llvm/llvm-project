@@ -2828,8 +2828,8 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``user``, ``supervisor``,
-and ``machine``. If there is no parameter, then it defaults to machine.
+Permissible values for this parameter are ``supervisor`` and ``machine``. If
+there is no parameter, then it defaults to ``machine``.
 
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.

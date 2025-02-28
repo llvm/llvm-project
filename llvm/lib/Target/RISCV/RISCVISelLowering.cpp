@@ -20777,7 +20777,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    if (!(Kind == "user" || Kind == "supervisor" || Kind == "machine"))
+    if (!(Kind == "supervisor" || Kind == "machine"))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
   }
