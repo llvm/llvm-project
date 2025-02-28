@@ -132,6 +132,7 @@ class PluginPythonOSPlugin(TestBase):
         )
 
     tid_regex = re.compile("tid = (0x[0-9a-fA-F]+)")
+
     def get_tid_from_thread_info_command(self, thread, use_backing_thread):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
