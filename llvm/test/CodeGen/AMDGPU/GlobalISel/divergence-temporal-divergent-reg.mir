@@ -25,6 +25,7 @@ body: |
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %9(s32), %bb.1
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[PHI1]], [[C2]]
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD]](s32), implicit $exec_lo
   ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[ADD]](s32)
   ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[COPY]]
   ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[PHI]](s32)
@@ -33,7 +34,7 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
-  ; GFX10-NEXT:   G_STORE [[ADD]](s32), [[MV]](p0) :: (store (s32))
+  ; GFX10-NEXT:   G_STORE [[COPY3]](s32), [[MV]](p0) :: (store (s32))
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
@@ -92,6 +93,7 @@ body: |
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %12(s32), %bb.1
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[PHI1]], [[C2]]
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[ADD]](s32), implicit $exec_lo
   ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[ADD]](s32)
   ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[COPY]]
   ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP]](s1), [[PHI]](s32)
@@ -100,8 +102,8 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
-  ; GFX10-NEXT:   G_STORE [[ADD]](s32), [[MV]](p0) :: (store (s32))
-  ; GFX10-NEXT:   G_STORE [[ADD]](s32), [[MV1]](p0) :: (store (s32))
+  ; GFX10-NEXT:   G_STORE [[COPY5]](s32), [[MV]](p0) :: (store (s32))
+  ; GFX10-NEXT:   G_STORE [[COPY5]](s32), [[MV1]](p0) :: (store (s32))
   ; GFX10-NEXT:   SI_RETURN
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
