@@ -9,6 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NOT:    LV: Found {{.*}} scalar instruction:   %ptr.iv.2.next = getelementptr inbounds i8, ptr %ptr.iv.2, i64 1
 ;
 ; CHECK:        VPlan 'Initial VPlan for VF={vscale x 2},UF>=1' {
+; CHECK-NEXT:   Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT:   Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:   Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count
@@ -24,7 +25,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, ir<1>
+; CHECK-NEXT:     EMIT ir<%ptr.iv.2> = WIDEN-POINTER-INDUCTION ir<%start.2>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[PTR_IDX:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<8>
 ; CHECK-NEXT:     vp<[[PTR_IDX_STEPS:%.+]]> = SCALAR-STEPS vp<[[PTR_IDX]]>, ir<8>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV_1:%.+]]> = ptradd ir<%start.1>, vp<[[PTR_IDX_STEPS]]>
@@ -67,11 +68,9 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP6]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -160,11 +159,9 @@ define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP6]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
