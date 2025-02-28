@@ -1698,6 +1698,118 @@ define i32 @loadCombine_4consecutive_mixsize2(ptr %p) {
   ret i32 %o2
 }
 
+define i32 @loadCombine_4consecutive_mixsize3(ptr %p) {
+; ALL-LABEL: @loadCombine_4consecutive_mixsize3(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; ALL-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 2
+; ALL-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i16 [[L2]] to i32
+; ALL-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; ALL-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 24
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
+; ALL-NEXT:    ret i32 [[O2]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %p2 = getelementptr i8, ptr %p, i32 3
+  %l1 = load i8, ptr %p
+  %l2 = load i16, ptr %p1
+  %l3 = load i8, ptr %p2
+
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i16 %l2 to i32
+  %e3 = zext i8 %l3 to i32
+
+  %s2 = shl i32 %e2, 8
+  %s3 = shl i32 %e3, 24
+
+  %o1 = or i32 %e1, %s2
+  %o2 = or i32 %o1, %s3
+  ret i32 %o2
+}
+
+define i16 @loadCombine_mixsize_4bit(ptr %p) {
+; ALL-LABEL: @loadCombine_mixsize_4bit(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 2
+; ALL-NEXT:    [[P2:%.*]] = getelementptr i4, ptr [[P]], i32 3
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i4, ptr [[P1]], align 1
+; ALL-NEXT:    [[L3:%.*]] = load i4, ptr [[P2]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i16
+; ALL-NEXT:    [[E2:%.*]] = zext i4 [[L2]] to i16
+; ALL-NEXT:    [[E3:%.*]] = zext i4 [[L3]] to i16
+; ALL-NEXT:    [[S2:%.*]] = shl i16 [[E2]], 8
+; ALL-NEXT:    [[S3:%.*]] = shl i16 [[E3]], 12
+; ALL-NEXT:    [[O1:%.*]] = or i16 [[E1]], [[S2]]
+; ALL-NEXT:    [[O2:%.*]] = or i16 [[O1]], [[S3]]
+; ALL-NEXT:    ret i16 [[O2]]
+;
+  %p1 = getelementptr i4, ptr %p, i32 2
+  %p2 = getelementptr i4, ptr %p, i32 3
+  %l1 = load i8, ptr %p
+  %l2 = load i4, ptr %p1
+  %l3 = load i4, ptr %p2
+
+  %e1 = zext i8 %l1 to i16
+  %e2 = zext i4 %l2 to i16
+  %e3 = zext i4 %l3 to i16
+
+  %s2 = shl i16 %e2, 8
+  %s3 = shl i16 %e3, 12
+
+  %o1 = or i16 %e1, %s2
+  %o2 = or i16 %o1, %s3
+  ret i16 %o2
+}
+
+define i64 @loadCombine_8consecutive_mixsize(ptr %p) {
+; ALL-LABEL: @loadCombine_8consecutive_mixsize(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; ALL-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; ALL-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ALL-NEXT:    [[L3:%.*]] = load i16, ptr [[P2]], align 2
+; ALL-NEXT:    [[L4:%.*]] = load i32, ptr [[P3]], align 4
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i64
+; ALL-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i64
+; ALL-NEXT:    [[E3:%.*]] = zext i16 [[L3]] to i64
+; ALL-NEXT:    [[E4:%.*]] = zext i32 [[L4]] to i64
+; ALL-NEXT:    [[S2:%.*]] = shl i64 [[E2]], 8
+; ALL-NEXT:    [[S3:%.*]] = shl i64 [[E3]], 16
+; ALL-NEXT:    [[S4:%.*]] = shl i64 [[E4]], 32
+; ALL-NEXT:    [[O1:%.*]] = or i64 [[E1]], [[S2]]
+; ALL-NEXT:    [[O2:%.*]] = or i64 [[O1]], [[S3]]
+; ALL-NEXT:    [[O3:%.*]] = or i64 [[O2]], [[S4]]
+; ALL-NEXT:    ret i64 [[O3]]
+;
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %p3 = getelementptr i8, ptr %p, i64 4
+  %l1 = load i8, ptr %p
+  %l2 = load i8, ptr %p1
+  %l3 = load i16, ptr %p2
+  %l4 = load i32, ptr %p3
+
+  %e1 = zext i8 %l1 to i64
+  %e2 = zext i8 %l2 to i64
+  %e3 = zext i16 %l3 to i64
+  %e4 = zext i32 %l4 to i64
+
+  %s2 = shl i64 %e2, 8
+  %s3 = shl i64 %e3, 16
+  %s4 = shl i64 %e4, 32
+
+  %o1 = or i64 %e1, %s2
+  %o2 = or i64 %o1, %s3
+  %o3 = or i64 %o2, %s4
+  ret i64 %o3
+}
+
 define i32 @loadCombine_4consecutive_lower_index_comes_before(ptr %p) {
 ; LE-LABEL: @loadCombine_4consecutive_lower_index_comes_before(
 ; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
