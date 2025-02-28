@@ -149,7 +149,7 @@ class PluginPythonOSPlugin(TestBase):
         self.assertTrue(result.Succeeded(), "failed to run thread info")
         match = self.tid_regex.search(result.GetOutput())
         self.assertNotEqual(match, None)
-        return match.group(1)
+        return int(match.group(1), 0)
 
     def run_python_os_step(self):
         """Test that the Python operating system plugin works correctly and allows single stepping of a virtual thread that is backed by a real thread"""
@@ -230,7 +230,7 @@ class PluginPythonOSPlugin(TestBase):
         thread.StepOver()
 
         tid_os = self.get_tid_from_thread_info_command(thread, False)
-        self.assertEqual(tid_os, "0x111111111")
+        self.assertEqual(tid_os, 0x111111111)
         tid_real = self.get_tid_from_thread_info_command(thread, True)
         self.assertNotEqual(tid_os, tid_real)
 
