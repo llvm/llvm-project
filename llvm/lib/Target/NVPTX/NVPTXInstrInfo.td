@@ -1965,11 +1965,9 @@ let hasSideEffects = false, isAsCheapAsAMove = true in {
   multiclass MOV<RegisterClass RC, string OpStr, ValueType VT, Operand IMMType, SDNode ImmNode>  {
     def rr : NVPTXInst<(outs RC:$dst), (ins RC:$src),
                        "mov." # OpStr # " \t$dst, $src;", []>;
-    let isMoveImm = true in {
-      def ri : NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
-                         "mov." # OpStr # " \t$dst, $src;",
-                         [(set VT:$dst, ImmNode:$src)]>;
-    }
+    def ri : NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
+                        "mov." # OpStr # " \t$dst, $src;",
+                        [(set VT:$dst, ImmNode:$src)]>;
   }
 }
 
