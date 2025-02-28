@@ -33,7 +33,10 @@ class MemoryMonitorDarwin : public MemoryMonitor {
         DISPATCH_SOURCE_TYPE_MEMORYPRESSURE,
         0, // system-wide monitoring
         DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL,
-        dispatch_get_main_queue());
+        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
+
+    if (!m_memory_pressure_source)
+      return;
 
     dispatch_source_set_event_handler(m_memory_pressure_source, ^{
       dispatch_source_memorypressure_flags_t pressureLevel =
@@ -45,7 +48,12 @@ class MemoryMonitorDarwin : public MemoryMonitor {
     });
   }
 
-  void Stop() override { dispatch_source_cancel(m_memory_pressure_source); }
+  void Stop() override {
+    if (m_memory_pressure_source) {
+      dispatch_source_cancel(m_memory_pressure_source);
+      dispatch_release(m_memory_pressure_source);
+    }
+  }
 
 private:
   dispatch_source_t m_memory_pressure_source;
