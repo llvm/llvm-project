@@ -12545,6 +12545,12 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
 
+  EVT ResultVT = N->getValueType(0);
+  // Only perform the DAG combine if this can then be lowered to a dot product
+  if (ResultVT.getVectorElementCount() * 4 !=
+      LHSExtOpVT.getVectorElementCount())
+    return SDValue();
+
   // For a 2-stage extend the signedness of both of the extends must be the
   // same. This is so the node can be folded into only a signed or unsigned
   // node.
@@ -12556,8 +12562,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
 
   unsigned NewOpcode =
       ExtIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
-                     RHSExtOp);
+  return DAG.getNode(NewOpcode, DL, ResultVT, Acc, LHSExtOp, RHSExtOp);
 }
 
 // Makes PARTIAL_REDUCE_*MLA(Acc, ZEXT(UnextOp1), Splat(1)) into

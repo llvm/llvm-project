@@ -20,10 +20,8 @@ define <vscale x 2 x i64> @signed_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <vsc
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv4i32:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.d, z0.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i32> %input to <vscale x 4 x i64>
@@ -48,10 +46,8 @@ define <vscale x 2 x i64> @unsigned_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <v
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv4i32:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.d, z0.d, z1.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i32> %input to <vscale x 4 x i64>
@@ -76,10 +72,8 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv8i16:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.s, z0.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.s, z0.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -104,10 +98,8 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv8i16:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z0.s, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.s, z0.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.s, z0.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i16> %input to <vscale x 8 x i32>
@@ -132,10 +124,8 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ;
 ; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv16i8:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.h, z0.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.h, z0.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -160,10 +150,8 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ;
 ; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv16i8:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z0.h, z2.h
-; CHECK-NEWLOWERING-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.h, z0.h, z1.b
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.h, z0.h, z1.b
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 16 x i8> %input to <vscale x 16 x i16>
@@ -172,15 +160,33 @@ entry:
 }
 
 define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vscale x 4 x i16> %input){
-; CHECK-LABEL: signed_wide_add_nxv4i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-NEXT:    uunpklo z2.d, z1.s
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ret
+; CHECK-SVE2-LABEL: signed_wide_add_nxv4i16:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    ptrue p0.s
+; CHECK-SVE2-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-SVE2-NEXT:    uunpklo z2.d, z1.s
+; CHECK-SVE2-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-SVE2-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE2-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE2-NEXT:    ret
+;
+; CHECK-SVE-LABEL: signed_wide_add_nxv4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    ptrue p0.s
+; CHECK-SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-SVE-NEXT:    uunpklo z2.d, z1.s
+; CHECK-SVE-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv4i16:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    ptrue p0.s
+; CHECK-NEWLOWERING-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
     %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
@@ -188,14 +194,30 @@ entry:
 }
 
 define <vscale x 2 x i32> @unsigned_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vscale x 4 x i16> %input){
-; CHECK-LABEL: unsigned_wide_add_nxv4i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    uunpklo z2.d, z1.s
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEXT:    add z0.d, z1.d, z0.d
-; CHECK-NEXT:    ret
+; CHECK-SVE2-LABEL: unsigned_wide_add_nxv4i16:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-SVE2-NEXT:    uunpklo z2.d, z1.s
+; CHECK-SVE2-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-SVE2-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE2-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE2-NEXT:    ret
+;
+; CHECK-SVE-LABEL: unsigned_wide_add_nxv4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-SVE-NEXT:    uunpklo z2.d, z1.s
+; CHECK-SVE-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE-NEXT:    add z0.d, z1.d, z0.d
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv4i16:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.d, z0.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>
     %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
@@ -203,17 +225,37 @@ entry:
 }
 
 define <vscale x 4 x i64> @signed_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
-; CHECK-LABEL: signed_wide_add_nxv8i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sunpkhi z4.d, z2.s
-; CHECK-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEXT:    sunpkhi z5.d, z3.s
-; CHECK-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEXT:    add z0.d, z3.d, z0.d
-; CHECK-NEXT:    add z1.d, z5.d, z1.d
-; CHECK-NEXT:    ret
+; CHECK-SVE2-LABEL: signed_wide_add_nxv8i32:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    sunpkhi z4.d, z2.s
+; CHECK-SVE2-NEXT:    sunpklo z2.d, z2.s
+; CHECK-SVE2-NEXT:    sunpkhi z5.d, z3.s
+; CHECK-SVE2-NEXT:    sunpklo z3.d, z3.s
+; CHECK-SVE2-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE2-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-SVE2-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-SVE2-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-SVE2-NEXT:    ret
+;
+; CHECK-SVE-LABEL: signed_wide_add_nxv8i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    sunpkhi z4.d, z2.s
+; CHECK-SVE-NEXT:    sunpklo z2.d, z2.s
+; CHECK-SVE-NEXT:    sunpkhi z5.d, z3.s
+; CHECK-SVE-NEXT:    sunpklo z3.d, z3.s
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-SVE-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-SVE-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: signed_wide_add_nxv8i32:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    saddwb z1.d, z1.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    saddwb z0.d, z0.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    saddwt z1.d, z1.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    saddwt z0.d, z0.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i32> %input to <vscale x 8 x i64>
     %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
@@ -221,19 +263,41 @@ entry:
 }
 
 define <vscale x 4 x i64> @unsigned_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vscale x 8 x i32> %input){
-; CHECK-LABEL: unsigned_wide_add_nxv8i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpkhi z4.d, z2.s
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uunpkhi z5.d, z3.s
-; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEXT:    add z0.d, z3.d, z0.d
-; CHECK-NEXT:    add z1.d, z5.d, z1.d
-; CHECK-NEXT:    ret
+; CHECK-SVE2-LABEL: unsigned_wide_add_nxv8i32:
+; CHECK-SVE2:       // %bb.0: // %entry
+; CHECK-SVE2-NEXT:    uunpkhi z4.d, z2.s
+; CHECK-SVE2-NEXT:    uunpklo z2.d, z2.s
+; CHECK-SVE2-NEXT:    uunpkhi z5.d, z3.s
+; CHECK-SVE2-NEXT:    uunpklo z3.d, z3.s
+; CHECK-SVE2-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE2-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-SVE2-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-SVE2-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-SVE2-NEXT:    ret
+;
+; CHECK-SVE-LABEL: unsigned_wide_add_nxv8i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    uunpkhi z4.d, z2.s
+; CHECK-SVE-NEXT:    uunpklo z2.d, z2.s
+; CHECK-SVE-NEXT:    uunpkhi z5.d, z3.s
+; CHECK-SVE-NEXT:    uunpklo z3.d, z3.s
+; CHECK-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-SVE-NEXT:    add z1.d, z1.d, z4.d
+; CHECK-SVE-NEXT:    add z0.d, z3.d, z0.d
+; CHECK-SVE-NEXT:    add z1.d, z5.d, z1.d
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-LABEL: unsigned_wide_add_nxv8i32:
+; CHECK-NEWLOWERING:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-NEXT:    uaddwb z1.d, z1.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uaddwb z0.d, z0.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uaddwt z1.d, z1.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uaddwt z0.d, z0.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i32> %input to <vscale x 8 x i64>
     %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
     ret <vscale x 4 x i64> %partial.reduce
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

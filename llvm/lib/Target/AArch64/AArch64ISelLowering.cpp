@@ -1898,6 +1898,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
                          Custom);
     }
+
+    if (EnablePartialReduceNodes &&
+        (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+          ElementCount VTElemCount = VT.getVectorElementCount();
+          if (VTElemCount.getKnownMinValue() == 1)
+            continue;
+          if (VTElemCount * 2 == InnerVT.getVectorElementCount()) {
+            setPartialReduceMLAAction(VT, InnerVT, Legal);
+            if (InnerVT.getVectorElementType() == VT.getVectorElementType())
+              setPartialReduceMLAAction(VT, InnerVT, Custom);
+          }
+        }
+      }
+    }
   }
 
 
