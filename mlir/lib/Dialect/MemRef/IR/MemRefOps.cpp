@@ -828,9 +828,8 @@ struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
       // We can still fold if source and target are similar SubViews.
       auto source = copyOp.getSource().getDefiningOp<SubViewOp>();
       auto target = copyOp.getTarget().getDefiningOp<SubViewOp>();
-      if (!source || !target) {
+      if (!source || !target)
         return failure();
-      }
       if (source.getSource() != target.getSource() ||
           source.getOffsets() != target.getOffsets() ||
           source.getStaticOffsets() != target.getStaticOffsets() ||
