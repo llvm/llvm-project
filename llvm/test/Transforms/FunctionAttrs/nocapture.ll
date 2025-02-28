@@ -361,15 +361,15 @@ define void @nc3(ptr %p) {
 }
 
 declare void @external_not_willreturn(ptr) readonly nounwind
-define void @readononly_nounwind_not_willreturn(ptr %p) {
+define void @readonly_nounwind_not_willreturn(ptr %p) {
 ; FNATTRS: Function Attrs: nofree nounwind memory(read)
-; FNATTRS-LABEL: define void @readononly_nounwind_not_willreturn
+; FNATTRS-LABEL: define void @readonly_nounwind_not_willreturn
 ; FNATTRS-SAME: (ptr readonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @external_not_willreturn(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
-; ATTRIBUTOR-LABEL: define void @readononly_nounwind_not_willreturn
+; ATTRIBUTOR-LABEL: define void @readonly_nounwind_not_willreturn
 ; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void @external_not_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR4]]
 ; ATTRIBUTOR-NEXT:    ret void
@@ -379,15 +379,15 @@ define void @readononly_nounwind_not_willreturn(ptr %p) {
 }
 
 declare void @external_willreturn(ptr) readonly nounwind willreturn
-define void @readononly_nounwind_willreturn(ptr %p) {
+define void @readonly_nounwind_willreturn(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
-; FNATTRS-LABEL: define void @readononly_nounwind_willreturn
+; FNATTRS-LABEL: define void @readonly_nounwind_willreturn
 ; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @external_willreturn(ptr [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nosync nounwind willreturn memory(read)
-; ATTRIBUTOR-LABEL: define void @readononly_nounwind_willreturn
+; ATTRIBUTOR-LABEL: define void @readonly_nounwind_willreturn
 ; ATTRIBUTOR-SAME: (ptr readonly captures(none) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void @external_willreturn(ptr readonly captures(none) [[P]]) #[[ATTR21:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
@@ -429,6 +429,40 @@ define void @callsite_readonly_nounwind_willreturn(ptr %f, ptr %p) {
 ;
   call void %f(ptr %p) readonly nounwind willreturn
   call void %f(ptr nocapture %p)
+  ret void
+}
+
+define void @self_readonly_nounwind_not_willreturn(ptr %p) readonly nounwind {
+; FNATTRS: Function Attrs: nofree nounwind memory(read)
+; FNATTRS-LABEL: define void @self_readonly_nounwind_not_willreturn
+; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR9]] {
+; FNATTRS-NEXT:    call void @capture(ptr [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: nosync nounwind memory(read)
+; ATTRIBUTOR-LABEL: define void @self_readonly_nounwind_not_willreturn
+; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7]] {
+; ATTRIBUTOR-NEXT:    call void @capture(ptr [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @capture(ptr %p)
+  ret void
+}
+
+define void @self_readonly_nounwind_willreturn(ptr %p) readonly nounwind willreturn {
+; FNATTRS: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
+; FNATTRS-LABEL: define void @self_readonly_nounwind_willreturn
+; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR11]] {
+; FNATTRS-NEXT:    call void @capture(ptr [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nosync nounwind willreturn memory(read)
+; ATTRIBUTOR-LABEL: define void @self_readonly_nounwind_willreturn
+; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR9]] {
+; ATTRIBUTOR-NEXT:    call void @capture(ptr [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @capture(ptr %p)
   ret void
 }
 
