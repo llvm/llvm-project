@@ -282,6 +282,7 @@ func.func @simplify_zero_dim_map(%in : memref<f32>) -> f32 {
 // Tests the simplification of a semi-affine expression in various cases.
 // CHECK-DAG: #[[$map0:.*]] = affine_map<()[s0, s1] -> (-(s1 floordiv s0) + 2)>
 // CHECK-DAG: #[[$map1:.*]] = affine_map<()[s0, s1] -> (-(s1 floordiv s0) + 42)>
+// CHECK-DAG: #[[$FLOORDIV:.*]] = affine_map<()[s0] -> (1 floordiv s0)>
 
 // Tests the simplification of a semi-affine expression with a modulo operation on a floordiv and multiplication.
 // CHECK-LABEL: func @semiaffine_mod
@@ -297,6 +298,16 @@ func.func @semiaffine_floordiv(%arg0: index, %arg1: index) -> index {
   %a = affine.apply affine_map<(d0)[s0] ->((-((d0 floordiv s0) * s0) + ((2 * s0) mod (3 * s0))) floordiv s0)> (%arg0)[%arg1]
   // CHECK: affine.apply #[[$map0]]()[%arg1, %arg0]
   return %a : index
+}
+
+// The following semi-affine expression with nested floordiv cannot be simplified.
+// CHECK-LABEL: func @semiaffine_nested_floordiv
+// CHECK-SAME:  %[[ARG0:.*]]: index
+func.func @semiaffine_nested_floordiv(%arg0: index) -> index {
+  %a = affine.apply affine_map<()[s0] ->((s0 floordiv s0) floordiv s0)> ()[%arg0]
+  return %a : index
+  // CHECK:       %[[RES:.*]] = affine.apply #[[$FLOORDIV]]()[%[[ARG0]]]
+  // CHECK-NEXT:  return %[[RES]] : index
 }
 
 // Tests the simplification of a semi-affine expression with a ceildiv operation and a division of arith.constant 0 by a symbol.
