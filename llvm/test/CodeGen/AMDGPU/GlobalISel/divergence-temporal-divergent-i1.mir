@@ -323,3 +323,403 @@ body: |
     %34:sreg_32_xm0_xexec(s32) = SI_IF %35(s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 ...
+
+---
+name: nested_loops_temporal_divergence_inner
+legalized: true
+tracksRegLiveness: true
+body: |
+  ; GFX10-LABEL: name: nested_loops_temporal_divergence_inner
+  ; GFX10: bb.0:
+  ; GFX10-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[COPY]](s32), [[C]]
+  ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.1:
+  ; GFX10-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %12(s32), %bb.3, [[C1]](s32), %bb.0
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %14(s32), %bb.3
+  ; GFX10-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[PHI1]](s32)
+  ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; GFX10-NEXT:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT]], [[C2]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV]], [[SHL]](s64)
+  ; GFX10-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[FCMP]](s1)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.2:
+  ; GFX10-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[COPY6]](s1), %bb.1, %36(s1), %bb.2
+  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C3]](s32), %bb.1, %22(s32), %bb.2
+  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI %24(s32), %bb.2, [[C3]](s32), %bb.1
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; GFX10-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[COPY7]], [[C4]]
+  ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[PHI4]](s32)
+  ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[PHI4]], [[C5]]
+  ; GFX10-NEXT:   [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[LOAD]]
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP1]](s1), [[PHI3]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[XOR]](s1)
+  ; GFX10-NEXT:   SI_LOOP [[INT]](s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.3:
+  ; GFX10-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV1]], [[SEXT]](s64)
+  ; GFX10-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[XOR]](s1)
+  ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8))
+  ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI1]], [[C6]]
+  ; GFX10-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[PHI1]](s32), [[COPY1]]
+  ; GFX10-NEXT:   [[INT1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ICMP]](s1), [[PHI]](s32)
+  ; GFX10-NEXT:   SI_LOOP [[INT1]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.4:
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
+  ; GFX10-NEXT:   SI_RETURN
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(p0) = G_MERGE_VALUES %2(s32), %3(s32)
+    %5:_(s32) = COPY $vgpr4
+    %6:_(s32) = COPY $vgpr5
+    %7:_(p0) = G_MERGE_VALUES %5(s32), %6(s32)
+    %8:_(s32) = G_FCONSTANT float 1.000000e+00
+    %9:_(s1) = G_FCMP floatpred(ogt), %0(s32), %8
+    %10:_(s32) = G_CONSTANT i32 0
+
+  bb.1:
+    %11:_(s32) = G_PHI %12(s32), %bb.3, %10(s32), %bb.0
+    %13:_(s32) = G_PHI %10(s32), %bb.0, %14(s32), %bb.3
+    %15:_(s64) = G_SEXT %13(s32)
+    %16:_(s32) = G_CONSTANT i32 2
+    %17:_(s64) = G_SHL %15, %16(s32)
+    %18:_(p0) = G_PTR_ADD %4, %17(s64)
+    %19:_(s32) = G_LOAD %18(p0) :: (load (s32))
+    %20:_(s32) = G_CONSTANT i32 0
+
+  bb.2:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %21:_(s32) = G_PHI %20(s32), %bb.1, %22(s32), %bb.2
+    %23:_(s32) = G_PHI %24(s32), %bb.2, %20(s32), %bb.1
+    %25:_(s1) = G_PHI %26(s1), %bb.2, %9(s1), %bb.1
+    %27:_(s1) = G_CONSTANT i1 true
+    %26:_(s1) = G_XOR %25, %27
+    %28:_(s32) = G_UITOFP %23(s32)
+    %29:_(s32) = G_CONSTANT i32 1
+    %24:_(s32) = G_ADD %23, %29
+    %30:_(s1) = G_FCMP floatpred(ogt), %28(s32), %19
+    %22:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %30(s1), %21(s32)
+    SI_LOOP %22(s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.3
+
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %22(s32)
+    %31:_(p0) = G_PTR_ADD %7, %15(s64)
+    %32:_(s32) = G_ZEXT %26(s1)
+    %33:_(s32) = G_CONSTANT i32 1
+    G_STORE %32(s32), %31(p0) :: (store (s8))
+    %14:_(s32) = G_ADD %13, %33
+    %34:_(s1) = G_ICMP intpred(ult), %13(s32), %1
+    %12:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %34(s1), %11(s32)
+    SI_LOOP %12(s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.4
+
+  bb.4:
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %12(s32)
+    SI_RETURN
+...
+
+---
+name: nested_loops_temporal_divergence_outer
+legalized: true
+tracksRegLiveness: true
+body: |
+  ; GFX10-LABEL: name: nested_loops_temporal_divergence_outer
+  ; GFX10: bb.0:
+  ; GFX10-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[COPY]](s32), [[C]]
+  ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.1:
+  ; GFX10-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %12(s32), %bb.3, [[C1]](s32), %bb.0
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %14(s32), %bb.3
+  ; GFX10-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[PHI1]](s32)
+  ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; GFX10-NEXT:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT]], [[C2]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV]], [[SHL]](s64)
+  ; GFX10-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[FCMP]](s1)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.2:
+  ; GFX10-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[COPY6]](s1), %bb.1, %36(s1), %bb.2
+  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C3]](s32), %bb.1, %22(s32), %bb.2
+  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI %24(s32), %bb.2, [[C3]](s32), %bb.1
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; GFX10-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[COPY7]], [[C4]]
+  ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[PHI4]](s32)
+  ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[PHI4]], [[C5]]
+  ; GFX10-NEXT:   [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[LOAD]]
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP1]](s1), [[PHI3]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[XOR]](s1)
+  ; GFX10-NEXT:   SI_LOOP [[INT]](s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.3:
+  ; GFX10-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV1]], [[SEXT]](s64)
+  ; GFX10-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[XOR]](s1)
+  ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8))
+  ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI1]], [[C6]]
+  ; GFX10-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[PHI1]](s32), [[COPY1]]
+  ; GFX10-NEXT:   [[INT1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ICMP]](s1), [[PHI]](s32)
+  ; GFX10-NEXT:   SI_LOOP [[INT1]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.4:
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
+  ; GFX10-NEXT:   SI_RETURN
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(p0) = G_MERGE_VALUES %2(s32), %3(s32)
+    %5:_(s32) = COPY $vgpr4
+    %6:_(s32) = COPY $vgpr5
+    %7:_(p0) = G_MERGE_VALUES %5(s32), %6(s32)
+    %8:_(s32) = G_FCONSTANT float 1.000000e+00
+    %9:_(s1) = G_FCMP floatpred(ogt), %0(s32), %8
+    %10:_(s32) = G_CONSTANT i32 0
+
+  bb.1:
+    %11:_(s32) = G_PHI %12(s32), %bb.3, %10(s32), %bb.0
+    %13:_(s32) = G_PHI %10(s32), %bb.0, %14(s32), %bb.3
+    %15:_(s64) = G_SEXT %13(s32)
+    %16:_(s32) = G_CONSTANT i32 2
+    %17:_(s64) = G_SHL %15, %16(s32)
+    %18:_(p0) = G_PTR_ADD %4, %17(s64)
+    %19:_(s32) = G_LOAD %18(p0) :: (load (s32))
+    %20:_(s32) = G_CONSTANT i32 0
+
+  bb.2:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %21:_(s32) = G_PHI %20(s32), %bb.1, %22(s32), %bb.2
+    %23:_(s32) = G_PHI %24(s32), %bb.2, %20(s32), %bb.1
+    %25:_(s1) = G_PHI %26(s1), %bb.2, %9(s1), %bb.1
+    %27:_(s1) = G_CONSTANT i1 true
+    %26:_(s1) = G_XOR %25, %27
+    %28:_(s32) = G_UITOFP %23(s32)
+    %29:_(s32) = G_CONSTANT i32 1
+    %24:_(s32) = G_ADD %23, %29
+    %30:_(s1) = G_FCMP floatpred(ogt), %28(s32), %19
+    %22:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %30(s1), %21(s32)
+    SI_LOOP %22(s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.3
+
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %22(s32)
+    %31:_(p0) = G_PTR_ADD %7, %15(s64)
+    %32:_(s32) = G_ZEXT %26(s1)
+    %33:_(s32) = G_CONSTANT i32 1
+    G_STORE %32(s32), %31(p0) :: (store (s8))
+    %14:_(s32) = G_ADD %13, %33
+    %34:_(s1) = G_ICMP intpred(ult), %13(s32), %1
+    %12:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %34(s1), %11(s32)
+    SI_LOOP %12(s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.4
+
+  bb.4:
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %12(s32)
+    SI_RETURN
+...
+
+---
+name: nested_loops_temporal_divergence_both
+legalized: true
+tracksRegLiveness: true
+body: |
+  ; GFX10-LABEL: name: nested_loops_temporal_divergence_both
+  ; GFX10: bb.0:
+  ; GFX10-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[MV2:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX10-NEXT:   [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[COPY]](s32), [[C]]
+  ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.1:
+  ; GFX10-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %15(s32), %bb.3, [[C1]](s32), %bb.0
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %17(s32), %bb.3
+  ; GFX10-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[PHI1]](s32)
+  ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; GFX10-NEXT:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT]], [[C2]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV]], [[SHL]](s64)
+  ; GFX10-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32))
+  ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[FCMP]](s1)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.2:
+  ; GFX10-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[COPY8]](s1), %bb.1, %40(s1), %bb.2
+  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C3]](s32), %bb.1, %25(s32), %bb.2
+  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI %27(s32), %bb.2, [[C3]](s32), %bb.1
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; GFX10-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[COPY9]], [[C4]]
+  ; GFX10-NEXT:   [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[PHI4]](s32)
+  ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[PHI4]], [[C5]]
+  ; GFX10-NEXT:   [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[UITOFP]](s32), [[LOAD]]
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[FCMP1]](s1), [[PHI3]](s32)
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[XOR]](s1)
+  ; GFX10-NEXT:   SI_LOOP [[INT]](s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.3:
+  ; GFX10-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
+  ; GFX10-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[MV1]], [[SEXT]](s64)
+  ; GFX10-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[XOR]](s1)
+  ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   G_STORE [[ZEXT]](s32), [[PTR_ADD1]](p0) :: (store (s8))
+  ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI1]], [[C6]]
+  ; GFX10-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[PHI1]](s32), [[COPY1]]
+  ; GFX10-NEXT:   [[INT1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ICMP]](s1), [[PHI]](s32)
+  ; GFX10-NEXT:   SI_LOOP [[INT1]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   G_BR %bb.4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.4:
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
+  ; GFX10-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[XOR]](s1)
+  ; GFX10-NEXT:   G_STORE [[ZEXT1]](s32), [[MV2]](p0) :: (store (s8))
+  ; GFX10-NEXT:   SI_RETURN
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(p0) = G_MERGE_VALUES %2(s32), %3(s32)
+    %5:_(s32) = COPY $vgpr4
+    %6:_(s32) = COPY $vgpr5
+    %7:_(p0) = G_MERGE_VALUES %5(s32), %6(s32)
+    %8:_(s32) = COPY $vgpr6
+    %9:_(s32) = COPY $vgpr7
+    %10:_(p0) = G_MERGE_VALUES %8(s32), %9(s32)
+    %11:_(s32) = G_FCONSTANT float 1.000000e+00
+    %12:_(s1) = G_FCMP floatpred(ogt), %0(s32), %11
+    %13:_(s32) = G_CONSTANT i32 0
+
+  bb.1:
+    %14:_(s32) = G_PHI %15(s32), %bb.3, %13(s32), %bb.0
+    %16:_(s32) = G_PHI %13(s32), %bb.0, %17(s32), %bb.3
+    %18:_(s64) = G_SEXT %16(s32)
+    %19:_(s32) = G_CONSTANT i32 2
+    %20:_(s64) = G_SHL %18, %19(s32)
+    %21:_(p0) = G_PTR_ADD %4, %20(s64)
+    %22:_(s32) = G_LOAD %21(p0) :: (load (s32))
+    %23:_(s32) = G_CONSTANT i32 0
+
+  bb.2:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %24:_(s32) = G_PHI %23(s32), %bb.1, %25(s32), %bb.2
+    %26:_(s32) = G_PHI %27(s32), %bb.2, %23(s32), %bb.1
+    %28:_(s1) = G_PHI %29(s1), %bb.2, %12(s1), %bb.1
+    %30:_(s1) = G_CONSTANT i1 true
+    %29:_(s1) = G_XOR %28, %30
+    %31:_(s32) = G_UITOFP %26(s32)
+    %32:_(s32) = G_CONSTANT i32 1
+    %27:_(s32) = G_ADD %26, %32
+    %33:_(s1) = G_FCMP floatpred(ogt), %31(s32), %22
+    %25:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %33(s1), %24(s32)
+    SI_LOOP %25(s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.3
+
+  bb.3:
+    successors: %bb.4(0x04000000), %bb.1(0x7c000000)
+
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %25(s32)
+    %34:_(p0) = G_PTR_ADD %7, %18(s64)
+    %35:_(s32) = G_ZEXT %29(s1)
+    %36:_(s32) = G_CONSTANT i32 1
+    G_STORE %35(s32), %34(p0) :: (store (s8))
+    %17:_(s32) = G_ADD %16, %36
+    %37:_(s1) = G_ICMP intpred(ult), %16(s32), %1
+    %15:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %37(s1), %14(s32)
+    SI_LOOP %15(s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+    G_BR %bb.4
+
+  bb.4:
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %15(s32)
+    %38:_(s32) = G_ZEXT %29(s1)
+    G_STORE %38(s32), %10(p0) :: (store (s8))
+    SI_RETURN
+...
