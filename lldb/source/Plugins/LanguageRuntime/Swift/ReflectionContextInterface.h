@@ -15,18 +15,18 @@
 
 #include <mutex>
 
+#include "LockGuarded.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "swift/ABI/ObjectFile.h"
 #include "swift/Remote/RemoteAddress.h"
-#include "swift/RemoteInspection/ReflectionContext.h"
 #include "swift/RemoteInspection/TypeRef.h"
-#include <optional>
+#include "swift/RemoteInspection/TypeRefBuilder.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Memory.h"
-#include "LockGuarded.h"
+#include <optional>
 
 namespace swift {
 namespace Demangle {
