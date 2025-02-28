@@ -169,10 +169,10 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   // TODO(cir): this should live in `emitFunctionProlog
   // Declare all the function arguments in the symbol table.
   for (const auto nameValue : llvm::zip(args, entryBB->getArguments())) {
-    auto *paramVar = std::get<0>(nameValue);
+    const VarDecl *paramVar = std::get<0>(nameValue);
     mlir::Value paramVal = std::get<1>(nameValue);
-    auto alignment = getContext().getDeclAlign(paramVar);
-    auto paramLoc = getLoc(paramVar->getSourceRange());
+    CharUnits alignment = getContext().getDeclAlign(paramVar);
+    mlir::Location paramLoc = getLoc(paramVar->getSourceRange());
     paramVal.setLoc(paramLoc);
 
     mlir::Value addrVal =
