@@ -826,6 +826,25 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 10);
+  // Check if shift is in [0, 31]
+  case RISCV::BI__builtin_riscv_cv_mac_muluN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulsN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsN:
+  case RISCV::BI__builtin_riscv_cv_mac_muluRN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuRN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulsRN:
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsRN:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case RISCV::BI__builtin_riscv_cv_mac_macuN:
+  case RISCV::BI__builtin_riscv_cv_mac_machhuN:
+  case RISCV::BI__builtin_riscv_cv_mac_macsN:
+  case RISCV::BI__builtin_riscv_cv_mac_machhsN:
+  case RISCV::BI__builtin_riscv_cv_mac_macuRN:
+  case RISCV::BI__builtin_riscv_cv_mac_machhuRN:
+  case RISCV::BI__builtin_riscv_cv_mac_macsRN:
+  case RISCV::BI__builtin_riscv_cv_mac_machhsRN:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 31);
   // Check if value range for vxrm is in [0, 3]
   case RISCVVector::BI__builtin_rvv_vaaddu_vv:
   case RISCVVector::BI__builtin_rvv_vaaddu_vx:
