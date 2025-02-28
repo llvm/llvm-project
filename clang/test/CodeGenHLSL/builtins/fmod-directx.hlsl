@@ -4,7 +4,7 @@
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \
+// RUN:   -emit-llvm -disable-llvm-passes -O1 -o - | FileCheck %s \
 // RUN:   -DFNATTRS="noundef nofpclass(nan inf)" -DTYPE=half
 
 //
@@ -12,13 +12,13 @@
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s \
+// RUN:   -O1 -o - | FileCheck %s \
 // RUN:   -DFNATTRS="noundef nofpclass(nan inf)" -DTYPE=float
 
 
 
 // CHECK: define [[FNATTRS]] [[TYPE]] @
-// CHECK: call reassoc nnan ninf nsz arcp afn [[FNATTRS]] [[TYPE]] @{{.*}}([[TYPE]] noundef nofpclass(nan inf) %{{.*}}, [[TYPE]] noundef nofpclass(nan inf) %{{.*}}) #{{.*}}
+// CHECK: call  nnan ninf nsz arcp afn [[FNATTRS]] [[TYPE]] @{{.*}}([[TYPE]] noundef nofpclass(nan inf) %{{.*}}, [[TYPE]] noundef nofpclass(nan inf) %{{.*}}) #{{.*}}
 // CHECK: ret [[TYPE]] %call
 half test_fmod_half(half p0, half p1) { return fmod(p0, p1); }
 
