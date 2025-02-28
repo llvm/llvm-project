@@ -1008,9 +1008,8 @@ private:
     BigInt quotient;
     if (remainder >= divider) {
       BigInt subtractor = divider;
-      int cur_bit =
-          multiword::countl_zero(subtractor.val) -
-                              multiword::countl_zero(remainder.val);
+      int cur_bit = multiword::countl_zero(subtractor.val) -
+                    multiword::countl_zero(remainder.val);
       subtractor <<= static_cast<size_t>(cur_bit);
       for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
         if (remainder < subtractor)
