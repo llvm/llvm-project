@@ -1748,10 +1748,16 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
     Unlike LLVM's GEP instruction, one cannot stride over the outermost
     reference; therefore, the leading 0 index must be omitted.
 
+    This operation can be used to index derived type fields, in which case
+    the operand is the name of the index field.
+
     ```
       %i = ... : index
       %h = ... : !fir.heap<!fir.array<100 x f32>>
       %p = fir.coordinate_of %h, %i : (!fir.heap<!fir.array<100 x f32>>, index) -> !fir.ref<f32>
+
+      %d = ... : !fir.ref<!fir.type<t{field1:i32, field2:f32}>>
+      %f = fir.coordinate_of %d, field2 : (!fir.ref<!fir.type<t{field1:i32, field2:f32}>>) -> !fir.ref<f32>
     ```
 
     In the example, `%p` will be a pointer to the `%i`-th f32 value in the
@@ -1761,7 +1767,8 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let arguments = (ins
     AnyRefOrBox:$ref,
     Variadic<AnyCoordinateType>:$coor,
-    TypeAttr:$baseType
+    TypeAttr:$baseType,
+    OptionalAttr<DenseI32ArrayAttr>:$field_indices
   );
 
   let results = (outs RefOrLLVMPtr);
@@ -1771,10 +1778,14 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "mlir::ValueRange":$coor),
-    [{ return build($_builder, $_state, resultType, ref, coor,
-           mlir::TypeAttr::get(ref.getType())); }]>,
+      "mlir::Value":$ref, "mlir::ValueRange":$coor)>,
+    OpBuilder<(ins "mlir::Type":$resultType,
+      "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
+  let extraClassDeclaration = [{
+    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    CoordinateIndicesAdaptor getIndices();
+  }];
 }
 
 def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {

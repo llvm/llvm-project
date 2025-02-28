@@ -88,8 +88,8 @@ as `CMAKE_CXX_COMPILER`, `CMAKE_CXX_COMPILER`, and `CMAKE_Fortran_COMPILER`.
 Flang-RT to ensure they are using the same ABI. The C and C++ compiler
 can be any compiler supporting the same ABI.
 
-In addition to the compiler, the build be able to find LLVM development tools
-such as `lit` and `FileCheck` that are not found in an LLVM's install
+In addition to the compiler, the build must be able to find LLVM development
+tools such as `lit` and `FileCheck` that are not found in an LLVM's install
 directory. Use `CMAKE_BINARY_DIR` to point to directory where LLVM has
 been built. A simple build configuration might look like the following:
 

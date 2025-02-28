@@ -31,3 +31,92 @@ body:             |
 
   WAVE_BARRIER
 ...
+
+# CHECK: align4:                                 ; @align4
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: s_cbranch_scc1 .LBB{{[0-9_]+}}          ; encoding: [A,A,0x85,0xbf]
+# CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
+# CHECK: .p2align        2
+# CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
+# CHECK: ; codeLenInByte = 16
+
+---
+name:            align4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    S_BARRIER
+
+  bb.2 (align 4):
+    S_ENDPGM 0
+...
+
+# CHECK: align8:                                 ; @align8
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: s_cbranch_scc1 .LBB{{[0-9_]+}}          ; encoding: [A,A,0x85,0xbf]
+# CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
+# CHECK: .p2align        3
+# CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
+# CHECK: ; codeLenInByte = 20
+---
+name:            align8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    S_BARRIER
+
+  bb.2 (align 8):
+    S_ENDPGM 0
+...
+
+# CHECK: align16:                                ; @align16
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: s_cbranch_scc1 .LBB{{[0-9_]+}}          ; encoding: [A,A,0x85,0xbf]
+# CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
+# CHECK: .p2align        4
+# CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
+# CHECK: ; codeLenInByte = 20
+---
+name:            align16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    S_BARRIER
+
+  bb.2 (align 16):
+    S_ENDPGM 0
+...
+
+# CHECK: align32:                                ; @align32
+# CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+# CHECK: s_cbranch_scc1 .LBB{{[0-9_]+}}          ; encoding: [A,A,0x85,0xbf]
+# CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
+# CHECK: .p2align        5
+# CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
+# CHECK: ; codeLenInByte = 36
+---
+name:            align32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $scc = IMPLICIT_DEF
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  bb.1:
+    S_BARRIER
+
+  bb.2 (align 32):
+    S_ENDPGM 0
+...

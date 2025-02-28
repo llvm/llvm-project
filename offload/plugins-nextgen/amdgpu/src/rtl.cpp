@@ -2854,12 +2854,6 @@ private:
   Error checkIfAPU() {
     // TODO: replace with ROCr API once it becomes available.
     llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsAPU = llvm::StringSwitch<bool>(StrGfxName)
-                .Case("gfx940", true)
-                .Default(false);
-    if (IsAPU)
-      return Plugin::success();
-
     bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
                         .Case("gfx942", true)
                         .Default(false);

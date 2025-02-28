@@ -183,7 +183,7 @@ struct EarliestCaptures : public CaptureTracker {
 
     // Continue analysis, as we need to see all potential captures. However,
     // we do not need to follow the instruction result, as this use will
-    // dominate any captures made through the instruction result..
+    // dominate any captures made through the instruction result.
     return ContinueIgnoringReturn;
   }
 
@@ -203,19 +203,11 @@ struct EarliestCaptures : public CaptureTracker {
 /// by the enclosing function (which is required to exist).  This routine can
 /// be expensive, so consider caching the results.  The boolean ReturnCaptures
 /// specifies whether returning the value (or part of it) from the function
-/// counts as capturing it or not.  The boolean StoreCaptures specified whether
-/// storing the value (or part of it) into memory anywhere automatically
 /// counts as capturing it or not.
 bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
-                                bool StoreCaptures, unsigned MaxUsesToExplore) {
+                                unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
-
-  // TODO: If StoreCaptures is not true, we could do Fancy analysis
-  // to determine whether this store is not actually an escape point.
-  // In that case, BasicAliasAnalysis should be updated as well to
-  // take advantage of this.
-  (void)StoreCaptures;
 
   LLVM_DEBUG(dbgs() << "Captured?: " << *V << " = ");
 
@@ -236,11 +228,9 @@ bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
 /// instruction are considered. This routine can be expensive, so consider
 /// caching the results.  The boolean ReturnCaptures specifies whether
 /// returning the value (or part of it) from the function counts as capturing
-/// it or not.  The boolean StoreCaptures specified whether storing the value
-/// (or part of it) into memory anywhere automatically counts as capturing it
-/// or not.
+/// it or not.
 bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
-                                      bool StoreCaptures, const Instruction *I,
+                                      const Instruction *I,
                                       const DominatorTree *DT, bool IncludeI,
                                       unsigned MaxUsesToExplore,
                                       const LoopInfo *LI) {
@@ -248,11 +238,7 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
          "It doesn't make sense to ask whether a global is captured.");
 
   if (!DT)
-    return PointerMayBeCaptured(V, ReturnCaptures, StoreCaptures,
-                                MaxUsesToExplore);
-
-  // TODO: See comment in PointerMayBeCaptured regarding what could be done
-  // with StoreCaptures.
+    return PointerMayBeCaptured(V, ReturnCaptures, MaxUsesToExplore);
 
   CapturesBefore CB(ReturnCaptures, I, DT, IncludeI, LI);
   PointerMayBeCaptured(V, &CB, MaxUsesToExplore);
@@ -264,7 +250,7 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 }
 
 Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
-                                       bool ReturnCaptures, bool StoreCaptures,
+                                       bool ReturnCaptures,
                                        const DominatorTree &DT,
                                        unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
@@ -291,12 +277,11 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
   switch (I->getOpcode()) {
   case Instruction::Call:
   case Instruction::Invoke: {
-    // TODO(captures): Make this more precise.
     auto *Call = cast<CallBase>(I);
     // Not captured if the callee is readonly, doesn't return a copy through
-    // its return value and doesn't unwind (a readonly function can leak bits
-    // by throwing an exception or not depending on the input value).
-    if (Call->onlyReadsMemory() && Call->doesNotThrow() &&
+    // its return value and doesn't unwind or diverge (a readonly function can
+    // leak bits by throwing an exception or not depending on the input value).
+    if (Call->onlyReadsMemory() && Call->doesNotThrow() && Call->willReturn() &&
         Call->getType()->isVoidTy())
       return CaptureComponents::None;
 
@@ -489,12 +474,7 @@ bool llvm::isNonEscapingLocalObject(
 
   // If this is an identified function-local object, check to see if it escapes.
   if (isIdentifiedFunctionLocal(V)) {
-    // Set StoreCaptures to True so that we can assume in our callers that the
-    // pointer is not the result of a load instruction. Currently
-    // PointerMayBeCaptured doesn't have any special analysis for the
-    // StoreCaptures=false case; if it did, our callers could be refined to be
-    // more precise.
-    auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
+    auto Ret = !PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
     if (IsCapturedCache)
       CacheIt->second = Ret;
     return Ret;

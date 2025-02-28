@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s  -split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @tma_prefetch_1d
 llvm.func @tma_prefetch_1d(%tma_desc : !llvm.ptr, %d0 : i32, %ch : i64) {

@@ -30,4 +30,9 @@ program main
   end do
   !$omp end teams loop
 
+  !ERROR: 'REDUCTION' clause not allowed with '!$OMP LOOP BIND(TEAMS)'.
+  !$omp loop bind(teams) reduction(+: x)
+  do i = 0, 10
+    x = x + i
+  end do
 end program main

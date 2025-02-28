@@ -1701,7 +1701,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+      setOperationAction(ISD::SELECT, VT, Custom);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
       if (Subtarget->hasSVEB16B16()) {
@@ -2055,8 +2059,9 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
-  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
-    return true;
+  assert(I->getIntrinsicID() ==
+             Intrinsic::experimental_vector_partial_reduce_add &&
+         "Unexpected intrinsic!");
   if (EnablePartialReduceNodes)
     return true;
 
@@ -2993,6 +2998,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
+    MAKE_CASE(AArch64ISD::CB)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -10603,6 +10609,17 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
                          DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
     }
 
+    // Try to emit Armv9.6 CB instructions. We prefer tb{n}z/cb{n}z due to their
+    // larger branch displacement but do prefer CB over cmp + br.
+    if (Subtarget->hasCMPBR() &&
+        AArch64CC::isValidCBCond(changeIntCCToAArch64CC(CC)) &&
+        ProduceNonFlagSettingCondBr) {
+      SDValue Cond =
+          DAG.getTargetConstant(changeIntCCToAArch64CC(CC), dl, MVT::i32);
+      return DAG.getNode(AArch64ISD::CB, dl, MVT::Other, Chain, Cond, LHS, RHS,
+                         Dest);
+    }
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
     return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
@@ -16878,9 +16895,16 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // mul(zext(i8), sext) can be transformed into smull(zext, sext) which
     // performs one extend implicitly. If DstWidth is at most 4 * SrcWidth, at
     // most one extra extend step is needed and using tbl is not profitable.
+    // Similarly, bail out if partial_reduce(acc, zext(i8)) can be lowered to a
+    // udot instruction.
     if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
       auto *SingleUser = cast<Instruction>(*I->user_begin());
-      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))))
+      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
+          (match(SingleUser,
+                 m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
+                     m_Value(), m_Specific(I))) &&
+           !shouldExpandPartialReductionIntrinsic(
+               cast<IntrinsicInst>(SingleUser))))
         return false;
     }
 

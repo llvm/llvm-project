@@ -135,7 +135,16 @@ module Clang_Frontend {
 
 module Clang_FrontendTool { requires cplusplus umbrella "clang/FrontendTool" module * { export * } }
 module Clang_Index { requires cplusplus umbrella "clang/Index" module * { export * } }
-module Clang_Lex { requires cplusplus umbrella "clang/Lex" module * { export * } }
+
+module Clang_Lex {
+  requires cplusplus
+  umbrella "clang/Lex"
+
+  textual header "clang/Lex/HLSLRootSignatureTokenKinds.def"
+
+  module * { export * }
+}
+
 module Clang_Parse { requires cplusplus umbrella "clang/Parse" module * { export * } }
 module Clang_Rewrite { requires cplusplus umbrella "clang/Rewrite/Core" module * { export * } }
 module Clang_RewriteFrontend { requires cplusplus umbrella "clang/Rewrite/Frontend" module * { export * } }

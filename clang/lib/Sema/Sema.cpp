@@ -1417,8 +1417,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   if (LangOpts.HLSL)
-    HLSL().DiagnoseAvailabilityViolations(
-        getASTContext().getTranslationUnitDecl());
+    HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
@@ -1655,11 +1654,20 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     }
 
     case DiagnosticIDs::SFINAE_Suppress:
+      if (DiagnosticsEngine::Level Level = getDiagnostics().getDiagnosticLevel(
+              DiagInfo.getID(), DiagInfo.getLocation());
+          Level == DiagnosticsEngine::Ignored)
+        return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
       if (*Info) {
-        (*Info)->addSuppressedDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        (*Info)->addSuppressedDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        if (!Diags.getDiagnosticIDs()->isNote(DiagID))
+          PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
+            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+          });
       }
 
       // Suppress this diagnostic.
@@ -1790,6 +1798,47 @@ public:
       Inherited::visitUsedDecl(Loc, D);
   }
 
+  // Visitor member and parent dtors called by this dtor.
+  void VisitCalledDestructors(CXXDestructorDecl *DD) {
+    const CXXRecordDecl *RD = DD->getParent();
+
+    // Visit the dtors of all members
+    for (const FieldDecl *FD : RD->fields()) {
+      QualType FT = FD->getType();
+      if (const auto *RT = FT->getAs<RecordType>())
+        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (ClassDecl->hasDefinition())
+            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+    }
+
+    // Also visit base class dtors
+    for (const auto &Base : RD->bases()) {
+      QualType BaseType = Base.getType();
+      if (const auto *RT = BaseType->getAs<RecordType>())
+        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (BaseDecl->hasDefinition())
+            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+    }
+  }
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    // Visit dtors called by variables that need destruction
+    for (auto *D : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        if (VD->isThisDeclarationADefinition() &&
+            VD->needsDestruction(S.Context)) {
+          QualType VT = VD->getType();
+          if (const auto *RT = VT->getAs<RecordType>())
+            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+              if (ClassDecl->hasDefinition())
+                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+        }
+
+    Inherited::VisitDeclStmt(DS);
+  }
   void checkVar(VarDecl *VD) {
     assert(VD->isFileVarDecl() &&
            "Should only check file-scope variables");
@@ -1831,6 +1880,8 @@ public:
     if (auto *S = FD->getBody()) {
       this->Visit(S);
     }
+    if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+      asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
     InUsePath.erase(FD);
   }

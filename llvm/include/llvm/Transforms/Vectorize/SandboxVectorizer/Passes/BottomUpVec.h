@@ -39,6 +39,9 @@ class BottomUpVec final : public RegionPass {
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
   std::unique_ptr<InstrMaps> IMaps;
+  /// Counter used for force-stopping the vectorizer after this many
+  /// invocations. Used for debugging miscompiles.
+  unsigned long BottomUpInvocationCnt = 0;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
@@ -58,9 +61,33 @@ class BottomUpVec final : public RegionPass {
   /// function helps collect these instructions (along with the pointer operands
   /// for loads/stores) so that they can be cleaned up later.
   void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
-  /// Recursively try to vectorize \p Bndl and its operands.
-  Value *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
-                      unsigned Depth);
+
+  /// Helper class describing how(if) to vectorize the code.
+  class ActionsVector {
+  private:
+    SmallVector<std::unique_ptr<Action>, 16> Actions;
+
+  public:
+    auto begin() const { return Actions.begin(); }
+    auto end() const { return Actions.end(); }
+    void push_back(std::unique_ptr<Action> &&ActPtr) {
+      ActPtr->Idx = Actions.size();
+      Actions.push_back(std::move(ActPtr));
+    }
+    void clear() { Actions.clear(); }
+#ifndef NDEBUG
+    void print(raw_ostream &OS) const;
+    void dump() const;
+#endif // NDEBUG
+  };
+  ActionsVector Actions;
+  /// Recursively try to vectorize \p Bndl and its operands. This populates the
+  /// `Actions` vector.
+  Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
+                       unsigned Depth);
+  /// Generate vector instructions based on `Actions` and return the last vector
+  /// created.
+  Value *emitVectors();
   /// Entry point for vectorization starting from \p Seeds.
   bool tryVectorize(ArrayRef<Value *> Seeds);
 

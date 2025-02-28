@@ -37,14 +37,12 @@ namespace llvm {
   /// by the enclosing function (which is required to exist).  This routine can
   /// be expensive, so consider caching the results.  The boolean ReturnCaptures
   /// specifies whether returning the value (or part of it) from the function
-  /// counts as capturing it or not.  The boolean StoreCaptures specified
-  /// whether storing the value (or part of it) into memory anywhere
-  /// automatically counts as capturing it or not.
+  /// counts as capturing it or not.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
-                            bool StoreCaptures, unsigned MaxUsesToExplore = 0);
+                            unsigned MaxUsesToExplore = 0);
 
   /// PointerMayBeCapturedBefore - Return true if this pointer value may be
   /// captured by the enclosing function (which is required to exist). If a
@@ -52,16 +50,13 @@ namespace llvm {
   /// instruction are considered. This routine can be expensive, so consider
   /// caching the results.  The boolean ReturnCaptures specifies whether
   /// returning the value (or part of it) from the function counts as capturing
-  /// it or not.  The boolean StoreCaptures specified whether storing the value
-  /// (or part of it) into memory anywhere automatically counts as capturing it
-  /// or not. Captures by the provided instruction are considered if the
+  /// it or not. Captures by the provided instruction are considered if the
   /// final parameter is true.
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
-                                  bool StoreCaptures, const Instruction *I,
-                                  const DominatorTree *DT,
+                                  const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
                                   unsigned MaxUsesToExplore = 0,
                                   const LoopInfo *LI = nullptr);
@@ -75,8 +70,7 @@ namespace llvm {
   // that the instruction the result value is compared against is not in a
   // cycle.
   Instruction *FindEarliestCapture(const Value *V, Function &F,
-                                   bool ReturnCaptures, bool StoreCaptures,
-                                   const DominatorTree &DT,
+                                   bool ReturnCaptures, const DominatorTree &DT,
                                    unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.

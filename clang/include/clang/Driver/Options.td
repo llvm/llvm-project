@@ -932,9 +932,20 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
-  MetaVarName<"<arch> <arg>">;
+def Xarch__
+    : JoinedAndSeparate<["-"], "Xarch_">,
+      Flags<[NoXarchOption]>,
+      HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
+      DocBrief<
+          [{Specifies that the argument should only be used if the compilation
+  target matches the specified architecture. This can be used with the target
+  CPU, triple architecture, or offloading host and device. It is most useful
+  for separating behavior undesirable on one of the targets when combining many
+  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
+  forward the argument to the offloading device while -Xarch_host will target
+  the host system, which can be used to suppress incompatible GPU arguments.}]>,
+      MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -2267,6 +2278,24 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
 
+defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
+  LangOpts<"AtomicRemoteMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+
+defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
+  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+
+defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
+  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
+  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
+
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -3147,7 +3176,7 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
-def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
@@ -3986,11 +4015,15 @@ defm assumptions : BoolFOption<"assumptions",
           "Disable codegen and compile-time checks for C++23's [[assume]] attribute">,
   PosFlag<SetTrue>>;
 
+
+let Visibility = [ClangOption, FlangOption] in {
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
+}
+
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
@@ -4713,6 +4746,7 @@ def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
+def mzos_target_EQ : Joined<["-"], "mzos-target=">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>, HelpText<"Set the z/OS release of the runtime environment">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Visibility<[ClangOption, FlangOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5138,14 +5172,10 @@ defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
 
-defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
-  TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable generation of unsafe floating point "
-          "atomic instructions. May generate more efficient code, but may not "
-          "respect rounding and denormal modes, and may give incorrect results "
-          "for certain memory destinations. (AMDGPU only)">,
-  NegFlag<SetFalse>>;
+def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
+  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
+  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -7332,6 +7362,10 @@ def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
 def mlink_bitcode_file
     : Separate<["-"], "mlink-bitcode-file">,
       HelpText<"Link the given bitcode file before performing optimizations.">;
+
+def vectorize_loops : Flag<["-"], "vectorize-loops">,
+  HelpText<"Run the Loop vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7397,7 +7431,7 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">,
 DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
@@ -7447,9 +7481,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_loops : Flag<["-"], "vectorize-loops">,
-  HelpText<"Run the Loop vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;

@@ -411,7 +411,9 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force = false);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force = false);
 void setRegClassType(Register Reg, const MachineInstr *SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
@@ -422,8 +424,9 @@ Register createVirtualRegister(const MachineInstr *SpvType,
 Register createVirtualRegister(const MachineInstr *SpvType,
                                SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR);
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
@@ -440,6 +443,11 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   auto It = Mapping.find(S);
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
+
+void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                                 unsigned MinWC, unsigned ContinuedOpcode,
+                                 ArrayRef<Register> Args,
+                                 Register ReturnRegister, Register TypeID);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -1590,7 +1590,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
 
   } else {
     assert((ElemType->isRecordType() || ElemType->isVectorType() ||
-            ElemType->isOpenCLSpecificType()) && "Unexpected type");
+            ElemType->isOpenCLSpecificType() || ElemType->isMFloat8Type()) &&
+           "Unexpected type");
 
     // C99 6.7.8p13:
     //
@@ -4260,7 +4261,7 @@ static bool TryInitializerListConstruction(Sema &S,
   QualType ArrayType = S.Context.getConstantArrayType(
       E.withConst(),
       llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
-                  List->getNumInits()),
+                  List->getNumInitsWithEmbedExpanded()),
       nullptr, clang::ArraySizeModifier::Normal, 0);
   InitializedEntity HiddenArray =
       InitializedEntity::InitializeTemporary(ArrayType);
@@ -4577,7 +4578,6 @@ static void TryConstructorInitialization(Sema &S,
     if (!IsListInit &&
         (Kind.getKind() == InitializationKind::IK_Default ||
          Kind.getKind() == InitializationKind::IK_Direct) &&
-        DestRecordDecl != nullptr &&
         !(CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isImplicit()) &&
         DestRecordDecl->isAggregate() &&
         DestRecordDecl->hasUninitializedExplicitInitFields()) {
@@ -6582,6 +6582,18 @@ void InitializationSequence::InitializeFrom(Sema &S,
         return;
       case SIF_Other:
         break;
+      }
+    }
+
+    if (S.getLangOpts().HLSL && Initializer && isa<ConstantArrayType>(DestAT)) {
+      QualType SrcType = Entity.getType();
+      if (SrcType->isArrayParameterType())
+        SrcType =
+            cast<ArrayParameterType>(SrcType)->getConstantArrayType(Context);
+      if (S.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+        TryArrayCopy(S, Kind, Entity, Initializer, DestType, *this,
+                     TreatUnavailableAsInvalid);
+        return;
       }
     }
 
