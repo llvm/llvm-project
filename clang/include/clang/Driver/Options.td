@@ -2278,6 +2278,24 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
 
+defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
+  LangOpts<"AtomicRemoteMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+
+defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
+  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+
+defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
+  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
+  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
+
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -5154,14 +5172,10 @@ defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
 
-defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
-  TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable generation of unsafe floating point "
-          "atomic instructions. May generate more efficient code, but may not "
-          "respect rounding and denormal modes, and may give incorrect results "
-          "for certain memory destinations. (AMDGPU only)">,
-  NegFlag<SetFalse>>;
+def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
+  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
+  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
