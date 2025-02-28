@@ -2533,6 +2533,15 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
 
   const MemRegion *R = MemRegVal->getRegion();
 
+  // Binding directly to a symbolic region should be treated as binding
+  // to element 0.
+  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
+    QualType Ty = SymReg->getPointeeStaticType();
+    if (Ty->isVoidType())
+      Ty = StateMgr.getContext().CharTy;
+    R = GetElementZeroRegion(SymReg, Ty);
+  }
+
   // Check if the region is a struct region.
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {
     QualType Ty = TR->getValueType();
@@ -2544,15 +2553,6 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
       return bindVector(B, TR, V);
     if (Ty->isUnionType())
       return bindAggregate(B, TR, V);
-  }
-
-  // Binding directly to a symbolic region should be treated as binding
-  // to element 0.
-  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
-    QualType Ty = SymReg->getPointeeStaticType();
-    if (Ty->isVoidType())
-      Ty = StateMgr.getContext().CharTy;
-    R = GetElementZeroRegion(SymReg, Ty);
   }
 
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&

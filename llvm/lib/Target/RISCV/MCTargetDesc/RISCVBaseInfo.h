@@ -637,20 +637,6 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   llvm_unreachable("Unexpected RlistVal");
 }
 
-inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64) {
-  if (RlistVal == RLISTENCODE::INVALID_RLIST)
-    return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
-  StackAdjustment -= StackAdjBase;
-  if (StackAdjustment % 16 != 0)
-    return false;
-  SpimmVal = StackAdjustment / 16;
-  if (SpimmVal > 3)
-    return false;
-  return true;
-}
-
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
 
