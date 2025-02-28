@@ -892,6 +892,10 @@ namespace lambdas {
       return a1.x;
     });
     A a2([&] { return a2.x; }); // ok
+    A a3([=]{ return a3.x; }()); // expected-warning{{variable 'a3' is uninitialized when used within its own initialization}}
+    A a4([&]{ return a4.x; }()); // expected-warning{{variable 'a4' is uninitialized when used within its own initialization}}
+    A a5([&]{ return a5; }()); // expected-warning{{variable 'a5' is uninitialized when used within its own initialization}}
+    A a6([&]{ return a5.x; }()); // ok
   }
 }
 

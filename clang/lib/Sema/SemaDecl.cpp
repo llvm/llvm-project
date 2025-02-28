@@ -60,6 +60,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
@@ -12597,6 +12598,7 @@ namespace {
     bool isRecordType;
     bool isPODType;
     bool isReferenceType;
+    bool isInCXXOperatorCall;
 
     bool isInitList;
     llvm::SmallVector<unsigned, 4> InitFieldIndex;
@@ -12609,6 +12611,7 @@ namespace {
       isPODType = false;
       isRecordType = false;
       isReferenceType = false;
+      isInCXXOperatorCall = false;
       isInitList = false;
       if (ValueDecl *VD = dyn_cast<ValueDecl>(OrigDecl)) {
         isPODType = VD->getType().isPODType(S.Context);
@@ -12796,6 +12799,7 @@ namespace {
     }
 
     void VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
+      llvm::SaveAndRestore CxxOpCallScope(isInCXXOperatorCall, true);
       Expr *Callee = E->getCallee();
 
       if (isa<UnresolvedLookupExpr>(Callee))
@@ -12804,6 +12808,19 @@ namespace {
       Visit(Callee);
       for (auto Arg: E->arguments())
         HandleValue(Arg->IgnoreParenImpCasts());
+    }
+
+    void VisitLambdaExpr(LambdaExpr *E) {
+      if (!isInCXXOperatorCall) {
+        Inherited::VisitLambdaExpr(E);
+        return;
+      }
+
+      for (Expr *Init : E->capture_inits())
+        if (DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(Init))
+          HandleDeclRefExpr(DRE);
+        else if (Init)
+          Visit(Init);
     }
 
     void VisitUnaryOperator(UnaryOperator *E) {
