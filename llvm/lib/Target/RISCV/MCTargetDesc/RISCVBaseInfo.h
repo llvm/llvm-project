@@ -629,49 +629,13 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (!IsRV64) {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 16;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 32;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-    case RLISTENCODE::RA_S0_S9:
-      return 48;
-    case RLISTENCODE::RA_S0_S11:
-      return 64;
-    }
-  } else {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-      return 16;
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 32;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-      return 48;
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 64;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-      return 80;
-    case RLISTENCODE::RA_S0_S9:
-      return 96;
-    case RLISTENCODE::RA_S0_S11:
-      return 112;
-    }
-  }
-  llvm_unreachable("Unexpected RlistVal");
+  unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
+  // s10 and s11 are saved together.
+  if (RlistVal == RLISTENCODE::RA_S0_S11)
+    ++NumRegs;
+
+  unsigned RegSize = IsRV64 ? 8 : 4;
+  return alignTo(NumRegs * RegSize, 16);
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
