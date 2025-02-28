@@ -678,7 +678,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   // Verify if both loads have same base pointers and load sizes are same.
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
   // Support Loadsizes greater or equal to 8bits and only power of 2.
