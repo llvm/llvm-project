@@ -782,6 +782,54 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   }
 }
 
+static bool isPush(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::CM_PUSH:
+  case RISCV::QC_CM_PUSH:
+  case RISCV::QC_CM_PUSHFP:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isPop(unsigned Opcode) {
+  // There are other pops but these are the only ones introduced during this
+  // pass.
+  switch (Opcode) {
+  case RISCV::CM_POP:
+  case RISCV::QC_CM_POP:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static unsigned getPushOpcode(RISCVMachineFunctionInfo::PushPopKind Kind,
+                              bool HasFP) {
+  switch (Kind) {
+  case RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp:
+    return RISCV::CM_PUSH;
+  case RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp:
+    return HasFP ? RISCV::QC_CM_PUSHFP : RISCV::QC_CM_PUSH;
+  default:
+    llvm_unreachable("Unhandled PushPopKind");
+  }
+}
+
+static unsigned getPopOpcode(RISCVMachineFunctionInfo::PushPopKind Kind) {
+  // There are other pops but they are introduced later by the Push/Pop
+  // Optimizer.
+  switch (Kind) {
+  case RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp:
+    return RISCV::CM_POP;
+  case RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp:
+    return RISCV::QC_CM_POP;
+  default:
+    llvm_unreachable("Unhandled PushPopKind");
+  }
+}
+
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -881,7 +929,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
-      FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
+      isPush(FirstFrameSetup->getOpcode())) {
     // Use available stack adjustment in push instruction to allocate additional
     // stack space. Align the stack size down to a multiple of 16. This is
     // needed for RVE.
@@ -932,9 +980,15 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // The frame pointer does need to be reserved from register allocation.
     assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
-    RI->adjustReg(MBB, MBBI, DL, FPReg, SPReg,
-                  StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
-                  MachineInstr::FrameSetup, getStackAlign());
+    // Xqccmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
+    // to update it again, but we do need to emit the `.cfi_def_cfa` below.
+    if (RVFI->getPushPopKind(MF) !=
+        RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
+      RI->adjustReg(
+          MBB, MBBI, DL, FPReg, SPReg,
+          StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
+          MachineInstr::FrameSetup, getStackAlign());
+    }
 
     // Emit ".cfi_def_cfa $fp, RVFI->getVarArgsSaveSize()"
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
@@ -1192,9 +1246,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Recover callee-saved registers.
   emitCFIForCSI<CFIRestoreRegisterEmitter>(MBB, MBBI, getUnmanagedCSI(MF, CSI));
 
-  bool ApplyPop = RVFI->isPushable(MF) && MBBI != MBB.end() &&
-                  MBBI->getOpcode() == RISCV::CM_POP;
-  if (ApplyPop) {
+  if (RVFI->isPushable(MF) && MBBI != MBB.end() && isPop(MBBI->getOpcode())) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space. Align the stack size down to a multiple of 16. This is needed for
     // RVE.
@@ -1815,7 +1867,8 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
           FixedCSRFIMap, [&](auto P) { return P.first == CS.getReg(); });
       if (FII != std::end(FixedCSRFIMap)) {
         int64_t Offset;
-        if (RVFI->isPushable(MF))
+        if (RVFI->getPushPopKind(MF) ==
+            RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp)
           Offset = -((FII->second + RVFI->getRVPushRegs() + 1) * (int64_t)Size);
         else
           Offset = FII->second * (int64_t)Size;
@@ -1880,8 +1933,10 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
       int RegEnc = RVFI->getRVPushRlist();
+
+      unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF));
       MachineInstrBuilder PushBuilder =
-          BuildMI(MBB, MI, DL, TII.get(RISCV::CM_PUSH))
+          BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameSetup);
       PushBuilder.addImm((int64_t)RegEnc);
       PushBuilder.addImm(0);
@@ -2034,8 +2089,9 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   if (RVFI->isPushable(*MF)) {
     int RegEnc = RVFI->getRVPushRlist();
     if (RegEnc != llvm::RISCVZC::RLISTENCODE::INVALID_RLIST) {
+      unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
       MachineInstrBuilder PopBuilder =
-          BuildMI(MBB, MI, DL, TII.get(RISCV::CM_POP))
+          BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameDestroy);
       // Use encoded number to represent registers to restore.
       PopBuilder.addImm(RegEnc);
