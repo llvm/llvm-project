@@ -81,7 +81,8 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
         return false;
     } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
       if (!II->isLifetimeStartOrEnd() && !II->isDroppable() &&
-          II->getIntrinsicID() != Intrinsic::fake_use)
+          II->getIntrinsicID() != Intrinsic::fake_use &&
+          II->getIntrinsicID() != Intrinsic::coro_outside_frame)
         return false;
     } else if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkersOrDroppableInsts(BCI))

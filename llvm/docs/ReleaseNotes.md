@@ -145,6 +145,10 @@ Changes to the CodeGen infrastructure
 Changes to the Metadata Info
 ---------------------------------
 
+* The `coro.outside.frame` metadata has been replaced by [an intrinsic with the
+  same name](coro.outside.frame). The old metadata is still parsed but has no
+  effect.
+
 Changes to the Debug Info
 ---------------------------------
 

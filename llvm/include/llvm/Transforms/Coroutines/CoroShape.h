@@ -57,6 +57,7 @@ struct Shape {
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
+  SmallVector<CoroOutsideFrameInst *, 8> OutsideFrames;
 
   // Values invalidated by replaceSwiftErrorOps()
   SmallVector<CallInst *, 2> SwiftErrorOps;
@@ -69,6 +70,7 @@ struct Shape {
     CoroSuspends.clear();
     CoroAwaitSuspends.clear();
     SymmetricTransfers.clear();
+    OutsideFrames.clear();
 
     SwiftErrorOps.clear();
 
