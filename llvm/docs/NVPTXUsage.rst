@@ -685,12 +685,18 @@ Syntax:
 Overview:
 """""""""
 
-The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a non-atomic non-volatile ``llvm.memset`` that writes ``undef`` to the destination address range ``[%ptr, %ptr + immarg)``. 
-Subsequent reads from the address range may read ``undef`` until the memory is overwritten with a different value.
-These operations *hint* the implementation that data in the L2 cache can be destructively discarded without writing it back to memory. 
-The operand ``immarg`` is an integer constant that specifies the length in bytes of the address range ``[%ptr, %ptr + immarg)`` to write ``undef`` into. 
+The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a non-atomic 
+non-volatile ``llvm.memset`` that writes ``undef`` to the destination 
+address range ``[%ptr, %ptr + immarg)``. 
+Subsequent reads from the address range may read ``undef`` until the memory is overwritten 
+with a different value.
+These operations *hint* the implementation that data in the L2 cache can be destructively 
+discarded without writing it back to memory. 
+The operand ``immarg`` is an integer constant that specifies the length in bytes of the 
+address range ``[%ptr, %ptr + immarg)`` to write ``undef`` into. 
 The only supported value for the ``immarg`` operand is ``128``. 
-If generic addressing is used and the specified address does not fall within the address window of global memory (``addrspace(1)``) the behavior is undefined.
+If generic addressing is used and the specified address does not fall within the 
+address window of global memory (``addrspace(1)``) the behavior is undefined.
 
 .. code-block:: llvm
  
@@ -702,10 +708,7 @@ If generic addressing is used and the specified address does not fall within the
    %fb = freeze i64 %b  ;; freezes undef to stable bit-pattern
    ;; %fa may compare different to %fb!
    
-For more information, refer to the  `CUDA C++ discard documentation <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__ and the `PTX ISA discard documentation <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
-
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`_.
+For more information, refer to the  `CUDA C++ discard documentation <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__ and to the `PTX ISA discard documentation <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
