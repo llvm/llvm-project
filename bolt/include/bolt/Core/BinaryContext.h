@@ -273,6 +273,10 @@ class BinaryContext {
   /// DWARF line info for CUs.
   std::map<unsigned, DwarfLineTable> DwarfLineTablesCUMap;
 
+  /// Container to cache results about functions that their paths lead to
+  /// a no-return function.
+  std::unordered_map<BinaryFunction *, bool> CallsNoReturnFunction;
+
   /// Internal helper for removing section name from a lookup table.
   void deregisterSectionName(const BinarySection &Section);
 
@@ -281,6 +285,16 @@ public:
       Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
       StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
       std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
+
+  void setHasPathToNoReturn(BinaryFunction *Func, bool value = true) {
+    CallsNoReturnFunction[Func] = value;
+  }
+
+  bool cachedInNoReturnMap(BinaryFunction *Func) {
+    return CallsNoReturnFunction.find(Func) != CallsNoReturnFunction.end();
+  }
+
+  bool hasPathToNoReturn(BinaryFunction *Func);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being

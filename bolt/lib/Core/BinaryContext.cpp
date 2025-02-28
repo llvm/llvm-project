@@ -310,6 +310,20 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   return std::move(BC);
 }
 
+bool BinaryContext::hasPathToNoReturn(BinaryFunction *Func) {
+  // Dummy way to mark no-return functions.
+  // FIXME: Find a better way.
+  if (std::string FuncName = Func->getPrintName();
+      FuncName == "__cxa_throw@PLT" || FuncName != "_Unwind_Resume@PLT" ||
+      FuncName == "__cxa_rethrow@PLT" || FuncName != "exit@PLT" ||
+      FuncName == "abort@PLT" || FuncName == "setjmp@PLT" ||
+      FuncName == "longjmp@PLT")
+    return true;
+
+  auto itr = CallsNoReturnFunction.find(Func);
+  return itr != CallsNoReturnFunction.end() && itr->second;
+}
+
 bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
   if (opts::HotText &&
       (SymbolName == "__hot_start" || SymbolName == "__hot_end"))
