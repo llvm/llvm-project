@@ -39,12 +39,13 @@ struct A {
   A& operator=(const A&);
 };
 
-class Abstract
-{
-    virtual ~Abstract() = 0;
+class Abstract {
+  virtual ~Abstract() = 0;
 };
 
 // Types for reference_{constructs/converts}_from_temporary
+
+#if TEST_STD_VER >= 23
 
 struct NonPOD {
   NonPOD(int);
@@ -82,5 +83,7 @@ public:
   operator int();
   explicit operator int&();
 };
+
+#endif
 
 #endif // TEST_META_UNARY_COMP_COMMON_H
