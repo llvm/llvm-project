@@ -302,3 +302,19 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
   %t1 = bitcast <2 x i16> %sel to i32
   ret i32 %t1
 }
+
+define i32 @pr129181() {
+; SSE-LABEL: pr129181:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pr129181:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    retq
+entry:
+  %x = insertelement <4 x i32> zeroinitializer, i32 0, i32 0
+  %cmp = icmp ult <4 x i32> %x, splat (i32 1)
+  %sel = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 1, i32 poison>
+  %reduce = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sel)
+  ret i32 %reduce
+}
