@@ -144,12 +144,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
   // CHECK:      llvm.switch %0 : i32, ^[[BB3]] [
   // CHECK-NEXT:   1: ^[[BB4:.*]],
   // CHECK-NEXT:   2: ^[[BB5:.*]],
-  // CHECK-NEXT:   3: ^[[BB6:.*]]
+  // CHECK-NEXT:   3: ^[[BB6:.*]],
+  // CHECK-NEXT:   -3: ^[[BB6:.*]]
   // CHECK-NEXT: ]
   llvm.switch %0 : i32, ^bb3 [
     1: ^bb4,
     2: ^bb5,
-    3: ^bb6
+    3: ^bb6,
+    -3: ^bb6
   ]
 
 // CHECK: ^[[BB3]]
