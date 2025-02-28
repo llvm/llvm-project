@@ -549,6 +549,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
       CmdArgs.push_back(
           Args.MakeArgString("-mllvm=-thinlto-distributor-arg=" + A));
+
+    for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-mllvm=-thinlto-remote-compiler-arg=-mllvm=") +
+          A->getValue(0)));
+    }
   }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))

@@ -5,6 +5,8 @@
 // RUN: echo "--target=x86_64-linux-gnu \
 // RUN:   -Xthinlto-distributor=distarg1 \
 // RUN:   -Xthinlto-distributor=distarg2,distarg3 \
+// RUN:   -mllvm llvm1 \
+// RUN:   -mllvm=llvm2 \
 // RUN:   -fuse-ld=lld" > %t.rsp
 
 
@@ -18,6 +20,8 @@
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg1"
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg2"
 // CHECK-SAME: "-mllvm=-thinlto-distributor-arg=distarg3"
+// CHECK-SAME: "-mllvm=-thinlto-remote-compiler-arg=-mllvm=llvm1"
+// CHECK-SAME: "-mllvm=-thinlto-remote-compiler-arg=-mllvm=llvm2"
 
 
 /// Check that options are not added without --thinlto-distributor= and
