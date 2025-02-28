@@ -940,6 +940,16 @@ func.func @max_pool2d_nan_propagate(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x4
 
 // -----
 
+// CHECK-LABEL: @max_pool2d_nan_ignore_int
+func.func @max_pool2d_nan_ignore_int(%arg0: tensor<1x6x34x62xi8>) -> (tensor<1x4x32x62xi8>) {
+  // CHECK: linalg.pooling_nhwc_max
+  // CHECK-NOT: linalg.generic
+  %0 = tosa.max_pool2d %arg0 {pad = array<i64: 0, 0, 0, 0>, kernel = array<i64: 3, 3>, stride = array<i64: 1, 1>, nan_mode = "IGNORE"} : (tensor<1x6x34x62xi8>) -> tensor<1x4x32x62xi8>
+  return %0: tensor<1x4x32x62xi8>
+}
+
+// -----
+
 // CHECK-LABEL: @max_pool2d_nan_ignore
 func.func @max_pool2d_nan_ignore(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x4x32x62xf32>) {
   // CHECK-NOT: linalg.pooling_nhwc_max
