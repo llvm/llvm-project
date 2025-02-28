@@ -23,6 +23,8 @@ namespace lldb_private {
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
 class XcodeSDK {
   std::string m_name;
+  std::optional<std::string>
+      m_sysroot_path; // TODO: should this be std::optional<FileSpec>?
 
 public:
   /// Different types of Xcode SDKs.
@@ -62,6 +64,8 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
+  XcodeSDK(std::string name, std::string sysroot)
+      : m_name(std::move(name)), m_sysroot_path(std::move(sysroot)) {}
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
@@ -79,6 +83,7 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
+  std::optional<llvm::StringRef> GetSysroot() const;
   /// Whether this Xcode SDK supports Swift.
   bool SupportsSwift() const;
 

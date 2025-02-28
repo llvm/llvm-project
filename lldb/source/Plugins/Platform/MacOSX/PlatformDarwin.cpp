@@ -79,6 +79,14 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   return {};
 }
 
+static bool XcodeSysrootExists(XcodeSDK const &sdk) {
+  auto maybe_sysroot = sdk.GetSysroot();
+  if (!maybe_sysroot)
+    return false;
+
+  return FileSystem::Instance().Exists(*maybe_sysroot);
+}
+
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
@@ -1395,6 +1403,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
         llvm::formatv("No symbol file available for module '{0}'",
                       module.GetFileSpec().GetFilename().AsCString("")));
 
+  std::string sysroot;
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
   XcodeSDK merged_sdk;
@@ -1424,6 +1433,9 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
                       llvm::toString(sdk_or_err.takeError())));
 
   auto [sdk, _] = std::move(*sdk_or_err);
+
+  if (XcodeSysrootExists(sdk))
+    return sdk.GetSysroot()->str();
 
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
