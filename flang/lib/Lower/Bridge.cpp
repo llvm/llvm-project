@@ -4640,10 +4640,10 @@ private:
 
     bool isInDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
 
-    bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
-                           Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
-                          !isInDeviceContext;
+    bool isCUDATransfer =
+        IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
+        isCUDATransfer &&
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
 

@@ -1303,6 +1303,18 @@ inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Get the number of distinct symbols with CUDA device
 // attribute in the expression.
 template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
@@ -1315,10 +1327,40 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   return symbols.size();
 }
 
+// Get the number of distinct symbols with CUDA managed or unified
+// attribute in the expression.
+template <typename A>
+inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
+  semantics::UnorderedSymbolSet symbols;
+  for (const Symbol &sym : CollectCudaSymbols(expr)) {
+    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
+      symbols.insert(sym);
+    }
+  }
+  return symbols.size();
+}
+
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
+}
+
+// Check if any of the symbols part of the lhs or rhs expression has a CUDA
+// device attribute.
+template <typename A, typename B>
+inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
+  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
+
+  // Special case where only managed or unifed symbols are involved. This is
+  // performed on the host.
+  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
+      rhsNbSymbols == 1) {
+    return false;
+  }
+  return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
