@@ -7,7 +7,7 @@ define i32 @test_ld_param_const(ptr byval(i32) %a) {
 ; CHECK-LABEL: test_ld_param_const(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_ld_param_const_param_0+4];
@@ -22,15 +22,13 @@ define i32 @test_ld_param_non_const(ptr byval([10 x i32]) %a, i32 %b) {
 ; CHECK-LABEL: test_ld_param_non_const(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %rd1, test_ld_param_non_const_param_0;
-; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
-; CHECK-NEXT:    cvta.to.local.u64 %rd3, %rd2;
-; CHECK-NEXT:    ld.param.s32 %rd4, [test_ld_param_non_const_param_1];
-; CHECK-NEXT:    add.s64 %rd5, %rd3, %rd4;
-; CHECK-NEXT:    ld.local.u32 %r1, [%rd5];
+; CHECK-NEXT:    ld.param.s32 %rd2, [test_ld_param_non_const_param_1];
+; CHECK-NEXT:    add.s64 %rd3, %rd1, %rd2;
+; CHECK-NEXT:    ld.local.u32 %r1, [%rd3];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %p2 = getelementptr i8, ptr %a, i32 %b
@@ -89,15 +87,13 @@ define i32 @test_modify_param(ptr byval([10 x i32]) %a, i32 %b, i32 %c ) {
 ; CHECK-LABEL: test_modify_param(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %rd1, test_modify_param_param_0;
-; CHECK-NEXT:    cvta.local.u64 %rd2, %rd1;
-; CHECK-NEXT:    cvta.to.local.u64 %rd3, %rd2;
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_modify_param_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_modify_param_param_2];
-; CHECK-NEXT:    st.local.u32 [%rd3+2], %r1;
+; CHECK-NEXT:    st.local.u32 [%rd1+2], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %p2 = getelementptr i8, ptr %a, i32 2
@@ -111,7 +107,7 @@ define i32 @test_multi_block(ptr byval([10 x i32]) %a, i1 %p) {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_multi_block_param_1];

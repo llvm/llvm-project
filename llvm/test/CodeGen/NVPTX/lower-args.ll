@@ -33,30 +33,28 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; PTX-LABEL: load_alignment(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;
-; PTX-NEXT:    .reg .b64 %rd<10>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %rd1, load_alignment_param_0;
-; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
-; PTX-NEXT:    cvta.to.local.u64 %rd3, %rd2;
-; PTX-NEXT:    ld.local.u64 %rd4, [%rd3];
-; PTX-NEXT:    ld.local.u64 %rd5, [%rd3+8];
-; PTX-NEXT:    add.s64 %rd6, %rd3, 16;
-; PTX-NEXT:    cvta.local.u64 %rd7, %rd6;
-; PTX-NEXT:    ld.local.u32 %r1, [%rd3+16];
-; PTX-NEXT:    ld.u32 %r2, [%rd4];
+; PTX-NEXT:    ld.local.u64 %rd2, [%rd1];
+; PTX-NEXT:    ld.local.u64 %rd3, [%rd1+8];
+; PTX-NEXT:    add.s64 %rd4, %rd1, 16;
+; PTX-NEXT:    cvta.local.u64 %rd5, %rd4;
+; PTX-NEXT:    ld.local.u32 %r1, [%rd1+16];
+; PTX-NEXT:    ld.u32 %r2, [%rd2];
 ; PTX-NEXT:    add.s32 %r3, %r2, %r1;
-; PTX-NEXT:    st.u32 [%rd5], %r3;
+; PTX-NEXT:    st.u32 [%rd3], %r3;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd7;
+; PTX-NEXT:    st.param.b64 [param0], %rd5;
 ; PTX-NEXT:    .param .b64 retval0;
 ; PTX-NEXT:    call.uni (retval0),
 ; PTX-NEXT:    escape,
 ; PTX-NEXT:    (
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    );
-; PTX-NEXT:    ld.param.b64 %rd8, [retval0];
+; PTX-NEXT:    ld.param.b64 %rd6, [retval0];
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
 entry:

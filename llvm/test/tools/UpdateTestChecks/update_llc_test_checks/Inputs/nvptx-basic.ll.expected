@@ -52,7 +52,7 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
 ; CHECK-LABEL: callee_St8x4(
 ; CHECK:         // @callee_St8x4
 ; CHECK-NEXT:  {
-; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

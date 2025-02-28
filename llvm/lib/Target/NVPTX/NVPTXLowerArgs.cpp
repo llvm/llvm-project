@@ -409,11 +409,11 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
     Worklist.pop();
 
     for (User *CurUser : Ctx.InitialVal->users()) {
-      if (auto *I = dyn_cast<LoadInst>(CurUser)) {
+      if (auto *I = dyn_cast<LoadInst>(CurUser))
         Loads.push_back({I, Ctx.Offset});
-      } else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser)) {
+      else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser))
         Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
-      } else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
+      else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
         APInt OffsetAccumulated =
             APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
 
