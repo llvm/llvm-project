@@ -53743,21 +53743,12 @@ static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
   SDValue Op = N.getOperand(0);
   APInt OpConst = Op.getConstantOperandAPInt(1);
   APInt SrlConst = N.getConstantOperandAPInt(1);
+  uint64_t SrlConstVal = SrlConst.getZExtValue();
   unsigned Opcode = Op.getOpcode();
 
-  switch (Opcode) {
-  default:
+  if (SrlConst.ule(32) ||
+      (Opcode == ISD::ADD && OpConst.countr_zero() < SrlConstVal))
     return SDValue();
-  case ISD::ADD:
-    if (OpConst.countr_zero() < SrlConst.getZExtValue())
-      return SDValue();
-    [[fallthrough]];
-  case ISD::OR:
-  case ISD::XOR:
-    if (SrlConst.ule(32))
-      return SDValue();
-    break;
-  }
 
   SDValue OpLhsSrl =
       DAG.getNode(ISD::SRL, DL, MVT::i64, Op.getOperand(0), N.getOperand(1));
@@ -53766,8 +53757,7 @@ static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
   APInt NewOpConstVal = OpConst.lshr(SrlConst).trunc(VT.getSizeInBits());
   SDValue NewOpConst = DAG.getConstant(NewOpConstVal, DL, VT);
   SDValue NewOpNode = DAG.getNode(Opcode, DL, VT, Trunc, NewOpConst);
-  EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
+  EVT CleanUpVT = EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConstVal);
 
   if (Opcode == ISD::ADD)
     return DAG.getZeroExtendInReg(NewOpNode, DL, CleanUpVT);
