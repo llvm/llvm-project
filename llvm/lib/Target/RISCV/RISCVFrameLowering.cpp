@@ -981,7 +981,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // The frame pointer does need to be reserved from register allocation.
     assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
-    // Xqxxmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
+    // Xqccmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
     // to update it again, but we do need to emit the `.cfi_def_cfa` below.
     if (RVFI->getPushPopKind(MF) !=
         RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
