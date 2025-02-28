@@ -47,6 +47,12 @@ private:
 public:
   RISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI) : TRI(TRI) {}
 
+  bool isCopyToV0(const MachineInstr &MI) {
+    return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
+           MI.getOperand(1).getReg().isVirtual() &&
+           MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
+  }
+
   bool isSoleUseCopyToV0(SUnit &SU) {
     if (SU.Succs.size() != 1)
       return false;
@@ -58,11 +64,7 @@ public:
     SUnit &DepSU = *Dep.getSUnit();
     if (DepSU.isBoundaryNode())
       return false;
-
-    const MachineInstr *DepMI = DepSU.getInstr();
-    return DepMI->isCopy() && DepMI->getOperand(0).getReg() == RISCV::V0 &&
-           DepMI->getOperand(1).getReg().isVirtual() &&
-           DepMI->getOperand(1).getSubReg() == RISCV::NoSubRegister;
+    return isCopyToV0(*DepSU.getInstr());
   }
 
   void apply(ScheduleDAGInstrs *DAG) override {
