@@ -508,7 +508,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
 /// Verify that the SDWA selection operand \p SrcSelOpName of the SDWA
 /// instruction \p MI can be combined with the selection \p OpSel.
 static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
-                            unsigned SrcSelOpName, SdwaSel OpSel) {
+                            AMDGPU::OpName SrcSelOpName, SdwaSel OpSel) {
   assert(TII->isSDWA(MI.getOpcode()));
 
   const MachineOperand *SrcSelOp = TII->getNamedOperand(MI, SrcSelOpName);
@@ -521,7 +521,7 @@ static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
 /// instruction \p MI named by \p SrcOpName and that the SDWA
 /// selection \p SrcSelOpName can be combined with the \p OpSel.
 static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
-                            unsigned SrcOpName, unsigned SrcSelOpName,
+                            AMDGPU::OpName SrcOpName, AMDGPU::OpName SrcSelOpName,
                             MachineOperand *Op, SdwaSel OpSel) {
   assert(TII->isSDWA(MI.getOpcode()));
 
