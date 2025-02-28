@@ -2307,6 +2307,7 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
 
 // Apply types parsed from demangled function declarations.
 void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
+  DenseMap<Function *, CallInst *> Ptrcasts;
   for (auto It : FDeclPtrTys) {
     Function *F = It.first;
     for (auto *U : F->users()) {
@@ -2326,6 +2327,9 @@ void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
             B.SetCurrentDebugLocation(DebugLoc());
             buildAssignPtr(B, ElemTy, Arg);
           }
+        } else if (isa<GetElementPtrInst>(Param)) {
+          replaceUsesOfWithSpvPtrcast(Param, normalizeType(ElemTy), CI,
+                                      Ptrcasts);
         } else if (isa<Instruction>(Param)) {
           GR->addDeducedElementType(Param, normalizeType(ElemTy));
           // insertAssignTypeIntrs() will complete buildAssignPtr()
