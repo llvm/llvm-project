@@ -33,6 +33,12 @@ namespace RISCVInsnOpcode {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVInsnOpcode
 
+namespace RISCVVInversePseudosTable {
+using namespace RISCV;
+#define GET_RISCVVInversePseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
