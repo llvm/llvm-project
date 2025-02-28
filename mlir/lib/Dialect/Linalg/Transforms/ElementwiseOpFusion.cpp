@@ -814,6 +814,55 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
   }
   return success();
 }
+// Create an expanded fused op that retains the name for certain ops
+// such as fill, copy and transpose and produce a generic op for
+// rest of linalg ops.
+Operation *createFusedOpForReshapeByExpansion(
+    PatternRewriter &rewriter, LinalgOp linalgOp, TypeRange resultTypes,
+    ArrayRef<Value> expandedOpOperands, ArrayRef<Value> outputs,
+    ArrayRef<AffineMap> expandedOpIndexingMaps, ExpansionInfo &expansionInfo,
+    SmallVector<ReassociationIndices> reassociation) {
+
+  return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
+      .Case<TransposeOp>([&](TransposeOp op) {
+        applyPermutationToVector(reassociation, op.getPermutation());
+        SmallVector<int64_t> newPerm;
+        for (auto reassoc : reassociation) {
+          for (auto dim : reassoc) {
+            newPerm.push_back(dim);
+          }
+        }
+        return rewriter.create<TransposeOp>(
+            linalgOp.getLoc(), expandedOpOperands[0], outputs[0], newPerm);
+      })
+      .Case<FillOp, CopyOp>([&](Operation *op) {
+        return clone(rewriter, linalgOp, resultTypes,
+                     llvm::to_vector(llvm::concat<Value>(
+                         llvm::to_vector(expandedOpOperands),
+                         llvm::to_vector(outputs))));
+      })
+      .Default([&](Operation *op) {
+        // The iterator types of the expanded op are all parallel.
+        SmallVector<utils::IteratorType> iteratorTypes(
+            expansionInfo.getExpandedOpNumDims(),
+            utils::IteratorType::parallel);
+        for (auto [i, type] : llvm::enumerate(linalgOp.getIteratorTypesArray()))
+          for (auto j : expansionInfo.getExpandedDims(i))
+            iteratorTypes[j] = type;
+        Operation *fused = rewriter.create<GenericOp>(
+            linalgOp.getLoc(), resultTypes, expandedOpOperands, outputs,
+            expandedOpIndexingMaps, iteratorTypes);
+        Region &fusedRegion = fused->getRegion(0);
+        Region &originalRegion = linalgOp->getRegion(0);
+        rewriter.cloneRegionBefore(originalRegion, fusedRegion,
+                                   fusedRegion.begin());
+
+        // Update the index accesses after the expansion.
+        updateExpandedGenericOpRegion(rewriter, linalgOp.getLoc(), fusedRegion,
+                                      expansionInfo);
+        return fused;
+      });
+}
 
 /// Implements the fusion of a tensor.collapse_shape or a tensor.expand_shape op
 /// and a generic op as explained in `isFusableWithReshapeByExpansion`. Assumes
@@ -919,51 +968,13 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
     }
   }
 
-  // The iterator types of the expanded op are all parallel.
-  SmallVector<utils::IteratorType> iteratorTypes(
-      expansionInfo.getExpandedOpNumDims(), utils::IteratorType::parallel);
-  for (auto [i, type] : llvm::enumerate(linalgOp.getIteratorTypesArray()))
-    for (auto j : expansionInfo.getExpandedDims(i))
-      iteratorTypes[j] = type;
-
   TypeRange resultTypes = ValueRange(outputs).getTypes();
-  Operation *fusedOp;
-
-  TypeSwitch<Operation *>(linalgOp.getOperation())
-      .Case<GenericOp>([&](GenericOp op) {
-        fusedOp = rewriter.create<GenericOp>(
-            linalgOp.getLoc(), resultTypes, expandedOpOperands, outputs,
-            expandedOpIndexingMaps, iteratorTypes);
-        Region &fusedRegion = fusedOp->getRegion(0);
-        Region &originalRegion = linalgOp->getRegion(0);
-        rewriter.cloneRegionBefore(originalRegion, fusedRegion,
-                                   fusedRegion.begin());
-
-        // Update the index accesses after the expansion.
-        updateExpandedGenericOpRegion(rewriter, loc, fusedRegion,
-                                      expansionInfo);
-      })
-      .Case<TransposeOp>([&](TransposeOp op) {
-        SmallVector<ReassociationIndices> reassociation =
-            isExpanding ? expandingReshapeOp.getReassociationIndices()
-                        : collapsingReshapeOp.getReassociationIndices();
-        applyPermutationToVector(reassociation, op.getPermutation());
-        SmallVector<int64_t> newPerm;
-        for (auto reassoc : reassociation) {
-          for (auto dim : reassoc) {
-            newPerm.push_back(dim);
-          }
-        }
-        fusedOp = rewriter.create<TransposeOp>(
-            linalgOp.getLoc(), expandedOpOperands[0], outputs[0], newPerm);
-      })
-      // All other expandable linalg ops that are not generic or transpose can
-      // be cloned with the expanded input and output operands.
-      .Default([&](Operation *op) {
-        fusedOp = clone(
-            rewriter, linalgOp, resultTypes,
-            llvm::to_vector(llvm::concat<Value>(expandedOpOperands, outputs)));
-      });
+  SmallVector<ReassociationIndices> reassociationBeforeExpansion =
+      isExpanding ? expandingReshapeOp.getReassociationIndices()
+                  : collapsingReshapeOp.getReassociationIndices();
+  Operation *fusedOp = createFusedOpForReshapeByExpansion(
+      rewriter, linalgOp, resultTypes, expandedOpOperands, outputs,
+      expandedOpIndexingMaps, expansionInfo, reassociationBeforeExpansion);
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
   SmallVector<Value> resultVals;
