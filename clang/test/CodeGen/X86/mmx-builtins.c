@@ -563,7 +563,13 @@ __m64 test_mm_slli_pi32(__m64 a) {
 
 __m64 test_mm_slli_si64(__m64 a) {
   // CHECK-LABEL: test_mm_slli_si64
-  // CHECK: call <2 x i64> @llvm.x86.sse2.pslli.q(
+  // CHECK:  %__m.addr.i = alloca <1 x i64>, align 8
+  // CHECK:  %__count.addr.i = alloca i32, align 4
+  // CHECK:  %5 = load <1 x i64>, ptr %__m.addr.i, align 8
+  // CHECK:  %6 = bitcast <1 x i64> %5 to i64
+  // CHECK:  %7 = load i32, ptr %__count.addr.i, align 4
+  // CHECK:  %sh_prom.i = zext i32 %7 to i64
+  // CHECK:  %shl.i = shl i64 %6, %sh_prom.i
   return _mm_slli_si64(a, 3);
 }
 
@@ -623,7 +629,13 @@ __m64 test_mm_srli_pi32(__m64 a) {
 
 __m64 test_mm_srli_si64(__m64 a) {
   // CHECK-LABEL: test_mm_srli_si64
-  // CHECK: call <2 x i64> @llvm.x86.sse2.psrli.q(
+  // CHECK:  %__m.addr.i = alloca <1 x i64>, align 8
+  // CHECK:  %__count.addr.i = alloca i32, align 4
+  // CHECK:  %5 = load <1 x i64>, ptr %__m.addr.i, align 8
+  // CHECK:  %6 = bitcast <1 x i64> %5 to i64
+  // CHECK:  %7 = load i32, ptr %__count.addr.i, align 4
+  // CHECK:  %sh_prom.i = zext i32 %7 to i64
+  // CHECK:  %shr.i = ashr i64 %6, %sh_prom.i
   return _mm_srli_si64(a, 3);
 }
 
