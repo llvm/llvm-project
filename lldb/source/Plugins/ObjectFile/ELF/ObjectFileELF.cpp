@@ -658,8 +658,9 @@ size_t ObjectFileELF::GetModuleSpecifications(
           // Get the section header data from the object file.
           DataExtractor sh_data = GetSectionHeadersFromELFData(header, data);
 
-          auto read_sect_callback = [&](const elf::ELFSectionHeader &sh,
-                                        lldb_private::DataExtractor &sh_data) -> bool {
+          auto read_sect_callback =
+              [&](const elf::ELFSectionHeader &sh,
+                  lldb_private::DataExtractor &sh_data) -> bool {
             return GetSectionContentsFromELFData(sh, data, sh_data);
           };
           GetSectionHeaderInfo(header, sh_data, section_headers,
@@ -1505,6 +1506,13 @@ size_t ObjectFileELF::GetSectionHeaderInfo(const elf::ELFHeader &header,
   }
   if (idx < section_headers.size())
     section_headers.resize(idx);
+  // Sometimes we are able to read the section header memory from an in memory
+  // ELF file, but all section header data has been set to zeroes. Remove any
+  // SHT_NULL sections if we have more than 1. The first entry in the section
+  // headers should always be a SHT_NULL section, but none of the others should
+  // be.
+  if (section_headers.size() > 1 && section_headers[1].sh_type == SHT_NULL)
+    section_headers.erase(section_headers.begin() + 1);
 
   const unsigned strtab_idx = header.e_shstrndx;
   if (strtab_idx && strtab_idx < section_headers.size()) {
@@ -3832,7 +3840,9 @@ DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
     // We have a ELF file in process memory, read the program header data from
     // the process.
     if (ProcessSP process_sp = m_process_wp.lock()) {
-      const addr_t data_addr = m_memory_addr + H.p_offset;
+      const lldb::offset_t base_file_addr = GetBaseAddress().GetFileAddress();
+      const addr_t load_bias = m_memory_addr - base_file_addr;
+      const addr_t data_addr = H.p_vaddr + load_bias;
       if (DataBufferSP data_sp = ReadMemory(process_sp, data_addr, H.p_memsz))
         return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
     }
