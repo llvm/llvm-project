@@ -1128,9 +1128,34 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
 
+    // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
+    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+      Value *BCSrc = BC->getOperand(0);
+
+      // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
+      if (isTypeLegal(BCSrc->getType())) {
+        Module *M = IC.Builder.GetInsertBlock()->getModule();
+        Function *Remangled =
+            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
+
+        // Make sure convergence tokens are preserved.
+        // TODO: CreateIntrinsic should allow directly copying bundles
+        SmallVector<OperandBundleDef, 2> OpBundles;
+        II.getOperandBundlesAsDefs(OpBundles);
+
+        SmallVector<Value *, 3> Args(II.args());
+        Args[0] = BCSrc;
+
+        CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
+        NewCall->takeName(&II);
+        return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
     return std::nullopt;
   }
   case Intrinsic::amdgcn_writelane: {
+    // TODO: Fold bitcast like readlane.
     if (simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
     return std::nullopt;
@@ -1560,6 +1585,10 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
+  case Intrinsic::amdgcn_readfirstlane:
+    // TODO: For a vector extract, should reduce the intrinsic call type.
+    SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    return std::nullopt;
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:

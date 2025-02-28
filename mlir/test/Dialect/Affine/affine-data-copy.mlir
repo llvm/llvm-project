@@ -354,3 +354,68 @@ func.func @arbitrary_memory_space() {
   }
   return
 }
+
+// CHECK-LABEL: zero_ranked
+func.func @zero_ranked(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+  return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_without_dma
+func.func @scalar_memref_copy_without_dma() {
+    %false = arith.constant false
+    %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    affine.store %false, %4[] : memref<i1>
+
+    // CHECK: %[[FALSE:.*]] = arith.constant false
+    // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+    return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_in_loop
+func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+
+  // CHECK: %[[FALSE:.*]] = arith.constant false
+  // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+  // CHECK: %[[TARGET:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: memref.copy %alloc, %[[TARGET]] : memref<i1> to memref<i1>
+  // CHECK: %[[FAST_MEMREF:.*]] = memref.alloc() : memref<480xi1>
+  // CHECK: affine.for %{{.*}} = 0 to 480 {
+  // CHECK:   %{{.*}} = affine.load %arg0[%{{.*}}] : memref<480xi1>
+  // CHECK:   affine.store %{{.*}}, %[[FAST_MEMREF]][%{{.*}}] : memref<480xi1>
+  // CHECK: }
+  // CHECK: affine.for %arg1 = 0 to 480 {
+  // CHECK:   %[[L0:.*]] = affine.load %[[FAST_MEMREF]][%arg1] : memref<480xi1>
+  // CHECK:   %[[L1:.*]] = affine.load %[[TARGET]][] : memref<i1>
+  // CHECK:   %[[CMPI:.*]] = arith.cmpi slt, %[[L0]], %[[L1]] : i1
+  // CHECK:   %[[SELECT:.*]] = arith.select %[[CMPI]], %[[L0]], %[[L1]] : i1
+  // CHECK:   affine.store %[[SELECT]], %[[TARGET]][] : memref<i1>
+  // CHECK: }
+  // CHECK: memref.dealloc %[[FAST_MEMREF]] : memref<480xi1>
+  return
+}
