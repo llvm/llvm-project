@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -42,6 +43,18 @@ public:
   bool IsNot(Kind kind) const { return m_kind != kind; }
 
   bool IsOneOf(Kind kind1, Kind kind2) const { return Is(kind1) || Is(kind2); }
+
+  bool IsOneOf(std::vector<Kind> kinds) const {
+    if (kinds.empty())
+      return false;
+
+    if (kinds.size() == 1)
+      return Is(kinds[0]);
+
+    Kind k = kinds.back();
+    kinds.pop_back();
+    return Is(k) || IsOneOf(kinds);
+  }
 
   template <typename... Ts> bool IsOneOf(Kind kind, Ts... Ks) const {
     return Is(kind) || IsOneOf(Ks...);
@@ -119,5 +132,25 @@ private:
 };
 
 } // namespace lldb_private::dil
+
+namespace llvm {
+
+template <> struct format_provider<lldb_private::dil::Token::Kind> {
+  static void format(const lldb_private::dil::Token::Kind &k, raw_ostream &OS,
+                     llvm::StringRef Options) {
+    OS << "'" << lldb_private::dil::Token::GetTokenName(k) << "'";
+  }
+};
+
+template <> struct format_provider<lldb_private::dil::Token> {
+  static void format(const lldb_private::dil::Token &t, raw_ostream &OS,
+                     llvm::StringRef Options) {
+    lldb_private::dil::Token::Kind kind = t.GetKind();
+    OS << "<'" << t.GetSpelling() << "' ("
+       << lldb_private::dil::Token::GetTokenName(kind) << ")>";
+  }
+};
+
+} // namespace llvm
 
 #endif // LLDB_VALUEOBJECT_DILLEXER_H

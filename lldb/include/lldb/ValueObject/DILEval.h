@@ -54,20 +54,29 @@ private:
 };
 
 /// Given the name of an identifier (variable name, member name, type name,
-/// etc.), find the ValueObject for that name (if it exists) and create and
-/// return an IdentifierInfo object containing all the relevant information
-/// about that object (for DIL parsing and evaluating).
+/// etc.), find the ValueObject for that name (if it exists), excluding global
+/// variables, and create and return an IdentifierInfo object containing all
+/// the relevant information about that object (for DIL parsing and
+/// evaluating).
 std::unique_ptr<IdentifierInfo>
-LookupIdentifier(llvm::StringRef name_ref,
-                 std::shared_ptr<ExecutionContextScope> ctx_scope,
-                 lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
+LookupIdentifier(llvm::StringRef name_ref, std::shared_ptr<StackFrame> frame_sp,
+                 lldb::DynamicValueType use_dynamic,
                  CompilerType *scope_ptr = nullptr);
+
+/// Given the name of an identifier, check to see if it matches the name of a
+/// global variable. If so, find the ValueObject for that global variable, and
+/// create and return an IdentifierInfo object containing all the relevant
+/// informatin about it.
+std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
+    llvm::StringRef name_ref, std::shared_ptr<StackFrame> frame_sp,
+    lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
+    CompilerType *scope_ptr = nullptr);
 
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
               lldb::DynamicValueType use_dynamic,
-              std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
+              std::shared_ptr<StackFrame> frame_sp);
 
   llvm::Expected<lldb::ValueObjectSP> DILEvalNode(const ASTNode *node);
 
@@ -85,7 +94,7 @@ private:
 
   lldb::DynamicValueType m_default_dynamic;
 
-  std::shared_ptr<ExecutionContextScope> m_exe_ctx_scope;
+  std::shared_ptr<StackFrame> m_exe_ctx_scope;
 };
 
 } // namespace lldb_private::dil

@@ -35,11 +35,12 @@ std::string FormatDiagnostics(llvm::StringRef input_expr,
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  static llvm::Expected<ASTNodeUP>
-  Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-        std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
-        lldb::DynamicValueType use_dynamic, bool use_synthetic,
-        bool fragile_ivar, bool check_ptr_vs_member);
+  static llvm::Expected<ASTNodeUP> Parse(llvm::StringRef dil_input_expr,
+                                         DILLexer lexer,
+                                         std::shared_ptr<StackFrame> frame_sp,
+                                         lldb::DynamicValueType use_dynamic,
+                                         bool use_synthetic, bool fragile_ivar,
+                                         bool check_ptr_vs_member);
 
   ~DILParser() { m_ctx_scope.reset(); }
 
@@ -51,7 +52,7 @@ public:
 
 private:
   explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+                     std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member,
                      Status &error);
@@ -72,8 +73,6 @@ private:
 
   void Expect(Token::Kind kind);
 
-  std::string TokenDescription(const Token &token);
-
   void TentativeParsingRollback(uint32_t saved_idx) {
     m_error.Clear();
     m_dil_lexer.ResetTokenIdx(saved_idx);
@@ -84,7 +83,7 @@ private:
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
   // context will outlive the parser.
-  std::shared_ptr<ExecutionContextScope> m_ctx_scope;
+  std::shared_ptr<StackFrame> m_ctx_scope;
 
   llvm::StringRef m_input_expr;
 

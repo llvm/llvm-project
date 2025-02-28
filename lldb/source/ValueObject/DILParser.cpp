@@ -25,26 +25,6 @@
 
 namespace lldb_private::dil {
 
-inline void TokenKindsJoinImpl(std::ostringstream &os, Token::Kind k) {
-  os << "'" << Token::GetTokenName(k).str() << "'";
-}
-
-template <typename... Ts>
-inline void TokenKindsJoinImpl(std::ostringstream &os, Token::Kind k,
-                               Ts... ks) {
-  TokenKindsJoinImpl(os, k);
-  os << ", ";
-  TokenKindsJoinImpl(os, ks...);
-}
-
-template <typename... Ts>
-inline std::string TokenKindsJoin(Token::Kind k, Ts... ks) {
-  std::ostringstream os;
-  TokenKindsJoinImpl(os, k, ks...);
-
-  return os.str();
-}
-
 std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
                               uint32_t loc) {
   // Get the position, in the current line of text, of the diagnostics pointer.
@@ -59,21 +39,21 @@ std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
 
 llvm::Expected<ASTNodeUP>
 DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-                 std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+                 std::shared_ptr<StackFrame> frame_sp,
                  lldb::DynamicValueType use_dynamic, bool use_synthetic,
                  bool fragile_ivar, bool check_ptr_vs_member) {
   Status error;
-  DILParser parser(dil_input_expr, lexer, exe_ctx_scope, use_dynamic,
-                   use_synthetic, fragile_ivar, check_ptr_vs_member, error);
+  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
+                   fragile_ivar, check_ptr_vs_member, error);
   return parser.Run();
 }
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
+                     std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member, Status &error)
-    : m_ctx_scope(exe_ctx_scope), m_input_expr(dil_input_expr),
-      m_dil_lexer(lexer), m_error(error), m_use_dynamic(use_dynamic),
+    : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr), m_dil_lexer(lexer),
+      m_error(error), m_use_dynamic(use_dynamic),
       m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
       m_check_ptr_vs_member(check_ptr_vs_member) {}
 
@@ -120,7 +100,7 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
   }
 
   BailOut(ErrorCode::kInvalidExpressionSyntax,
-          llvm::formatv("Unexpected token: {0}", TokenDescription(CurToken())),
+          llvm::formatv("Unexpected token: {0}", CurToken()),
           CurToken().GetLocation());
   return std::make_unique<ErrorNode>();
 }
@@ -275,16 +255,9 @@ void DILParser::BailOut(Status error) {
 void DILParser::Expect(Token::Kind kind) {
   if (CurToken().IsNot(kind)) {
     BailOut(ErrorCode::kUnknown,
-            llvm::formatv("expected {0}, got: {1}", TokenKindsJoin(kind),
-                          TokenDescription(CurToken())),
+            llvm::formatv("expected {0}, got: {1}", kind, CurToken()),
             CurToken().GetLocation());
   }
-}
-
-std::string DILParser::TokenDescription(const Token &token) {
-  const auto &spelling = token.GetSpelling();
-  llvm::StringRef kind_name = Token::GetTokenName(token.GetKind());
-  return llvm::formatv("<'{0}' ({1})>", spelling, kind_name);
 }
 
 } // namespace lldb_private::dil
