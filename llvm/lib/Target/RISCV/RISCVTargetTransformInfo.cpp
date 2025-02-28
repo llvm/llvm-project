@@ -475,6 +475,64 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   return InstructionCost::getInvalid();
 }
 
+InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
+                                           ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind) {
+  // Avoid missing masks and length changing shuffles
+  if (Mask.size() <= 2 || Mask.size() != Tp->getNumElements())
+    return InstructionCost::getInvalid();
+
+  int NumElts = Tp->getNumElements();
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  // Avoid scalarization cases
+  if (!LT.second.isFixedLengthVector())
+    return InstructionCost::getInvalid();
+
+  // Requires moving elements between parts, which requires additional
+  // unmodeled instructions.
+  if (LT.first != 1)
+    return InstructionCost::getInvalid();
+
+  auto GetSlideOpcode = [&](int SlideAmt) {
+    assert(SlideAmt != 0);
+    bool IsVI = isUInt<5>(std::abs(SlideAmt));
+    if (SlideAmt < 0)
+      return IsVI ? RISCV::VSLIDEDOWN_VI : RISCV::VSLIDEDOWN_VX;
+    return IsVI ? RISCV::VSLIDEUP_VI : RISCV::VSLIDEUP_VX;
+  };
+
+  std::array<std::pair<int, int>, 2> SrcInfo;
+  if (!isMaskedSlidePair(Mask, NumElts, SrcInfo))
+    return InstructionCost::getInvalid();
+
+  if (SrcInfo[1].second == 0)
+    std::swap(SrcInfo[0], SrcInfo[1]);
+
+  InstructionCost FirstSlideCost = 0;
+  if (SrcInfo[0].second != 0) {
+    unsigned Opcode = GetSlideOpcode(SrcInfo[0].second);
+    FirstSlideCost = getRISCVInstructionCost(Opcode, LT.second, CostKind);
+  }
+
+  if (SrcInfo[1].first == -1)
+    return FirstSlideCost;
+
+  InstructionCost SecondSlideCost = 0;
+  if (SrcInfo[1].second != 0) {
+    unsigned Opcode = GetSlideOpcode(SrcInfo[1].second);
+    SecondSlideCost = getRISCVInstructionCost(Opcode, LT.second, CostKind);
+  } else {
+    SecondSlideCost =
+        getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
+  }
+
+  auto EC = Tp->getElementCount();
+  VectorType *MaskTy =
+      VectorType::get(IntegerType::getInt1Ty(Tp->getContext()), EC);
+  InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
+  return FirstSlideCost + SecondSlideCost + MaskCost;
+}
+
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -487,8 +545,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (ST->hasVInstructions() && isa<FixedVectorType>(Tp) &&
-      LT.second.isFixedLengthVector()) {
+  if (auto *FVTp = dyn_cast<FixedVectorType>(Tp);
+      FVTp && ST->hasVInstructions() && LT.second.isFixedLengthVector()) {
     InstructionCost VRegSplittingCost = costShuffleViaVRegSplitting(
         *this, LT.second, ST->getRealVLen(), Tp, Mask, CostKind);
     if (VRegSplittingCost.isValid())
@@ -544,6 +602,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           return Cost;
         }
       }
+
+      if (InstructionCost SlideCost = getSlideCost(FVTp, Mask, CostKind);
+          SlideCost.isValid())
+        return SlideCost;
+
       // vrgather + cost of generating the mask constant.
       // We model this for an unknown mask with a single vrgather.
       if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
@@ -558,6 +621,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
     case TTI::SK_Transpose:
     case TTI::SK_PermuteTwoSrc: {
+
+      if (InstructionCost SlideCost = getSlideCost(FVTp, Mask, CostKind);
+          SlideCost.isValid())
+        return SlideCost;
+
       // 2 x (vrgather + cost of generating the mask constant) + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
