@@ -12501,13 +12501,13 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   return SDValue();
 }
 
+// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), ZEXT(MulOpRHS)),
+// Splat(1)) into
+// PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS).
+// Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), SEXT(MulOpRHS)),
+// Splat(1)) into
+// PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS).
 SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
-  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(ZEXT(MulOpLHS), ZEXT(MulOpRHS)),
-  // Splat(1)) into
-  // PARTIAL_REDUCE_UMLA(Acc, MulOpLHS, MulOpRHS).
-  // Makes PARTIAL_REDUCE_*MLA(Acc, MUL(SEXT(MulOpLHS), SEXT(MulOpRHS)),
-  // Splat(1)) into
-  // PARTIAL_REDUCE_SMLA(Acc, MulOpLHS, MulOpRHS).
   SDLoc DL(N);
 
   SDValue Op0 = N->getOperand(0);
@@ -12521,32 +12521,31 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
       !ConstantOne.isOne())
     return SDValue();
 
-  SDValue ExtMulOpLHS = Op1->getOperand(0);
-  SDValue ExtMulOpRHS = Op1->getOperand(1);
-  unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
-  unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
-  if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
-      !ISD::isExtOpcode(ExtMulOpRHSOpcode))
+  SDValue LHS = Op1->getOperand(0);
+  SDValue RHS = Op1->getOperand(1);
+  unsigned LHSOpcode = LHS->getOpcode();
+  unsigned RHSOpcode = RHS->getOpcode();
+  if (!ISD::isExtOpcode(LHSOpcode) || !ISD::isExtOpcode(RHSOpcode))
     return SDValue();
 
-  SDValue MulOpLHS = ExtMulOpLHS->getOperand(0);
-  SDValue MulOpRHS = ExtMulOpRHS->getOperand(0);
-  EVT MulOpLHSVT = MulOpLHS.getValueType();
-  if (MulOpLHSVT != MulOpRHS.getValueType())
+  SDValue LHSExtOp = LHS->getOperand(0);
+  SDValue RHSExtOp = RHS->getOperand(0);
+  EVT LHSExtOpVT = LHSExtOp.getValueType();
+  if (LHSExtOpVT != RHSExtOp.getValueType())
     return SDValue();
 
   // FIXME: Add a check to only perform the DAG combine if there is lowering
   // provided by the target
 
-  bool LHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
-  bool RHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
+  bool LHSIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
+  bool RHSIsSigned = RHSOpcode == ISD::SIGN_EXTEND;
   if (LHSIsSigned != RHSIsSigned)
     return SDValue();
 
   unsigned NewOpcode =
       LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Op0, MulOpLHS,
-                     MulOpRHS);
+  return DAG.getNode(NewOpcode, DL, N->getValueType(0), Op0, LHSExtOp,
+                     RHSExtOp);
 }
 
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
