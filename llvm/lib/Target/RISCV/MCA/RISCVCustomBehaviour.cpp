@@ -21,7 +21,7 @@
 
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
-namespace llvm::RISCV::mca {
+namespace llvm::RISCV {
 struct VXMemOpInfo {
   unsigned Log2IdxEEW : 3;
   unsigned IsOrdered : 1;
@@ -31,14 +31,8 @@ struct VXMemOpInfo {
 };
 
 #define GET_RISCVBaseVXMemOpTable_IMPL
-// We need to include the implementation code here because RISCVCustomBehavior
-// is not linked against RISCVCodeGen.
-#define GET_RISCVVLXSEGTable_IMPL
-#define GET_RISCVVSXSEGTable_IMPL
-#define GET_RISCVVLXTable_IMPL
-#define GET_RISCVVSXTable_IMPL
 #include "RISCVGenSearchableTables.inc"
-} // namespace llvm::RISCV::mca
+} // namespace llvm::RISCV
 
 namespace llvm {
 namespace mca {
@@ -268,7 +262,7 @@ unsigned RISCVInstrumentManager::getSchedClassID(
   uint8_t SEW = SI ? SI->getSEW() : 0;
 
   std::optional<unsigned> VPOpcode;
-  if (const auto *VXMO = RISCV::mca::getVXMemOpInfo(Opcode)) {
+  if (const auto *VXMO = RISCV::getVXMemOpInfo(Opcode)) {
     // Calculate the expected index EMUL. For indexed operations,
     // the DataEEW and DataEMUL are equal to SEW and LMUL, respectively.
     unsigned IndexEMUL = ((1 << VXMO->Log2IdxEEW) * LMUL) / SEW;
@@ -276,12 +270,12 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     if (!VXMO->NF) {
       // Indexed Load / Store.
       if (VXMO->IsStore) {
-        if (const auto *VXP = RISCV::mca::getVSXPseudo(
+        if (const auto *VXP = RISCV::getVSXPseudo(
                 /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
                 IndexEMUL))
           VPOpcode = VXP->Pseudo;
       } else {
-        if (const auto *VXP = RISCV::mca::getVLXPseudo(
+        if (const auto *VXP = RISCV::getVLXPseudo(
                 /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
                 IndexEMUL))
           VPOpcode = VXP->Pseudo;
@@ -289,14 +283,14 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     } else {
       // Segmented Indexed Load / Store.
       if (VXMO->IsStore) {
-        if (const auto *VXP = RISCV::mca::getVSXSEGPseudo(
-                VXMO->NF, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
-                IndexEMUL))
+        if (const auto *VXP =
+                RISCV::getVSXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
+                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       } else {
-        if (const auto *VXP = RISCV::mca::getVLXSEGPseudo(
-                VXMO->NF, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW, LMUL,
-                IndexEMUL))
+        if (const auto *VXP =
+                RISCV::getVLXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
+                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       }
     }
