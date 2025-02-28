@@ -8590,6 +8590,48 @@ public:
 };
 } // namespace
 
+/// Returns main/alternate instructions for the given \p VL. Unlike
+/// getSameOpcode supports non-compatible instructions for better SplitVectorize
+/// node support.
+/// \returns first main/alt instructions, if only poisons and instruction with
+/// only 2 opcodes exists. Returns pair of nullptr otherwise.
+static std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
+  Instruction *MainOp = nullptr;
+  Instruction *AltOp = nullptr;
+  for (Value *V : VL) {
+    if (isa<PoisonValue>(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return {};
+    if (!MainOp) {
+      MainOp = I;
+      continue;
+    }
+    if (MainOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != MainOp->getParent())
+        return {};
+      continue;
+    }
+    if (!AltOp) {
+      AltOp = I;
+      continue;
+    }
+    if (AltOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != AltOp->getParent())
+        return {};
+      continue;
+    }
+    return {};
+  }
+  if (!AltOp)
+    return {};
+  assert(MainOp && AltOp && MainOp->getOpcode() != AltOp->getOpcode() &&
+         "Expected different main and alt instructions.");
+  return std::make_pair(MainOp, AltOp);
+}
+
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx,
                             unsigned InterleaveFactor) {
@@ -8963,41 +9005,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
        !all_of(VL, isVectorLikeInstWithConstOps)) ||
       NotProfitableForVectorization(VL)) {
     if (!S) {
-      Instruction *MainOp = nullptr;
-      Instruction *AltOp = nullptr;
-      for (Value *V : VL) {
-        if (isa<PoisonValue>(V))
-          continue;
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I) {
-          MainOp = AltOp = nullptr;
-          break;
-        }
-        if (!MainOp) {
-          MainOp = I;
-          continue;
-        }
-        if (MainOp->getOpcode() == I->getOpcode()) {
-          if (I->getParent() != MainOp->getParent()) {
-            MainOp = AltOp = nullptr;
-            break;
-          }
-          continue;
-        }
-        if (!AltOp) {
-          AltOp = I;
-          continue;
-        }
-        if (AltOp->getOpcode() == I->getOpcode()) {
-          if (I->getParent() != AltOp->getParent()) {
-            MainOp = AltOp = nullptr;
-            break;
-          }
-          continue;
-        }
-        MainOp = AltOp = nullptr;
-        break;
-      }
+      auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
       // Last chance to try to vectorize alternate node.
       if (MainOp && AltOp &&
           TrySplitNode(SmallNodeSize, InstructionsState(MainOp, AltOp)))
@@ -10454,6 +10462,59 @@ void BoUpSLP::transformNodes() {
                TE->getVectorFactor() < VFLimit;
       }) == 2;
 
+  // Checks if the scalars are used in other node.
+  auto AreReusedScalars = [&](const TreeEntry *TE, ArrayRef<Value *> VL,
+                              function_ref<bool(Value *)> CheckContainer) {
+    return TE->isSame(VL) || all_of(VL, [&](Value *V) {
+             if (isa<PoisonValue>(V))
+               return true;
+             auto *I = dyn_cast<Instruction>(V);
+             if (!I)
+               return false;
+             return is_contained(TE->Scalars, I) || CheckContainer(I);
+           });
+  };
+  auto CheckForSameVectorNodes = [&](const TreeEntry &E) {
+    if (E.hasState()) {
+      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(E.getMainOp());
+          !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
+            return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
+              ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
+              return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
+                return is_contained(TEs, TE);
+              });
+            });
+          }))
+        return true;
+      ;
+      if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(E.getMainOp());
+          !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
+            return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
+              ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
+              return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
+                return is_contained(TEs, TE);
+              });
+            });
+          }))
+        return true;
+    } else {
+      // Check if the gather node full copy of split node.
+      auto *It = find_if(E.Scalars, IsaPred<Instruction>);
+      if (It != E.Scalars.end()) {
+        if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(*It);
+            !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
+              return AreReusedScalars(TE, E.Scalars, [&](Value *V) {
+                ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
+                return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
+                  return is_contained(TEs, TE);
+                });
+              });
+            }))
+          return true;
+      }
+    }
+    return false;
+  };
   // The tree may grow here, so iterate over nodes, built before.
   for (unsigned Idx : seq<unsigned>(BaseGraphSize)) {
     TreeEntry &E = *VectorizableTree[Idx];
@@ -10470,55 +10531,9 @@ void BoUpSLP::transformNodes() {
         continue;
       if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
         continue;
-      auto AreReusedScalars = [&](const TreeEntry *TE,
-                                  function_ref<bool(Value *)> CheckContainer) {
-        return TE->isSame(VL) || all_of(VL, [&](Value *V) {
-                 if (isa<PoisonValue>(V))
-                   return true;
-                 auto *I = dyn_cast<Instruction>(V);
-                 if (!I)
-                   return false;
-                 return is_contained(TE->Scalars, I) || CheckContainer(I);
-               });
-      };
-      if (E.hasState()) {
-        if (ArrayRef<TreeEntry *> TEs = getTreeEntries(E.getMainOp());
-            !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
-              return AreReusedScalars(TE, [&](Value *V) {
-                ArrayRef<TreeEntry *> VTEs = getTreeEntries(V);
-                return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
-                  return is_contained(TEs, TE);
-                });
-              });
-            }))
-          continue;
-        if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(E.getMainOp());
-            !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
-              return AreReusedScalars(TE, [&](Value *V) {
-                ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
-                return !VTEs.empty() && any_of(VTEs, [&](const TreeEntry *TE) {
-                  return is_contained(TEs, TE);
-                });
-              });
-            }))
-          continue;
-      } else {
-        // Check if the gather node full copy of split node.
-        auto *It = find_if(VL, IsaPred<Instruction>);
-        if (It != VL.end()) {
-          if (ArrayRef<TreeEntry *> TEs = getSplitTreeEntries(*It);
-              !TEs.empty() && any_of(TEs, [&](const TreeEntry *TE) {
-                return AreReusedScalars(TE, [&](Value *V) {
-                  ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V);
-                  return !VTEs.empty() &&
-                         any_of(VTEs, [&](const TreeEntry *TE) {
-                           return is_contained(TEs, TE);
-                         });
-                });
-              }))
-            continue;
-        }
-      }
+      // Check if the node is a copy of other vector nodes.
+      if (CheckForSameVectorNodes(E))
+        continue;
       // Try to find vectorizable sequences and transform them into a series of
       // insertvector instructions.
       unsigned StartIdx = 0;
@@ -11913,11 +11928,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             E->Idx != 0 &&
             (E->getOpcode() != Instruction::Load || E->UserTreeIndex)) {
           const EdgeInfo &EI = E->UserTreeIndex;
-          if (EI.UserTE->getOpcode() != Instruction::Select ||
+          if (!EI.UserTE->hasState() ||
+              EI.UserTE->getOpcode() != Instruction::Select ||
               EI.EdgeIdx != 0) {
             auto UserBWIt = MinBWs.find(EI.UserTE);
             Type *UserScalarTy =
-                EI.UserTE->State == TreeEntry::SplitVectorize
+                (EI.UserTE->isGather() ||
+                 EI.UserTE->State == TreeEntry::SplitVectorize)
                     ? EI.UserTE->Scalars.front()->getType()
                     : EI.UserTE->getOperand(EI.EdgeIdx).front()->getType();
             if (UserBWIt != MinBWs.end())
@@ -18671,6 +18688,12 @@ bool BoUpSLP::collectValuesToDemote(
           (void)for_each(E.Scalars, std::bind(IsPotentiallyTruncated, _1,
                                               std::ref(BitWidth)));
         } else {
+          // Several vectorized uses? Check if we can truncate it, otherwise -
+          // exit.
+          if (any_of(E.Scalars, [&](Value *V) {
+                return !V->hasOneUse() && !IsPotentiallyTruncated(V, BitWidth);
+              }))
+            return false;
           bool NeedToExit = false;
           if (Checker && !AttemptCheckBitwidth(Checker, NeedToExit))
             return false;
@@ -19023,6 +19046,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       KnownBits Known = computeKnownBits(R, *DL);
       return Known.isNonNegative();
     });
+
+    if (!IsKnownPositive && !IsTopRoot && E.UserTreeIndex &&
+        E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::UIToFP)
+      MaxBitWidth =
+          std::min(DL->getTypeSizeInBits(
+                       E.UserTreeIndex.UserTE->Scalars.front()->getType()),
+                   DL->getTypeSizeInBits(ScalarTy));
 
     // We first check if all the bits of the roots are demanded. If they're not,
     // we can truncate the roots to this narrower type.

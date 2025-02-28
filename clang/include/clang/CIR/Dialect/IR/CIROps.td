@@ -116,6 +116,158 @@ def ConstantOp : CIR_Op<"const",
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                     string transform, string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+      comparator # "(" #
+      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
+             ", $" # rhsArg # ")">> {
+  string lhs = lhsArg;
+  string rhs = rhsArg;
+  string transformer = transform;
+}
+
+def AllocaOp : CIR_Op<"alloca", [
+  AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
+                 "addr", "allocaType",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]> {
+  let summary = "Defines a scope-local variable";
+  let description = [{
+    The `cir.alloca` operation defines a scope-local variable.
+
+    The presence of the `const` attribute indicates that the local variable is
+    declared with C/C++ `const` keyword.
+
+    The result type is a pointer to the input's type.
+
+    Example:
+
+    ```mlir
+    // int count;
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count"] {alignment = 4 : i64}
+
+    // int *ptr;
+    %1 = cir.alloca !cir.ptr<i32>, !cir.ptr<!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
+    ...
+    ```
+  }];
+
+  let arguments = (ins
+    TypeAttr:$allocaType,
+    StrAttr:$name,
+    UnitAttr:$init,
+    UnitAttr:$constant,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    OptionalAttr<ArrayAttr>:$annotations
+  );
+
+  let results = (outs Res<CIR_PointerType, "",
+                      [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$addr,
+                   "mlir::Type":$allocaType,
+                   "llvm::StringRef":$name,
+                   "mlir::IntegerAttr":$alignment)>
+  ];
+
+  let extraClassDeclaration = [{
+    // Whether the alloca input type is a pointer.
+    bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
+  }];
+
+  let assemblyFormat = [{
+    $allocaType `,` qualified(type($addr)) `,`
+    `[` $name
+       (`,` `init` $init^)?
+       (`,` `const` $constant^)?
+    `]`
+    ($annotations^)? attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+def LoadOp : CIR_Op<"load", [
+  TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
+                 "addr", "result",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+
+  let summary = "Load value from memory adddress";
+  let description = [{
+    `cir.load` reads a value (lvalue to rvalue conversion) given an address
+    backed up by a `cir.ptr` type.
+
+    Example:
+
+    ```mlir
+
+    // Read from local variable, address in %0.
+    %1 = cir.load %0 : !cir.ptr<i32>, i32
+    ```
+  }];
+
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
+                           [MemRead]>:$addr);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $addr `:` qualified(type($addr)) `,` type($result) attr-dict
+  }];
+
+  // FIXME: add verifier.
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+def StoreOp : CIR_Op<"store", [
+  TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
+                 "addr", "value",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+
+  let summary = "Store value to memory address";
+  let description = [{
+    `cir.store` stores a value (first operand) to the memory address specified
+    in the second operand. A unit attribute `volatile` can be used to indicate
+    a volatile store. Store's can be marked atomic by using
+    `atomic(<mem_order>)`.
+
+    `align` can be used to specify an alignment that's different from the
+    default, which is computed from `result`'s type ABI data layout.
+
+    Example:
+
+    ```mlir
+    // Store a function argument to local storage, address in %0.
+    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$value,
+                       Arg<CIR_PointerType, "the address to store the value",
+                           [MemWrite]>:$addr);
+
+  let assemblyFormat = [{
+    $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+  }];
+
+  // FIXME: add verifier.
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 

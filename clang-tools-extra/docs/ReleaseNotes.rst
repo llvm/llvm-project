@@ -108,6 +108,13 @@ Changes in existing checks
   calls of ``std::string`` constructor with char pointer, start position and
   length parameters.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
+  positives from smart pointer accessors repeated in checking ``has_value``
+  and accessing ``value``. The option `IgnoreSmartPointerDereference` should
+  no longer be needed and will be removed. Also fixing false positive from 
+  const reference accessors to objects containing optional member.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.

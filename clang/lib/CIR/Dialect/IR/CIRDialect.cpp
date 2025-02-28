@@ -118,6 +118,24 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
+                          mlir::OperationState &odsState, mlir::Type addr,
+                          mlir::Type allocaType, llvm::StringRef name,
+                          mlir::IntegerAttr alignment) {
+  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
+                        mlir::TypeAttr::get(allocaType));
+  odsState.addAttribute(getNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(name));
+  if (alignment) {
+    odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
+  }
+  odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 

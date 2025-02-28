@@ -106,17 +106,7 @@ private:
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
 
-  // Match direct address complex pattern.
-  bool SelectDirectAddr(SDValue N, SDValue &Address);
-
-  void SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT VT);
-  bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
-  bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
-  bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                    SDValue &Offset);
+  bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

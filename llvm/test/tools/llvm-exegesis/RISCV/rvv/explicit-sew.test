@@ -1,0 +1,7 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFWREDUSUM_VS_M1_E32 \
+# RUN:    --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s
+
+# Make sure none of the config has SEW other than e32
+# CHECK: PseudoVFWREDUSUM_VS_M1_E32
+# CHECK: SEW: e32
+# CHECK-NOT: SEW: e{{(8|16|64)}}

@@ -191,7 +191,7 @@ class AddressRangeTestCase(TestBase):
         interp.HandleCommand(script, result, False)
         self.assertTrue(result.Succeeded(), "script command succeeded")
         # [0x1000-0x2000] // Resolved with target or addresses without sections
-        self.assertRegex(result.GetOutput(), "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)")
+        self.assertRegex(result.GetOutput(), r"^\[0x[0-9a-f]+\-0x[0-9a-f]+\)")
         process.Kill()
 
     def test_address_range_print_no_section_resolved(self):
@@ -215,7 +215,7 @@ class AddressRangeTestCase(TestBase):
 
         range_str = str(range)
         # [0x1000-0x2000] // Resolved with target or addresses without sections
-        self.assertRegex(range_str, "^\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
+        self.assertRegex(range_str, r"^\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
         process.Kill()
 
     def test_address_range_print_not_resolved(self):
@@ -223,7 +223,7 @@ class AddressRangeTestCase(TestBase):
         range = lldb.SBAddressRange(self.addr1, 8)
         range_str = str(range)
         # a.out[0x1000-0x2000] // Without target
-        self.assertRegex(range_str, "^a.out\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
+        self.assertRegex(range_str, r"^a.out\[0x[0-9a-f]+\-0x[0-9a-f]+\)$")
 
     def test_address_range_list_print(self):
         """Make sure the SBAddressRangeList can be printed."""
