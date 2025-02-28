@@ -181,7 +181,9 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // Add branches between prolog and epilog blocks.
   addBranches(*Preheader, PrologBBs, KernelBB, EpilogBBs, VRMap);
 
-  recalcEmptyIntervals();
+  // The intervals of newly created virtual registers are calculated after the
+  // kernel expansion.
+  calculateIntervals();
 
   delete[] VRMap;
   delete[] VRMapPhi;
@@ -351,15 +353,15 @@ static void replaceRegUsesAfterLoop(unsigned FromReg, unsigned ToReg,
                                     MachineBasicBlock *MBB,
                                     MachineRegisterInfo &MRI,
                                     LiveIntervals &LIS,
-                                    SmallVector<Register> &EmptyIntervalRegs) {
+                                    SmallVector<Register> &NoIntervalRegs) {
   for (MachineOperand &O :
        llvm::make_early_inc_range(MRI.use_operands(FromReg)))
     if (O.getParent()->getParent() != MBB)
       O.setReg(ToReg);
-  if (!LIS.hasInterval(ToReg)) {
-    LIS.createEmptyInterval(ToReg);
-    EmptyIntervalRegs.push_back(ToReg);
-  }
+  // The interval will be calculated after the kernel expansion in
+  // calculateIntervals().
+  if (!LIS.hasInterval(ToReg))
+    NoIntervalRegs.push_back(ToReg);
 }
 
 /// Return true if the register has a use that occurs outside the
@@ -550,7 +552,7 @@ void ModuloScheduleExpander::generateExistingPhis(
 
               if (IsLast && np == NumPhis - 1)
                 replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS,
-                                        EmptyIntervalRegs);
+                                        NoIntervalRegs);
               continue;
             }
           }
@@ -591,7 +593,7 @@ void ModuloScheduleExpander::generateExistingPhis(
       // register to replace depends on whether the Phi is scheduled in the
       // epilog.
       if (IsLast && np == NumPhis - 1)
-        replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS, EmptyIntervalRegs);
+        replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS, NoIntervalRegs);
 
       // In the kernel, a dependent Phi uses the value from this Phi.
       if (InKernel)
@@ -610,7 +612,7 @@ void ModuloScheduleExpander::generateExistingPhis(
     // scheduling.
     if (NumStages == 0 && IsLast && VRMap[CurStageNum].count(LoopVal))
       replaceRegUsesAfterLoop(Def, VRMap[CurStageNum][LoopVal], BB, MRI, LIS,
-                              EmptyIntervalRegs);
+                              NoIntervalRegs);
   }
 }
 
@@ -730,7 +732,7 @@ void ModuloScheduleExpander::generatePhis(
                                   NewReg);
         }
         if (IsLast && np == NumPhis - 1)
-          replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS, EmptyIntervalRegs);
+          replaceRegUsesAfterLoop(Def, NewReg, BB, MRI, LIS, NoIntervalRegs);
       }
     }
   }
@@ -942,23 +944,24 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
   }
 }
 
-/// Some new registers are generated during the kernel expansion. We recalculate
-/// the live intervals of these registers after the expansion.
-void ModuloScheduleExpander::recalcEmptyIntervals() {
-  // The interval can be computed if the register's non-debug users have
+/// Some registers are generated during the kernel expansion. We calculate the
+/// live intervals of these registers after the expansion.
+void ModuloScheduleExpander::calculateIntervals() {
+  // The interval can be computed if all the register's non-debug users have
   // slot indexes.
-  auto CanRecalculateInterval = [this](unsigned Reg) -> bool {
+  auto CanCalculateInterval = [this](Register Reg) -> bool {
     for (auto &Opnd : this->MRI.reg_nodbg_operands(Reg))
       if (this->LIS.isNotInMIMap(*Opnd.getParent()))
         return false;
     return true;
   };
-  for (auto Reg : EmptyIntervalRegs)
-    if (CanRecalculateInterval(Reg)) {
-      LIS.removeInterval(Reg);
+  for (auto Reg : NoIntervalRegs) {
+    if (CanCalculateInterval(Reg))
       LIS.createAndComputeVirtRegInterval(Reg);
-    }
-  EmptyIntervalRegs.clear();
+    else
+      LIS.createEmptyInterval(Reg);
+  }
+  NoIntervalRegs.clear();
 }
 
 /// Return true if we can compute the amount the instruction changes
@@ -1082,7 +1085,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
       MO.setReg(NewReg);
       VRMap[CurStageNum][reg] = NewReg;
       if (LastDef)
-        replaceRegUsesAfterLoop(reg, NewReg, BB, MRI, LIS, EmptyIntervalRegs);
+        replaceRegUsesAfterLoop(reg, NewReg, BB, MRI, LIS, NoIntervalRegs);
     } else if (MO.isUse()) {
       MachineInstr *Def = MRI.getVRegDef(reg);
       // Compute the stage that contains the last definition for instruction.
