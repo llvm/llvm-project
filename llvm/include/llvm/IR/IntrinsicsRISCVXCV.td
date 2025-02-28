@@ -81,12 +81,6 @@ multiclass ScalarCoreVSimdGprGprGprIntrinsicHB {
   def int_riscv_cv_simd_ # NAME # _b : ScalarCoreVSimdGprGprGprIntrinsic;
 }
 
-multiclass ScalarCoreVSimdGprGprIntrinsicDiv {
-  def int_riscv_cv_simd_ # NAME # _div2 : ScalarCoreVSimdGprGprIntrinsic;
-  def int_riscv_cv_simd_ # NAME # _div4 : ScalarCoreVSimdGprGprIntrinsic;
-  def int_riscv_cv_simd_ # NAME # _div8 : ScalarCoreVSimdGprGprIntrinsic;
-}
-
 multiclass ScalarCoreVSimdGprImmIntrinsicHB {
   def int_riscv_cv_simd_ # NAME # _h : ScalarCoreVSimdGprImmIntrinsic;
   def int_riscv_cv_simd_ # NAME # _b : ScalarCoreVSimdGprImmIntrinsic;
