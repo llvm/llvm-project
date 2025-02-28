@@ -233,6 +233,14 @@ llvm.mlir.global_ctors { ctors = [@ctor], priorities = [0 : i32]}
 
 // -----
 
+// CHECK: llvm.mlir.global_ctors {ctors = [], priorities = []}
+llvm.mlir.global_ctors {ctors = [], priorities = []}
+
+// CHECK: llvm.mlir.global_dtors {dtors = [], priorities = []}
+llvm.mlir.global_dtors {dtors = [], priorities = []}
+
+// -----
+
 llvm.func @dtor() {
   llvm.return
 }
