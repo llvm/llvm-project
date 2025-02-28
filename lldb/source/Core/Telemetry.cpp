@@ -64,10 +64,7 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
   serializer.write("lldb_version", lldb_version);
-  if (exit_desc.has_value()) {
-    serializer.write("exit_code", exit_desc->exit_code);
-    serializer.write("exit_desc", exit_desc->description);
-  }
+  serializer.write("is_exit_entry", is_exit_entry);
 }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
@@ -91,6 +88,16 @@ TelemetryManager *TelemetryManager::GetInstance() {
   if (!Config::BuildTimeEnableTelemetry)
     return nullptr;
   return g_instance.get();
+}
+
+TelemetryManager *TelemetryManager::GetInstanceIfEnabled() {
+  // Telemetry may be enabled at build time but disabled at runtime.
+  if (TelemetryManager *ins = TelemetryManager::GetInstance()) {
+    if (ins->GetConfig()->EnableTelemetry)
+      return ins;
+  }
+
+  return nullptr;
 }
 
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
