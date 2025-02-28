@@ -188,6 +188,9 @@ private:
   /// Instructions to change when emitting the final schedule.
   InstrChangesTy InstrChanges;
 
+  /// Record newly created registers with empty live intervals.
+  SmallVector<Register> EmptyIntervalRegs;
+
   void generatePipelinedLoop();
   void generateProlog(unsigned LastStage, MachineBasicBlock *KernelBB,
                       ValueMapTy *VRMap, MBBVectorTy &PrologBBs);
@@ -211,6 +214,7 @@ private:
   void addBranches(MachineBasicBlock &PreheaderBB, MBBVectorTy &PrologBBs,
                    MachineBasicBlock *KernelBB, MBBVectorTy &EpilogBBs,
                    ValueMapTy *VRMap);
+  void recalcEmptyIntervals();
   bool computeDelta(MachineInstr &MI, unsigned &Delta);
   void updateMemOperands(MachineInstr &NewMI, MachineInstr &OldMI,
                          unsigned Num);
