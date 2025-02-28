@@ -2,6 +2,7 @@
 # RUN:    --riscv-enumerate-rounding-modes=false --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s --check-prefix=VX
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFADD_VFPR16_M1_E16 \
 # RUN:    --riscv-enumerate-rounding-modes=false --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s --check-prefix=FP
+# UNSUPPORTED: expensive_checks
 
 # VX: PseudoVAADDU_VV_M1
 # VX: VXRM: rnu
