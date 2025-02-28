@@ -225,6 +225,7 @@ Bug Fixes in This Version
 
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fixed a crash when merging named enumerations in modules (#GH114240).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
