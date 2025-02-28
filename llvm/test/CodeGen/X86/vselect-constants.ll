@@ -306,10 +306,12 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 define i32 @pr129181() {
 ; SSE-LABEL: pr129181:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: pr129181:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    retq
 entry:
   %x = insertelement <4 x i32> zeroinitializer, i32 0, i32 0
