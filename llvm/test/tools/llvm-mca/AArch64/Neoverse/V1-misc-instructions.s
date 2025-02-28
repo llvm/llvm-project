@@ -18,10 +18,6 @@ hvc #0xecb9
 isb
 pssbb
 smc #0x7e57
-stlur w3, [x27]
-stlur x23, [x25]
-stlurb w30, [x17]
-stlurh w9, [x29]
 svc #0x89cb
 sysl x16, #5, c11, c8, #5
 
@@ -47,10 +43,6 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  1      1     0.07    *      *      U     isb
 # CHECK-NEXT:  1      1     0.07    *      *      U     pssbb
 # CHECK-NEXT:  1      1     0.07                  U     smc	#0x7e57
-# CHECK-NEXT:  2      1     0.50           *            stlur	w3, [x27]
-# CHECK-NEXT:  2      1     0.50           *            stlur	x23, [x25]
-# CHECK-NEXT:  2      1     0.50           *            stlurb	w30, [x17]
-# CHECK-NEXT:  2      1     0.50           *            stlurh	w9, [x29]
 # CHECK-NEXT:  1      1     0.07                  U     svc	#0x89cb
 # CHECK-NEXT:  1      1     0.07                  U     sysl	x16, #5, c11, c8, #5
 
@@ -76,7 +68,7 @@ sysl x16, #5, c11, c8, #5
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -93,9 +85,5 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     isb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     pssbb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smc	#0x7e57
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlur	w3, [x27]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlur	x23, [x25]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlurb	w30, [x17]
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     stlurh	w9, [x29]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     svc	#0x89cb
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sysl	x16, #5, c11, c8, #5

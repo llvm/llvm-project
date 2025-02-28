@@ -597,7 +597,6 @@ ld4 { v4.b, v5.b, v6.b, v7.b }[12], [x27]
 ld4 { v5.h, v6.h, v7.h, v8.h }[0], [x4]
 ld4 { v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
 ld4 { v0.s, v1.s, v2.s, v3.s }[0], [x26]
-ld4 { v0.d, v1.d, v2.d, v3.d }[1], [x0]
 ld4r { v20.8b, v21.8b, v22.8b, v23.8b }, [x23]
 ld4r { v1.16b, v2.16b, v3.16b, v4.16b }, [x25]
 ld4r { v16.4h, v17.4h, v18.4h, v19.4h }, [x6]
@@ -608,8 +607,6 @@ ld4r { v0.2s, v1.2s, v2.2s, v3.2s }, [x30]
 ld4r { v0.2s, v1.2s, v2.2s, v3.2s }, [sp], #16
 ld4r { v7.4s, v8.4s, v9.4s, v10.4s }, [x23]
 ld4r { v0.4s, v1.4s, v2.4s, v3.4s }, [sp], x8
-ld4r { v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
-ld4r { v0.2d, v1.2d, v2.2d, v3.2d }, [sp]
 mla v0.8b, v0.8b, v0.8b
 mla v15.8h, v22.8h, v4.h[3]
 mla v28.2s, v10.2s, v2.s[0]
@@ -780,15 +777,9 @@ shl v0.2d, v0.2d, #3
 shl v0.4h, v0.4h, #3
 shl v0.8h, v23.8h, #10
 shl v0.4s, v0.4s, #3
-shll v0.2d, v0.2s, #32
 shll v0.4s, v0.4h, #16
 shll v0.8h, v0.8b, #8
 shll v0.2d, v0.2s, #32
-shll v0.4s, v0.4h, #16
-shll v0.8h, v0.8b, #8
-shll2 v0.2d, v0.4s, #32
-shll2 v0.4s, v0.8h, #16
-shll2 v0.8h, v0.16b, #8
 shll2 v0.2d, v0.4s, #32
 shll2 v0.4s, v0.8h, #16
 shll2 v0.8h, v0.16b, #8
@@ -1399,7 +1390,6 @@ uqrshl b11, b20, b30
 uqrshl s23, s20, s16
 uqrshl v25.8b, v13.8b, v23.8b
 uqrshl v0.16b, v0.16b, v0.16b
-uqrshl v0.4s, v0.4s, v0.4s
 uqrshl v0.4s, v0.4s, v0.4s
 uqrshl v0.8h, v0.8h, v0.8h
 uqrshrn b10, h12, #5
@@ -2186,7 +2176,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  7      8     1.00    *                   ld4	{ v5.h, v6.h, v7.h, v8.h }[0], [x4]
 # CHECK-NEXT:  8      8     1.00    *                   ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
 # CHECK-NEXT:  7      8     1.00    *                   ld4	{ v0.s, v1.s, v2.s, v3.s }[0], [x26]
-# CHECK-NEXT:  7      8     1.00    *                   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
 # CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v20.8b, v21.8b, v22.8b, v23.8b }, [x23]
 # CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x25]
 # CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v16.4h, v17.4h, v18.4h, v19.4h }, [x6]
@@ -2197,8 +2186,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  8      8     1.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], #16
 # CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v7.4s, v8.4s, v9.4s, v10.4s }, [x23]
 # CHECK-NEXT:  8      8     1.00    *                   ld4r	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], x8
-# CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
-# CHECK-NEXT:  7      8     1.00    *                   ld4r	{ v0.2d, v1.2d, v2.2d, v3.2d }, [sp]
 # CHECK-NEXT:  1      4     0.50                        mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      4     0.50                        mla	v15.8h, v22.8h, v4.h[3]
 # CHECK-NEXT:  1      4     0.50                        mla	v28.2s, v10.2s, v2.s[0]
@@ -2369,15 +2356,9 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.50                        shl	v0.4h, v0.4h, #3
 # CHECK-NEXT:  1      2     0.50                        shl	v0.8h, v23.8h, #10
 # CHECK-NEXT:  1      2     0.50                        shl	v0.4s, v0.4s, #3
-# CHECK-NEXT:  1      2     0.50                        shll	v0.2d, v0.2s, #32
 # CHECK-NEXT:  1      2     0.50                        shll	v0.4s, v0.4h, #16
 # CHECK-NEXT:  1      2     0.50                        shll	v0.8h, v0.8b, #8
 # CHECK-NEXT:  1      2     0.50                        shll	v0.2d, v0.2s, #32
-# CHECK-NEXT:  1      2     0.50                        shll	v0.4s, v0.4h, #16
-# CHECK-NEXT:  1      2     0.50                        shll	v0.8h, v0.8b, #8
-# CHECK-NEXT:  1      2     0.50                        shll2	v0.2d, v0.4s, #32
-# CHECK-NEXT:  1      2     0.50                        shll2	v0.4s, v0.8h, #16
-# CHECK-NEXT:  1      2     0.50                        shll2	v0.8h, v0.16b, #8
 # CHECK-NEXT:  1      2     0.50                        shll2	v0.2d, v0.4s, #32
 # CHECK-NEXT:  1      2     0.50                        shll2	v0.4s, v0.8h, #16
 # CHECK-NEXT:  1      2     0.50                        shll2	v0.8h, v0.16b, #8
@@ -2989,7 +2970,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.50                        uqrshl	v25.8b, v13.8b, v23.8b
 # CHECK-NEXT:  1      4     0.50                        uqrshl	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      4     0.50                        uqrshl	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.50                        uqrshl	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      4     0.50                        uqrshl	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.25                        uqrshrn	b10, h12, #5
 # CHECK-NEXT:  1      2     0.25                        uqrshrn	h12, s10, #14
@@ -3192,7 +3172,7 @@ zip2 v0.8h, v0.8h, v0.8h
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     87.33  170.83 170.83 20.75  7.75   7.75   7.75   609.25 503.75 502.75 397.25
+# CHECK-NEXT:  -      -      -      -      -      -      -     84.33  167.83 167.83 20.75  7.75   7.75   7.75   606.25 497.25 499.75 390.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3792,7 +3772,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4	{ v5.h, v6.h, v7.h, v8.h }[0], [x4]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00   0.25   0.25   0.25   0.25   1.00   1.00   1.00   1.00   ld4	{ v0.h, v1.h, v2.h, v3.h }[7], [x0], x0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4	{ v0.s, v1.s, v2.s, v3.s }[0], [x26]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4	{ v0.d, v1.d, v2.d, v3.d }[1], [x0]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v20.8b, v21.8b, v22.8b, v23.8b }, [x23]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v1.16b, v2.16b, v3.16b, v4.16b }, [x25]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v16.4h, v17.4h, v18.4h, v19.4h }, [x6]
@@ -3803,8 +3782,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00   0.25   0.25   0.25   0.25   1.00   1.00   1.00   1.00   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], #16
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v7.4s, v8.4s, v9.4s, v10.4s }, [x23]
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00   0.25   0.25   0.25   0.25   1.00   1.00   1.00   1.00   ld4r	{ v0.4s, v1.4s, v2.4s, v3.4s }, [sp], x8
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00   1.00    -      -      -      -     1.00   1.00   1.00   1.00   ld4r	{ v0.2d, v1.2d, v2.2d, v3.2d }, [sp]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mla	v15.8h, v22.8h, v4.h[3]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     mla	v28.2s, v10.2s, v2.s[0]
@@ -3975,15 +3952,9 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shl	v0.4h, v0.4h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shl	v0.8h, v23.8h, #10
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shl	v0.4s, v0.4s, #3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.2d, v0.2s, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.4s, v0.4h, #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.8h, v0.8b, #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.2d, v0.2s, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.4s, v0.4h, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll	v0.8h, v0.8b, #8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.2d, v0.4s, #32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.4s, v0.8h, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.8h, v0.16b, #8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.2d, v0.4s, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.4s, v0.8h, #16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   shll2	v0.8h, v0.16b, #8
@@ -4594,7 +4565,6 @@ zip2 v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	s23, s20, s16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	v25.8b, v13.8b, v23.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   uqrshl	v0.8h, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   uqrshrn	b10, h12, #5
