@@ -1182,14 +1182,6 @@ static void VerifySDNode(SDNode *N, const TargetLowering *TLI) {
     }
     break;
   }
-  case ISD::CHAIN_BARRIER: {
-    assert(N->getNumValues() == 1 && "Expected single result!");
-    assert(N->getNumOperands() == 1 && "Expected single operand!");
-    assert(N->getValueType(0) == MVT::Other &&
-           N->getOperand(0).getValueType() == MVT::Other &&
-           "Expected result and operand to be chains!");
-    break;
-  }
   }
 }
 #endif // NDEBUG
@@ -2623,18 +2615,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
       TLI->getLibcallCallingConv(LC), RetType, Callee, std::move(Args));
 
   auto [Call, CallChain] = TLI->LowerCallTo(CLI);
-
-  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
-    // This is needed for x87, which uses a floating-point stack. If (for
-    // example) the node to be expanded has two results one floating-point which
-    // is returned by the call, and one integer result, returned via an output
-    // pointer. If only the integer result is used then the `CopyFromReg` for
-    // the FP result may be optimized out. This prevents an FP stack pop from
-    // being emitted for it. The `CHAIN_BARRIER` node prevents optimizations
-    // from removing the `CopyFromReg` from the chain, and ensures the FP pop
-    // will be emitted.
-    CallChain = getNode(ISD::CHAIN_BARRIER, DL, MVT::Other, CallChain);
-  }
 
   for (auto [ResNo, ResultPtr] : llvm::enumerate(ResultPtrs)) {
     if (ResNo == CallRetResNo) {
