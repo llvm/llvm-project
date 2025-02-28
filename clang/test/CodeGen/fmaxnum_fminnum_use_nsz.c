@@ -158,7 +158,7 @@ float fmin32b(float a, float b) {
 // CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[ELT_MIN:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NEXT:    [[ELT_MIN:%.*]] = call nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
@@ -174,7 +174,7 @@ float fmin32b(float a, float b) {
 // CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    ret <4 x float> [[TMP2]]
@@ -190,7 +190,7 @@ float fmin32b(float a, float b) {
 // CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    ret <4 x float> [[TMP2]]
@@ -364,7 +364,7 @@ float fmin64b(double a, double b) {
 // CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[ELT_MIN:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NEXT:    [[ELT_MIN:%.*]] = call nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret <2 x double> [[TMP2]]
@@ -380,7 +380,7 @@ float fmin64b(double a, double b) {
 // CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    ret <2 x double> [[TMP2]]
@@ -396,7 +396,7 @@ float fmin64b(double a, double b) {
 // CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    ret <2 x double> [[TMP2]]
@@ -686,7 +686,7 @@ float fmax32b(float a, float b) {
 // CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[ELT_MAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NEXT:    [[ELT_MAX:%.*]] = call nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
@@ -702,7 +702,7 @@ float fmax32b(float a, float b) {
 // CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    ret <4 x float> [[TMP2]]
@@ -718,7 +718,7 @@ float fmax32b(float a, float b) {
 // CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
 // CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    ret <4 x float> [[TMP2]]
@@ -892,7 +892,7 @@ float fmax64b(double a, double b) {
 // CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[ELT_MAX:%.*]] = call <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NEXT:    [[ELT_MAX:%.*]] = call nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret <2 x double> [[TMP2]]
@@ -908,7 +908,7 @@ float fmax64b(double a, double b) {
 // CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    ret <2 x double> [[TMP2]]
@@ -924,7 +924,7 @@ float fmax64b(double a, double b) {
 // CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
+// CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
 // CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    ret <2 x double> [[TMP2]]
