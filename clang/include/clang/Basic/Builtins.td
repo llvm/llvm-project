@@ -209,6 +209,18 @@ def FmaxF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T, T)";
 }
 
+def MinNum : Builtin {
+  let Spellings = ["__builtin_minnum"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def MaxNum : Builtin {
+  let Spellings = ["__builtin_maxnum"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def FminF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_fmin"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
@@ -1300,6 +1312,18 @@ def ElementwiseMax : Builtin {
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaxNum : Builtin {
+  let Spellings = ["__builtin_elementwise_maxnum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinNum : Builtin {
+  let Spellings = ["__builtin_elementwise_minnum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
