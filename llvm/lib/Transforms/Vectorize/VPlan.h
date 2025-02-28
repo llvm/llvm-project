@@ -1730,7 +1730,8 @@ public:
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
-class VPHeaderPHIRecipe : public VPSingleDefRecipe {
+class VPHeaderPHIRecipe : public VPSingleDefRecipe,
+                          public VPPhiAccessors<VPHeaderPHIRecipe> {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
                     VPValue *Start = nullptr, DebugLoc DL = {})
@@ -2616,7 +2617,8 @@ public:
 /// order to merge values that are set under such a branch and feed their uses.
 /// The phi nodes can be scalar or vector depending on the users of the value.
 /// This recipe works in concert with VPBranchOnMaskRecipe.
-class VPPredInstPHIRecipe : public VPSingleDefRecipe {
+class VPPredInstPHIRecipe : public VPSingleDefRecipe,
+                            public VPPhiAccessors<VPPredInstPHIRecipe> {
 public:
   /// Construct a VPPredInstPHIRecipe given \p PredInst whose value needs a phi
   /// nodes after merging back from a Branch-on-Mask.

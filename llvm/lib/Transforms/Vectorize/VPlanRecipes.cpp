@@ -1745,6 +1745,12 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPHeaderPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
+}
+
 InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
@@ -2536,6 +2542,14 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
   // replicate regions. Match the current behavior in the VPlan cost model for
   // now.
   return 0;
+}
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPPredInstPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  assert(Idx == 0 && "Only one incoming block available");
+  // VPPredInstPHIRecipe only has a single incoming value, which corresponds to
+  // the second predecessor.
+  return getIncomingBlockForRecipe(getAsRecipe(), 1);
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
