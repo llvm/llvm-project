@@ -521,8 +521,9 @@ static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
 /// instruction \p MI named by \p SrcOpName and that the SDWA
 /// selection \p SrcSelOpName can be combined with the \p OpSel.
 static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
-                            AMDGPU::OpName SrcOpName, AMDGPU::OpName SrcSelOpName,
-                            MachineOperand *Op, SdwaSel OpSel) {
+                            AMDGPU::OpName SrcOpName,
+                            AMDGPU::OpName SrcSelOpName, MachineOperand *Op,
+                            SdwaSel OpSel) {
   assert(TII->isSDWA(MI.getOpcode()));
 
   const MachineOperand *Src = TII->getNamedOperand(MI, SrcOpName);
