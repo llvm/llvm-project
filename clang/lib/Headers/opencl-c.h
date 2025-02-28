@@ -15082,6 +15082,7 @@ half16 __ovld __cnfn shuffle2(half16, half16, ushort16);
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing : enable
 #endif //cl_khr_gl_msaa_sharing
 
+#if defined(__opencl_c_images)
 /**
  * Use the coordinate (coord.xy) to do an element lookup in
  * the 2D image object specified by image.
@@ -16142,6 +16143,8 @@ int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_t);
 int __ovld __cnfn get_image_num_samples(read_write image2d_array_msaa_depth_t);
 #endif //defined(__opencl_c_read_write_images)
 #endif
+
+#endif // defined(__opencl_c_images)
 
 // OpenCL v2.0 s6.13.15 - Work-group Functions
 
