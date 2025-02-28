@@ -61,6 +61,7 @@
     __cpp_lib_constexpr_cmath                               202202L [C++23]
     __cpp_lib_constexpr_complex                             201711L [C++20]
     __cpp_lib_constexpr_dynamic_alloc                       201907L [C++20]
+    __cpp_lib_constexpr_forward_list                        202502L [C++26]
     __cpp_lib_constexpr_functional                          201907L [C++20]
     __cpp_lib_constexpr_iterator                            201811L [C++20]
     __cpp_lib_constexpr_memory                              201811L [C++20]
@@ -428,6 +429,10 @@
 
 # ifdef __cpp_lib_constexpr_dynamic_alloc
 #   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_functional
@@ -1304,6 +1309,10 @@
 
 # ifdef __cpp_lib_constexpr_dynamic_alloc
 #   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_functional
@@ -2282,6 +2291,10 @@
 
 # ifdef __cpp_lib_constexpr_dynamic_alloc
 #   error "__cpp_lib_constexpr_dynamic_alloc should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_constexpr_functional
@@ -3500,6 +3513,10 @@
 # endif
 # if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_functional
@@ -4940,6 +4957,10 @@
 # endif
 # if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++23"
+# endif
+
+# ifdef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_functional
@@ -6608,6 +6629,13 @@
 # endif
 # if __cpp_lib_constexpr_dynamic_alloc != 201907L
 #   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++26"
+# endif
+
+# ifndef __cpp_lib_constexpr_forward_list
+#   error "__cpp_lib_constexpr_forward_list should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_forward_list != 202502L
+#   error "__cpp_lib_constexpr_forward_list should have the value 202502L in c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_functional
