@@ -254,10 +254,23 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
     return nullptr;
 
+  // If V is a load instruction that loads from a constant global then attempt
+  // to use that constant to produce the pattern.
+  Constant *C = nullptr;
+  if (auto *LI = dyn_cast<LoadInst>(V)) {
+    if (auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand())) {
+      if (GV->isConstant() && GV->hasInitializer()) {
+        C = GV->getInitializer();
+      }
+    }
+  }
+
+  if (!C)
+    C = dyn_cast<Constant>(V);
+
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
-  Constant *C = dyn_cast<Constant>(V);
   if (!C || isa<ConstantExpr>(C))
     return nullptr;
 
@@ -284,7 +297,7 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
 
   // Otherwise, we'll use an array of the constants.
   uint64_t ArraySize = 16 / Size;
-  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  ArrayType *AT = ArrayType::get(C->getType(), ArraySize);
   return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 

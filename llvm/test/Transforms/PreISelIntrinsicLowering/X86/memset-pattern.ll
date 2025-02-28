@@ -4,13 +4,16 @@
 ;.
 ; CHECK: @G = global i32 5
 ; CHECK: @ptr_pat = private unnamed_addr constant ptr @G, align 8
+; CHECK: @nonconst_ptr_pat = private unnamed_addr global ptr @G, align 8
 ; CHECK: @.memset_pattern = private unnamed_addr constant [2 x i64] [i64 -6148895925951734307, i64 -6148895925951734307], align 16
 ; CHECK: @.memset_pattern.1 = private unnamed_addr constant [2 x i64] [i64 4614256656552045848, i64 4614256656552045848], align 16
-; CHECK: @.memset_pattern.2 = private unnamed_addr constant [8 x i16] [i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555], align 16
-; CHECK: @.memset_pattern.3 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
-; CHECK: @.memset_pattern.4 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
+; CHECK: @.memset_pattern.2 = private unnamed_addr constant [2 x ptr] [ptr @G, ptr @G], align 16
+; CHECK: @.memset_pattern.3 = private unnamed_addr constant [2 x ptr] [ptr @G, ptr @G], align 16
+; CHECK: @.memset_pattern.4 = private unnamed_addr constant [8 x i16] [i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555], align 16
 ; CHECK: @.memset_pattern.5 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
 ; CHECK: @.memset_pattern.6 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
+; CHECK: @.memset_pattern.7 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
+; CHECK: @.memset_pattern.8 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
 ;.
 define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_dynvalue(
@@ -33,7 +36,7 @@ define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.3, i64 16)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.5, i64 16)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 1, i1 false)
@@ -61,7 +64,7 @@ define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounw
 define void @memset_pattern_i128_1_align_attr(ptr align(16) %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_align_attr(
 ; CHECK-SAME: ptr align 16 [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr align 16 [[A]], ptr @.memset_pattern.4, i64 16)
+; CHECK-NEXT:    call void @memset_pattern16(ptr align 16 [[A]], ptr @.memset_pattern.6, i64 16)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr align(16) %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 1, i1 false)
@@ -71,7 +74,7 @@ define void @memset_pattern_i128_1_align_attr(ptr align(16) %a, i128 %value) nou
 define void @memset_pattern_i128_16(ptr %a) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_16(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.5, i64 256)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.7, i64 256)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 16, i1 false)
@@ -82,7 +85,7 @@ define void @memset_pattern_i128_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.6, i64 [[TMP1]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.8, i64 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 %x, i1 false)
@@ -112,7 +115,7 @@ define void @memset_pattern_i16_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i16_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 2, [[X]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 [[TMP1]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.4, i64 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i16 u0xabcd, i64 %x, i1 false)
@@ -149,20 +152,11 @@ define void @memset_pattern_i64_128_tbaa(ptr %a) nounwind {
 @G = global i32 5
 @ptr_pat = private unnamed_addr constant ptr @G, align 8
 
-; FIXME: memset_pattern16 should be selected.
 define void @memset_pattern_i64_16_fromptr(ptr %a) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i64_16_fromptr(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @ptr_pat, align 8
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
-; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 16
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
-; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 128)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load i64, ptr @ptr_pat, align 8
@@ -170,21 +164,12 @@ define void @memset_pattern_i64_16_fromptr(ptr %a) nounwind {
   ret void
 }
 
-; FIXME: memset_pattern16 should be selected.
 define void @memset_pattern_i64_x_fromptr(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i64_x_fromptr(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @ptr_pat, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
-; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[X]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
-; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 8, [[X]]
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.3, i64 [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = load i64, ptr @ptr_pat, align 8
