@@ -260,7 +260,7 @@ constexpr TypeBuilderFunc getModel<void **>() {
 template <>
 constexpr TypeBuilderFunc getModel<long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(context, 8 * sizeof(long));
+    return mlir::IntegerType::get(context, 8 * 4);
   };
 }
 template <>
@@ -309,7 +309,7 @@ constexpr TypeBuilderFunc getModel<const long long *>() {
 template <>
 constexpr TypeBuilderFunc getModel<unsigned long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+    return mlir::IntegerType::get(context, 8 * 4);
   };
 }
 template <>
