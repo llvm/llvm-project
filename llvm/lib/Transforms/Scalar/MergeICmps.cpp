@@ -1011,6 +1011,13 @@ std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
   return Blocks;
 }
 
+template<typename T>
+bool isInvalidPrevBlock(PHINode &Phi, unsigned I) {
+  auto* IncomingValue = Phi.getIncomingValue(I);
+  return !isa<T>(IncomingValue) ||
+    cast<T>(IncomingValue)->getParent() != Phi.getIncomingBlock(I);
+}
+
 bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                 DomTreeUpdater &DTU) {
   LLVM_DEBUG(dbgs() << "processPhi()\n");
@@ -1042,9 +1049,7 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
       LLVM_DEBUG(dbgs() << "skip: several non-constant values\n");
       return false;
     }
-    if (!isa<ICmpInst>(Phi.getIncomingValue(I)) ||
-        cast<ICmpInst>(Phi.getIncomingValue(I))->getParent() !=
-            Phi.getIncomingBlock(I)) {
+    if (isInvalidPrevBlock<ICmpInst>(Phi,I) && isInvalidPrevBlock<SelectInst>(Phi,I)) {
       // Non-constant incoming value is not from a cmp instruction or not
       // produced by the last block. We could end up processing the value
       // producing block more than once.
