@@ -23,12 +23,17 @@ define signext i32 @andn_i32(i32 signext %a, i32 signext %b) nounwind {
 }
 
 define signext i32 @andn_i32_from_sub(i32 signext %a, i32 signext %b) nounwind {
-; CHECK-LABEL: andn_i32_from_sub:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    negw a1, a1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    ret
-  %neg = sub i32 0, %b
+; RV64I-LABEL: andn_i32_from_sub:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: andn_i32_from_sub:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:    ret
+  %neg = sub i32 -1, %b
   %and = and i32 %neg, %a
   ret i32 %and
 }
@@ -52,7 +57,7 @@ define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 define i64 @andn_i64_from_sub(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: andn_i64_from_sub:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -60,7 +65,7 @@ define i64 @andn_i64_from_sub(i64 %a, i64 %b) nounwind {
 ; RV64ZBB-ZBKB:       # %bb.0:
 ; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
 ; RV64ZBB-ZBKB-NEXT:    ret
-  %neg = sub i64 0, %b
+  %neg = sub i64 -1, %b
   %and = and i64 %neg, %a
   ret i64 %and
 }
