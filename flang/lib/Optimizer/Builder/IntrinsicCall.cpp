@@ -456,8 +456,18 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genIeeeSupportFlag,
      {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"ieee_support_halting", &I::genIeeeSupportHalting},
-    {"ieee_support_rounding", &I::genIeeeSupportRounding},
+    {"ieee_support_halting",
+     &I::genIeeeSupportHalting,
+     {{{"flag", asValue}}},
+     /*isElemental=*/false},
+    {"ieee_support_rounding",
+     &I::genIeeeSupportRounding,
+     {{{"round_value", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"ieee_support_standard",
+     &I::genIeeeSupportStandard,
+     {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ieee_unordered", &I::genIeeeUnordered},
     {"ieee_value", &I::genIeeeValue},
     {"ieor", &I::genIeor},
@@ -1277,8 +1287,10 @@ static constexpr MathOperation mathOperations[] = {
     {"erf", "erf", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::ErfOp>},
     {"erf", RTNAME_STRING(ErfF128), FuncTypeReal16Real16, genLibF128Call},
-    {"erfc", "erfcf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"erfc", "erfc", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"erfc", "erfcf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::ErfcOp>},
+    {"erfc", "erfc", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::ErfcOp>},
     {"erfc", RTNAME_STRING(ErfcF128), FuncTypeReal16Real16, genLibF128Call},
     {"exp", "expf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::ExpOp>},
@@ -2728,15 +2740,36 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 3);
-  assert(args[1].getType() == args[2].getType());
   auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
   auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+
+  mlir::Value arg1 = args[1];
+  mlir::Value arg2 = args[2];
+
+  auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
+    if (mlir::isa<mlir::Float32Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI32Type(),
+                                                   arg);
+    if (mlir::isa<mlir::Float64Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI64Type(),
+                                                   arg);
+    return arg;
+  };
+
+  arg1 = bitCastFloat(arg1);
+  arg2 = bitCastFloat(arg2);
+
+  if (arg1.getType() != arg2.getType()) {
+    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
+    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
+  }
+
   auto address =
       builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, args[0])
           .getResult(0);
   auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
-      loc, address, args[1], args[2], successOrdering, failureOrdering);
+      loc, address, arg1, arg2, successOrdering, failureOrdering);
   return builder.create<mlir::LLVM::ExtractValueOp>(loc, cmpxchg, 1);
 }
 
@@ -2753,7 +2786,7 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
                                             llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
+  assert(args[1].getType().isIntOrFloat());
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
@@ -5519,13 +5552,33 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // Set the current floating point rounding mode to the value of arg
   // ROUNDING_VALUE. Values are llvm.get.rounding encoding values.
-  // Generate an error if the value of optional arg RADIX is not 2.
+  // Modes ieee_to_zero, ieee_nearest, ieee_up, and ieee_down are supported.
+  // Modes ieee_away and ieee_other are not supported, and are treated as
+  // ieee_nearest. Generate an error if the optional RADIX arg is not 2.
   assert(args.size() == 1 || args.size() == 2);
   if (args.size() == 2)
     checkRadix(builder, loc, fir::getBase(args[1]), "ieee_set_rounding_mode");
-  auto [fieldRef, ignore] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
+  static_assert(
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO <= 3 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST <= 3 && _FORTRAN_RUNTIME_IEEE_UP >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_UP <= 3 && _FORTRAN_RUNTIME_IEEE_DOWN >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_DOWN <= 3 && "unexpected rounding mode mapping");
+  mlir::Value mask = builder.create<mlir::arith::ShLIOp>(
+      loc, builder.createAllOnesInteger(loc, fieldTy),
+      builder.createIntegerConstant(loc, fieldTy, 2));
+  mlir::Value modeIsSupported = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq,
+      builder.create<mlir::arith::AndIOp>(loc, mode, mask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, fieldTy, _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mode = builder.create<mlir::arith::SelectOp>(loc, modeIsSupported, mode,
+                                               nearest);
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);
@@ -5586,7 +5639,7 @@ IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
   // is therefore ignored. Standard flags are all supported. The nonstandard
   // DENORM extension is not supported, at least for now.
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
   mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
       loc, fieldTy,
@@ -5618,9 +5671,8 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportHalting(
 }
 
 // IEEE_SUPPORT_ROUNDING
-mlir::Value
-IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportRounding(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   // Check if floating point rounding mode ROUND_VALUE is supported.
   // Rounding is supported either for all type kinds or none.
   // An optional X kind argument is therefore ignored.
@@ -5631,7 +5683,7 @@ IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
   //  3 - toward negative infinity [supported]
   //  4 - to nearest, ties away from zero [not supported]
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, args[0]);
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
   mlir::Value lbOk = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::sge, mode,
@@ -5642,6 +5694,19 @@ IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
       builder.createIntegerConstant(loc, fieldTy, _FORTRAN_RUNTIME_IEEE_DOWN));
   return builder.createConvert(
       loc, resultType, builder.create<mlir::arith::AndIOp>(loc, lbOk, ubOk));
+}
+
+// IEEE_SUPPORT_STANDARD
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportStandard(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Check if IEEE standard support is available, which reduces to checking
+  // if halting control is supported, as that is the only support component
+  // that may not be available.
+  assert(args.size() <= 1);
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_NEAREST);
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genSupportHalting(builder, loc, nearest));
 }
 
 // IEEE_UNORDERED

@@ -246,7 +246,8 @@ static void EventThreadFunction(DAP &dap) {
 //     }
 //   }]
 // }
-void InitializeRequestHandler::operator()(const llvm::json::Object &request) {
+void InitializeRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;

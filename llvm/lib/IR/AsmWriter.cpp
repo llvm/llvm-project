@@ -88,6 +88,14 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    PrintInstAddrs("print-inst-addrs", cl::Hidden,
+                   cl::desc("Print addresses of instructions when dumping"));
+
+static cl::opt<bool> PrintInstDebugLocs(
+    "print-inst-debug-locs", cl::Hidden,
+    cl::desc("Pretty print debug locations of instructions when dumping"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -2224,6 +2232,26 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Out << ")";
 }
 
+static void writeDISubrangeType(raw_ostream &Out, const DISubrangeType *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DISubrangeType(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printInt("size", N->getSizeInBits());
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMetadata("baseType", N->getRawBaseType(),
+                        /* ShouldSkipNull */ false);
+  Printer.printMetadata("lowerBound", N->getRawLowerBound());
+  Printer.printMetadata("upperBound", N->getRawUpperBound());
+  Printer.printMetadata("stride", N->getRawStride());
+  Printer.printMetadata("bias", N->getRawBias());
+  Out << ")";
+}
+
 static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
                                  AsmWriterContext &WriterCtx) {
   Out << "!DICompositeType(";
@@ -4236,6 +4264,18 @@ void AssemblyWriter::printInfoComment(const Value &V) {
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
   }
+
+  if (PrintInstDebugLocs) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      if (I->getDebugLoc()) {
+        Out << " ; ";
+        I->getDebugLoc().print(Out);
+      }
+    }
+  }
+
+  if (PrintInstAddrs)
+    Out << " ; " << &V;
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,

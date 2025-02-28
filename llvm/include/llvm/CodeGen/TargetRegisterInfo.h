@@ -1111,6 +1111,10 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  virtual int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const {
+    llvm_unreachable("getDwarfRegNumForVirtReg does not exist on this target");
+  }
+
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger

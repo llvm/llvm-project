@@ -13,6 +13,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -131,6 +132,21 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
+mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
+                                            QualType ty, mlir::Location loc,
+                                            CharUnits alignment) {
+  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
+  assert(namedVar && "Needs a named decl");
+  assert(!cir::MissingFeatures::cgfSymbolTable());
+
+  mlir::Value addrVal = addr.getPointer();
+  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  if (ty->isReferenceType() || ty.isConstQualified())
+    allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
+
+  return mlir::success();
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    SourceLocation loc,
@@ -153,6 +169,7 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
     emitCompoundStmtWithoutScope(*block);
   else
     result = emitStmt(body, /*useCurrentScope=*/true);
+
   return result;
 }
 
@@ -215,6 +232,22 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   finishFunction(bodyRange.getEnd());
 
   return fn;
+}
+
+/// Emit code to compute a designator that specifies the location
+/// of the expression.
+/// FIXME: document this function better.
+LValue CIRGenFunction::emitLValue(const Expr *e) {
+  // FIXME: ApplyDebugLocation DL(*this, e);
+  switch (e->getStmtClass()) {
+  default:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               std::string("l-value not implemented for '") +
+                                   e->getStmtClassName() + "'");
+    break;
+  case Expr::DeclRefExprClass:
+    return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  }
 }
 
 } // namespace clang::CIRGen

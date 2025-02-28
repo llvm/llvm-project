@@ -319,7 +319,6 @@ void SPIRVModuleAnalysis::visitDecl(
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-  DenseSet<Register> Deps;
 
   // Process each operand of the instruction to resolve dependencies
   for (const MachineOperand &MO : MI.operands()) {
@@ -1723,7 +1722,12 @@ void addInstrRequirements(const MachineInstr &MI,
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
@@ -1731,7 +1735,12 @@ void addInstrRequirements(const MachineInstr &MI,
     Register ImageReg = MI.getOperand(0).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
   }

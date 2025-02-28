@@ -56,7 +56,8 @@ namespace lldb_dap {
 //     acknowledgement, so no body field is required."
 //   }]
 // },
-void RestartRequestHandler::operator()(const llvm::json::Object &request) {
+void RestartRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   if (!dap.last_launch_or_attach_request) {

@@ -64,12 +64,12 @@ public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
   virtual llvm::StringRef GetInstanceName() const = 0;
-  static TelemetryManager *getInstance();
+  static TelemetryManager *GetInstance();
 
 protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
 
-  static void setInstance(std::unique_ptr<TelemetryManager> manger);
+  static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;

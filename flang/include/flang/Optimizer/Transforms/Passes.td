@@ -453,4 +453,37 @@ def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
   ];
 }
 
+def SetRuntimeCallAttributes
+    : Pass<"set-runtime-call-attrs", "mlir::func::FuncOp"> {
+  let summary = "Set Fortran runtime fir.call attributes targeting LLVM IR";
+  let description = [{
+    This pass sets different attributes for Fortran runtime calls
+    that enable more optimizations in LLVM backend.
+    For the time being, the meaning of these attributes is not
+    strictly defined for HLFIR/FIR.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def GenRuntimeCallsForTest
+    : Pass<"gen-runtime-calls-for-test", "mlir::ModuleOp"> {
+  let summary =
+      "Print FIR containing declarations/calls of Fortran runtime functions";
+  let description = [{
+    This pass is only for developers to be able to print FIR
+    that declares and calls Fortran runtime functions.
+    It helps producing/updating tests for passes that modify
+    the func/call operations based on some knowledge of
+    Fortran runtime.
+  }];
+  let options =
+      [Option<"doGenerateCalls", "do-generate-calls", "bool",
+              /*default=*/"false",
+              "Generate thin wrapper functions that call Fortran runtime "
+              "functions. If it is set to false, then only the declarations "
+              "are generated.">,
+  ];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect"];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

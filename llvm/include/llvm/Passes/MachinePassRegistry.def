@@ -144,6 +144,7 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass())
 MACHINE_FUNCTION_PASS("machine-cse", MachineCSEPass())
+MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass())
 MACHINE_FUNCTION_PASS("machine-scheduler", MachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("machinelicm", MachineLICMPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
@@ -194,6 +195,16 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
       return parseRegAllocFastPassOptions(*PB, Params);
     },
     "filter=reg-filter;no-clear-vregs")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "greedy", "RAGreedyPass",
+    [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
+    [PB = this](StringRef Params) {
+      // TODO: parseRegAllocGreedyFilterFunc(*PB, Params);
+      (void)PB;
+      return Expected<RAGreedyPass::Options>(RAGreedyPass::Options{});
+    }, "reg-filter"
+)
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -245,7 +256,6 @@ DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
-DUMMY_MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sanmd", MachineSanitizerBinaryMetadata)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sink", MachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-uniformity", MachineUniformityInfoWrapperPass)
@@ -260,7 +270,6 @@ DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
-DUMMY_MACHINE_FUNCTION_PASS("ra-greedy", RAGreedyPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)

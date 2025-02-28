@@ -12,6 +12,15 @@
 #include "LLDBUtils.h"
 #include "lldb/API/SBFileSpec.h"
 
+#if defined(_WIN32)
+#define NOMINMAX
+#include <windows.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
+#endif
+
 namespace lldb_dap {
 
 static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {

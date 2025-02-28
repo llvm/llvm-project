@@ -5919,6 +5919,7 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )
@@ -5929,6 +5930,7 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )

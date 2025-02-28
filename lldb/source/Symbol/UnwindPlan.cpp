@@ -412,48 +412,44 @@ void UnwindPlan::InsertRow(const UnwindPlan::RowSP &row_sp,
     *it = row_sp;
 }
 
-UnwindPlan::RowSP UnwindPlan::GetRowForFunctionOffset(int offset) const {
+const UnwindPlan::Row *UnwindPlan::GetRowForFunctionOffset(int offset) const {
+  if (m_row_list.empty())
+    return nullptr;
+  if (offset == -1)
+    return m_row_list.back().get();
+
   RowSP row;
-  if (!m_row_list.empty()) {
-    if (offset == -1)
-      row = m_row_list.back();
-    else {
-      collection::const_iterator pos, end = m_row_list.end();
-      for (pos = m_row_list.begin(); pos != end; ++pos) {
-        if ((*pos)->GetOffset() <= static_cast<lldb::offset_t>(offset))
-          row = *pos;
-        else
-          break;
-      }
-    }
+  collection::const_iterator pos, end = m_row_list.end();
+  for (pos = m_row_list.begin(); pos != end; ++pos) {
+    if ((*pos)->GetOffset() <= static_cast<lldb::offset_t>(offset))
+      row = *pos;
+    else
+      break;
   }
-  return row;
+  return row.get();
 }
 
 bool UnwindPlan::IsValidRowIndex(uint32_t idx) const {
   return idx < m_row_list.size();
 }
 
-const UnwindPlan::RowSP UnwindPlan::GetRowAtIndex(uint32_t idx) const {
+const UnwindPlan::Row *UnwindPlan::GetRowAtIndex(uint32_t idx) const {
   if (idx < m_row_list.size())
-    return m_row_list[idx];
-  else {
-    Log *log = GetLog(LLDBLog::Unwind);
-    LLDB_LOGF(log,
-              "error: UnwindPlan::GetRowAtIndex(idx = %u) invalid index "
-              "(number rows is %u)",
-              idx, (uint32_t)m_row_list.size());
-    return UnwindPlan::RowSP();
-  }
+    return m_row_list[idx].get();
+  LLDB_LOG(GetLog(LLDBLog::Unwind),
+           "error: UnwindPlan::GetRowAtIndex(idx = {0}) invalid index "
+           "(number rows is {1})",
+           idx, m_row_list.size());
+  return nullptr;
 }
 
-const UnwindPlan::RowSP UnwindPlan::GetLastRow() const {
+const UnwindPlan::Row *UnwindPlan::GetLastRow() const {
   if (m_row_list.empty()) {
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOGF(log, "UnwindPlan::GetLastRow() when rows are empty");
-    return UnwindPlan::RowSP();
+    return nullptr;
   }
-  return m_row_list.back();
+  return m_row_list.back().get();
 }
 
 int UnwindPlan::GetRowCount() const { return m_row_list.size(); }
@@ -486,7 +482,7 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) {
   // If the 0th Row of unwind instructions is missing, or if it doesn't provide
   // a register to use to find the Canonical Frame Address, this is not a valid
   // UnwindPlan.
-  if (GetRowAtIndex(0).get() == nullptr ||
+  if (GetRowAtIndex(0) == nullptr ||
       GetRowAtIndex(0)->GetCFAValue().GetValueType() ==
           Row::FAValue::unspecified) {
     Log *log = GetLog(LLDBLog::Unwind);

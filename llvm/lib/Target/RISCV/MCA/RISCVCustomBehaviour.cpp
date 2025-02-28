@@ -205,7 +205,7 @@ getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
   return std::make_pair(EEW, *EMUL);
 }
 
-bool opcodeHasEEWAndEMULInfo(unsigned short Opcode) {
+static bool opcodeHasEEWAndEMULInfo(unsigned short Opcode) {
   return Opcode == RISCV::VLM_V || Opcode == RISCV::VSM_V ||
          Opcode == RISCV::VLE8_V || Opcode == RISCV::VSE8_V ||
          Opcode == RISCV::VLE16_V || Opcode == RISCV::VSE16_V ||

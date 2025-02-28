@@ -1,0 +1,69 @@
+// RUN: cir-opt %s -o - | FileCheck %s
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global @c : !cir.int<s, 8>
+  cir.global @sc : !cir.int<s, 8>
+  cir.global @uc : !cir.int<u, 8>
+  cir.global @ss : !cir.int<s, 16>
+  cir.global @us = #cir.int<100> : !cir.int<u, 16>
+  cir.global @si = #cir.int<42> : !cir.int<s, 32>
+  cir.global @ui : !cir.int<u, 32>
+  cir.global @sl : !cir.int<s, 64>
+  cir.global @ul : !cir.int<u, 64>
+  cir.global @sll : !cir.int<s, 64>
+  cir.global @ull = #cir.int<123456> : !cir.int<u, 64>
+  cir.global @s128 : !cir.int<s, 128>
+  cir.global @u128 : !cir.int<u, 128>
+  cir.global @wc : !cir.int<s, 32>
+  cir.global @c8 : !cir.int<u, 8>
+  cir.global @c16 : !cir.int<u, 16>
+  cir.global @c32 : !cir.int<u, 32>
+  cir.global @sb20 : !cir.int<s, 20>
+  cir.global @ub48 : !cir.int<u, 48>
+  cir.global @f16 : !cir.f16
+  cir.global @bf16 : !cir.bf16
+  cir.global @f : !cir.float
+  cir.global @d = #cir.fp<1.250000e+00> : !cir.double
+  cir.global @ld : !cir.long_double<!cir.f80>
+  cir.global @f128 : !cir.f128
+  cir.global @vp : !cir.ptr<!cir.void>
+  cir.global @ip = #cir.ptr<null> : !cir.ptr<!cir.int<s, 32>>
+  cir.global @dp : !cir.ptr<!cir.double>
+  cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
+  cir.global @fp : !cir.ptr<!cir.func<()>>
+  cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
+  cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>
+}
+
+// CHECK: cir.global @c : !cir.int<s, 8>
+// CHECK: cir.global @sc : !cir.int<s, 8>
+// CHECK: cir.global @uc : !cir.int<u, 8>
+// CHECK: cir.global @ss : !cir.int<s, 16>
+// CHECK: cir.global @us = #cir.int<100>
+// CHECK: cir.global @si = #cir.int<42>
+// CHECK: cir.global @ui : !cir.int<u, 32>
+// CHECK: cir.global @sl : !cir.int<s, 64>
+// CHECK: cir.global @ul : !cir.int<u, 64>
+// CHECK: cir.global @sll : !cir.int<s, 64>
+// CHECK: cir.global @ull = #cir.int<123456> : !cir.int<u, 64>
+// CHECK: cir.global @s128 : !cir.int<s, 128>
+// CHECK: cir.global @u128 : !cir.int<u, 128>
+// CHECK: cir.global @wc : !cir.int<s, 32>
+// CHECK: cir.global @c8 : !cir.int<u, 8>
+// CHECK: cir.global @c16 : !cir.int<u, 16>
+// CHECK: cir.global @c32 : !cir.int<u, 32>
+// CHECK: cir.global @sb20 : !cir.int<s, 20>
+// CHECK: cir.global @ub48 : !cir.int<u, 48>
+// CHECK: cir.global @f16 : !cir.f16
+// CHECK: cir.global @bf16 : !cir.bf16
+// CHECK: cir.global @f : !cir.float
+// CHECK: cir.global @d = #cir.fp<1.250000e+00> : !cir.double
+// CHECK: cir.global @ld : !cir.long_double<!cir.f80>
+// CHECK: cir.global @f128 : !cir.f128
+// CHECK: cir.global @vp : !cir.ptr<!cir.void>
+// CHECK: cir.global @ip = #cir.ptr<null> : !cir.ptr<!cir.int<s, 32>>
+// CHECK: cir.global @dp : !cir.ptr<!cir.double>
+// CHECK: cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
+// CHECK: cir.global @fp : !cir.ptr<!cir.func<()>>
+// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
+// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>

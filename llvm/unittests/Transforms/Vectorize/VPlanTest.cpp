@@ -1069,7 +1069,7 @@ TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPBranchOnMaskRecipe Recipe(Mask);
+  VPBranchOnMaskRecipe Recipe(Mask, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1157,7 +1157,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
 
-    VPBranchOnMaskRecipe Recipe(Mask);
+    VPBranchOnMaskRecipe Recipe(Mask, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());

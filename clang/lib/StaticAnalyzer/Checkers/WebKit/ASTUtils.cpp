@@ -24,6 +24,8 @@ bool isSafePtr(clang::CXXRecordDecl *Decl) {
 
 bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -53,9 +55,9 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                callback) &&
+                                isSafePtr, isSafePtrType, callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                callback);
+                                isSafePtr, isSafePtrType, callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -92,7 +94,7 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *callee = call->getDirectCallee()) {
-        if (isCtorOfRefCounted(callee) || isCtorOfCheckedPtr(callee)) {
+        if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 

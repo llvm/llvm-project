@@ -210,7 +210,7 @@ private:
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);
   RT_API_ATTRS void HitEndOnRead(IoErrorHandler &);
-  RT_API_ATTRS std::int32_t ReadHeaderOrFooter(std::int64_t frameOffset);
+  RT_API_ATTRS std::uint32_t ReadHeaderOrFooter(std::int64_t frameOffset);
 
   Lock lock_;
 

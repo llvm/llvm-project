@@ -4675,15 +4675,16 @@ public:
       }
 
       if (select_helper.FDIsSetRead(pipe_read_fd)) {
-        size_t bytes_read;
         // Consume the interrupt byte
-        Status error = m_pipe.Read(&ch, 1, bytes_read);
-        if (error.Success()) {
+        if (llvm::Expected<size_t> bytes_read = m_pipe.Read(&ch, 1)) {
           if (ch == 'q')
             break;
           if (ch == 'i')
             if (StateIsRunningState(m_process->GetState()))
               m_process->SendAsyncInterrupt();
+        } else {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Process), bytes_read.takeError(),
+                         "Pipe read failed: {0}");
         }
       }
     }
@@ -4707,8 +4708,10 @@ public:
     // deadlocking when the pipe gets fed up and blocks until data is consumed.
     if (m_is_running) {
       char ch = 'q'; // Send 'q' for quit
-      size_t bytes_written = 0;
-      m_pipe.Write(&ch, 1, bytes_written);
+      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                       "Pipe write failed: {0}");
+      }
     }
   }
 
@@ -4720,9 +4723,7 @@ public:
     // m_process->SendAsyncInterrupt() from a much safer location in code.
     if (m_active) {
       char ch = 'i'; // Send 'i' for interrupt
-      size_t bytes_written = 0;
-      Status result = m_pipe.Write(&ch, 1, bytes_written);
-      return result.Success();
+      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
     } else {
       // This IOHandler might be pushed on the stack, but not being run
       // currently so do the right thing if we aren't actively watching for

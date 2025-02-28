@@ -38,7 +38,14 @@ subroutine C937(var)
 
   type B
     type(A) y
-    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'y%x')
+    !ERROR: Allocatable or array component 'forward' may not have a coarray ultimate component '%y%x'
+    type(B), allocatable :: forward
+    real :: u
+  end type
+
+  type B2
+    type(A) y
+    !ERROR: Pointer 'forward' may not have a coarray potential component '%y%x'
     type(B), pointer :: forward
     real :: u
   end type
@@ -48,11 +55,14 @@ subroutine C937(var)
   end type
 
   type D
-    !ERROR: A component with a POINTER or ALLOCATABLE attribute may not be of a type with a coarray ultimate component (named 'x')
-    type(A), pointer :: potential
+    !ERROR: Allocatable or array component 'potential' may not have a coarray ultimate component '%x'
+    type(A), allocatable :: potential
   end type
 
-
+  type D2
+    !ERROR: Pointer 'potential' may not have a coarray potential component '%x'
+    type(A), pointer :: potential
+  end type
 
   class(*), allocatable :: var
   ! unlimited polymorphic is the ONLY way to get an allocatable/pointer 'var' that can be

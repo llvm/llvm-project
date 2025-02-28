@@ -47,6 +47,9 @@ Improvements and New Features
 - The ``std::ranges::{copy, copy_n, copy_backward, move, move_backward}`` algorithms have been optimized for
   ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 2000x.
 
+- The ``std::ranges::equal`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a performance
+  improvement of up to 188x.
+
 - Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals

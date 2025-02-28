@@ -2731,8 +2731,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       SDValue ByValSrc;
       bool NeedsStackCopy;
-      if (ByValTemporaries.contains(realArgIdx)) {
-        ByValSrc = ByValTemporaries[realArgIdx];
+      if (auto It = ByValTemporaries.find(realArgIdx);
+          It != ByValTemporaries.end()) {
+        ByValSrc = It->second;
         NeedsStackCopy = true;
       } else {
         ByValSrc = Arg;

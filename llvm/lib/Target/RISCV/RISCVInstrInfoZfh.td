@@ -52,22 +52,22 @@ def ZfhDExt    : ExtInfo<"", "", [HasStdExtZfh, HasStdExtD],
 def ZfhminDExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtD],
                          ?, ?, FPR32, FPR64, FPR16>;
 
-def ZhinxExt            : ExtInfo<"_INX", "RVZfinx",
+def ZhinxExt            : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinx],
                                   f16, FPR16INX, FPR32INX, ?, FPR16INX>;
-def ZhinxminExt         : ExtInfo<"_INX", "RVZfinx",
+def ZhinxminExt         : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinxmin],
                                   f16, FPR16INX, FPR32INX, ?, FPR16INX>;
-def ZhinxZdinxExt       : ExtInfo<"_INX", "RVZfinx",
+def ZhinxZdinxExt       : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV64],
                                   ?, ?, FPR32INX, FPR64INX, FPR16INX>;
-def ZhinxminZdinxExt    : ExtInfo<"_INX", "RVZfinx",
+def ZhinxminZdinxExt    : ExtInfo<"_INX", "Zfinx",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64],
                                   ?, ?, FPR32INX, FPR64INX, FPR16INX>;
-def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "RV32Zdinx",
+def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV32],
                                   ?, ?, FPR32INX, FPR64IN32X, FPR16INX >;
-def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "RV32Zdinx",
+def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32],
                                   ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;
 

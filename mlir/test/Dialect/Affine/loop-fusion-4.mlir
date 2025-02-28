@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{compute-tolerance=0.0}))' -split-input-file | FileCheck %s --check-prefix=ZERO-TOLERANCE
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer maximal}))' -split-input-file | FileCheck %s --check-prefix=PRODUCER-CONSUMER-MAXIMAL
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal mode=sibling}))' -split-input-file | FileCheck %s --check-prefix=SIBLING-MAXIMAL
 // All fusion: producer-consumer and sibling.
@@ -495,3 +496,129 @@ func.func @test_add_slice_bounds() {
   }
   return
 }
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @producer_reduction_no_fusion
+func.func @producer_reduction_no_fusion(%input : memref<10xf32>, %output : memref<10xf32>, %reduc : memref<1xf32>) {
+  %zero = arith.constant 0. : f32
+  %one = arith.constant 1. : f32
+  // This producer can't be fused into inside %i without a violation of
+  // semantics.
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 0 to 10
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %1 = affine.load %reduc[0] : memref<1xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %reduc[0] : memref<1xf32>
+  }
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for %{{.*}} = 0 to 10
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %reduc[0] : memref<1xf32>
+    %2 = arith.addf %0, %one : f32
+    affine.store %2, %output[%i] : memref<10xf32>
+  }
+  return
+}
+
+// SIBLING-MAXIMAL-LABEL: func @sibling_reduction
+func.func @sibling_reduction(%input : memref<10xf32>, %output : memref<10xf32>, %reduc : memref<10xf32>) {
+  %zero = arith.constant 0. : f32
+  %one = arith.constant 1. : f32
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %2 = arith.addf %0, %one : f32
+    affine.store %2, %output[%i] : memref<10xf32>
+  }
+  // Ensure that the fusion happens at the right depth.
+  affine.for %i = 0 to 10 {
+    %0 = affine.load %input[%i] : memref<10xf32>
+    %1 = affine.load %reduc[0] : memref<10xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %reduc[0] : memref<10xf32>
+  }
+  // SIBLING-MAXIMAL:      affine.for %{{.*}} = 0 to 10
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
+  return
+}
+
+// -----
+
+// From  https://github.com/llvm/llvm-project/issues/54541
+
+#map = affine_map<(d0) -> (d0 mod 65536)>
+// ZERO-TOLERANCE-LABEL: func @zero_tolerance
+func.func @zero_tolerance(%arg0: memref<65536xcomplex<f64>>, %arg1: memref<30x131072xi64>,
+%3 : memref<30xi64>,
+%4 : memref<30xi64>,
+%5 : memref<30xi64>,
+%6 : memref<30xi64>
+) {
+  %c65536 = arith.constant 65536 : index
+  %cst = arith.constant 0.000000e+00 : f64
+  %cst_0 = arith.constant 0x4320000000380004 : f64
+  %cst_1 = arith.constant 5.000000e-01 : f64
+  %0 = memref.alloc() {alignment = 128 : i64} : memref<30x131072xi64>
+  %1 = memref.alloc() {alignment = 128 : i64} : memref<131072xi1>
+  %2 = memref.alloc() {alignment = 128 : i64} : memref<131072xi128>
+  // This nest nest shouldn't be fused in when a zero tolerance is specified.
+  // ZERO-TOLERANCE: affine.for %{{.*}} = 0 to 131072
+  affine.for %arg2 = 0 to 131072 {
+    %7 = affine.apply #map(%arg2)
+    %8 = affine.load %arg0[%7] : memref<65536xcomplex<f64>>
+    %9 = arith.cmpi ult, %arg2, %c65536 : index
+    %10 = complex.im %8 : complex<f64>
+    %11 = complex.re %8 : complex<f64>
+    %12 = arith.select %9, %11, %10 : f64
+    %13 = arith.cmpf olt, %12, %cst : f64
+    %14 = arith.negf %12 : f64
+    %15 = arith.select %13, %14, %12 : f64
+    %16 = arith.mulf %15, %cst_0 : f64
+    %17 = arith.addf %16, %cst_1 : f64
+    %18 = arith.fptosi %17 : f64 to i128
+    affine.store %18, %2[%arg2] : memref<131072xi128>
+    affine.store %13, %1[%arg2] : memref<131072xi1>
+  }
+  // The next two nests are fused.
+  // ZERO-TOLERANCE:      affine.for %{{.*}} = 0 to 30
+  // ZERO-TOLERANCE-NEXT:   affine.for %{{.*}} = 0 to 131072
+  // ZERO-TOLERANCE:          func.call @__external_reduce_barrett
+  // ZERO-TOLERANCE:          affine.store
+  // ZERO-TOLERANCE:          affine.load
+  // ZERO-TOLERANCE-NEXT:     affine.store
+  affine.for %arg2 = 0 to 30 {
+    affine.for %arg3 = 0 to 131072 {
+      %7 = affine.load %6[%arg2] : memref<30xi64>
+      %8 = affine.load %3[%arg2] : memref<30xi64>
+      %9 = affine.load %5[%arg2] : memref<30xi64>
+      %10 = affine.load %4[%arg2] : memref<30xi64>
+      %11 = affine.load %2[%arg3] : memref<131072xi128>
+      %12 = affine.load %1[%arg3] : memref<131072xi1>
+      %13 = func.call @__external_reduce_barrett(%7, %8, %9, %10, %11) {outputModFac = 1 : i64} : (i64, i64, i64, i64, i128) -> i64
+      %14 = arith.subi %7, %13 : i64
+      %15 = arith.select %12, %14, %13 : i64
+      affine.store %15, %0[%arg2, %arg3] : memref<30x131072xi64>
+    }
+  }
+  func.call @__external_levelwise_forward_ntt(%0) : (memref<30x131072xi64>) -> ()
+  affine.for %arg2 = 0 to 30 {
+    affine.for %arg3 = 0 to 131072 {
+      %7 = affine.load %0[%arg2, %arg3] : memref<30x131072xi64>
+      affine.store %7, %arg1[%arg2, %arg3] : memref<30x131072xi64>
+    }
+  }
+  // Under maximal fusion, just one nest.
+  // PRODUCER-CONSUMER-MAXIMAL:      affine.for %{{.*}} = 0 to 30
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.for %{{.*}} = 0 to 131072
+  // PRODUCER-CONSUMER-MAXIMAL-NOT:  affine.for %{{.*}}
+  memref.dealloc %2 : memref<131072xi128>
+  memref.dealloc %1 : memref<131072xi1>
+  memref.dealloc %0 : memref<30x131072xi64>
+  return
+}
+func.func private @__external_levelwise_forward_ntt(memref<30x131072xi64>)
+func.func private @__external_reduce_barrett(i64, i64, i64, i64, i128) -> i64
