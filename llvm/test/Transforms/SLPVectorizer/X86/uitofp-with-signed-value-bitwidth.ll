@@ -7,7 +7,8 @@ define i32 @test(ptr %d, i32 %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <2 x i32> [[TMP2]] to <2 x double>
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <2 x i64> [[TMP8]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fcmp ogt <2 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1

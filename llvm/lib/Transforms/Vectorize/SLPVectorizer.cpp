@@ -18423,6 +18423,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       return Known.isNonNegative();
     });
 
+    if (!IsKnownPositive && !IsTopRoot && E.UserTreeIndex &&
+        E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::UIToFP)
+      MaxBitWidth =
+          std::min(DL->getTypeSizeInBits(
+                       E.UserTreeIndex.UserTE->Scalars.front()->getType()),
+                   DL->getTypeSizeInBits(ScalarTy));
+
     // We first check if all the bits of the roots are demanded. If they're not,
     // we can truncate the roots to this narrower type.
     for (Value *Root : E.Scalars) {
