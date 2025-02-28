@@ -1289,7 +1289,7 @@ struct FormatStyle {
   BitFieldColonSpacingStyle BitFieldColonSpacing;
 
   /// The number of columns to use to indent the contents of braced init lists.
-  /// If unset, ``ContinuationIndentWidth`` is used.
+  /// If unset or negative, ``ContinuationIndentWidth`` is used.
   /// \code
   ///   AlignAfterOpenBracket: AlwaysBreak
   ///   BracedInitializerIndentWidth: 2
@@ -1319,7 +1319,7 @@ struct FormatStyle {
   ///   }
   /// \endcode
   /// \version 17
-  std::optional<unsigned> BracedInitializerIndentWidth;
+  int BracedInitializerIndentWidth;
 
   /// Different ways to wrap braces after control statements.
   enum BraceWrappingAfterControlStatementStyle : int8_t {
@@ -3318,7 +3318,9 @@ struct FormatStyle {
   enum LanguageKind : int8_t {
     /// Do not use.
     LK_None,
-    /// Should be used for C, C++.
+    /// Should be used for C.
+    LK_C,
+    /// Should be used for C++.
     LK_Cpp,
     /// Should be used for C#.
     LK_CSharp,
@@ -3343,7 +3345,9 @@ struct FormatStyle {
     /// https://sci-hub.st/10.1109/IEEESTD.2018.8299595
     LK_Verilog
   };
-  bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
+  bool isCpp() const {
+    return Language == LK_Cpp || Language == LK_C || Language == LK_ObjC;
+  }
   bool isCSharp() const { return Language == LK_CSharp; }
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
@@ -3353,7 +3357,12 @@ struct FormatStyle {
   }
   bool isTableGen() const { return Language == LK_TableGen; }
 
-  /// Language, this format style is targeted at.
+  /// The language that this format style targets.
+  /// \note
+  ///  You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+  ///  files by adding a ``// clang-format Language:`` line before the first
+  ///  non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
+  /// \endnote
   /// \version 3.5
   LanguageKind Language;
 
@@ -5710,6 +5719,8 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
 // Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   switch (Language) {
+  case FormatStyle::LK_C:
+    return "C";
   case FormatStyle::LK_Cpp:
     return "C++";
   case FormatStyle::LK_CSharp:

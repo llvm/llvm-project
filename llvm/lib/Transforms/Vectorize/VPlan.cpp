@@ -577,8 +577,7 @@ template <typename T> static T *getEnclosingLoopRegionForRegion(T *P) {
     P = P->getParent();
     // Multiple loop regions can be nested, but replicate regions can only be
     // nested inside a loop region or must be outside any other region.
-    assert((!P || !cast<VPRegionBlock>(P)->isReplicator()) &&
-           "unexpected nested replicate regions");
+    assert((!P || !P->isReplicator()) && "unexpected nested replicate regions");
   }
   return P;
 }
@@ -600,16 +599,25 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
+  bool IsSwitch = isa<VPInstruction>(R) &&
+                  cast<VPInstruction>(R)->getOpcode() == Instruction::Switch;
   bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
                       match(R, m_BranchOnCond(m_VPValue())) ||
                       match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
   (void)IsCondBranch;
-
-  if (VPBB->getNumSuccessors() >= 2 ||
+  (void)IsSwitch;
+  if (VPBB->getNumSuccessors() == 2 ||
       (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
-    assert(IsCondBranch && "block with multiple successors not terminated by "
-                           "conditional branch recipe");
+    assert((IsCondBranch || IsSwitch) &&
+           "block with multiple successors not terminated by "
+           "conditional branch nor switch recipe");
 
+    return true;
+  }
+
+  if (VPBB->getNumSuccessors() > 2) {
+    assert(IsSwitch && "block with more than 2 successors not terminated by "
+                       "a switch recipe");
     return true;
   }
 
@@ -819,7 +827,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   // For the scalar case, we may not always execute the original predicated
   // block, Thus, scale the block's cost by the probability of executing it.
   if (VF.isScalar())
-    return ThenCost / getReciprocalPredBlockProb();
+    return ThenCost / getPredBlockCostDivisor(Ctx.CostKind);
 
   return ThenCost;
 }
@@ -842,6 +850,11 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 VPlan::VPlan(Loop *L) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
+
+  SmallVector<BasicBlock *> IRExitBlocks;
+  L->getExitBlocks(IRExitBlocks);
+  for (BasicBlock *EB : IRExitBlocks)
+    ExitBlocks.push_back(createVPIRBasicBlock(EB));
 }
 
 VPlan::~VPlan() {
@@ -861,7 +874,7 @@ VPlan::~VPlan() {
     }
     delete VPB;
   }
-  for (VPValue *VPV : VPLiveInsToFree)
+  for (VPValue *VPV : getLiveIns())
     delete VPV;
   if (BackedgeTakenCount)
     delete BackedgeTakenCount;
@@ -923,7 +936,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
-  auto *VPExitBlock = Plan->createVPIRBasicBlock(IRExitBlock);
+  VPIRBasicBlock *VPExitBlock = Plan->getExitBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
@@ -973,6 +986,14 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   } else {
     VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
   }
+}
+
+VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
+  auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
+    return VPIRBB->getIRBasicBlock() == IRBB;
+  });
+  assert(Iter != getExitBlocks().end() && "no exit block found");
+  return *Iter;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
@@ -1224,7 +1245,7 @@ VPlan *VPlan::duplicate() {
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
   auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
-  for (VPValue *OldLiveIn : VPLiveInsToFree) {
+  for (VPValue *OldLiveIn : getLiveIns()) {
     Old2NewVPValues[OldLiveIn] =
         NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
@@ -1528,7 +1549,7 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignName(Plan.BackedgeTakenCount);
-  for (VPValue *LI : Plan.VPLiveInsToFree)
+  for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>

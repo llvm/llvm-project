@@ -90,8 +90,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd operands should be bool");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
-    // Return the type based on the pointer argument (i.e. first operand).
+    // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -251,9 +252,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,
-                VPReplicateRecipe, VPWidenCallRecipe, VPWidenMemoryRecipe,
-                VPWidenSelectRecipe>(
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPWidenIntrinsicRecipe>([](const VPWidenIntrinsicRecipe *R) {
             return R->getResultType();

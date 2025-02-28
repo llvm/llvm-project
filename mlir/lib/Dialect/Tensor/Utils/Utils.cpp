@@ -27,6 +27,8 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
                                     OpBuilder &b,
                                     SmallVector<Value> dynOutDims) {
 
+  // This assumption simplifies the following logic without limiting what's
+  // required _today_. If needed, we can relax it in the future.
   assert(((resType.getNumDynamicDims() == dynOutDims.size()) ||
           dynOutDims.empty()) &&
          "Either none or all output dynamic dims must be specified!");

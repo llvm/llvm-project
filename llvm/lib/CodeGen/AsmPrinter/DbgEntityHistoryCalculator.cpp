@@ -362,8 +362,9 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
       FellowRegisters.push_back(Reg);
 
   // Drop all entries that have ended.
+  auto &Entries = LiveEntries[Var];
   for (auto Index : IndicesToErase)
-    LiveEntries[Var].erase(Index);
+    Entries.erase(Index);
 }
 
 /// Add a new debug value for \p Var. Closes all overlapping debug values.
@@ -400,10 +401,9 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
       for (const MachineOperand &Op : DV.debug_operands()) {
         if (Op.isReg() && Op.getReg()) {
           Register NewReg = Op.getReg();
-          if (!TrackedRegs.count(NewReg))
+          if (TrackedRegs.insert_or_assign(NewReg, true).second)
             addRegDescribedVar(RegVars, NewReg, Var);
           LiveEntries[Var].insert(NewIndex);
-          TrackedRegs[NewReg] = true;
         }
       }
     }

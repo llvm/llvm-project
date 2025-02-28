@@ -1111,6 +1111,10 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  virtual int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const {
+    llvm_unreachable("getDwarfRegNumForVirtReg does not exist on this target");
+  }
+
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger
@@ -1230,13 +1234,6 @@ public:
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                    const MachineRegisterInfo &MRI) const {
     return nullptr;
-  }
-
-  /// Returns the physical register number of sub-register "Index"
-  /// for physical register RegNo. Return zero if the sub-register does not
-  /// exist.
-  inline MCRegister getSubReg(MCRegister Reg, unsigned Idx) const {
-    return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
   }
 
   /// Some targets have non-allocatable registers that aren't technically part

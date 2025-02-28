@@ -2064,7 +2064,7 @@ static bool destArrayCanBeWidened(CallInst *CI) {
   return true;
 }
 
-static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
                                            unsigned NumBytesToPad,
                                            unsigned NumBytesToCopy) {
   if (!OldVar->hasInitializer())
@@ -2083,10 +2083,10 @@ static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
     StrData.push_back('\0');
   auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
   // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  Constant *SourceReplace = ConstantDataArray::get(OldVar->getContext(), Arr);
   GlobalVariable *NewGV = new GlobalVariable(
-      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
-      SourceReplace, SourceReplace->getName());
+      *(OldVar->getParent()), SourceReplace->getType(), true,
+      OldVar->getLinkage(), SourceReplace, SourceReplace->getName());
   // Copy any other attributes from original global variable
   // e.g. unamed_addr
   NewGV->copyAttributesFrom(OldVar);
@@ -2114,13 +2114,13 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
   }
 }
 
-static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+static bool tryWidenGlobalArrayAndDests(GlobalVariable *SourceVar,
                                         const unsigned NumBytesToPad,
                                         const unsigned NumBytesToCopy,
                                         ConstantInt *BytesToCopyOp,
                                         ConstantDataArray *SourceDataArray) {
   auto *NewSourceGV =
-      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+      widenGlobalVariable(SourceVar, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
     return false;
 
@@ -2158,8 +2158,6 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
-    Function *F = CI->getCalledFunction();
-
     auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
     if (!BytesToCopyOp)
       continue;
@@ -2186,10 +2184,12 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (NumElementsToCopy != DZSize || DZSize != SZSize)
       continue;
 
-    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
-        NumBytesToCopy, SourceDataArray->getType());
+    unsigned NumBytesToPad =
+        GetTTI(*CI->getFunction())
+            .getNumBytesToPadGlobalArray(NumBytesToCopy,
+                                         SourceDataArray->getType());
     if (NumBytesToPad) {
-      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+      return tryWidenGlobalArrayAndDests(GV, NumBytesToPad, NumBytesToCopy,
                                          BytesToCopyOp, SourceDataArray);
     }
   }

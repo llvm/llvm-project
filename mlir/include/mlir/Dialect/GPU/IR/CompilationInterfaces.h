@@ -79,6 +79,12 @@ public:
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
   tokenizeCmdOptions() const;
 
+  /// Returns a tokenization of the substr of the command line options that
+  /// starts with `startsWith` and ends with end of the command line options and
+  /// consumes it.
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith);
+
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
