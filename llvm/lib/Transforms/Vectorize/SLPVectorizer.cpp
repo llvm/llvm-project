@@ -12609,7 +12609,7 @@ InstructionCost BoUpSLP::getSpillCost() {
         }
       } else {
         OpLastInst = EntriesToLastInstruction.at(Op);
-        OpParent = Op->getMainOp()->getParent();
+        OpParent = OpLastInst->getParent();
       }
       // Check the call instructions within the same basic blocks.
       if (OpParent == Parent) {
