@@ -24,14 +24,12 @@ using namespace NVPTXAS;
 namespace NVPTXII {
 enum {
   // These must be kept in sync with TSFlags in NVPTXInstrFormats.td
-  // clang-format off
-  IsTexFlag            =  0x40,
-  IsSuldMask           = 0x180,
-  IsSuldShift          =   0x7,
-  IsSustFlag           = 0x200,
-  IsSurfTexQueryFlag   = 0x400,
-  IsTexModeUnifiedFlag = 0x800,
-  // clang-format on
+  IsTexFlag = 0x80,
+  IsSuldMask = 0x300,
+  IsSuldShift = 8,
+  IsSustFlag = 0x400,
+  IsSurfTexQueryFlag = 0x800,
+  IsTexModeUnifiedFlag = 0x1000
 };
 } // namespace NVPTXII
 
