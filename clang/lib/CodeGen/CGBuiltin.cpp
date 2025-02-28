@@ -6621,10 +6621,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   }
 
+  // These will be emitted as Intrinsic later.
+  auto NeedsDeviceOverload = [&](unsigned BuiltinID) {
+    if (getTarget().getTriple().isAMDGCN()) {
+      switch (BuiltinID) {
+      default:
+        return false;
+      case Builtin::BIlogb:
+      case Builtin::BI__builtin_logb:
+      case Builtin::BIscalbn:
+      case Builtin::BI__builtin_scalbn:
+        return true;
+      }
+    }
+    return false;
+  };
+
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  if (!NeedsDeviceOverload(BuiltinID) &&
+      getContext().BuiltinInfo.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
@@ -20910,6 +20927,30 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case Builtin::BIlogb:
+  case Builtin::BI__builtin_logb: {
+    auto Src0 = EmitScalarExpr(E->getArg(0));
+    auto FrExpFunc = CGM.getIntrinsic(Intrinsic::amdgcn_frexp_exp,
+                                      {Builder.getInt32Ty(), Src0->getType()});
+    auto FrExp = Builder.CreateCall(FrExpFunc, Src0);
+    auto Add = Builder.CreateAdd(
+        FrExp, ConstantInt::getSigned(FrExp->getType(), -1), "", false, true);
+    auto SIToFP = Builder.CreateSIToFP(Add, Builder.getDoubleTy());
+    auto Fabs = emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::fabs);
+    auto FCmpONE = Builder.CreateFCmpONE(
+        Fabs, ConstantFP::getInfinity(Builder.getDoubleTy()));
+    auto Sel1 = Builder.CreateSelect(FCmpONE, SIToFP, Fabs);
+    auto FCmpOEQ =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::getZero(Builder.getDoubleTy()));
+    auto Sel2 = Builder.CreateSelect(
+        FCmpOEQ, ConstantFP::getInfinity(Builder.getDoubleTy(), /*Neg*/ true),
+        Sel1);
+    return Sel2;
+  }
+  case Builtin::BIscalbn:
+  case Builtin::BI__builtin_scalbn:
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, E, Intrinsic::ldexp, Intrinsic::experimental_constrained_ldexp);
   default:
     return nullptr;
   }
