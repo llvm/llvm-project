@@ -1224,8 +1224,7 @@ typedef __char32_t char32_t;
 #  endif
 
 // TODO(LLVM 22): Remove this macro once LLVM19 support ends.
-#  if __has_builtin(__reference_converts_from_temporary) ||                                                            \
-      (defined(_LIBCPP_CLANG_VER) && (_LIBCPP_CLANG_VER == 1901))
+#  if __has_builtin(__reference_converts_from_temporary) || (defined(_LIBCPP_CLANG_VER) && (_LIBCPP_CLANG_VER == 1901))
 #    define _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY 1
 #  else
 #    define _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY 0
