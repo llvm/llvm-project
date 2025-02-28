@@ -414,11 +414,10 @@ private:
 };
 } // namespace
 
-static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
-                               const SuspendCrossingInfo &Checker,
-                               SmallVectorImpl<AllocaInfo> &Allocas,
-                               const DominatorTree &DT,
-                               const SmallPtrSetImpl<Value*> &OutsideFrameSet) {
+static void collectFrameAlloca(
+    AllocaInst *AI, const coro::Shape &Shape,
+    const SuspendCrossingInfo &Checker, SmallVectorImpl<AllocaInfo> &Allocas,
+    const DominatorTree &DT, const SmallPtrSetImpl<Value *> &OutsideFrameSet) {
   if (Shape.CoroSuspends.empty())
     return;
 
@@ -464,7 +463,7 @@ void collectSpillsAndAllocasFromInsts(
     const SuspendCrossingInfo &Checker, const DominatorTree &DT,
     const coro::Shape &Shape) {
 
-  SmallPtrSet<Value*, 4> OutsideFramePtrs;
+  SmallPtrSet<Value *, 4> OutsideFramePtrs;
   for (const CoroOutsideFrameInst *I : Shape.OutsideFrames)
     OutsideFramePtrs.insert(I->getPtr());
 
