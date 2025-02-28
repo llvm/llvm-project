@@ -9,6 +9,7 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK-SAME:                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>>,
 // CHECK-SAME:                             %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32>) -> !hlfir.expr<?xi32> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_5]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -16,12 +17,14 @@ func.func @cshift_vector(%arg0: !fir.box<!fir.array<?xi32>>, %arg1: !fir.ref<i32
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
-// CHECK:           %[[VAL_11:.*]] = arith.remsi %[[VAL_10]], %[[VAL_8]] : i64
-// CHECK:           %[[VAL_12:.*]] = arith.xori %[[VAL_10]], %[[VAL_8]] : i64
+// CHECK:           %[[ISZERO:.*]] = arith.cmpi eq, %[[VAL_8]], %[[VAL_4]] : i64
+// CHECK:           %[[EXTENT:.*]] = arith.select %[[ISZERO]], %[[VAL_3]], %[[VAL_8]] : i64
+// CHECK:           %[[VAL_11:.*]] = arith.remsi %[[VAL_10]], %[[EXTENT]] : i64
+// CHECK:           %[[VAL_12:.*]] = arith.xori %[[VAL_10]], %[[EXTENT]] : i64
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_12]], %[[VAL_4]] : i64
 // CHECK:           %[[VAL_14:.*]] = arith.cmpi ne, %[[VAL_11]], %[[VAL_4]] : i64
 // CHECK:           %[[VAL_15:.*]] = arith.andi %[[VAL_14]], %[[VAL_13]] : i1
-// CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[VAL_8]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[EXTENT]] overflow<nsw, nuw> : i64
 // CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_15]], %[[VAL_16]], %[[VAL_11]] : i64
 // CHECK:           %[[VAL_18:.*]] = hlfir.eval_in_mem shape %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
 // CHECK:           ^bb0(%[[VAL_19:.*]]: !fir.ref<!fir.array<?xi32>>):
@@ -121,6 +124,7 @@ func.func @cshift_2d_by_scalar(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir
 // CHECK-LABEL:   func.func @cshift_2d_by_scalar(
 // CHECK-SAME:                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x?xi32>>,
 // CHECK-SAME:                                   %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32>) -> !hlfir.expr<?x?xi32> {
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
@@ -130,12 +134,14 @@ func.func @cshift_2d_by_scalar(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
-// CHECK:           %[[VAL_11:.*]] = arith.remsi %[[VAL_10]], %[[VAL_8]] : i64
-// CHECK:           %[[VAL_12:.*]] = arith.xori %[[VAL_10]], %[[VAL_8]] : i64
+// CHECK:           %[[ISZERO:.*]] = arith.cmpi eq, %[[VAL_8]], %[[VAL_2]] : i64
+// CHECK:           %[[EXTENT:.*]] = arith.select %[[ISZERO]], %[[ONE]], %[[VAL_8]] : i64
+// CHECK:           %[[VAL_11:.*]] = arith.remsi %[[VAL_10]], %[[EXTENT]] : i64
+// CHECK:           %[[VAL_12:.*]] = arith.xori %[[VAL_10]], %[[EXTENT]] : i64
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_12]], %[[VAL_2]] : i64
 // CHECK:           %[[VAL_14:.*]] = arith.cmpi ne, %[[VAL_11]], %[[VAL_2]] : i64
 // CHECK:           %[[VAL_15:.*]] = arith.andi %[[VAL_14]], %[[VAL_13]] : i1
-// CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[VAL_8]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_16:.*]] = arith.addi %[[VAL_11]], %[[EXTENT]] overflow<nsw, nuw> : i64
 // CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_15]], %[[VAL_16]], %[[VAL_11]] : i64
 // CHECK:           %[[VAL_18:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 // CHECK:           ^bb0(%[[VAL_19:.*]]: index, %[[VAL_20:.*]]: index):
@@ -167,6 +173,7 @@ func.func @cshift_2d_by_vector(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir
 // CHECK-LABEL:   func.func @cshift_2d_by_vector(
 // CHECK-SAME:                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x?xi32>>,
 // CHECK-SAME:                                   %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>>) -> !hlfir.expr<?x?xi32> {
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
@@ -182,12 +189,14 @@ func.func @cshift_2d_by_vector(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: !fir
 // CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_14]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
 // CHECK:             %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (i32) -> i64
-// CHECK:             %[[VAL_18:.*]] = arith.remsi %[[VAL_17]], %[[VAL_8]] : i64
-// CHECK:             %[[VAL_19:.*]] = arith.xori %[[VAL_17]], %[[VAL_8]] : i64
+// CHECK:             %[[ISZERO:.*]] = arith.cmpi eq, %[[VAL_8]], %[[VAL_2]] : i64
+// CHECK:             %[[EXTENT:.*]] = arith.select %[[ISZERO]], %[[ONE]], %[[VAL_8]] : i64
+// CHECK:             %[[VAL_18:.*]] = arith.remsi %[[VAL_17]], %[[EXTENT]] : i64
+// CHECK:             %[[VAL_19:.*]] = arith.xori %[[VAL_17]], %[[EXTENT]] : i64
 // CHECK:             %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_2]] : i64
 // CHECK:             %[[VAL_21:.*]] = arith.cmpi ne, %[[VAL_18]], %[[VAL_2]] : i64
 // CHECK:             %[[VAL_22:.*]] = arith.andi %[[VAL_21]], %[[VAL_20]] : i1
-// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_18]], %[[VAL_8]] overflow<nsw, nuw> : i64
+// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_18]], %[[EXTENT]] overflow<nsw, nuw> : i64
 // CHECK:             %[[VAL_24:.*]] = arith.select %[[VAL_22]], %[[VAL_23]], %[[VAL_18]] : i64
 // CHECK:             %[[VAL_25:.*]] = arith.subi %[[VAL_8]], %[[VAL_24]] overflow<nsw, nuw> : i64
 // CHECK:             %[[VAL_26:.*]] = arith.subi %[[VAL_24]], %[[VAL_8]] overflow<nsw, nuw> : i64
@@ -217,6 +226,7 @@ func.func @cshift_vector_char(%arg0: !fir.box<!fir.array<?x!fir.char<2,?>>>, %ar
 // CHECK-SAME:                                  %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x!fir.char<2,?>>>,
 // CHECK-SAME:                                  %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32>) -> !hlfir.expr<?x!fir.char<2,?>> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
@@ -227,12 +237,14 @@ func.func @cshift_vector_char(%arg0: !fir.box<!fir.array<?x!fir.char<2,?>>>, %ar
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i64
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
-// CHECK:           %[[VAL_13:.*]] = arith.remsi %[[VAL_12]], %[[VAL_10]] : i64
-// CHECK:           %[[VAL_14:.*]] = arith.xori %[[VAL_12]], %[[VAL_10]] : i64
+// CHECK:           %[[ISZERO:.*]] = arith.cmpi eq, %[[VAL_10]], %[[VAL_3]] : i64
+// CHECK:           %[[EXTENT:.*]] = arith.select %[[ISZERO]], %[[ONE]], %[[VAL_10]] : i64
+// CHECK:           %[[VAL_13:.*]] = arith.remsi %[[VAL_12]], %[[EXTENT]] : i64
+// CHECK:           %[[VAL_14:.*]] = arith.xori %[[VAL_12]], %[[EXTENT]] : i64
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi slt, %[[VAL_14]], %[[VAL_3]] : i64
 // CHECK:           %[[VAL_16:.*]] = arith.cmpi ne, %[[VAL_13]], %[[VAL_3]] : i64
 // CHECK:           %[[VAL_17:.*]] = arith.andi %[[VAL_16]], %[[VAL_15]] : i1
-// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_13]], %[[VAL_10]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_13]], %[[EXTENT]] overflow<nsw, nuw> : i64
 // CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_13]] : i64
 // CHECK:           %[[VAL_20:.*]] = hlfir.elemental %[[VAL_7]] typeparams %[[VAL_9]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<2,?>> {
 // CHECK:           ^bb0(%[[VAL_21:.*]]: index):
@@ -262,18 +274,21 @@ func.func @cshift_vector_poly(%arg0: !fir.class<!fir.array<?x!fir.type<_QFFtestT
 // CHECK-SAME:                                  %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.class<!fir.array<?x!fir.type<_QFFtestTt>>>,
 // CHECK-SAME:                                  %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: i32) -> !hlfir.expr<?x!fir.type<_QFFtestTt>?> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.class<!fir.array<?x!fir.type<_QFFtestTt>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_5]]#1 : (index) -> i64
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
-// CHECK:           %[[VAL_9:.*]] = arith.remsi %[[VAL_8]], %[[VAL_7]] : i64
-// CHECK:           %[[VAL_10:.*]] = arith.xori %[[VAL_8]], %[[VAL_7]] : i64
+// CHECK:           %[[ISZERO:.*]] = arith.cmpi eq, %[[VAL_7]], %[[VAL_3]] : i64
+// CHECK:           %[[EXTENT:.*]] = arith.select %[[ISZERO]], %[[ONE]], %[[VAL_7]] : i64
+// CHECK:           %[[VAL_9:.*]] = arith.remsi %[[VAL_8]], %[[EXTENT]] : i64
+// CHECK:           %[[VAL_10:.*]] = arith.xori %[[VAL_8]], %[[EXTENT]] : i64
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi slt, %[[VAL_10]], %[[VAL_3]] : i64
 // CHECK:           %[[VAL_12:.*]] = arith.cmpi ne, %[[VAL_9]], %[[VAL_3]] : i64
 // CHECK:           %[[VAL_13:.*]] = arith.andi %[[VAL_12]], %[[VAL_11]] : i1
-// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_9]], %[[VAL_7]] overflow<nsw, nuw> : i64
+// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_9]], %[[EXTENT]] overflow<nsw, nuw> : i64
 // CHECK:           %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_14]], %[[VAL_9]] : i64
 // CHECK:           %[[VAL_16:.*]] = hlfir.elemental %[[VAL_6]] mold %[[VAL_0]] unordered : (!fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QFFtestTt>>>) -> !hlfir.expr<?x!fir.type<_QFFtestTt>?> {
 // CHECK:           ^bb0(%[[VAL_17:.*]]: index):

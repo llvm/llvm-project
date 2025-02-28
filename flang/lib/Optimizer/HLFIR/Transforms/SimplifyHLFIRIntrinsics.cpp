@@ -474,6 +474,15 @@ private:
                                          mlir::Type calcType) {
     shiftVal = builder.createConvert(loc, calcType, shiftVal);
     extent = builder.createConvert(loc, calcType, extent);
+    // Make sure that we do not divide by zero. When the dimension
+    // has zero size, turn the extent into 1. Note that the computed
+    // MODULO value won't be used in this case, so it does not matter
+    // which extent value we use.
+    mlir::Value zero = builder.createIntegerConstant(loc, calcType, 0);
+    mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
+    mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+    extent = builder.create<mlir::arith::SelectOp>(loc, isZero, one, extent);
     shiftVal = fir::IntrinsicLibrary{builder, loc}.genModulo(
         calcType, {shiftVal, extent});
     return builder.createConvert(loc, calcType, shiftVal);
