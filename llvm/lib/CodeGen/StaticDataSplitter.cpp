@@ -10,7 +10,7 @@
 // for the following types of static data:
 // - Jump tables
 // - Module-internal global variables
-// - Constant pools (TODO)
+// - Constant pools
 //
 // For the original RFC of this pass please see
 // https://discourse.llvm.org/t/rfc-profile-guided-static-data-partitioning/83744
@@ -117,16 +117,17 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
   const TargetMachine &TM = MF.getTarget();
   MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+  const MachineConstantPool *MCP = MF.getConstantPool();
 
   // Jump table could be used by either terminating instructions or
   // non-terminating ones, so we walk all instructions and use
   // `MachineOperand::isJTI()` to identify jump table operands.
-  // Similarly, `MachineOperand::isCPI()` can identify constant pool usages
-  // in the same loop.
+  // Similarly, `MachineOperand::isCPI()` is used to identify constant pool
+  // usages in the same loop.
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isJTI() && !Op.isGlobal())
+        if (!Op.isJTI() && !Op.isGlobal() && !Op.isCPI())
           continue;
 
         std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
@@ -148,7 +149,7 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
           if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
             ++NumChangedJumpTables;
-        } else {
+        } else if (Op.isGlobal()) {
           // Find global variables with local linkage.
           const GlobalVariable *GV =
               getLocalLinkageGlobalVariable(Op.getGlobal());
@@ -159,6 +160,20 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
               !inStaticDataSection(GV, TM))
             continue;
           SDPI->addConstantProfileCount(GV, Count);
+        } else {
+          assert(Op.isCPI() && "Op must be constant pool index in this branch");
+          int CPI = Op.getIndex();
+          if (CPI == -1)
+            continue;
+
+          assert(MCP != nullptr && "Constant pool info is not available.");
+          const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
+
+          if (CPE.isMachineConstantPoolEntry())
+            continue;
+
+          const Constant *C = CPE.Val.ConstVal;
+          SDPI->addConstantProfileCount(C, Count);
         }
       }
     }
@@ -203,17 +218,34 @@ void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
 
 void StaticDataSplitter::annotateStaticDataWithoutProfiles(
     const MachineFunction &MF) {
+  const MachineConstantPool *MCP = MF.getConstantPool();
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isGlobal())
+        if (!Op.isGlobal() && !Op.isCPI())
           continue;
-        const GlobalVariable *GV =
-            getLocalLinkageGlobalVariable(Op.getGlobal());
-        if (!GV || GV->getName().starts_with("llvm.") ||
-            !inStaticDataSection(GV, MF.getTarget()))
-          continue;
-        SDPI->addConstantProfileCount(GV, std::nullopt);
+        if (Op.isGlobal()) {
+          const GlobalVariable *GV =
+              getLocalLinkageGlobalVariable(Op.getGlobal());
+          if (!GV || GV->getName().starts_with("llvm.") ||
+              !inStaticDataSection(GV, MF.getTarget()))
+            continue;
+          SDPI->addConstantProfileCount(GV, std::nullopt);
+        } else {
+          assert(Op.isCPI() && "Op must be constant pool index in this branch");
+          int CPI = Op.getIndex();
+          if (CPI == -1)
+            continue;
+
+          assert(MCP != nullptr && "Constant pool info is not available.");
+          const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
+
+          if (CPE.isMachineConstantPoolEntry())
+            continue;
+
+          const Constant *C = CPE.Val.ConstVal;
+          SDPI->addConstantProfileCount(C, std::nullopt);
+        }
       }
     }
   }

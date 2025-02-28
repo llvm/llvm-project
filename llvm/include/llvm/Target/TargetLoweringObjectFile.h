@@ -104,6 +104,13 @@ public:
                                            SectionKind Kind, const Constant *C,
                                            Align &Alignment) const;
 
+  /// Similar to the function above, but append \p SectionSuffix to the section
+  /// name.
+  virtual MCSection *getSectionForConstant(const DataLayout &DL,
+                                           SectionKind Kind, const Constant *C,
+                                           Align &Alignment,
+                                           StringRef SectionSuffix) const;
+
   virtual MCSection *
   getSectionForMachineBasicBlock(const Function &F,
                                  const MachineBasicBlock &MBB,

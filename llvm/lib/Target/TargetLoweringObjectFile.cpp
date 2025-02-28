@@ -386,6 +386,16 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
   return DataSection;
 }
 
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error("Unimplemented");
+}
+
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
     const TargetMachine &TM) const {

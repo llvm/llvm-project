@@ -2791,8 +2791,26 @@ void AsmPrinter::emitConstantPool() {
     if (!CPE.isMachineConstantPoolEntry())
       C = CPE.Val.ConstVal;
 
-    MCSection *S = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), Kind, C, Alignment);
+    MCSection *S = nullptr;
+    if (TM.Options.EnableStaticDataPartitioning) {
+      SmallString<8> SectionNameSuffix;
+      if (C && SDPI && PSI) {
+        auto Count = SDPI->getConstantProfileCount(C);
+        if (Count) {
+          if (PSI->isHotCount(*Count)) {
+            SectionNameSuffix.append("hot");
+          } else if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(C)) {
+            SectionNameSuffix.append("unlikely");
+          }
+        }
+      }
+
+      S = getObjFileLowering().getSectionForConstant(
+          getDataLayout(), Kind, C, Alignment, SectionNameSuffix);
+    } else {
+      S = getObjFileLowering().getSectionForConstant(getDataLayout(), Kind, C,
+                                                     Alignment);
+    }
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.

@@ -1072,6 +1072,41 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
   return DataRelROSection;
 }
 
+MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // TODO: Share code between this function and
+  // MCObjectInfo::initELFMCObjectFileInfo.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+
+  auto &Context = getContext();
+  if (Kind.isMergeableConst4() && MergeableConst4Section)
+    return Context.getELFSection(".rodata.cst4." + SectionPrefix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  if (Kind.isMergeableConst8() && MergeableConst8Section)
+    return Context.getELFSection(".rodata.cst8." + SectionPrefix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  if (Kind.isMergeableConst16() && MergeableConst16Section)
+    return Context.getELFSection(".rodata.cst16." + SectionPrefix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  if (Kind.isMergeableConst32() && MergeableConst32Section)
+    return Context.getELFSection(".rodata.cst32." + SectionPrefix,
+                                 ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+  if (Kind.isReadOnly())
+    return Context.getELFSection(".rodata" + SectionPrefix, ELF::SHT_PROGBITS,
+                                 ELF::SHF_ALLOC);
+
+  assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
+  return Context.getELFSection(".data.rel.ro" + SectionPrefix,
+                               ELF::SHT_PROGBITS,
+                               ELF::SHF_ALLOC | ELF::SHF_WRITE);
+}
+
 /// Returns a unique section for the given machine basic block.
 MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
