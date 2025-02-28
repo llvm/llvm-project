@@ -153,6 +153,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include <numeric>
 #include <queue>
 
@@ -373,19 +374,19 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   Type *StructType = Arg->getParamByValType();
   const DataLayout &DL = Func->getDataLayout();
 
-  uint64_t NewArgAlign =
-      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL).value();
-  uint64_t CurArgAlign =
-      Arg->getAttribute(Attribute::Alignment).getValueAsInt();
+  const Align NewArgAlign =
+      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL);
+  const Align CurArgAlign = Arg->getParamAlign().valueOrOne();
 
   if (CurArgAlign >= NewArgAlign)
     return;
 
-  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign << " instead of "
-                    << CurArgAlign << " for " << *Arg << '\n');
+  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign.value()
+                    << " instead of " << CurArgAlign.value() << " for " << *Arg
+                    << '\n');
 
   auto NewAlignAttr =
-      Attribute::get(Func->getContext(), Attribute::Alignment, NewArgAlign);
+      Attribute::getWithAlignment(Func->getContext(), NewArgAlign);
   Arg->removeAttr(Attribute::Alignment);
   Arg->addAttr(NewAlignAttr);
 
@@ -402,7 +403,6 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   SmallVector<Load> Loads;
   std::queue<LoadContext> Worklist;
   Worklist.push({ArgInParamAS, 0});
-  bool IsGridConstant = isParamGridConstant(*Arg);
 
   while (!Worklist.empty()) {
     LoadContext Ctx = Worklist.front();
@@ -411,15 +411,9 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
     for (User *CurUser : Ctx.InitialVal->users()) {
       if (auto *I = dyn_cast<LoadInst>(CurUser)) {
         Loads.push_back({I, Ctx.Offset});
-        continue;
-      }
-
-      if (auto *I = dyn_cast<BitCastInst>(CurUser)) {
-        Worklist.push({I, Ctx.Offset});
-        continue;
-      }
-
-      if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
+      } else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser)) {
+        Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
+      } else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
         APInt OffsetAccumulated =
             APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
 
@@ -431,26 +425,13 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         assert(Offset != OffsetLimit && "Expect Offset less than UINT64_MAX");
 
         Worklist.push({I, Ctx.Offset + Offset});
-        continue;
       }
-
-      if (isa<MemTransferInst>(CurUser))
-        continue;
-
-      // supported for grid_constant
-      if (IsGridConstant &&
-          (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
-           isa<PtrToIntInst>(CurUser)))
-        continue;
-
-      llvm_unreachable("All users must be one of: load, "
-                       "bitcast, getelementptr, call, store, ptrtoint");
     }
   }
 
   for (Load &CurLoad : Loads) {
-    Align NewLoadAlign(std::gcd(NewArgAlign, CurLoad.Offset));
-    Align CurLoadAlign(CurLoad.Inst->getAlign());
+    Align NewLoadAlign(std::gcd(NewArgAlign.value(), CurLoad.Offset));
+    Align CurLoadAlign = CurLoad.Inst->getAlign();
     CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
   }
 }
@@ -641,7 +622,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     copyByValParam(*Func, *Arg);
 }
 
-void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
+static void markPointerAsAS(Value *Ptr, const unsigned AS) {
   if (Ptr->getType()->getPointerAddressSpace() != ADDRESS_SPACE_GENERIC)
     return;
 
@@ -658,13 +639,16 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
-      Ptr->getName(), InsertPt);
+      Ptr, PointerType::get(Ptr->getContext(), AS), Ptr->getName(), InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
                                               Ptr->getName(), InsertPt);
   // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
   Ptr->replaceAllUsesWith(PtrInGeneric);
   PtrInGlobal->setOperand(0, Ptr);
+}
+
+void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
+  markPointerAsAS(Ptr, ADDRESS_SPACE_GLOBAL);
 }
 
 // =============================================================================
@@ -724,9 +708,15 @@ bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
 bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
                                          Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
+
+  const auto *TLI =
+      cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
+
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
-      handleByValParam(TM, &Arg);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
+      markPointerAsAS(&Arg, ADDRESS_SPACE_LOCAL);
+      adjustByValArgAlignment(&Arg, &Arg, TLI);
+    }
   return true;
 }
 

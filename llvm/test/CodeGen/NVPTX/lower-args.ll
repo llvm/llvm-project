@@ -17,9 +17,8 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; IR-LABEL: define void @load_alignment(
 ; IR-SAME: ptr readonly byval([[CLASS_OUTER:%.*]]) align 8 captures(none) [[ARG:%.*]]) {
 ; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[ARG1:%.*]] = alloca [[CLASS_OUTER]], align 8
-; IR-NEXT:    [[ARG2:%.*]] = addrspacecast ptr [[ARG]] to ptr addrspace(101)
-; IR-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 8 [[ARG1]], ptr addrspace(101) align 8 [[ARG2]], i64 24, i1 false)
+; IR-NEXT:    [[ARG2:%.*]] = addrspacecast ptr [[ARG]] to ptr addrspace(5)
+; IR-NEXT:    [[ARG1:%.*]] = addrspacecast ptr addrspace(5) [[ARG2]] to ptr
 ; IR-NEXT:    [[ARG_IDX_VAL:%.*]] = load ptr, ptr [[ARG1]], align 8
 ; IR-NEXT:    [[ARG_IDX1:%.*]] = getelementptr [[CLASS_OUTER]], ptr [[ARG1]], i64 0, i32 0, i32 1
 ; IR-NEXT:    [[ARG_IDX1_VAL:%.*]] = load ptr, ptr [[ARG_IDX1]], align 8
@@ -33,27 +32,21 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ;
 ; PTX-LABEL: load_alignment(
 ; PTX:       {
-; PTX-NEXT:    .local .align 8 .b8 __local_depot0[24];
-; PTX-NEXT:    .reg .b64 %SP;
-; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<4>;
 ; PTX-NEXT:    .reg .b64 %rd<10>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.u64 %SPL, __local_depot0;
-; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX-NEXT:    ld.param.u64 %rd3, [load_alignment_param_0+16];
-; PTX-NEXT:    st.local.u64 [%rd2+16], %rd3;
-; PTX-NEXT:    ld.param.u64 %rd4, [load_alignment_param_0+8];
-; PTX-NEXT:    st.local.u64 [%rd2+8], %rd4;
-; PTX-NEXT:    ld.param.u64 %rd5, [load_alignment_param_0];
-; PTX-NEXT:    st.local.u64 [%rd2], %rd5;
-; PTX-NEXT:    add.s64 %rd6, %rd2, 16;
+; PTX-NEXT:    mov.b64 %rd1, load_alignment_param_0;
+; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
+; PTX-NEXT:    cvta.to.local.u64 %rd3, %rd2;
+; PTX-NEXT:    ld.local.u64 %rd4, [%rd3];
+; PTX-NEXT:    ld.local.u64 %rd5, [%rd3+8];
+; PTX-NEXT:    add.s64 %rd6, %rd3, 16;
 ; PTX-NEXT:    cvta.local.u64 %rd7, %rd6;
-; PTX-NEXT:    cvt.u32.u64 %r1, %rd3;
-; PTX-NEXT:    ld.u32 %r2, [%rd5];
+; PTX-NEXT:    ld.local.u32 %r1, [%rd3+16];
+; PTX-NEXT:    ld.u32 %r2, [%rd4];
 ; PTX-NEXT:    add.s32 %r3, %r2, %r1;
-; PTX-NEXT:    st.u32 [%rd4], %r3;
+; PTX-NEXT:    st.u32 [%rd5], %r3;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd7;
@@ -85,37 +78,29 @@ entry:
 ; Check that nvptx-lower-args copies padding as the struct may have been a union
 define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 ; IR-LABEL: define void @load_padding(
-; IR-SAME: ptr readonly byval([[CLASS_PADDED:%.*]]) captures(none) [[ARG:%.*]]) {
-; IR-NEXT:    [[ARG1:%.*]] = alloca [[CLASS_PADDED]], align 8
-; IR-NEXT:    [[ARG2:%.*]] = addrspacecast ptr [[ARG]] to ptr addrspace(101)
-; IR-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 8 [[ARG1]], ptr addrspace(101) align 8 [[ARG2]], i64 8, i1 false)
+; IR-SAME: ptr readonly byval([[CLASS_PADDED:%.*]]) align 4 captures(none) [[ARG:%.*]]) {
+; IR-NEXT:    [[ARG2:%.*]] = addrspacecast ptr [[ARG]] to ptr addrspace(5)
+; IR-NEXT:    [[ARG1:%.*]] = addrspacecast ptr addrspace(5) [[ARG2]] to ptr
 ; IR-NEXT:    [[TMP:%.*]] = call ptr @escape(ptr nonnull align 16 [[ARG1]])
 ; IR-NEXT:    ret void
 ;
 ; PTX-LABEL: load_padding(
 ; PTX:       {
-; PTX-NEXT:    .local .align 8 .b8 __local_depot1[8];
-; PTX-NEXT:    .reg .b64 %SP;
-; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b64 %rd<6>;
+; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    mov.u64 %SPL, __local_depot1;
-; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
-; PTX-NEXT:    add.u64 %rd1, %SP, 0;
-; PTX-NEXT:    add.u64 %rd2, %SPL, 0;
-; PTX-NEXT:    ld.param.u64 %rd3, [load_padding_param_0];
-; PTX-NEXT:    st.local.u64 [%rd2], %rd3;
+; PTX-NEXT:    mov.b64 %rd1, load_padding_param_0;
+; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd1;
+; PTX-NEXT:    st.param.b64 [param0], %rd2;
 ; PTX-NEXT:    .param .b64 retval0;
 ; PTX-NEXT:    call.uni (retval0),
 ; PTX-NEXT:    escape,
 ; PTX-NEXT:    (
 ; PTX-NEXT:    param0
 ; PTX-NEXT:    );
-; PTX-NEXT:    ld.param.b64 %rd4, [retval0];
+; PTX-NEXT:    ld.param.b64 %rd3, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
   %tmp = call ptr @escape(ptr nonnull align 16 %arg)
