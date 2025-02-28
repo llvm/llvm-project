@@ -484,8 +484,8 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  const char *Name;
-  unsigned Value;
+  char Name[10];
+  uint8_t Value;
 };
 
 #define GET_RISCVOpcodesList_DECL
@@ -637,22 +637,97 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   llvm_unreachable("Unexpected RlistVal");
 }
 
-inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64) {
-  if (RlistVal == RLISTENCODE::INVALID_RLIST)
-    return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
-  StackAdjustment -= StackAdjBase;
-  if (StackAdjustment % 16 != 0)
-    return false;
-  SpimmVal = StackAdjustment / 16;
-  if (SpimmVal > 3)
-    return false;
-  return true;
-}
-
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
+
+namespace RISCVVInversePseudosTable {
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+  uint8_t VLMul;
+  uint8_t SEW;
+};
+
+#define GET_RISCVVInversePseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
+namespace RISCV {
+struct VLSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t FF : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLXSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSXSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLEPseudo {
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t FF : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSEPseudo {
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLX_VSXPseudo {
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+#define GET_RISCVVSSEGTable_DECL
+#define GET_RISCVVLSEGTable_DECL
+#define GET_RISCVVLXSEGTable_DECL
+#define GET_RISCVVSXSEGTable_DECL
+#define GET_RISCVVLETable_DECL
+#define GET_RISCVVSETable_DECL
+#define GET_RISCVVLXTable_DECL
+#define GET_RISCVVSXTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCV
 
 } // namespace llvm
 

@@ -268,7 +268,7 @@ vfsqrt.v v8, v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      260
-# CHECK-NEXT: Total Cycles:      10216
+# CHECK-NEXT: Total Cycles:      10243
 # CHECK-NEXT: Total uOps:        260
 
 # CHECK:      Dispatch Width:    4

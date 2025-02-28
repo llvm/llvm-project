@@ -77,6 +77,34 @@ void foo(void) {
                                : parallel) default(nothing)
   for (int i = 0; i < 16; i++)
     ;
+
+#pragma omp metadirective when(user = {condition(0)}	\
+			       : parallel for) otherwise()
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(0)}	\
+			       : parallel for)
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(0)}		  \
+			       : parallel for) when(implementation = {extension(match_none)} \
+						    : parallel) default(parallel for)
+  for (int i=0; i<10; i++)
+    ;
+
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for) otherwise()
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for)
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(1)}		  \
+			       : parallel for) when(implementation = {extension(match_none)} \
+						    : parallel) default(parallel for)
+  for (int i=0; i<10; i++)
+    ;
 }
 
 // CHECK: void bar(void);
