@@ -36,6 +36,7 @@ add_lldb_tool(lldb-dap
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Watchpoint.cpp
+  MemoryMonitor.cpp
 
   Handler/ResponseHandler.cpp
   Handler/AttachRequestHandler.cpp

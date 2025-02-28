@@ -9,7 +9,9 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
+#include "MemoryMonitor.h"
 #include "RunInTerminal.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
@@ -504,9 +506,20 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create a memory monitor. This can return nullptr if the host platform is
+  // not supported.
+  std::unique_ptr<MemoryMonitor> memory_monitor = MemoryMonitor::Create(
+      []() { lldb::SBDebugger::MemoryPressureDetected(); });
+
+  if (memory_monitor)
+    memory_monitor->Start();
+
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+  auto terminate_debugger = llvm::make_scope_exit([&] {
+    if (memory_monitor)
+      memory_monitor->Stop();
+    lldb::SBDebugger::Terminate();
+  });
 
   std::vector<std::string> pre_init_commands;
   for (const std::string &arg :
