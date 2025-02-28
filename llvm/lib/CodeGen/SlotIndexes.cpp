@@ -221,7 +221,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
-    bool MIIndexNotFound = MI && mi2iMap.find(MI) == mi2iMap.end();
+    bool MIIndexNotFound = MI && !mi2iMap.contains(MI);
     bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
