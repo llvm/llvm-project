@@ -99,17 +99,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
-  auto IsLowPrecisionType = [](const Type *Ty) {
-    return (Ty->isIntegerTy() && Ty->getScalarSizeInBits() == 16) ||
-           Ty->isHalfTy();
-  };
-
   if (!CSF.LowPrecisionPresent)
-    CSF.LowPrecisionPresent = IsLowPrecisionType(I.getType());
+    CSF.LowPrecisionPresent =
+        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
 
   if (!CSF.LowPrecisionPresent) {
     for (const Value *Op : I.operands()) {
-      if (IsLowPrecisionType(Op->getType())) {
+      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
         CSF.LowPrecisionPresent = true;
         break;
       }
