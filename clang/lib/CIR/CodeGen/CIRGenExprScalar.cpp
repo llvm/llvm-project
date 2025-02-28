@@ -59,6 +59,15 @@ public:
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
+  mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
+    mlir::Type type = cgf.convertType(e->getType());
+    assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
+           "expect floating-point type");
+    return builder.create<cir::ConstantOp>(
+        cgf.getLoc(e->getExprLoc()), type,
+        builder.getAttr<cir::FPAttr>(type, e->getValue()));
+  }
+
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(

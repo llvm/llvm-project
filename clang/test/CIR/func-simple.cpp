@@ -57,3 +57,15 @@ bool boolfunc() { return true; }
 // CHECK:   %0 = cir.const #true
 // CHECK:   cir.return %0 : !cir.bool
 // CHECK: }
+
+float floatfunc() { return 42.42f; }
+// CHECK: cir.func @floatfunc() -> !cir.float {
+// CHECK:   %0 = cir.const #cir.fp<4.242000e+01> : !cir.float
+// CHECK:   cir.return %0 : !cir.float
+// CHECK: }
+
+double doublefunc() { return 42.42; }
+// CHECK: cir.func @doublefunc() -> !cir.double {
+// CHECK:   %0 = cir.const #cir.fp<4.242000e+01> : !cir.double
+// CHECK:   cir.return %0 : !cir.double
+// CHECK: }
