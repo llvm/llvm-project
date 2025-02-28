@@ -5,6 +5,7 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
@@ -49,6 +50,14 @@ config_setting(
 config_setting(
     name = "mpfr_system",
     flag_values = {":mpfr": "system"},
+)
+
+########################### Header Generation ##################################
+
+py_binary(
+    name = "hdrgen",
+    srcs = glob(["utils/hdrgen/hdrgen/**/*.py"]),
+    imports = ["utils/hdrgen"],
 )
 
 ################################## Base Config #################################
@@ -3356,6 +3365,64 @@ libc_function(
     ],
 )
 
+############################### stdbit targets ###############################
+
+bit_suffix_list = [
+    "uc",
+    "us",
+    "ui",
+    "ul",
+    "ull",
+]
+
+bit_prefix_list = [
+    "stdc_leading_zeros_",
+    "stdc_leading_ones_",
+    "stdc_trailing_zeros_",
+    "stdc_trailing_ones_",
+    "stdc_count_ones_",
+    "stdc_has_single_bit_",
+    "stdc_bit_width_",
+    "stdc_bit_floor_",
+    "stdc_bit_ceil_",
+]
+
+bit_prefix_needs_math_list = [
+    "stdc_first_leading_zero_",
+    "stdc_first_leading_one_",
+    "stdc_first_trailing_zero_",
+    "stdc_first_trailing_one_",
+    "stdc_count_zeros_",
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = ["src/stdbit/" + bit_prefix + bit_suffix + ".cpp"],
+        hdrs = ["src/stdbit/" + bit_prefix + bit_suffix + ".h"],
+        deps = [
+            ":__support_common",
+            ":__support_cpp_bit",
+        ],
+    )
+    for bit_prefix in bit_prefix_list
+    for bit_suffix in bit_suffix_list
+]
+
+[
+    libc_function(
+        name = bit_prefix + bit_suffix,
+        srcs = ["src/stdbit/" + bit_prefix + bit_suffix + ".cpp"],
+        hdrs = ["src/stdbit/" + bit_prefix + bit_suffix + ".h"],
+        deps = [
+            ":__support_common",
+            ":__support_math_extras",
+        ],
+    )
+    for bit_prefix in bit_prefix_needs_math_list
+    for bit_suffix in bit_suffix_list
+]
+
 ############################### stdlib targets ###############################
 
 libc_function(
@@ -3510,6 +3577,49 @@ libc_function(
         ":__support_common",
         ":qsort_util",
         ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "str_from_util",
+    hdrs = ["src/stdlib/str_from_util.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_str_to_integer",
+        ":printf_converter",
+        ":printf_core_structs",
+        ":printf_writer",
+    ],
+)
+
+libc_function(
+    name = "strfromf",
+    srcs = ["src/stdlib/strfromf.cpp"],
+    hdrs = ["src/stdlib/strfromf.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
+    ],
+)
+
+libc_function(
+    name = "strfromd",
+    srcs = ["src/stdlib/strfromd.cpp"],
+    hdrs = ["src/stdlib/strfromd.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
+    ],
+)
+
+libc_function(
+    name = "strfroml",
+    srcs = ["src/stdlib/strfroml.cpp"],
+    hdrs = ["src/stdlib/strfroml.h"],
+    deps = [
+        ":__support_common",
+        ":str_from_util",
     ],
 )
 

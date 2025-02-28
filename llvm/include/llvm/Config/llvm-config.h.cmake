@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 528426
+#define LLVM_MAIN_REVISION 528892
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -205,7 +205,7 @@
 /* Define if logf128 is available */
 #cmakedefine LLVM_HAS_LOGF128
 
-/* Define if building LLVM with LLVM_BUILD_TELEMETRY */
-#cmakedefine LLVM_BUILD_TELEMETRY ${LLVM_BUILD_TELEMETRY}
+/* Define if building LLVM with LLVM_ENABLE_TELEMETRY */
+#cmakedefine01 LLVM_ENABLE_TELEMETRY
 
 #endif
