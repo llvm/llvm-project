@@ -18,9 +18,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__reference_constructs_from_temporary) ||                                                            \
-    (defined(_LIBCPP_COMPILER_CLANG_BASED) && (__clang_major__ >= 19) && (__clang_minor__ >= 1) &&                     \
-     (__clang_patchlevel__ >= 2))
+#if _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY
 
 template <class _Tp, class _Up>
 const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
