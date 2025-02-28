@@ -508,21 +508,11 @@ struct LoopInterchange {
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
     // and repeat this process.
-    for (unsigned j = SelecLoopId; j > 0; j--) {
+    for (unsigned J = SelecLoopId; J > 0; J--) {
       bool ChangedPerIter = false;
-      for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
-        bool Interchanged = processLoop(LoopList[i], LoopList[i - 1], i, i - 1,
-                                        DependencyMatrix, CostMap);
-        if (!Interchanged)
-          continue;
-        // Loops interchanged, update LoopList accordingly.
-        std::swap(LoopList[i - 1], LoopList[i]);
-        // Update the DependencyMatrix
-        interChangeDependencies(DependencyMatrix, i, i - 1);
-
-        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
-                   printDepMatrix(DependencyMatrix));
-
+      for (unsigned I = SelecLoopId; I > SelecLoopId - J; I--) {
+        bool Interchanged =
+            processLoop(LoopList, I, I - 1, DependencyMatrix, CostMap);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -534,10 +524,12 @@ struct LoopInterchange {
     return Changed;
   }
 
-  bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
+  bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
                    const DenseMap<const Loop *, unsigned> &CostMap) {
+    Loop *OuterLoop = LoopList[OuterLoopId];
+    Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
@@ -566,6 +558,15 @@ struct LoopInterchange {
     LoopsInterchanged++;
 
     llvm::formLCSSARecursively(*OuterLoop, *DT, LI, SE);
+
+    // Loops interchanged, update LoopList accordingly.
+    std::swap(LoopList[OuterLoopId], LoopList[InnerLoopId]);
+    // Update the DependencyMatrix
+    interChangeDependencies(DependencyMatrix, InnerLoopId, OuterLoopId);
+
+    LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
+               printDepMatrix(DependencyMatrix));
+
     return true;
   }
 };
