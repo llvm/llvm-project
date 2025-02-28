@@ -210,42 +210,8 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z5.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z24.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z25.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z27.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z29.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z26.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z26.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z7.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z7.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z29.d, z28.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z5.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z26.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z5, z27
-; CHECK-NEWLOWERING-NEXT:    mla z5.d, p0/m, z28.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z25.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    mad z2.d, p0/m, z3.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z5.d, z0.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z2.d, z1.d
+; CHECK-NEWLOWERING-NEXT:    udot z0.d, z5.h, z4.h
+; CHECK-NEWLOWERING-NEXT:    udot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -273,42 +239,8 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z5.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-NEXT:    sunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z24.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z25.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z27.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z29.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z26.d
-; CHECK-NEWLOWERING-NEXT:    sunpklo z26.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z7.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    sunpklo z6.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z7.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z29.d, z28.d
-; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z5.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z26.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z5, z27
-; CHECK-NEWLOWERING-NEXT:    mla z5.d, p0/m, z28.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z25.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    mad z2.d, p0/m, z3.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z5.d, z0.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z2.d, z1.d
+; CHECK-NEWLOWERING-NEXT:    sdot z0.d, z5.h, z4.h
+; CHECK-NEWLOWERING-NEXT:    sdot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -790,11 +722,11 @@ define <vscale x 4 x i32> @not_udot(<vscale x 4 x i32> %acc, <vscale x 8 x i8> %
 ; CHECK-NEWLOWERING-NEXT:    and z1.h, z1.h, #0xff
 ; CHECK-NEWLOWERING-NEXT:    and z2.h, z2.h, #0xff
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    mla z0.s, p0/m, z4.s, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    mla z0.s, p0/m, z3.s, z4.s
 ; CHECK-NEWLOWERING-NEXT:    mla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
@@ -824,11 +756,11 @@ define <vscale x 2 x i64> @not_udot_wide(<vscale x 2 x i64> %acc, <vscale x 4 x 
 ; CHECK-NEWLOWERING-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-NEWLOWERING-NEXT:    and z2.s, z2.s, #0xffff
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z1.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z2.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z3.d, z4.d
 ; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:

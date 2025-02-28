@@ -1592,11 +1592,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         ElementCount VTElemCount = VT.getVectorElementCount();
         if (VTElemCount.getKnownMinValue() == 1)
           continue;
-        if (VTElemCount * 4 == InnerVT.getVectorElementCount())
-          setPartialReduceMLAAction(VT, InnerVT, Custom);
-        if (InnerVT.getVectorElementType().getSizeInBits() * 4 ==
-            VT.getVectorElementType().getSizeInBits())
+        if (VTElemCount * 4 == InnerVT.getVectorElementCount()) {
           setPartialReduceMLAAction(VT, InnerVT, Legal);
+          if (InnerVT.getVectorElementType() == VT.getVectorElementType())
+            setPartialReduceMLAAction(VT, InnerVT, Custom);
+        }
       }
     }
 
