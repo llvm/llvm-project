@@ -32,7 +32,7 @@ all_categories = {
     "libc++": "Test for libc++ data formatters",
     "libstdcxx": "Test for libstdcxx data formatters",
     "lldb-server": "Tests related to lldb-server",
-    "lldb-dap": "Tests for the Debug Adaptor Protocol with lldb-dap",
+    "lldb-dap": "Tests for the Debug Adapter Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
     "pexpect": "Tests requiring the pexpect library to be available",
     "objc": "Tests related to the Objective-C programming language support",
