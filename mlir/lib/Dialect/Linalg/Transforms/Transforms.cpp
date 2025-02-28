@@ -415,7 +415,6 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
         RankedTensorType::get(memrefTy.getShape(), memrefTy.getElementType());
     auto collapsedTensorType = tensor::CollapseShapeOp::inferCollapsedType(
         tensorTy, packingMetadata.reassociations);
-    // tensor collapsed type을 memref로 재구성 (같은 메모리 공간 유지)
     collapsedType = MemRefType::get(collapsedTensorType.getShape(),
                                     collapsedTensorType.getElementType());
   }
