@@ -251,7 +251,7 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
   return NeedsProtector;
 }
 
-/// Maximum remaining allocation size obsorved for a phi node, and how often
+/// Maximum remaining allocation size observed for a phi node, and how often
 /// the allocation size has already been decreased. We only allow a limited
 /// number of decreases.
 struct PhiInfo {
