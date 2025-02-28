@@ -73,6 +73,10 @@ bool Lowerer::lower(Function &F) {
       case Intrinsic::coro_id_async:
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
         break;
+      case Intrinsic::coro_return:
+        // FIXME: Remove this case with backend support.
+        II->replaceAllUsesWith(II->getArgOperand(0));
+        break;
       case Intrinsic::coro_subfn_addr:
         lowerSubFn(Builder, cast<CoroSubFnInst>(II));
         break;
