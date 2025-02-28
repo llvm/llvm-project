@@ -1,0 +1,41 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVMUL_VV_MF4_MASK \
+# RUN:    --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s --check-prefix=FRAC-LMUL
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVFADD_VFPR16_M1_E16,PseudoVFADD_VV_M2_E16,PseudoVFCLASS_V_MF2 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=FP
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
+# RUN:    --opcode-name=PseudoVSEXT_VF8_M2,PseudoVZEXT_VF8_M2 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=VEXT
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 -benchmark-phase=assemble-measured-code --mode=latency \
+# RUN:    --opcode-name=PseudoVFREDUSUM_VS_M1_E16 --max-configs-per-opcode=1000 --min-instructions=100 | \
+# RUN:    FileCheck %s --check-prefix=VFRED --allow-empty
+
+# Make sure only the supported SEWs are generated for fractional LMUL.
+# FRAC-LMUL: PseudoVMUL_VV_MF4_MASK
+# FRAC-LMUL: SEW: e8
+# FRAC-LMUL: SEW: e16
+# FRAC-LMUL-NOT: SEW: e{{(32|64)}}
+
+# Make sure only SEWs that are equal to the supported FLEN are generated
+# FP: PseudoVFADD_VFPR16_M1_E16
+# FP-NOT: SEW: e8
+# FP: PseudoVFADD_VV_M2_E16
+# FP-NOT: SEW: e8
+# FP: PseudoVFCLASS_V_MF2
+# FP-NOT: SEW: e8
+
+# VS/ZEXT can only operate on SEW that will not lead to invalid EEW on the
+# source operand.
+# VEXT: PseudoVSEXT_VF8_M2
+# VEXT-NOT: SEW: e8
+# VEXT-NOT: SEW: e16
+# VEXT-NOT: SEW: e32
+# VEXT: SEW: e64
+# VEXT: PseudoVZEXT_VF8_M2
+# VEXT-NOT: SEW: e8
+# VEXT-NOT: SEW: e16
+# VEXT-NOT: SEW: e32
+# VEXT: SEW: e64
+
+# P470 doesn't have Zvfh so 16-bit vfredusum shouldn't exist
+# VFRED-NOT: PseudoVFREDUSUM_VS_M1_E16
