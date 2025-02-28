@@ -312,15 +312,11 @@ public:
 };
 
 
-// A basic block that contains one or more comparisons
+// A basic block that contains one or more comparisons.
 class MultBCECmpBlock {
  public:
   MultBCECmpBlock(std::vector<Comparison*> Cmps, BasicBlock *BB, InstructionSet BlockInsts)
       : BB(BB), BlockInsts(std::move(BlockInsts)), Cmps(std::move(Cmps)) {}
-
-  // // Returns true if each comparison in this basic block is being merged.
-  // // Necessary because otherwise would leave basic block in invalid state.
-  // bool hasAllCmpsMerged() const;
 
   // Returns true if the block does other works besides comparison.
   bool doesOtherWork() const;
@@ -329,24 +325,20 @@ class MultBCECmpBlock {
     return Cmps;
   }
 
-  // // Returns true if the non-BCE-cmp instructions can be separated from BCE-cmp
-  // // instructions in the block.
-  // bool canSplit(AliasAnalysis &AA) const;
+  // Returns true if the non-BCE-cmp instructions can be separated from BCE-cmp
+  // instructions in the block.
+  bool canSplit(AliasAnalysis &AA) const;
 
-  // // Return true if this all the relevant instructions in the BCE-cmp-block can
-  // // be sunk below this instruction. By doing this, we know we can separate the
-  // // BCE-cmp-block instructions from the non-BCE-cmp-block instructions in the
-  // // block.
-  // bool canSinkBCECmpInst(const Instruction *, AliasAnalysis &AA) const;
+  // Return true if this all the relevant instructions in the BCE-cmp-block can
+  // be sunk below this instruction. By doing this, we know we can separate the
+  // BCE-cmp-block instructions from the non-BCE-cmp-block instructions in the
+  // block.
+  bool canSinkBCECmpInst(const Instruction *, AliasAnalysis &AA) const;
 
   // The basic block where this comparison happens.
   BasicBlock *BB;
   // Instructions relating to the BCECmp and branch.
   InstructionSet BlockInsts;
-  // The block requires splitting.
-  bool RequireSplit = false;
-  // Original order of this block in the chain.
-  unsigned OrigOrder = 0;
 
 private:
   std::vector<Comparison*> Cmps;
@@ -359,8 +351,11 @@ private:
 // (see canSplit()).
 class SingleBCECmpBlock {
  public:
-  SingleBCECmpBlock(MultBCECmpBlock M, unsigned I)
-      : BB(M.BB), OrigOrder(M.OrigOrder), Cmp(M.getCmps()[I]) {}
+  SingleBCECmpBlock(MultBCECmpBlock M, unsigned I, unsigned OrigOrder)
+      : BB(M.BB), OrigOrder(OrigOrder), Cmp(M.getCmps()[I]) {}
+
+  SingleBCECmpBlock(MultBCECmpBlock M, unsigned I, unsigned OrigOrder, llvm::SmallVector<Instruction *, 4> SplitInsts)
+      : BB(M.BB), OrigOrder(OrigOrder), RequireSplit(true), Cmp(M.getCmps()[I]), SplitInsts(SplitInsts)  {}
 
   const BCEAtom* Lhs() const { return Cmp->getLoads().first; }
   const Comparison* getCmp() const {
@@ -374,67 +369,60 @@ class SingleBCECmpBlock {
   // We can separate the BCE-cmp-block instructions and the non-BCE-cmp-block
   // instructions. Split the old block and move all non-BCE-cmp-insts into the
   // new parent block.
-  // void split(BasicBlock *NewParent, AliasAnalysis &AA) const;
+  void split(BasicBlock *NewParent, AliasAnalysis &AA) const;
 
   // The basic block where this comparison happens.
   BasicBlock *BB;
   // Original order of this block in the chain.
   unsigned OrigOrder = 0;
+  // The block requires splitting.
+  bool RequireSplit = false;
 
 private:
   Comparison* Cmp;
+  llvm::SmallVector<Instruction *, 4> SplitInsts;
 };
 
-// bool MultBCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
-//                                     AliasAnalysis &AA) const {
-//   // If this instruction may clobber the loads and is in middle of the BCE cmp
-//   // block instructions, then bail for now.
-//   if (Inst->mayWriteToMemory()) {
-//     auto MayClobber = [&](LoadInst *LI) {
-//       // If a potentially clobbering instruction comes before the load,
-//       // we can still safely sink the load.
-//       return (Inst->getParent() != LI->getParent() || !Inst->comesBefore(LI)) &&
-//              isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
-//     };
-//     for (auto* Cmp : Cmps.getCmpChain()) {
-//       auto [Lhs,Rhs] = Cmp->getLoads();
-//       if (MayClobber(Lhs->LoadI) || (Rhs && MayClobber((*Rhs)->LoadI)))
-//         return false;
-//     }
-//   }
-//   // Make sure this instruction does not use any of the BCE cmp block
-//   // instructions as operand.
-//   return llvm::none_of(Inst->operands(), [&](const Value *Op) {
-//     const Instruction *OpI = dyn_cast<Instruction>(Op);
-//     return OpI && BlockInsts.contains(OpI);
-//   });
-// }
+bool MultBCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
+                                    AliasAnalysis &AA) const {
+  // If this instruction may clobber the loads and is in middle of the BCE cmp
+  // block instructions, then bail for now.
+  if (Inst->mayWriteToMemory()) {
+    auto MayClobber = [&](LoadInst *LI) {
+      // If a potentially clobbering instruction comes before the load,
+      // we can still safely sink the load.
+      return (Inst->getParent() != LI->getParent() || !Inst->comesBefore(LI)) &&
+             isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
+    };
+    for (auto* Cmp : Cmps) {
+      auto [Lhs,Rhs] = Cmp->getLoads();
+      if (MayClobber(Lhs->LoadI) || (Rhs && MayClobber((*Rhs)->LoadI)))
+        return false;
+    }
+  }
+  // Make sure this instruction does not use any of the BCE cmp block
+  // instructions as operand.
+  return llvm::none_of(Inst->operands(), [&](const Value *Op) {
+    const Instruction *OpI = dyn_cast<Instruction>(Op);
+    return OpI && BlockInsts.contains(OpI);
+  });
+}
 
-// void SingleBCECmpBlock::split(BasicBlock *NewParent, AliasAnalysis &AA) const {
-//   llvm::SmallVector<Instruction *, 4> OtherInsts;
-//   for (Instruction &Inst : *BB) {
-//     if (BlockInsts.count(&Inst))
-//       continue;
-//     assert(canSinkBCECmpInst(&Inst, AA) && "Split unsplittable block");
-//     // This is a non-BCE-cmp-block instruction. And it can be separated
-//     // from the BCE-cmp-block instruction.
-//     OtherInsts.push_back(&Inst);
-//   }
+void SingleBCECmpBlock::split(BasicBlock *NewParent, AliasAnalysis &AA) const {
+  // Do the actual splitting.
+  for (Instruction *Inst : reverse(SplitInsts))
+    Inst->moveBeforePreserving(*NewParent, NewParent->begin());
+}
 
-//   // Do the actual splitting.
-//   for (Instruction *Inst : reverse(OtherInsts))
-//     Inst->moveBeforePreserving(*NewParent, NewParent->begin());
-// }
-
-// bool MultBCECmpBlock::canSplit(AliasAnalysis &AA) const {
-//   for (Instruction &Inst : *BB) {
-//     if (!BlockInsts.count(&Inst)) {
-//       if (!canSinkBCECmpInst(&Inst, AA))
-//         return false;
-//     }
-//   }
-//   return true;
-// }
+bool MultBCECmpBlock::canSplit(AliasAnalysis &AA) const {
+  for (Instruction &Inst : *BB) {
+    if (!BlockInsts.count(&Inst)) {
+      if (!canSinkBCECmpInst(&Inst, AA))
+        return false;
+    }
+  }
+  return true;
+}
 
 bool MultBCECmpBlock::doesOtherWork() const {
   // TODO(courbet): Can we allow some other things ? This is very conservative.
@@ -592,11 +580,26 @@ std::optional<MultBCECmpBlock> visitCmpBlock(Value *const Val,
 // }
 
 static inline void enqueueBlock(std::vector<SingleBCECmpBlock> &Comparisons,
-                                MultBCECmpBlock &&CmpBlock) {
+                                MultBCECmpBlock &&CmpBlock, AliasAnalysis &AA, bool RequireSplit) {
   // emitDebugInfo(Comparison);
-  CmpBlock.OrigOrder = Comparisons.size();
-  for (unsigned i = 0; i < CmpBlock.getCmps().size(); i++)
-    Comparisons.push_back(SingleBCECmpBlock(CmpBlock, i));
+  for (unsigned i = 0; i < CmpBlock.getCmps().size(); i++) {
+    unsigned OrigOrder = Comparisons.size();
+    if (!RequireSplit || i != 0) {
+      Comparisons.push_back(SingleBCECmpBlock(CmpBlock, i, OrigOrder));
+      continue;
+    }
+    // If should split mult block then put all instructions at the beginning of the first block
+    llvm::SmallVector<Instruction *, 4> OtherInsts;
+    for (Instruction &Inst : *CmpBlock.BB) {
+      if (CmpBlock.BlockInsts.count(&Inst))
+        continue;
+      assert(CmpBlock.canSinkBCECmpInst(&Inst, AA) && "Split unsplittable block");
+      // This is a non-BCE-cmp-block instruction. And it can be separated
+      // from the BCE-cmp-block instruction.
+      OtherInsts.push_back(&Inst);
+    }
+    Comparisons.push_back(SingleBCECmpBlock(CmpBlock, i, OrigOrder, OtherInsts));
+  }
 }
 
 // A chain of comparisons.
@@ -683,33 +686,32 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
     if (CmpBlock->doesOtherWork()) {
       LLVM_DEBUG(dbgs() << "block '" << CmpBlock->BB->getName()
                         << "' does extra work besides compare\n");
-      // if (Comparisons.empty()) {
-      //   // This is the initial block in the chain, in case this block does other
-      //   // work, we can try to split the block and move the irrelevant
-      //   // instructions to the predecessor.
-      //   //
-      //   // If this is not the initial block in the chain, splitting it wont
-      //   // work.
-      //   //
-      //   // As once split, there will still be instructions before the BCE cmp
-      //   // instructions that do other work in program order, i.e. within the
-      //   // chain before sorting. Unless we can abort the chain at this point
-      //   // and start anew.
-      //   //
-      //   // NOTE: we only handle blocks a with single predecessor for now.
-      //   if (Comparison->canSplit(AA)) {
-      //     LLVM_DEBUG(dbgs()
-      //                << "Split initial block '" << Comparison->BB->getName()
-      //                << "' that does extra work besides compare\n");
-      //     Comparison->RequireSplit = true;
-      //     enqueueBlock(Comparisons, std::move(*Comparison));
-      //   } else {
-      //     LLVM_DEBUG(dbgs()
-      //                << "ignoring initial block '" << Comparison->BB->getName()
-      //                << "' that does extra work besides compare\n");
-      //   }
-      //   continue;
-      // }
+      if (Comparisons.empty()) {
+        // This is the initial block in the chain, in case this block does other
+        // work, we can try to split the block and move the irrelevant
+        // instructions to the predecessor.
+        //
+        // If this is not the initial block in the chain, splitting it wont
+        // work.
+        //
+        // As once split, there will still be instructions before the BCE cmp
+        // instructions that do other work in program order, i.e. within the
+        // chain before sorting. Unless we can abort the chain at this point
+        // and start anew.
+        //
+        // NOTE: we only handle blocks a with single predecessor for now.
+        if (CmpBlock->canSplit(AA)) {
+          LLVM_DEBUG(dbgs()
+                     << "Split initial block '" << CmpBlock->BB->getName()
+                     << "' that does extra work besides compare\n");
+          enqueueBlock(Comparisons, std::move(*CmpBlock), AA, true);
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "ignoring initial block '" << CmpBlock->BB->getName()
+                     << "' that does extra work besides compare\n");
+        }
+        continue;
+      }
       // TODO(courbet): Right now we abort the whole chain. We could be
       // merging only the blocks that don't do other work and resume the
       // chain from there. For example:
@@ -735,7 +737,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
       // We could still merge bb1 and bb2 though.
       return;
     }
-    enqueueBlock(Comparisons, std::move(*CmpBlock));
+    enqueueBlock(Comparisons, std::move(*CmpBlock), AA, false);
   }
   
   // It is possible we have no suitable comparison to merge.
@@ -862,12 +864,12 @@ static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
   // If there is one block that requires splitting, we do it now, i.e.
   // just before we know we will collapse the chain. The instructions
   // can be executed before any of the instructions in the chain.
-  // const auto ToSplit = llvm::find_if(
-  //     Comparisons, [](const BCECmpBlock &B) { return B.RequireSplit; });
-  // if (ToSplit != Comparisons.end()) {
-  //   LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
-  //   ToSplit->split(BB, AA);
-  // }
+  const auto ToSplit = llvm::find_if(
+      Comparisons, [](const SingleBCECmpBlock &B) { return B.RequireSplit; });
+  if (ToSplit != Comparisons.end()) {
+    LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
+    ToSplit->split(BB, AA);
+  }
 
   if (Comparisons.size() == 1) {
     LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");

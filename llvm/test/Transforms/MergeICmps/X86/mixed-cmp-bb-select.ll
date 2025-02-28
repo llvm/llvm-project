@@ -2,8 +2,6 @@
 
 ; Tests if a mixed chain of comparisons (including a select block) can still be merged into two memcmp calls.
 
-%S = type { i32, i8, i8, i16, i32, i32, i32 }
-
 define dso_local noundef zeroext i1 @cmp_mixed(
     ptr noundef nonnull readonly align 4 captures(none) dereferenceable(20) %a,
     ptr noundef nonnull readonly align 4 captures(none) dereferenceable(20) %b) local_unnamed_addr {

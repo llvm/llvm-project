@@ -92,19 +92,19 @@ land.end:                                         ; preds = %land.rhs, %land.lhs
 define dso_local noundef zeroext i1 @partial_merge_not_select(ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) %p) local_unnamed_addr {
 ; REG-LABEL: @partial_merge_not_select(
 ; REG:       entry5:
-; REG-NEXT:    [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 1
+; REG-NEXT:    [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 10
 ; REG-NEXT:    [[TMP0:%.*]] = load i8, ptr [[IDX0]], align 1
-; REG-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -56
-; REG-NEXT:    br i1 [[CMP0]], label [[ENTRY_4:%.*]], label [[LAND_END:%.*]]
+; REG-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -1
+; REG-NEXT:    br i1 [[CMP0]], label [[ENTRY_4:%.*]], label [[LAND_END]]
 ; REG:       entry4:
-; REG-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
+; REG-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
 ; REG-NEXT:    [[TMP1:%.*]] = load i8, ptr [[IDX1]], align 1
-; REG-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -66
-; REG-NEXT:    br i1 [[CMP1]], label [[ENTRY_3:%.*]], label [[LAND_END]]
+; REG-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -56
+; REG-NEXT:    br i1 [[CMP1]], label [[ENTRY_3:%.*]], label [[LAND_END:%.*]]
 ; REG:       entry3:
-; REG-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 10
+; REG-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
 ; REG-NEXT:    [[TMP2:%.*]] = load i8, ptr [[IDX2]], align 1
-; REG-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -1
+; REG-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -66
 ; REG-NEXT:    br i1 [[CMP2]], label [[LAND_LHS_LAND_RHS:%.*]], label [[LAND_END]]
 ; REG:       "land.lhs.true11+land.rhs":
 ; REG-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
@@ -129,16 +129,16 @@ define dso_local noundef zeroext i1 @partial_merge_not_select(ptr noundef nonnul
 ;
 ; CFG-LABEL: @partial_merge_not_select(
 ; CFG:       entry5:
-; CFG-NEXT:    [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 1
+; CFG-NEXT:    [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 10
 ; CFG-NEXT:    [[TMP0:%.*]] = load i8, ptr [[IDX0]], align 1
-; CFG-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -56
-; CFG-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
+; CFG-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -1
+; CFG-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
 ; CFG-NEXT:    [[TMP1:%.*]] = load i8, ptr [[IDX1]], align 1
-; CFG-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -66
+; CFG-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -56
 ; CFG-NEXT:    [[SEL0:%.*]] = select i1 [[CMP0]], i1 [[CMP1]], i1 false
-; CFG-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 10
+; CFG-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
 ; CFG-NEXT:    [[TMP2:%.*]] = load i8, ptr [[IDX2]], align 1
-; CFG-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -1
+; CFG-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -66
 ; CFG-NEXT:    [[SEL1:%.*]] = select i1 [[SEL0]], i1 [[CMP2]], i1 false
 ; CFG-NEXT:    br i1 [[SEL1]], label [[LAND_LHS_LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CFG:       "land.lhs.true11+land.rhs":
