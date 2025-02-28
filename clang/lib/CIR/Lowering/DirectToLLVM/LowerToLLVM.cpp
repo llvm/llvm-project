@@ -222,18 +222,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr>(init.value())) {
-      // If a directly equivalent attribute is available, use it.
-      init =
-          llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(init.value())
-              .Case<cir::FPAttr>([&](cir::FPAttr attr) {
-                return rewriter.getFloatAttr(llvmType, attr.getValue());
-              })
-              .Case<cir::IntAttr>([&](cir::IntAttr attr) {
-                return rewriter.getIntegerAttr(llvmType, attr.getValue());
-              })
-              .Default([&](mlir::Attribute attr) { return mlir::Attribute(); });
+      GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
+      init = initRewriter.visit(init.value());
       // If initRewriter returned a null attribute, init will have a value but
-      // the value will be null.
+      // the value will be null. If that happens, initRewriter didn't handle the
+      // attribute type. It probably needs to be added to
+      // GlobalInitAttrRewriter.
       if (!init.value()) {
         op.emitError() << "unsupported initializer '" << init.value() << "'";
         return mlir::failure();
