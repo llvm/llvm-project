@@ -987,7 +987,7 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   return true;
 }
 
-// If `I` is a load instruction, used only by shufflevector instructions with 
+// If `I` is a load instruction, used only by shufflevector instructions with
 // poison values, attempt to shrink the load to only the lanes being used.
 static bool shrinkLoadsForBroadcast(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -1008,7 +1008,7 @@ static bool shrinkLoadsForBroadcast(Instruction &I) {
   using IndexRange = std::pair<unsigned, unsigned>;
   auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
     auto OutputRange = IndexRange(VecTy->getNumElements(), 0u);
-    for (auto &Use: I.uses()) {
+    for (auto &Use : I.uses()) {
       // All uses must be ShuffleVector instructions.
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(Use.getUser());
       if (!Shuffle)
@@ -1025,7 +1025,7 @@ static bool shrinkLoadsForBroadcast(Instruction &I) {
       auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
       auto NumElems = Op0Ty->getNumElements();
 
-      for (unsigned Index: Mask) {
+      for (unsigned Index : Mask) {
         if (Index < NumElems) {
           OutputRange.first = std::min(Index, OutputRange.first);
           OutputRange.second = std::max(Index, OutputRange.second);
@@ -1047,26 +1047,25 @@ static bool shrinkLoadsForBroadcast(Instruction &I) {
       auto *ElemTy = VecTy->getElementType();
       auto *NewVecTy = FixedVectorType::get(ElemTy, NewSize);
       auto *NewLoad = cast<LoadInst>(
-        Builder.CreateLoad(NewVecTy, OldLoad->getPointerOperand()));
+          Builder.CreateLoad(NewVecTy, OldLoad->getPointerOperand()));
       NewLoad->copyMetadata(I);
 
       // Replace all users.
-      auto OldShuffles = SmallVector<ShuffleVectorInst*, 4u>{};
-      for (auto &Use: I.uses()) {
+      auto OldShuffles = SmallVector<ShuffleVectorInst *, 4u>{};
+      for (auto &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
-        
+
         Builder.SetInsertPoint(Shuffle);
         Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
         auto *NewShuffle = Builder.CreateShuffleVector(
-          NewLoad, PoisonValue::get(NewVecTy), Shuffle->getShuffleMask()
-        );
+            NewLoad, PoisonValue::get(NewVecTy), Shuffle->getShuffleMask());
 
         Shuffle->replaceAllUsesWith(NewShuffle);
         OldShuffles.push_back(Shuffle);
       }
 
       // Erase old users.
-      for (auto *Shuffle: OldShuffles)
+      for (auto *Shuffle : OldShuffles)
         Shuffle->eraseFromParent();
 
       I.eraseFromParent();

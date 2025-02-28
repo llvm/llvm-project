@@ -254,14 +254,14 @@ void test_core(void) {
   // CHECK-ASM: vstrlr
 
   vf = vec_splat(vf, 0);
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> zeroinitializer
-  // CHECK-ASM: vrepf
+  // CHECK: shufflevector <1 x float> %{{.*}}, <1 x float> poison, <4 x i32> zeroinitializer
+  // CHECK-ASM: vlrepf
   vf = vec_splat(vf, 1);
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  // CHECK-ASM: vrepf
+  // CHECK: shufflevector <2 x float> %{{.*}}, <2 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  // CHECK-ASM: vst
   vd = vec_splat(vd, 0);
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
-  // CHECK-ASM: vrepg
+  // CHECK: shufflevector <1 x double> %{{.*}}, <1 x double> poison, <2 x i32> zeroinitializer
+  // CHECK-ASM: vlrepg
   vd = vec_splat(vd, 1);
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
