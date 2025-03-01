@@ -624,6 +624,15 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
+inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+  assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
+         "Unexpected number of registers");
+  if (NumRegs == 13)
+    --NumRegs;
+
+  return RLISTENCODE::RA + (NumRegs - 1);
+}
+
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");

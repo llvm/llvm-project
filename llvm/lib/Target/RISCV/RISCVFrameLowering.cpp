@@ -332,51 +332,19 @@ getRestoreLibCallName(const MachineFunction &MF,
   return RestoreLibCalls[LibCallID];
 }
 
-// Return encoded value and register count for PUSH/POP instruction,
-// representing registers to store/load.
-static std::pair<unsigned, unsigned>
-getPushPopEncodingAndNum(const Register MaxReg) {
-  switch (MaxReg.id()) {
-  default:
-    llvm_unreachable("Unexpected Reg for Push/Pop Inst");
-  case RISCV::X27: /*s11*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S11, 13);
-  case RISCV::X25: /*s9*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S9, 11);
-  case RISCV::X24: /*s8*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S8, 10);
-  case RISCV::X23: /*s7*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S7, 9);
-  case RISCV::X22: /*s6*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S6, 8);
-  case RISCV::X21: /*s5*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S5, 7);
-  case RISCV::X20: /*s4*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S4, 6);
-  case RISCV::X19: /*s3*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S3, 5);
-  case RISCV::X18: /*s2*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S2, 4);
-  case RISCV::X9: /*s1*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S1, 3);
-  case FPReg: /*s0*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0, 2);
-  case RAReg: /*ra*/
-    return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA, 1);
-  }
-}
-
 // Get the max reg of Push/Pop for restoring callee saved registers.
-static Register getMaxPushPopReg(const std::vector<CalleeSavedInfo> &CSI) {
-  MCRegister MaxPushPopReg;
+static unsigned getNumPushPopRegs(const std::vector<CalleeSavedInfo> &CSI) {
+  unsigned NumPushPopRegs = 0;
   for (auto &CS : CSI) {
-    if (llvm::find_if(FixedCSRFIMap, [&](auto P) {
-          return P.first == CS.getReg();
-        }) != std::end(FixedCSRFIMap))
-      MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
+    auto *FII = llvm::find_if(FixedCSRFIMap,
+                              [&](auto P) { return P.first == CS.getReg(); });
+    if (FII != std::end(FixedCSRFIMap)) {
+      unsigned RegNum = std::distance(std::begin(FixedCSRFIMap), FII);
+      NumPushPopRegs = std::max(NumPushPopRegs, RegNum + 1);
+    }
   }
-  assert(MaxPushPopReg != RISCV::X26 && "x26 requires x27 to also be pushed");
-  return MaxPushPopReg;
+  assert(NumPushPopRegs != 12 && "x26 requires x27 to also be pushed");
+  return NumPushPopRegs;
 }
 
 // Return true if the specified function should have a dedicated frame
@@ -1790,14 +1758,10 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
 
   if (RVFI->isPushable(MF)) {
     // Determine how many GPRs we need to push and save it to RVFI.
-    Register MaxReg = getMaxPushPopReg(CSI);
-    if (MaxReg != RISCV::NoRegister) {
-      auto [RegEnc, PushedRegNum] = getPushPopEncodingAndNum(MaxReg);
+    unsigned PushedRegNum = getNumPushPopRegs(CSI);
+    if (PushedRegNum) {
       RVFI->setRVPushRegs(PushedRegNum);
       RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
-
-      // Use encoded number to represent registers to spill.
-      RVFI->setRVPushRlist(RegEnc);
     }
   }
 
@@ -1879,11 +1843,11 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
-      int RegEnc = RVFI->getRVPushRlist();
+      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(RISCV::CM_PUSH))
               .setMIFlag(MachineInstr::FrameSetup);
-      PushBuilder.addImm((int64_t)RegEnc);
+      PushBuilder.addImm(RegEnc);
       PushBuilder.addImm(0);
 
       for (unsigned i = 0; i < PushedRegNum; i++)
@@ -2032,8 +1996,9 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
 
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {
-    int RegEnc = RVFI->getRVPushRlist();
-    if (RegEnc != llvm::RISCVZC::RLISTENCODE::INVALID_RLIST) {
+    unsigned PushedRegNum = RVFI->getRVPushRegs();
+    if (PushedRegNum > 0) {
+      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
       MachineInstrBuilder PopBuilder =
           BuildMI(MBB, MI, DL, TII.get(RISCV::CM_POP))
               .setMIFlag(MachineInstr::FrameDestroy);
