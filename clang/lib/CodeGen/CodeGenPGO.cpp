@@ -298,18 +298,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
         MCDCState
             .DecisionByStmt[CodeGenFunction::stripCond(StackTop.DecisionExpr)];
 
-    /// Was the "split-nested" logical operator case encountered?
-    if (false && DecisionStack.size() > 1) {
-      unsigned DiagID = Diag.getCustomDiagID(
-          DiagnosticsEngine::Warning,
-          "unsupported MC/DC boolean expression; "
-          "contains an operation with a nested boolean expression. "
-          "Expression will not be covered");
-      Diag.Report(S->getBeginLoc(), DiagID);
-      DecisionStack.pop_back();
-      return true;
-    }
-
     /// Was the maximum number of conditions encountered?
     auto NumCond = StackTop.Leaves.size();
     if (NumCond > MCDCMaxCond) {
