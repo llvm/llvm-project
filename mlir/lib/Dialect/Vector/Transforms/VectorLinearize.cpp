@@ -57,6 +57,24 @@ static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
   return trailingVecDimBitWidth <= targetBitWidth;
 }
 
+static FailureOr<Attribute>
+linearizeConstAttr(Location loc, ConversionPatternRewriter &rewriter,
+                   VectorType resType, Attribute value) {
+  if (auto dstElementsAttr = dyn_cast<DenseElementsAttr>(value)) {
+    if (resType.isScalable() && !isa<SplatElementsAttr>(value))
+      return rewriter.notifyMatchFailure(
+          loc,
+          "Cannot linearize a constant scalable vector that's not a splat");
+
+    return dstElementsAttr.reshape(resType);
+  }
+
+  if (auto poisonAttr = dyn_cast<ub::PoisonAttr>(value))
+    return poisonAttr;
+
+  return rewriter.notifyMatchFailure(loc, "unsupported attr type");
+}
+
 namespace {
 struct LinearizeConstantLike final
     : OpTraitConversionPattern<OpTrait::ConstantLike> {
@@ -75,8 +93,9 @@ struct LinearizeConstantLike final
     if (op->getNumResults() != 1)
       return rewriter.notifyMatchFailure(loc, "expected 1 result");
 
+    const TypeConverter &converter = *getTypeConverter();
     auto resType =
-        getTypeConverter()->convertType<VectorType>(op->getResult(0).getType());
+        converter.convertType<VectorType>(op->getResult(0).getType());
 
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
@@ -90,35 +109,20 @@ struct LinearizeConstantLike final
     if (!value)
       return rewriter.notifyMatchFailure(loc, "no 'value' attr");
 
-    if (auto dstElementsAttr = dyn_cast<DenseElementsAttr>(value)) {
-      if (resType.isScalable() && !isa<SplatElementsAttr>(value))
-        return rewriter.notifyMatchFailure(
-            loc,
-            "Cannot linearize a constant scalable vector that's not a splat");
+    FailureOr<Attribute> newValue =
+        linearizeConstAttr(loc, rewriter, resType, value);
+    if (failed(newValue))
+      return failure();
 
-      dstElementsAttr = dstElementsAttr.reshape(resType);
-      FailureOr<Operation *> newOp =
-          convertOpResultTypes(op, {}, *getTypeConverter(), rewriter);
-      if (failed(newOp))
-        return failure();
+    FailureOr<Operation *> convertResult =
+        convertOpResultTypes(op, /*operands=*/{}, converter, rewriter);
+    if (failed(convertResult))
+      return failure();
 
-      (*newOp)->setAttr(attrName, dstElementsAttr);
-      rewriter.replaceOp(op, *newOp);
-      return success();
-    }
-
-    if (auto poisonAttr = dyn_cast<ub::PoisonAttr>(value)) {
-      FailureOr<Operation *> newOp =
-          convertOpResultTypes(op, {}, *getTypeConverter(), rewriter);
-      if (failed(newOp))
-        return failure();
-
-      (*newOp)->setAttr(attrName, poisonAttr);
-      rewriter.replaceOp(op, *newOp);
-      return success();
-    }
-
-    return rewriter.notifyMatchFailure(loc, "unsupported attr type");
+    Operation *newOp = *convertResult;
+    newOp->setAttr(attrName, *newValue);
+    rewriter.replaceOp(op, newOp);
+    return success();
   }
 
 private:
