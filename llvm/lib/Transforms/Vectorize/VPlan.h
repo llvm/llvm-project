@@ -1147,7 +1147,7 @@ public:
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
 /// cast/dyn_cast/isa and execute() implementation.
-struct VPIRPhi : public VPIRInstruction {
+struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors<VPIRPhi> {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {

@@ -1039,16 +1039,19 @@ static const VPBasicBlock *getIncomingBlockForRecipe(const VPRecipeBase *R,
   return Pred->getExitingBasicBlock();
 }
 
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPIRPhi>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
+}
+
 void VPIRPhi::execute(VPTransformState &State) {
   PHINode *Phi = &getIRPhi();
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    VPValue *ExitValue = Op;
+  for (const auto &[ExitValue, IncVPBB] : incoming_values_and_blocks()) {
     auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                     ? VPLane::getFirstLane()
                     : VPLane::getLastLaneForVF(State.VF);
-    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
-    auto *PredVPBB = Pred->getExitingBasicBlock();
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[IncVPBB];
     // Set insertion point in PredBB in case an extract needs to be generated.
     // TODO: Model extracts explicitly.
     State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
@@ -1073,12 +1076,11 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
-    interleaveComma(
-        enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
-          Op.value()->printAsOperand(O, SlotTracker);
-          O << " from ";
-          getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
-        });
+    interleaveComma(incoming_values_and_blocks(), O, [&O, &SlotTracker](auto Op) {
+                    std::get<0>(Op)->printAsOperand(O, SlotTracker);
+      O << " from ";
+      std::get<1>(Op)->printAsOperand(O);
+    });
     O << ")";
   }
 }
