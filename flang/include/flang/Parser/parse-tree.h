@@ -2642,7 +2642,7 @@ WRAPPER_CLASS(FileUnitNumber, ScalarIntExpr);
 // symbols are known.
 struct IoUnit {
   UNION_CLASS_BOILERPLATE(IoUnit);
-  std::variant<Variable, FileUnitNumber, Star> u;
+  std::variant<Variable, common::Indirection<Expr>, Star> u;
 };
 
 // R1206 file-name-expr -> scalar-default-char-expr
@@ -3349,6 +3349,8 @@ struct StmtFunctionStmt {
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...    = can be :
+// !DIR$ UNROLL [N]
+// !DIR$ UNROLL_AND_JAM [N]
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3371,10 +3373,13 @@ struct CompilerDirective {
   struct Unroll {
     WRAPPER_CLASS_BOILERPLATE(Unroll, std::optional<std::uint64_t>);
   };
+  struct UnrollAndJam {
+    WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
+  };
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized>
       u;
 };
 
@@ -3948,6 +3953,16 @@ using OmpContextSelector = traits::OmpContextSelectorSpecification;
 
 // --- Clauses
 
+using OmpDirectiveList = std::list<llvm::omp::Directive>;
+
+// Ref: [5.2:214]
+//
+// absent-clause ->
+//   ABSENT(directive-name[, directive-name])
+struct OmpAbsentClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpAbsentClause, OmpDirectiveList);
+};
+
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:264-265]
 //
 // affinity-clause ->
@@ -4019,6 +4034,14 @@ struct OmpAtomicDefaultMemOrderClause {
 struct OmpBindClause {
   ENUM_CLASS(Binding, Parallel, Teams, Thread)
   WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
+};
+
+// Ref: [5.2:214]
+//
+// contains-clause ->
+//   CONTAINS(directive-name[, directive-name])
+struct OmpContainsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpContainsClause, OmpDirectiveList);
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
@@ -4193,6 +4216,14 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [5.2: 214]
+//
+// holds-clause ->
+//   HOLDS(expr)
+struct OmpHoldsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHoldsClause, common::Indirection<Expr>);
+};
+
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
 // that allow the IF clause.
 //
@@ -4273,6 +4304,21 @@ struct OmpMatchClause {
 struct OmpMessageClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, Expr);
 };
+
+// Ref: [5.2: 214]
+//
+// no_openmp_clause -> NO_OPENMP
+EMPTY_CLASS(OmpNoOpenMPClause);
+
+// Ref: [5.2: 214]
+//
+// no_openmp_routines_clause -> NO_OPENMP_ROUTINES
+EMPTY_CLASS(OmpNoOpenMPRoutinesClause);
+
+// Ref: [5.2: 214]
+//
+// no_parallelism_clause -> NO_PARALELISM
+EMPTY_CLASS(OmpNoParallelismClause);
 
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
 //
@@ -4468,6 +4514,41 @@ struct OpenMPUtilityConstruct {
   std::variant<OmpErrorDirective, OmpNothingDirective> u;
 };
 
+// Ref: [5.2: 213-216]
+//
+// assumes-construct ->
+//   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
+//          no-openmp-routines-clause | no-parallelism-clause
+struct OpenMPDeclarativeAssumes {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAssumes);
+  std::tuple<Verbatim, OmpClauseList> t;
+  CharBlock source;
+};
+
+struct OmpAssumeDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective);
+  std::tuple<Verbatim, OmpClauseList> t;
+  CharBlock source;
+};
+
+struct OmpEndAssumeDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpEndAssumeDirective, Verbatim);
+  CharBlock source;
+};
+
+// Ref: [5.2: 213-216]
+//
+// assume-construct ->
+//   ASSUME absent-clause | contains-clause | holds_clause | no-openmp-clause
+//          no-openmp-routines-clause | no-parallelism-clause
+//       block
+//   [END ASSUME]
+struct OpenMPAssumeConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct);
+  std::tuple<OmpAssumeDirective, Block, std::optional<OmpEndAssumeDirective>> t;
+  CharBlock source;
+};
+
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
 struct OmpSectionsDirective {
@@ -4553,8 +4634,8 @@ WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpReductionIdentifier, std::list<DeclarationTypeSpec>,
-      OmpReductionCombiner, std::optional<OmpReductionInitializerClause>>
+  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
+      std::optional<OmpReductionInitializerClause>>
       t;
 };
 
@@ -4590,10 +4671,11 @@ struct OpenMPDeclarativeAllocate {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
-      OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
+  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
+      OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
+      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
       OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct,
-      OpenMPDeclareTargetConstruct, OmpMetadirectiveDirective>
+      OmpMetadirectiveDirective>
       u;
 };
 
@@ -4880,7 +4962,7 @@ struct OpenMPConstruct {
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
       OpenMPUtilityConstruct, OpenMPExecutableAllocate,
-      OpenMPAllocatorsConstruct, OpenMPCriticalConstruct>
+      OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
       u;
 };
 

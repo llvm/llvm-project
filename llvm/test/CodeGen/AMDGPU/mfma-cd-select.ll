@@ -94,9 +94,20 @@ bb3:
   ret void
 }
 
-; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_nonentry:
+; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_nonentry_noagpr:
+; GFX908: v_mfma_f32_32x32x1{{.*}} a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, a[{{[0-9:]+}}]
+; GFX90A: v_mfma_f32_32x32x1{{.*}} v[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, v[{{[0-9:]+}}]
+define void @test_mfma_f32_32x32x1f32_nonentry_noagpr(ptr addrspace(1) %arg) #0 {
+bb:
+  %in.1 = load <32 x float>, ptr addrspace(1) %arg
+  %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
+  store <32 x float> %mai.1, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_nonentry_with_agpr:
 ; GCN: v_mfma_f32_32x32x1{{.*}} a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9:]+}}, a[{{[0-9:]+}}]
-define void @test_mfma_f32_32x32x1f32_nonentry(ptr addrspace(1) %arg) #0 {
+define void @test_mfma_f32_32x32x1f32_nonentry_with_agpr(ptr addrspace(1) %arg) #3 {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
   %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
@@ -109,3 +120,4 @@ declare void @foo()
 attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-no-agpr" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-no-agpr" }
+attributes #3 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }

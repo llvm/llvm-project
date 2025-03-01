@@ -9,20 +9,20 @@ define void @bn_mul_comba8(ptr nocapture %r, ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:    std 4, -8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr 4, 3
 ; CHECK-NEXT:    ld 3, -8(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 6, 0(3)
-; CHECK-NEXT:    ld 11, 0(5)
-; CHECK-NEXT:    mulhdu 8, 11, 6
+; CHECK-NEXT:    ld 9, 0(3)
+; CHECK-NEXT:    ld 8, 0(5)
+; CHECK-NEXT:    mulhdu 7, 8, 9
 ; CHECK-NEXT:    ld 3, 8(3)
-; CHECK-NEXT:    mulld 7, 3, 6
-; CHECK-NEXT:    addc 9, 7, 8
-; CHECK-NEXT:    ld 10, 8(5)
-; CHECK-NEXT:    mulhdu 5, 10, 11
-; CHECK-NEXT:    mulld 10, 10, 11
-; CHECK-NEXT:    addc 9, 9, 10
+; CHECK-NEXT:    mulld 6, 3, 9
+; CHECK-NEXT:    mulhdu 3, 3, 9
+; CHECK-NEXT:    addc 6, 6, 7
+; CHECK-NEXT:    addze 3, 3
+; CHECK-NEXT:    ld 5, 8(5)
+; CHECK-NEXT:    mulld 7, 5, 8
+; CHECK-NEXT:    mulhdu 5, 5, 8
+; CHECK-NEXT:    addc 6, 6, 7
 ; CHECK-NEXT:    addze 5, 5
-; CHECK-NEXT:    addc 7, 7, 8
-; CHECK-NEXT:    mulhdu 3, 3, 6
-; CHECK-NEXT:    adde 3, 5, 3
+; CHECK-NEXT:    add 3, 5, 3
 ; CHECK-NEXT:    cmpld 3, 5
 ; CHECK-NEXT:    crmove 20, 0
 ; CHECK-NEXT:    li 5, 0

@@ -1198,28 +1198,14 @@ ASTContext::buildBuiltinTemplateDecl(BuiltinTemplateKind BTK,
   return BuiltinTemplate;
 }
 
-BuiltinTemplateDecl *
-ASTContext::getMakeIntegerSeqDecl() const {
-  if (!MakeIntegerSeqDecl)
-    MakeIntegerSeqDecl = buildBuiltinTemplateDecl(BTK__make_integer_seq,
-                                                  getMakeIntegerSeqName());
-  return MakeIntegerSeqDecl;
-}
-
-BuiltinTemplateDecl *
-ASTContext::getTypePackElementDecl() const {
-  if (!TypePackElementDecl)
-    TypePackElementDecl = buildBuiltinTemplateDecl(BTK__type_pack_element,
-                                                   getTypePackElementName());
-  return TypePackElementDecl;
-}
-
-BuiltinTemplateDecl *ASTContext::getBuiltinCommonTypeDecl() const {
-  if (!BuiltinCommonTypeDecl)
-    BuiltinCommonTypeDecl = buildBuiltinTemplateDecl(
-        BTK__builtin_common_type, getBuiltinCommonTypeName());
-  return BuiltinCommonTypeDecl;
-}
+#define BuiltinTemplate(BTName)                                                \
+  BuiltinTemplateDecl *ASTContext::get##BTName##Decl() const {                 \
+    if (!Decl##BTName)                                                         \
+      Decl##BTName =                                                           \
+          buildBuiltinTemplateDecl(BTK##BTName, get##BTName##Name());          \
+    return Decl##BTName;                                                       \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
 
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,
                                             RecordDecl::TagKind TK) const {
@@ -3898,7 +3884,8 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
   if (Ty->isArrayParameterType())
     return Ty;
   assert(Ty->isConstantArrayType() && "Ty must be an array type.");
-  const auto *ATy = cast<ConstantArrayType>(Ty.getDesugaredType(*this));
+  QualType DTy = Ty.getDesugaredType(*this);
+  const auto *ATy = cast<ConstantArrayType>(DTy);
   llvm::FoldingSetNodeID ID;
   ATy->Profile(ID, *this, ATy->getElementType(), ATy->getZExtSize(),
                ATy->getSizeExpr(), ATy->getSizeModifier(),
@@ -3910,7 +3897,7 @@ QualType ASTContext::getArrayParameterType(QualType Ty) const {
     return QualType(AT, 0);
 
   QualType Canonical;
-  if (!Ty.isCanonical()) {
+  if (!DTy.isCanonical()) {
     Canonical = getArrayParameterType(getCanonicalType(Ty));
 
     // Get the new insert position for the node we care about.

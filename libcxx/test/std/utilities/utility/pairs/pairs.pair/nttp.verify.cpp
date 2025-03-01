@@ -13,6 +13,9 @@
 // LWG-3382 NTTP for pair and array:
 // pair<T, U> is a structural type ([temp.param]) if T and U are both structural types.
 
+// This deprecated ABI switch makes pair a non-structural type.
+// XFAIL: libcpp-deprecated-abi-disable-pair-trivial-copy-ctor
+
 #include <utility>
 
 #include <functional>

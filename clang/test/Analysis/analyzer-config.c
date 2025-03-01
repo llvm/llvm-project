@@ -116,6 +116,7 @@
 // CHECK-NEXT: osx.NumberObjectConversion:Pedantic = false
 // CHECK-NEXT: osx.cocoa.RetainCount:TrackNSCFStartParam = false
 // CHECK-NEXT: prune-paths = true
+// CHECK-NEXT: region-store-max-binding-fanout = 128
 // CHECK-NEXT: region-store-small-array-limit = 5
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false

@@ -237,8 +237,7 @@ static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
   assert(D);
   assert(D->ElemRecord);
 
-  // FIXME: There might be cases where we need to move over the (v)bases as
-  // well.
+  // FIXME: Code duplication.
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOffset = F.Offset;
     const auto *SrcDesc =
@@ -249,6 +248,26 @@ static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
 
     if (auto Fn = F.Desc->MoveFn)
       Fn(B, Src + FieldOffset, Dst + FieldOffset, F.Desc);
+  }
+
+  for (const auto &Base : D->ElemRecord->bases()) {
+    auto BaseOffset = Base.Offset;
+    const auto *SrcDesc =
+        reinterpret_cast<const InlineDescriptor *>(Src + BaseOffset) - 1;
+    auto *DestDesc = reinterpret_cast<InlineDescriptor *>(Dst + BaseOffset) - 1;
+    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
+
+    if (auto Fn = Base.Desc->MoveFn)
+      Fn(B, Src + BaseOffset, Dst + BaseOffset, Base.Desc);
+  }
+
+  for (const auto &VBase : D->ElemRecord->virtual_bases()) {
+    auto VBaseOffset = VBase.Offset;
+    const auto *SrcDesc =
+        reinterpret_cast<const InlineDescriptor *>(Src + VBaseOffset) - 1;
+    auto *DestDesc =
+        reinterpret_cast<InlineDescriptor *>(Dst + VBaseOffset) - 1;
+    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
   }
 }
 

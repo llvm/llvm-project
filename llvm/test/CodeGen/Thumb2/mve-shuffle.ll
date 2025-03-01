@@ -355,30 +355,30 @@ define arm_aapcs_vfpcc <8 x i16> @shuffle3step_i16(<32 x i16> %src) {
 ; CHECK-NEXT:    vins.f16 s16, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s5
 ; CHECK-NEXT:    vmov.f32 s17, s4
-; CHECK-NEXT:    vmovx.f16 s13, s3
+; CHECK-NEXT:    vmovx.f16 s14, s6
 ; CHECK-NEXT:    vins.f16 s17, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s8
 ; CHECK-NEXT:    vmov.f32 s18, s7
-; CHECK-NEXT:    vmovx.f16 s14, s6
+; CHECK-NEXT:    vins.f16 s14, s8
 ; CHECK-NEXT:    vins.f16 s18, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s11
-; CHECK-NEXT:    vmov.f32 s19, s10
-; CHECK-NEXT:    vmovx.f16 s15, s9
-; CHECK-NEXT:    vins.f16 s19, s2
+; CHECK-NEXT:    vmovx.f16 s8, s10
+; CHECK-NEXT:    vins.f16 s10, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s1
+; CHECK-NEXT:    vmovx.f16 s13, s3
 ; CHECK-NEXT:    vins.f16 s0, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s4
 ; CHECK-NEXT:    vins.f16 s3, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s7
+; CHECK-NEXT:    vmovx.f16 s15, s9
 ; CHECK-NEXT:    vins.f16 s6, s2
-; CHECK-NEXT:    vmovx.f16 s2, s10
-; CHECK-NEXT:    vins.f16 s9, s2
+; CHECK-NEXT:    vins.f16 s9, s8
 ; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vins.f16 s14, s8
 ; CHECK-NEXT:    vins.f16 s15, s11
 ; CHECK-NEXT:    vins.f16 s13, s5
 ; CHECK-NEXT:    vmov.f32 s2, s6
 ; CHECK-NEXT:    vmov.f32 s3, s9
+; CHECK-NEXT:    vmov.f32 s19, s10
 ; CHECK-NEXT:    vadd.i16 q0, q0, q3
 ; CHECK-NEXT:    vadd.i16 q0, q0, q4
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -1467,47 +1467,27 @@ entry:
   ret <2 x double> %out
 }
 define arm_aapcs_vfpcc <8 x double> @shuffle9_f64(<4 x double> %src1, <4 x double> %src2) {
-; CHECK-LV-LABEL: shuffle9_f64:
-; CHECK-LV:       @ %bb.0: @ %entry
-; CHECK-LV-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    vmov q5, q2
-; CHECK-LV-NEXT:    vmov.f32 s16, s0
-; CHECK-LV-NEXT:    vmov.f32 s18, s20
-; CHECK-LV-NEXT:    vmov.f32 s20, s2
-; CHECK-LV-NEXT:    vmov.f32 s10, s12
-; CHECK-LV-NEXT:    vmov.f32 s19, s21
-; CHECK-LV-NEXT:    vmov.f32 s8, s4
-; CHECK-LV-NEXT:    vmov.f32 s17, s1
-; CHECK-LV-NEXT:    vmov.f32 s21, s3
-; CHECK-LV-NEXT:    vmov q0, q4
-; CHECK-LV-NEXT:    vmov.f32 s12, s6
-; CHECK-LV-NEXT:    vmov.f32 s11, s13
-; CHECK-LV-NEXT:    vmov.f32 s9, s5
-; CHECK-LV-NEXT:    vmov.f32 s13, s7
-; CHECK-LV-NEXT:    vmov q1, q5
-; CHECK-LV-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    bx lr
-;
-; CHECK-LIS-LABEL: shuffle9_f64:
-; CHECK-LIS:       @ %bb.0: @ %entry
-; CHECK-LIS-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    vmov q5, q2
-; CHECK-LIS-NEXT:    vmov q4, q0
-; CHECK-LIS-NEXT:    vmov.f32 s2, s20
-; CHECK-LIS-NEXT:    vmov.f32 s20, s18
-; CHECK-LIS-NEXT:    vmov.f32 s10, s12
-; CHECK-LIS-NEXT:    vmov.f32 s3, s21
-; CHECK-LIS-NEXT:    vmov.f32 s8, s4
-; CHECK-LIS-NEXT:    vmov.f32 s21, s19
-; CHECK-LIS-NEXT:    vmov.f32 s12, s6
-; CHECK-LIS-NEXT:    vmov.f32 s11, s13
-; CHECK-LIS-NEXT:    vmov.f32 s9, s5
-; CHECK-LIS-NEXT:    vmov.f32 s13, s7
-; CHECK-LIS-NEXT:    vmov q1, q5
-; CHECK-LIS-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    bx lr
+; CHECK-LABEL: shuffle9_f64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    vmov q5, q2
+; CHECK-NEXT:    vmov.f32 s16, s0
+; CHECK-NEXT:    vmov.f32 s18, s20
+; CHECK-NEXT:    vmov.f32 s20, s2
+; CHECK-NEXT:    vmov.f32 s10, s12
+; CHECK-NEXT:    vmov.f32 s19, s21
+; CHECK-NEXT:    vmov.f32 s8, s4
+; CHECK-NEXT:    vmov.f32 s17, s1
+; CHECK-NEXT:    vmov.f32 s21, s3
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vmov.f32 s12, s6
+; CHECK-NEXT:    vmov.f32 s11, s13
+; CHECK-NEXT:    vmov.f32 s9, s5
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmov q1, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x double> %src1, <4 x double> %src2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   ret <8 x double> %out
@@ -1580,47 +1560,27 @@ entry:
   ret <2 x i64> %out
 }
 define arm_aapcs_vfpcc <8 x i64> @shuffle9_i64(<4 x i64> %src1, <4 x i64> %src2) {
-; CHECK-LV-LABEL: shuffle9_i64:
-; CHECK-LV:       @ %bb.0: @ %entry
-; CHECK-LV-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    vmov q5, q2
-; CHECK-LV-NEXT:    vmov.f32 s16, s0
-; CHECK-LV-NEXT:    vmov.f32 s18, s20
-; CHECK-LV-NEXT:    vmov.f32 s20, s2
-; CHECK-LV-NEXT:    vmov.f32 s10, s12
-; CHECK-LV-NEXT:    vmov.f32 s19, s21
-; CHECK-LV-NEXT:    vmov.f32 s8, s4
-; CHECK-LV-NEXT:    vmov.f32 s17, s1
-; CHECK-LV-NEXT:    vmov.f32 s21, s3
-; CHECK-LV-NEXT:    vmov q0, q4
-; CHECK-LV-NEXT:    vmov.f32 s12, s6
-; CHECK-LV-NEXT:    vmov.f32 s11, s13
-; CHECK-LV-NEXT:    vmov.f32 s9, s5
-; CHECK-LV-NEXT:    vmov.f32 s13, s7
-; CHECK-LV-NEXT:    vmov q1, q5
-; CHECK-LV-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-LV-NEXT:    bx lr
-;
-; CHECK-LIS-LABEL: shuffle9_i64:
-; CHECK-LIS:       @ %bb.0: @ %entry
-; CHECK-LIS-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    vmov q5, q2
-; CHECK-LIS-NEXT:    vmov q4, q0
-; CHECK-LIS-NEXT:    vmov.f32 s2, s20
-; CHECK-LIS-NEXT:    vmov.f32 s20, s18
-; CHECK-LIS-NEXT:    vmov.f32 s10, s12
-; CHECK-LIS-NEXT:    vmov.f32 s3, s21
-; CHECK-LIS-NEXT:    vmov.f32 s8, s4
-; CHECK-LIS-NEXT:    vmov.f32 s21, s19
-; CHECK-LIS-NEXT:    vmov.f32 s12, s6
-; CHECK-LIS-NEXT:    vmov.f32 s11, s13
-; CHECK-LIS-NEXT:    vmov.f32 s9, s5
-; CHECK-LIS-NEXT:    vmov.f32 s13, s7
-; CHECK-LIS-NEXT:    vmov q1, q5
-; CHECK-LIS-NEXT:    vpop {d8, d9, d10, d11}
-; CHECK-LIS-NEXT:    bx lr
+; CHECK-LABEL: shuffle9_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
+; CHECK-NEXT:    vmov q5, q2
+; CHECK-NEXT:    vmov.f32 s16, s0
+; CHECK-NEXT:    vmov.f32 s18, s20
+; CHECK-NEXT:    vmov.f32 s20, s2
+; CHECK-NEXT:    vmov.f32 s10, s12
+; CHECK-NEXT:    vmov.f32 s19, s21
+; CHECK-NEXT:    vmov.f32 s8, s4
+; CHECK-NEXT:    vmov.f32 s17, s1
+; CHECK-NEXT:    vmov.f32 s21, s3
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vmov.f32 s12, s6
+; CHECK-NEXT:    vmov.f32 s11, s13
+; CHECK-NEXT:    vmov.f32 s9, s5
+; CHECK-NEXT:    vmov.f32 s13, s7
+; CHECK-NEXT:    vmov q1, q5
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i64> %src1, <4 x i64> %src2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   ret <8 x i64> %out
@@ -1860,3 +1820,6 @@ entry:
   ret double %res
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-LIS: {{.*}}
+; CHECK-LV: {{.*}}

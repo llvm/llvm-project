@@ -40,8 +40,10 @@ Region::Region(Context &Ctx, TargetTransformInfo &TTI)
 
   CreateInstCB = Ctx.registerCreateInstrCallback(
       [this](Instruction *NewInst) { add(NewInst); });
-  EraseInstCB = Ctx.registerEraseInstrCallback(
-      [this](Instruction *ErasedInst) { remove(ErasedInst); });
+  EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
+    remove(ErasedInst);
+    removeFromAux(ErasedInst);
+  });
 }
 
 Region::~Region() {
@@ -62,7 +64,7 @@ void Region::setAux(ArrayRef<Instruction *> Aux) {
   auto &LLVMCtx = Ctx.LLVMCtx;
   for (auto [Idx, I] : enumerate(Aux)) {
     llvm::ConstantInt *IdxC =
-        llvm::ConstantInt::get(LLVMCtx, llvm::APInt(32, Idx, false));
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVMCtx), Idx, false);
     assert(cast<llvm::Instruction>(I->Val)->getMetadata(AuxMDKind) == nullptr &&
            "Instruction already in Aux!");
     cast<llvm::Instruction>(I->Val)->setMetadata(
@@ -84,11 +86,22 @@ void Region::setAux(unsigned Idx, Instruction *I) {
   Aux[Idx] = I;
 }
 
+void Region::dropAuxMetadata(Instruction *I) {
+  auto *LLVMI = cast<llvm::Instruction>(I->Val);
+  LLVMI->setMetadata(AuxMDKind, nullptr);
+}
+
+void Region::removeFromAux(Instruction *I) {
+  auto It = find(Aux, I);
+  if (It == Aux.end())
+    return;
+  dropAuxMetadata(I);
+  Aux.erase(It);
+}
+
 void Region::clearAux() {
-  for (unsigned Idx : seq<unsigned>(0, Aux.size())) {
-    auto *LLVMI = cast<llvm::Instruction>(Aux[Idx]->Val);
-    LLVMI->setMetadata(AuxMDKind, nullptr);
-  }
+  for (unsigned Idx : seq<unsigned>(0, Aux.size()))
+    dropAuxMetadata(Aux[Idx]);
   Aux.clear();
 }
 

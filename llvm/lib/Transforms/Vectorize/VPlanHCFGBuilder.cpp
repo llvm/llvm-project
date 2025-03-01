@@ -62,7 +62,7 @@ private:
   // Utility functions.
   void setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB);
   void setRegionPredsFromBB(VPRegionBlock *VPBB, BasicBlock *BB);
-  void fixPhiNodes();
+  void fixHeaderPhis();
   VPBasicBlock *getOrCreateVPBB(BasicBlock *BB);
 #ifndef NDEBUG
   bool isExternalDef(Value *Val);
@@ -75,7 +75,7 @@ public:
       : TheLoop(Lp), LI(LI), Plan(P) {}
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  void buildPlainCFG();
+  void buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
 };
 } // anonymous namespace
 
@@ -120,7 +120,7 @@ void PlainCFGBuilder::setRegionPredsFromBB(VPRegionBlock *Region,
 }
 
 // Add operands to VPInstructions representing phi nodes from the input IR.
-void PlainCFGBuilder::fixPhiNodes() {
+void PlainCFGBuilder::fixHeaderPhis() {
   for (auto *Phi : PhisToFix) {
     assert(IRDef2VPValue.count(Phi) && "Missing VPInstruction for PHINode.");
     VPValue *VPVal = IRDef2VPValue[Phi];
@@ -131,29 +131,17 @@ void PlainCFGBuilder::fixPhiNodes() {
            "Expected VPInstruction with no operands.");
 
     Loop *L = LI->getLoopFor(Phi->getParent());
-    if (isHeaderBB(Phi->getParent(), L)) {
-      // For header phis, make sure the incoming value from the loop
-      // predecessor is the first operand of the recipe.
-      assert(Phi->getNumOperands() == 2 &&
-             "header phi must have exactly 2 operands");
-      BasicBlock *LoopPred = L->getLoopPredecessor();
-      VPPhi->addOperand(
-          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)));
-      BasicBlock *LoopLatch = L->getLoopLatch();
-      VPPhi->addOperand(
-          getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)));
-      continue;
-    }
-
-    // Add operands for VPPhi in the order matching its predecessors in VPlan.
-    DenseMap<const VPBasicBlock *, VPValue *> VPPredToIncomingValue;
-    for (unsigned I = 0; I != Phi->getNumOperands(); ++I) {
-      VPPredToIncomingValue[BB2VPBB[Phi->getIncomingBlock(I)]] =
-          getOrCreateVPOperand(Phi->getIncomingValue(I));
-    }
-    for (VPBlockBase *Pred : VPPhi->getParent()->getPredecessors())
-      VPPhi->addOperand(
-          VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
+    assert(isHeaderBB(Phi->getParent(), L));
+    // For header phis, make sure the incoming value from the loop
+    // predecessor is the first operand of the recipe.
+    assert(Phi->getNumOperands() == 2 &&
+           "header phi must have exactly 2 operands");
+    BasicBlock *LoopPred = L->getLoopPredecessor();
+    VPPhi->addOperand(
+        getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)));
+    BasicBlock *LoopLatch = L->getLoopLatch();
+    VPPhi->addOperand(
+        getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)));
   }
 }
 
@@ -242,10 +230,10 @@ bool PlainCFGBuilder::isExternalDef(Value *Val) {
     // Instruction definition is in outermost loop PH.
     return false;
 
-  // Check whether Instruction definition is in the loop exit.
-  BasicBlock *Exit = TheLoop->getUniqueExitBlock();
-  assert(Exit && "Expected loop with single exit.");
-  if (InstParent == Exit) {
+  // Check whether Instruction definition is in a loop exit.
+  SmallVector<BasicBlock *> ExitBlocks;
+  TheLoop->getExitBlocks(ExitBlocks);
+  if (is_contained(ExitBlocks, InstParent)) {
     // Instruction definition is in outermost loop exit.
     return false;
   }
@@ -288,6 +276,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
+  // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
 
@@ -313,14 +302,37 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       continue;
     }
 
-    VPValue *NewVPV;
+    if (auto *SI = dyn_cast<SwitchInst>(Inst)) {
+      SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
+      for (auto Case : SI->cases())
+        Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
+      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst);
+      continue;
+    }
+
+    VPSingleDefRecipe *NewR;
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       // Phi node's operands may have not been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewVPV = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
-      VPBB->appendRecipe(cast<VPWidenPHIRecipe>(NewVPV));
-      PhisToFix.push_back(Phi);
+      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
+      VPBB->appendRecipe(NewR);
+      if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
+        // Header phis need to be fixed after the VPBB for the latch has been
+        // created.
+        PhisToFix.push_back(Phi);
+      } else {
+        // Add operands for VPPhi in the order matching its predecessors in
+        // VPlan.
+        DenseMap<const VPBasicBlock *, VPValue *> VPPredToIncomingValue;
+        for (unsigned I = 0; I != Phi->getNumOperands(); ++I) {
+          VPPredToIncomingValue[BB2VPBB[Phi->getIncomingBlock(I)]] =
+              getOrCreateVPOperand(Phi->getIncomingValue(I));
+        }
+        for (VPBlockBase *Pred : VPBB->getPredecessors())
+          NewR->addOperand(
+              VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
+      }
     } else {
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
@@ -330,16 +342,17 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Build VPInstruction for any arbitrary Instruction without specific
       // representation in VPlan.
-      NewVPV = cast<VPInstruction>(
+      NewR = cast<VPInstruction>(
           VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst));
     }
 
-    IRDef2VPValue[Inst] = NewVPV;
+    IRDef2VPValue[Inst] = NewR;
   }
 }
 
 // Main interface to build the plain CFG.
-void PlainCFGBuilder::buildPlainCFG() {
+void PlainCFGBuilder::buildPlainCFG(
+    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
   // 0. Reuse the top-level region, vector-preheader and exit VPBBs from the
   // skeleton. These were created directly rather than via getOrCreateVPBB(),
   // revisit them now to update BB2VPBB. Note that header/entry and
@@ -356,24 +369,6 @@ void PlainCFGBuilder::buildPlainCFG() {
   // latter.
   BB2VPBB[ThePreheaderBB] = VectorPreheaderVPBB;
   Loop2Region[LI->getLoopFor(TheLoop->getHeader())] = TheRegion;
-  BasicBlock *ExitBB = TheLoop->getUniqueExitBlock();
-  if (!ExitBB) {
-    // If there is no unique exit block, we must exit via the latch. This exit
-    // is mapped to the middle block in the input plan.
-    BasicBlock *Latch = TheLoop->getLoopLatch();
-    auto *Br = cast<BranchInst>(Latch->getTerminator());
-    if (TheLoop->contains(Br->getSuccessor(0))) {
-      assert(!TheLoop->contains(Br->getSuccessor(1)) &&
-             "latch must exit the loop");
-      ExitBB = Br->getSuccessor(1);
-    } else {
-      assert(!TheLoop->contains(Br->getSuccessor(0)) &&
-             "latch must exit the loop");
-      ExitBB = Br->getSuccessor(0);
-    }
-  }
-  assert(ExitBB && "Must have a unique exit block or also exit via the latch.");
-  BB2VPBB[ExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
 
   // The existing vector region's entry and exiting VPBBs correspond to the loop
   // header and latch.
@@ -401,11 +396,9 @@ void PlainCFGBuilder::buildPlainCFG() {
   RPO.perform(LI);
 
   for (BasicBlock *BB : RPO) {
-    // Create or retrieve the VPBasicBlock for this BB and create its
-    // VPInstructions.
+    // Create or retrieve the VPBasicBlock for this BB.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     VPRegionBlock *Region = VPBB->getParent();
-    createVPInstructionsForVPBB(VPBB, BB);
     Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     if (!isHeaderBB(BB, LoopForBB)) {
@@ -418,6 +411,9 @@ void PlainCFGBuilder::buildPlainCFG() {
         setRegionPredsFromBB(Region, BB);
     }
 
+    // Create VPInstructions for BB.
+    createVPInstructionsForVPBB(VPBB, BB);
+
     if (TheLoop->getLoopLatch() == BB) {
       VPBB->setOneSuccessor(VectorLatchVPBB);
       VectorLatchVPBB->clearPredecessors();
@@ -428,6 +424,14 @@ void PlainCFGBuilder::buildPlainCFG() {
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited
     // during the RPO traversal.
+    if (auto *SI = dyn_cast<SwitchInst>(BB->getTerminator())) {
+      SmallVector<VPBlockBase *> Succs = {
+          getOrCreateVPBB(SI->getDefaultDest())};
+      for (auto Case : SI->cases())
+        Succs.push_back(getOrCreateVPBB(Case.getCaseSuccessor()));
+      VPBB->setSuccessors(Succs);
+      continue;
+    }
     auto *BI = cast<BranchInst>(BB->getTerminator());
     unsigned NumSuccs = succ_size(BB);
     if (NumSuccs == 1) {
@@ -439,10 +443,6 @@ void PlainCFGBuilder::buildPlainCFG() {
     }
     assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
            "block must have conditional branch with 2 successors");
-    // Look up the branch condition to get the corresponding VPValue
-    // representing the condition bit in VPlan (which may be in another VPBB).
-    assert(IRDef2VPValue.contains(BI->getCondition()) &&
-           "Missing condition bit in IRDef2VPValue!");
 
     BasicBlock *IRSucc0 = BI->getSuccessor(0);
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
@@ -478,14 +478,17 @@ void PlainCFGBuilder::buildPlainCFG() {
   }
 
   // 2. The whole CFG has been built at this point so all the input Values must
-  // have a VPlan couterpart. Fix VPlan phi nodes by adding their corresponding
-  // VPlan operands.
-  fixPhiNodes();
+  // have a VPlan counterpart. Fix VPlan header phi by adding their
+  // corresponding VPlan operands.
+  fixHeaderPhis();
+
+  for (const auto &[IRBB, VPB] : BB2VPBB)
+    VPB2IRBB[VPB] = IRBB;
 }
 
 void VPlanHCFGBuilder::buildPlainCFG() {
   PlainCFGBuilder PCFGBuilder(TheLoop, LI, Plan);
-  PCFGBuilder.buildPlainCFG();
+  PCFGBuilder.buildPlainCFG(VPB2IRBB);
 }
 
 // Public interface to build a H-CFG.

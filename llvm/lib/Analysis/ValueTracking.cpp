@@ -1984,7 +1984,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
         uint64_t SEW = RISCVVType::decodeVSEW(
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
-        RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
+        RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
         uint64_t MaxVLEN =
             Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;

@@ -767,6 +767,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
     }
+  } else if (!Subtarget->isTargetMachO()) {
+    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
+    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
   }
 
   if (Subtarget->isThumb1Only())
@@ -2728,8 +2731,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       SDValue ByValSrc;
       bool NeedsStackCopy;
-      if (ByValTemporaries.contains(realArgIdx)) {
-        ByValSrc = ByValTemporaries[realArgIdx];
+      if (auto It = ByValTemporaries.find(realArgIdx);
+          It != ByValTemporaries.end()) {
+        ByValSrc = It->second;
         NeedsStackCopy = true;
       } else {
         ByValSrc = Arg;
@@ -20786,9 +20790,9 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
     if (Align)
-      SP =
-          DAG.getNode(ISD::AND, DL, MVT::i32, SP.getValue(0),
-                      DAG.getConstant(-(uint64_t)Align->value(), DL, MVT::i32));
+      SP = DAG.getNode(
+          ISD::AND, DL, MVT::i32, SP.getValue(0),
+          DAG.getSignedConstant(-(uint64_t)Align->value(), DL, MVT::i32));
     Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, SP);
     SDValue Ops[2] = { SP, Chain };
     return DAG.getMergeValues(Ops, DL);

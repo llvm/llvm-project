@@ -1777,8 +1777,9 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);
-    if (getAbstractScopeDIEs().count(SPScope))
-      return getAbstractScopeDIEs()[SPScope];
+    const auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(SPScope); It != DIEs.end())
+      return It->second;
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
 }

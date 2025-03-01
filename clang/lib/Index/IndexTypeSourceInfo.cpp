@@ -11,6 +11,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
@@ -207,27 +208,8 @@ public:
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
-    const DependentNameType *DNT = TL.getTypePtr();
-    const NestedNameSpecifier *NNS = DNT->getQualifier();
-    const Type *T = NNS->getAsType();
-    if (!T)
-      return true;
-    const TemplateSpecializationType *TST =
-        T->getAs<TemplateSpecializationType>();
-    if (!TST)
-      return true;
-    TemplateName TN = TST->getTemplateName();
-    const ClassTemplateDecl *TD =
-        dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
-    if (!TD)
-      return true;
-    CXXRecordDecl *RD = TD->getTemplatedDecl();
-    if (!RD->hasDefinition())
-      return true;
-    RD = RD->getDefinition();
-    DeclarationName Name(DNT->getIdentifier());
-    std::vector<const NamedDecl *> Symbols = RD->lookupDependentName(
-        Name, [](const NamedDecl *ND) { return isa<TypeDecl>(ND); });
+    std::vector<const NamedDecl *> Symbols =
+        IndexCtx.getResolver()->resolveDependentNameType(TL.getTypePtr());
     if (Symbols.size() != 1)
       return true;
     return IndexCtx.handleReference(Symbols[0], TL.getNameLoc(), Parent,
