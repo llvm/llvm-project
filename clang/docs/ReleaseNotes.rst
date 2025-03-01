@@ -388,6 +388,8 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
