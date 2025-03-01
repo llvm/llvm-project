@@ -44,7 +44,7 @@ struct State {
     bool isValid() const { return ID != InvalidID; }
 
     void update(unsigned I, IndicesTy &&X) {
-      assert(ID != InvalidID);
+      assert(isValid());
       BitmapIdx = I;
       Indices = std::move(X);
     }

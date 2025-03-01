@@ -25,6 +25,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -308,7 +309,9 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
   assert(Instr->getParent() && "Predicated instruction not in any basic block");
   auto *BlockInMask = PredRecipe->getMask();
-  auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
+  auto *MaskDef = BlockInMask->getDefiningRecipe();
+  auto *BOMRecipe = new VPBranchOnMaskRecipe(
+      BlockInMask, MaskDef ? MaskDef->getDebugLoc() : DebugLoc());
   auto *Entry =
       Plan.createVPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
 
@@ -392,7 +395,7 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       R.moveBefore(*PredVPBB, PredVPBB->end());
     VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
-    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    auto *ParentRegion = VPBB->getParent();
     if (ParentRegion && ParentRegion->getExiting() == VPBB)
       ParentRegion->setExiting(PredVPBB);
     for (auto *Succ : to_vector(VPBB->successors())) {
@@ -590,7 +593,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
+  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
@@ -886,6 +889,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
     recursivelyDeleteDeadRecipes(DeadMask);
+
+    /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
+    VPValue *NewMask;
+    if (NewBlend->getNumOperands() == 3 &&
+        match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
+      VPValue *Inc0 = NewBlend->getOperand(0);
+      VPValue *Inc1 = NewBlend->getOperand(1);
+      VPValue *OldMask = NewBlend->getOperand(2);
+      NewBlend->setOperand(0, Inc1);
+      NewBlend->setOperand(1, Inc0);
+      NewBlend->setOperand(2, NewMask);
+      if (OldMask->getNumUsers() == 0)
+        cast<VPInstruction>(OldMask)->eraseFromParent();
+    }
     return;
   }
 
@@ -963,9 +980,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 }
 
-/// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
-/// un-typed live-ins in VPTypeAnalysis.
-static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
+void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(&CanonicalIVTy);
@@ -1042,7 +1057,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   }
 
   Term->eraseFromParent();
-  VPlanTransforms::removeDeadRecipes(Plan);
 
   Plan.setVF(BestVF);
   Plan.setUF(BestUF);
@@ -1242,9 +1256,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
 
-    auto *RecurSplice = cast<VPInstruction>(
+    auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue()});
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing
@@ -1664,40 +1678,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
       })
-      .Case<VPWidenRecipe>([&](VPWidenRecipe *W) -> VPRecipeBase * {
-        unsigned Opcode = W->getOpcode();
-        if (!Instruction::isBinaryOp(Opcode) && !Instruction::isUnaryOp(Opcode))
-          return nullptr;
-        return new VPWidenEVLRecipe(*W, EVL);
-      })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
-      .Case<VPWidenIntrinsicRecipe, VPWidenCastRecipe>(
-          [&](auto *CR) -> VPRecipeBase * {
-            Intrinsic::ID VPID;
-            if (auto *CallR = dyn_cast<VPWidenIntrinsicRecipe>(CR)) {
-              VPID =
-                  VPIntrinsic::getForIntrinsic(CallR->getVectorIntrinsicID());
-            } else {
-              auto *CastR = cast<VPWidenCastRecipe>(CR);
-              VPID = VPIntrinsic::getForOpcode(CastR->getOpcode());
-            }
-
-            // Not all intrinsics have a corresponding VP intrinsic.
-            if (VPID == Intrinsic::not_intrinsic)
-              return nullptr;
-            assert(VPIntrinsic::getMaskParamPos(VPID) &&
-                   VPIntrinsic::getVectorLengthParamPos(VPID) &&
-                   "Expected VP intrinsic to have mask and EVL");
-
-            SmallVector<VPValue *> Ops(CR->operands());
-            Ops.push_back(&AllOneMask);
-            Ops.push_back(&EVL);
-            return new VPWidenIntrinsicRecipe(
-                VPID, Ops, TypeInfo.inferScalarType(CR), CR->getDebugLoc());
-          })
       .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
         SmallVector<VPValue *> Ops(Sel->operands());
         Ops.push_back(&EVL);
@@ -2064,7 +2048,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   }
 }
 
-bool VPlanTransforms::handleUncountableEarlyExit(
+void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
     BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -2081,18 +2065,9 @@ bool VPlanTransforms::handleUncountableEarlyExit(
       cast<BranchInst>(UncountableExitingBlock->getTerminator());
   BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
   BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-
-  // The early exit block may or may not be the same as the "countable" exit
-  // block. Creates a new VPIRBB for the early exit block in case it is distinct
-  // from the countable exit block.
-  // TODO: Introduce both exit blocks during VPlan skeleton construction.
-  VPIRBasicBlock *VPEarlyExitBlock;
-  if (OrigLoop->getUniqueExitBlock()) {
-    VPEarlyExitBlock = cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-  } else {
-    VPEarlyExitBlock = Plan.createVPIRBasicBlock(
-        !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  }
+  BasicBlock *EarlyExitIRBB =
+      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
+  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
 
   VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
       OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
@@ -2101,12 +2076,17 @@ bool VPlanTransforms::handleUncountableEarlyExit(
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
+  VPBasicBlock *VectorEarlyExitVPBB =
+      Plan.createVPBasicBlock("vector.early.exit");
   VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
-  VPBlockUtils::connectBlocks(NewMiddle, VPEarlyExitBlock);
+  VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
   NewMiddle->swapSuccessors();
+
+  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
 
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
+  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
   for (VPRecipeBase &R : *VPEarlyExitBlock) {
     auto *ExitIRI = cast<VPIRInstruction>(&R);
     auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
@@ -2115,9 +2095,6 @@ bool VPlanTransforms::handleUncountableEarlyExit(
 
     VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
         ExitPhi->getIncomingValueForBlock(UncountableExitingBlock));
-    // The incoming value from the early exit must be a live-in for now.
-    if (!IncomingFromEarlyExit->isLiveIn())
-      return false;
 
     if (OrigLoop->getUniqueExitBlock()) {
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
@@ -2129,6 +2106,10 @@ bool VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
+    if (!IncomingFromEarlyExit->isLiveIn())
+      IncomingFromEarlyExit =
+          EarlyExitB.createNaryOp(VPInstruction::ExtractFirstActive,
+                                  {IncomingFromEarlyExit, EarlyExitTakenCond});
     ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
@@ -2146,5 +2127,38 @@ bool VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
-  return true;
+}
+
+void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  auto *VectorPreheader = Plan.getVectorPreheader();
+  VPBuilder Builder(VectorPreheader);
+  for (VPValue *LiveIn : Plan.getLiveIns()) {
+    if (all_of(LiveIn->users(),
+               [LiveIn](VPUser *U) {
+                 return cast<VPRecipeBase>(U)->usesScalars(LiveIn);
+               }) ||
+        !LiveIn->getLiveInIRValue() ||
+        isa<Constant>(LiveIn->getLiveInIRValue()))
+      continue;
+
+    // Add explicit broadcast if the vector preheader dominates all users.
+    // TODO: Find valid insert point for all users.
+    if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
+          return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
+                 VPDT.dominates(VectorPreheader,
+                                cast<VPRecipeBase>(U)->getParent());
+        })) {
+      auto *Broadcast =
+          Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
+      LiveIn->replaceUsesWithIf(Broadcast, [LiveIn, Broadcast](VPUser &U,
+                                                               unsigned Idx) {
+        return Broadcast != &U && !cast<VPRecipeBase>(&U)->usesScalars(LiveIn);
+      });
+    }
+  }
 }

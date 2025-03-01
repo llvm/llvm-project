@@ -369,10 +369,9 @@ func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
     return
 }
 
-// In this example, emit 2 atomic RMWs.
-//
-// Note, sizeof(%src) = 18 bits. This is modelled as %src_as_bytes:
-// <3xi8> (bits [0, 18) with the input values from %src, and [18, 24) are masked out)
+// Emit two atomic RMW partial stores. Store 6 bits from the input vector (bits [12:18)),
+// into bytes [1:2] from a 3-byte output memref. Due to partial storing,
+// both bytes are accessed partially through masking.
 
 // CHECK-LABEL: func @vector_store_i2_const_index_two_partial_stores(
 // CHECK-SAME: %[[ARG0:.+]]: vector<3xi2>)

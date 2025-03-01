@@ -764,6 +764,11 @@ void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPStripeDirective(OMPStripeDirective *Node) {
+  Indent() << "#pragma omp stripe";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
   Indent() << "#pragma omp unroll";
   PrintOMPExecutableDirective(Node);
@@ -1240,6 +1245,16 @@ void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
 
   PrintOpenACCClauseList(S);
   OS << '\n';
+}
+
+void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  Indent() << "#pragma acc atomic";
+
+  if (S->getAtomicKind() != OpenACCAtomicKind::None)
+    OS << " " << S->getAtomicKind();
+
+  OS << '\n';
+  PrintStmt(S->getAssociatedStmt());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1967,7 +1982,6 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
@@ -2593,15 +2607,6 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "...[";
   PrintExpr(E->getIndexExpr());
   OS << "]";
-}
-
-void StmtPrinter::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  OS << "<<resolved pack(";
-  llvm::interleave(
-      E->getExprs().begin(), E->getExprs().end(),
-      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
-  OS << ")>>";
 }
 
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(

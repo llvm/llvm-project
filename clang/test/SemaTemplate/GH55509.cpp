@@ -99,3 +99,14 @@ namespace regression1 {
 
   template void foo<int>(A<int>);
 } // namespace regression1
+namespace regression2 {
+  template <class> struct A {
+    template <class T> static void f() {
+      A<int>::f<T>();
+    }
+  };
+  template <> template <class T> void A<int>::f() {
+    static_assert(__is_same(T, long));
+  }
+  template void A<void>::f<long>();
+} // namespace regression2

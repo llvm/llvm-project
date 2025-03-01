@@ -610,8 +610,13 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
       APInt NewMask = *ConstB & *ConstD;
       if (NewMask == *ConstB)
         return LHS;
-      if (NewMask == *ConstD)
+      if (NewMask == *ConstD) {
+        if (IsLogical) {
+          if (auto *RHSI = dyn_cast<Instruction>(RHS))
+            RHSI->dropPoisonGeneratingFlags();
+        }
         return RHS;
+      }
     }
 
     if (Mask & AMask_NotAllOnes) {
@@ -3067,8 +3072,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
-static Instruction *matchOrConcat(Instruction &Or,
-                                  InstCombiner::BuilderTy &Builder) {
+static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
   assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
   Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
   Type *Ty = Or.getType();
@@ -3609,7 +3613,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Funnel = matchFunnelShift(I, *this))
     return Funnel;
 
-  if (Instruction *Concat = matchOrConcat(I, Builder))
+  if (Value *Concat = matchOrConcat(I, Builder))
     return replaceInstUsesWith(I, Concat);
 
   if (Instruction *R = foldBinOpShiftWithShift(I))
@@ -4150,9 +4154,6 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // TODO: This can be generalized to compares of non-signbits using
-  // decomposeBitTestICmp(). It could be enhanced more by using (something like)
-  // foldLogOpOfMaskedICmps().
   const APInt *LC, *RC;
   if (match(LHS1, m_APInt(LC)) && match(RHS1, m_APInt(RC)) &&
       LHS0->getType() == RHS0->getType() &&
@@ -4199,6 +4200,21 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                       ConstantInt::get(Ty, NewC));
           }
         }
+    }
+
+    // Fold (icmp eq/ne (X & Pow2), 0) ^ (icmp eq/ne (Y & Pow2), 0) into
+    // (icmp eq/ne ((X ^ Y) & Pow2), 0)
+    Value *X, *Y, *Pow2;
+    if (ICmpInst::isEquality(PredL) && ICmpInst::isEquality(PredR) &&
+        LC->isZero() && RC->isZero() && LHS->hasOneUse() && RHS->hasOneUse() &&
+        match(LHS0, m_And(m_Value(X), m_Value(Pow2))) &&
+        match(RHS0, m_And(m_Value(Y), m_Specific(Pow2))) &&
+        isKnownToBeAPowerOfTwo(Pow2, /*OrZero=*/true, /*Depth=*/0, &I)) {
+      Value *Xor = Builder.CreateXor(X, Y);
+      Value *And = Builder.CreateAnd(Xor, Pow2);
+      return Builder.CreateICmp(PredL == PredR ? ICmpInst::ICMP_NE
+                                               : ICmpInst::ICMP_EQ,
+                                And, ConstantInt::getNullValue(Xor->getType()));
     }
   }
 

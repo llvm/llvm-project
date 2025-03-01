@@ -919,9 +919,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();

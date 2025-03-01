@@ -161,6 +161,12 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: getsid
+    standards:
+      - POSIX
+    return_type: pid_t
+    arguments:
+      - type: pid_t
   - name: gettid
     standards:
       - Linux
@@ -275,6 +281,12 @@ functions:
       - type: const void *__restrict
       - type: void *
       - type: ssize_t
+  - name: setsid
+    standards:
+      - POSIX
+    return_type: pid_t
+    arguments:
+      - type: void
   - name: symlink
     standards:
       - POSIX

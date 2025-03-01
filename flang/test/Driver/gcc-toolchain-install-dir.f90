@@ -1,5 +1,5 @@
 !! Test that --gcc-toolchain and --gcc-install-dir options are working as expected.
-!! It does not test cross-compiling (--sysroot), so crtbegin.o, libgcc/compiler-rt, libc, libFortranRuntime, etc. are not supposed to be affected.
+!! It does not test cross-compiling (--sysroot), so crtbegin.o, libgcc/compiler-rt, libc, libflang_rt.runtime, etc. are not supposed to be affected.
 !! PREFIX is captured twice because the driver escapes backslashes (occuring in Windows paths) in the -### output, but not on the "Selected GCC installation:" line.
 
 ! RUN: %flang 2>&1 -### -v -o %t %s -no-integrated-as -fuse-ld=ld --target=i386-unknown-linux-gnu --gcc-install-dir=%S/Inputs/basic_cross_linux_tree/usr/lib/gcc/i386-unknown-linux-gnu/10.2.0 | FileCheck %s --check-prefix=CHECK-I386

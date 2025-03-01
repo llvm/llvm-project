@@ -319,7 +319,6 @@ void SPIRVModuleAnalysis::visitDecl(
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-  DenseSet<Register> Deps;
 
   // Process each operand of the instruction to resolve dependencies
   for (const MachineOperand &MO : MI.operands()) {
@@ -362,6 +361,16 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
+  } else if (Opcode == SPIRV::OpTypeStruct) {
+    GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
+    const MachineInstr *NextInstr = MI.getNextNode();
+    while (NextInstr &&
+           NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) {
+      Register Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
+      MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
+      MAI.setSkipEmission(NextInstr);
+      NextInstr = NextInstr->getNextNode();
+    }
   } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
              TII->isInlineAsmDefInstr(MI)) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
@@ -1677,6 +1686,17 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
+  case SPIRV::OpConvertHandleToImageINTEL:
+  case SPIRV::OpConvertHandleToSamplerINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
+      report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
+                         "instructions require the following SPIR-V extension: "
+                         "SPV_INTEL_bindless_images",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
+    Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
+    break;
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
@@ -1692,13 +1712,22 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpSDot:
   case SPIRV::OpUDot:
+  case SPIRV::OpSUDot:
+  case SPIRV::OpSDotAccSat:
+  case SPIRV::OpUDotAccSat:
+  case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
@@ -1706,8 +1735,26 @@ void addInstrRequirements(const MachineInstr &MI,
     Register ImageReg = MI.getOperand(0).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    if (isImageTypeWithUnknownFormat(TypeDef))
+    // OpImageRead and OpImageWrite can use Unknown Image Formats
+    // when the Kernel capability is declared. In the OpenCL environment we are
+    // not allowed to produce
+    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
+    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
+    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
+    break;
+  }
+  case SPIRV::OpTypeStructContinuedINTEL:
+  case SPIRV::OpConstantCompositeContinuedINTEL:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
+  case SPIRV::OpCompositeConstructContinuedINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_long_composites))
+      report_fatal_error(
+          "Continued instructions require the "
+          "following SPIR-V extension: SPV_INTEL_long_composites",
+          false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
+    Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
 

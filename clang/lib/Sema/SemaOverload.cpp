@@ -5710,12 +5710,14 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
     //    - if the initializer list has one element that is not itself an
     //      initializer list, the implicit conversion sequence is the one
     //      required to convert the element to the parameter type.
+    // Bail out on EmbedExpr as well since we never create EmbedExpr for a
+    // single integer.
     unsigned NumInits = From->getNumInits();
-    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)))
-      Result = TryCopyInitialization(S, From->getInit(0), ToType,
-                                     SuppressUserConversions,
-                                     InOverloadResolution,
-                                     AllowObjCWritebackConversion);
+    if (NumInits == 1 && !isa<InitListExpr>(From->getInit(0)) &&
+        !isa<EmbedExpr>(From->getInit(0)))
+      Result = TryCopyInitialization(
+          S, From->getInit(0), ToType, SuppressUserConversions,
+          InOverloadResolution, AllowObjCWritebackConversion);
     //    - if the initializer list has no elements, the implicit conversion
     //      sequence is the identity conversion.
     else if (NumInits == 0) {
@@ -6927,7 +6929,7 @@ void Sema::AddOverloadCandidate(
     bool PartialOverloading, bool AllowExplicit, bool AllowExplicitConversions,
     ADLCallKind IsADLCandidate, ConversionSequenceList EarlyConversions,
     OverloadCandidateParamOrder PO, bool AggregateCandidateDeduction,
-    bool HasMatchedPackOnParmToNonPackOnArg) {
+    bool StrictPackMatch) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Function->getType()->getAs<FunctionType>());
   assert(Proto && "Functions without a prototype cannot be overloaded");
@@ -6947,7 +6949,7 @@ void Sema::AddOverloadCandidate(
                          Expr::Classification::makeSimpleLValue(), Args,
                          CandidateSet, SuppressUserConversions,
                          PartialOverloading, EarlyConversions, PO,
-                         HasMatchedPackOnParmToNonPackOnArg);
+                         StrictPackMatch);
       return;
     }
     // We treat a constructor like a non-member function, since its object
@@ -6990,8 +6992,7 @@ void Sema::AddOverloadCandidate(
       CandidateSet.getRewriteInfo().getRewriteKind(Function, PO);
   Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
   Candidate.ExplicitCallArguments = Args.size();
-  Candidate.HasMatchedPackOnParmToNonPackOnArg =
-      HasMatchedPackOnParmToNonPackOnArg;
+  Candidate.StrictPackMatch = StrictPackMatch;
 
   // Explicit functions are not actually candidates at all if we're not
   // allowing them in this context, but keep them around so we can point
@@ -7563,7 +7564,7 @@ void Sema::AddMethodCandidate(
     Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
     OverloadCandidateSet &CandidateSet, bool SuppressUserConversions,
     bool PartialOverloading, ConversionSequenceList EarlyConversions,
-    OverloadCandidateParamOrder PO, bool HasMatchedPackOnParmToNonPackOnArg) {
+    OverloadCandidateParamOrder PO, bool StrictPackMatch) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Method->getType()->getAs<FunctionType>());
   assert(Proto && "Methods without a prototype cannot be overloaded");
@@ -7594,8 +7595,7 @@ void Sema::AddMethodCandidate(
   Candidate.TookAddressOfOverload =
       CandidateSet.getKind() == OverloadCandidateSet::CSK_AddressOfOverloadSet;
   Candidate.ExplicitCallArguments = Args.size();
-  Candidate.HasMatchedPackOnParmToNonPackOnArg =
-      HasMatchedPackOnParmToNonPackOnArg;
+  Candidate.StrictPackMatch = StrictPackMatch;
 
   bool IgnoreExplicitObject =
       (Method->isExplicitObjectMemberFunction() &&
@@ -7805,8 +7805,7 @@ void Sema::AddMethodTemplateCandidate(
   AddMethodCandidate(cast<CXXMethodDecl>(Specialization), FoundDecl,
                      ActingContext, ObjectType, ObjectClassification, Args,
                      CandidateSet, SuppressUserConversions, PartialOverloading,
-                     Conversions, PO,
-                     Info.hasMatchedPackOnParmToNonPackOnArg());
+                     Conversions, PO, Info.hasStrictPackMatch());
 }
 
 /// Determine whether a given function template has a simple explicit specifier
@@ -7894,7 +7893,7 @@ void Sema::AddTemplateOverloadCandidate(
       PartialOverloading, AllowExplicit,
       /*AllowExplicitConversions=*/false, IsADLCandidate, Conversions, PO,
       Info.AggregateDeductionCandidateHasMismatchedArity,
-      Info.hasMatchedPackOnParmToNonPackOnArg());
+      Info.hasStrictPackMatch());
 }
 
 bool Sema::CheckNonDependentConversions(
@@ -8016,8 +8015,7 @@ void Sema::AddConversionCandidate(
     CXXConversionDecl *Conversion, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
     OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-    bool AllowExplicit, bool AllowResultConversion,
-    bool HasMatchedPackOnParmToNonPackOnArg) {
+    bool AllowExplicit, bool AllowResultConversion, bool StrictPackMatch) {
   assert(!Conversion->getDescribedFunctionTemplate() &&
          "Conversion function templates use AddTemplateConversionCandidate");
   QualType ConvType = Conversion->getConversionType().getNonReferenceType();
@@ -8062,8 +8060,7 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAllToTypes(ToType);
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
-  Candidate.HasMatchedPackOnParmToNonPackOnArg =
-      HasMatchedPackOnParmToNonPackOnArg;
+  Candidate.StrictPackMatch = StrictPackMatch;
 
   // Explicit functions are not actually candidates at all if we're not
   // allowing them in this context, but keep them around so we can point
@@ -8266,7 +8263,7 @@ void Sema::AddTemplateConversionCandidate(
   AddConversionCandidate(Specialization, FoundDecl, ActingDC, From, ToType,
                          CandidateSet, AllowObjCConversionOnExplicit,
                          AllowExplicit, AllowResultConversion,
-                         Info.hasMatchedPackOnParmToNonPackOnArg());
+                         Info.hasStrictPackMatch());
 }
 
 void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
@@ -10374,20 +10371,16 @@ static bool allowAmbiguity(ASTContext &Context, const FunctionDecl *F1,
 /// [over.match.best.general]p2.6
 /// F1 and F2 are non-template functions with the same
 /// non-object-parameter-type-lists, and F1 is more constrained than F2 [...]
-static bool sameFunctionParameterTypeLists(Sema &S,
-                                           const OverloadCandidate &Cand1,
-                                           const OverloadCandidate &Cand2) {
-  if (!Cand1.Function || !Cand2.Function)
-    return false;
-
-  FunctionDecl *Fn1 = Cand1.Function;
-  FunctionDecl *Fn2 = Cand2.Function;
-
+static bool sameFunctionParameterTypeLists(Sema &S, FunctionDecl *Fn1,
+                                           FunctionDecl *Fn2,
+                                           bool IsFn1Reversed,
+                                           bool IsFn2Reversed) {
+  assert(Fn1 && Fn2);
   if (Fn1->isVariadic() != Fn2->isVariadic())
     return false;
 
-  if (!S.FunctionNonObjectParamTypesAreEqual(
-          Fn1, Fn2, nullptr, Cand1.isReversed() ^ Cand2.isReversed()))
+  if (!S.FunctionNonObjectParamTypesAreEqual(Fn1, Fn2, nullptr,
+                                             IsFn1Reversed ^ IsFn2Reversed))
     return false;
 
   auto *Mem1 = dyn_cast<CXXMethodDecl>(Fn1);
@@ -10406,6 +10399,30 @@ static bool sameFunctionParameterTypeLists(Sema &S,
       return false;
   }
   return true;
+}
+
+static FunctionDecl *
+getMorePartialOrderingConstrained(Sema &S, FunctionDecl *Fn1, FunctionDecl *Fn2,
+                                  bool IsFn1Reversed, bool IsFn2Reversed) {
+  if (!Fn1 || !Fn2)
+    return nullptr;
+
+  // C++ [temp.constr.order]:
+  //   A non-template function F1 is more partial-ordering-constrained than a
+  //   non-template function F2 if:
+  bool Cand1IsSpecialization = Fn1->getPrimaryTemplate();
+  bool Cand2IsSpecialization = Fn2->getPrimaryTemplate();
+
+  if (Cand1IsSpecialization || Cand2IsSpecialization)
+    return nullptr;
+
+  // - they have the same non-object-parameter-type-lists, and [...]
+  if (!sameFunctionParameterTypeLists(S, Fn1, Fn2, IsFn1Reversed,
+                                      IsFn2Reversed))
+    return nullptr;
+
+  // - the declaration of F1 is more constrained than the declaration of F2.
+  return S.getMoreConstrainedFunction(Fn1, Fn2);
 }
 
 /// isBetterOverloadCandidate - Determines whether the first overload
@@ -10618,9 +10635,8 @@ bool clang::isBetterOverloadCandidate(
           isa<CXXConstructorDecl>(Cand2.Function))
     return isa<CXXConstructorDecl>(Cand1.Function);
 
-  if (Cand1.HasMatchedPackOnParmToNonPackOnArg !=
-      Cand2.HasMatchedPackOnParmToNonPackOnArg)
-    return Cand2.HasMatchedPackOnParmToNonPackOnArg;
+  if (Cand1.StrictPackMatch != Cand2.StrictPackMatch)
+    return Cand2.StrictPackMatch;
 
   //    -- F1 is a non-template function and F2 is a function template
   //       specialization, or, if not that,
@@ -10655,12 +10671,12 @@ bool clang::isBetterOverloadCandidate(
     }
   }
 
-  //   -— F1 and F2 are non-template functions with the same
-  //      parameter-type-lists, and F1 is more constrained than F2 [...],
-  if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
-      sameFunctionParameterTypeLists(S, Cand1, Cand2) &&
-      S.getMoreConstrainedFunction(Cand1.Function, Cand2.Function) ==
-          Cand1.Function)
+  //   -— F1 and F2 are non-template functions and F1 is more
+  //      partial-ordering-constrained than F2 [...],
+  if (FunctionDecl *F = getMorePartialOrderingConstrained(
+          S, Cand1.Function, Cand2.Function, Cand1.isReversed(),
+          Cand2.isReversed());
+      F && F == Cand1.Function)
     return true;
 
   //   -- F1 is a constructor for a class D, F2 is a constructor for a base
@@ -13005,9 +13021,10 @@ public:
       // C++ [over.over]p4:
       //   If more than one function is selected, [...]
       if (Matches.size() > 1 && !eliminiateSuboptimalOverloadCandidates()) {
-        if (FoundNonTemplateFunction)
+        if (FoundNonTemplateFunction) {
           EliminateAllTemplateMatches();
-        else
+          EliminateLessPartialOrderingConstrainedMatches();
+        } else
           EliminateAllExceptMostSpecializedTemplate();
       }
     }
@@ -13258,6 +13275,33 @@ private:
     }
   }
 
+  void EliminateLessPartialOrderingConstrainedMatches() {
+    // C++ [over.over]p5:
+    //   [...] Any given non-template function F0 is eliminated if the set
+    //   contains a second non-template function that is more
+    //   partial-ordering-constrained than F0. [...]
+    assert(Matches[0].second->getPrimaryTemplate() == nullptr &&
+           "Call EliminateAllTemplateMatches() first");
+    SmallVector<std::pair<DeclAccessPair, FunctionDecl *>, 4> Results;
+    Results.push_back(Matches[0]);
+    for (unsigned I = 1, N = Matches.size(); I < N; ++I) {
+      assert(Matches[I].second->getPrimaryTemplate() == nullptr);
+      FunctionDecl *F = getMorePartialOrderingConstrained(
+          S, Matches[I].second, Results[0].second,
+          /*IsFn1Reversed=*/false,
+          /*IsFn2Reversed=*/false);
+      if (!F) {
+        Results.push_back(Matches[I]);
+        continue;
+      }
+      if (F == Matches[I].second) {
+        Results.clear();
+        Results.push_back(Matches[I]);
+      }
+    }
+    std::swap(Matches, Results);
+  }
+
   void EliminateSuboptimalCudaMatches() {
     S.CUDA().EraseUnwantedMatches(S.getCurFunctionDecl(/*AllowLambda=*/true),
                                   Matches);
@@ -13414,8 +13458,8 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       Result = FD;
     };
 
-    // We have more than one result - see if it is more constrained than the
-    // previous one.
+    // We have more than one result - see if it is more
+    // partial-ordering-constrained than the previous one.
     if (Result) {
       // Check CUDA preference first. If the candidates have differennt CUDA
       // preference, choose the one with higher CUDA preference. Otherwise,
@@ -13430,9 +13474,17 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
           continue;
         }
       }
-      // FD has the same CUDA prefernece than Result. Continue check
+      // FD has the same CUDA preference than Result. Continue to check
       // constraints.
-      FunctionDecl *MoreConstrained = getMoreConstrainedFunction(FD, Result);
+
+      // C++ [over.over]p5:
+      //    [...] Any given non-template function F0 is eliminated if the set
+      //    contains a second non-template function that is more
+      //    partial-ordering-constrained than F0 [...]
+      FunctionDecl *MoreConstrained =
+          getMorePartialOrderingConstrained(*this, FD, Result,
+                                            /*IsFn1Reversed=*/false,
+                                            /*IsFn2Reversed=*/false);
       if (MoreConstrained != FD) {
         if (!MoreConstrained) {
           IsResultAmbiguous = true;
@@ -13449,7 +13501,6 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     return nullptr;
 
   if (Result) {
-    SmallVector<const Expr *, 1> ResultAC;
     // We skipped over some ambiguous declarations which might be ambiguous with
     // the selected result.
     for (FunctionDecl *Skipped : AmbiguousDecls) {
@@ -13495,7 +13546,7 @@ bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
 
 FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     OverloadExpr *ovl, bool Complain, DeclAccessPair *FoundResult,
-    TemplateSpecCandidateSet *FailedTSC) {
+    TemplateSpecCandidateSet *FailedTSC, bool ForTypeDeduction) {
   // C++ [over.over]p1:
   //   [...] [Note: any redundant set of parentheses surrounding the
   //   overloaded function name is ignored (5.1). ]
@@ -13546,8 +13597,16 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
 
     assert(Specialization && "no specialization and no error?");
 
-    // Multiple matches; we can't resolve to a single declaration.
+    // C++ [temp.deduct.call]p6:
+    //    [...] If all successful deductions yield the same deduced A, that
+    //    deduced A is the result of deduction; otherwise, the parameter is
+    //    treated as a non-deduced context.
     if (Matched) {
+      if (ForTypeDeduction &&
+          isSameOrCompatibleFunctionType(Matched->getType(),
+                                         Specialization->getType()))
+        continue;
+      // Multiple matches; we can't resolve to a single declaration.
       if (Complain) {
         Diag(ovl->getExprLoc(), diag::err_addr_ovl_ambiguous)
           << ovl->getName();

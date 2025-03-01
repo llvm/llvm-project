@@ -89,8 +89,8 @@ public:
   MDNode *createFunctionEntryCount(uint64_t Count, bool Synthetic,
                                    const DenseSet<GlobalValue::GUID> *Imports);
 
-  /// Return metadata containing the section prefix for a function.
-  MDNode *createFunctionSectionPrefix(StringRef Prefix);
+  /// Return metadata containing the section prefix for a global object.
+  MDNode *createGlobalObjectSectionPrefix(StringRef Prefix);
 
   /// Return metadata containing the pseudo probe descriptor for a function.
   MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, StringRef FName);

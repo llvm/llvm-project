@@ -50,6 +50,9 @@ class Attr<Pred condition, string summary = ""> :
 
   // Default value for attribute.
   // Requires a constBuilderCall defined.
+  //
+  // Format: `$_builder` will be expanded to the relevant builder, e.g. to allow
+  //         access to the current context.
   string defaultValue = ?;
 
   // The value type of this attribute. This corresponds to the mlir::Type that

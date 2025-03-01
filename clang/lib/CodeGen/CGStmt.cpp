@@ -221,6 +221,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPTileDirectiveClass:
     EmitOMPTileDirective(cast<OMPTileDirective>(*S));
     break;
+  case Stmt::OMPStripeDirectiveClass:
+    EmitOMPStripeDirective(cast<OMPStripeDirective>(*S));
+    break;
   case Stmt::OMPUnrollDirectiveClass:
     EmitOMPUnrollDirective(cast<OMPUnrollDirective>(*S));
     break;
@@ -489,6 +492,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCUpdateConstructClass:
     EmitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*S));
     break;
+  case Stmt::OpenACCAtomicConstructClass:
+    EmitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*S));
   }
 }
 
@@ -781,6 +786,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   HLSLControlFlowHintAttr::Spelling flattenOrBranch =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
   const CallExpr *musttail = nullptr;
+  const AtomicAttr *AA = nullptr;
 
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
@@ -811,6 +817,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
+    case attr::Atomic:
+      AA = cast<AtomicAttr>(A);
+      break;
     case attr::HLSLControlFlowHint: {
       flattenOrBranch = cast<HLSLControlFlowHintAttr>(A)->getSemanticSpelling();
     } break;
@@ -822,6 +831,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   SaveAndRestore save_flattenOrBranch(HLSLControlFlowAttr, flattenOrBranch);
+  CGAtomicOptionsRAII AORAII(CGM, AA);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
@@ -3303,18 +3313,9 @@ CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
 
 llvm::ConvergenceControlInst *
 CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB) {
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  if (BB->empty())
-    Builder.SetInsertPoint(BB);
-  else
-    Builder.SetInsertPoint(BB->getFirstInsertionPt());
-
-  llvm::CallBase *CB = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_loop, {}, {});
-  Builder.restoreIP(IP);
-
-  CB = addConvergenceControlToken(CB);
-  return cast<llvm::ConvergenceControlInst>(CB);
+  llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
+  assert(ParentToken);
+  return llvm::ConvergenceControlInst::CreateLoop(*BB, ParentToken);
 }
 
 llvm::ConvergenceControlInst *
@@ -3327,13 +3328,5 @@ CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
   // Adding a convergence token requires the function to be marked as
   // convergent.
   F->setConvergent();
-
-  CGBuilderTy::InsertPoint IP = Builder.saveIP();
-  Builder.SetInsertPoint(&BB->front());
-  llvm::CallBase *I = Builder.CreateIntrinsic(
-      llvm::Intrinsic::experimental_convergence_entry, {}, {});
-  assert(isa<llvm::IntrinsicInst>(I));
-  Builder.restoreIP(IP);
-
-  return cast<llvm::ConvergenceControlInst>(I);
+  return llvm::ConvergenceControlInst::CreateEntry(*BB);
 }

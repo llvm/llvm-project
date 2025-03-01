@@ -10,15 +10,15 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; MachineTraceMetrics::Ensemble::addLiveIns crashes because the first operand
 ; on an inline asm instruction is not a vreg def.
 ; <rdar://problem/12472811>
-define void @f1() nounwind {
+define void @f1(i1 %arg) nounwind {
 entry:
-  br i1 undef, label %if.then6.i, label %if.end.i
+  br i1 %arg, label %if.then6.i, label %if.end.i
 
 if.then6.i:
   br label %if.end.i
 
 if.end.i:
-  br i1 undef, label %if.end25.i, label %if.else17.i
+  br i1 %arg, label %if.end25.i, label %if.else17.i
 
 if.else17.i:
   %shl24.i = shl i32 undef, undef

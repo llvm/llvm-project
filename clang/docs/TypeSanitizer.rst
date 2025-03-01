@@ -27,7 +27,7 @@ reduce these impacts.
 The TypeSanitizer Algorithm
 ===========================
 For each TBAA type-access descriptor, encoded in LLVM IR using TBAA Metadata, the instrumentation 
-pass generates descriptor tales. Thus there is a unique pointer to each type (and access descriptor).
+pass generates descriptor tables. Thus there is a unique pointer to each type (and access descriptor).
 These tables are comdat (except for anonymous-namespace types), so the pointer values are unique 
 across the program.
 
@@ -202,4 +202,4 @@ enough for TypeSanitizer's runtime.
 
 We are actively working on enhancing the tool --- stay tuned.  Any help, 
 issues, pull requests, ideas, is more than welcome. You can find the 
-`issue tracker here.<https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20TySan%20label%3Acompiler-rt%3Atysan>`
+`issue tracker here. <https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20TySan%20label%3Acompiler-rt%3Atysan>`_

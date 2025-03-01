@@ -121,7 +121,7 @@ private:
 
   bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const final;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
   BuiltinVaListKind getBuiltinVaListKind() const final {
     return VoidPtrBuiltinVaList;
