@@ -118,11 +118,13 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ; GFX7-NEXT:    s_xor_b64 s[2:3], s[2:3], s[6:7]
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX7-NEXT:    s_mov_b32 s8, -1
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
 ; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX7-NEXT:    s_mov_b32 s9, s8
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
-; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[8:9]
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: scalar_xnor_v4i16_one_use:

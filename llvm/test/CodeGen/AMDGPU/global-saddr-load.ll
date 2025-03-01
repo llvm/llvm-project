@@ -742,7 +742,10 @@ define amdgpu_ps float @global_load_saddr_i8_offset_0x100000001(ptr addrspace(1)
 ;
 ; GFX12-SDAG-LABEL: global_load_saddr_i8_offset_0x100000001:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[2:3], 1
+; GFX12-SDAG-NEXT:    s_mov_b32 s0, 1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_mov_b32 s1, s0
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GFX12-SDAG-NEXT:    s_load_u8 s0, s[0:1], 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0

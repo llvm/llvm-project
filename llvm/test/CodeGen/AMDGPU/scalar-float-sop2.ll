@@ -218,7 +218,7 @@ define amdgpu_ps float @_amdgpu_ps_main() {
 ; GFX1150-NEXT:    s_mov_b32 s3, s0
 ; GFX1150-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0
 ; GFX1150-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1150-NEXT:    s_fmac_f32 s0, s1, 4.0
+; GFX1150-NEXT:    s_fmamk_f32 s0, s1, 0x40800000, s0
 ; GFX1150-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX1150-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1150-NEXT:    ; return to shader part epilog
@@ -232,7 +232,7 @@ define amdgpu_ps float @_amdgpu_ps_main() {
 ; GFX12-NEXT:    s_mov_b32 s3, s0
 ; GFX12-NEXT:    s_buffer_load_b64 s[0:1], s[0:3], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_fmac_f32 s0, s1, 4.0
+; GFX12-NEXT:    s_fmamk_f32 s0, s1, 0x40800000, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
