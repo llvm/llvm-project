@@ -2753,8 +2753,7 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     RegEnd = RegStart;
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
-  if (Encode == RISCVZC::INVALID_RLIST)
-    return Error(S, "invalid register list");
+  assert(Encode != RISCVZC::INVALID_RLIST);
   Operands.push_back(RISCVOperand::createRlist(Encode, S));
 
   return ParseStatus::Success;
