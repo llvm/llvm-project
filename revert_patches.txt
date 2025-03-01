@@ -35,3 +35,5 @@ revert : breaks build of 5 spec-accel codes
 25f29ee377b1 - [flang][OpenMP] Update all `lastprivate` symbols, not just in clauses (#125628)
 Kareem, Ron
 ---
+a3165398db07 AMDGPU: Fix overly conservative immediate operand check
+---
