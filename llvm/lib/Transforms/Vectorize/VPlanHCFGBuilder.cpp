@@ -23,6 +23,7 @@
 
 #include "VPlanHCFGBuilder.h"
 #include "LoopVectorizationPlanner.h"
+#include "VPlanCFG.h"
 #include "llvm/Analysis/LoopIterator.h"
 
 #define DEBUG_TYPE "loop-vectorize"
