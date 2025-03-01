@@ -24,3 +24,15 @@ define void @multiple_extract(ptr %p) {
   store i32 %e1, ptr %p1, align 4
   ret void
 }
+
+; infinite loop if we fold an extract that is waiting to be erased
+define void @unsued_extract(ptr %p) {
+; CHECK-LABEL: @unsued_extract(
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x float>, ptr %p, align 8
+  %shuffle0 = shufflevector <4 x float> zeroinitializer, <4 x float> %load, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %shuffle1 = shufflevector <4 x float> %shuffle0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
+  %extract = extractelement <4 x float> %load, i64 1
+  ret void
+}
