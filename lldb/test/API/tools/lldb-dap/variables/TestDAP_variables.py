@@ -670,8 +670,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
 
+        return_name = "(Return Value)"
         verify_locals = {
-            "(Return Value)": {"equals": {"type": "int", "value": "300"}},
+            return_name: {"equals": {"type": "int", "value": "300"}},
             "argc": {},
             "argv": {},
             "pt": {},
@@ -694,6 +695,19 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
                 local_variables = self.dap_server.get_local_variables()
                 varref_dict = {}
+
+                # `verify_variable` function only checks if the local variables
+                # are in the `verify_dict` passed  this will cause this test to pass
+                # even if there is no return value.
+                local_variable_names = [
+                    variable["name"] for variable in local_variables
+                ]
+                self.assertIn(
+                    return_name,
+                    local_variable_names,
+                    "return variable is not in local variables",
+                )
+
                 self.verify_variables(verify_locals, local_variables, varref_dict)
                 break
 
