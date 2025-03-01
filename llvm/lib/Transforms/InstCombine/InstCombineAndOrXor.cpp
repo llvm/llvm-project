@@ -3119,6 +3119,13 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
       match(UpperSrc, m_BitReverse(m_Value(UpperBRev))))
     return ConcatIntrinsicCalls(Intrinsic::bitreverse, UpperBRev, LowerBRev);
 
+  Value *X;
+  if (match(LowerSrc, m_SExt(m_Value(X))) &&
+      match(UpperSrc,
+            m_SExt(m_AShr(m_Specific(X), m_SpecificInt(HalfWidth / 2 - 1))))) {
+    return Builder.CreateSExt(X, Ty);
+  }
+
   return nullptr;
 }
 
