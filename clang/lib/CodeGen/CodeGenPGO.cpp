@@ -231,7 +231,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   struct DecisionState {
     llvm::DenseSet<const Stmt *> Leaves; // Not BinOp
     const Expr *DecisionExpr;            // Root
-    bool Split;
+    bool Split;                          // In splitting with Leaves.
 
     DecisionState() = delete;
     DecisionState(const Expr *E, bool Split = false)
