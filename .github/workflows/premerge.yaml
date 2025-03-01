@@ -14,8 +14,6 @@ on:
       # do this is that it allows us to take advantage of concurrency groups
       # to cancel in progress CI jobs whenever the PR is closed.
       - closed
-    paths:
-      - .github/workflows/premerge.yaml
   push:
     branches:
       - 'main'
@@ -27,6 +25,7 @@ concurrency:
 
 jobs:
   premerge-checks-linux:
+    name: Linux Premerge Checks (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -85,6 +84,7 @@ jobs:
           ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
 
   premerge-checks-windows:
+    name: Windows Premerge Checks (Test Only - Please Ignore Results)
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -144,7 +144,8 @@ jobs:
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
 
-  permerge-check-macos:
+  premerge-check-macos:
+    name: MacOS Premerge Checks
     runs-on: macos-14
     if: >-
       github.repository_owner == 'llvm' &&

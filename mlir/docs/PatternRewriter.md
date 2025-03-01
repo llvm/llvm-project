@@ -361,7 +361,7 @@ This driver comes in two fashions:
 *   `applyPatternsGreedily` ("region-based driver") applies patterns to
     all ops in a given region or a given container op (but not the container op
     itself). I.e., the worklist is initialized with all containing ops.
-*   `applyOpPatternsAndFold` ("op-based driver") applies patterns to the
+*   `applyOpPatternsGreedily` ("op-based driver") applies patterns to the
     provided list of operations. I.e., the worklist is initialized with the
     specified list of ops.
 

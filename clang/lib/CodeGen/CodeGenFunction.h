@@ -834,6 +834,48 @@ public:
   };
   FPOptions CurFPFeatures;
 
+  class CGAtomicOptionsRAII {
+  public:
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, AtomicOptions AO)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      CGM.setAtomicOpts(AO);
+    }
+    CGAtomicOptionsRAII(CodeGenModule &CGM_, const AtomicAttr *AA)
+        : CGM(CGM_), SavedAtomicOpts(CGM.getAtomicOpts()) {
+      if (!AA)
+        return;
+      AtomicOptions AO = SavedAtomicOpts;
+      for (auto Option : AA->atomicOptions()) {
+        switch (Option) {
+        case AtomicAttr::remote_memory:
+          AO.remote_memory = true;
+          break;
+        case AtomicAttr::no_remote_memory:
+          AO.remote_memory = false;
+          break;
+        case AtomicAttr::fine_grained_memory:
+          AO.fine_grained_memory = true;
+          break;
+        case AtomicAttr::no_fine_grained_memory:
+          AO.fine_grained_memory = false;
+          break;
+        case AtomicAttr::ignore_denormal_mode:
+          AO.ignore_denormal_mode = true;
+          break;
+        case AtomicAttr::no_ignore_denormal_mode:
+          AO.ignore_denormal_mode = false;
+          break;
+        }
+      }
+      CGM.setAtomicOpts(AO);
+    }
+    ~CGAtomicOptionsRAII() { CGM.setAtomicOpts(SavedAtomicOpts); }
+
+  private:
+    CodeGenModule &CGM;
+    AtomicOptions SavedAtomicOpts;
+  };
+
 public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
   /// rethrows.
@@ -3010,6 +3052,10 @@ public:
   /// Given an opaque value expression, return its RValue mapping if it exists,
   /// otherwise create one.
   RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+
+  /// isOpaqueValueEmitted - Return true if the opaque value expression has
+  /// already been emitted.
+  bool isOpaqueValueEmitted(const OpaqueValueExpr *E);
 
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }

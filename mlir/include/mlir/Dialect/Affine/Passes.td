@@ -154,16 +154,16 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
   }];
   let constructor = "mlir::affine::createLoopFusionPass()";
   let options = [
-    Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
+    Option<"computeToleranceThreshold", "compute-tolerance", "double",
            /*default=*/"0.30f", "Fractional increase in additional computation "
                                 "tolerated while fusing">,
-    Option<"fastMemorySpace", "fusion-fast-mem-space", "unsigned",
+    Option<"fastMemorySpace", "fast-mem-space", "unsigned",
            /*default=*/"0",
            "Faster memory space number to promote fusion buffers to">,
-    Option<"localBufSizeThreshold", "fusion-local-buf-threshold", "uint64_t",
+    Option<"localBufSizeThreshold", "local-buf-threshold", "uint64_t",
            /*default=*/"0", "Threshold size (KiB) for promoting local buffers "
                             "to fast memory space">,
-    Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
+    Option<"maximalFusion", "maximal", "bool", /*default=*/"false",
            "Enables maximal loop fusion">,
     Option<"affineFusionMode", "mode", "enum FusionMode",
            "mlir::affine::FusionMode::Greedy", "fusion mode to attempt",
@@ -219,7 +219,7 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
   ];
 }
 
-def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
+def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOpInterface"> {
   let summary = "Unroll and jam affine loops";
   let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [

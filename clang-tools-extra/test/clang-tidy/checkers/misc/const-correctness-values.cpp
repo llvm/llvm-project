@@ -283,8 +283,8 @@ void template_instantiation() {
 struct ConstNonConstClass {
   ConstNonConstClass();
   ConstNonConstClass(double &np_local0);
-  double nonConstMethod() {}
-  double constMethod() const {}
+  double nonConstMethod() { return 0; }
+  double constMethod() const { return 0; }
   double modifyingMethod(double &np_arg0) const;
 
   double NonConstMember;

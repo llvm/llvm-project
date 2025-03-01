@@ -403,6 +403,12 @@ void OutputSection::addContributingPartialSection(PartialSection *sec) {
   contribSections.push_back(sec);
 }
 
+void OutputSection::splitECChunks() {
+  llvm::stable_sort(chunks, [=](const Chunk *a, const Chunk *b) {
+    return (a->getMachine() != ARM64) < (b->getMachine() != ARM64);
+  });
+}
+
 // Check whether the target address S is in range from a relocation
 // of type relType at address P.
 bool Writer::isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
@@ -1156,6 +1162,11 @@ void Writer::createSections() {
     sec->addContributingPartialSection(pSec);
   }
 
+  if (ctx.hybridSymtab) {
+    if (OutputSection *sec = findSection(".CRT"))
+      sec->splitECChunks();
+  }
+
   // Finally, move some output sections to the end.
   auto sectionOrder = [&](const OutputSection *s) {
     // Move DISCARDABLE (or non-memory-mapped) sections to the end of file
@@ -1747,16 +1758,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  switch (config->machine) {
-  case ARM64EC:
-    coff->Machine = AMD64;
-    break;
-  case ARM64X:
-    coff->Machine = ARM64;
-    break;
-  default:
-    coff->Machine = config->machine;
-  }
+  coff->Machine = ctx.symtab.isEC() ? AMD64 : ctx.symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
@@ -1984,9 +1986,16 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     // Common is always data, so it is ignored.
     break;
   case Symbol::DefinedAbsoluteKind:
-  case Symbol::DefinedSyntheticKind:
     // Absolute is never code, synthetic generally isn't and usually isn't
     // determinable.
+    break;
+  case Symbol::DefinedSyntheticKind:
+    // For EC export thunks, mark both the thunk itself and its target.
+    if (auto expChunk = dyn_cast_or_null<ECExportThunkChunk>(
+            cast<Defined>(s)->getChunk())) {
+      addSymbolToRVASet(addressTakenSyms, cast<Defined>(s));
+      addSymbolToRVASet(addressTakenSyms, expChunk->target);
+    }
     break;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
@@ -2052,9 +2061,11 @@ void Writer::createGuardCFTables() {
     // with /guard:cf.
     for (ObjFile *file : ctx.objFileInstances) {
       if (file->hasGuardCF()) {
-        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-        cast<DefinedAbsolute>(flagSym)->setVA(
-            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        ctx.forEachSymtab([&](SymbolTable &symtab) {
+          Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+          cast<DefinedAbsolute>(flagSym)->setVA(
+              uint32_t(GuardFlags::CF_INSTRUMENTED));
+        });
         break;
       }
     }
@@ -2136,8 +2147,10 @@ void Writer::createGuardCFTables() {
     guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
     guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
-  Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-  cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  ctx.forEachSymtab([guardFlags](SymbolTable &symtab) {
+    Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+    cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  });
 }
 
 // Take a list of input sections containing symbol table indices and add those
@@ -2208,10 +2221,12 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
     tableChunk = make<RVATableChunk>(std::move(tableSymbols));
   rdataSec->addChunk(tableChunk);
 
-  Symbol *t = ctx.symtab.findUnderscore(tableSym);
-  Symbol *c = ctx.symtab.findUnderscore(countSym);
-  replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
-  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    Symbol *t = symtab.findUnderscore(tableSym);
+    Symbol *c = symtab.findUnderscore(countSym);
+    replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
+    cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  });
 }
 
 // Create CHPE metadata chunks.
@@ -2324,21 +2339,28 @@ void Writer::createRuntimePseudoRelocs() {
 // There's a symbol pointing to the start sentinel pointer, __CTOR_LIST__
 // and __DTOR_LIST__ respectively.
 void Writer::insertCtorDtorSymbols() {
-  AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(ctx, -1);
-  AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(ctx, 0);
-  ctorsSec->insertChunkAtStart(ctorListHead);
-  ctorsSec->addChunk(ctorListEnd);
-  dtorsSec->insertChunkAtStart(dtorListHead);
-  dtorsSec->addChunk(dtorListEnd);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AbsolutePointerChunk *ctorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *ctorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    AbsolutePointerChunk *dtorListHead = make<AbsolutePointerChunk>(symtab, -1);
+    AbsolutePointerChunk *dtorListEnd = make<AbsolutePointerChunk>(symtab, 0);
+    ctorsSec->insertChunkAtStart(ctorListHead);
+    ctorsSec->addChunk(ctorListEnd);
+    dtorsSec->insertChunkAtStart(dtorListHead);
+    dtorsSec->addChunk(dtorListEnd);
 
-  Symbol *ctorListSym = ctx.symtab.findUnderscore("__CTOR_LIST__");
-  Symbol *dtorListSym = ctx.symtab.findUnderscore("__DTOR_LIST__");
-  replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
-                                  ctorListHead);
-  replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
-                                  dtorListHead);
+    Symbol *ctorListSym = symtab.findUnderscore("__CTOR_LIST__");
+    Symbol *dtorListSym = symtab.findUnderscore("__DTOR_LIST__");
+    replaceSymbol<DefinedSynthetic>(ctorListSym, ctorListSym->getName(),
+                                    ctorListHead);
+    replaceSymbol<DefinedSynthetic>(dtorListSym, dtorListSym->getName(),
+                                    dtorListHead);
+  });
+
+  if (ctx.hybridSymtab) {
+    ctorsSec->splitECChunks();
+    dtorsSec->splitECChunks();
+  }
 }
 
 // Handles /section options to allow users to overwrite

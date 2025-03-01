@@ -113,7 +113,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # error when we run to main and try to get variables
         os.unlink(main_obj)
 
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         self.launch(program=program, initCommands=initCommands)

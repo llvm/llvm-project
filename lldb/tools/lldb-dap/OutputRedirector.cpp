@@ -62,6 +62,9 @@ Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
           continue;
         break;
       }
+      // Skip the null byte used to trigger a Stop.
+      if (bytes_count == 1 && buffer[0] == '\0')
+        continue;
 
       StringRef data(buffer, bytes_count);
       if (m_stopped)

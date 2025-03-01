@@ -8,23 +8,23 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP5:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP6:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP5:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP6:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[OP_RDX4:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 0, i32 0, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[ADD17:%.*]] = add i32 [[PHI]], 0
-; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[PHI]], 0
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[PHI2]], 0
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[PHI]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[PHI2]], 0
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[PHI2]], 0
+; CHECK-NEXT:    [[ADD23:%.*]] = add i32 [[PHI]], 0
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[PHI2]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4]] = add <2 x i32> [[TMP0]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5]] = extractelement <2 x i32> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP6]] = extractelement <2 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> [[TMP3]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP7]], [[ADD17]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP7]], [[ADD]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = xor i32 [[ADD4]], [[ADD6]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = xor i32 [[ADD19]], [[TMP6]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = xor i32 [[ADD23]], [[TMP6]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = xor i32 [[OP_RDX]], [[OP_RDX1]]
 ; CHECK-NEXT:    [[OP_RDX4]] = xor i32 [[OP_RDX3]], [[OP_RDX2]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[TMP5]], 0

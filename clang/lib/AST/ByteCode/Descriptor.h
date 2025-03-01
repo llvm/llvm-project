@@ -274,6 +274,7 @@ public:
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
+  void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

@@ -1632,8 +1632,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
-                       << option.second << " is not recognized";
+        ErrAlways(ctx) << "unknown -z " << reportArg.first
+                       << "= value: " << option.second;
         continue;
       }
       *reportArg.second = option.second;
@@ -2617,8 +2617,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
-        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
-            sym->computeBinding(ctx) != STB_LOCAL)
+        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
           sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
@@ -2965,6 +2964,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.arg.exportDynamic &= ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))

@@ -1540,10 +1540,12 @@ bool CheckForCoindexedObject(parser::ContextualMessages &messages,
 
 namespace Fortran::semantics {
 
-const Symbol &ResolveAssociations(const Symbol &original) {
+const Symbol &ResolveAssociations(
+    const Symbol &original, bool stopAtTypeGuard) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (!details->rank()) { // Not RANK(n) or RANK(*)
+    if (!details->rank() /* not RANK(n) or RANK(*) */ &&
+        !(stopAtTypeGuard && details->isTypeGuard())) {
       if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
@@ -1567,8 +1569,8 @@ static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   return nullptr;
 }
 
-const Symbol &GetAssociationRoot(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
+const Symbol &GetAssociationRoot(const Symbol &original, bool stopAtTypeGuard) {
+  const Symbol &symbol{ResolveAssociations(original, stopAtTypeGuard)};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
     if (const Symbol * root{GetAssociatedVariable(*details)}) {
       return *root;
@@ -1812,7 +1814,11 @@ bool IsSaved(const Symbol &original) {
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false; // this is a component
   } else if (symbol.attrs().test(Attr::SAVE)) {
-    return true; // explicit SAVE attribute
+    // explicit or implied SAVE attribute
+    // N.B.: semantics sets implied SAVE for main program
+    // local variables whose derived types have coarray
+    // potential subobject components.
+    return true;
   } else if (IsDummy(symbol) || IsFunctionResult(symbol) ||
       IsAutomatic(symbol) || IsNamedConstant(symbol)) {
     return false;
