@@ -224,6 +224,7 @@ Improvements to Coverage Mapping
   as a part of the expression. (#GH124563)
 
 - [MC/DC] Nested expressions are handled as individual MC/DC expressions.
+
 Bug Fixes in This Version
 -------------------------
 
