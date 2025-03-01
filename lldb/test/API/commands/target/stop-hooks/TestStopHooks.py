@@ -31,8 +31,8 @@ class TestStopHooks(TestBase):
         self.after_expr_test()
 
     def test_stop_hooks_before_and_after_creation(self):
-        """Test that if we add a stop hook in the dummy target, we can
-        they don't collide with ones set directly in the target."""
+        """Test that if we add a stop hooks in the dummy target,
+        they aren't overridden by the ones set directly in the target."""
         self.before_and_after_target()
 
     def step_out_test(self):
