@@ -593,7 +593,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           sym);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
-      if (!result.getInitMoldArg().getUses().empty())
+      if (result.initReadsFromMold())
         mightHaveReadHostSym.insert(sym);
     }
 

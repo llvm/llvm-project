@@ -99,6 +99,8 @@ private:
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorReduceCommon(SDNode *N, unsigned RedOp,
                                            bool IsIm2Col = false);
+  void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
+  void SelectTcgen05St(SDNode *N, bool hasOffset = false);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);

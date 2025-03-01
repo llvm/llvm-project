@@ -46,8 +46,6 @@ def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let DiagnosticString = "stack adjustment is invalid for this instruction and register list; "
-        "refer to Zc spec for a detailed range of stack adjustment";
   let PredicateMethod = "isSpimm";
   let RenderMethod = "addSpimmOperands";
 }

@@ -2790,11 +2790,15 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 }
 
 // CHECK-LABEL: @par_task_
+// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
 // CHECK: %[[TASK_ALLOC:.*]] = call ptr @__kmpc_omp_task_alloc({{.*}}ptr @[[task_outlined_fn:.+]])
 // CHECK: call i32 @__kmpc_omp_task({{.*}}, ptr %[[TASK_ALLOC]])
-// CHECK: define internal void @[[task_outlined_fn]]
-// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
-// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]], ptr %[[ARG_ALLOC]])
+// CHECK: define internal void @[[task_outlined_fn]](i32 %[[GLOBAL_TID_VAL:.*]], ptr %[[STRUCT_ARG:.*]])
+// CHECK: %[[LOADED_STRUCT_PTR:.*]] = load ptr, ptr %[[STRUCT_ARG]], align 8
+// CHECK: %[[GEP_STRUCTARG:.*]] = getelementptr { ptr }, ptr %[[LOADED_STRUCT_PTR]], i32 0, i32 0
+// CHECK: %[[LOADGEP_STRUCTARG:.*]] = load ptr, ptr %[[GEP_STRUCTARG]], align 8
+// CHEKC: %[[NEW_STRUCTARG:.*]] = alloca { ptr }, align 8
+// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]],
 // CHECK: define internal void @[[parallel_outlined_fn]]
 // -----
 
@@ -2819,29 +2823,34 @@ llvm.func @task(%arg0 : !llvm.ptr) {
   }
   llvm.return
 }
-// CHECK-LABEL: @task..omp_par
-// CHECK:       task.alloca:
-// CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
-// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
-// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
-// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
-// CHECK:         br label %omp.region.after_alloca
-
-// CHECK:       omp.region.after_alloca:
-// CHECK:         br label %task.body
-
-// CHECK:       task.body:                                        ; preds = %omp.region.after_alloca
+// CHECK-LABEL: @task
+// CHECK-SAME:      (ptr %[[ARG:.*]])
+// CHECK:         %[[STRUCT_ARG:.*]] = alloca { ptr }, align 8
+//                ...
 // CHECK:         br label %omp.private.init
+// CHECK:       omp.private.init:
+// CHECK:         %[[TASK_STRUCT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[GEP:.*]] = getelementptr { i32 }, ptr %[[TASK_STRUCT:.*]], i32 0, i32 0
+// CHECK:         br label %omp.private.copy1
+// CHECK:       omp.private.copy1:
+// CHECK:         %[[LOADED:.*]] = load i32, ptr %[[ARG]], align 4
+// CHECK:         store i32 %[[LOADED]], ptr %[[GEP]], align 4
+//                ...
+// CHECK:         br label %omp.task.start
+// CHECK:       omp.task.start:
+// CHECK:         br label %[[CODEREPL:.*]]
+// CHECK:       [[CODEREPL]]:
 
-// CHECK:       omp.private.init:                                 ; preds = %task.body
-// CHECK:         br label %omp.private.copy
-
-// CHECK:       omp.private.copy:                                 ; preds = %omp.private.init
-// CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
-// CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
+// CHECK-LABEL: @task..omp_par
+// CHECK:      task.alloca:
+// CHECK:         %[[VAL_12:.*]] = load ptr, ptr %[[STRUCT_ARG:.*]], align 8
+// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_12]], i32 0, i32 0
+// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
+// CHECK:         br label %task.body
+// CHECK:       task.body:                                        ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = getelementptr { i32 }, ptr %[[VAL_14]], i32 0, i32 0
 // CHECK:         br label %omp.task.region
-
-// CHECK:       omp.task.region:                                  ; preds = %omp.private.copy
+// CHECK:       omp.task.region:                                  ; preds = %task.body
 // CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
@@ -2915,6 +2924,19 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         br label %[[omp_region_cont:[^,]+]]
 // CHECK:       [[omp_taskgroup_region]]:
 // CHECK:         %{{.+}} = alloca i8, align 1
+// CHECK:         br label %[[omp_private_init:[^,]+]]
+// CHECK:       [[omp_private_init]]:
+// CHECK:         br label %[[omp_private_copy:[^,]+]]
+// CHECK:       [[omp_private_copy]]:
+// CHECK:         br label %[[omp_task_start:[^,]+]]
+
+// CHECK:       [[omp_region_cont:[^,]+]]:
+// CHECK:         br label %[[taskgroup_exit:[^,]+]]
+// CHECK:       [[taskgroup_exit]]:
+// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         ret void
+
+// CHECK:       [[omp_task_start]]:
 // CHECK:         br label %[[codeRepl:[^,]+]]
 // CHECK:       [[codeRepl]]:
 // CHECK:         %[[omp_global_thread_num_t1:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
@@ -2938,11 +2960,6 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         br label %[[task_exit3:[^,]+]]
 // CHECK:       [[task_exit3]]:
 // CHECK:         br label %[[omp_taskgroup_region1]]
-// CHECK:       [[omp_region_cont]]:
-// CHECK:         br label %[[taskgroup_exit:[^,]+]]
-// CHECK:       [[taskgroup_exit]]:
-// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
-// CHECK:         ret void
 // CHECK:       }
 
 // -----
