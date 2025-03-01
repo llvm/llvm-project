@@ -233,6 +233,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // FP8E5M2      : 8-bit floating-point operations E5M2.
 // FFT          : Fast Fourier Transform operations.
 // VARIABLE     : Stateful variable operations.
+// CONTROLFLOW  : Control Flow operations.
 //===----------------------------------------------------------------------===//
 
 def Tosa_NONE : I32EnumAttrCase<"none", 0>;
