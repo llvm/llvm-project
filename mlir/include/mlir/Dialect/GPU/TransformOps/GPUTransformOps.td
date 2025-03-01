@@ -26,6 +26,7 @@ def ApplyGPUToNVVMConversionPatternsOp : Op<Transform_Dialect,
     Collects patterns that convert GPU dialect ops to NVVM dialect ops. These
     patterns require an "LLVMTypeConverter".
   }];
+  let arguments = (ins DefaultValuedAttr<I16Attr, "1">:$benefit);
   let assemblyFormat = "attr-dict";
 }
 

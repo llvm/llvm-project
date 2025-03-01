@@ -191,9 +191,9 @@ define void @divergent_i1_xor_used_outside_loop_larger_loop_body(i32 %num.elts, 
 ; GFX10-LABEL: divergent_i1_xor_used_outside_loop_larger_loop_body:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_mov_b32 s5, 0
 ; GFX10-NEXT:    s_mov_b32 s6, -1
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_6
 ; GFX10-NEXT:  ; %bb.1: ; %loop.start.preheader
@@ -298,7 +298,7 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s5, 0
 ; GFX10-NEXT:    ; implicit-def: $sgpr6
-; GFX10-NEXT:    v_mov_b32_e32 v4, s5
+; GFX10-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX10-NEXT:    s_branch .LBB4_2
 ; GFX10-NEXT:  .LBB4_1: ; %Flow
 ; GFX10-NEXT:    ; in Loop: Header=BB4_2 Depth=1
@@ -312,6 +312,7 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_6
 ; GFX10-NEXT:  .LBB4_2: ; %cond.block.0
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v4
 ; GFX10-NEXT:    s_and_saveexec_b32 s7, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_4
@@ -328,11 +329,12 @@ define void @divergent_i1_icmp_used_outside_loop(i32 %v0, i32 %v1, ptr addrspace
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s7
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s4, v1, v4
 ; GFX10-NEXT:    s_mov_b32 s7, -1
+; GFX10-NEXT:    ; implicit-def: $vgpr5
 ; GFX10-NEXT:    s_and_saveexec_b32 s8, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_1
 ; GFX10-NEXT:  ; %bb.5: ; %loop.cond
 ; GFX10-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX10-NEXT:    v_add_nc_u32_e32 v4, 1, v4
+; GFX10-NEXT:    v_add_nc_u32_e32 v5, 1, v4
 ; GFX10-NEXT:    s_andn2_b32 s4, -1, exec_lo
 ; GFX10-NEXT:    s_and_b32 s7, exec_lo, 0
 ; GFX10-NEXT:    s_or_b32 s7, s4, s7

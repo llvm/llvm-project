@@ -385,16 +385,18 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
-static Value *
-calculateVectorIndex(Value *Ptr,
-                     const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
+static Value *calculateVectorIndex(
+    Value *Ptr, const std::map<GetElementPtrInst *, WeakTrackingVH> &GEPIdx) {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
   if (!GEP)
     return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
 
   auto I = GEPIdx.find(GEP);
   assert(I != GEPIdx.end() && "Must have entry for GEP!");
-  return I->second;
+
+  Value *IndexValue = I->second;
+  assert(IndexValue && "index value missing from GEP index map");
+  return IndexValue;
 }
 
 static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
@@ -449,7 +451,7 @@ static Value *promoteAllocaUserToVector(
     Instruction *Inst, const DataLayout &DL, FixedVectorType *VectorTy,
     unsigned VecStoreSize, unsigned ElementSize,
     DenseMap<MemTransferInst *, MemTransferInfo> &TransferInfo,
-    std::map<GetElementPtrInst *, Value *> &GEPVectorIdx, Value *CurVal,
+    std::map<GetElementPtrInst *, WeakTrackingVH> &GEPVectorIdx, Value *CurVal,
     SmallVectorImpl<LoadInst *> &DeferredLoads) {
   // Note: we use InstSimplifyFolder because it can leverage the DataLayout
   // to do more folding, especially in the case of vector splats.
@@ -757,7 +759,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     return false;
   }
 
-  std::map<GetElementPtrInst *, Value *> GEPVectorIdx;
+  std::map<GetElementPtrInst *, WeakTrackingVH> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
   SmallVector<Instruction *> UsersToRemove;
   SmallVector<Instruction *> DeferredInsts;
@@ -839,10 +841,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         return RejectUser(Inst, "mem transfer inst length is non-constant or "
                                 "not a multiple of the vector element size");
 
-      if (!TransferInfo.count(TransferInst)) {
+      if (TransferInfo.try_emplace(TransferInst).second) {
         DeferredInsts.push_back(Inst);
         WorkList.push_back(Inst);
-        TransferInfo[TransferInst] = MemTransferInfo();
       }
 
       auto getPointerIndexOfAlloca = [&](Value *Ptr) -> ConstantInt * {

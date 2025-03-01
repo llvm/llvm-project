@@ -321,8 +321,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     unsigned Size = Ty1.getSizeInBits();
     (void)Size;
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
-
+    assert((Size == 32 || Size == 64 || Size == 80) &&
+           "Unsupported size for G_FCMP");
     auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP= */ true);
     OpRegBankIdx = {PMI_GPR8,
                     /* Predicate */ PMI_None, FpRegBank, FpRegBank};

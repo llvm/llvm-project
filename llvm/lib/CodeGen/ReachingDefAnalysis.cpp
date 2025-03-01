@@ -147,16 +147,7 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       assert(FrameIndex >= 0 && "Can't handle negative frame indicies yet!");
       if (!isFIDef(*MI, FrameIndex, TII))
         continue;
-      if (MBBFrameObjsReachingDefs.contains(MBBNumber)) {
-        auto Frame2InstrIdx = MBBFrameObjsReachingDefs[MBBNumber];
-        if (Frame2InstrIdx.count(FrameIndex - ObjectIndexBegin) > 0)
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin].push_back(CurInstr);
-        else
-          Frame2InstrIdx[FrameIndex - ObjectIndexBegin] = {CurInstr};
-      } else {
-        MBBFrameObjsReachingDefs[MBBNumber] = {
-            {FrameIndex - ObjectIndexBegin, {CurInstr}}};
-      }
+      MBBFrameObjsReachingDefs[{MBBNumber, FrameIndex}].push_back(CurInstr);
     }
     if (!isValidRegDef(MO))
       continue;
@@ -266,9 +257,13 @@ void ReachingDefAnalysis::printAllReachingDefs(MachineFunction &MF) {
         Defs.clear();
         getGlobalReachingDefs(&MI, Reg, Defs);
         MO.print(dbgs(), TRI);
-        dbgs() << ":{ ";
+        SmallVector<int, 0> Nums;
         for (MachineInstr *Def : Defs)
-          dbgs() << InstToNumMap[Def] << " ";
+          Nums.push_back(InstToNumMap[Def]);
+        llvm::sort(Nums);
+        dbgs() << ":{ ";
+        for (int Num : Nums)
+          dbgs() << Num << " ";
         dbgs() << "}\n";
       }
       dbgs() << Num << ": " << MI << "\n";
@@ -347,9 +342,13 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
   int LatestDef = ReachingDefDefaultVal;
 
   if (Reg.isStack()) {
+    // Check that there was a reaching def.
     int FrameIndex = Reg.stackSlotIndex();
-    for (int Def : MBBFrameObjsReachingDefs.lookup(MBBNumber).lookup(
-             FrameIndex - ObjectIndexBegin)) {
+    auto Lookup = MBBFrameObjsReachingDefs.find({MBBNumber, FrameIndex});
+    if (Lookup == MBBFrameObjsReachingDefs.end())
+      return LatestDef;
+    auto &Defs = Lookup->second;
+    for (int Def : Defs) {
       if (Def >= InstId)
         break;
       DefRes = Def;

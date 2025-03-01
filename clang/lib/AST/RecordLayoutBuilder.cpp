@@ -1469,15 +1469,18 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   //   sizeof(T')*8 <= n.
 
   QualType IntegralPODTypes[] = {
-    Context.UnsignedCharTy, Context.UnsignedShortTy, Context.UnsignedIntTy,
-    Context.UnsignedLongTy, Context.UnsignedLongLongTy
+      Context.UnsignedCharTy,     Context.UnsignedShortTy,
+      Context.UnsignedIntTy,      Context.UnsignedLongTy,
+      Context.UnsignedLongLongTy, Context.UnsignedInt128Ty,
   };
 
   QualType Type;
+  uint64_t MaxSize =
+      Context.getTargetInfo().getLargestOverSizedBitfieldContainer();
   for (const QualType &QT : IntegralPODTypes) {
     uint64_t Size = Context.getTypeSize(QT);
 
-    if (Size > FieldSize)
+    if (Size > FieldSize || Size > MaxSize)
       break;
 
     Type = QT;
@@ -1520,6 +1523,7 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   setSize(std::max(getSizeInBits(), getDataSizeInBits()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, TypeAlign);
   UpdateAlignment(TypeAlign);
 }
 
@@ -3481,22 +3485,10 @@ uint64_t ASTContext::getFieldOffset(const ValueDecl *VD) const {
 }
 
 uint64_t ASTContext::lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
-                                          const ObjCImplementationDecl *ID,
                                           const ObjCIvarDecl *Ivar) const {
   Ivar = Ivar->getCanonicalDecl();
   const ObjCInterfaceDecl *Container = Ivar->getContainingInterface();
-
-  // FIXME: We should eliminate the need to have ObjCImplementationDecl passed
-  // in here; it should never be necessary because that should be the lexical
-  // decl context for the ivar.
-
-  // If we know have an implementation (and the ivar is in it) then
-  // look up in the implementation layout.
-  const ASTRecordLayout *RL;
-  if (ID && declaresSameEntity(ID->getClassInterface(), Container))
-    RL = &getASTObjCImplementationLayout(ID);
-  else
-    RL = &getASTObjCInterfaceLayout(Container);
+  const ASTRecordLayout *RL = &getASTObjCInterfaceLayout(Container);
 
   // Compute field index.
   //
@@ -3522,8 +3514,7 @@ uint64_t ASTContext::lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
 /// \param Impl - If given, also include the layout of the interface's
 /// implementation. This may differ by including synthesized ivars.
 const ASTRecordLayout &
-ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
-                          const ObjCImplementationDecl *Impl) const {
+ASTContext::getObjCLayout(const ObjCInterfaceDecl *D) const {
   // Retrieve the definition
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<ObjCInterfaceDecl*>(D));
@@ -3532,21 +3523,8 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
          "Invalid interface decl!");
 
   // Look up this layout, if already laid out, return what we have.
-  const ObjCContainerDecl *Key =
-    Impl ? (const ObjCContainerDecl*) Impl : (const ObjCContainerDecl*) D;
-  if (const ASTRecordLayout *Entry = ObjCLayouts[Key])
+  if (const ASTRecordLayout *Entry = ObjCLayouts[D])
     return *Entry;
-
-  // Add in synthesized ivar count if laying out an implementation.
-  if (Impl) {
-    unsigned SynthCount = CountNonClassIvars(D);
-    // If there aren't any synthesized ivars then reuse the interface
-    // entry. Note we can't cache this because we simply free all
-    // entries later; however we shouldn't look up implementations
-    // frequently.
-    if (SynthCount == 0)
-      return getObjCLayout(D, nullptr);
-  }
 
   ItaniumRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
   Builder.Layout(D);
@@ -3557,7 +3535,7 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
       /*RequiredAlignment : used by MS-ABI)*/
       Builder.Alignment, Builder.getDataSize(), Builder.FieldOffsets);
 
-  ObjCLayouts[Key] = NewEntry;
+  ObjCLayouts[D] = NewEntry;
 
   return *NewEntry;
 }

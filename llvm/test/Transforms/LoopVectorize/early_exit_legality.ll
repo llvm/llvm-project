@@ -49,7 +49,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
 ; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK:  LV: Not vectorizing: Some exit values in loop with uncountable exit not supported yet.
+; CHECK-NOT:   LV: Not vectorizing
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -141,7 +141,7 @@ define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
 ; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
 ; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK:       LV: Not vectorizing: Some exit values in loop with uncountable exit not supported yet.
+; CHECK-NOT:   LV: Not vectorizing
 entry:
   %p1 = alloca [1024 x i8]
   call void @init_mem(ptr %p1, i64 1024)

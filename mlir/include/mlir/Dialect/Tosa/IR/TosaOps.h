@@ -16,6 +16,7 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Traits.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -28,7 +29,15 @@
 // TOSA dialect and structs includes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Tosa/IR/TosaEnums.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
+#include "mlir/Transforms/DialectConversion.h"
+
+//===----------------------------------------------------------------------===//
+// TOSA operation validation includes.
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
 
 namespace mlir {
 class PatternRewriter;
@@ -151,5 +160,15 @@ bool isa_tosa_shape_type(mlir::Type t);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.h.inc"
+
+namespace mlir {
+namespace tosa {
+
+// Create a rank-1 const tensor for zero point of the source tensor.
+std::optional<Value> createZeroPointTensor(OpBuilder &builder, Location loc,
+                                           Type srcElemType, int64_t zp = 0);
+
+} // namespace tosa
+} // namespace mlir
 
 #endif // MLIR_DIALECT_TOSA_IR_TOSAOPS_H

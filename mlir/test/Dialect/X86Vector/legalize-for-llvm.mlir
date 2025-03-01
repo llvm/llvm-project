@@ -70,6 +70,24 @@ func.func @avx512bf16_dot_512(%src: vector<16xf32>, %a: vector<32xbf16>,
   return %0 : vector<16xf32>
 }
 
+// CHECK-LABEL: func @avx512bf16_cvt_packed_f32_to_bf16_256
+func.func @avx512bf16_cvt_packed_f32_to_bf16_256(
+  %a: vector<8xf32>) -> (vector<8xbf16>)
+{
+  // CHECK: x86vector.avx512.intr.cvtneps2bf16.256
+  %0 = x86vector.avx512.cvt.packed.f32_to_bf16 %a : vector<8xf32> -> vector<8xbf16>
+  return %0 : vector<8xbf16>
+}
+
+// CHECK-LABEL: func @avx512bf16_cvt_packed_f32_to_bf16_512
+func.func @avx512bf16_cvt_packed_f32_to_bf16_512(
+  %a: vector<16xf32>) -> (vector<16xbf16>)
+{
+  // CHECK: x86vector.avx512.intr.cvtneps2bf16.512
+  %0 = x86vector.avx512.cvt.packed.f32_to_bf16 %a : vector<16xf32> -> vector<16xbf16>
+  return %0 : vector<16xbf16>
+}
+
 // CHECK-LABEL: func @avx_rsqrt
 func.func @avx_rsqrt(%a: vector<8xf32>) -> (vector<8xf32>)
 {

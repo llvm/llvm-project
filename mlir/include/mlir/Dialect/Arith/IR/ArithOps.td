@@ -144,13 +144,6 @@ class Arith_CompareOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
-// Just like `Arith_CompareOp` but also admits 0-D vectors. Introduced
-// temporarily to allow gradual transition to 0-D vectors.
-class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
-    Arith_CompareOp<mnemonic, traits> {
-  let results = (outs BoolLikeOfAnyRank:$result);
-}
-
 class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
       [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -1426,9 +1419,9 @@ def Arith_BitcastOp : Arith_CastOp<"bitcast", BitcastTypeConstraint,
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpIOp
-  : Arith_CompareOpOfAnyRank<"cmpi",
-                             [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+def Arith_CmpIOp : Arith_CompareOp<"cmpi",
+    [DeclareOpInterfaceMethods<InferIntRangeInterface,
+                               ["inferResultRanges"]>]> {
   let summary = "integer comparison operation";
   let description = [{
     The `cmpi` operation is a generic comparison for integer-like types. Its two
@@ -1495,8 +1488,8 @@ def Arith_CmpIOp
   }];
 
   let arguments = (ins Arith_CmpIPredicateAttr:$predicate,
-                       SignlessIntegerOrIndexLikeOfAnyRank:$lhs,
-                       SignlessIntegerOrIndexLikeOfAnyRank:$rhs);
+                       SignlessIntegerOrIndexLike:$lhs,
+                       SignlessIntegerOrIndexLike:$rhs);
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

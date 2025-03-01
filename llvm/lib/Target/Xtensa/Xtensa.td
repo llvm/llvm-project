@@ -17,10 +17,9 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 // Subtarget Features.
 //===----------------------------------------------------------------------===//
-def FeatureDensity : SubtargetFeature<"density", "HasDensity", "true",
-                    "Enable Density instructions">;
-def HasDensity : Predicate<"Subtarget->hasDensity()">,
-                     AssemblerPredicate<(all_of FeatureDensity)>;
+
+include "XtensaFeatures.td"
+
 //===----------------------------------------------------------------------===//
 // Xtensa supported processors.
 //===----------------------------------------------------------------------===//

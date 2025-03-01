@@ -1,12 +1,12 @@
 // RUN: fir-opt --split-input-file --omp-maps-for-privatized-symbols %s | FileCheck %s
 module attributes {omp.is_target_device = false} {
-  omp.private {type = private} @_QFtarget_simpleEsimple_var_private_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> alloc {
-  ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
-    %0 = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "simple_var", pinned, uniq_name = "_QFtarget_simpleEsimple_var"}
-    %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-    %5:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtarget_simpleEsimple_var"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-    omp.yield(%5#0 : !fir.ref<!fir.box<!fir.heap<i32>>>)
+  omp.private {type = private} @_QFtarget_simpleEsimple_var_private_ref_box_heap_i32 : !fir.box<!fir.heap<i32>> init {
+  ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg1: !fir.ref<!fir.box<!fir.heap<i32>>>):
+    %mold = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+    // extract box address, see if it is null, etc
+    omp.yield(%arg1: !fir.ref<!fir.box<!fir.heap<i32>>>)
   }
+
   func.func @_QPtarget_simple() {
     %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFtarget_simpleEa"}
     %1:2 = hlfir.declare %0 {uniq_name = "_QFtarget_simpleEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

@@ -118,3 +118,8 @@ func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // expected-error@+1 {{expected ':' after block name}}
 "g"()({^a:^b })
+
+// -----
+
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.variadic_args_types_split "hello_world" : i32

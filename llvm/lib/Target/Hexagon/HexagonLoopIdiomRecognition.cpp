@@ -1388,14 +1388,12 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
 
   CastMapType CastMap;
 
-  auto upcast = [] (CastMapType &CM, IRBuilder<> &IRB, Value *V,
-        IntegerType *Ty) -> Value* {
-    auto H = CM.find(std::make_pair(V, Ty));
-    if (H != CM.end())
-      return H->second;
-    Value *CV = IRB.CreateIntCast(V, Ty, false);
-    CM.insert(std::make_pair(std::make_pair(V, Ty), CV));
-    return CV;
+  auto upcast = [](CastMapType &CM, IRBuilder<> &IRB, Value *V,
+                   IntegerType *Ty) -> Value * {
+    auto [H, Inserted] = CM.try_emplace(std::make_pair(V, Ty));
+    if (Inserted)
+      H->second = IRB.CreateIntCast(V, Ty, false);
+    return H->second;
   };
 
   for (auto I = LoopB->begin(), E = LoopB->end(); I != E; ++I) {
