@@ -474,7 +474,7 @@ public:
     constexpr auto __last_idx = sizeof...(_Views) - 1;
     return __it.__it_.index() == __last_idx &&
            std::__unchecked_get<__last_idx>(__it.__it_) ==
-               ranges::end(std::__unchecked_get<__last_idx>(__it.__parent_->__views_));
+               ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
