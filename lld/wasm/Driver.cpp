@@ -583,6 +583,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   ctx.arg.relocatable = args.hasArg(OPT_relocatable);
+  ctx.arg.rpath = args::getStrings(args, OPT_rpath);
   ctx.arg.gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !ctx.arg.relocatable);
   for (auto *arg : args.filtered(OPT_keep_section))

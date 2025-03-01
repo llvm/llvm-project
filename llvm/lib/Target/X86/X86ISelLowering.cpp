@@ -701,6 +701,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::f16, Promote);
     setOperationAction(ISD::FMUL, MVT::f16, Promote);
     setOperationAction(ISD::FDIV, MVT::f16, Promote);
+    setOperationAction(ISD::FABS, MVT::f16, Custom);
+    setOperationAction(ISD::FNEG, MVT::f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
@@ -6142,6 +6145,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
     uint64_t InsertIdx = N.getConstantOperandVal(2);
+    // Subvector isn't demanded - just return the base vector.
+    if (DemandedElts.extractBits(NumSubElts, InsertIdx) == 0) {
+      Mask.resize(NumElts, SM_SentinelUndef);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      Ops.push_back(Src);
+      return true;
+    }
     // Handle CONCAT(SUB0, SUB1).
     // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
     if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
@@ -53778,36 +53788,35 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::CVTP2SI, DL, VT, Src);
 }
 
-// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
-// (add (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are able
-// to avoid generating code with MOVABS and large constants in certain cases.
-static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
-                                     const SDLoc &DL) {
-  using namespace llvm::SDPatternMatch;
+// Attempt to fold some (truncate (srl (add/or/xor X, C1), C2)) patterns to
+// (add/or/xor (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we
+// are able to avoid generating code with MOVABS and large constants in certain
+// cases.
+static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
+                                          const SDLoc &DL) {
 
-  SDValue AddLhs;
-  APInt AddConst, SrlConst;
-  if (VT != MVT::i32 ||
-      !sd_match(N, m_AllOf(m_SpecificVT(MVT::i64),
-                           m_Srl(m_OneUse(m_Add(m_Value(AddLhs),
-                                                m_ConstInt(AddConst))),
-                                 m_ConstInt(SrlConst)))))
+  SDValue Op = N.getOperand(0);
+  APInt OpConst = Op.getConstantOperandAPInt(1);
+  APInt SrlConst = N.getConstantOperandAPInt(1);
+  uint64_t SrlConstVal = SrlConst.getZExtValue();
+  unsigned Opcode = Op.getOpcode();
+
+  if (SrlConst.ule(32) ||
+      (Opcode == ISD::ADD && OpConst.countr_zero() < SrlConstVal))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
-    return SDValue();
+  SDValue OpLhsSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, Op.getOperand(0), N.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, OpLhsSrl);
 
-  SDValue AddLHSSrl =
-      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+  APInt NewOpConstVal = OpConst.lshr(SrlConst).trunc(VT.getSizeInBits());
+  SDValue NewOpConst = DAG.getConstant(NewOpConstVal, DL, VT);
+  SDValue NewOpNode = DAG.getNode(Opcode, DL, VT, Trunc, NewOpConst);
+  EVT CleanUpVT = EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConstVal);
 
-  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
-  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
-  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
-
-  EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
-  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
+  if (Opcode == ISD::ADD)
+    return DAG.getZeroExtendInReg(NewOpNode, DL, CleanUpVT);
+  return NewOpNode;
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -53855,11 +53864,21 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   if (!Src.hasOneUse())
     return SDValue();
 
-  if (SDValue R = combinei64TruncSrlAdd(Src, VT, DAG, DL))
-    return R;
+  if (VT == MVT::i32 && SrcVT == MVT::i64 && SrcOpcode == ISD::SRL &&
+      isa<ConstantSDNode>(Src.getOperand(1))) {
 
-  // Only support vector truncation for now.
-  // TODO: i64 scalar math would benefit as well.
+    unsigned SrcOpOpcode = Src.getOperand(0).getOpcode();
+    if ((SrcOpOpcode != ISD::ADD && SrcOpOpcode != ISD::OR &&
+         SrcOpOpcode != ISD::XOR) ||
+        !isa<ConstantSDNode>(Src.getOperand(0).getOperand(1)))
+      return SDValue();
+
+    if (SDValue R = combinei64TruncSrlConstant(Src, VT, DAG, DL))
+      return R;
+
+    return SDValue();
+  }
+
   if (!VT.isVector())
     return SDValue();
 
@@ -58555,27 +58574,28 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   if (Vec.isUndef() && IdxVal != 0 && SubVec.hasOneUse() &&
       SubVec.getOpcode() == X86ISD::VBROADCAST_LOAD) {
     auto *MemIntr = cast<MemIntrinsicSDNode>(SubVec);
-    SDVTList Tys = DAG.getVTList(OpVT, MVT::Other);
-    SDValue Ops[] = { MemIntr->getChain(), MemIntr->getBasePtr() };
-    SDValue BcastLd =
-        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
-                                MemIntr->getMemoryVT(),
-                                MemIntr->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
-    return BcastLd;
+    return getBROADCAST_LOAD(X86ISD::VBROADCAST_LOAD, dl, OpVT,
+                             MemIntr->getMemoryVT(), MemIntr, 0, DAG);
   }
 
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, attempt to create a subvector broadcast.
-  if (IdxVal == (OpVT.getVectorNumElements() / 2) && SubVec.hasOneUse() &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
+  // TODO: Drop hasOneUse checks.
+  if (IdxVal == (OpVT.getVectorNumElements() / 2) &&
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
+      (Vec.hasOneUse() || SubVec.hasOneUse())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&
-        DAG.areNonVolatileConsecutiveLoads(SubLd, VecLd,
-                                           SubVec.getValueSizeInBits() / 8, 0))
-      return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT, SubVecVT,
-                               SubLd, 0, DAG);
+        DAG.areNonVolatileConsecutiveLoads(
+            SubLd, VecLd, SubVec.getValueSizeInBits() / 8, 0)) {
+      SDValue BcastLd = getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, dl, OpVT,
+                                          SubVecVT, SubLd, 0, DAG);
+      SDValue NewSubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVecVT,
+                                      BcastLd, DAG.getVectorIdxConstant(0, dl));
+      DCI.CombineTo(SubLd, NewSubVec, BcastLd.getValue(1));
+      return BcastLd;
+    }
   }
 
   return SDValue();

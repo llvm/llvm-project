@@ -16782,7 +16782,7 @@ versions of the intrinsics respect the exception behavior.
      - qNaN, invalid exception
 
    * - ``+0.0 vs -0.0``
-     - either one
+     - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
 
@@ -16826,21 +16826,30 @@ type.
 
 Semantics:
 """"""""""
+Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
+function ``fmin``, although not all implementations have implemented these recommended behaviors.
 
-Follows the IEEE-754 semantics for minNum, except for handling of
-signaling NaNs. This match's the behavior of libm's fmin.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a minnum can produce inconsistent results. For example,
+``minnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
-If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. If the operands compare equal,
-returns either one of the operands. For example, this means that
-fmin(+0.0, -0.0) returns either operand.
+IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`minimumNumber <i_minimumnum>`.
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
-signaling and quiet NaN inputs. If a target's implementation follows
-the standard and returns a quiet NaN if either input is a signaling
-NaN, the intrinsic lowering is responsible for quieting the inputs to
-correctly return the non-NaN input (e.g. by using the equivalent of
-``llvm.canonicalize``).
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
+which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
+if ``nsz`` and ``nnan`` are given.
+
+For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention.
 
 .. _i_maxnum:
 
@@ -16877,20 +16886,30 @@ type.
 
 Semantics:
 """"""""""
-Follows the IEEE-754 semantics for maxNum except for the handling of
-signaling NaNs. This matches the behavior of libm's fmax.
+Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
+function ``fmax``, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. If the operands compare equal,
-returns either one of the operands. For example, this means that
-fmax(+0.0, -0.0) returns either -0.0 or 0.0.
+If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
+NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
+so arithmetic feeding into a maxnum can produce inconsistent results. For example,
+``maxnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
-Unlike the IEEE-754 2008 behavior, this does not distinguish between
-signaling and quiet NaN inputs. If a target's implementation follows
-the standard and returns a quiet NaN if either input is a signaling
-NaN, the intrinsic lowering is responsible for quieting the inputs to
-correctly return the non-NaN input (e.g. by using the equivalent of
-``llvm.canonicalize``).
+IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`maximumNumber <i_maximumnum>`.
+
+If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
+and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
+
+Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
+have instructions that match these semantics exactly; thus it is quite simple for these architectures.
+Some architectures have similiar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
+which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
+if ``nsz`` and ``nnan`` are given.
+
+For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
+even in the same release of a single libm implemention.
 
 .. _i_minimum:
 
@@ -17377,8 +17396,8 @@ Semantics:
 """"""""""
 
 This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
-also behaves in the same way as C standard function ``roundeven``, except that
-it does not raise floating point exceptions.
+also behaves in the same way as C standard function ``roundeven``, including
+that it disregards rounding mode and does not raise floating point exceptions.
 
 
 '``llvm.lround.*``' Intrinsic
@@ -19769,12 +19788,8 @@ The '``llvm.vector.reduce.fmax.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
-intrinsic. That is, the result will always be a number unless all elements of
-the vector are NaN. For a vector with maximum element magnitude 0.0 and
-containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
-
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
+intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
+operation can assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -19802,12 +19817,8 @@ The '``llvm.vector.reduce.fmin.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.minnum.*``'
-intrinsic. That is, the result will always be a number unless all elements of
-the vector are NaN. For a vector with minimum element magnitude 0.0 and
-containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
-
-If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
-assume that NaNs are not present in the input vector.
+intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
+operation can assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -22086,7 +22097,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -22135,7 +22146,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -23434,10 +23445,7 @@ result type. If only ``nnan`` is set then the neutral value is ``-Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>` intrinsic (and thus the
-'``llvm.maxnum.*``' intrinsic). That is, the result will always be a number
-unless all elements of the vector and the starting value are ``NaN``. For a
-vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
-``-0.0`` elements, the sign of the result is unspecified.
+'``llvm.maxnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
 
@@ -23504,10 +23512,7 @@ result type. If only ``nnan`` is set then the neutral value is ``+Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>` intrinsic (and thus the
-'``llvm.minnum.*``' intrinsic). That is, the result will always be a number
-unless all elements of the vector and the starting value are ``NaN``. For a
-vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
-``-0.0`` elements, the sign of the result is unspecified.
+'``llvm.minnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
 
@@ -28179,7 +28184,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for maxNum.
+This function follows the IEEE-754-2008 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -28211,7 +28216,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754 semantics for minNum.
+This function follows the IEEE-754-2008 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic

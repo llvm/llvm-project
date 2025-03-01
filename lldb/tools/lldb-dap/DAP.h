@@ -30,6 +30,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -145,7 +146,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   std::string name;
-  llvm::StringRef debug_adaptor_path;
+  llvm::StringRef debug_adapter_path;
   std::ofstream *log;
   InputStream input;
   OutputStream output;
@@ -210,7 +211,7 @@ struct DAP {
   std::string last_nonempty_var_expression;
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
       std::vector<std::string> pre_init_commands);
   ~DAP();
   DAP(const DAP &rhs) = delete;

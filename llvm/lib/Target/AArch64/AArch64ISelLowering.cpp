@@ -1701,7 +1701,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
+      setOperationAction(ISD::SELECT, VT, Custom);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
 
       if (Subtarget->hasSVEB16B16()) {
@@ -23075,8 +23079,9 @@ static SDValue isNVCastToHalfWidthElements(SDValue V) {
     return SDValue();
 
   SDValue Op = V.getOperand(0);
-  if (V.getValueType().getVectorElementCount() !=
-      Op.getValueType().getVectorElementCount() * 2)
+  if (!Op.getValueType().isVector() ||
+      V.getValueType().getVectorElementCount() !=
+          Op.getValueType().getVectorElementCount() * 2)
     return SDValue();
 
   return Op;

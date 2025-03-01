@@ -91,6 +91,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unintended-char-ostream-output
+  <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
+
+  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
+  ``ostream``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -101,6 +107,13 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
   calls of ``std::string`` constructor with char pointer, start position and
   length parameters.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
+  positives from smart pointer accessors repeated in checking ``has_value``
+  and accessing ``value``. The option `IgnoreSmartPointerDereference` should
+  no longer be needed and will be removed. Also fixing false positive from 
+  const reference accessors to objects containing optional member.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
@@ -119,6 +132,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers 
   to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
+  on ternary operators calling ``std::move``.
 
 Removed checks
 ^^^^^^^^^^^^^^
