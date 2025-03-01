@@ -687,7 +687,7 @@ Overview:
 
 The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a non-atomic 
 non-volatile ``llvm.memset`` that writes ``undef`` to the destination 
-address range ``[%ptr, %ptr + immarg)``. 
+address range ``[%ptr, %ptr + immarg)``. The ``%ptr`` must be aligned by 128.
 Subsequent reads from the address range may read ``undef`` until the memory is overwritten 
 with a different value.
 These operations *hint* the implementation that data in the L2 cache can be destructively 
