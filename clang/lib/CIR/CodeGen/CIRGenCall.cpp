@@ -507,6 +507,7 @@ emitCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
           // handler: unwind.
           auto *r = result.addRegion();
           builder.createBlock(r);
+          builder.create<cir::ResumeOp>(loc, mlir::Value{}, mlir::Value{});
         });
     op.setSynthetic(true);
     return op;

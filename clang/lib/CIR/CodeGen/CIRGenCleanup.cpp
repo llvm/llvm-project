@@ -666,10 +666,12 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         if (nextAction == ehResumeBlock) {
           if (auto tryToPatch =
                   currYield->getParentOp()->getParentOfType<cir::TryOp>()) {
-            mlir::Block *resumeBlockToPatch =
-                tryToPatch.getCatchUnwindEntryBlock();
-            emitEHResumeBlock(/*isCleanup=*/true, resumeBlockToPatch,
-                              tryToPatch.getLoc());
+            if (!tryToPatch.getSynthetic()) {
+              mlir::Block *resumeBlockToPatch =
+                  tryToPatch.getCatchUnwindEntryBlock();
+              emitEHResumeBlock(/*isCleanup=*/true, resumeBlockToPatch,
+                                tryToPatch.getLoc());
+            }
           }
         }
 
