@@ -635,8 +635,8 @@ static void computeUnknownVars(const FlatLinearConstraints &cst,
       }
 
       // Detect a variable as an expression of other variables.
-      unsigned idx;
-      if (!cst.findConstraintWithNonZeroAt(pos, /*isEq=*/true, &idx)) {
+      std::optional<unsigned> idx;
+      if (!(idx = cst.findConstraintWithNonZeroAt(pos, /*isEq=*/true))) {
         continue;
       }
 
@@ -646,7 +646,7 @@ static void computeUnknownVars(const FlatLinearConstraints &cst,
       for (j = 0, e = cst.getNumVars(); j < e; ++j) {
         if (j == pos)
           continue;
-        int64_t c = cst.atEq64(idx, j);
+        int64_t c = cst.atEq64(*idx, j);
         if (c == 0)
           continue;
         // If any of the involved IDs hasn't been found yet, we can't proceed.
@@ -660,8 +660,8 @@ static void computeUnknownVars(const FlatLinearConstraints &cst,
         continue;
 
       // Add constant term to AffineExpr.
-      expr = expr + cst.atEq64(idx, cst.getNumVars());
-      int64_t vPos = cst.atEq64(idx, pos);
+      expr = expr + cst.atEq64(*idx, cst.getNumVars());
+      int64_t vPos = cst.atEq64(*idx, pos);
       assert(vPos != 0 && "expected non-zero here");
       if (vPos > 0)
         expr = (-expr).floorDiv(vPos);
