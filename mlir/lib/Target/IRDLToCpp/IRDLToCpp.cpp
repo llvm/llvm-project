@@ -133,20 +133,22 @@ static void fillDict(irdl::detail::dictionary &dict,
   dict["NAMESPACE_PATH"] = strings.namespacePath;
 }
 
-static void generateTypedefList(irdl::DialectOp &dialect,
-                                llvm::SmallVector<std::string> &typeNames) {
+static LogicalResult generateTypedefList(irdl::DialectOp &dialect,
+  llvm::SmallVector<std::string>& typeNames) {
   auto typeOps = dialect.getOps<irdl::TypeOp>();
   auto range = llvm::map_range(
       typeOps, [](auto &&type) { return getStrings(type).typeCppName; });
   typeNames = llvm::SmallVector<std::string>(range);
+  return success();
 }
 
-static void generateOpList(irdl::DialectOp &dialect,
-                           llvm::SmallVector<std::string> &opNames) {
+static LogicalResult generateOpList(irdl::DialectOp &dialect,
+  llvm::SmallVector<std::string>& opNames) {
   auto operationOps = dialect.getOps<irdl::OperationOp>();
   auto range = llvm::map_range(
       operationOps, [](auto &&op) { return getStrings(op).opCppName; });
   opNames = llvm::SmallVector<std::string>(range);
+  return success();
 }
 
 } // namespace
@@ -225,7 +227,7 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   }
 
   llvm::SmallVector<std::string> opNames;
-  if (failed(generateOpList(dialectBlock, opNames)))
+  if (failed(generateOpList(dialect, opNames)))
     return failure();
   const auto forwardDeclarations = llvm::formatv(
       R"(
@@ -342,9 +344,10 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   typeDefTemplate.render(output, dict);
 
   // get op list
+  auto &dialectBlock = *dialect.getRegion().getBlocks().begin();
   auto operations = dialectBlock.getOps<irdl::OperationOp>();
   llvm::SmallVector<std::string> opNames;
-  if (failed(generateOpList(dialectBlock, opNames)))
+  if (failed(generateOpList(dialect, opNames)))
     return failure();
 
   const auto commaSeparatedOpList = llvm::join(
@@ -425,7 +428,7 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                               raw_ostream &output) {
   static const auto typeDefTempl = detail::Template(
-#include "Templates/TypeDefTest.cpp"
+#include "Templates/TypeDef.txt"
   );
 
   StringRef dialectName = dialect.getSymName();
