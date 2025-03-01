@@ -385,13 +385,13 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  auto const where =
-      EvenWhenVoid
-          ? functionDecl(unless(anyOf(hasTrailingReturn(), cxxConversionDecl(),
-                                      cxxMethodDecl(isImplicit()))))
-          : functionDecl(unless(anyOf(hasTrailingReturn(), returns(voidType()),
-                                      cxxConversionDecl(),
-                                      cxxMethodDecl(isImplicit()))));
+  const auto hasNoWrittenReturnType =
+      anyOf(cxxConversionDecl(), cxxConstructorDecl(), cxxDestructorDecl(),
+            cxxMethodDecl(isImplicit()));
+
+  const auto where = functionDecl(
+      unless(anyOf(hasTrailingReturn(), hasNoWrittenReturnType,
+                   EvenWhenVoid ? unless(anything()) : returns(voidType()))));
 
   auto F = where.bind("Func");
 
