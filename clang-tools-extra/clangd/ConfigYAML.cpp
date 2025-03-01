@@ -104,6 +104,10 @@ private:
       if (auto Values = scalarValues(N))
         F.Remove = std::move(*Values);
     });
+    Dict.handle("BuiltinHeaders", [&](Node &N) {
+      if (auto BuiltinHeaders = scalarValue(N, "BuiltinHeaders"))
+        F.BuiltinHeaders = *BuiltinHeaders;
+    });
     Dict.handle("CompilationDatabase", [&](Node &N) {
       F.CompilationDatabase = scalarValue(N, "CompilationDatabase");
     });
