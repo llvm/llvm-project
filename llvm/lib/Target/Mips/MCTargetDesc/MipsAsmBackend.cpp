@@ -351,10 +351,11 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
 const MCFixupKindInfo &MipsAsmBackend::
 getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
     { "fixup_Mips_16",           0,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
@@ -424,16 +425,18 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_SUB",                  0,     64,   0 },
     { "fixup_MICROMIPS_SUB",             0,     64,   0 },
     { "fixup_Mips_JALR",                 0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",            0,     32,   0 }
+    { "fixup_MICROMIPS_JALR",            0,     32,   0 },
+      // clang-format on
   };
   static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
 
   const static MCFixupKindInfo BigEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
     { "fixup_Mips_16",          16,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
@@ -503,7 +506,8 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_SUB",                   0,     64,   0 },
     { "fixup_MICROMIPS_SUB",              0,     64,   0 },
     { "fixup_Mips_JALR",                  0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",             0,     32,   0 }
+    { "fixup_MICROMIPS_JALR",             0,     32,   0 },
+      // clang-format on
   };
   static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
