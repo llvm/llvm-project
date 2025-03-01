@@ -408,11 +408,10 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   ShapedType collapsedType;
   if (stripMinedType.isa<TensorType>()) {
     collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
-        stripMinedType.cast<RankedTensorType>(),
-        packingMetadata.reassociations);
+        cast<RankedTensorType>(stripMinedType), packingMetadata.reassociations);
   } else if (stripMinedType.isa<MemRefType>()) {
     collapsedType = memref::CollapseShapeOp::inferCollapsedType(
-        stripMinedType.cast<MemRefType>(), packingMetadata.reassociations);
+        cast<MemRefType>(stripMinedType), packingMetadata.reassociations);
   }
 
   // Get dynamic dims from input tensor based on packedToStripMinedShapePerm
