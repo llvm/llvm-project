@@ -571,12 +571,12 @@ define i64 @ctpop_i64(i64 %a) nounwind {
 define i1 @ctpop_i64_ugt_two(i64 %a) nounwind {
 ; RV32I-LABEL: ctpop_i64_ugt_two:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, -1
-; RV32I-NEXT:    and a2, a0, a2
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    sub a0, a1, a0
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    sub a2, a1, a2
+; RV32I-NEXT:    addi a3, a0, -1
+; RV32I-NEXT:    and a0, a0, a3
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
@@ -595,12 +595,12 @@ define i1 @ctpop_i64_ugt_two(i64 %a) nounwind {
 define i1 @ctpop_i64_ugt_one(i64 %a) nounwind {
 ; RV32I-LABEL: ctpop_i64_ugt_one:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, -1
-; RV32I-NEXT:    and a2, a0, a2
-; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    sub a0, a1, a0
-; RV32I-NEXT:    and a0, a1, a0
-; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    sub a2, a1, a2
+; RV32I-NEXT:    addi a3, a0, -1
+; RV32I-NEXT:    and a0, a0, a3
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
