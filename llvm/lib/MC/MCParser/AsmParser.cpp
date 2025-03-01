@@ -150,7 +150,7 @@ private:
   unsigned MacrosEnabledFlag : 1;
 
   /// Keeps track of how many .macro's have been instantiated.
-  unsigned NumOfMacroInstantiations;
+  unsigned NumOfMacroInstantiations = 0;
 
   /// The values from the last parsed cpp hash file line comment if any.
   struct CppHashInfoTy {
@@ -821,8 +821,6 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   PlatformParser->Initialize(*this);
   initializeDirectiveKindMap();
   initializeCVDefRangeTypeMap();
-
-  NumOfMacroInstantiations = 0;
 }
 
 AsmParser::~AsmParser() {
@@ -1018,8 +1016,6 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // All errors should have been emitted.
   assert(!hasPendingError() && "unexpected error from parseStatement");
-
-  getTargetParser().flushPendingInstructions(getStreamer());
 
   if (TheCondState.TheCond != StartingCondState.TheCond ||
       TheCondState.Ignore != StartingCondState.Ignore)
