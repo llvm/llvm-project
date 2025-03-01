@@ -74,8 +74,8 @@ contains
 
   ! C1020
   subroutine s5
-    real, target :: x[*]
-    real, target, volatile :: y[*]
+    real, target, save :: x[*]
+    real, target, volatile, save :: y[*]
     real, pointer :: p
     real, pointer, volatile :: q
     p => x
@@ -148,7 +148,7 @@ contains
 
   ! C1026 (R1037) A data-target shall not be a coindexed object.
   subroutine s10
-    real, target :: a[*]
+    real, target, save :: a[*]
     real, pointer :: b
     !ERROR: A coindexed object may not be a pointer target
     b => a[1]

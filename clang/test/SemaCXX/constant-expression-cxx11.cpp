@@ -380,19 +380,35 @@ static_assert(string == string, "");
 static_assert(string == also_string, "");
 
 // These strings may overlap, and so the result of the comparison is unknown.
-constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
 
 // These may overlap even though they have different encodings.
 // One of these two comparisons is non-constant, but due to endianness we don't
 // know which one.
 constexpr bool may_overlap_different_encoding[] =
   {fold((const char*)u"A" != (const char*)"xA\0\0\0x" + 1), fold((const char*)u"A" != (const char*)"x\0A\0\0x" + 1)};
-  // expected-error@-2 {{}} expected-note@-1 {{addresses of literals}}
+  // expected-error@-2 {{}} expected-note@-1 {{addresses of potentially overlapping literals}}
 
 }
+
+constexpr const char *getStr() {
+  return "abc"; // expected-note {{repeated evaluation of the same literal expression can produce different objects}}
+}
+constexpr int strMinus() {
+  (void)(getStr() - getStr()); // expected-note {{arithmetic on addresses of potentially overlapping literals has unspecified value}} \
+                               // cxx11-warning {{C++14 extension}}
+  return 0;
+}
+static_assert(strMinus() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                    // expected-note {{in call to}}
+
+constexpr int a = 0;
+constexpr int b = 1;
+constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
 
 namespace MaterializeTemporary {
 
@@ -1446,7 +1462,7 @@ namespace InstantiateCaseStmt {
 
 namespace ConvertedConstantExpr {
   extern int &m;
-  extern int &n; // expected-note 2{{declared here}}
+  extern int &n; // pre-cxx23-note 2{{declared here}}
 
   constexpr int k = 4;
   int &m = const_cast<int&>(k);
@@ -1455,9 +1471,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
-    eo = (m + // expected-error {{not a constant expression}}
-          n // expected-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}}
+    eo = (m + // pre-cxx23-error {{not a constant expression}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-error {{not a constant expression}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1991,7 +2007,8 @@ namespace ConstexprConstructorRecovery {
 
 namespace Lifetime {
   void f() {
-    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}} expected-warning {{not yet bound to a value}}
+    constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
+                          // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
     constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   }
 
@@ -2411,15 +2428,15 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // expected-note 2{{declared here}}
-    constexpr int k = t.size(); // expected-error 2{{constant}} expected-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) { // cxx11_20-note 2{{declared here}}
+    constexpr int k = t.size();  // cxx11_20-error 2{{constexpr variable 'k' must be initialized by a constant expression}} cxx11_20-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
   }
   void g(array<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{in instantiation of function template}}
     f3(a);
   }
 
@@ -2428,8 +2445,9 @@ namespace array_size {
   };
   void h(array_nonstatic<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{instantiation of}}
   }
+  //static_assert(f2(array_size::array<3>{}));
 }
 
 namespace flexible_array {

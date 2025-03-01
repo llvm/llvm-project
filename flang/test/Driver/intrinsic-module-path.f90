@@ -12,8 +12,8 @@
 ! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
 ! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
 
-! GIVEN: error: Cannot read module file for module 'ieee_arithmetic': File has invalid checksum
-! GIVEN: error: Cannot read module file for module 'iso_fortran_env': File has invalid checksum
+! GIVEN: error: Cannot use module file for module 'ieee_arithmetic': File has invalid checksum
+! GIVEN: error: Cannot use module file for module 'iso_fortran_env': File has invalid checksum
 
 
 program test_intrinsic_module_path

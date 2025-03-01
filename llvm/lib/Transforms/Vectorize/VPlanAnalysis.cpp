@@ -60,7 +60,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   }
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
-    return inferScalarType(R->getOperand(1));
+    assert(inferScalarType(R->getOperand(0)) ==
+               inferScalarType(R->getOperand(1)) &&
+           "different types inferred for different operands");
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeReductionResult: {
     auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
@@ -71,7 +74,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
   case VPInstruction::ResumePhi:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::AnyOf:
     return SetResultTyFromOp();
+  case VPInstruction::ExtractFirstActive:
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
@@ -79,9 +86,13 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return BaseTy;
   }
   case VPInstruction::LogicalAnd:
+    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
+           inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
+           "LogicalAnd operands should be bool");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
-    // Return the type based on the pointer argument (i.e. first operand).
+    // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -115,6 +126,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::FNeg:
   case Instruction::Freeze:
     return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue: {
+    assert(R->getNumOperands() == 2 && "expected single level extractvalue");
+    auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
+    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
+    return StructTy->getTypeAtIndex(CI->getZExtValue());
+  }
   default:
     break;
   }
@@ -231,13 +248,12 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe>(
-              [this](const VPRecipeBase *R) {
-                return inferScalarType(R->getOperand(0));
-              })
-          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPWidenEVLRecipe,
-                VPReplicateRecipe, VPWidenCallRecipe, VPWidenMemoryRecipe,
-                VPWidenSelectRecipe>(
+                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe,
+                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
+            return inferScalarType(R->getOperand(0));
+          })
+          .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPWidenIntrinsicRecipe>([](const VPWidenIntrinsicRecipe *R) {
             return R->getResultType();

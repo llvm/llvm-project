@@ -7,57 +7,27 @@
 ! RUN: bbc -fopenmp -emit-hlfir --force-byref-reduction %s -o - \
 ! RUN: | FileCheck %s
 
-!CHECK:  omp.private {type = firstprivate} @[[W_FIRSTPRIVATIZER:_QFEw_firstprivate_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_W_ALLOC:.*]] = fir.alloca i32 {bindc_name = "w", {{.*}}}
-!CHECK:    %[[PRIV_W_DECL:.*]]:2 = hlfir.declare %[[PRIV_W_ALLOC]] {uniq_name = "_QFEw"}
-!CHECK:    omp.yield(%[[PRIV_W_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  } copy {
+!CHECK:  omp.private {type = firstprivate} @[[W_FIRSTPRIVATIZER:_QFEw_firstprivate_i32]] : i32 copy {
 !CHECK:  ^bb0(%[[ORIG_W:.*]]: !fir.ref<i32>, %[[PRIV_W:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_W_VAL:.*]] = fir.load %[[ORIG_W]]
 !CHECK:    hlfir.assign %[[ORIG_W_VAL]] to %[[PRIV_W]]
 !CHECK:    omp.yield(%[[PRIV_W]] : !fir.ref<i32>)
 !CHECK:  }
 
-!CHECK:  omp.private {type = firstprivate} @[[Y_FIRSTPRIVATIZER:_QFEy_firstprivate_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_Y_ALLOC:.*]] = fir.alloca i32 {bindc_name = "y", {{.*}}}
-!CHECK:    %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y_ALLOC]] {uniq_name = "_QFEy"}
-!CHECK:    omp.yield(%[[PRIV_Y_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  } copy {
+!CHECK:  omp.private {type = firstprivate} @[[Y_FIRSTPRIVATIZER:_QFEy_firstprivate_i32]] : i32 copy {
 !CHECK:  ^bb0(%[[ORIG_Y:.*]]: !fir.ref<i32>, %[[PRIV_Y:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_Y_VAL:.*]] = fir.load %[[ORIG_Y]]
 !CHECK:    hlfir.assign %[[ORIG_Y_VAL]] to %[[PRIV_Y]]
 !CHECK:    omp.yield(%[[PRIV_Y]] : !fir.ref<i32>)
 !CHECK:  }
 
-!CHECK:  omp.private {type = private} @[[X_PRIVATIZER:_QFEx_private_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_X_ALLOC:.*]] = fir.alloca i32 {bindc_name = "x", {{.*}}}
-!CHECK:    %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X_ALLOC]] {uniq_name = "_QFEx"}
-!CHECK:    omp.yield(%[[PRIV_X_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  }
+!CHECK:  omp.private {type = private} @[[X_PRIVATIZER:_QFEx_private_i32]] : i32
 
-!CHECK:  omp.private {type = private} @[[W_PRIVATIZER:_QFEw_private_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_W_ALLOC:.*]] = fir.alloca i32 {bindc_name = "w", {{.*}}}
-!CHECK:    %[[PRIV_W_DECL:.*]]:2 = hlfir.declare %[[PRIV_W_ALLOC]] {uniq_name = "_QFEw"}
-!CHECK:    omp.yield(%[[PRIV_W_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  }
+!CHECK:  omp.private {type = private} @[[W_PRIVATIZER:_QFEw_private_i32]] : i32
 
-!CHECK:  omp.private {type = private} @[[Y_PRIVATIZER:_QFEy_private_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_Y_ALLOC:.*]] = fir.alloca i32 {bindc_name = "y", {{.*}}}
-!CHECK:    %[[PRIV_Y_DECL:.*]]:2 = hlfir.declare %[[PRIV_Y_ALLOC]] {uniq_name = "_QFEy"}
-!CHECK:    omp.yield(%[[PRIV_Y_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  }
+!CHECK:  omp.private {type = private} @[[Y_PRIVATIZER:_QFEy_private_i32]] : i32
 
-!CHECK:  omp.private {type = firstprivate} @[[X_FIRSTPRIVATIZER:_QFEx_firstprivate_ref_i32]] : !fir.ref<i32> alloc {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[PRIV_X_ALLOC:.*]] = fir.alloca i32 {bindc_name = "x", {{.*}}}
-!CHECK:    %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X_ALLOC]] {uniq_name = "_QFEx"}
-!CHECK:    omp.yield(%[[PRIV_X_DECL]]#0 : !fir.ref<i32>)
-!CHECK:  } copy {
+!CHECK:  omp.private {type = firstprivate} @[[X_FIRSTPRIVATIZER:_QFEx_firstprivate_i32]] : i32 copy {
 !CHECK:  ^bb0(%[[ORIG_X:.*]]: !fir.ref<i32>, %[[PRIV_X:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_X_VAL:.*]] = fir.load %[[ORIG_X]]
 !CHECK:    hlfir.assign %[[ORIG_X_VAL]] to %[[PRIV_X]]
@@ -346,7 +316,7 @@ subroutine skipped_default_clause_checks()
        type(it)::iii
 
 !CHECK: omp.parallel {{.*}} {
-!CHECK: omp.wsloop reduction(byref @min_byref_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) {
+!CHECK: omp.wsloop private({{.*}}) reduction(byref @min_byref_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) {
 !CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) {{.*}} {
 !CHECK: omp.yield
 !CHECK: }

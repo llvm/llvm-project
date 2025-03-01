@@ -4,7 +4,7 @@
 define void @basic(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @basic(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -15,7 +15,7 @@ define void @basic(ptr %p) {
 define void @stores_on_both_paths(ptr %p, i1 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @stores_on_both_paths(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -42,7 +42,7 @@ end:
 define void @store_pointer_to_pointer(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @store_pointer_to_pointer(
-; CHECK-SAME: ptr [[P:%.*]], ptr nocapture writeonly initializes((0, 8)) [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr [[P:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[P2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    store ptr [[P]], ptr [[P2]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -65,7 +65,7 @@ define void @store_pointer_to_itself(ptr %p) {
 define void @load_before_store(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @load_before_store(
-; CHECK-SAME: ptr nocapture [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[P:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    store i32 123, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -78,7 +78,7 @@ define void @load_before_store(ptr %p) {
 define void @partial_load_before_store(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @partial_load_before_store(
-; CHECK-SAME: ptr nocapture initializes((4, 8)) [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) initializes((4, 8)) [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -117,7 +117,7 @@ define void @call_clobber_after_store(ptr %p) {
 define void @store_offset(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @store_offset(
-; CHECK-SAME: ptr nocapture writeonly initializes((8, 12)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((8, 12)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i32 123, ptr [[G]], align 4
 ; CHECK-NEXT:    ret void
@@ -143,7 +143,7 @@ define void @store_volatile(ptr %p) {
 define void @merge_store_ranges(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @merge_store_ranges(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    store i32 123, ptr [[G]], align 4
 ; CHECK-NEXT:    store i32 123, ptr [[P]], align 4
@@ -158,9 +158,9 @@ define void @merge_store_ranges(ptr %p) {
 define void @partially_overlapping_stores_branches(ptr %p, i1 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @partially_overlapping_stores_branches(
-; CHECK-SAME: ptr nocapture initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -189,7 +189,7 @@ end:
 define void @non_overlapping_stores_branches(ptr %p, i1 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @non_overlapping_stores_branches(
-; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
@@ -218,7 +218,7 @@ end:
 define void @dominating_store(ptr %p, i1 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @dominating_store(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -269,7 +269,7 @@ end:
 define void @merge_existing_initializes(ptr initializes((33, 36)) %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @merge_existing_initializes(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8), (33, 36)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8), (33, 36)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -280,7 +280,7 @@ define void @merge_existing_initializes(ptr initializes((33, 36)) %p) {
 define void @negative_offset(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @negative_offset(
-; CHECK-SAME: ptr nocapture writeonly initializes((-5, 3)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((-5, 3)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 -5
 ; CHECK-NEXT:    store i64 123, ptr [[G]], align 4
 ; CHECK-NEXT:    ret void
@@ -293,7 +293,7 @@ define void @negative_offset(ptr %p) {
 define void @non_const_gep(ptr %p, i64 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @non_const_gep(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 8)) [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    store i64 123, ptr [[G]], align 4
 ; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
@@ -382,12 +382,20 @@ define void @call_initializes_escape_bundle(ptr %p) {
 }
 
 define void @access_bundle() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define void @access_bundle(
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[SINK:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 123, ptr [[SINK]], align 4
+; CHECK-NEXT:    ret void
+;
   %sink = alloca i64, align 8
   store i64 123, ptr %sink
   ret void
 }
 
 define void @call_operand_bundle(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define void @call_operand_bundle(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @access_bundle() [ "unknown"(ptr [[P]]) ]
@@ -402,7 +410,7 @@ declare void @llvm.memset(ptr, i8, i64 ,i1)
 define void @memset(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 9)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 9)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -413,7 +421,7 @@ define void @memset(ptr %p) {
 define void @memset_offset(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_offset(
-; CHECK-SAME: ptr nocapture writeonly initializes((3, 12)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((3, 12)) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[G]], i8 2, i64 9, i1 false)
 ; CHECK-NEXT:    ret void
@@ -426,7 +434,7 @@ define void @memset_offset(ptr %p) {
 define void @memset_neg(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_neg(
-; CHECK-SAME: ptr nocapture writeonly [[P:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 -1, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -437,7 +445,7 @@ define void @memset_neg(ptr %p) {
 define void @memset_volatile(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -448,7 +456,7 @@ define void @memset_volatile(ptr %p) {
 define void @memset_non_constant(ptr %p, i64 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_non_constant(
-; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr writeonly captures(none) [[P:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 [[I]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -461,7 +469,7 @@ declare void @llvm.memcpy(ptr, ptr, i64 ,i1)
 define void @memcpy(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 9)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 9)) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -472,7 +480,7 @@ define void @memcpy(ptr %p, ptr %p2) {
 define void @memcpy_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -483,7 +491,7 @@ define void @memcpy_volatile(ptr %p, ptr %p2) {
 define void @memcpy_offset(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_offset(
-; CHECK-SAME: ptr nocapture writeonly initializes((3, 12)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((3, 12)) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 9, i1 false)
 ; CHECK-NEXT:    ret void
@@ -496,7 +504,7 @@ define void @memcpy_offset(ptr %p, ptr %p2) {
 define void @memcpy_src(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_src(
-; CHECK-SAME: ptr nocapture initializes((96, 128)) [[P:%.*]], ptr nocapture initializes((0, 96)) [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) initializes((96, 128)) [[P:%.*]], ptr captures(none) initializes((0, 96)) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2]], ptr [[P]], i64 96, i1 false)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 64
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 64, i1 false)
@@ -511,7 +519,7 @@ define void @memcpy_src(ptr %p, ptr %p2) {
 define void @memcpy_non_constant(ptr %p, ptr %p2, i64 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_non_constant(
-; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 [[I]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -524,7 +532,7 @@ declare void @llvm.memmove(ptr, ptr, i64 ,i1)
 define void @memmove(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove(
-; CHECK-SAME: ptr nocapture writeonly initializes((0, 9)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((0, 9)) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -535,7 +543,7 @@ define void @memmove(ptr %p, ptr %p2) {
 define void @memmove_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -546,7 +554,7 @@ define void @memmove_volatile(ptr %p, ptr %p2) {
 define void @memmove_offset(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_offset(
-; CHECK-SAME: ptr nocapture writeonly initializes((3, 12)) [[P:%.*]], ptr nocapture readonly [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) initializes((3, 12)) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 3
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 9, i1 false)
 ; CHECK-NEXT:    ret void
@@ -559,7 +567,7 @@ define void @memmove_offset(ptr %p, ptr %p2) {
 define void @memmove_src(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_src(
-; CHECK-SAME: ptr nocapture initializes((96, 128)) [[P:%.*]], ptr nocapture initializes((0, 96)) [[P2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) initializes((96, 128)) [[P:%.*]], ptr captures(none) initializes((0, 96)) [[P2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P2]], ptr [[P]], i64 96, i1 false)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 64
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[G]], ptr [[P2]], i64 64, i1 false)
@@ -574,10 +582,56 @@ define void @memmove_src(ptr %p, ptr %p2) {
 define void @memmove_non_constant(ptr %p, ptr %p2, i64 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_non_constant(
-; CHECK-SAME: ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr writeonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]], i64 [[I:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 [[I]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove(ptr %p, ptr %p2, i64 %i, i1 false)
+  ret void
+}
+
+define void @callee_byval(ptr byval(i32) %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @callee_byval(
+; CHECK-SAME: ptr writeonly byval(i32) captures(none) initializes((0, 4)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p
+  ret void
+}
+
+define void @caller_byval(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @caller_byval(
+; CHECK-SAME: ptr readonly captures(none) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee_byval(ptr byval(i32) [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @callee_byval(ptr byval(i32) %p)
+  ret void
+}
+
+define void @memset_offset_0_size_0(ptr %dst, ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memset_offset_0_size_0(
+; CHECK-SAME: ptr writeonly captures(none) [[DST:%.*]], ptr readonly captures(none) [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 0, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
+  ret void
+}
+
+define void @memset_offset_1_size_0(ptr %dst, ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memset_offset_1_size_0(
+; CHECK-SAME: ptr writeonly captures(none) [[DST:%.*]], ptr readonly captures(none) [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[DST_1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST_1]], ptr [[SRC]], i64 0, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dst.1 = getelementptr inbounds i8, ptr %dst, i64 1
+  call void @llvm.memmove.p0.p0.i64(ptr %dst.1, ptr %src, i64 0, i1 false)
   ret void
 }

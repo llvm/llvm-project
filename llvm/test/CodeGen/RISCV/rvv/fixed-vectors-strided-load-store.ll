@@ -320,8 +320,8 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @gather_unknown_pow2(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, i64 %shift) {
 ; CHECK-LABEL: @gather_unknown_pow2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STEP:%.*]] = shl i64 8, [[SHIFT:%.*]]
-; CHECK-NEXT:    [[STRIDE:%.*]] = shl i64 1, [[SHIFT]]
+; CHECK-NEXT:    [[STRIDE:%.*]] = shl i64 1, [[SHIFT:%.*]]
+; CHECK-NEXT:    [[STEP:%.*]] = shl i64 8, [[SHIFT]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STRIDE]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1026,6 +1026,117 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind.next = add <32 x i16> %vec.ind, splat (i16 32)
   %i6 = icmp eq i64 %index.next, 1024
   br i1 %i6, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+
+define void @vp_gather(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
+; CHECK-LABEL: @vp_gather(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR1]]
+; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 1024, [[VEC_IND_SCALAR]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 32, i1 false)
+; CHECK-NEXT:    [[ODD:%.*]] = and <32 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <32 x i64> [[ODD]], zeroinitializer
+; CHECK-NEXT:    [[WIDE_VP_GATHER:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_VP_GATHER]]
+; CHECK-NEXT:    store <32 x i8> [[I4]], ptr [[I2]], align 1
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], 32
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], 160
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i64> [[VEC_IND]], splat (i64 32)
+; CHECK-NEXT:    [[I6:%.*]] = icmp eq i64 [[VEC_IND_NEXT_SCALAR]], 1024
+; CHECK-NEXT:    br i1 [[I6]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
+  %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
+  %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
+
+  %elems = sub i64 1024, %index
+  %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 32, i1 false)
+
+  %odd = and <32 x i64> %vec.ind, splat (i64 1)
+  %mask = icmp ne <32 x i64> %odd, splat (i64 0)
+
+  %wide.vp.gather = call <32 x i8> @llvm.vp.gather(<32 x ptr> %i1, <32 x i1> %mask, i32 %evl)
+  %i2 = getelementptr inbounds i8, ptr %A, i64 %index
+  %wide.load = load <32 x i8>, ptr %i2, align 1
+  %i4 = add <32 x i8> %wide.load, %wide.vp.gather
+  store <32 x i8> %i4, ptr %i2, align 1
+  %index.next = add nuw i64 %index, 32
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
+  %i6 = icmp eq i64 %index.next, 1024
+  br i1 %i6, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+
+define void @vp_scatter(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
+; CHECK-LABEL: @vp_scatter(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]]
+; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 1024, [[VEC_IND_SCALAR]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 32, i1 false)
+; CHECK-NEXT:    [[ODD:%.*]] = and <32 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <32 x i64> [[ODD]], zeroinitializer
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], 32
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], 160
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i64> [[VEC_IND]], splat (i64 32)
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i64 [[VEC_IND_NEXT_SCALAR]], 1024
+; CHECK-NEXT:    br i1 [[I5]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
+  %i = getelementptr inbounds i8, ptr %B, i64 %index
+  %wide.load = load <32 x i8>, ptr %i, align 1
+  %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
+  %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
+
+
+  %elems = sub i64 1024, %index
+  %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 32, i1 false)
+
+  %odd = and <32 x i64> %vec.ind, splat (i64 1)
+  %mask = icmp ne <32 x i64> %odd, splat (i64 0)
+
+  %wide.masked.gather = call <32 x i8> @llvm.vp.gather(<32 x ptr> %i3, <32 x i1> %mask, i32 %evl)
+  %i4 = add <32 x i8> %wide.masked.gather, %wide.load
+  call void @llvm.vp.scatter(<32 x i8> %i4, <32 x ptr> %i3, <32 x i1> %mask, i32 %evl)
+  %index.next = add nuw i64 %index, 32
+  %vec.ind.next = add <32 x i64> %vec.ind, splat (i64 32)
+  %i5 = icmp eq i64 %index.next, 1024
+  br i1 %i5, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void

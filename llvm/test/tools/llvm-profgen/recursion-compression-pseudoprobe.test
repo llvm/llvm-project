@@ -9,9 +9,6 @@
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe-nommap.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-context-depth=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
-; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
-
 
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa]:4:1
 ; CHECK-UNCOMPRESS:  1: 1
@@ -68,23 +65,6 @@
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:1:0
 ; CHECK-UNCOMPRESS:  5: 1 fb:1
 ; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
-; CHECK-MAX-CTX-DEPTH: [fb]:19:6
-; CHECK-MAX-CTX-DEPTH:  1: 6
-; CHECK-MAX-CTX-DEPTH:  2: 3
-; CHECK-MAX-CTX-DEPTH:  3: 3
-; CHECK-MAX-CTX-DEPTH:  4: 0
-; CHECK-MAX-CTX-DEPTH:  5: 4 fb:4
-; CHECK-MAX-CTX-DEPTH:  6: 3 fa:3
-; CHECK-MAX-CTX-DEPTH:  !CFGChecksum: 563022570642068
-; CHECK-MAX-CTX-DEPTH: [fa]:14:4
-; CHECK-MAX-CTX-DEPTH:  1: 4
-; CHECK-MAX-CTX-DEPTH:  3: 4
-; CHECK-MAX-CTX-DEPTH:  4: 2
-; CHECK-MAX-CTX-DEPTH:  5: 1
-; CHECK-MAX-CTX-DEPTH:  6: 0
-; CHECK-MAX-CTX-DEPTH:  7: 2 fb:2
-; CHECK-MAX-CTX-DEPTH:  8: 1 fa:1
-; CHECK-MAX-CTX-DEPTH:  !CFGChecksum: 563070469352221
 
 
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb]:13:4

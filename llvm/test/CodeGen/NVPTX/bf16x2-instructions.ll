@@ -22,19 +22,14 @@ define <2 x bfloat> @test_ret_const() #0 {
 define <2 x bfloat> @test_fadd_imm_0(<2 x bfloat> %a) #0 {
 ; SM80-LABEL: test_fadd_imm_0(
 ; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<3>;
-; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_fadd_imm_0_param_0];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM80-NEXT:    cvt.f32.bf16 %f3, %rs2;
-; SM80-NEXT:    add.rn.f32 %f4, %f3, 0f40000000;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r2, %f4, %f2;
-; SM80-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM80-NEXT:    mov.b32 %r2, 1065369472;
+; SM80-NEXT:    mov.b32 %r3, 1073758080;
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r1, %r2, %r3;
+; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fadd_imm_0(
@@ -54,15 +49,13 @@ define <2 x bfloat> @test_fadd_imm_0(<2 x bfloat> %a) #0 {
 define bfloat @test_fadd_imm_1(bfloat %a) #0 {
 ; SM80-LABEL: test_fadd_imm_1(
 ; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<3>;
-; SM80-NEXT:    .reg .f32 %f<3>;
+; SM80-NEXT:    .reg .b16 %rs<4>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b16 %rs1, [test_fadd_imm_1_param_0];
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    add.rn.f32 %f2, %f1, 0f3F800000;
-; SM80-NEXT:    cvt.rn.bf16.f32 %rs2, %f2;
-; SM80-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM80-NEXT:    mov.b16 %rs2, 0x3F80;
+; SM80-NEXT:    fma.rn.bf16 %rs3, %rs1, %rs2, %rs2;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fadd_imm_1(
@@ -82,23 +75,14 @@ define bfloat @test_fadd_imm_1(bfloat %a) #0 {
 define <2 x bfloat> @test_fsubx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-LABEL: test_fsubx2(
 ; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<5>;
-; SM80-NEXT:    .reg .b32 %r<4>;
-; SM80-NEXT:    .reg .f32 %f<7>;
+; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_0];
 ; SM80-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_1];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-NEXT:    cvt.f32.bf16 %f2, %rs3;
-; SM80-NEXT:    sub.rn.f32 %f3, %f2, %f1;
-; SM80-NEXT:    cvt.f32.bf16 %f4, %rs2;
-; SM80-NEXT:    cvt.f32.bf16 %f5, %rs4;
-; SM80-NEXT:    sub.rn.f32 %f6, %f5, %f4;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r3, %f6, %f3;
-; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
+; SM80-NEXT:    mov.b32 %r3, -1082081408;
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r3, %r1;
+; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fsubx2(
@@ -118,23 +102,14 @@ define <2 x bfloat> @test_fsubx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 define <2 x bfloat> @test_fmulx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-LABEL: test_fmulx2(
 ; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<5>;
-; SM80-NEXT:    .reg .b32 %r<4>;
-; SM80-NEXT:    .reg .f32 %f<7>;
+; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_0];
-; SM80-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_1];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-NEXT:    cvt.f32.bf16 %f2, %rs3;
-; SM80-NEXT:    mul.rn.f32 %f3, %f2, %f1;
-; SM80-NEXT:    cvt.f32.bf16 %f4, %rs2;
-; SM80-NEXT:    cvt.f32.bf16 %f5, %rs4;
-; SM80-NEXT:    mul.rn.f32 %f6, %f5, %f4;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r3, %f6, %f3;
-; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
+; SM80-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_1];
+; SM80-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_0];
+; SM80-NEXT:    mov.b32 %r3, -2147450880;
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r1, %r3;
+; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fmulx2(
@@ -543,30 +518,16 @@ define <2 x bfloat> @test_fabs(<2 x bfloat> %a) #0 {
 define <2 x bfloat> @test_fabs_add(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-LABEL: test_fabs_add(
 ; SM80:       {
-; SM80-NEXT:    .reg .b16 %rs<7>;
-; SM80-NEXT:    .reg .b32 %r<6>;
-; SM80-NEXT:    .reg .f32 %f<11>;
+; SM80-NEXT:    .reg .b32 %r<7>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_fabs_add_param_1];
 ; SM80-NEXT:    ld.param.b32 %r2, [test_fabs_add_param_0];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-NEXT:    cvt.f32.bf16 %f1, %rs1;
-; SM80-NEXT:    add.rn.f32 %f2, %f1, %f1;
-; SM80-NEXT:    cvt.f32.bf16 %f3, %rs2;
-; SM80-NEXT:    add.rn.f32 %f4, %f3, %f3;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r3, %f4, %f2;
-; SM80-NEXT:    abs.bf16x2 %r4, %r3;
-; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r4;
-; SM80-NEXT:    cvt.f32.bf16 %f5, %rs3;
-; SM80-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; SM80-NEXT:    cvt.f32.bf16 %f6, %rs5;
-; SM80-NEXT:    add.rn.f32 %f7, %f5, %f6;
-; SM80-NEXT:    cvt.f32.bf16 %f8, %rs4;
-; SM80-NEXT:    cvt.f32.bf16 %f9, %rs6;
-; SM80-NEXT:    add.rn.f32 %f10, %f8, %f9;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r5, %f10, %f7;
-; SM80-NEXT:    st.param.b32 [func_retval0], %r5;
+; SM80-NEXT:    mov.b32 %r3, 1065369472;
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r3, %r2;
+; SM80-NEXT:    abs.bf16x2 %r5, %r4;
+; SM80-NEXT:    fma.rn.bf16x2 %r6, %r5, %r3, %r1;
+; SM80-NEXT:    st.param.b32 [func_retval0], %r6;
 ; SM80-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fabs_add(
@@ -802,45 +763,18 @@ define <2 x bfloat> @test_round(<2 x bfloat> %a) #0 {
 }
 
 define <2 x bfloat> @test_copysign(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
-; SM80-LABEL: test_copysign(
-; SM80:       {
-; SM80-NEXT:    .reg .pred %p<3>;
-; SM80-NEXT:    .reg .b16 %rs<15>;
-; SM80-NEXT:    .reg .b32 %r<4>;
-; SM80-EMPTY:
-; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_copysign_param_1];
-; SM80-NEXT:    ld.param.b32 %r2, [test_copysign_param_0];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-NEXT:    abs.bf16 %rs3, %rs2;
-; SM80-NEXT:    neg.bf16 %rs4, %rs3;
-; SM80-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
-; SM80-NEXT:    shr.u16 %rs7, %rs6, 15;
-; SM80-NEXT:    and.b16 %rs8, %rs7, 1;
-; SM80-NEXT:    setp.eq.b16 %p1, %rs8, 1;
-; SM80-NEXT:    selp.b16 %rs9, %rs4, %rs3, %p1;
-; SM80-NEXT:    abs.bf16 %rs10, %rs1;
-; SM80-NEXT:    neg.bf16 %rs11, %rs10;
-; SM80-NEXT:    shr.u16 %rs12, %rs5, 15;
-; SM80-NEXT:    and.b16 %rs13, %rs12, 1;
-; SM80-NEXT:    setp.eq.b16 %p2, %rs13, 1;
-; SM80-NEXT:    selp.b16 %rs14, %rs11, %rs10, %p2;
-; SM80-NEXT:    mov.b32 %r3, {%rs14, %rs9};
-; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
-; SM80-NEXT:    ret;
-;
-; SM90-LABEL: test_copysign(
-; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<6>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
-; SM90-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
-; SM90-NEXT:    and.b32 %r3, %r2, -2147450880;
-; SM90-NEXT:    and.b32 %r4, %r1, 2147450879;
-; SM90-NEXT:    or.b32 %r5, %r4, %r3;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r5;
-; SM90-NEXT:    ret;
+; CHECK-LABEL: test_copysign(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [test_copysign_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_copysign_param_1];
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147450880;
+; CHECK-NEXT:    and.b32 %r4, %r1, 2147450879;
+; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.copysign.f16(<2 x bfloat> %a, <2 x bfloat> %b)
   ret <2 x bfloat> %r
 }

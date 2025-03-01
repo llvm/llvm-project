@@ -300,18 +300,6 @@ T ExitOnFileError(const Twine &FileName, Expected<T> &&E) {
   return std::move(*E);
 }
 
-static const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
-                                                unsigned Opcode) {
-  const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
-  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
-    return "Unsupported opcode: isPseudo/usesCustomInserter";
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return "Unsupported opcode: isBranch/isIndirectBranch";
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return "Unsupported opcode: isCall/isReturn";
-  return nullptr;
-}
-
 // Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
 // and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
@@ -370,7 +358,8 @@ static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
                  const BitVector &ForbiddenRegs) {
   // Ignore instructions that we cannot run.
-  if (const char *Reason = getIgnoredOpcodeReasonOrNull(State, Opcode))
+  if (const char *Reason =
+          State.getExegesisTarget().getIgnoredOpcodeReasonOrNull(State, Opcode))
     return make_error<Failure>(Reason);
 
   const Instruction &Instr = State.getIC().getInstr(Opcode);
@@ -520,7 +509,7 @@ void benchmarkMain() {
   const auto Opcodes = getOpcodesOrDie(State);
   std::vector<BenchmarkCode> Configurations;
 
-  unsigned LoopRegister =
+  MCRegister LoopRegister =
       State.getExegesisTarget().getDefaultLoopCounterRegister(
           State.getTargetMachine().getTargetTriple());
 

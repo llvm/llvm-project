@@ -29,10 +29,16 @@ rax1 z0.d, z0.d, z0.d
 // CHECK: error: instruction requires: sve2-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
-.cpu generic+sve2-bitperm
-.cpu generic+nosve2-bitperm
+.cpu generic+sve2+sve-bitperm
+.cpu generic+sve2+nosve-bitperm
 bgrp z21.s, z10.s, z21.s
-// CHECK: error: instruction requires: sve2-bitperm
+// CHECK: error: instruction requires: sve-bitperm
+// CHECK-NEXT: bgrp z21.s, z10.s, z21.s
+
+.cpu generic+ssve-bitperm
+.cpu generic+nossve-bitperm
+bgrp z21.s, z10.s, z21.s
+// CHECK: error: instruction requires: sve2 or ssve-bitperm sve-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
 .cpu generic+sve2+f8f16mm

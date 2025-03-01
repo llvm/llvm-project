@@ -31,9 +31,9 @@ cl::opt<unsigned> SeedGroupsLimit(
     cl::desc("Limit the number of collected seeds groups in a BB to "
              "cap compilation time."));
 
-MutableArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
-                                                    unsigned MaxVecRegBits,
-                                                    bool ForcePowerOf2) {
+ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
+                                             unsigned MaxVecRegBits,
+                                             bool ForcePowerOf2) {
   // Use uint32_t here for compatibility with IsPowerOf2_32
 
   // BitCount tracks the size of the working slice. From that we can tell
@@ -47,10 +47,13 @@ MutableArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
   // Can't start a slice with a used instruction.
   assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
   for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
+    // Stop if this instruction is used. This needs to be done before
+    // getNumBits() because a "used" instruction may have been erased.
+    if (isUsed(StartIdx + NumElements))
+      break;
     uint32_t InstBits = Utils::getNumBits(S);
-    // Stop if this instruction is used, or if adding it puts the slice over
-    // the limit.
-    if (isUsed(StartIdx + NumElements) || BitCount + InstBits > MaxVecRegBits)
+    // Stop if adding it puts the slice over the limit.
+    if (BitCount + InstBits > MaxVecRegBits)
       break;
     NumElements++;
     BitCount += InstBits;
@@ -64,13 +67,13 @@ MutableArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
     BitCount = BitCountPowerOfTwo;
   }
 
-  assert((!ForcePowerOf2 || isPowerOf2_32(BitCount)) &&
-         "Must be a power of two");
   // Return any non-empty slice
-  if (NumElements > 1)
-    return MutableArrayRef<Instruction *>(&Seeds[StartIdx], NumElements);
-  else
-    return {};
+  if (NumElements > 1) {
+    assert((!ForcePowerOf2 || isPowerOf2_32(BitCount)) &&
+           "Must be a power of two");
+    return ArrayRef<Instruction *>(&Seeds[StartIdx], NumElements);
+  }
+  return {};
 }
 
 template <typename LoadOrStoreT>

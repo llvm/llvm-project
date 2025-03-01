@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @clause_LiteralComputeWeight(ptr %call23) {
 ; CGSCC: Function Attrs: nofree noreturn nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@clause_LiteralComputeWeight
-; CGSCC-SAME: (ptr nocapture nofree nonnull readonly align 8 dereferenceable(8) [[CALL23:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull readonly align 8 captures(none) dereferenceable(8) [[CALL23:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[DO_BODY:%.*]]
 ; CGSCC:       do.body:

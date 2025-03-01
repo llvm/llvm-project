@@ -88,6 +88,15 @@ template <> struct ilist_callback_traits<MachineBasicBlock> {
   }
 };
 
+// The hotness of static data tracked by a MachineFunction and not represented
+// as a global object in the module IR / MIR. Typical examples are
+// MachineJumpTableInfo and MachineConstantPool.
+enum class MachineFunctionDataHotness {
+  Unknown,
+  Cold,
+  Hot,
+};
+
 /// MachineFunctionInfo - This class can be derived from and used by targets to
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
@@ -489,6 +498,11 @@ public:
     SmallVector<ArgRegPair, 1> ArgRegPairs;
   };
 
+  struct CalledGlobalInfo {
+    const GlobalValue *Callee;
+    unsigned TargetFlags;
+  };
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
@@ -500,6 +514,11 @@ private:
   /// A helper function that returns call site info for a give call
   /// instruction if debug entry value support is enabled.
   CallSiteInfoMap::iterator getCallSiteInfo(const MachineInstr *MI);
+
+  using CalledGlobalsMap = DenseMap<const MachineInstr *, CalledGlobalInfo>;
+  /// Mapping of call instruction to the global value and target flags that it
+  /// calls, if applicable.
+  CalledGlobalsMap CalledGlobalsInfo;
 
   // Callbacks for insertion and removal.
   void handleInsertion(MachineInstr &MI);
@@ -899,8 +918,16 @@ public:
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
               raw_ostream *OS = nullptr, bool AbortOnError = true) const;
 
+  /// For New Pass Manager: Run the current MachineFunction through the machine
+  /// code verifier, useful for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(MachineFunctionAnalysisManager &MFAM,
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
+
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
+  /// TODO: Add the param for LiveStacks analysis.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
               const char *Banner = nullptr, raw_ostream *OS = nullptr,
@@ -1182,6 +1209,24 @@ public:
     CatchretTargets.push_back(Target);
   }
 
+  /// Tries to get the global and target flags for a call site, if the
+  /// instruction is a call to a global.
+  CalledGlobalInfo tryGetCalledGlobal(const MachineInstr *MI) const {
+    return CalledGlobalsInfo.lookup(MI);
+  }
+
+  /// Notes the global and target flags for a call site.
+  void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
+    assert(MI && "MI must not be null");
+    assert(Details.Callee && "Global must not be null");
+    CalledGlobalsInfo.insert({MI, Details});
+  }
+
+  /// Iterates over the full set of call sites and their associated globals.
+  auto getCalledGlobals() const {
+    return llvm::make_range(CalledGlobalsInfo.begin(), CalledGlobalsInfo.end());
+  }
+
   /// \name Exception Handling
   /// \{
 
@@ -1358,7 +1403,7 @@ public:
 
   /// Start tracking the arguments passed to the call \p CallI.
   void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
-    assert(CallI->isCandidateForCallSiteEntry());
+    assert(CallI->isCandidateForAdditionalCallInfo());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
     (void)Inserted;
@@ -1374,18 +1419,16 @@ public:
 
   /// Erase the call site info for \p MI. It is used to remove a call
   /// instruction from the instruction stream.
-  void eraseCallSiteInfo(const MachineInstr *MI);
+  void eraseAdditionalCallInfo(const MachineInstr *MI);
   /// Copy the call site info from \p Old to \ New. Its usage is when we are
   /// making a copy of the instruction that will be inserted at different point
   /// of the instruction stream.
-  void copyCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void copyAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.
-  void moveCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
+  void moveAdditionalCallInfo(const MachineInstr *Old, const MachineInstr *New);
 
   unsigned getNewDebugInstrNum() {
     return ++DebugInstrNumberingCount;

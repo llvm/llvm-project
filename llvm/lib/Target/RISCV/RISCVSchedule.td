@@ -237,6 +237,7 @@ def : ReadAdvance<ReadFCvtF16ToI32, 0>;
 def : ReadAdvance<ReadFDiv16, 0>;
 def : ReadAdvance<ReadFCmp16, 0>;
 def : ReadAdvance<ReadFMA16, 0>;
+def : ReadAdvance<ReadFMA16Addend, 0>;
 def : ReadAdvance<ReadFMinMax16, 0>;
 def : ReadAdvance<ReadFMul16, 0>;
 def : ReadAdvance<ReadFSGNJ16, 0>;

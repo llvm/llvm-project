@@ -27,6 +27,12 @@ add_clang_library(clangTidyBugproneModule STATIC
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
+  IncorrectEnableIfCheck.cpp
+  IncorrectEnableSharedFromThisCheck.cpp
+  UnintendedCharOstreamOutputCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectRoundingsCheck.cpp
@@ -42,6 +48,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
+  NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
   NondeterministicPointerIterationOrderCheck.cpp
@@ -95,7 +102,6 @@ add_clang_library(clangTidyBugproneModule STATIC
 
   LINK_LIBS
   clangTidy
-  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
 
   DEPENDS
@@ -112,6 +118,7 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTooling
   clangTransformer
   )

@@ -15,8 +15,8 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_COND_CLEANUP32:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER1:%.*]], !dbg [[DBG21]]
 ; CHECK:       for.cond5.preheader1:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP4:%.*]], [[FOR_COND5_PREHEADER1]] ], !dbg [[DBG21]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]], !dbg [[DBG21]]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP4:%.*]], [[FOR_COND5_PREHEADER1]] ], !dbg [[DBG34:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[H]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> zeroinitializer, <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, <4 x ptr> [[TMP0]], i64 1, !dbg [[DBG22]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 1), <4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true)), !dbg [[DBG22]]
@@ -42,7 +42,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:      #dbg_value(i64 [[I_023]], [[META11]], !DIExpression(), [[META20]])
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER:%.*]], !dbg [[DBG26]]
 ; CHECK:       for.cond5.preheader:
-; CHECK-NEXT:    [[L_022:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC10:%.*]], [[FOR_COND5_PREHEADER]] ]
+; CHECK-NEXT:    [[L_022:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ [[INC10:%.*]], [[FOR_COND5_PREHEADER]] ], !dbg [[DBG34]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[H]], i64 [[L_022]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4, !dbg [[DBG22]]
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, ptr [[TMP10]], i64 1, !dbg [[DBG31:![0-9]+]]
@@ -72,7 +72,7 @@ for.cond1.preheader:                              ; preds = %entry, %for.cond.cl
   br label %for.cond5.preheader, !dbg !22
 
 for.cond5.preheader:                              ; preds = %for.cond1.preheader, %for.cond5.preheader
-  %l.022 = phi i64 [ 0, %for.cond1.preheader ], [ %inc10, %for.cond5.preheader ]
+  %l.022 = phi i64 [ 0, %for.cond1.preheader ], [ %inc10, %for.cond5.preheader ], !dbg !34
   %0 = getelementptr i32, ptr %h, i64 %l.022
   store i32 0, ptr %0, align 4, !dbg !24
   %arrayidx.1 = getelementptr i32, ptr %0, i64 1, !dbg !26
@@ -134,6 +134,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !31 = distinct !{!31, !21, !32, !33}
 !32 = !DILocation(line: 13, column: 13, scope: !12)
 !33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!34 = !DILocation(line: 10, column: 5, scope: !12)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "outer-loop-vect.c", directory: {{.*}})

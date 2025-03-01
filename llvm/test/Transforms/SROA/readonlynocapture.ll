@@ -390,4 +390,20 @@ define i32 @testcallalloca() {
   ret i32 %l1
 }
 
+declare void @callee_byval(ptr byval(i32) %p)
+
+define i32 @simple_byval() {
+; CHECK-LABEL: @simple_byval(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee_byval(ptr [[A]])
+; CHECK-NEXT:    ret i32 0
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @callee_byval(ptr %a)
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

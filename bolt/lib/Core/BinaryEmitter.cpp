@@ -46,13 +46,13 @@ BreakFunctionNames("break-funcs",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::list<std::string>
+static cl::list<std::string>
     FunctionPadSpec("pad-funcs", cl::CommaSeparated,
                     cl::desc("list of functions to pad with amount of bytes"),
                     cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."),
                     cl::Hidden, cl::cat(BoltCategory));
 
-cl::list<std::string> FunctionPadBeforeSpec(
+static cl::list<std::string> FunctionPadBeforeSpec(
     "pad-funcs-before", cl::CommaSeparated,
     cl::desc("list of functions to pad with amount of bytes"),
     cl::value_desc("func1:pad1,func2:pad2,func3:pad3,..."), cl::Hidden,
@@ -74,10 +74,9 @@ X86AlignBranchBoundaryHotOnly("x86-align-branch-boundary-hot-only",
   cl::init(true),
   cl::cat(BoltOptCategory));
 
-size_t padFunction(const cl::list<std::string> &Spec,
+size_t padFunction(std::map<std::string, size_t> &FunctionPadding,
+                   const cl::list<std::string> &Spec,
                    const BinaryFunction &Function) {
-  static std::map<std::string, size_t> FunctionPadding;
-
   if (FunctionPadding.empty() && !Spec.empty()) {
     for (const std::string &Spec : Spec) {
       size_t N = Spec.find(':');
@@ -97,6 +96,15 @@ size_t padFunction(const cl::list<std::string> &Spec,
   }
 
   return 0;
+}
+
+size_t padFunctionBefore(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadBeforeSpec, Function);
+}
+size_t padFunctionAfter(const BinaryFunction &Function) {
+  static std::map<std::string, size_t> CacheFunctionPadding;
+  return padFunction(CacheFunctionPadding, FunctionPadSpec, Function);
 }
 
 } // namespace opts
@@ -324,8 +332,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     Streamer.emitCodeAlignment(Function.getAlign(), &*BC.STI);
   }
 
-  if (size_t Padding =
-          opts::padFunction(opts::FunctionPadBeforeSpec, Function)) {
+  if (size_t Padding = opts::padFunctionBefore(Function)) {
     // Handle padFuncsBefore after the above alignment logic but before
     // symbol addresses are decided.
     if (!BC.HasRelocations) {
@@ -404,7 +411,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   emitFunctionBody(Function, FF, /*EmitCodeOnly=*/false);
 
   // Emit padding if requested.
-  if (size_t Padding = opts::padFunction(opts::FunctionPadSpec, Function)) {
+  if (size_t Padding = opts::padFunctionAfter(Function)) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: padding function " << Function << " with "
                       << Padding << " bytes\n");
     Streamer.emitFill(Padding, MAI->getTextAlignFillValue());

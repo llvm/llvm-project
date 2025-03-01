@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   SPIRVCodeGen
   SPIRVAnalysis
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(SPIRVTests

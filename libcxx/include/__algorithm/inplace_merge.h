@@ -44,17 +44,17 @@ private:
   _Predicate __p_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __invert() {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __invert() {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __invert(_Predicate __p) : __p_(__p) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __invert(_Predicate __p) : __p_(__p) {}
 
   template <class _T1>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _T1& __x) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x) {
     return !__p_(__x);
   }
 
   template <class _T1, class _T2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _T1& __x, const _T2& __y) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x, const _T2& __y) {
     return __p_(__y, __x);
   }
 };
@@ -66,7 +66,7 @@ template <class _AlgPolicy,
           class _InputIterator2,
           class _Sent2,
           class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI void __half_inplace_merge(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __half_inplace_merge(
     _InputIterator1 __first1,
     _Sent1 __last1,
     _InputIterator2 __first2,
@@ -91,7 +91,7 @@ _LIBCPP_HIDE_FROM_ABI void __half_inplace_merge(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI void __buffered_inplace_merge(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __buffered_inplace_merge(
     _BidirectionalIterator __first,
     _BidirectionalIterator __middle,
     _BidirectionalIterator __last,
@@ -122,7 +122,7 @@ _LIBCPP_HIDE_FROM_ABI void __buffered_inplace_merge(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-void __inplace_merge(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
     _BidirectionalIterator __first,
     _BidirectionalIterator __middle,
     _BidirectionalIterator __last,

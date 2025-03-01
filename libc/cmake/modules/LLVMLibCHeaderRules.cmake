@@ -66,6 +66,7 @@ function(add_header target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      HEADER_NAME ${dest_leaf_filename}
       HEADER_FILE_PATH ${dest_file}
       DEPS "${fq_deps_list}"
   )
@@ -75,7 +76,7 @@ function(add_gen_header target_name)
   cmake_parse_arguments(
     "ADD_GEN_HDR"
     "PUBLIC" # No optional arguments
-    "YAML_FILE;DEF_FILE;GEN_HDR" # Single value arguments
+    "YAML_FILE;GEN_HDR" # Single value arguments
     "DEPENDS"     # Multi value arguments
     ${ARGN}
   )
@@ -83,9 +84,6 @@ function(add_gen_header target_name)
   if(NOT LLVM_LIBC_FULL_BUILD)
     add_library(${fq_target_name} INTERFACE)
     return()
-  endif()
-  if(NOT ADD_GEN_HDR_DEF_FILE)
-    message(FATAL_ERROR "`add_gen_hdr` rule requires DEF_FILE to be specified.")
   endif()
   if(NOT ADD_GEN_HDR_GEN_HDR)
     message(FATAL_ERROR "`add_gen_hdr` rule requires GEN_HDR to be specified.")
@@ -97,28 +95,24 @@ function(add_gen_header target_name)
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
   set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
-  set(def_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_DEF_FILE})
-
-  set(fq_data_files "")
-  if(ADD_GEN_HDR_DATA_FILES)
-    foreach(data_file IN LISTS ADD_GEN_HDR_DATA_FILES)
-      list(APPEND fq_data_files "${CMAKE_CURRENT_SOURCE_DIR}/${data_file}")
-    endforeach(data_file)
-  endif()
 
   set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
-  list(TRANSFORM entry_points PREPEND "--e=")
+  list(TRANSFORM entry_points PREPEND "--entry-point=")
 
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/hdrgen/yaml_to_classes.py
-            ${yaml_file}
-            --h_def_file ${def_file}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
+            --output ${out_file}
+            --depfile ${dep_file}
+            --write-if-changed
             ${entry_points}
-            --output_dir ${out_file}
-    DEPENDS ${yaml_file} ${def_file} ${fq_data_files}
-    COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file} and ${def_file}"
+            ${yaml_file}
+    DEPENDS ${yaml_file}
+    DEPFILE ${dep_file}
+    COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
   )
   if(LIBC_TARGET_OS_IS_GPU)
     file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
@@ -126,13 +120,13 @@ function(add_gen_header target_name)
     set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
     add_custom_command(
       OUTPUT ${decl_out_file}
-      COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/hdrgen/yaml_to_classes.py
+      COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/yaml_to_classes.py"
               ${yaml_file}
               --export-decls
               ${entry_points}
               --output_dir ${decl_out_file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${yaml_file} ${fq_data_files}
+      DEPENDS ${yaml_file}
     )
   endif()
 
@@ -164,6 +158,7 @@ function(add_gen_header target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      HEADER_NAME ${ADD_GEN_HDR_GEN_HDR}
       HEADER_FILE_PATH ${out_file}
       DECLS_FILE_PATH "${decl_out_file}"
       DEPS "${fq_deps_list}"

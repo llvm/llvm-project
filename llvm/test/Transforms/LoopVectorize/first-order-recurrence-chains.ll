@@ -654,17 +654,17 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP2]], i32 3
 ; CHECK-NEXT:    store double [[TMP6]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI10:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
 ; CHECK-NEXT:    br i1 true, label %End, label %scalar.ph
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    %bc.resume.val = phi i64 [ 0, %middle.block ], [ 0, %Entry ]
 ; CHECK-NEXT:    phi double [ [[TMP0]], %middle.block ], [ 0.000000e+00, %Entry ]
 ; CHECK-NEXT:    phi double [ [[TMP3]], %middle.block ], [ 0.000000e+00, %Entry ]
 ; CHECK-NEXT:    phi double [ [[VECTOR_RECUR_EXTRACT9]], %middle.block ], [ 0.000000e+00, %Entry ]
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ 1000, %middle.block ], [ 0, %Entry ]
 ; CHECK:      End:
 ; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP0]], %middle.block ]
 ; CHECK-NEXT:    = phi double [ {{.+}}, %Loop ], [ [[TMP3]], %middle.block ]
@@ -684,7 +684,7 @@ Loop:
   %iv.next= add nuw nsw i64 %iv, 1
   %l2 = load double, ptr %b, align 8
   store double %div, ptr %p, align 8
-  %cond = icmp eq i64 %iv.next, 0
+  %cond = icmp eq i64 %iv.next, 1000
   br i1 %cond, label %End, label %Loop
 
 End:

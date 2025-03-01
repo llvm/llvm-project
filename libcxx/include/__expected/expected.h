@@ -459,14 +459,14 @@ class expected : private __expected_base<_Tp, _Err> {
   template <class _Up, class _OtherErr>
   friend class expected;
 
-  using __base = __expected_base<_Tp, _Err>;
+  using __base _LIBCPP_NODEBUG = __expected_base<_Tp, _Err>;
 
 public:
   using value_type      = _Tp;
   using error_type      = _Err;
   using unexpected_type = unexpected<_Err>;
 
-  using __trivially_relocatable =
+  using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
                       expected,
                       void>;
@@ -505,7 +505,7 @@ public:
 
 private:
   template <class _Up, class _OtherErr, class _UfQual, class _OtherErrQual>
-  using __can_convert = _And<
+  using __can_convert _LIBCPP_NODEBUG = _And<
       is_constructible<_Tp, _UfQual>,
       is_constructible<_Err, _OtherErrQual>,
       _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
@@ -1363,7 +1363,7 @@ class expected<_Tp, _Err> : private __expected_void_base<_Err> {
   friend class expected;
 
   template <class _Up, class _OtherErr, class _OtherErrQual>
-  using __can_convert =
+  using __can_convert _LIBCPP_NODEBUG =
       _And< is_void<_Up>,
             is_constructible<_Err, _OtherErrQual>,
             _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
@@ -1371,7 +1371,7 @@ class expected<_Tp, _Err> : private __expected_void_base<_Err> {
             _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
             _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>>>;
 
-  using __base = __expected_void_base<_Err>;
+  using __base _LIBCPP_NODEBUG = __expected_void_base<_Err>;
 
 public:
   using value_type      = _Tp;

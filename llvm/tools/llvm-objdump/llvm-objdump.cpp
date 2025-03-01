@@ -94,7 +94,8 @@ namespace {
 
 class CommonOptTable : public opt::GenericOptTable {
 public:
-  CommonOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
+  CommonOptTable(const StringTable &StrTable,
+                 ArrayRef<StringTable::Offset> PrefixesTable,
                  ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
       : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
@@ -359,7 +360,7 @@ static StringRef ToolName;
 
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
 
-Dumper::Dumper(const object::ObjectFile &O) : O(O) {
+Dumper::Dumper(const object::ObjectFile &O) : O(O), OS(outs()) {
   WarningHandler = [this](const Twine &Msg) {
     if (Warnings.insert(Msg.str()).second)
       reportWarning(Msg, this->O.getFileName());

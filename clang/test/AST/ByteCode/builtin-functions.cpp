@@ -1010,7 +1010,7 @@ namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
                                                        // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
-                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
+                                                       // expected-note {{comparison of addresses of potentially overlapping literals has unspecified value}}
 }
 
 namespace BuiltinInImplicitCtor {
@@ -1244,6 +1244,50 @@ namespace BuiltinMemcpy {
   }
   static_assert(cpyptr());
 
+#ifndef __AVR__
+  constexpr int test_memmove(int a, int b, int n) {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memmove(arr + a, arr + b, n); // both-note {{destination is not a contiguous array of at least 3 elements of type 'int'}}
+    return result(arr);
+  }
+  static_assert(test_memmove(2, 0, 12) == 4234); // both-error {{constant}} \
+                                                 // both-note {{in call}}
+#endif
+
+  struct Trivial { char k; short s; constexpr bool ok() { return k == 3 && s == 4; } };
+  constexpr bool test_trivial() {
+    Trivial arr[3] = {{1, 2}, {3, 4}, {5, 6}};
+    __builtin_memcpy(arr, arr+1, sizeof(Trivial));
+    __builtin_memmove(arr+1, arr, 2 * sizeof(Trivial));
+
+    return arr[0].ok() && arr[1].ok() && arr[2].ok();
+  }
+  static_assert(test_trivial());
+
+  // Check that an incomplete array is rejected.
+  constexpr int test_incomplete_array_type() { // both-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(arr, arr, 4 * sizeof(arr[0]));
+    // both-note@-1 2{{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
+
+
+  /// FIXME: memmove needs to support overlapping memory regions.
+  constexpr bool memmoveOverlapping() {
+    char s1[] {1, 2, 3};
+    __builtin_memmove(s1, s1 + 1, 2 * sizeof(char));
+    // Now: 2, 3, 3
+    bool Result1 = (s1[0] == 2 && s1[1] == 3 && s1[2]== 3);
+
+    __builtin_memmove(s1 + 1, s1, 2 * sizeof(char));
+    // Now: 2, 2, 3
+    bool Result2 = (s1[0] == 2 && s1[1] == 2 && s1[2]== 3);
+
+    return Result1 && Result2;
+  }
+  static_assert(memmoveOverlapping()); // expected-error {{failed}}
 }
 
 namespace Memcmp {

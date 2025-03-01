@@ -671,6 +671,11 @@ class GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
 
+  GOTTableManager(LinkGraph &G) {
+    if ((GOTSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
+
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind KindToSet = Edge::Invalid;
     switch (E.getKind()) {
@@ -721,15 +726,20 @@ private:
     return *GOTSection;
   }
 
+  void registerExistingEntries();
+
   Section *GOTSection = nullptr;
 };
 
 /// Procedure Linkage Table Builder.
 class PLTTableManager : public TableManager<PLTTableManager> {
 public:
-  PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
-
   static StringRef getSectionName() { return "$__STUBS"; }
+
+  PLTTableManager(LinkGraph &G, GOTTableManager &GOT) : GOT(GOT) {
+    if ((StubsSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == x86_64::BranchPCRel32 && !E.getTarget().isDefined()) {
@@ -754,14 +764,16 @@ public:
 
 public:
   Section &getStubsSection(LinkGraph &G) {
-    if (!PLTSection)
-      PLTSection = &G.createSection(getSectionName(),
-                                    orc::MemProt::Read | orc::MemProt::Exec);
-    return *PLTSection;
+    if (!StubsSection)
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
+    return *StubsSection;
   }
 
+  void registerExistingEntries();
+
   GOTTableManager &GOT;
-  Section *PLTSection = nullptr;
+  Section *StubsSection = nullptr;
 };
 
 /// Optimize the GOT and Stub relocations if the edge target address is in range

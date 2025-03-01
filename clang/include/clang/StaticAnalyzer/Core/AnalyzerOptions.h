@@ -124,6 +124,36 @@ enum UserModeKind {
 
 enum class CTUPhase1InliningKind { None, Small, All };
 
+class PositiveAnalyzerOption {
+public:
+  constexpr PositiveAnalyzerOption() = default;
+  constexpr PositiveAnalyzerOption(unsigned Value) : Value(Value) {
+    assert(Value > 0 && "only positive values are accepted");
+  }
+  constexpr PositiveAnalyzerOption(const PositiveAnalyzerOption &) = default;
+  constexpr PositiveAnalyzerOption &
+  operator=(const PositiveAnalyzerOption &Other) {
+    Value = Other.Value;
+    return *this;
+  }
+
+  static constexpr std::optional<PositiveAnalyzerOption> create(unsigned Val) {
+    if (Val == 0)
+      return std::nullopt;
+    return PositiveAnalyzerOption{Val};
+  }
+  static std::optional<PositiveAnalyzerOption> create(StringRef Str) {
+    unsigned Parsed = 0;
+    if (Str.getAsInteger(0, Parsed))
+      return std::nullopt;
+    return PositiveAnalyzerOption::create(Parsed);
+  }
+  constexpr operator unsigned() const { return Value; }
+
+private:
+  unsigned Value = 1;
+};
+
 /// Stores options for the analyzer from the command line.
 ///
 /// Some options are frontend flags (e.g.: -analyzer-output), but some are

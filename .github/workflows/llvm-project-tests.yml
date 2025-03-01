@@ -39,7 +39,12 @@ on:
         type: string
         # Use windows-2019 due to:
         # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-        default: '["ubuntu-latest", "windows-2019", "macOS-13"]'
+        # Use ubuntu-22.04 rather than ubuntu-latest to match the ubuntu
+        # version in the CI container. Without this, setup-python tries
+        # to install a python version linked against a newer version of glibc.
+        # TODO(boomanaiden154): Bump the Ubuntu version once the version in the
+        # container is bumped.
+        default: '["ubuntu-22.04", "windows-2019", "macOS-13"]'
 
       python_version:
         required: false
@@ -113,7 +118,8 @@ jobs:
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
             builddir="/mnt/build/"
-            mkdir -p $builddir
+            sudo mkdir -p $builddir
+            sudo chown gha $builddir
             extra_cmake_args="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
           else
             builddir="$(pwd)"/build

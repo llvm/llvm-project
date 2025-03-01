@@ -4,6 +4,7 @@ import("//third-party/unittest/unittest.gni")
 unittest("CoreTests") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
+    "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Core",
     "//bolt/lib/Rewrite",
     "//bolt/lib/Profile",

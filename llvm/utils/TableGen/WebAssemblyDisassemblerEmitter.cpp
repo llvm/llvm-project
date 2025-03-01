@@ -75,7 +75,7 @@ void llvm::emitWebAssemblyDisassemblerTables(
       }
     }
     // Set this instruction as the one to use.
-    CGIP = std::pair(I, &CGI);
+    CGIP = {I, &CGI};
   }
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";

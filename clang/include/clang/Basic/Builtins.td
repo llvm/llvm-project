@@ -521,6 +521,12 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
+def Sincospi : Builtin, FPMathTemplate {
+  let Spellings = ["__builtin_sincospi"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
@@ -837,6 +843,12 @@ def BuiltinAssumeAligned : Builtin {
   let Spellings = ["__builtin_assume_aligned"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void*(void const*, size_t, ...)";
+}
+
+def BuiltinAssumeDereferenceable : Builtin {
+  let Spellings = ["__builtin_assume_dereferenceable"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(void const*, _Constant size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -1977,16 +1989,16 @@ def AtomicNandFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
-def AtomicTestAndSet : Builtin {
+def AtomicTestAndSet : AtomicBuiltin {
   let Spellings = ["__atomic_test_and_set"];
-  let Attributes = [NoThrow];
-  let Prototype = "bool(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "bool(...)";
 }
 
-def AtomicClear : Builtin {
+def AtomicClear : AtomicBuiltin {
   let Spellings = ["__atomic_clear"];
-  let Attributes = [NoThrow];
-  let Prototype = "void(void volatile*, int)";
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 def AtomicThreadFence : Builtin {
@@ -3347,10 +3359,12 @@ def VFork : LibBuiltin<"unistd.h"> {
 }
 
 // POSIX pthread.h
-// FIXME: This should be a GNULibBuiltin, but it's currently missing the prototype.
 
-def PthreadCreate : CustomEntry {
-  let Entry = "LIBBUILTIN(pthread_create, \"\",  \"fC<2,3>\", PTHREAD_H, ALL_GNU_LANGUAGES)";
+def PthreadCreate : GNULibBuiltin<"pthread.h"> {
+  let Spellings = ["pthread_create"];
+  let Attributes = [FunctionWithoutBuiltinPrefix, Callback<[2, 3]>];
+  // Note that we don't have an expressable prototype so we leave it empty.
+  let Prototype = "";
 }
 
 def SigSetJmp : LibBuiltin<"setjmp.h"> {
@@ -3566,6 +3580,19 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def Sincos : FPMathTemplate, GNULibBuiltin<"math.h"> {
+  let Spellings = ["sincos"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(T, T*, T*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def SincosF16F128 : F16F128MathTemplate, Builtin {
+  let Spellings = ["__builtin_sincos"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
 }
 
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4750,6 +4777,18 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(...)";
 }
 
+def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];
@@ -4778,6 +4817,18 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveActiveMax : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_max"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
+def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
 }
 
 def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
@@ -4840,6 +4891,12 @@ def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLFirstBitLow : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbitlow"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
   let Attributes = [NoThrow, Const];
@@ -4848,12 +4905,6 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
-def HLSLLength : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

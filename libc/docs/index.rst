@@ -12,7 +12,8 @@ The LLVM C Library
   LLVM-libc is not fully complete right now. Some programs may fail to build due
   to missing functions. If you would like to help us finish LLVM-libc, check
   out "`Contributing to the libc project <contributing.html>`__" in the sidebar
-  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__.
+  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__
+  (`invite link <https://discord.gg/xS7Z362>`__).
 
 Introduction
 ============
@@ -38,31 +39,31 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
 
 .. toctree::
    :hidden:
-   :maxdepth: 2
-   :caption: Using
-
-   usage_modes
-   overlay_mode
-   fullbuild_mode
-   configure
-   gpu/index.rst
-
-.. toctree::
-   :hidden:
    :maxdepth: 1
-   :caption: Status
+   :caption: Status & Support
 
    headers/index.rst
-   c23
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: Support
-
    arch_support
    platform_support
    compiler_support
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Simple Usage
+
+   getting_started
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Advanced Usage
+
+   full_host_build
+   full_cross_build
+   overlay_mode
+   gpu/index.rst
+   configure
 
 .. toctree::
    :hidden:
@@ -73,13 +74,13 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
    dev/index.rst
    porting
    contributing
-   talks
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: External Links
+   :caption: Useful Links
 
+   talks
    Source Code <https://github.com/llvm/llvm-project/tree/main/libc>
    Bug Reports <https://github.com/llvm/llvm-project/labels/libc>
    Discourse <https://discourse.llvm.org/c/runtimes/libc>

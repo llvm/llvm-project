@@ -203,6 +203,15 @@ bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                             const APInt &DemandedElts, APInt &DemandedLHS,
                             APInt &DemandedRHS, bool AllowUndefElts = false);
 
+/// Does this shuffle mask represent either one slide shuffle or a pair of
+/// two slide shuffles, combined with a select on some constant vector mask?
+/// A slide is a shuffle mask which shifts some set of elements up or down
+/// the vector, with all other elements being undefined.  An identity shuffle
+/// will be matched a slide by 0.  The output parameter provides the source
+/// (-1 means no source), and slide direction for each slide.
+bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                       std::array<std::pair<int, int>, 2> &SrcInfo);
+
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.
@@ -235,10 +244,17 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// A variant of the previous method which is specialized for Scale=2, and
+/// treats -1 as undef and allows widening when a wider element is partially
+/// undef in the narrow form of the mask.  This transformation discards
+/// information about which bytes in the original shuffle were undef.
+bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
+
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
-/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
-/// Returns false on failure, and ScaledMask will be in an undefined state.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or
+/// vice-versa). Returns false on failure, and ScaledMask will be in an
+/// undefined state.
 bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
@@ -263,7 +279,8 @@ void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction);
 
 /// Compute the demanded elements mask of horizontal binary operations. A
 /// horizontal operation combines two adjacent elements in a vector operand.
@@ -740,12 +757,11 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    assert(!InterleaveGroupMap.count(Instr) &&
-           "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
-    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
-    return InterleaveGroupMap[Instr];
+    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    assert(Inserted && "Already in an interleaved access group");
+    It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
+    InterleaveGroups.insert(It->second);
+    return It->second;
   }
 
   /// Release the group and remove all the relationships.

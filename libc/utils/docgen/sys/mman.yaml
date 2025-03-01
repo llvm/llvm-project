@@ -1,77 +1,77 @@
 functions:
   mlock:
-    posix-definition: ''
+    in-latest-posix: ''
   mlockall:
-    posix-definition: ''
+    in-latest-posix: ''
   mmap:
-    posix-definition: ''
+    in-latest-posix: ''
   mprotect:
-    posix-definition: ''
+    in-latest-posix: ''
   msync:
-    posix-definition: ''
+    in-latest-posix: ''
   munlock:
-    posix-definition: ''
+    in-latest-posix: ''
   munlockall:
-    posix-definition: ''
+    in-latest-posix: ''
   munmap:
-    posix-definition: ''
+    in-latest-posix: ''
   posix_madvise:
-    posix-definition: ''
+    in-latest-posix: ''
   posix_mem_offset:
-    posix-definition: ''
+    in-latest-posix: ''
   posix_typed_mem_get_info:
-    posix-definition: ''
+    in-latest-posix: ''
   posix_typed_mem_open:
-    posix-definition: ''
+    in-latest-posix: ''
   shm_open:
-    posix-definition: ''
+    in-latest-posix: ''
   shm_unlink:
-    posix-definition: ''
+    in-latest-posix: ''
 macros:
   MAP_ANON:
-    posix-definition: ''
+    in-latest-posix: ''
   MAP_ANONYMOUS:
-    posix-definition: ''
+    in-latest-posix: ''
   MAP_FAILED:
-    posix-definition: ''
+    in-latest-posix: ''
   MAP_FIXED:
-    posix-definition: ''
+    in-latest-posix: ''
   MAP_PRIVATE:
-    posix-definition: ''
+    in-latest-posix: ''
   MAP_SHARED:
-    posix-definition: ''
+    in-latest-posix: ''
   MCL_CURRENT:
-    posix-definition: ''
+    in-latest-posix: ''
   MCL_FUTURE:
-    posix-definition: ''
+    in-latest-posix: ''
   MS_ASYNC:
-    posix-definition: ''
+    in-latest-posix: ''
   MS_INVALIDATE:
-    posix-definition: ''
+    in-latest-posix: ''
   MS_SYNC:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_MADV_DONTNEED:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_MADV_NORMAL:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_MADV_RANDOM:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_MADV_SEQUENTIAL:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_MADV_WILLNEED:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_TYPED_MEM_ALLOCATE:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_TYPED_MEM_ALLOCATE_CONTIG:
-    posix-definition: ''
+    in-latest-posix: ''
   POSIX_TYPED_MEM_MAP_ALLOCATABLE:
-    posix-definition: ''
+    in-latest-posix: ''
   PROT_EXEC:
-    posix-definition: ''
+    in-latest-posix: ''
   PROT_NONE:
-    posix-definition: ''
+    in-latest-posix: ''
   PROT_READ:
-    posix-definition: ''
+    in-latest-posix: ''
   PROT_WRITE:
-    posix-definition: ''
+    in-latest-posix: ''
 

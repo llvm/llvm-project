@@ -170,10 +170,10 @@ struct BlockData {
   // Indicates if the block uses VXRM. Uninitialized means no use.
   VXRMInfo VXRMUse;
 
-  // Indicates the VXRM output from the block. Unitialized means transparent.
+  // Indicates the VXRM output from the block. Uninitialized means transparent.
   VXRMInfo VXRMOut;
 
-  // Keeps track of the available VXRM value at the start of the basic bloc.
+  // Keeps track of the available VXRM value at the start of the basic block.
   VXRMInfo AvailableIn;
 
   // Keeps track of the available VXRM value at the end of the basic block.
@@ -384,8 +384,8 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
             PInfo.AvailableOut.getVXRMImm() ==
                 BBInfo.AnticipatedIn.getVXRMImm())
           continue;
-        // If the predecessor anticipates this value for all its succesors,
-        // then a write to VXRM would have already occured before this block is
+        // If the predecessor anticipates this value for all its successors,
+        // then a write to VXRM would have already occurred before this block is
         // executed.
         if (PInfo.AnticipatedOut.isStatic() &&
             PInfo.AnticipatedOut.getVXRMImm() ==
@@ -429,7 +429,7 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   // If all our successors anticipate a value, do the insert.
   // NOTE: It's possible that not all predecessors of our successor provide the
   // correct value. This can occur on critical edges. If we don't split the
-  // critical edge we'll also have a write vxrm in the succesor that is
+  // critical edge we'll also have a write vxrm in the successor that is
   // redundant with this one.
   if (PendingInsert ||
       (BBInfo.AnticipatedOut.isStatic() &&

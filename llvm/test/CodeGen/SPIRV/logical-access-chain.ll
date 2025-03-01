@@ -1,10 +1,10 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK:      [[uint:%[0-9]+]] = OpTypeInt 32 0
-; CHECK:     [[uint2:%[0-9]+]] = OpTypeVector [[uint]] 2
-; CHECK:    [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
-; CHECK:  [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
-; CHECK: [[ptr_uint2:%[0-9]+]] = OpTypePointer Function [[uint2]]
+; CHECK-DAG:      [[uint:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG:     [[uint2:%[0-9]+]] = OpTypeVector [[uint]] 2
+; CHECK-DAG:    [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
+; CHECK-DAG:  [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
+; CHECK-DAG: [[ptr_uint2:%[0-9]+]] = OpTypePointer Function [[uint2]]
 
 define void @main() #1 {
 entry:

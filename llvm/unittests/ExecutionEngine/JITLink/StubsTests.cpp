@@ -58,7 +58,7 @@ TEST(StubsTest, StubsGeneration_x86_64) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, x86_64::Pointer64);
 
@@ -79,7 +79,7 @@ TEST(StubsTest, StubsGeneration_aarch64) {
       0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
   };
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("aarch64-linux-gnu"), 8, llvm::endianness::little,
+              Triple("aarch64-linux-gnu"), SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, aarch64::Pointer64);
 
@@ -100,7 +100,7 @@ TEST(StubsTest, StubsGeneration_i386) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("i386-unknown-linux-gnu"), 8, llvm::endianness::little,
+              Triple("i386-unknown-linux-gnu"), SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
 
@@ -130,7 +130,7 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x4c // jr $t8
   };
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("loongarch32"), 4, llvm::endianness::little,
+              Triple("loongarch32"), SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, loongarch::Pointer32);
 
@@ -162,8 +162,9 @@ TEST(StubsTest, StubsGeneration_loongarch64) {
       0x00,
       0x4c // jr $t8
   };
+
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("loongarch64"), 8, llvm::endianness::little,
+              Triple("loongarch64"), SubtargetFeatures(),
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, loongarch::Pointer64);
 

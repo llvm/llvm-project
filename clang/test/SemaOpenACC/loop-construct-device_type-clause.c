@@ -92,8 +92,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) detach(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) device(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'deviceptr' clause is not valid on 'loop' directive}}
@@ -106,8 +105,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) firstprivate(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) host(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'link' may not follow a 'device_type' clause in a 'loop' construct}}
@@ -173,8 +171,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) device_num(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) default_async(1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'async' clause is not valid on 'loop' directive}}

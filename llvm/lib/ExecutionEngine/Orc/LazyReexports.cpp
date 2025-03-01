@@ -280,31 +280,34 @@ private:
   std::mutex M;
 };
 
+LazyReexportsManager::Listener::~Listener() = default;
+
 Expected<std::unique_ptr<LazyReexportsManager>>
 LazyReexportsManager::Create(EmitTrampolinesFn EmitTrampolines,
                              RedirectableSymbolManager &RSMgr,
-                             JITDylib &PlatformJD) {
+                             JITDylib &PlatformJD, Listener *L) {
   Error Err = Error::success();
   std::unique_ptr<LazyReexportsManager> LRM(new LazyReexportsManager(
-      std::move(EmitTrampolines), RSMgr, PlatformJD, Err));
+      std::move(EmitTrampolines), RSMgr, PlatformJD, L, Err));
   if (Err)
     return std::move(Err);
   return std::move(LRM);
 }
 
 Error LazyReexportsManager::handleRemoveResources(JITDylib &JD, ResourceKey K) {
-  JD.getExecutionSession().runSessionLocked([&]() {
+  return JD.getExecutionSession().runSessionLocked([&]() -> Error {
     auto I = KeyToReentryAddrs.find(K);
-    if (I != KeyToReentryAddrs.end()) {
-      auto &ReentryAddrs = I->second;
-      for (auto &ReentryAddr : ReentryAddrs) {
-        assert(CallThroughs.count(ReentryAddr) && "CallTrhough missing");
-        CallThroughs.erase(ReentryAddr);
-      }
-      KeyToReentryAddrs.erase(I);
+    if (I == KeyToReentryAddrs.end())
+      return Error::success();
+
+    auto &ReentryAddrs = I->second;
+    for (auto &ReentryAddr : ReentryAddrs) {
+      assert(CallThroughs.count(ReentryAddr) && "CallTrhough missing");
+      CallThroughs.erase(ReentryAddr);
     }
+    KeyToReentryAddrs.erase(I);
+    return L ? L->onLazyReexportsRemoved(JD, K) : Error::success();
   });
-  return Error::success();
 }
 
 void LazyReexportsManager::handleTransferResources(JITDylib &JD,
@@ -323,14 +326,17 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
       DstAddrs.insert(DstAddrs.end(), SrcAddrs.begin(), SrcAddrs.end());
       KeyToReentryAddrs.erase(I);
     }
+    if (L)
+      L->onLazyReexportsTransfered(JD, DstK, SrcK);
   }
 }
 
 LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
                                            RedirectableSymbolManager &RSMgr,
-                                           JITDylib &PlatformJD, Error &Err)
+                                           JITDylib &PlatformJD, Listener *L,
+                                           Error &Err)
     : ES(PlatformJD.getExecutionSession()),
-      EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr) {
+      EmitTrampolines(std::move(EmitTrampolines)), RSMgr(RSMgr), L(L) {
 
   using namespace shared;
 
@@ -381,20 +387,25 @@ void LazyReexportsManager::emitRedirectableSymbols(
   SymbolMap Redirs;
   size_t I = 0;
   for (auto &[Name, AI] : Reexports)
-    Redirs[Name] = (*ReentryPoints)[I++];
+    Redirs[Name] = {(*ReentryPoints)[I++].getAddress(), AI.AliasFlags};
 
   I = 0;
-  if (auto Err = MR->withResourceKeyDo([&](ResourceKey K) {
-        for (auto &[Name, AI] : Reexports) {
-          const auto &ReentryPoint = (*ReentryPoints)[I++];
-          CallThroughs[ReentryPoint.getAddress()] = {Name, AI.Aliasee,
-                                                     &MR->getTargetJITDylib()};
-          KeyToReentryAddrs[K].push_back(ReentryPoint.getAddress());
-        }
-      })) {
-    MR->getExecutionSession().reportError(std::move(Err));
-    MR->failMaterialization();
-    return;
+  if (!Reexports.empty()) {
+    if (auto Err = MR->withResourceKeyDo([&](ResourceKey K) {
+          auto &JD = MR->getTargetJITDylib();
+          auto &ReentryAddrsForK = KeyToReentryAddrs[K];
+          for (auto &[Name, AI] : Reexports) {
+            const auto &ReentryPoint = (*ReentryPoints)[I++];
+            CallThroughs[ReentryPoint.getAddress()] = {&JD, Name, AI.Aliasee};
+            ReentryAddrsForK.push_back(ReentryPoint.getAddress());
+          }
+          if (L)
+            L->onLazyReexportsCreated(JD, K, Reexports);
+        })) {
+      MR->getExecutionSession().reportError(std::move(Err));
+      MR->failMaterialization();
+      return;
+    }
   }
 
   RSMgr.emitRedirectableSymbols(std::move(MR), std::move(Redirs));
@@ -415,6 +426,9 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
     LandingInfo = I->second;
   });
 
+  if (L)
+    L->onLazyReexportCalled(LandingInfo);
+
   SymbolInstance LandingSym(LandingInfo.JD, std::move(LandingInfo.BodyName));
   LandingSym.lookupAsync([this, JD = std::move(LandingInfo.JD),
                           ReentryName = std::move(LandingInfo.Name),
@@ -430,6 +444,169 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
     } else
       SendResult(std::move(Result));
   });
+}
+
+class SimpleLazyReexportsSpeculator::SpeculateTask : public IdleTask {
+public:
+  SpeculateTask(std::weak_ptr<SimpleLazyReexportsSpeculator> Speculator)
+      : Speculator(std::move(Speculator)) {}
+
+  void printDescription(raw_ostream &OS) override {
+    OS << "Speculative Lookup Task";
+  }
+
+  void run() override {
+    if (auto S = Speculator.lock())
+      S->doNextSpeculativeLookup();
+  }
+
+private:
+  std::weak_ptr<SimpleLazyReexportsSpeculator> Speculator;
+};
+
+SimpleLazyReexportsSpeculator::~SimpleLazyReexportsSpeculator() {
+  for (auto &[JD, _] : LazyReexports)
+    JITDylibSP(JD)->Release();
+}
+
+void SimpleLazyReexportsSpeculator::onLazyReexportsCreated(
+    JITDylib &JD, ResourceKey K, const SymbolAliasMap &Reexports) {
+  if (!LazyReexports.count(&JD))
+    JD.Retain();
+  auto &BodiesVec = LazyReexports[&JD][K];
+  for (auto &[Name, AI] : Reexports)
+    BodiesVec.push_back(AI.Aliasee);
+  if (!SpeculateTaskActive) {
+    SpeculateTaskActive = true;
+    ES.dispatchTask(std::make_unique<SpeculateTask>(WeakThis));
+  }
+}
+
+void SimpleLazyReexportsSpeculator::onLazyReexportsTransfered(
+    JITDylib &JD, ResourceKey DstK, ResourceKey SrcK) {
+
+  auto I = LazyReexports.find(&JD);
+  if (I == LazyReexports.end())
+    return;
+
+  auto &MapForJD = I->second;
+  auto J = MapForJD.find(SrcK);
+  if (J == MapForJD.end())
+    return;
+
+  // We have something to transfer.
+  auto K = MapForJD.find(DstK);
+  if (K == MapForJD.end()) {
+    auto Tmp = std::move(J->second);
+    MapForJD.erase(J);
+    MapForJD[DstK] = std::move(Tmp);
+  } else {
+    auto &SrcNames = J->second;
+    auto &DstNames = K->second;
+    DstNames.insert(DstNames.end(), SrcNames.begin(), SrcNames.end());
+    MapForJD.erase(J);
+  }
+}
+
+Error SimpleLazyReexportsSpeculator::onLazyReexportsRemoved(JITDylib &JD,
+                                                            ResourceKey K) {
+
+  auto I = LazyReexports.find(&JD);
+  if (I == LazyReexports.end())
+    return Error::success();
+
+  auto &MapForJD = I->second;
+  MapForJD.erase(K);
+
+  if (MapForJD.empty()) {
+    LazyReexports.erase(I);
+    JD.Release();
+  }
+
+  return Error::success();
+}
+
+void SimpleLazyReexportsSpeculator::onLazyReexportCalled(
+    const CallThroughInfo &CTI) {
+  if (RecordExec)
+    RecordExec(CTI);
+}
+
+void SimpleLazyReexportsSpeculator::addSpeculationSuggestions(
+    std::vector<std::pair<std::string, SymbolStringPtr>> NewSuggestions) {
+  ES.runSessionLocked([&]() {
+    for (auto &[JDName, SymbolName] : NewSuggestions)
+      SpeculateSuggestions.push_back(
+          {std::move(JDName), std::move(SymbolName)});
+  });
+}
+
+bool SimpleLazyReexportsSpeculator::doNextSpeculativeLookup() {
+  // Use existing speculation queue if available, otherwise take the next
+  // element from LazyReexports.
+  JITDylibSP SpeculateJD = nullptr;
+  SymbolStringPtr SpeculateFn;
+
+  auto SpeculateAgain = ES.runSessionLocked([&]() {
+    while (!SpeculateSuggestions.empty()) {
+      auto [JDName, SymbolName] = std::move(SpeculateSuggestions.front());
+      SpeculateSuggestions.pop_front();
+
+      if (auto *JD = ES.getJITDylibByName(JDName)) {
+        SpeculateJD = JD;
+        SpeculateFn = std::move(SymbolName);
+        break;
+      }
+    }
+
+    if (!SpeculateJD) {
+      assert(!LazyReexports.empty() && "LazyReexports map is empty");
+      auto LRItr =
+          std::next(LazyReexports.begin(), rand() % LazyReexports.size());
+      auto &[JD, KeyToFnBodies] = *LRItr;
+
+      assert(!KeyToFnBodies.empty() && "Key to function bodies map empty");
+      auto KeyToFnBodiesItr =
+          std::next(KeyToFnBodies.begin(), rand() % KeyToFnBodies.size());
+      auto &[Key, FnBodies] = *KeyToFnBodiesItr;
+
+      assert(!FnBodies.empty() && "Function bodies list empty");
+      auto FnBodyItr = std::next(FnBodies.begin(), rand() % FnBodies.size());
+
+      SpeculateJD = JITDylibSP(JD);
+      SpeculateFn = std::move(*FnBodyItr);
+
+      FnBodies.erase(FnBodyItr);
+      if (FnBodies.empty()) {
+        KeyToFnBodies.erase(KeyToFnBodiesItr);
+        if (KeyToFnBodies.empty()) {
+          LRItr->first->Release();
+          LazyReexports.erase(LRItr);
+        }
+      }
+    }
+
+    SpeculateTaskActive =
+        !SpeculateSuggestions.empty() || !LazyReexports.empty();
+    return SpeculateTaskActive;
+  });
+
+  LLVM_DEBUG({
+    dbgs() << "Issuing speculative lookup for ( " << SpeculateJD->getName()
+           << ", " << SpeculateFn << " )...\n";
+  });
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(SpeculateJD.get()),
+      {{std::move(SpeculateFn), SymbolLookupFlags::WeaklyReferencedSymbol}},
+      SymbolState::Ready,
+      [](Expected<SymbolMap> Result) { consumeError(Result.takeError()); },
+      NoDependenciesToRegister);
+
+  if (SpeculateAgain)
+    ES.dispatchTask(std::make_unique<SpeculateTask>(WeakThis));
+
+  return false;
 }
 
 } // End namespace orc.

@@ -7031,18 +7031,18 @@ define <4 x double> @test_mask_vfmadd256_pd_rmkz(<4 x double> %a0, <4 x double> 
 define <8 x i32> @combine_vpermi2d_vpermps(<16 x i32> noundef %a) {
 ; X86-LABEL: combine_vpermi2d_vpermps:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovaps {{.*#+}} ymm1 = [14,13,6,3,5,15,0,1]
-; X86-NEXT:    # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x0d,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [14,13,6,3,5,15,0,1]
+; X86-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x21,0x0d,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-NEXT:    vpermps %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0x16,0xc0]
 ; X86-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: combine_vpermi2d_vpermps:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [14,13,6,3,5,15,0,1]
-; X64-NEXT:    # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x0d,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [14,13,6,3,5,15,0,1]
+; X64-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x21,0x0d,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    vpermps %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0x16,0xc0]
 ; X64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; X64-NEXT:    retq # encoding: [0xc3]

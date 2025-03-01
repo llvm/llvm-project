@@ -1,3 +1,5 @@
+#include <clc/clcfunc.h>
+#include <clc/clctypes.h>
 
 #define __CLC_FLOATN float
 #define __CLC_INTN int

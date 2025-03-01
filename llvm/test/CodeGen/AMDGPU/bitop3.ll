@@ -52,8 +52,7 @@ define amdgpu_ps float @not_and_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: not_and_and_and:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v0, v0
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
@@ -103,8 +102,7 @@ define amdgpu_ps float @and_and_not_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: and_and_not_and:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v2, v2
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0x30
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
   %notc = xor i32 %c, -1
@@ -122,8 +120,7 @@ define amdgpu_ps float @and_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: and_and_and:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
   %and1 = and i32 %a, %c
   %and2 = and i32 %and1, %b
@@ -141,8 +138,7 @@ define amdgpu_ps float @test_12(i32 %a, i32 %b) {
 ;
 ; GFX950-GISEL-LABEL: test_12:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v0, v0
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %and1 = and i32 %nota, %b
@@ -214,9 +210,11 @@ define amdgpu_ps float @test_12_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: test_12_src_overflow:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v0, v0
-; GFX950-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, v0
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_not_b32_e32 v3, v0
+; GFX950-GISEL-NEXT:    v_not_b32_e32 v4, v2
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
+; GFX950-GISEL-NEXT:    v_and_b32_e32 v2, v3, v4
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc8
 ; GFX950-GISEL-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notc = xor i32 %c, -1
@@ -242,11 +240,9 @@ define amdgpu_ps float @test_100_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX950-GISEL-LABEL: test_100_src_overflow:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_or_b32_e32 v3, v2, v0
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v3, v3
-; GFX950-GISEL-NEXT:    v_not_b32_e32 v4, v1
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v3, v2, v0, v2 bitop3:3
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v3, v1, v3
-; GFX950-GISEL-NEXT:    v_and_b32_e32 v4, v0, v4
+; GFX950-GISEL-NEXT:    v_bitop3_b32 v4, v0, v1, v0 bitop3:0x30
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, v1, v0
 ; GFX950-GISEL-NEXT:    v_not_b32_e32 v1, v2
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v4, v4, v2

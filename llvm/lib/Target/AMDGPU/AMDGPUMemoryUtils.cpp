@@ -141,8 +141,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   FunctionVariableMap DirectMapFunction;
   getUsesOfLDSByFunction(CG, M, DirectMapKernel, DirectMapFunction);
 
-  // Collect variables that are used by functions whose address has escaped
-  DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
+  // Collect functions whose address has escaped
+  DenseSet<Function *> AddressTakenFuncs;
   for (Function &F : M.functions()) {
     if (!isKernelLDS(&F))
       if (F.hasAddressTaken(nullptr,
@@ -150,9 +150,14 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
                             /* IgnoreAssumeLikeCalls */ false,
                             /* IgnoreLLVMUsed */ true,
                             /* IgnoreArcAttachedCall */ false)) {
-        set_union(VariablesReachableThroughFunctionPointer,
-                  DirectMapFunction[&F]);
+        AddressTakenFuncs.insert(&F);
       }
+  }
+
+  // Collect variables that are used by functions whose address has escaped
+  DenseSet<GlobalVariable *> VariablesReachableThroughFunctionPointer;
+  for (Function *F : AddressTakenFuncs) {
+    set_union(VariablesReachableThroughFunctionPointer, DirectMapFunction[F]);
   }
 
   auto FunctionMakesUnknownCall = [&](const Function *F) -> bool {
@@ -206,6 +211,13 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     }
   }
 
+  // Collect variables that are transitively used by functions whose address has
+  // escaped
+  for (Function *F : AddressTakenFuncs) {
+    set_union(VariablesReachableThroughFunctionPointer,
+              TransitiveMapFunction[F]);
+  }
+
   // DirectMapKernel lists which variables are used by the kernel
   // find the variables which are used through a function call
   FunctionVariableMap IndirectMapKernel;
@@ -218,10 +230,36 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
       Function *Ith = R.second->getFunction();
       if (Ith) {
         set_union(IndirectMapKernel[&Func], TransitiveMapFunction[Ith]);
-      } else {
-        set_union(IndirectMapKernel[&Func],
-                  VariablesReachableThroughFunctionPointer);
       }
+    }
+
+    // Check if the kernel encounters unknows calls, wheher directly or
+    // indirectly.
+    bool SeesUnknownCalls = [&]() {
+      SmallVector<Function *> WorkList = {CG[&Func]->getFunction()};
+      SmallPtrSet<Function *, 8> Visited;
+
+      while (!WorkList.empty()) {
+        Function *F = WorkList.pop_back_val();
+
+        for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
+          if (!CallRecord.second)
+            continue;
+
+          Function *Callee = CallRecord.second->getFunction();
+          if (!Callee)
+            return true;
+
+          if (Visited.insert(Callee).second)
+            WorkList.push_back(Callee);
+        }
+      }
+      return false;
+    }();
+
+    if (SeesUnknownCalls) {
+      set_union(IndirectMapKernel[&Func],
+                VariablesReachableThroughFunctionPointer);
     }
   }
 
@@ -326,10 +364,10 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:
+    case Intrinsic::amdgcn_iglp_opt:
       return false;
     default:
       break;

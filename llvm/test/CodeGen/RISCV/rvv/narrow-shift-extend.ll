@@ -142,10 +142,9 @@ entry:
 define <vscale x 4 x i32> @test_vloxei7(ptr %ptr, <vscale x 4 x i1> %offset, i64 %vl) {
 ; CHECK-LABEL: test_vloxei7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; CHECK-NEXT:    vsll.vi v12, v8, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vloxei64.v v8, (a0), v12

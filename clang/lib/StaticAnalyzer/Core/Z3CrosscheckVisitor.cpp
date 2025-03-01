@@ -21,6 +21,10 @@
 
 #define DEBUG_TYPE "Z3CrosscheckOracle"
 
+// Queries attempted at most `Z3CrosscheckMaxAttemptsPerQuery` number of times.
+// Multiple `check()` calls might be called on the same query if previous
+// attempts of the same query resulted in UNSAT for any reason. Each query is
+// only counted once for these statistics, the retries are not accounted for.
 STATISTIC(NumZ3QueriesDone, "Number of Z3 queries done");
 STATISTIC(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
 STATISTIC(NumTimesZ3ExhaustedRLimit,
@@ -77,16 +81,32 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
     RefutationSolver->addConstraint(SMTConstraints);
   }
 
-  // And check for satisfiability
-  llvm::TimeRecord Start = llvm::TimeRecord::getCurrentTime(/*Start=*/true);
-  std::optional<bool> IsSAT = RefutationSolver->check();
-  llvm::TimeRecord Diff = llvm::TimeRecord::getCurrentTime(/*Start=*/false);
-  Diff -= Start;
-  Result = Z3Result{
-      IsSAT,
-      static_cast<unsigned>(Diff.getWallTime() * 1000),
-      RefutationSolver->getStatistics()->getUnsigned("rlimit count"),
+  auto GetUsedRLimit = [](const llvm::SMTSolverRef &Solver) {
+    return Solver->getStatistics()->getUnsigned("rlimit count");
   };
+
+  auto AttemptOnce = [&](const llvm::SMTSolverRef &Solver) -> Z3Result {
+    constexpr auto getCurrentTime = llvm::TimeRecord::getCurrentTime;
+    unsigned InitialRLimit = GetUsedRLimit(Solver);
+    double Start = getCurrentTime(/*Start=*/true).getWallTime();
+    std::optional<bool> IsSAT = Solver->check();
+    double End = getCurrentTime(/*Start=*/false).getWallTime();
+    return {
+        IsSAT,
+        static_cast<unsigned>((End - Start) * 1000),
+        GetUsedRLimit(Solver) - InitialRLimit,
+    };
+  };
+
+  // And check for satisfiability
+  unsigned MinQueryTimeAcrossAttempts = std::numeric_limits<unsigned>::max();
+  for (unsigned I = 0; I < Opts.Z3CrosscheckMaxAttemptsPerQuery; ++I) {
+    Result = AttemptOnce(RefutationSolver);
+    Result.Z3QueryTimeMilliseconds =
+        std::min(MinQueryTimeAcrossAttempts, Result.Z3QueryTimeMilliseconds);
+    if (Result.IsSAT.has_value())
+      return;
+  }
 }
 
 void Z3CrosscheckVisitor::addConstraints(

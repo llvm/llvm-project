@@ -32,9 +32,8 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
       G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
-                                    createTripleWithCOFFFormat(TT),
-                                    std::move(Features), getPointerSize(Obj),
-                                    getEndianness(Obj),
+                                    createTripleWithCOFFFormat(std::move(TT)),
+                                    std::move(Features),
                                     std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
@@ -43,17 +42,6 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
 }
 
 COFFLinkGraphBuilder::~COFFLinkGraphBuilder() = default;
-
-unsigned
-COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
-  return Obj.getBytesInAddress();
-}
-
-llvm::endianness
-COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
-}
 
 uint64_t COFFLinkGraphBuilder::getSectionSize(const object::COFFObjectFile &Obj,
                                               const object::coff_section *Sec) {
@@ -647,32 +635,16 @@ Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
     return *ImageBase;
 
   auto IBN = G.intern(ImageBaseName);
+  ImageBase = G.findExternalSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findAbsoluteSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findDefinedSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
 
-  // Check external symbols for image base.
-  for (auto *Sym : G.external_symbols()) {
-    if (Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  // Check absolute symbols (unexpected, but legal).
-  for (auto *Sym : G.absolute_symbols()) {
-    if (Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  // Finally, check defined symbols.
-  for (auto *Sym : G.defined_symbols()) {
-    if (Sym->hasName() && Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  ImageBase = nullptr;
   return nullptr;
 }
 

@@ -52,3 +52,11 @@ bool llvm::isVectorizedStructTy(StructType *StructTy) {
     return Ty->isVectorTy() && cast<VectorType>(Ty)->getElementCount() == VF;
   });
 }
+
+/// Returns true if `StructTy` is an unpacked literal struct where all elements
+/// are scalars that can be used as vector element types.
+bool llvm::canVectorizeStructTy(StructType *StructTy) {
+  auto ElemTys = StructTy->elements();
+  return !ElemTys.empty() && isUnpackedStructLiteral(StructTy) &&
+         all_of(ElemTys, VectorType::isValidElementType);
+}

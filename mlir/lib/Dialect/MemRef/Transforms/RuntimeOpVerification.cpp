@@ -91,7 +91,7 @@ struct CastOpInterface
     // Get result offset and strides.
     int64_t resultOffset;
     SmallVector<int64_t> resultStrides;
-    if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+    if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
       return;
 
     // Check offset.

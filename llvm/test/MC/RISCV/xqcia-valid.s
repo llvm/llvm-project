@@ -1,5 +1,5 @@
 # Xqcia - Qualcomm uC Arithmetic Extesnsion
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcia -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcia -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcia < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcia -M no-aliases --no-print-imm-hex -d - \
@@ -10,13 +10,13 @@
 # RUN:     | llvm-objdump --mattr=+experimental-xqcia --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: qc.slasat    a0, gp, a7
+# CHECK-INST: qc.shlsat    a0, gp, a7
 # CHECK-ENC: encoding: [0x0b,0xb5,0x11,0x15]
-qc.slasat x10, x3, x17
+qc.shlsat x10, x3, x17
 
-# CHECK-INST: qc.sllsat    s7, s9, s11
+# CHECK-INST: qc.shlusat    s7, s9, s11
 # CHECK-ENC: encoding: [0x8b,0xbb,0xbc,0x19]
-qc.sllsat x23, x25, x27
+qc.shlusat x23, x25, x27
 
 # CHECK-INST: qc.addsat    a7, a4, t2
 # CHECK-ENC: encoding: [0x8b,0x38,0x77,0x1c]

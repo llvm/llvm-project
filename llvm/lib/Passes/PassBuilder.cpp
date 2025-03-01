@@ -46,6 +46,7 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
@@ -109,24 +110,33 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
+#include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
@@ -135,6 +145,7 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
@@ -177,6 +188,7 @@
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
+#include "llvm/Transforms/IPO/FatLTOCleanup.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -492,6 +504,9 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)                              \
+  PIC->addClassToPassName(CLASS, NAME);
 #include "llvm/Passes/MachinePassRegistry.def"
     });
   }
@@ -818,6 +833,75 @@ Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<LowerAllowCheckPass::Options>
+parseLowerAllowCheckPassOptions(StringRef Params) {
+  LowerAllowCheckPass::Options Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    // Format is <cutoffs[1,2,3]=70000;cutoffs[5,6,8]=90000>
+    //
+    // Parsing allows duplicate indices (last one takes precedence).
+    // It would technically be in spec to specify
+    //   cutoffs[0]=70000,cutoffs[1]=90000,cutoffs[0]=80000,...
+    if (ParamName.starts_with("cutoffs[")) {
+      StringRef IndicesStr;
+      StringRef CutoffStr;
+
+      std::tie(IndicesStr, CutoffStr) = ParamName.split("]=");
+      //       cutoffs[1,2,3
+      //                   70000
+
+      int cutoff;
+      if (CutoffStr.getAsInteger(0, cutoff))
+        return make_error<StringError>(
+            formatv("invalid LowerAllowCheck pass cutoffs parameter '{0}' "
+                    "({1})",
+                    CutoffStr, Params)
+                .str(),
+            inconvertibleErrorCode());
+
+      if (!IndicesStr.consume_front("cutoffs[") || IndicesStr == "")
+        return make_error<StringError>(
+            formatv("invalid LowerAllowCheck pass index parameter '{0}' "
+                    "({1})",
+                    IndicesStr, CutoffStr)
+                .str(),
+            inconvertibleErrorCode());
+
+      while (IndicesStr != "") {
+        StringRef firstIndexStr;
+        std::tie(firstIndexStr, IndicesStr) = IndicesStr.split('|');
+
+        unsigned int index;
+        if (firstIndexStr.getAsInteger(0, index))
+          return make_error<StringError>(
+              formatv("invalid LowerAllowCheck pass index parameter '{0}' "
+                      "({1}) {2}",
+                      firstIndexStr, IndicesStr)
+                  .str(),
+              inconvertibleErrorCode());
+
+        // In the common case (sequentially increasing indices), we will issue
+        // O(n) resize requests. We assume the underlying data structure has
+        // O(1) runtime for each added element.
+        if (index >= Result.cutoffs.size())
+          Result.cutoffs.resize(index + 1, 0);
+
+        Result.cutoffs[index] = cutoff;
+      }
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LowerAllowCheck pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
+}
+
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {
@@ -1039,6 +1123,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
       Result.setMemDep(Enable);
+    } else if (ParamName == "memoryssa") {
+      Result.setMemorySSA(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{0}' ", ParamName).str(),
@@ -1248,9 +1334,9 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
-Expected<RegAllocFastPassOptions>
+Expected<RegAllocFastPass::Options>
 parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
-  RegAllocFastPassOptions Opts;
+  RegAllocFastPass::Options Opts;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
@@ -1281,30 +1367,49 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
   return Opts;
 }
 
-Expected<BoundsCheckingPass::BoundsCheckingOptions>
+Expected<BoundsCheckingPass::Options>
 parseBoundsCheckingOptions(StringRef Params) {
-  BoundsCheckingPass::BoundsCheckingOptions Options(
-      BoundsCheckingPass::ReportingMode::Trap, false);
+  BoundsCheckingPass::Options Options;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     if (ParamName == "trap") {
-      Options.Mode = BoundsCheckingPass::ReportingMode::Trap;
+      Options.Rt = std::nullopt;
     } else if (ParamName == "rt") {
-      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntime;
+      Options.Rt = {
+          /*MinRuntime=*/false,
+          /*MayReturn=*/true,
+      };
     } else if (ParamName == "rt-abort") {
-      Options.Mode = BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
+      Options.Rt = {
+          /*MinRuntime=*/false,
+          /*MayReturn=*/false,
+      };
     } else if (ParamName == "min-rt") {
-      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntime;
+      Options.Rt = {
+          /*MinRuntime=*/true,
+          /*MayReturn=*/true,
+      };
     } else if (ParamName == "min-rt-abort") {
-      Options.Mode = BoundsCheckingPass::ReportingMode::MinRuntimeAbort;
+      Options.Rt = {
+          /*MinRuntime=*/true,
+          /*MayReturn=*/false,
+      };
     } else if (ParamName == "merge") {
       Options.Merge = true;
     } else {
-      return make_error<StringError>(
-          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
+      StringRef ParamEQ;
+      StringRef Val;
+      std::tie(ParamEQ, Val) = ParamName.split('=');
+      int8_t Id;
+      if (ParamEQ == "guard" && !Val.getAsInteger(0, Id)) {
+        Options.GuardKind = Id;
+      } else {
+        return make_error<StringError>(
+            formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
     }
   }
   return Options;

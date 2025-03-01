@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass is to address a situation that appears after register allocaion
-// evey now and then, namely a register copy from a source that was defined
+// This pass is to address a situation that appears after register allocation
+// every now and then, namely a register copy from a source that was defined
 // as an immediate value in the same block (usually just before the copy).
 //
 // Here is an example of actual code emitted that shows this problem:

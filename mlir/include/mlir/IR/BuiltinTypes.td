@@ -79,8 +79,18 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name, string mnemonic>
-    : Builtin_Type<name, mnemonic, /*traits=*/[], "::mlir::FloatType"> {
+class Builtin_FloatType<string name, string mnemonic,
+                        list<string> declaredInterfaceMethods = []>
+    : Builtin_Type<name, mnemonic, /*traits=*/[
+        DeclareTypeInterfaceMethods<
+            FloatTypeInterface,
+            ["getFloatSemantics"] # declaredInterfaceMethods>]> {
+}
+
+// Float types that are cached in MLIRContext.
+class Builtin_CachedFloatType<string name, string mnemonic,
+                              list<string> declaredInterfaceMethods = []>
+    : Builtin_FloatType<name, mnemonic, declaredInterfaceMethods> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -322,49 +332,52 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 //===----------------------------------------------------------------------===//
 // BFloat16Type
 
-def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
+def Builtin_BFloat16 : Builtin_CachedFloatType<"BFloat16", "bf16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "bfloat16 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float16Type
 
-def Builtin_Float16 : Builtin_FloatType<"Float16", "f16"> {
+def Builtin_Float16 : Builtin_CachedFloatType<"Float16", "f16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "16-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // FloatTF32Type
 
-def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32", "tf32"> {
+def Builtin_FloatTF32 : Builtin_CachedFloatType<"FloatTF32", "tf32"> {
   let summary = "TF32 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float32Type
 
-def Builtin_Float32 : Builtin_FloatType<"Float32", "f32"> {
+def Builtin_Float32 : Builtin_CachedFloatType<"Float32", "f32",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "32-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float64Type
 
-def Builtin_Float64 : Builtin_FloatType<"Float64", "f64"> {
+def Builtin_Float64 : Builtin_CachedFloatType<"Float64", "f64"> {
   let summary = "64-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float80Type
 
-def Builtin_Float80 : Builtin_FloatType<"Float80", "f80"> {
+def Builtin_Float80 : Builtin_CachedFloatType<"Float80", "f80"> {
   let summary = "80-bit floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float128Type
 
-def Builtin_Float128 : Builtin_FloatType<"Float128", "f128"> {
+def Builtin_Float128 : Builtin_CachedFloatType<"Float128", "f128"> {
   let summary = "128-bit floating-point type";
 }
 
@@ -795,10 +808,52 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
 
+    /// Return "true" if the last N dimensions are contiguous.
+    ///
+    /// Examples:
+    ///   - memref<5x4x3x2xi8, strided<[24, 6, 2, 1]> is contiguous when
+    ///   considering both _all_ and _only_ the trailing 3 dims,
+    ///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
+    ///   considering the trailing 3 dims.
+    ///
+    bool areTrailingDimsContiguous(int64_t n);
+
+    /// Return a version of this type with identity layout if it can be
+    /// determined statically that the layout is the canonical contiguous
+    /// strided layout. Otherwise pass the layout into `simplifyAffineMap`
+    /// and return a copy of this type with simplified layout.
+    MemRefType canonicalizeStridedLayout();
+
     /// [deprecated] Returns the memory space in old raw integer representation.
     /// New `Attribute getMemorySpace()` method should be used instead.
     unsigned getMemorySpaceAsInt() const;
 
+    /// Returns the strides of the MemRef if the layout map is in strided form.
+    /// MemRefs with a layout map in strided form include:
+    ///   1. empty or identity layout map, in which case the stride information
+    ///      is the canonical form computed from sizes;
+    ///   2. a StridedLayoutAttr layout;
+    ///   3. any other layout that be converted into a single affine map layout
+    ///      of the form `K + k0 * d0 + ... kn * dn`, where K and ki's are
+    ///      constants or symbols.
+    ///
+    /// A stride specification is a list of integer values that are either
+    /// static or dynamic (encoded with ShapedType::kDynamic). Strides encode
+    /// the distance in the number of elements between successive entries along
+    /// a particular dimension.
+    LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
+                                      int64_t &offset);
+
+    /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
+    /// that will assert if the logical result is not succeeded.
+    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset();
+
+    /// Return "true" if the layout is compatible with strided semantics.
+    bool isStrided();
+
+    /// Return "true" if the last dimension has a static unit stride. Also
+    /// return "true" for types with no strides.
+    bool isLastDimUnitStride();
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
@@ -979,6 +1034,17 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     /// shape as this type.
     RankedTensorType clone(::mlir::Type elementType) {
       return ::llvm::cast<RankedTensorType>(cloneWith(getShape(), elementType));
+    }
+
+    /// Return a clone of this type without the encoding.
+    RankedTensorType dropEncoding() {
+      return RankedTensorType::get(getShape(), getElementType());
+    }
+
+    /// Return a clone of this type with the given new encoding and the same
+    /// shape and element type as this type.
+    RankedTensorType cloneWithEncoding(::mlir::Attribute encoding) {
+      return RankedTensorType::get(getShape(), getElementType(), encoding);
     }
   }];
   let skipDefaultBuilders = 1;

@@ -104,7 +104,7 @@ define i32 @alloca_not_captured_as_per_operand_attr(ptr %data, i64 %n) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr captures(none) [[RETVAL]])
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;
@@ -147,7 +147,7 @@ define i32 @alloca_not_captured_and_readonly_as_per_operand_attr(ptr %data, i64 
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture readonly [[RETVAL]])
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr readonly captures(none) [[RETVAL]])
 ; CHECK-NEXT:    ret i32 [[RDX_INC]]
 ;
 entry:
@@ -189,7 +189,7 @@ define i32 @alloca_not_captured_as_per_operand_attr_and_readonly_as_per_callbase
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr nocapture [[RETVAL]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[I0:%.*]] = call i32 @capture_of_alloca(ptr captures(none) [[RETVAL]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[I1:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[I1]]
 ;

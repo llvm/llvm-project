@@ -1,4 +1,4 @@
-// Global variables of intergal types
+// Global variables of scalar typees with initial values
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
 
 char c;
@@ -13,11 +13,11 @@ unsigned char uc;
 short ss;
 // CHECK: cir.global @ss : !cir.int<s, 16>
 
-unsigned short us;
-// CHECK: cir.global @us : !cir.int<u, 16>
+unsigned short us = 100;
+// CHECK: cir.global @us = #cir.int<100> : !cir.int<u, 16>
 
-int si;
-// CHECK: cir.global @si : !cir.int<s, 32>
+int si = 42;
+// CHECK: cir.global @si = #cir.int<42> : !cir.int<s, 32>
 
 unsigned ui;
 // CHECK: cir.global @ui : !cir.int<u, 32>
@@ -31,8 +31,8 @@ unsigned long ul;
 long long sll;
 // CHECK: cir.global @sll : !cir.int<s, 64>
 
-unsigned long long ull;
-// CHECK: cir.global @ull : !cir.int<u, 64>
+unsigned long long ull = 123456;
+// CHECK: cir.global @ull = #cir.int<123456> : !cir.int<u, 64>
 
 __int128 s128;
 // CHECK: cir.global @s128 : !cir.int<s, 128>
@@ -58,6 +58,9 @@ _BitInt(20) sb20;
 unsigned _BitInt(48) ub48;
 // CHECK: cir.global @ub48 : !cir.int<u, 48>
 
+bool boolfalse = false;
+// CHECK: cir.global @boolfalse = #false
+
 _Float16 f16;
 // CHECK: cir.global @f16 : !cir.f16
 
@@ -67,8 +70,8 @@ __bf16 bf16;
 float f;
 // CHECK: cir.global @f : !cir.float
 
-double d;
-// CHECK: cir.global @d : !cir.double
+double d = 1.25;
+// CHECK: cir.global @d = #cir.fp<1.250000e+00> : !cir.double
 
 long double ld;
 // CHECK: cir.global @ld : !cir.long_double<!cir.f80>
@@ -79,8 +82,8 @@ __float128 f128;
 void *vp;
 // CHECK: cir.global @vp : !cir.ptr<!cir.void>
 
-int *ip;
-// CHECK: cir.global @ip : !cir.ptr<!cir.int<s, 32>>
+int *ip = 0;
+// CHECK: cir.global @ip = #cir.ptr<null> : !cir.ptr<!cir.int<s, 32>>
 
 double *dp;
 // CHECK: cir.global @dp : !cir.ptr<!cir.double>
@@ -89,10 +92,10 @@ char **cpp;
 // CHECK: cir.global @cpp : !cir.ptr<!cir.ptr<!cir.int<s, 8>>>
 
 void (*fp)();
-// CHECK: cir.global @fp : !cir.ptr<!cir.func<!cir.void ()>>
+// CHECK: cir.global @fp : !cir.ptr<!cir.func<()>>
 
-int (*fpii)(int);
-// CHECK: cir.global @fpii : !cir.ptr<!cir.func<!cir.int<s, 32> (!cir.int<s, 32>)>>
+int (*fpii)(int) = 0;
+// CHECK: cir.global @fpii = #cir.ptr<null> : !cir.ptr<!cir.func<(!cir.int<s, 32>) -> !cir.int<s, 32>>>
 
 void (*fpvar)(int, ...);
-// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<!cir.void (!cir.int<s, 32>, ...)>>
+// CHECK: cir.global @fpvar : !cir.ptr<!cir.func<(!cir.int<s, 32>, ...)>>

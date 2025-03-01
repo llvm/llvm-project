@@ -17,6 +17,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -154,7 +155,7 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
   if (S.getLangOpts().CPlusPlus11)
     S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
         << /*isConstexpr=*/0 << /*isConstructor=*/0
-        << ("'" + S.getASTContext().BuiltinInfo.getName(ID) + "'").str();
+        << S.getASTContext().BuiltinInfo.getQuotedName(ID);
   else
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
@@ -1537,15 +1538,19 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
   if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
+    auto PrevDiags = S.getEvalStatus().Diag;
+    S.getEvalStatus().Diag = nullptr;
     InterpStack Stk;
     Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
     auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
+    S.getEvalStatus().Diag = PrevDiags;
     if (Res.isInvalid()) {
       C.cleanup();
       Stk.clear();
+      return returnInt(false);
     }
 
-    if (!Res.isInvalid() && !Res.empty()) {
+    if (!Res.empty()) {
       const APValue &LV = Res.toAPValue();
       if (LV.isLValue()) {
         APValue::LValueBase Base = LV.getLValueBase();
@@ -1582,6 +1587,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Walk up the call stack to find the appropriate caller and get the
   // element type from it.
   QualType ElemType;
+  const CallExpr *NewCall = nullptr;
 
   for (const InterpFrame *F = Frame; F; F = F->Caller) {
     const Function *Func = F->getFunction();
@@ -1604,6 +1610,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       ElemType = TAL[0].getAsType();
+      NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
       break;
     }
   }
@@ -1614,6 +1621,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                        : diag::note_constexpr_new);
     return false;
   }
+  assert(NewCall);
 
   if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
     S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
@@ -1647,27 +1655,27 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
-    if (NumElems.ule(1)) {
-      const Descriptor *Desc =
-          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
-                               /*IsConst=*/false, /*IsTemporary=*/false,
-                               /*IsMutable=*/false);
-      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+    if (IsArray) {
+      Block *B = Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
+                                    S.Ctx.getEvalID(),
                                     DynamicAllocator::Form::Operator);
       assert(B);
-
-      S.Stk.push<Pointer>(B);
+      S.Stk.push<Pointer>(Pointer(B).atIndex(0));
       return true;
     }
-    assert(NumElems.ugt(1));
 
-    Block *B =
-        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
-                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    const Descriptor *Desc =
+        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
+                             /*IsConst=*/false, /*IsTemporary=*/false,
+                             /*IsMutable=*/false);
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
     assert(B);
+
     S.Stk.push<Pointer>(B);
     return true;
   }
@@ -1675,21 +1683,22 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+      NewCall, ElemType.getTypePtr(),
+      IsArray ? std::nullopt : Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 
-  if (NumElems.ule(1)) {
-    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
-                                  DynamicAllocator::Form::Operator);
+  if (IsArray) {
+    Block *B =
+        Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                           DynamicAllocator::Form::Operator);
     assert(B);
-    S.Stk.push<Pointer>(B);
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
     return true;
   }
 
-  Block *B =
-      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
-                         DynamicAllocator::Form::Operator);
+  Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                DynamicAllocator::Form::Operator);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;
@@ -1837,6 +1846,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 3);
   unsigned ID = Func->getBuiltinID();
   Pointer DestPtr = getParam<Pointer>(Frame, 0);
+  const ASTContext &ASTCtx = S.getASTContext();
   const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
   const APSInt &Size =
       peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
@@ -1857,34 +1867,63 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     Pointer DiagPtr = (SrcPtr.isZero() ? SrcPtr : DestPtr);
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
         << /*IsMove=*/Move << /*IsWchar=*/false << !SrcPtr.isZero()
-        << DiagPtr.toDiagnosticString(S.getASTContext());
+        << DiagPtr.toDiagnosticString(ASTCtx);
     return false;
   }
 
-  QualType ElemType;
-  if (DestPtr.getFieldDesc()->isArray())
-    ElemType = DestPtr.getFieldDesc()->getElemQualType();
-  else
-    ElemType = DestPtr.getType();
+  // Can't read from dummy pointers.
+  if (DestPtr.isDummy() || SrcPtr.isDummy())
+    return false;
 
-  unsigned ElemSize =
-      S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
-  if (Size.urem(ElemSize) != 0) {
+  QualType DestElemType;
+  size_t RemainingDestElems;
+  if (DestPtr.getFieldDesc()->isArray()) {
+    DestElemType = DestPtr.getFieldDesc()->getElemQualType();
+    RemainingDestElems = DestPtr.isUnknownSizeArray()
+                             ? 0
+                             : (DestPtr.getNumElems() - DestPtr.getIndex());
+  } else {
+    DestElemType = DestPtr.getType();
+    RemainingDestElems = 1;
+  }
+  unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
+
+  if (Size.urem(DestElemSize) != 0) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << /*IsWchar=*/false << 0 << ElemType << Size << ElemSize;
+        << Move << /*IsWchar=*/false << 0 << DestElemType << Size
+        << DestElemSize;
     return false;
   }
 
   QualType SrcElemType;
-  if (SrcPtr.getFieldDesc()->isArray())
+  size_t RemainingSrcElems;
+  if (SrcPtr.getFieldDesc()->isArray()) {
     SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
-  else
+    RemainingSrcElems = SrcPtr.isUnknownSizeArray()
+                            ? 0
+                            : (SrcPtr.getNumElems() - SrcPtr.getIndex());
+  } else {
     SrcElemType = SrcPtr.getType();
+    RemainingSrcElems = 1;
+  }
+  unsigned SrcElemSize = ASTCtx.getTypeSizeInChars(SrcElemType).getQuantity();
 
-  if (!S.getASTContext().hasSameUnqualifiedType(ElemType, SrcElemType)) {
+  if (!ASTCtx.hasSameUnqualifiedType(DestElemType, SrcElemType)) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_type_pun)
-        << Move << SrcElemType << ElemType;
+        << Move << SrcElemType << DestElemType;
+    return false;
+  }
+
+  // Check if we have enough elements to read from and write to/
+  size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
+  size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
+  if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {
+    APInt N = Size.udiv(DestElemSize);
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_unsupported)
+        << Move << /*IsWChar*/ false << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
+        << DestElemType << toString(N, 10, /*Signed=*/false);
     return false;
   }
 
@@ -1902,10 +1941,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     }
   }
 
-  // As a last resort, reject dummy pointers.
-  if (DestPtr.isDummy() || SrcPtr.isDummy())
-    return false;
-  assert(Size.getZExtValue() % ElemSize == 0);
+  assert(Size.getZExtValue() % DestElemSize == 0);
   if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
     return false;
 
@@ -1948,7 +1984,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                   !isOneByteCharacterType(PtrB.getType()))) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcmp_unsupported)
-        << ("'" + ASTCtx.BuiltinInfo.getName(ID) + "'").str() << PtrA.getType()
+        << ASTCtx.BuiltinInfo.getQuotedName(ID) << PtrA.getType()
         << PtrB.getType();
     return false;
   }
