@@ -1403,6 +1403,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     if (!UI || UI->getParent() != LI->getParent())
       return false;
 
+    // If any extract is waiting to be erased, then bail out as this will
+    // distort the cost calculation and possibly lead to infinite loops.
+    if (UI->use_empty())
+      return false;
+
     // Check if any instruction between the load and the extract may modify
     // memory.
     if (LastCheckedInst->comesBefore(UI)) {
