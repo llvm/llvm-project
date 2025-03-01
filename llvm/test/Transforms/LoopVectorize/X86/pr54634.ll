@@ -69,13 +69,13 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[TOP]] ]
 ; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = urem i64 [[TMP8]], 4
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[TMP8]], [[N_MOD_VF4]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x ptr addrspace(10)> poison, ptr addrspace(10) [[DOTUNPACK]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x ptr addrspace(10)> [[BROADCAST_SPLATINSERT10]], <4 x ptr addrspace(10)> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i64> poison, i64 [[DOTUNPACK2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT12]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[VEC_EPILOG_RESUME_VAL]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[DOTSPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label [[L26:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT14:%.*]], [[L26]] ]

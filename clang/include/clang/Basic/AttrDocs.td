@@ -4966,9 +4966,17 @@ def RestrictDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "malloc";
   let Content = [{
-The ``malloc`` attribute indicates that the function acts like a system memory
-allocation function, returning a pointer to allocated storage disjoint from the
-storage for any other object accessible to the caller.
+The ``malloc`` attribute has two forms with different functionality. The first
+is when it is used without arguments, where it marks that a function acts like
+a system memory allocation function, returning a pointer to allocated storage
+that does not alias storage from any other object accessible to the caller.
+
+The second form is when ``malloc`` takes one or two arguments. The first
+argument names a function that should be associated with this function as its
+deallocation function. When this form is used, it enables the compiler to
+diagnose when the incorrect deallocation function is used with this variable.
+However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
+yet implemented in clang.
   }];
 }
 
@@ -8202,6 +8210,21 @@ unroller to unroll the loop ``_value_`` times. Note: [unroll(x)] is not compatib
 
 See `hlsl loop extensions <https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-for>`_
 for details.
+  }];
+}
+
+def AtomicDocs : Documentation {
+  let Category = DocCatStmt;
+  let Content = [{
+The ``atomic`` attribute can be applied to *compound statements* to override or
+further specify the default atomic code-generation behavior, especially on
+targets such as AMDGPU. You can annotate compound statements with options
+to modify how atomic instructions inside that statement are emitted at the IR
+level.
+
+For details, see the documentation for `@atomic
+<http://clang.llvm.org/docs/LanguageExtensions.html#extensions-for-controlling-atomic-code-generation>`_
+
   }];
 }
 

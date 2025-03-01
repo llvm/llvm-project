@@ -1156,6 +1156,7 @@ def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
 def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
                                              [ThreadSafetyReferenceReturn]>;
+def ThreadSafetyPointer    : DiagGroup<"thread-safety-pointer">;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,

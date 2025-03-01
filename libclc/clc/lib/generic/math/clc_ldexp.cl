@@ -41,7 +41,7 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
     int s = i & 0x80000000;
     int v = __clc_add_sat(e, n);
     v = __clc_clamp(v, 0, 0xff);
-    int mr = e == 0 | v == 0 | v == 0xff ? 0 : m;
+    int mr = (e == 0 || v == 0 || v == 0xff) ? 0 : m;
     int c = e == 0xff;
     mr = c ? m : mr;
     int er = c ? e : v;
@@ -96,7 +96,7 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   val_ui = dexp == 0 ? dval_ui : val_ui;
   val_f = __clc_as_float(val_ui);
 
-  val_f = __clc_isnan(x) | __clc_isinf(x) | val_x == 0 ? x : val_f;
+  val_f = (__clc_isnan(x) || __clc_isinf(x) || val_x == 0) ? x : val_f;
   return val_f;
 }
 

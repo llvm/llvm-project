@@ -115,14 +115,14 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-NEXT:    compact z0.s, p2, z0.s
 ; CHECK-NEXT:    cntp x8, p1, p2.s
 ; CHECK-NEXT:    compact z1.s, p0, z1.s
-; CHECK-NEXT:    st1w { z0.s }, p1, [sp]
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    st1w { z1.s }, p1, [x9, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
-; CHECK-NEXT:    ld1w { z1.s }, p1/z, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #2
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
