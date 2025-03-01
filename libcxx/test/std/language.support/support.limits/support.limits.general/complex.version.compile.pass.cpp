@@ -15,9 +15,9 @@
 
 // Test the feature test macros defined by <complex>
 
-/*  Constant                       Value
-    __cpp_lib_complex_udls         201309L [C++14]
-    __cpp_lib_constexpr_complex    201711L [C++20]
+/*  Constant                     Value
+    __cpp_lib_complex_udls       201309L [C++14]
+    __cpp_lib_constexpr_deque    202502L [C++20]
 */
 
 #include <complex>
@@ -29,8 +29,8 @@
 #   error "__cpp_lib_complex_udls should not be defined before c++14"
 # endif
 
-# ifdef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
+# ifdef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 14
@@ -42,8 +42,8 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++14"
 # endif
 
-# ifdef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
+# ifdef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -55,8 +55,8 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++17"
 # endif
 
-# ifdef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
+# ifdef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -68,11 +68,11 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++20"
 # endif
 
-# ifndef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should be defined in c++20"
+# ifndef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should be defined in c++20"
 # endif
-# if __cpp_lib_constexpr_complex != 201711L
-#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++20"
+# if __cpp_lib_constexpr_deque != 202502L
+#   error "__cpp_lib_constexpr_deque should have the value 202502L in c++20"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -84,11 +84,11 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++23"
 # endif
 
-# ifndef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should be defined in c++23"
+# ifndef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should be defined in c++23"
 # endif
-# if __cpp_lib_constexpr_complex != 201711L
-#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++23"
+# if __cpp_lib_constexpr_deque != 202502L
+#   error "__cpp_lib_constexpr_deque should have the value 202502L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -100,11 +100,11 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++26"
 # endif
 
-# ifndef __cpp_lib_constexpr_complex
-#   error "__cpp_lib_constexpr_complex should be defined in c++26"
+# ifndef __cpp_lib_constexpr_deque
+#   error "__cpp_lib_constexpr_deque should be defined in c++26"
 # endif
-# if __cpp_lib_constexpr_complex != 201711L
-#   error "__cpp_lib_constexpr_complex should have the value 201711L in c++26"
+# if __cpp_lib_constexpr_deque != 202502L
+#   error "__cpp_lib_constexpr_deque should have the value 202502L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23
