@@ -559,3 +559,21 @@ class A
         self.assertEqual(bases[1].get_base_offsetof(cursor_type_decl), 96)
         self.assertTrue(bases[2].is_virtual_base())
         self.assertEqual(bases[2].get_base_offsetof(cursor_type_decl), 128)
+
+    def test_class_methods(self):
+        source = """
+        template <typename T>
+        class Template { void Foo(); };
+        typedef Template<int> instance;
+        instance bar;
+        """
+        tu = get_tu(source, lang="cpp", flags=["--target=x86_64-linux-gnu"])
+        cursor = get_cursor(tu, "instance")
+        cursor_type = cursor.underlying_typedef_type
+        self.assertEqual(cursor.kind, CursorKind.TYPEDEF_DECL)
+        methods = list(cursor_type.get_methods())
+        self.assertEqual(len(methods), 4)
+        self.assertEqual(methods[0].kind, CursorKind.CXX_METHOD)
+        self.assertEqual(methods[1].kind, CursorKind.CONSTRUCTOR)
+        self.assertEqual(methods[2].kind, CursorKind.CONSTRUCTOR)
+        self.assertEqual(methods[3].kind, CursorKind.CONSTRUCTOR)
