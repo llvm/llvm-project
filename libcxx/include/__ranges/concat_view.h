@@ -555,7 +555,9 @@ public:
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __ix = __x.__it_.index();
     size_t __iy = __y.__it_.index();
 
@@ -604,7 +606,7 @@ public:
             (__apply_drop_first<_Const, _Views...>::value)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __ix = __x.__it_.index();
     __variant_detail::__visitation::__variant::__visit_value(
         [&](auto& __it_x) {
