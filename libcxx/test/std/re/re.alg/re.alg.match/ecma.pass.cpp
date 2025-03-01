@@ -1305,6 +1305,12 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+    {
+      std::cmatch m;
+      const char s[] = "$_se";
+      assert(std::regex_match(s, m, std::regex("\\$\\_se")));
+      assert(m.size() == 1);
+    }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
