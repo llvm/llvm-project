@@ -1961,7 +1961,7 @@ let hasSideEffects = false in {
 
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
-let IsSimpleMove=1, hasSideEffects=0, isAsCheapAsAMove=1 in {
+let hasSideEffects=0, isAsCheapAsAMove=1 in {
   def IMOV1rr :  NVPTXInst<(outs Int1Regs:$dst), (ins Int1Regs:$sss),
                            "mov.pred \t$dst, $sss;", []>;
   def IMOV16rr : NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$sss),
