@@ -105,6 +105,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %var = spirv.Variable : !spirv.ptr<i1, Function>
 // CHECK-NEXT:    spirv.Branch ^[[BB:.+]]
 // CHECK-NEXT:  ^[[BB]]:
+// CHECK:    spirv.Branch ^[[BB:.+]]
+// CHECK-NEXT:  ^[[BB]]:
 
 // CHECK-NEXT:    spirv.mlir.selection {
     spirv.mlir.selection {

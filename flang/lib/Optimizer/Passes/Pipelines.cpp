@@ -205,11 +205,14 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
-  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
+
+  if (pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createSetRuntimeCallAttributes());
 
   // Last Optimizer EP Callback
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
@@ -245,7 +248,15 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
-  pm.addPass(hlfir::createBufferizeHLFIR());
+
+  hlfir::BufferizeHLFIROptions bufferizeOptions;
+  // For opt-for-speed, avoid running any of the loops resulting
+  // from hlfir.elemental lowering, if the result is an empty array.
+  // This helps to avoid long running loops for elementals with
+  // shapes like (0, HUGE).
+  if (optLevel.isOptimizingForSpeed())
+    bufferizeOptions.optimizeEmptyElementals = true;
+  pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
   // Run hlfir.assign inlining again after BufferizeHLFIR,
   // because the latter may introduce new hlfir.assign operations,
   // e.g. for copying an array into a temporary due to
@@ -317,8 +328,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-       config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
-       config.UnsafeFPMath}));
+       config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
+       ""}));
 
   fir::addFIRToLLVMPass(pm, config);
 }

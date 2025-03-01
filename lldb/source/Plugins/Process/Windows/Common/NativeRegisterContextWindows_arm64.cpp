@@ -10,7 +10,6 @@
 
 #include "NativeRegisterContextWindows_arm64.h"
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
@@ -143,8 +142,13 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {
+  // Currently, there is no API to query the maximum supported hardware
+  // breakpoints and watchpoints on Windows. The values set below are based
+  // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
+  m_max_hwp_supported = 1;
+}
 
 bool NativeRegisterContextWindows_arm64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_arm64 && reg_index <= k_last_gpr_arm64);
@@ -709,48 +713,37 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
   return SetThreadContextHelper(GetThreadHandle(), &tls_context);
 }
 
-Status NativeRegisterContextWindows_arm64::IsWatchpointHit(uint32_t wp_index,
-                                                           bool &is_hit) {
-  return Status::FromErrorString("unimplemented");
+llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
+  ::CONTEXT tls_context;
+  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
+                                        CONTEXT_DEBUG_REGISTERS);
+  if (error.Fail())
+    return error.ToError();
+
+  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+    m_hwp_regs[i].address = tls_context.Wvr[i];
+    m_hwp_regs[i].control = tls_context.Wcr[i];
+  }
+
+  return llvm::Error::success();
 }
 
-Status NativeRegisterContextWindows_arm64::GetWatchpointHitIndex(
-    uint32_t &wp_index, lldb::addr_t trap_addr) {
-  return Status::FromErrorString("unimplemented");
-}
+llvm::Error
+NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
+  ::CONTEXT tls_context;
+  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
+                                        CONTEXT_DEBUG_REGISTERS);
+  if (error.Fail())
+    return error.ToError();
 
-Status NativeRegisterContextWindows_arm64::IsWatchpointVacant(uint32_t wp_index,
-                                                              bool &is_vacant) {
-  return Status::FromErrorString("unimplemented");
-}
+  if (hwbType == eDREGTypeWATCH) {
+    for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+      tls_context.Wvr[i] = m_hwp_regs[i].address;
+      tls_context.Wcr[i] = m_hwp_regs[i].control;
+    }
+  }
 
-Status NativeRegisterContextWindows_arm64::SetHardwareWatchpointWithIndex(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
-  return Status::FromErrorString("unimplemented");
-}
-
-bool NativeRegisterContextWindows_arm64::ClearHardwareWatchpoint(
-    uint32_t wp_index) {
-  return false;
-}
-
-Status NativeRegisterContextWindows_arm64::ClearAllHardwareWatchpoints() {
-  return Status::FromErrorString("unimplemented");
-}
-
-uint32_t NativeRegisterContextWindows_arm64::SetHardwareWatchpoint(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  return LLDB_INVALID_INDEX32;
-}
-
-lldb::addr_t
-NativeRegisterContextWindows_arm64::GetWatchpointAddress(uint32_t wp_index) {
-  return LLDB_INVALID_ADDRESS;
-}
-
-uint32_t NativeRegisterContextWindows_arm64::NumSupportedHardwareWatchpoints() {
-  // Not implemented
-  return 0;
+  return SetThreadContextHelper(GetThreadHandle(), &tls_context).ToError();
 }
 
 #endif // defined(__aarch64__) || defined(_M_ARM64)

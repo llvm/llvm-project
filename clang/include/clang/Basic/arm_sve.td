@@ -19,7 +19,7 @@ include "arm_sve_sme_incl.td"
 // Loads
 
 // Load one vector (scalar base)
-def SVLD1   : MInst<"svld1[_{2}]", "dPc", "csilUcUsUiUlhfd", [IsLoad, VerifyRuntimeMode],               MemEltTyDefault, "aarch64_sve_ld1">;
+def SVLD1   : MInst<"svld1[_{2}]", "dPc", "csilUcUsUiUlhfdm", [IsLoad, VerifyRuntimeMode],               MemEltTyDefault, "aarch64_sve_ld1">;
 def SVLD1SB : MInst<"svld1sb_{d}", "dPS", "silUsUiUl",       [IsLoad, VerifyRuntimeMode],               MemEltTyInt8,    "aarch64_sve_ld1">;
 def SVLD1UB : MInst<"svld1ub_{d}", "dPW", "silUsUiUl",       [IsLoad, IsZExtReturn, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_ld1">;
 def SVLD1SH : MInst<"svld1sh_{d}", "dPT", "ilUiUl",          [IsLoad, VerifyRuntimeMode],               MemEltTyInt16,   "aarch64_sve_ld1">;
@@ -33,7 +33,7 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 }
 
 // Load one vector (scalar base, VL displacement)
-def SVLD1_VNUM   : MInst<"svld1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad, VerifyRuntimeMode],               MemEltTyDefault, "aarch64_sve_ld1">;
+def SVLD1_VNUM   : MInst<"svld1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfdm", [IsLoad, VerifyRuntimeMode],               MemEltTyDefault, "aarch64_sve_ld1">;
 def SVLD1SB_VNUM : MInst<"svld1sb_vnum_{d}", "dPSl", "silUsUiUl",       [IsLoad, VerifyRuntimeMode],               MemEltTyInt8,    "aarch64_sve_ld1">;
 def SVLD1UB_VNUM : MInst<"svld1ub_vnum_{d}", "dPWl", "silUsUiUl",       [IsLoad, IsZExtReturn, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_ld1">;
 def SVLD1SH_VNUM : MInst<"svld1sh_vnum_{d}", "dPTl", "ilUiUl",          [IsLoad, VerifyRuntimeMode],               MemEltTyInt16,   "aarch64_sve_ld1">;
@@ -247,10 +247,10 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = InvalidMode in {
 }
 
 // Load one vector, unextended load, non-temporal (scalar base)
-def SVLDNT1 : MInst<"svldnt1[_{2}]", "dPc", "csilUcUsUiUlhfd", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
+def SVLDNT1 : MInst<"svldnt1[_{2}]", "dPc", "csilUcUsUiUlhfdm", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
 
 // Load one vector, unextended load, non-temporal (scalar base, VL displacement)
-def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
+def SVLDNT1_VNUM : MInst<"svldnt1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfdm", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
 
 let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
   def SVLDNT1_BF      : MInst<"svldnt1[_{2}]",      "dPc",  "b", [IsLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_ldnt1">;
@@ -265,7 +265,7 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 }
 
 multiclass StructLoad<string name, string proto, string i> {
-  def : SInst<name, proto, "csilUcUsUiUlhfd", MergeNone, i, [IsStructLoad, VerifyRuntimeMode]>;
+  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, [IsStructLoad, VerifyRuntimeMode]>;
   let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
     def: SInst<name, proto, "b", MergeNone, i, [IsStructLoad, VerifyRuntimeMode]>;
   }
@@ -314,11 +314,11 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
   def SVLD1UDQ_VNUM : MInst<"svld1udq_vnum[_{d}]", "dPcl", "lUld", [IsLoad], MemEltTyInt64, "aarch64_sve_ld1udq">;
 
   // Load one vector (vector base + scalar offset)
-  def SVLD1Q_GATHER_U64BASE_OFFSET : MInst<"svld1q_gather[_{2}base]_offset_{d}", "dPgl", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
-  def SVLD1Q_GATHER_U64BASE : MInst<"svld1q_gather[_{2}base]_{d}", "dPg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
+  def SVLD1Q_GATHER_U64BASE_OFFSET : MInst<"svld1q_gather[_{2}base]_offset_{d}", "dPgl", "cUcsUsiUilUlfhdbm", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
+  def SVLD1Q_GATHER_U64BASE : MInst<"svld1q_gather[_{2}base]_{d}", "dPg", "cUcsUsiUilUlfhdbm", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
 
   // Load one vector (scalar base + vector offset)
-  def SVLD1Q_GATHER_U64OFFSET : MInst<"svld1q_gather_[{3}]offset[_{d}]", "dPcg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_vector_offset">;
+  def SVLD1Q_GATHER_U64OFFSET : MInst<"svld1q_gather_[{3}]offset[_{d}]", "dPcg", "cUcsUsiUilUlfhdbm", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_vector_offset">;
 
   // Load N-element structure into N vectors (scalar base)
   defm SVLD2Q : StructLoad<"svld2q[_{2}]", "2Pc", "aarch64_sve_ld2q_sret">;
@@ -341,7 +341,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
 // Stores
 
 // Store one vector (scalar base)
-def SVST1    : MInst<"svst1[_{d}]",  "vPpd", "csilUcUsUiUlhfd", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_st1">;
+def SVST1    : MInst<"svst1[_{d}]",  "vPpd", "csilUcUsUiUlhfdm", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_st1">;
 def SVST1B_S : MInst<"svst1b[_{d}]", "vPAd", "sil",             [IsStore, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_st1">;
 def SVST1B_U : MInst<"svst1b[_{d}]", "vPEd", "UsUiUl",          [IsStore, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_st1">;
 def SVST1H_S : MInst<"svst1h[_{d}]", "vPBd", "il",              [IsStore, VerifyRuntimeMode], MemEltTyInt16,   "aarch64_sve_st1">;
@@ -350,7 +350,7 @@ def SVST1W_S : MInst<"svst1w[_{d}]", "vPCd", "l",               [IsStore, Verify
 def SVST1W_U : MInst<"svst1w[_{d}]", "vPGd", "Ul",              [IsStore, VerifyRuntimeMode], MemEltTyInt32,   "aarch64_sve_st1">;
 
 // Store one vector (scalar base, VL displacement)
-def SVST1_VNUM    : MInst<"svst1_vnum[_{d}]",  "vPpld", "csilUcUsUiUlhfd", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_st1">;
+def SVST1_VNUM    : MInst<"svst1_vnum[_{d}]",  "vPpld", "csilUcUsUiUlhfdm", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_st1">;
 def SVST1B_VNUM_S : MInst<"svst1b_vnum[_{d}]", "vPAld", "sil",             [IsStore, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_st1">;
 def SVST1B_VNUM_U : MInst<"svst1b_vnum[_{d}]", "vPEld", "UsUiUl",          [IsStore, VerifyRuntimeMode], MemEltTyInt8,    "aarch64_sve_st1">;
 def SVST1H_VNUM_S : MInst<"svst1h_vnum[_{d}]", "vPBld", "il",              [IsStore, VerifyRuntimeMode], MemEltTyInt16,   "aarch64_sve_st1">;
@@ -435,7 +435,7 @@ def SVST1W_SCATTER_INDEX_S    : MInst<"svst1w_scatter[_{2}base]_index[_{d}]", "v
 } // let SVETargetGuard = "sve"
 
 multiclass StructStore<string name, string proto, string i> {
-  def : SInst<name, proto, "csilUcUsUiUlhfd", MergeNone, i, [IsStructStore, VerifyRuntimeMode]>;
+  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, [IsStructStore, VerifyRuntimeMode]>;
   let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
     def: SInst<name, proto, "b", MergeNone, i, [IsStructStore, VerifyRuntimeMode]>;
   }
@@ -451,10 +451,10 @@ defm SVST3_VNUM : StructStore<"svst3_vnum[_{d}]", "vPpl3", "aarch64_sve_st3">;
 defm SVST4_VNUM : StructStore<"svst4_vnum[_{d}]", "vPpl4", "aarch64_sve_st4">;
 
 // Store one vector, with no truncation, non-temporal (scalar base)
-def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfd", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;
+def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfdm", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;
 
 // Store one vector, with no truncation, non-temporal (scalar base, VL displacement)
-def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfd", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;
+def SVSTNT1_VNUM : MInst<"svstnt1_vnum[_{d}]", "vPpld", "csilUcUsUiUlhfdm", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;
 
 let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
   def SVSTNT1_BF      : MInst<"svstnt1[_{d}]",      "vPpd",  "b", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;
@@ -470,12 +470,12 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = InvalidMode in {
   def SVST1UDQ_VNUM : MInst<"svst1dq_vnum[_{d}]", "vPpld", "lUld", [IsStore], MemEltTyInt64, "aarch64_sve_st1dq">;
 
   // Store one vector (vector base + scalar offset)
-  def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
-  def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+  def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdbm", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+  def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdbm", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
 
   // Store one vector (scalar base + vector offset)
-  def SVST1Q_SCATTER_OFFSETS_U : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
-  def SVST1Q_SCATTER_OFFSETS_S : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPp#d", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
+  def SVST1Q_SCATTER_OFFSETS_U : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdbm", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
+  def SVST1Q_SCATTER_OFFSETS_S : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPp#d", "cUcsUsiUilUlfhdbm", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
 
   // Store N vectors into N-element structure (scalar base)
   defm SVST2Q : StructStore<"svst2q[_{d}]", "vPc2", "aarch64_sve_st2q">;
@@ -1303,14 +1303,14 @@ def SVZIP2Q_BF16      : SInst<"svzip2q[_{d}]",     "ddd",  "b", MergeNone, "aarc
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector creation
-def SVUNDEF_1 : SInst<"svundef_{d}",  "dv", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
-def SVUNDEF_2 : SInst<"svundef2_{d}", "2v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
-def SVUNDEF_3 : SInst<"svundef3_{d}", "3v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
-def SVUNDEF_4 : SInst<"svundef4_{d}", "4v", "csilUcUsUiUlhfd", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
+def SVUNDEF_1 : SInst<"svundef_{d}",  "dv", "csilUcUsUiUlhfdm", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
+def SVUNDEF_2 : SInst<"svundef2_{d}", "2v", "csilUcUsUiUlhfdm", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
+def SVUNDEF_3 : SInst<"svundef3_{d}", "3v", "csilUcUsUiUlhfdm", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
+def SVUNDEF_4 : SInst<"svundef4_{d}", "4v", "csilUcUsUiUlhfdm", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
 
-def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
-def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
-def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
+def SVCREATE_2 : SInst<"svcreate2[_{d}]", "2dd",   "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
+def SVCREATE_3 : SInst<"svcreate3[_{d}]", "3ddd",  "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
+def SVCREATE_4 : SInst<"svcreate4[_{d}]", "4dddd", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleCreate, VerifyRuntimeMode]>;
 
 let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 def SVUNDEF_1_BF16 : SInst<"svundef_{d}",  "dv", "b", MergeNone, "", [IsUndef, VerifyRuntimeMode]>;
@@ -1330,13 +1330,13 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vector insertion and extraction
-def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;
-def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_2>]>;
-def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_3>]>;
+def SVGET_2 : SInst<"svget2[_{d}]", "d2i", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;
+def SVGET_3 : SInst<"svget3[_{d}]", "d3i", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_2>]>;
+def SVGET_4 : SInst<"svget4[_{d}]", "d4i", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_3>]>;
 
-def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;
-def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_2>]>;
-def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfd", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_3>]>;
+def SVSET_2 : SInst<"svset2[_{d}]", "22id", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;
+def SVSET_3 : SInst<"svset3[_{d}]", "33id", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_2>]>;
+def SVSET_4 : SInst<"svset4[_{d}]", "44id", "csilUcUsUiUlhfdm", MergeNone, "", [IsTupleSet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_3>]>;
 
 let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 def SVGET_2_BF16 : SInst<"svget2[_{d}]", "d2i", "b", MergeNone, "", [IsTupleGet, VerifyRuntimeMode], [ImmCheck<1, ImmCheck0_1>]>;
@@ -2042,20 +2042,20 @@ def SVWHILEHS_COUNT  : SInst<"svwhilege_{d}[_{1}]",  "}nni", "QcQsQiQl", MergeNo
 }
 
 multiclass MultiVecLoad<string i> {
-  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "cUc",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "cUcm",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "sUshb", [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "iUif",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}]_x2", "2}c", "lUld",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "cUc",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "cUcm",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "sUshb", [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "iUif",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}]_x4", "4}c", "lUld",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 
-  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "cUc",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "cUcm",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "sUshb", [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "iUif",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}]_x2", "2}cl", "lUld",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "cUc",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "cUcm",   [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "sUshb", [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "iUif",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}]_x4", "4}cl", "lUld",  [IsStructLoad, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
@@ -2067,20 +2067,20 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
 }
 
 multiclass MultiVecStore<string i> {
-  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "cUc",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "cUcm",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # H_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "sUshb", [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # W_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "iUif",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # D_X2 : MInst<"sv" # i # "[_{2}_x2]", "v}p2", "lUld",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "cUc",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "cUcm",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # H_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "sUshb", [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # W_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "iUif",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # D_X4 : MInst<"sv" # i # "[_{2}_x4]", "v}p4", "lUld",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
 
-  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "cUc",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
+  def SV # NAME # B_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "cUcm",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # H_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "sUshb", [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # W_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "iUif",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
   def SV # NAME # D_VNUM_X2 : MInst<"sv" # i # "_vnum" # "[_{2}_x2]", "v}pl2", "lUld",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x2">;
-  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "cUc",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
+  def SV # NAME # B_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "cUcm",   [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # H_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "sUshb", [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # W_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "iUif",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
   def SV # NAME # D_VNUM_X4 : MInst<"sv" # i # "_vnum" # "[_{2}_x4]", "v}pl4", "lUld",  [IsStructStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_" # i # "_pn_x4">;
@@ -2104,7 +2104,7 @@ let SVETargetGuard = "sve2p1", SMETargetGuard = "sme" in {
 def SVSCLAMP : SInst<"svclamp[_{d}]", "dddd", "csil",     MergeNone, "aarch64_sve_sclamp", [VerifyRuntimeMode], []>;
 def SVUCLAMP : SInst<"svclamp[_{d}]", "dddd", "UcUsUiUl", MergeNone, "aarch64_sve_uclamp", [VerifyRuntimeMode], []>;
 
-defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUlbhfd", "aarch64_sve_revd">;
+defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUlmbhfd", "aarch64_sve_revd">;
 }
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
@@ -2223,8 +2223,8 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
   def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
 
   // 2-way and 4-way selects
-  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
-  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
+  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
+  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
 
   // SRSHL / URSHL
   def SVSRSHL_SINGLE_X2 : SInst<"svrshl[_single_{d}_x2]", "22d", "csil",     MergeNone, "aarch64_sve_srshl_single_x2", [IsStreaming], []>;
@@ -2402,15 +2402,15 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
 //
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2" in {
-  def SVZIP_X2  : SInst<"svzip[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x2",  [IsStreaming], []>;
-  def SVZIPQ_X2 : SInst<"svzipq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x2", [IsStreaming], []>;
-  def SVZIP_X4  : SInst<"svzip[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zip_x4",  [IsStreaming], []>;
-  def SVZIPQ_X4 : SInst<"svzipq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_zipq_x4", [IsStreaming], []>;
+  def SVZIP_X2  : SInst<"svzip[_{d}_x2]",  "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zip_x2",  [IsStreaming], []>;
+  def SVZIPQ_X2 : SInst<"svzipq[_{d}_x2]", "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zipq_x2", [IsStreaming], []>;
+  def SVZIP_X4  : SInst<"svzip[_{d}_x4]",  "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zip_x4",  [IsStreaming], []>;
+  def SVZIPQ_X4 : SInst<"svzipq[_{d}_x4]", "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_zipq_x4", [IsStreaming], []>;
 
-  def SVUZP_X2  : SInst<"svuzp[_{d}_x2]",  "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x2",  [IsStreaming], []>;
-  def SVUZPQ_X2 : SInst<"svuzpq[_{d}_x2]", "22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x2", [IsStreaming], []>;
-  def SVUZP_X4  : SInst<"svuzp[_{d}_x4]",  "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzp_x4",  [IsStreaming], []>;
-  def SVUZPQ_X4 : SInst<"svuzpq[_{d}_x4]", "44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_uzpq_x4", [IsStreaming], []>;
+  def SVUZP_X2  : SInst<"svuzp[_{d}_x2]",  "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzp_x2",  [IsStreaming], []>;
+  def SVUZPQ_X2 : SInst<"svuzpq[_{d}_x2]", "22", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzpq_x2", [IsStreaming], []>;
+  def SVUZP_X4  : SInst<"svuzp[_{d}_x4]",  "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzp_x4",  [IsStreaming], []>;
+  def SVUZPQ_X4 : SInst<"svuzpq[_{d}_x4]", "44", "cUcsUsiUilUlmbhfd", MergeNone, "aarch64_sve_uzpq_x4", [IsStreaming], []>;
 }
 
 //
@@ -2432,18 +2432,18 @@ let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2,fp8" in {
   def FSCALE_X4 : Inst<"svscale[_{d}_x4]", "444.x", "fhd", MergeNone, "aarch64_sme_fp8_scale_x4", [IsStreaming],[]>;
 
   // Convert from FP8 to half-precision/BFloat16 multi-vector
-  def SVF1CVT_X2 : Inst<"svcvt1_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1_x2", [IsStreaming, SetsFPMR], []>;
-  def SVF2CVT_X2 : Inst<"svcvt2_{d}[_mf8]_x2_fpm", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2_x2", [IsStreaming, SetsFPMR], []>;
+  def SVF1CVT_X2 : Inst<"svcvt1_{d}[_mf8]_x2", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1_x2", [IsStreaming], []>;
+  def SVF2CVT_X2 : Inst<"svcvt2_{d}[_mf8]_x2", "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2_x2", [IsStreaming], []>;
 
   // Convert from FP8 to deinterleaved half-precision/BFloat16 multi-vector
-  def SVF1CVTL_X2 : Inst<"svcvtl1_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming, SetsFPMR], []>;
-  def SVF2CVTL_X2 : Inst<"svcvtl2_{d}[_mf8]_x2_fpm",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming, SetsFPMR], []>;
+  def SVF1CVTL_X2 : Inst<"svcvtl1_{d}[_mf8]_x2",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl1_x2",  [IsStreaming], []>;
+  def SVF2CVTL_X2 : Inst<"svcvtl2_{d}[_mf8]_x2",  "2~>", "bh", MergeNone, "aarch64_sve_fp8_cvtl2_x2",  [IsStreaming], []>;
 
   // Convert from single/half/bfloat multivector to FP8
-  def SVFCVT_X2 : Inst<"svcvt_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvt_x2", [IsStreaming, SetsFPMR], []>;
-  def SVFCVT_X4 : Inst<"svcvt_mf8[_{d}_x4]_fpm", "~4>", "f",  MergeNone, "aarch64_sve_fp8_cvt_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
+  def SVFCVT_X2 : Inst<"svcvt_mf8[_{d}_x2]", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvt_x2", [IsStreaming], []>;
+  def SVFCVT_X4 : Inst<"svcvt_mf8[_{d}_x4]", "~4>", "f",  MergeNone, "aarch64_sve_fp8_cvt_x4", [IsOverloadNone, IsStreaming], []>;
   // interleaved
-  def SVFCVTN_X4 : Inst<"svcvtn_mf8[_{d}_x4]_fpm", "~4>", "f", MergeNone, "aarch64_sve_fp8_cvtn_x4", [IsOverloadNone, IsStreaming, SetsFPMR], []>;
+  def SVFCVTN_X4 : Inst<"svcvtn_mf8[_{d}_x4]", "~4>", "f", MergeNone, "aarch64_sve_fp8_cvtn_x4", [IsOverloadNone, IsStreaming], []>;
 }
 
 let SVETargetGuard = "sve2p1", SMETargetGuard = "sme2" in {
@@ -2464,67 +2464,67 @@ let SVETargetGuard = "sve2,fp8", SMETargetGuard = "sme2,fp8" in {
   // SVE FP8 widening conversions
 
   // 8-bit floating-point convert to BFloat16/Float16
-  def SVF1CVT : SInst<"svcvt1_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVF2CVT : SInst<"svcvt2_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVF1CVT : SInst<"svcvt1_{d}[_mf8]", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt1", [VerifyRuntimeMode]>;
+  def SVF2CVT : SInst<"svcvt2_{d}[_mf8]", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvt2", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point convert to BFloat16/Float16 (top)
-  def SVF1CVTLT : SInst<"svcvtlt1_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt1", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVF2CVTLT : SInst<"svcvtlt2_{d}[_mf8]_fpm", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt2", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVF1CVTLT : SInst<"svcvtlt1_{d}[_mf8]", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt1", [VerifyRuntimeMode]>;
+  def SVF2CVTLT : SInst<"svcvtlt2_{d}[_mf8]", "d~>", "bh", MergeNone, "aarch64_sve_fp8_cvtlt2", [VerifyRuntimeMode]>;
 
   // BFloat16/Float16 convert, narrow and interleave to 8-bit floating-point
-  def SVFCVTN : SInst<"svcvtn_mf8[_{d}_x2]_fpm", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvtn", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFCVTN : SInst<"svcvtn_mf8[_{d}_x2]", "~2>", "bh", MergeNone, "aarch64_sve_fp8_cvtn", [VerifyRuntimeMode]>;
 
   // Single-precision convert, narrow and interleave to 8-bit floating-point (top and bottom)
-  def SVFCVTNB : SInst<"svcvtnb_mf8[_f32_x2]_fpm", "~2>",  "f", MergeNone, "aarch64_sve_fp8_cvtnb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFCVTNT : SInst<"svcvtnt_mf8[_f32_x2]_fpm", "~~2>", "f", MergeNone, "aarch64_sve_fp8_cvtnt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFCVTNB : SInst<"svcvtnb_mf8[_f32_x2]", "~2>",  "f", MergeNone, "aarch64_sve_fp8_cvtnb", [VerifyRuntimeMode]>;
+  def SVFCVTNT : SInst<"svcvtnt_mf8[_f32_x2]", "~~2>", "f", MergeNone, "aarch64_sve_fp8_cvtnt", [VerifyRuntimeMode]>;
 }
 
 let SVETargetGuard = "sve2,fp8dot2", SMETargetGuard ="sme,ssve-fp8dot2" in {
   // 8-bit floating-point dot product to half-precision (vectors)
-  def SVFDOT_2WAY   :  SInst<"svdot[_f16_mf8]_fpm",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFDOT_N_2WAY :  SInst<"svdot[_n_f16_mf8]_fpm", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFDOT_2WAY   :  SInst<"svdot[_f16_mf8]",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode]>;
+  def SVFDOT_N_2WAY :  SInst<"svdot[_n_f16_mf8]", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point dot product to half-precision (indexed)
-  def SVFDOT_LANE_2WAY :  SInst<"svdot_lane[_f16_mf8]_fpm", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fdot_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFDOT_LANE_2WAY :  SInst<"svdot_lane[_f16_mf8]", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fdot_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
 }
 
 let SVETargetGuard = "sve2,fp8dot4", SMETargetGuard ="sme,ssve-fp8dot4" in {
   // 8-bit floating-point dot product to single-precision (vectors)
-  def SVFDOT_4WAY   : SInst<"svdot[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFDOT_N_4WAY : SInst<"svdot[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFDOT_4WAY   : SInst<"svdot[_f32_mf8]",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode]>;
+  def SVFDOT_N_4WAY : SInst<"svdot[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fdot", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point dot product to single-precision (indexed)
-  def SVFDOT_LANE_4WAY :  SInst<"svdot_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fdot_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_3>]>;
+  def SVFDOT_LANE_4WAY :  SInst<"svdot_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fdot_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let SVETargetGuard = "sve2,fp8fma", SMETargetGuard = "sme,ssve-fp8fma" in {
   // 8-bit floating-point multiply-add long to half-precision (bottom)
-  def SVFMLALB   : SInst<"svmlalb[_f16_mf8]_fpm",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALB_N : SInst<"svmlalb[_n_f16_mf8]_fpm", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALB   : SInst<"svmlalb[_f16_mf8]",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode]>;
+  def SVFMLALB_N : SInst<"svmlalb[_n_f16_mf8]", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalb", [VerifyRuntimeMode]>;
 
-  // 8-bit floating-point multiply-add long to ha_fpmlf-precision (bottom, indexed)
-  def SVFMLALB_LANE : SInst<"svmlalb_lane[_f16_mf8]_fpm", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_15>]>;
+  // 8-bit floating-point multiply-add long to half-precision (bottom, indexed)
+  def SVFMLALB_LANE : SInst<"svmlalb_lane[_f16_mf8]", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
 
   // 8-bit floating-point multiply-add long to half-precision (top)
-  def SVFMLALT   : SInst<"svmlalt[_f16_mf8]_fpm",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALT_N : SInst<"svmlalt[_n_f16_mf8]_fpm", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALT   : SInst<"svmlalt[_f16_mf8]",   "dd~~>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode]>;
+  def SVFMLALT_N : SInst<"svmlalt[_n_f16_mf8]", "dd~!>", "h", MergeNone, "aarch64_sve_fp8_fmlalt", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point multiply-add long to half-precision (top, indexed)
-  def SVFMLALT_LANE : SInst<"svmlalt_lane[_f16_mf8]_fpm", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVFMLALT_LANE : SInst<"svmlalt_lane[_f16_mf8]", "dd~~i>", "h", MergeNone, "aarch64_sve_fp8_fmlalt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
 
   // 8-bit floating-point multiply-add long long to single-precision (all top/bottom variants)
-  def SVFMLALLBB   : SInst<"svmlallbb[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLBB_N : SInst<"svmlallbb[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLBT   : SInst<"svmlallbt[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLBT_N : SInst<"svmlallbt[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLTB   : SInst<"svmlalltb[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLTB_N : SInst<"svmlalltb[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLTT   : SInst<"svmlalltt[_f32_mf8]_fpm",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode, SetsFPMR]>;
-  def SVFMLALLTT_N : SInst<"svmlalltt[_n_f32_mf8]_fpm", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode, SetsFPMR]>;
+  def SVFMLALLBB   : SInst<"svmlallbb[_f32_mf8]",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode]>;
+  def SVFMLALLBB_N : SInst<"svmlallbb[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb", [VerifyRuntimeMode]>;
+  def SVFMLALLBT   : SInst<"svmlallbt[_f32_mf8]",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode]>;
+  def SVFMLALLBT_N : SInst<"svmlallbt[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt", [VerifyRuntimeMode]>;
+  def SVFMLALLTB   : SInst<"svmlalltb[_f32_mf8]",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode]>;
+  def SVFMLALLTB_N : SInst<"svmlalltb[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb", [VerifyRuntimeMode]>;
+  def SVFMLALLTT   : SInst<"svmlalltt[_f32_mf8]",   "dd~~>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode]>;
+  def SVFMLALLTT_N : SInst<"svmlalltt[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point multiply-add long long to single-precision (indexed, all top/bottom variants)
-  def SVFMLALLBB_LANE : SInst<"svmlallbb_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]_fpm", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode, SetsFPMR], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLBB_LANE : SInst<"svmlallbb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
 }

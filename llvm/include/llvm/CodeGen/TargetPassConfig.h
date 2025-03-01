@@ -22,9 +22,7 @@
 namespace llvm {
 
 class TargetMachine;
-struct MachineSchedContext;
 class PassConfigImpl;
-class ScheduleDAGInstrs;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -299,27 +297,6 @@ public:
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();
-
-  /// Create an instance of ScheduleDAGInstrs to be run within the standard
-  /// MachineScheduler pass for this function and target at the current
-  /// optimization level.
-  ///
-  /// This can also be used to plug a new MachineSchedStrategy into an instance
-  /// of the standard ScheduleDAGMI:
-  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C), /*RemoveKillFlags=*/false)
-  ///
-  /// Return NULL to select the default (generic) machine scheduler.
-  virtual ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
-
-  /// Similar to createMachineScheduler but used when postRA machine scheduling
-  /// is enabled.
-  virtual ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
 
   /// printAndVerify - Add a pass to dump then verify the machine function, if
   /// those steps are enabled.
