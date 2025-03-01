@@ -48,8 +48,64 @@ let cppNamespace = "::cir" in {
 
     let methods = [
       InterfaceMethod<"",
+      "bool", "hasExternalLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isExternalLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "hasAvailableExternallyLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{ return false; }]
+      /*defaultImplementation=*/[{
+        return cir::isAvailableExternallyLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasLinkOnceLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isLinkOnceLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasLinkOnceAnyLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isLinkOnceAnyLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasLinkOnceODRLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isLinkOnceODRLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasWeakLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isWeakLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasWeakAnyLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isWeakAnyLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasWeakODRLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isWeakODRLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasInternalLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isInternalLinkage($_op.getLinkage());
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "hasPrivateLinkage", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isPrivateLinkage($_op.getLinkage());
+      }]
       >,
       InterfaceMethod<"",
       "bool", "hasLocalLinkage", (ins), [{}],
@@ -64,9 +120,9 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
-      "bool", "isExternalLinkage", (ins), [{}],
+      "bool", "hasCommonLinkage", (ins), [{}],
       /*defaultImplementation=*/[{
-        return cir::isExternalLinkage($_op.getLinkage());
+        return cir::isCommonLinkage($_op.getLinkage());
       }]
       >,
       InterfaceMethod<"",
@@ -89,11 +145,23 @@ let cppNamespace = "::cir" in {
         $_op.setDsolocal(val);
       }]
       >,
+      InterfaceMethod<"",
+      "bool", "isDSOLocal", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getDsolocal();
+      }]
+      >,
+      InterfaceMethod<"",
+      "bool", "isWeakForLinker", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return cir::isWeakForLinker($_op.getLinkage());
+      }]
+      >
     ];
     let extraClassDeclaration = [{
-    bool hasDefaultVisibility();
-    bool canBenefitFromLocalAlias();
-  }];
+      bool hasDefaultVisibility();
+      bool canBenefitFromLocalAlias();
+    }];
   }
 
 } // namespace cir

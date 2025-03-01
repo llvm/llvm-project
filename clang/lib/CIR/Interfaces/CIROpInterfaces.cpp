@@ -31,7 +31,7 @@ bool CIRGlobalValueInterface::canBenefitFromLocalAlias() {
   // wouldn't even generate Comdat::Largest comdat as it tries to leave ABI
   // specifics to LLVM lowering stage, thus here we don't need test Comdat
   // selectionKind.
-  return hasDefaultVisibility() && isExternalLinkage() && !isDeclaration() &&
+  return hasDefaultVisibility() && hasExternalLinkage() && !isDeclaration() &&
          !hasComdat();
   return false;
 }
