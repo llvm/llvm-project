@@ -11,7 +11,7 @@
 // template<BidirectionalIterator Iter, Predicate<auto, Iter::value_type> Pred>
 //   requires ShuffleIterator<Iter>
 //         && CopyConstructible<Pred>
-//   Iter
+//   constexpr Iter                                                               // constexpr since C++26
 //   stable_partition(Iter first, Iter last, Pred pred);
 
 #include <algorithm>
@@ -25,17 +25,17 @@
 
 struct is_odd
 {
-    bool operator()(const int& i) const {return i & 1;}
+    TEST_CONSTEXPR_CXX26 bool operator()(const int& i) const {return i & 1;}
 };
 
 struct odd_first
 {
-    bool operator()(const std::pair<int,int>& p) const
+    TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int,int>& p) const
         {return p.first & 1;}
 };
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX26 void
 test()
 {
   { // check mixed
@@ -282,9 +282,10 @@ test()
     assert(array[9] == P(0, 2));
   }
 #if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
-  // TODO: Re-enable this test once we get recursive inlining fixed.
+  // TODO: Re-enable this test for GCC once we get recursive inlining fixed.
   // For now it trips up GCC due to the use of always_inline.
-#  if 0
+#  if !defined(TEST_COMPILER_GCC)
+  if (!TEST_IS_CONSTANT_EVALUATED)
   { // check that the algorithm still works when no memory is available
     std::vector<int> vec(150, 3);
     vec[5]                             = 6;
@@ -309,11 +310,11 @@ test()
 struct is_null
 {
     template <class P>
-        bool operator()(const P& p) {return p == 0;}
+        TEST_CONSTEXPR_CXX26 bool operator()(const P& p) {return p == 0;}
 };
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX26 void
 test1()
 {
     const unsigned size = 5;
@@ -324,14 +325,22 @@ test1()
 
 #endif // TEST_STD_VER >= 11
 
-int main(int, char**)
-{
-    test<bidirectional_iterator<std::pair<int,int>*> >();
-    test<random_access_iterator<std::pair<int,int>*> >();
-    test<std::pair<int,int>*>();
+TEST_CONSTEXPR_CXX26 bool test() {
+  test<bidirectional_iterator<std::pair<int, int>*> >();
+  test<random_access_iterator<std::pair<int, int>*> >();
+  test<std::pair<int, int>*>();
 
 #if TEST_STD_VER >= 11
-    test1<bidirectional_iterator<std::unique_ptr<int>*> >();
+  test1<bidirectional_iterator<std::unique_ptr<int>*> >();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;
