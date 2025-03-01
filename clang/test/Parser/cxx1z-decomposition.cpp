@@ -140,8 +140,10 @@ namespace Template {
   template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration template not supported}}
 }
 
+#define MYC C
+
 namespace Init {
-  void f() {
+  template<typename T> T f(T t) {
     int arr[1];
     struct S { int n; };
     auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' requires an initializer}} expected-error {{expected initializer before ';'}}
@@ -153,6 +155,8 @@ namespace Init {
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
     auto [A, B] C = {1, 2}; // expected-error{{expected initializer before 'C'}} expected-error{{decomposition declaration '[A, B]' requires an initializer}} expected-error{{expected ';' at end of declaration}}
+    T t1 = t; // check that uninitialized decomposition declaration error works with templates and macros
+    auto [t0, t2] MYC = {t, t1}; // expected-error{{expected initializer before 'C'}} expected-error{{decomposition declaration '[t0, t2]' requires an initializer}} expected-error{{expected ';' at end of declaration}}
   }
 }
 
