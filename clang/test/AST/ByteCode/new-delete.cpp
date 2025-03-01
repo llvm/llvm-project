@@ -942,6 +942,26 @@ namespace ArrayBaseCast {
   static_assert(test());
 }
 
+namespace PR45350 {
+  int q;
+  struct V { int n; int *p = &n; constexpr ~V() { *p = *p * 10 + n; }};
+  constexpr int f(int n) {
+    int k = 0;
+    V *p = new V[n];
+    for (int i = 0; i != n; ++i) {
+      if (p[i].p != &p[i].n) return -1;
+      p[i].n = i;
+      p[i].p = &k;
+    }
+    delete[] p;
+    return k;
+  }
+  // [expr.delete]p6:
+  //   In the case of an array, the elements will be destroyed in order of
+  //   decreasing address
+  static_assert(f(6) == 543210);
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

@@ -96,7 +96,7 @@ if (LLVM_TREE_AVAILABLE)
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH)
+  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT)
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
 else ()
@@ -108,10 +108,12 @@ else ()
   # be installed there using the same prefix. This is to not have a difference
   # between bootstrap and standalone runtimes builds.
   set(FLANG_RT_OUTPUT_RESOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  set(FLANG_RT_INSTALL_RESOURCE_PATH "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
+set(FLANG_RT_INSTALL_RESOURCE_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT}"
+    CACHE PATH "Path to install runtime libraries to (default: clang resource dir)")
 extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
 cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
 cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
@@ -227,6 +229,12 @@ if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
 endif ()
 
+# Build with _XOPEN_SOURCE on AIX to avoid errors caused by _ALL_SOURCE.
+# We need to enable the large-file API as well.
+if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
+  add_compile_definitions(_XOPEN_SOURCE=700)
+  add_compile_definitions(_LARGE_FILE_API)
+endif ()
 
 # Check whether the compiler can undefine a macro using the "-U" flag.
 # Aternatively, we could use

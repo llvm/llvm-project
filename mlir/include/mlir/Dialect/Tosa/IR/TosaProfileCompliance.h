@@ -143,10 +143,12 @@ public:
     case Extension::fft:
       return {Profile::pro_fp};
     case Extension::variable:
+    case Extension::controlflow:
       return {Profile::pro_fp, Profile::pro_int};
     case Extension::none:
       return {};
     };
+    llvm_unreachable("bad Extension type");
   }
 
   // Debug utilites.

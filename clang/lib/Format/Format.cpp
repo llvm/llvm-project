@@ -401,6 +401,7 @@ template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
   static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
+    IO.enumCase(Value, "C", FormatStyle::LK_C);
     IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
     IO.enumCase(Value, "Java", FormatStyle::LK_Java);
     IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
@@ -1511,7 +1512,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BinPackLongBracedList = true;
   LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
-  LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
+  LLVMStyle.BracedInitializerIndentWidth = -1;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
                              /*AfterClass=*/false,
                              /*AfterControlStatement=*/FormatStyle::BWACS_Never,
@@ -3957,7 +3958,12 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
 
   LangOpts.LineComment = 1;
-  LangOpts.CXXOperatorNames = Style.isCpp();
+
+  const auto Language = Style.Language;
+  LangOpts.C17 = Language == FormatStyle::LK_C;
+  LangOpts.CXXOperatorNames =
+      Language == FormatStyle::LK_Cpp || Language == FormatStyle::LK_ObjC;
+
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
@@ -3982,6 +3988,8 @@ const char *StyleOptionHelpDescription =
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
+  if (FileName.ends_with(".c"))
+    return FormatStyle::LK_C;
   if (FileName.ends_with(".java"))
     return FormatStyle::LK_Java;
   if (FileName.ends_with_insensitive(".js") ||
@@ -4039,6 +4047,8 @@ static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
       continue;
 
     Text = Text.trim();
+    if (Text == "C")
+      return FormatStyle::LK_C;
     if (Text == "Cpp")
       return FormatStyle::LK_Cpp;
     if (Text == "ObjC")

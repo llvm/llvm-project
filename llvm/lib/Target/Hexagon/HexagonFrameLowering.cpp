@@ -2281,18 +2281,20 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           continue;
 
         IndexType Index = IndexMap.getIndex(&In);
+        auto &LS = LastStore[FI];
+        auto &LL = LastLoad[FI];
         if (Load) {
-          if (LastStore[FI] == IndexType::None)
-            LastStore[FI] = IndexType::Entry;
-          LastLoad[FI] = Index;
+          if (LS == IndexType::None)
+            LS = IndexType::Entry;
+          LL = Index;
         } else if (Store) {
           HexagonBlockRanges::RangeList &RL = FIRangeMap[FI].Map[&B];
-          if (LastStore[FI] != IndexType::None)
-            RL.add(LastStore[FI], LastLoad[FI], false, false);
-          else if (LastLoad[FI] != IndexType::None)
-            RL.add(IndexType::Entry, LastLoad[FI], false, false);
-          LastLoad[FI] = IndexType::None;
-          LastStore[FI] = Index;
+          if (LS != IndexType::None)
+            RL.add(LS, LL, false, false);
+          else if (LL != IndexType::None)
+            RL.add(IndexType::Entry, LL, false, false);
+          LL = IndexType::None;
+          LS = Index;
         } else {
           BadFIs.insert(FI);
         }
