@@ -275,6 +275,10 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       if (AI == cast<AtomicCmpXchgInst>(I)->getNewValOperand())
         return true;
       break;
+    case Instruction::AtomicRMW:
+      if (AI == cast<AtomicRMWInst>(I)->getValOperand())
+        return true;
+      break;
     case Instruction::PtrToInt:
       if (AI == cast<PtrToIntInst>(I)->getOperand(0))
         return true;
@@ -327,13 +331,9 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
       break;
     }
     case Instruction::Load:
-    case Instruction::AtomicRMW:
     case Instruction::Ret:
       // These instructions take an address operand, but have load-like or
       // other innocuous behavior that should not trigger a stack protector.
-      // atomicrmw conceptually has both load and store semantics, but the
-      // value being stored must be integer; so if a pointer is being stored,
-      // we'll catch it in the PtrToInt case above.
       break;
     default:
       // Conservatively return true for any instruction that takes an address

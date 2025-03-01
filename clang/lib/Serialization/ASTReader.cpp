@@ -645,10 +645,11 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
 
     // For an #undef'd macro, we only care about the name.
     if (IsUndef) {
-      if (MacroNames && !Macros.count(MacroName))
+      auto [It, Inserted] = Macros.try_emplace(MacroName);
+      if (MacroNames && Inserted)
         MacroNames->push_back(MacroName);
 
-      Macros[MacroName] = std::make_pair("", true);
+      It->second = std::make_pair("", true);
       continue;
     }
 
@@ -661,9 +662,10 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
       MacroBody = MacroBody.substr(0, End);
     }
 
-    if (MacroNames && !Macros.count(MacroName))
+    auto [It, Inserted] = Macros.try_emplace(MacroName);
+    if (MacroNames && Inserted)
       MacroNames->push_back(MacroName);
-    Macros[MacroName] = std::make_pair(MacroBody, false);
+    It->second = std::make_pair(MacroBody, false);
   }
 }
 
@@ -8112,12 +8114,6 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getExternCContextDecl();
     break;
 
-  case PREDEF_DECL_MAKE_INTEGER_SEQ_ID:
-    if (Context.MakeIntegerSeqDecl)
-      return Context.MakeIntegerSeqDecl;
-    NewLoaded = Context.getMakeIntegerSeqDecl();
-    break;
-
   case PREDEF_DECL_CF_CONSTANT_STRING_ID:
     if (Context.CFConstantStringTypeDecl)
       return Context.CFConstantStringTypeDecl;
@@ -8130,17 +8126,13 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getCFConstantStringTagDecl();
     break;
 
-  case PREDEF_DECL_TYPE_PACK_ELEMENT_ID:
-    if (Context.TypePackElementDecl)
-      return Context.TypePackElementDecl;
-    NewLoaded = Context.getTypePackElementDecl();
+#define BuiltinTemplate(BTName)                                                \
+  case PREDEF_DECL##BTName##_ID:                                               \
+    if (Context.Decl##BTName)                                                  \
+      return Context.Decl##BTName;                                             \
+    NewLoaded = Context.get##BTName##Decl();                                   \
     break;
-
-  case PREDEF_DECL_COMMON_TYPE_ID:
-    if (Context.BuiltinCommonTypeDecl)
-      return Context.BuiltinCommonTypeDecl;
-    NewLoaded = Context.getBuiltinCommonTypeDecl();
-    break;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   case NUM_PREDEF_DECL_IDS:
     llvm_unreachable("Invalid decl ID");
@@ -10186,12 +10178,12 @@ void ASTReader::visitTopLevelModuleMaps(
 }
 
 void ASTReader::finishPendingActions() {
-  while (!PendingIdentifierInfos.empty() ||
-         !PendingDeducedFunctionTypes.empty() ||
-         !PendingDeducedVarTypes.empty() || !PendingDeclChains.empty() ||
-         !PendingMacroIDs.empty() || !PendingDeclContextInfos.empty() ||
-         !PendingUpdateRecords.empty() ||
-         !PendingObjCExtensionIvarRedeclarations.empty()) {
+  while (
+      !PendingIdentifierInfos.empty() || !PendingDeducedFunctionTypes.empty() ||
+      !PendingDeducedVarTypes.empty() || !PendingIncompleteDeclChains.empty() ||
+      !PendingDeclChains.empty() || !PendingMacroIDs.empty() ||
+      !PendingDeclContextInfos.empty() || !PendingUpdateRecords.empty() ||
+      !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -10238,6 +10230,13 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
+
+    // For each decl chain that we wanted to complete while deserializing, mark
+    // it as "still needs to be completed".
+    for (unsigned I = 0; I != PendingIncompleteDeclChains.size(); ++I) {
+      markIncompleteDeclChain(PendingIncompleteDeclChains[I]);
+    }
+    PendingIncompleteDeclChains.clear();
 
     // Load pending declaration chains.
     for (unsigned I = 0; I != PendingDeclChains.size(); ++I)
@@ -10476,12 +10475,6 @@ void ASTReader::finishPendingActions() {
   for (auto *ND : PendingMergedDefinitionsToDeduplicate)
     getContext().deduplicateMergedDefinitonsFor(ND);
   PendingMergedDefinitionsToDeduplicate.clear();
-
-  // For each decl chain that we wanted to complete while deserializing, mark
-  // it as "still needs to be completed".
-  for (Decl *D : PendingIncompleteDeclChains)
-    markIncompleteDeclChain(D);
-  PendingIncompleteDeclChains.clear();
 }
 
 void ASTReader::diagnoseOdrViolations() {
@@ -11059,6 +11052,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_no_openmp_routines:
     C = new (Context) OMPNoOpenMPRoutinesClause();
     break;
+  case llvm::omp::OMPC_no_openmp_constructs:
+    C = new (Context) OMPNoOpenMPConstructsClause();
+    break;
   case llvm::omp::OMPC_no_parallelism:
     C = new (Context) OMPNoParallelismClause();
     break;
@@ -11499,6 +11495,9 @@ void OMPClauseReader::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {}
 
 void OMPClauseReader::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseReader::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseReader::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {}
 

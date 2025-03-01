@@ -634,14 +634,20 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob([
-        "source/Core/**/*.cpp",
-        "source/ValueObject/**/*.cpp",  # This should be its own library.
-    ]),
-    hdrs = glob([
-        "include/lldb/Core/**/*.h",
-        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-    ]),
+    srcs = glob(
+        [
+            "source/Core/**/*.cpp",
+            "source/ValueObject/**/*.cpp",  # This should be its own library.
+        ],
+        exclude = ["source/Core/Telemetry.cpp"],
+    ),
+    hdrs = glob(
+        [
+            "include/lldb/Core/**/*.h",
+            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+        ],
+        exclude = ["include/lldb/Core/Telemetry.h"],
+    ),
     includes = ["include"],
     deps = [
         ":BreakpointHeaders",
@@ -1054,12 +1060,13 @@ gentbl_cc_library(
 cc_binary(
     name = "lldb-dap",
     srcs = glob([
-        "tools/lldb-dap/*.cpp",
-        "tools/lldb-dap/*.h",
+        "tools/lldb-dap/**/*.cpp",
+        "tools/lldb-dap/**/*.h",
     ]),
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
+    includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",

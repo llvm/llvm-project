@@ -821,6 +821,24 @@ func.func @fold_away_iter_and_result_with_no_use(%arg0 : i32,
 
 // -----
 
+// CHECK-LABEL: @replace_duplicate_iter_args
+// CHECK-SAME: [[LB:%arg[0-9]]]: index, [[UB:%arg[0-9]]]: index, [[STEP:%arg[0-9]]]: index, [[A:%arg[0-9]]]: index, [[B:%arg[0-9]]]: index
+func.func @replace_duplicate_iter_args(%lb: index, %ub: index, %step: index, %a: index, %b: index) -> (index, index, index, index) {
+  // CHECK-NEXT: [[RES:%.*]]:2 = scf.for {{.*}} iter_args([[K0:%.*]] = [[A]], [[K1:%.*]] = [[B]])
+  %0:4 = scf.for %i = %lb to %ub step %step iter_args(%k0 = %a, %k1 = %b, %k2 = %b, %k3 = %a) -> (index, index, index, index) {
+    // CHECK-NEXT: [[V0:%.*]] = arith.addi [[K0]], [[K1]]
+    %1 = arith.addi %k0, %k1 : index
+    // CHECK-NEXT: [[V1:%.*]] = arith.addi [[K1]], [[K0]]
+    %2 = arith.addi %k2, %k3 : index
+    // CHECK-NEXT: yield [[V0]], [[V1]]
+    scf.yield %1, %2, %2, %1 : index, index, index, index
+  }
+  // CHECK: return [[RES]]#0, [[RES]]#1, [[RES]]#1, [[RES]]#0
+  return %0#0, %0#1, %0#2, %0#3 : index, index, index, index
+}
+
+// -----
+
 func.func private @do(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
 
 func.func @matmul_on_tensors(%t0: tensor<32x1024xf32>) -> tensor<?x?xf32> {

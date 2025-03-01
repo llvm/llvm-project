@@ -82,8 +82,6 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; X86-NEXT:    vmovw %xmm0, %eax
-; X86-NEXT:    vmovw %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: add2:
@@ -110,8 +108,6 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; FP16-NEXT:    vmovd %eax, %xmm1
 ; FP16-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; FP16-NEXT:    vmovw %xmm0, %eax
-; FP16-NEXT:    vmovw %eax, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; AVXNC-LABEL: add2:
@@ -124,8 +120,6 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; AVXNC-NEXT:    vmovd %eax, %xmm1
 ; AVXNC-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
   %add = fadd bfloat %a, %b
   ret bfloat %add
@@ -432,8 +426,6 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; X86-NEXT:    vmovw %xmm0, %eax
-; X86-NEXT:    vmovw %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; SSE2-LABEL: add_constant2:
@@ -454,8 +446,6 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; FP16-NEXT:    vmovd %eax, %xmm0
 ; FP16-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
-; FP16-NEXT:    vmovw %xmm0, %eax
-; FP16-NEXT:    vmovw %eax, %xmm0
 ; FP16-NEXT:    retq
 ;
 ; AVXNC-LABEL: add_constant2:
@@ -465,8 +455,6 @@ define bfloat @add_constant2(bfloat %a) nounwind {
 ; AVXNC-NEXT:    vmovd %eax, %xmm0
 ; AVXNC-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
-; AVXNC-NEXT:    vmovd %xmm0, %eax
-; AVXNC-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVXNC-NEXT:    retq
   %add = fadd bfloat %a, 1.0
   ret bfloat %add
@@ -520,6 +508,103 @@ define bfloat @fold_ext_trunc2(bfloat %a) nounwind {
   %ext = fpext bfloat %a to float
   %trunc = fptrunc float %ext to bfloat
   ret bfloat %trunc
+}
+
+define bfloat @fold_from_half(half %a) nounwind {
+; X86-LABEL: fold_from_half:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: fold_from_half:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq __extendhfsf2@PLT
+; SSE2-NEXT:    callq __truncsfbf2@PLT
+; SSE2-NEXT:    popq %rax
+; SSE2-NEXT:    retq
+;
+; FP16-LABEL: fold_from_half:
+; FP16:       # %bb.0:
+; FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; FP16-NEXT:    retq
+;
+; AVXNC-LABEL: fold_from_half:
+; AVXNC:       # %bb.0:
+; AVXNC-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
+; AVXNC-NEXT:    retq
+  %ext = fpext half %a to float
+  %trunc = fptrunc float %ext to bfloat
+  ret bfloat %trunc
+}
+
+define half @fold_to_half(bfloat %a) nounwind {
+; X86-LABEL: fold_to_half:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: fold_to_half:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    callq __truncsfhf2@PLT
+; SSE2-NEXT:    popq %rax
+; SSE2-NEXT:    retq
+;
+; BF16-LABEL: fold_to_half:
+; BF16:       # %bb.0:
+; BF16-NEXT:    vpextrw $0, %xmm0, %eax
+; BF16-NEXT:    shll $16, %eax
+; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; BF16-NEXT:    retq
+;
+; FP16-LABEL: fold_to_half:
+; FP16:       # %bb.0:
+; FP16-NEXT:    vmovw %xmm0, %eax
+; FP16-NEXT:    shll $16, %eax
+; FP16-NEXT:    vmovd %eax, %xmm0
+; FP16-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
+; FP16-NEXT:    retq
+  %ext = fpext bfloat %a to float
+  %trunc = fptrunc float %ext to half
+  ret half %trunc
+}
+
+define bfloat @bitcast_from_half(half %a) nounwind {
+; X86-LABEL: bitcast_from_half:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    retl
+;
+; CHECK-LABEL: bitcast_from_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %bc = bitcast half %a to bfloat
+  ret bfloat %bc
+}
+
+define half @bitcast_to_half(bfloat %a) nounwind {
+; X86-LABEL: bitcast_to_half:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    retl
+;
+; CHECK-LABEL: bitcast_to_half:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %bc = bitcast bfloat %a to half
+  ret half %bc
 }
 
 define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
@@ -759,15 +844,15 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_1
+; SSE2-NEXT:    jne .LBB16_1
 ; SSE2-NEXT:  # %bb.2: # %cond.load
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    jmp .LBB12_3
-; SSE2-NEXT:  .LBB12_1:
+; SSE2-NEXT:    jmp .LBB16_3
+; SSE2-NEXT:  .LBB16_1:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:  .LBB12_3:
+; SSE2-NEXT:  .LBB16_3:
 ; SSE2-NEXT:    pushq %r14
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    subq $88, %rsp
@@ -1004,10 +1089,10 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; AVXNC-NEXT:    vbroadcastss {{.*#+}} ymm0 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
 ; AVXNC-NEXT:    xorl %eax, %eax
 ; AVXNC-NEXT:    testb %al, %al
-; AVXNC-NEXT:    jne .LBB12_2
+; AVXNC-NEXT:    jne .LBB16_2
 ; AVXNC-NEXT:  # %bb.1: # %cond.load
 ; AVXNC-NEXT:    vmovups (%rax), %ymm0
-; AVXNC-NEXT:  .LBB12_2:
+; AVXNC-NEXT:  .LBB16_2:
 ; AVXNC-NEXT:    vmovaps %ymm0, %ymm1
 ; AVXNC-NEXT:    retq
   %1 = call <32 x bfloat> @llvm.masked.load.v32bf16.p0(ptr poison, i32 2, <32 x i1> poison, <32 x bfloat> <bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80, bfloat 0xRBF80>)

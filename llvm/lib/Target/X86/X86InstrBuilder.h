@@ -161,11 +161,14 @@ addRegOffset(const MachineInstrBuilder &MIB,
 
 /// addRegReg - This function is used to add a memory reference of the form:
 /// [Reg + Reg].
-static inline const MachineInstrBuilder &addRegReg(const MachineInstrBuilder &MIB,
-                                            unsigned Reg1, bool isKill1,
-                                            unsigned Reg2, bool isKill2) {
-  return MIB.addReg(Reg1, getKillRegState(isKill1)).addImm(1)
-    .addReg(Reg2, getKillRegState(isKill2)).addImm(0).addReg(0);
+static inline const MachineInstrBuilder &
+addRegReg(const MachineInstrBuilder &MIB, unsigned Reg1, bool isKill1,
+          unsigned SubReg1, unsigned Reg2, bool isKill2, unsigned SubReg2) {
+  return MIB.addReg(Reg1, getKillRegState(isKill1), SubReg1)
+      .addImm(1)
+      .addReg(Reg2, getKillRegState(isKill2), SubReg2)
+      .addImm(0)
+      .addReg(0);
 }
 
 static inline const MachineInstrBuilder &

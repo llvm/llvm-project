@@ -34,6 +34,14 @@ public:
   mlir::LogicalResult
   matchAndRewrite(cir::GlobalOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override;
+
+private:
+  mlir::LogicalResult matchAndRewriteRegionInitializedGlobal(
+      cir::GlobalOp op, mlir::Attribute init,
+      mlir::ConversionPatternRewriter &rewriter) const;
+
+  void setupRegionInitializedLLVMGlobalOp(
+      cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 };
 
 } // namespace direct

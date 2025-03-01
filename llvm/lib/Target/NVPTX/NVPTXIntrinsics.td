@@ -328,6 +328,25 @@ defm REDUX_SYNC_AND : REDUX_SYNC<"and", "b32", int_nvvm_redux_sync_and>;
 defm REDUX_SYNC_XOR : REDUX_SYNC<"xor", "b32", int_nvvm_redux_sync_xor>;
 defm REDUX_SYNC_OR : REDUX_SYNC<"or", "b32", int_nvvm_redux_sync_or>;
 
+multiclass REDUX_SYNC_F<string BinOp, string abs, string NaN> {
+  defvar intr_name = "int_nvvm_redux_sync_f" # BinOp # !subst(".", "_", abs) # !subst(".", "_", NaN);
+
+  def : NVPTXInst<(outs Float32Regs:$dst),
+                  (ins Float32Regs:$src, Int32Regs:$mask),
+                  "redux.sync." # BinOp # abs # NaN # ".f32 $dst, $src, $mask;",
+                  [(set f32:$dst, (!cast<Intrinsic>(intr_name) f32:$src, Int32Regs:$mask))]>,
+                  Requires<[hasPTX<86>, hasSM100a]>; 
+}
+
+defm REDUX_SYNC_FMIN : REDUX_SYNC_F<"min", "", "">;
+defm REDUX_SYNC_FMIN_ABS : REDUX_SYNC_F<"min", ".abs", "">;
+defm REDUX_SYNC_FMIN_NAN: REDUX_SYNC_F<"min", "", ".NaN">;
+defm REDUX_SYNC_FMIN_ABS_NAN: REDUX_SYNC_F<"min", ".abs", ".NaN">;
+defm REDUX_SYNC_FMAX : REDUX_SYNC_F<"max", "", "">;
+defm REDUX_SYNC_FMAX_ABS : REDUX_SYNC_F<"max", ".abs", "">;
+defm REDUX_SYNC_FMAX_NAN: REDUX_SYNC_F<"max", "", ".NaN">;
+defm REDUX_SYNC_FMAX_ABS_NAN: REDUX_SYNC_F<"max", ".abs", ".NaN">;
+
 } // isConvergent = true
 
 //-----------------------------------
@@ -739,6 +758,47 @@ foreach dim = [1, 2, 3, 4, 5] in {
       CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<dim, mode>;
   }
 }
+
+//Prefetch and Prefetchu 
+
+class PREFETCH_INTRS<string InstName> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          InstName # " [$addr];",
+          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
+          !subst(".", "_", InstName))) i64:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+   
+
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
+def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
+
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_normal" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_normal") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+def PREFETCH_GLOBAL_L2_EVICT_LAST   : NVPTXInst<(outs), (ins Int64Regs:$addr),
+                                      "prefetch.global.L2::evict_last" # " [$addr];",
+                                      [(!cast<Intrinsic>("int_nvvm_prefetch_global_L2_evict_last") i64:$addr)]>,
+                                      Requires<[hasPTX<80>, hasSM<90>]>;
+
+
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
+
+//Applypriority intrinsics
+class APPLYPRIORITY_L2_INTRS<string addr> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr, Int64Regs:$size),
+          StrJoin<".", ["applypriority", addr , "L2::evict_normal"]>.ret # " [$addr], $size;",
+          [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_applypriority", addr , "L2_evict_normal"]>.ret)
+          i64:$addr, i64:$size)]>,
+          Requires<[hasPTX<74>, hasSM<80>]>;
+
+def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
+def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
 
 //-----------------------------------
 // MBarrier Functions
@@ -1962,41 +2022,41 @@ multiclass F_ATOMIC_2_NEG<ValueType regT, NVPTXRegClass regclass, string SpaceSt
 
 // has 3 operands
 multiclass F_ATOMIC_3_imp<ValueType ptrT, NVPTXRegClass ptrclass,
-  ValueType regT, NVPTXRegClass regclass,
+  ValueType regT, NVPTXRegClass regclass, string SemStr,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, list<Predicate> Pred> {
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
     def reg : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, regclass:$b, regclass:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
     Requires<Pred>;
 
     def imm1 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, IMMType:$b, regclass:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
     Requires<Pred>;
 
     def imm2 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, regclass:$b, IMMType:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
     Requires<Pred>;
 
     def imm3 : NVPTXInst<(outs regclass:$dst),
       (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
       [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
     Requires<Pred>;
   }
 }
-multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
-  string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
-  defm p32 : F_ATOMIC_3_imp<i32, Int32Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, Pred>;
-  defm p64 : F_ATOMIC_3_imp<i64, Int64Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, Pred>;
+multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SemStr, string SpaceStr,
+  string TypeStr, string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
+  defm p32 : F_ATOMIC_3_imp<i32, Int32Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
+    OpcStr, IntOp, IMMType, Pred>;
+  defm p64 : F_ATOMIC_3_imp<i64, Int64Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
+    OpcStr, IntOp, IMMType, Pred>;
 }
 
 // atom_add
@@ -2378,51 +2438,76 @@ defm INT_PTX_ATOM_XOR_GEN_64 : F_ATOMIC_2<i64, Int64Regs, "", ".b64", ".xor",
 defm INT_PTX_ATOM_XOR_GEN_64_USE_G : F_ATOMIC_2<i64, Int64Regs, ".global", ".b64",
   ".xor", atomic_load_xor_i64_gen, i64imm, imm, [hasSM<32>]>;
 
-// atom_cas
+multiclass ternary_atomic_op_as {
+  // one record per address space
+  def NAME#_generic: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.generic>;
 
-def atomic_cmp_swap_i16_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i16_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i16_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i16 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i32_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i32 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_g: ATOMIC_GLOBAL_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_s: ATOMIC_SHARED_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
-def atomic_cmp_swap_i64_gen: ATOMIC_GENERIC_CHK<(ops node:$a, node:$b, node:$c),
-  (atomic_cmp_swap_i64 node:$a, node:$b, node:$c)>;
+  def NAME#_global: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.global>;
 
-defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
-  atomic_cmp_swap_i16_g, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, ".shared", ".b16", ".cas",
-  atomic_cmp_swap_i16_s, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", ".b16", ".cas",
-  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_GEN_16_USE_G : F_ATOMIC_3<i16, Int16Regs, ".global", ".b16", ".cas",
-  atomic_cmp_swap_i16_gen, i16imm, [hasSM<70>, hasPTX<63>]>;
-defm INT_PTX_ATOM_CAS_G_32 : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32", ".cas",
-  atomic_cmp_swap_i32_g, i32imm>;
-defm INT_PTX_ATOM_CAS_S_32 : F_ATOMIC_3<i32, Int32Regs, ".shared", ".b32", ".cas",
-  atomic_cmp_swap_i32_s, i32imm>;
-defm INT_PTX_ATOM_CAS_GEN_32 : F_ATOMIC_3<i32, Int32Regs, "", ".b32", ".cas",
-  atomic_cmp_swap_i32_gen, i32imm>;
-defm INT_PTX_ATOM_CAS_GEN_32_USE_G : F_ATOMIC_3<i32, Int32Regs, ".global", ".b32",
-  ".cas", atomic_cmp_swap_i32_gen, i32imm>;
-defm INT_PTX_ATOM_CAS_G_64 : F_ATOMIC_3<i64, Int64Regs, ".global", ".b64", ".cas",
-  atomic_cmp_swap_i64_g, i64imm>;
-defm INT_PTX_ATOM_CAS_S_64 : F_ATOMIC_3<i64, Int64Regs, ".shared", ".b64", ".cas",
-  atomic_cmp_swap_i64_s, i64imm>;
-defm INT_PTX_ATOM_CAS_GEN_64 : F_ATOMIC_3<i64, Int64Regs, "", ".b64", ".cas",
-  atomic_cmp_swap_i64_gen, i64imm>;
-defm INT_PTX_ATOM_CAS_GEN_64_USE_G : F_ATOMIC_3<i64, Int64Regs, ".global", ".b64",
-  ".cas", atomic_cmp_swap_i64_gen, i64imm>;
+  def NAME#_shared: PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val),
+      AS_match.shared>;
+}
+
+// generate pattern fragments for size x memory order
+// NOTE: i8 cmpxchg is not supported in ptx, and AtomicExpandPass will emulate all i8 cmpxchgs
+// using larger-bitwidth cas
+foreach size = ["i16", "i32", "i64"] in {
+  foreach order = ["", "_monotonic", "_acquire", "_release", "_acq_rel", "_seq_cst"] in {
+    defm atomic_cmp_swap#_#size#order: ternary_atomic_op_as;
+  }
+}
+
+// eg. with type = 32, order = ".acquire", addrspace = ".global",
+// atomic_cmp_swap_pat = atomic_cmp_swap_i32_acquire_global.
+// preds = [hasSM<70>, hasPTX<63>]
+// F_ATOMIC_3<i32, Int32Regs, ".acquire", ".global", ".b32",
+//            ".cas", atomic_cmp_swap_i32_acquire_global, i32imm,
+//            [hasSM<70>, hasPTX<63>]>
+multiclass INT_PTX_ATOM_CAS<string atomic_cmp_swap_pat, string type,
+                           string order, string addrspace, list<Predicate> preds>
+    : F_ATOMIC_3<!cast<ValueType>("i"#type),
+                 !cast<NVPTXRegClass>("Int"#type#"Regs"),
+                 order,
+                 addrspace,
+                 ".b"#type,
+                 ".cas",
+                 !cast<PatFrag>(atomic_cmp_swap_pat),
+                 !cast<Operand>("i"#type#"imm"),
+                 preds>;
+
+// Define atom.cas for all combinations of size x addrspace x memory order
+// supported in PTX *and* on the hardware.
+foreach size = ["32", "64"] in {
+  foreach addrspace = ["generic", "global", "shared"] in {
+    defvar cas_addrspace_string = !if(!eq(addrspace, "generic"), "", "."#addrspace);
+    foreach order = ["acquire", "release", "acq_rel", "monotonic"] in {
+      defvar cas_order_string = !if(!eq(order, "monotonic"), ".relaxed", "."#order);
+      // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
+      // Memory orders are only supported for SM70+, PTX63+- so we have two sets of instruction definitions-
+      // for SM70+, and "old" ones which lower to "atom.cas", for earlier archs.
+      defm INT_PTX_ATOM_CAS_#size#_#order#addrspace
+        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#addrspace, size,
+                           cas_order_string, cas_addrspace_string,
+                           [hasSM<70>, hasPTX<63>]>;
+      defm INT_PTX_ATOM_CAS_#size#_#order#_old#addrspace
+        : INT_PTX_ATOM_CAS<"atomic_cmp_swap_i"#size#_#order#_#addrspace, size,
+                           "", cas_addrspace_string, []>;
+    }
+  }
+}
+
+// Note that 16-bit CAS support in PTX is emulated.
+defm INT_PTX_ATOM_CAS_G_16 : F_ATOMIC_3<i16, Int16Regs, "", ".global", ".b16", ".cas",
+  atomic_cmp_swap_i16_global, i16imm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_S_16 : F_ATOMIC_3<i16, Int16Regs, "", ".shared", ".b16", ".cas",
+  atomic_cmp_swap_i16_shared, i16imm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_CAS_GEN_16 : F_ATOMIC_3<i16, Int16Regs, "", "", ".b16", ".cas",
+  atomic_cmp_swap_i16_generic, i16imm, [hasSM<70>, hasPTX<63>]>;
 
 // Support for scoped atomic operations.  Matches
 // int_nvvm_atomic_{op}_{space}_{type}_{scope}
@@ -2643,99 +2728,46 @@ defm INT_PTX_SATOM_XOR : ATOM2_bitwise_impl<"xor">;
 
 // Scalar
 
-multiclass LDU_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr),
+class LDU_G<string TyStr, NVPTXRegClass regclass>
+  :  NVPTXInst<(outs regclass:$result), (ins ADDR:$src),
+               "ldu.global." # TyStr # " \t$result, [$src];",
                       []>, Requires<[hasLDU]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr),
-                        []>, Requires<[hasLDU]>;
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr),
-                      []>, Requires<[hasLDU]>;
- def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr),
-                      []>, Requires<[hasLDU]>;
- def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr),
-                        []>, Requires<[hasLDU]>;
-}
 
-defm INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64 \t$result, [$src];", Float64Regs>;
+def INT_PTX_LDU_GLOBAL_i8  : LDU_G<"u8", Int16Regs>;
+def INT_PTX_LDU_GLOBAL_i16 : LDU_G<"u16", Int16Regs>;
+def INT_PTX_LDU_GLOBAL_i32 : LDU_G<"u32", Int32Regs>;
+def INT_PTX_LDU_GLOBAL_i64 : LDU_G<"u64", Int64Regs>;
+def INT_PTX_LDU_GLOBAL_f32 : LDU_G<"f32", Float32Regs>;
+def INT_PTX_LDU_GLOBAL_f64 : LDU_G<"f64", Float64Regs>;
 
 // vector
 
 // Elementized vector ldu
-multiclass VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins MEMri:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins MEMri64:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ldu.global.", TyStr), []>;
-}
+class VLDU_G_ELE_V2<string TyStr, NVPTXRegClass regclass>
+  : NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+                     (ins ADDR:$src),
+                     "ldu.global.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
 
-multiclass VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ldu.global.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                            regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ldu.global.", TyStr), []>;
-}
 
-defm INT_PTX_LDU_G_v2i8_ELE
-  : VLDU_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDU_G_v2i16_ELE
-  : VLDU_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v2i32_ELE
-  : VLDU_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDU_G_v2f32_ELE
-  : VLDU_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDU_G_v2i64_ELE
-  : VLDU_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDU_G_v2f64_ELE
-  : VLDU_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDU_G_v4i8_ELE
-  : VLDU_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v4i16_ELE
-  : VLDU_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4i32_ELE
-  : VLDU_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f16_ELE
-  : VLDU_G_ELE_V4<"v4.b16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int16Regs>;
-defm INT_PTX_LDU_G_v4f16x2_ELE
-  : VLDU_G_ELE_V4<"v4.b32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Int32Regs>;
-defm INT_PTX_LDU_G_v4f32_ELE
-  : VLDU_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];",
-    Float32Regs>;
+class VLDU_G_ELE_V4<string TyStr, NVPTXRegClass regclass>
+  : NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
+                            regclass:$dst4), (ins ADDR:$src),
+               "ldu.global.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
+
+
+def INT_PTX_LDU_G_v2i8_ELE : VLDU_G_ELE_V2<"u8", Int16Regs>;
+def INT_PTX_LDU_G_v2i16_ELE : VLDU_G_ELE_V2<"u16", Int16Regs>;
+def INT_PTX_LDU_G_v2i32_ELE : VLDU_G_ELE_V2<"u32", Int32Regs>;
+def INT_PTX_LDU_G_v2f32_ELE : VLDU_G_ELE_V2<"f32", Float32Regs>;
+def INT_PTX_LDU_G_v2i64_ELE : VLDU_G_ELE_V2<"u64", Int64Regs>;
+def INT_PTX_LDU_G_v2f64_ELE : VLDU_G_ELE_V2<"f64", Float64Regs>;
+
+def INT_PTX_LDU_G_v4i8_ELE : VLDU_G_ELE_V4<"u8", Int16Regs>;
+def INT_PTX_LDU_G_v4i16_ELE : VLDU_G_ELE_V4<"u16", Int16Regs>;
+def INT_PTX_LDU_G_v4i32_ELE  : VLDU_G_ELE_V4<"u32", Int32Regs>;
+def INT_PTX_LDU_G_v4f16_ELE   : VLDU_G_ELE_V4<"b16", Int16Regs>;
+def INT_PTX_LDU_G_v4f16x2_ELE  : VLDU_G_ELE_V4<"b32", Int32Regs>;
+def INT_PTX_LDU_G_v4f32_ELE  : VLDU_G_ELE_V4<"f32", Float32Regs>;
 
 
 //-----------------------------------
@@ -2746,97 +2778,44 @@ defm INT_PTX_LDU_G_v4f32_ELE
 // non-coherent texture cache, and therefore the values read must be read-only
 // during the lifetime of the kernel.
 
-multiclass LDG_G<string TyStr, NVPTXRegClass regclass> {
-  def areg: NVPTXInst<(outs regclass:$result), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
-  def areg64: NVPTXInst<(outs regclass:$result), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr),
+class LDG_G<string TyStr, NVPTXRegClass regclass>
+  : NVPTXInst<(outs regclass:$result), (ins ADDR:$src),
+               "ld.global.nc." # TyStr # " \t$result, [$src];",
                         []>, Requires<[hasLDG]>;
- def avar:  NVPTXInst<(outs regclass:$result), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
- def ari :  NVPTXInst<(outs regclass:$result), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                      []>, Requires<[hasLDG]>;
- def ari64 :  NVPTXInst<(outs regclass:$result), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr),
-                        []>, Requires<[hasLDG]>;
-}
 
-defm INT_PTX_LDG_GLOBAL_i8
-  : LDG_G<"u8 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i16
-  : LDG_G<"u16 \t$result, [$src];", Int16Regs>;
-defm INT_PTX_LDG_GLOBAL_i32
-  : LDG_G<"u32 \t$result, [$src];", Int32Regs>;
-defm INT_PTX_LDG_GLOBAL_i64
-  : LDG_G<"u64 \t$result, [$src];", Int64Regs>;
-defm INT_PTX_LDG_GLOBAL_f32
-  : LDG_G<"f32 \t$result, [$src];", Float32Regs>;
-defm INT_PTX_LDG_GLOBAL_f64
-  : LDG_G<"f64 \t$result, [$src];", Float64Regs>;
+def INT_PTX_LDG_GLOBAL_i8 : LDG_G<"u8", Int16Regs>;
+def INT_PTX_LDG_GLOBAL_i16 : LDG_G<"u16", Int16Regs>;
+def INT_PTX_LDG_GLOBAL_i32 : LDG_G<"u32", Int32Regs>;
+def INT_PTX_LDG_GLOBAL_i64 : LDG_G<"u64", Int64Regs>;
+def INT_PTX_LDG_GLOBAL_f32 : LDG_G<"f32", Float32Regs>;
+def INT_PTX_LDG_GLOBAL_f64 : LDG_G<"f64", Float64Regs>;
 
 // vector
 
 // Elementized vector ldg
-multiclass VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> {
- def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int32Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins Int64Regs:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins MEMri:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins MEMri64:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
- def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-                     (ins imemAny:$src),
-                     !strconcat("ld.global.nc.", TyStr), []>;
-}
+class VLDG_G_ELE_V2<string TyStr, NVPTXRegClass regclass> :
+  NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
+            (ins ADDR:$src),
+            "ld.global.nc.v2." # TyStr # " \t{{$dst1, $dst2}}, [$src];", []>;
 
-multiclass VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> {
-  def _areg32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                              regclass:$dst4), (ins Int32Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _areg64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                               regclass:$dst4), (ins Int64Regs:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _ari32: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                              regclass:$dst4), (ins MEMri:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _ari64: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                              regclass:$dst4), (ins MEMri64:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-  def _avar: NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3,
-                             regclass:$dst4), (ins imemAny:$src),
-               !strconcat("ld.global.nc.", TyStr), []>;
-}
+
+class VLDG_G_ELE_V4<string TyStr, NVPTXRegClass regclass> :
+  NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
+            (ins ADDR:$src),
+            "ld.global.nc.v4." # TyStr # " \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.
-defm INT_PTX_LDG_G_v2i8_ELE
-  : VLDG_G_ELE_V2<"v2.u8 \t{{$dst1, $dst2}}, [$src];",  Int16Regs>;
-defm INT_PTX_LDG_G_v2i16_ELE
-  : VLDG_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v2i32_ELE
-  : VLDG_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v2f32_ELE
-  : VLDG_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
-defm INT_PTX_LDG_G_v2i64_ELE
-  : VLDG_G_ELE_V2<"v2.u64 \t{{$dst1, $dst2}}, [$src];", Int64Regs>;
-defm INT_PTX_LDG_G_v2f64_ELE
-  : VLDG_G_ELE_V2<"v2.f64 \t{{$dst1, $dst2}}, [$src];", Float64Regs>;
-defm INT_PTX_LDG_G_v4i8_ELE
-  : VLDG_G_ELE_V4<"v4.u8 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i16_ELE
-  : VLDG_G_ELE_V4<"v4.u16 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int16Regs>;
-defm INT_PTX_LDG_G_v4i32_ELE
-  : VLDG_G_ELE_V4<"v4.u32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Int32Regs>;
-defm INT_PTX_LDG_G_v4f32_ELE
-  : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
+def INT_PTX_LDG_G_v2i8_ELE : VLDG_G_ELE_V2<"u8", Int16Regs>;
+def INT_PTX_LDG_G_v2i16_ELE : VLDG_G_ELE_V2<"u16", Int16Regs>;
+def INT_PTX_LDG_G_v2i32_ELE : VLDG_G_ELE_V2<"u32", Int32Regs>;
+def INT_PTX_LDG_G_v2f32_ELE : VLDG_G_ELE_V2<"f32", Float32Regs>;
+def INT_PTX_LDG_G_v2i64_ELE : VLDG_G_ELE_V2<"u64", Int64Regs>;
+def INT_PTX_LDG_G_v2f64_ELE : VLDG_G_ELE_V2<"f64", Float64Regs>;
+
+def INT_PTX_LDG_G_v4i8_ELE : VLDG_G_ELE_V4<"u8", Int16Regs>;
+def INT_PTX_LDG_G_v4i16_ELE : VLDG_G_ELE_V4<"u16", Int16Regs>;
+def INT_PTX_LDG_G_v4i32_ELE : VLDG_G_ELE_V4<"u32", Int32Regs>;
+def INT_PTX_LDG_G_v4f32_ELE : VLDG_G_ELE_V4<"f32", Float32Regs>;
 
 
 multiclass NG_TO_G<string Str> {
@@ -2911,17 +2890,17 @@ def nvvm_move_ptr64 : NVPTXInst<(outs Int64Regs:$r), (ins Int64Regs:$s),
 
 // @TODO: Are these actually needed, or will we always just see symbols
 // copied to registers first?
-/*def nvvm_move_sym32 : NVPTXInst<(outs Int32Regs:$r), (ins imem:$s),
+/*def nvvm_move_sym32 : NVPTXInst<(outs Int32Regs:$r), (ins ADDR_base:$s),
                              "mov.u32 \t$r, $s;",
                              [(set Int32Regs:$r,
                              (int_nvvm_move_ptr texternalsym:$s))]>;
-def nvvm_move_sym64 : NVPTXInst<(outs Int64Regs:$r), (ins imem:$s),
+def nvvm_move_sym64 : NVPTXInst<(outs Int64Regs:$r), (ins ADDR_base:$s),
                              "mov.u64 \t$r, $s;",
                              [(set Int64Regs:$r,
                              (int_nvvm_move_ptr texternalsym:$s))]>;*/
 
 def texsurf_handles
-  : NVPTXInst<(outs Int64Regs:$result), (ins imem:$src),
+  : NVPTXInst<(outs Int64Regs:$result), (ins ADDR_base:$src),
               "mov.u64 \t$result, $src;", []>;
 
 //-----------------------------------
@@ -7205,20 +7184,16 @@ class WMMA_REGINFO<WMMA_REGS r, string op>
 class BuildPatternI<Intrinsic Intr, dag Ins> {
   // Build a dag pattern that matches the intrinsic call.
   dag ret = !foreach(tmp, Ins,
-                          !subst(imem, ADDRvar,
-                          !subst(MEMri64, ADDRri64,
-                          !subst(MEMri, ADDRri,
-                          !subst(ins, Intr, tmp)))));
+                          !subst(ADDR, addr,
+                          !subst(ins, Intr, tmp)));
 }
 
 // Same as above, but uses PatFrag instead of an Intrinsic.
 class BuildPatternPF<PatFrag Intr, dag Ins> {
   // Build a dag pattern that matches the intrinsic call.
   dag ret = !foreach(tmp, Ins,
-                          !subst(imem, ADDRvar,
-                          !subst(MEMri64, ADDRri64,
-                          !subst(MEMri, ADDRri,
-                          !subst(ins, Intr, tmp)))));
+                          !subst(ADDR, addr,
+                          !subst(ins, Intr, tmp)));
 }
 
 // Common WMMA-related fields used for building patterns for all MMA instructions.
@@ -7235,10 +7210,9 @@ class WMMA_INSTR<string _Intr, list<dag> _Args>
 // wmma.load.[a|b|c].sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
 
-class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride,
-                DAGOperand SrcOp>
+class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
   : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record,
-                              [!con((ins SrcOp:$src),
+                              [!con((ins ADDR:$src),
                                     !if(WithStride, (ins Int32Regs:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
   // Load/store intrinsics are overloaded on pointer's address space.
@@ -7275,9 +7249,9 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride,
 // wmma.store.d.sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
 class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
-                   bit WithStride, DAGOperand DstOp>
+                   bit WithStride>
   : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record,
-               [!con((ins DstOp:$dst),
+               [!con((ins ADDR:$dst),
                      Frag.Ins,
                      !if(WithStride, (ins Int32Regs:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
@@ -7316,14 +7290,12 @@ defset list<WMMA_INSTR> MMA_LDSTs  = {
   foreach layout = ["row", "col"] in {
     foreach stride = [false, true] in {
       foreach space = [".global", ".shared", ""] in {
-        foreach addr = [imem, Int32Regs, Int64Regs, MEMri, MEMri64] in {
-          foreach frag = NVVM_MMA_OPS.all_ld_ops in
-            if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
-              def : WMMA_LOAD<WMMA_REGINFO<frag, "load">, layout, space, stride, addr>;
-          foreach frag = NVVM_MMA_OPS.all_st_ops in
-            if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
-              def : WMMA_STORE_D<WMMA_REGINFO<frag, "store">, layout, space, stride, addr>;
-        } // addr
+        foreach frag = NVVM_MMA_OPS.all_ld_ops in
+          if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
+            def : WMMA_LOAD<WMMA_REGINFO<frag, "load">, layout, space, stride>;
+        foreach frag = NVVM_MMA_OPS.all_st_ops in
+          if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
+            def : WMMA_STORE_D<WMMA_REGINFO<frag, "store">, layout, space, stride>;
       } // space
     } // stride
   } // layout
@@ -7450,9 +7422,8 @@ defset list<WMMA_INSTR> MMAs  = {
 //
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
-class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space,
-               DAGOperand SrcOp>
-  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins SrcOp:$src)]>,
+class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
+  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins ADDR:$src)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
@@ -7476,12 +7447,9 @@ class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space,
 defset list<WMMA_INSTR> LDMATRIXs  = {
   foreach transposed = [false, true] in {
     foreach space = [".shared", ""] in {
-      foreach addr = [imem, Int32Regs, Int64Regs, MEMri, MEMri64] in {
-        foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in
-          if NVVM_LDMATRIX_SUPPORTED<frag>.ret then
-            def : LDMATRIX<WMMA_REGINFO<frag, "ldmatrix">, transposed, space,
-                            addr>;
-      } // addr
+      foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in
+        if NVVM_LDMATRIX_SUPPORTED<frag>.ret then
+          def : LDMATRIX<WMMA_REGINFO<frag, "ldmatrix">, transposed, space>;
     } // space
   } // transposed
 } // defset
@@ -7547,7 +7515,7 @@ multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
   def : NVPTXInst<(outs), (ins i32imm:$reg_count),
           "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
           [(Intr timm:$reg_count)]>,
-    Requires<[hasSM90a, hasPTX<80>]>;
+    Requires<[hasArchAccelFeatures, hasSM<90>, hasPTX<80>]>;
 }
 
 defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
@@ -7621,5 +7589,180 @@ multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
 }
 defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
 defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
+
+def tcgen05_wait_ld: NVPTXInst<(outs), (ins), "tcgen05.wait::ld.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_ld)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_wait_st: NVPTXInst<(outs), (ins), "tcgen05.wait::st.sync.aligned;",
+  [(int_nvvm_tcgen05_wait_st)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+multiclass TCGEN05_COMMIT_INTR<NVPTXRegClass rc, string AS, string num> {
+  defvar prefix = "tcgen05.commit.cta_group::" # num;
+  defvar suffix = ".mbarrier::arrive::one.shared::cluster";
+
+  defvar intr_suffix = !if(!eq(AS, "shared"), "_shared", "") # "_cg" # num;
+  defvar Intr = !cast<Intrinsic>("int_nvvm_tcgen05_commit" # intr_suffix);
+  defvar IntrMC = !cast<Intrinsic>("int_nvvm_tcgen05_commit_mc" # intr_suffix);
+
+  def NAME : NVPTXInst<(outs), (ins rc:$mbar),
+             !strconcat(prefix, suffix, ".b64 [$mbar];"),
+             [(Intr rc:$mbar)]>,
+             Requires<[hasTcgen05Instructions]>;
+  def NAME # _MC : NVPTXInst<(outs), (ins rc:$mbar, Int16Regs:$mc),
+                   !strconcat(prefix, suffix, ".multicast::cluster.b64 [$mbar], $mc;"),
+                   [(IntrMC rc:$mbar, Int16Regs:$mc)]>,
+                   Requires<[hasTcgen05Instructions]>;
+}
+
+defm TCGEN05_COMMIT_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "", "1">;
+defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "", "2">;
+defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<Int64Regs, "shared", "2">;
+defm TCGEN05_COMMIT_S32_CG1 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "1">;
+defm TCGEN05_COMMIT_S32_CG2 : TCGEN05_COMMIT_INTR<Int32Regs, "shared", "2">;
+
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def NAME : NVPTXInst<(outs),
+             (ins Int32Regs:$tmem_addr),
+             !strconcat("tcgen05.shift.cta_group::", num, ".down [$tmem_addr];"),
+             [(Intr Int32Regs:$tmem_addr)]>,
+             Requires<[hasTcgen05Instructions]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+
+multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
+  defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
+  defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
+  defvar fmt_intr = StrJoin<"_", [src_fmt]>.ret;
+
+  defvar shape_mc_asm = StrJoin<".", [shape, mc]>.ret;
+  defvar shape_mc_intr = !subst("::", "_", !subst(".", "_", shape_mc_asm));
+
+  defvar intr_prefix = StrJoin<"_", ["int_nvvm_tcgen05_cp", shape_mc_intr, fmt_intr]>.ret;
+  defvar IntrCG1 = !cast<Intrinsic>(intr_prefix # "_cg1");
+  defvar IntrCG2 = !cast<Intrinsic>(intr_prefix # "_cg2");
+
+  def NAME # _cg1 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::1." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG1 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+  def NAME # _cg2 : NVPTXInst<(outs),
+                    (ins Int32Regs:$tmem_addr, Int64Regs:$sdesc),
+                    "tcgen05.cp.cta_group::2." # shape_mc_asm # fmt_asm # " [$tmem_addr], $sdesc;",
+                    [(IntrCG2 Int32Regs:$tmem_addr, Int64Regs:$sdesc)]>,
+                    Requires<[hasTcgen05Instructions]>;
+}
+
+foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
+  defm TCGEN05_CP_128x256b # src_fmt : TCGEN05_CP_INTR<"128x256b", src_fmt>;
+  defm TCGEN05_CP_4x256b # src_fmt   : TCGEN05_CP_INTR<"4x256b", src_fmt>;
+  defm TCGEN05_CP_128x128b # src_fmt : TCGEN05_CP_INTR<"128x128b", src_fmt>;
+  defm TCGEN05_CP_64x128_1 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::02_13">;
+  defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
+  defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
+}
+} // isConvergent
+
+let hasSideEffects = 1 in {
+
+def tcgen05_fence_before_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::before_thread_sync;",
+  [(int_nvvm_tcgen05_fence_before_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+def tcgen05_fence_after_thread_sync: NVPTXInst<(outs), (ins),
+  "tcgen05.fence::after_thread_sync;",
+  [(int_nvvm_tcgen05_fence_after_thread_sync)]>,
+  Requires<[hasTcgen05Instructions]>;
+
+} // hasSideEffects
+
+// name class for tcgen05.{ld, st}
+class TCGEN05_LDST_INST_NAME<string Op, string shape, int lg2Count, bit packOrUnpack> {
+  string name = "TCGEN05_" # Op
+                # "_" # shape
+                # "_x" # !shl(1, lg2Count)
+                # !if(!eq(packOrUnpack, 1), !if(!eq(Op, "LD"), "_PACK", "_UNPACK"), "");
+}
+
+// reginfo class tcgen05.{ld, st}
+class TCGEN05_LDST_REGINFO<int Veclen> {
+  // create a list of types for load/store operands
+  list<NVPTXRegClass> regs = !listsplat(Int32Regs, Veclen);
+  // generate list of regnames for load/store operands
+  list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
+  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  dag Ins = !dag(ins, regs, reg_names);
+  dag Outs = !dag(outs, regs, reg_names);
+}
+
+//
+// tcgen05.ld.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.pack::16b].[b32]
+//
+
+class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+  let OutOperandList = Info.Outs;
+  let AsmString = "tcgen05.ld.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Pack, 1), ".pack::16b", "")
+                  # ".b32 "
+                  # Info.regstring # ", "
+                  # "[$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ";";
+}
+
+//
+// tcgen05.st.sync.aligned.shape.x[1, 2, 4, 8, 16, 32, 64, 128][|.unpack::16b].[b32]
+//
+
+class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
+        NVPTXInst<(outs), (ins), "?", []>,
+        Requires<[hasTcgen05Instructions]> {
+
+  TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
+                                NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
+
+  let InOperandList = !con((ins Int32Regs:$taddr),
+                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           Info.Ins);
+  let OutOperandList = (outs);
+  let AsmString = "tcgen05.st.sync.aligned"
+                  # "." # Shape
+                  # ".x" # !shl(1, Num)
+                  # !if(!eq(Unpack, 1), ".unpack::16b", "")
+                  # ".b32 [$taddr]"
+                  # !if(!eq(Shape, "16x32bx2"), ", $offset", "")
+                  # ", " # Info.regstring
+                  # ";";
+}
+
+let isConvergent = true in {
+
+foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
+  foreach num = !range(0, 8) in {
+    foreach packOrUnpack = [false, true] in {
+      if NVVM_TCGEN05_LDST_ACCESS_SIZE<shape, num>.valid then {
+        def TCGEN05_LDST_INST_NAME<"LD", shape, num, packOrUnpack>.name :
+              TCGEN05_LD_INST<shape, num, packOrUnpack>;
+        def TCGEN05_LDST_INST_NAME<"ST", shape, num, packOrUnpack>.name :
+              TCGEN05_ST_INST<shape, num, packOrUnpack>;
+      }
+    }
+  }
+}
 
 } // isConvergent

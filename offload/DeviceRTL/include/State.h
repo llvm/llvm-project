@@ -86,7 +86,7 @@ struct TeamStateTy {
   ParallelRegionFnTy ParallelRegionFnVar;
 };
 
-extern TeamStateTy [[clang::address_space(3)]] TeamState;
+extern Local<TeamStateTy> TeamState;
 
 struct ThreadStateTy {
 
@@ -112,7 +112,7 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy **[[clang::address_space(3)]] ThreadStates;
+extern Local<ThreadStateTy **> ThreadStates;
 
 /// Initialize the state machinery. Must be called by all threads.
 void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,

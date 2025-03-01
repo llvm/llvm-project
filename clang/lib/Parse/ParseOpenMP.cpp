@@ -1693,6 +1693,7 @@ void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
 ///     'holds' '(' scalar-expression ')'
 ///     'no_openmp'
 ///     'no_openmp_routines'
+///     'no_openmp_constructs' (OpenMP 6.0)
 ///     'no_parallelism'
 ///
 void Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
@@ -2547,9 +2548,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     }
   }
 
-  if (DKind == OMPD_tile && !SeenClauses[unsigned(OMPC_sizes)]) {
+  if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
+      !SeenClauses[unsigned(OMPC_sizes)]) {
     Diag(Loc, diag::err_omp_required_clause)
-        << getOpenMPDirectiveName(OMPD_tile) << "sizes";
+        << getOpenMPDirectiveName(DKind) << "sizes";
   }
 
   StmtResult AssociatedStmt;
@@ -2880,6 +2882,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           StmtCtx,
           /*ReadDirectiveWithinMetadirective=*/true);
       break;
+    }
+    // If no match is found and no otherwise clause is present, skip
+    // OMP5.2 Chapter 7.4: If no otherwise clause is specified the effect is as
+    // if one was specified without an associated directive variant.
+    if (BestIdx == -1 && Idx == 1) {
+      assert(Tok.is(tok::annot_pragma_openmp_end) &&
+             "Expecting the end of the pragma here");
+      ConsumeAnnotationToken();
+      return StmtEmpty();
     }
     break;
   }
@@ -3474,6 +3485,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   }
   case OMPC_no_openmp:
   case OMPC_no_openmp_routines:
+  case OMPC_no_openmp_constructs:
   case OMPC_no_parallelism: {
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)

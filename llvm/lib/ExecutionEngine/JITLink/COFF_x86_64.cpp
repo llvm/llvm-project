@@ -221,8 +221,7 @@ public:
         }
         case EdgeKind_coff_x86_64::SecRel32: {
           E.setAddend(E.getAddend() -
-                      getSectionStart(E.getTarget().getBlock().getSection())
-                          .getValue());
+                      getSectionStart(E.getTarget().getSection()).getValue());
           E.setKind(x86_64::Pointer32);
           break;
         }

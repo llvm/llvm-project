@@ -3377,11 +3377,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sinh, Intrinsic::experimental_constrained_sinh));
 
+    case Builtin::BI__builtin_sincospi:
+    case Builtin::BI__builtin_sincospif:
+    case Builtin::BI__builtin_sincospil:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincospi intrinsic once one exists.
+      emitSincosBuiltin(*this, E, Intrinsic::sincospi);
+      return RValue::get(nullptr);
+
+    case Builtin::BIsincos:
+    case Builtin::BIsincosf:
+    case Builtin::BIsincosl:
     case Builtin::BI__builtin_sincos:
     case Builtin::BI__builtin_sincosf:
     case Builtin::BI__builtin_sincosf16:
     case Builtin::BI__builtin_sincosl:
     case Builtin::BI__builtin_sincosf128:
+      if (Builder.getIsFPConstrained())
+        break; // TODO: Emit constrained sincos intrinsic once one exists.
       emitSincosBuiltin(*this, E, Intrinsic::sincos);
       return RValue::get(nullptr);
 
@@ -3838,6 +3851,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                             /*The expr loc is sufficient.*/ SourceLocation(),
                             AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
+  }
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    const Expr *Ptr = E->getArg(0);
+    const Expr *Size = E->getArg(1);
+    Value *PtrValue = EmitScalarExpr(Ptr);
+    Value *SizeValue = EmitScalarExpr(Size);
+    if (SizeValue->getType() != IntPtrTy)
+      SizeValue =
+          Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
+    Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
@@ -10199,6 +10223,7 @@ llvm::Type *CodeGenFunction::getEltType(const SVETypeFlags &TypeFlags) {
   default:
     llvm_unreachable("Invalid SVETypeFlag!");
 
+  case SVETypeFlags::EltTyMFloat8:
   case SVETypeFlags::EltTyInt8:
     return Builder.getInt8Ty();
   case SVETypeFlags::EltTyInt16:
@@ -10627,7 +10652,7 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
       LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is returned may be different from the
@@ -10674,7 +10699,7 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
                                            unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
       LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is stored may be different from the
@@ -19463,6 +19488,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
         "hlsl.all");
   }
+  case Builtin::BI__builtin_hlsl_and: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateAnd(Op0, Op1, "hlsl.and");
+  }
+  case Builtin::BI__builtin_hlsl_or: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateOr(Op0, Op1, "hlsl.or");
+  }
   case Builtin::BI__builtin_hlsl_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
@@ -20712,9 +20747,19 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
     return emitBuiltinWithOneOverloadedType<4>(*this, E,
                                                Intrinsic::amdgcn_bitop3);
-  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
-    return emitBuiltinWithOneOverloadedType<4>(
-        *this, E, Intrinsic::amdgcn_make_buffer_rsrc);
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
+    // TODO: LLVM has this overloaded to allow for fat pointers, but since
+    // those haven't been plumbed through to Clang yet, default to creating the
+    // resource type.
+    SmallVector<Value *, 4> Args;
+    for (unsigned I = 0; I < 4; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    llvm::PointerType *RetTy = llvm::PointerType::get(
+        Builder.getContext(), llvm::AMDGPUAS::BUFFER_RESOURCE);
+    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_make_buffer_rsrc,
+                                   {RetTy, Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b32:
@@ -20789,6 +20834,19 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
         ArrayRef<Value *>{X}, nullptr, "spv.length");
+  }
+  case SPIRV::BI__builtin_spirv_reflect: {
+    Value *I = EmitScalarExpr(E->getArg(0));
+    Value *N = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           "Reflect operands must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           E->getArg(1)->getType()->isVectorType() &&
+           "Reflect operands must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
+        ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
   }
   }
   return nullptr;
@@ -21011,6 +21069,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
               CI = Intrinsic::experimental_constrained_nearbyint; break;
       case 1: ID = Intrinsic::round;
               CI = Intrinsic::experimental_constrained_round; break;
+      case 4: ID = Intrinsic::roundeven;
+              CI = Intrinsic::experimental_constrained_roundeven; break;
       case 5: ID = Intrinsic::trunc;
               CI = Intrinsic::experimental_constrained_trunc; break;
       case 6: ID = Intrinsic::ceil;
@@ -22470,11 +22530,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Tag = EmitScalarExpr(E->getArg(0));
     Value *Obj = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_throw);
-    return Builder.CreateCall(Callee, {Tag, Obj});
+    return EmitRuntimeCallOrInvoke(Callee, {Tag, Obj});
   }
   case WebAssembly::BI__builtin_wasm_rethrow: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
-    return Builder.CreateCall(Callee);
+    return EmitRuntimeCallOrInvoke(Callee);
   }
   case WebAssembly::BI__builtin_wasm_memory_atomic_wait32: {
     Value *Addr = EmitScalarExpr(E->getArg(0));

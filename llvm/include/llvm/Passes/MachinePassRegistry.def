@@ -114,6 +114,8 @@ MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())
+MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis())
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
@@ -142,14 +144,15 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass())
 MACHINE_FUNCTION_PASS("machine-cse", MachineCSEPass())
+MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass())
 MACHINE_FUNCTION_PASS("machine-scheduler", MachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("machinelicm", MachineLICMPass())
 MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
 MACHINE_FUNCTION_PASS("opt-phis", OptimizePHIsPass())
 MACHINE_FUNCTION_PASS("peephole-opt", PeepholeOptimizerPass())
 MACHINE_FUNCTION_PASS("phi-node-elimination", PHIEliminationPass())
-MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("post-RA-sched", PostRASchedulerPass(TM))
+MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("print<livedebugvars>", LiveDebugVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(errs()))
@@ -187,11 +190,21 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "regallocfast", "RegAllocFastPass",
-    [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
+    [](RegAllocFastPass::Options Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
       return parseRegAllocFastPassOptions(*PB, Params);
     },
     "filter=reg-filter;no-clear-vregs")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "greedy", "RAGreedyPass",
+    [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
+    [PB = this](StringRef Params) {
+      // TODO: parseRegAllocGreedyFilterFunc(*PB, Params);
+      (void)PB;
+      return Expected<RAGreedyPass::Options>(RAGreedyPass::Options{});
+    }, "reg-filter"
+)
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 
 // After a pass is converted to new pass manager, its entry should be moved from
@@ -243,7 +256,6 @@ DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
-DUMMY_MACHINE_FUNCTION_PASS("machine-latecleanup", MachineLateInstrsCleanupPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sanmd", MachineSanitizerBinaryMetadata)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sink", MachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-uniformity", MachineUniformityInfoWrapperPass)
@@ -258,7 +270,6 @@ DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
-DUMMY_MACHINE_FUNCTION_PASS("ra-greedy", RAGreedyPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
 DUMMY_MACHINE_FUNCTION_PASS("regalloc", RegAllocPass)
 DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)

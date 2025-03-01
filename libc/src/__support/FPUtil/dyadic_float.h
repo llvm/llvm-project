@@ -604,7 +604,7 @@ approx_reciprocal(const DyadicFloat<Bits> &a) {
   // of correct bits in x' is double the number in x.
 
   // An initial approximation to the reciprocal
-  DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - Bits,
+  DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - int(Bits),
                       uint64_t(0xFFFFFFFFFFFFFFFF) /
                           static_cast<uint64_t>(a.mantissa >> (Bits - 32)));
 
