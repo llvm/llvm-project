@@ -9327,7 +9327,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   // TODO: Convert to VPlan-transform and consoliate all transforms for VPlan
   // creation.
-  HCFGBuilder.buildHierarchicalCFG();
+  HCFGBuilder.buildPlainCFG();
 
   VPlanTransforms::introduceTopLevelVectorLoopRegion(
       *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
@@ -9631,7 +9631,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   auto Plan = std::make_unique<VPlan>(OrigLoop);
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
-  HCFGBuilder.buildHierarchicalCFG();
+  HCFGBuilder.buildPlainCFG();
 
   VPlanTransforms::introduceTopLevelVectorLoopRegion(
       *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
