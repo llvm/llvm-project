@@ -6324,8 +6324,6 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
   MCSymbol *Sym = getContext().getOrCreateSymbol(
       getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
-  getTargetParser().doBeforeLabelEmit(Sym, LabelLoc);
-
   // Emit the label.
   Out.emitLabel(Sym, LabelLoc);
 
@@ -6334,8 +6332,6 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
   if (enabledGenDwarfForAssembly())
     MCGenDwarfLabelEntry::Make(Sym, &getStreamer(), getSourceManager(),
                                LabelLoc);
-
-  getTargetParser().onLabelParsed(Sym);
 
   return false;
 }
