@@ -604,61 +604,61 @@ __OMP_RTL(__kmpc_rfun_sum_l, false, Void, Int64Ptr, Int64)
 
 __OMP_RTL(__kmpc_rfun_sum_lds_l, false, Void, Int64Ptr, Int64)
 
-__OMP_RTL(__kmpc_xteamr_d_16x64, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_d_16x64, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_d_16x64_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_d_16x64_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_f_16x64, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_f_16x64, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_f_16x64_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_f_16x64_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_h_16x64, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_h_16x64, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_h_16x64_fast_sum, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_h_16x64_fast_sum, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_bf_16x64, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_bf_16x64, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_bf_16x64_fast_sum, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_bf_16x64_fast_sum, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_s_16x64, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_s_16x64, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_s_16x64_fast_sum, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_s_16x64_fast_sum, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_i_16x64, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_i_16x64, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_i_16x64_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_i_16x64_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_l_16x64, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_l_16x64, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_l_16x64_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_l_16x64_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_d_32x32, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_d_32x32, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_d_32x32_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_d_32x32_fast_sum, false, Void, Double, DoublePtr, DoublePtr, Int32Ptr, VoidPtr, VoidPtr, Double, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_f_32x32, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_f_32x32, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_f_32x32_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_f_32x32_fast_sum, false, Void, Float, FloatPtr, FloatPtr, Int32Ptr, VoidPtr, VoidPtr, Float, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_h_32x32, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_h_32x32, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_h_32x32_fast_sum, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_h_32x32_fast_sum, false, Void, Half, HalfPtr, HalfPtr, Int32Ptr, VoidPtr, VoidPtr, Half, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_bf_32x32, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_bf_32x32, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_bf_32x32_fast_sum, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_bf_32x32_fast_sum, false, Void, BFloat, BFloatPtr, BFloatPtr, Int32Ptr, VoidPtr, VoidPtr, BFloat, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_s_32x32, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_s_32x32, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_s_32x32_fast_sum, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_s_32x32_fast_sum, false, Void, Int16, Int16Ptr, Int16Ptr, Int32Ptr, VoidPtr, VoidPtr, Int16, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_i_32x32, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_i_32x32, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_i_32x32_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_i_32x32_fast_sum, false, Void, Int32, Int32Ptr, Int32Ptr, Int32Ptr, VoidPtr, VoidPtr, Int32, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_l_32x32, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_l_32x32, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32, Int32)
 
-__OMP_RTL(__kmpc_xteamr_l_32x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32)
+__OMP_RTL(__kmpc_xteamr_l_32x32_fast_sum, false, Void, Int64, Int64Ptr, Int64Ptr, Int32Ptr, VoidPtr, VoidPtr, Int64, Int64, Int32, Int32)
 
 __OMP_RTL(__llvm_profile_register_function, false, Void, VoidPtr)
 __OMP_RTL(__llvm_profile_register_names_function, false, Void, VoidPtr, Int64)
