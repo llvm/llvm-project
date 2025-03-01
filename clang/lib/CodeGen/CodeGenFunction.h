@@ -1689,14 +1689,31 @@ public:
   }
   void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
 
+  enum CounterForIncrement {
+    UseExecPath = 0,
+    UseSkipPath,
+  };
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
+    incrementProfileCounter(UseExecPath, S, false, StepV);
+  }
+
+  /// Emit increment of Counter.
+  /// \param ExecSkip Use `Skipped` Counter if UseSkipPath is specified.
+  /// \param S The Stmt that Counter is associated.
+  /// \param UseBoth Mark both Exec/Skip as used. (for verification)
+  /// \param StepV The offset Value for adding to Counter.
+  void incrementProfileCounter(CounterForIncrement ExecSkip, const Stmt *S,
+                               bool UseBoth = false,
+                               llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
         !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
       auto AL = ApplyDebugLocation::CreateArtificial(*this);
-      PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+      PGO.emitCounterSetOrIncrement(Builder, S, (ExecSkip == UseSkipPath),
+                                    UseBoth, StepV);
     }
     PGO.setCurrentStmt(S);
   }

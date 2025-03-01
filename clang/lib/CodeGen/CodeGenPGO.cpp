@@ -1137,6 +1137,16 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
   if (CoverageMapping.empty())
     return;
 
+  // Scan max(FalseCnt) and update NumRegionCounters.
+  unsigned MaxNumCounters = NumRegionCounters;
+  for (const auto [_, V] : *RegionCounterMap) {
+    assert((!V.Executed.hasValue() || MaxNumCounters > V.Executed) &&
+           "TrueCnt should not be reassigned");
+    if (V.Skipped.hasValue())
+      MaxNumCounters = std::max(MaxNumCounters, V.Skipped + 1);
+  }
+  NumRegionCounters = MaxNumCounters;
+
   CGM.getCoverageMapping()->addFunctionMappingRecord(
       FuncNameVar, FuncName, FunctionHash, CoverageMapping);
 }
@@ -1197,11 +1207,25 @@ std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                           bool UseSkipPath, bool UseBoth,
                                            llvm::Value *StepV) {
-  if (!RegionCounterMap || !Builder.GetInsertBlock())
+  if (!RegionCounterMap)
     return;
 
-  unsigned Counter = (*RegionCounterMap)[S].Executed;
+  unsigned Counter;
+  auto &TheMap = (*RegionCounterMap)[S];
+  if (!UseSkipPath) {
+    if (!TheMap.Executed.hasValue())
+      return;
+    Counter = TheMap.Executed;
+  } else {
+    if (!TheMap.Skipped.hasValue())
+      return;
+    Counter = TheMap.Skipped;
+  }
+
+  if (!Builder.GetInsertBlock())
+    return;
 
   // Make sure that pointer to global is passed in with zero addrspace
   // This is relevant during GPU profiling
