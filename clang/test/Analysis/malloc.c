@@ -735,7 +735,7 @@ void mallocCastToFP(void) {
 // This tests that 'malloc()' buffers are undefined by default
 char mallocGarbage (void) {
 	char *buf = malloc(2);
-	char result = buf[1]; // expected-warning{{undefined}}
+	char result = buf[1]; // expected-warning{{uninitialized}}
 	free(buf);
 	return result;
 }

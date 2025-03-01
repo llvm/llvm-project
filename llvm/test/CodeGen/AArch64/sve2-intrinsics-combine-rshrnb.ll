@@ -4,8 +4,8 @@
 define void @add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: add_lshr_rshrnb_b_6:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    rshrnb z0.b, z0.h, #6
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
@@ -21,8 +21,8 @@ define void @add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 define void @neg_add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: neg_add_lshr_rshrnb_b_6:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.h, z0.h, #1 // =0x1
 ; CHECK-NEXT:    lsr z0.h, z0.h, #6
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
@@ -39,8 +39,8 @@ define void @neg_add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 define void @add_lshr_rshrnb_h_7(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: add_lshr_rshrnb_h_7:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    rshrnb z0.b, z0.h, #7
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
@@ -56,8 +56,8 @@ define void @add_lshr_rshrnb_h_7(ptr %ptr, ptr %dst, i64 %index){
 define void @add_lshr_rshrn_h_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: add_lshr_rshrn_h_6:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    rshrnb z0.h, z0.s, #6
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
@@ -73,8 +73,8 @@ define void @add_lshr_rshrn_h_6(ptr %ptr, ptr %dst, i64 %index){
 define void @add_lshr_rshrnb_h_2(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: add_lshr_rshrnb_h_2:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    rshrnb z0.h, z0.s, #2
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
@@ -103,8 +103,8 @@ define void @neg_add_lshr_rshrnb_h_0(ptr %ptr, ptr %dst, i64 %index){
 define void @neg_zero_shift(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: neg_zero_shift:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.s, z0.s, #1 // =0x1
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
@@ -208,8 +208,8 @@ define void @neg_wide_add_shift_add_rshrnb_d(ptr %dest, i64 %index, <vscale x 4 
 define void @neg_trunc_lsr_add_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vscale x 8 x i16> %add_op1){
 ; CHECK-LABEL: neg_trunc_lsr_add_op1_not_splat:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z1, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    lsr z0.h, z0.h, #6
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
@@ -226,8 +226,8 @@ define void @neg_trunc_lsr_add_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vs
 define void @neg_trunc_lsr_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vscale x 8 x i16> %lshr_op1){
 ; CHECK-LABEL: neg_trunc_lsr_op1_not_splat:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z1, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    add z1.h, z1.h, #32 // =0x20
 ; CHECK-NEXT:    lsrr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
@@ -244,8 +244,8 @@ define void @neg_trunc_lsr_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vscale
 define void @neg_add_has_two_uses(ptr %ptr, ptr %dst, ptr %dst2, i64 %index){
 ; CHECK-LABEL: neg_add_has_two_uses:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.h, z0.h, #32 // =0x20
 ; CHECK-NEXT:    add z1.h, z0.h, z0.h
 ; CHECK-NEXT:    lsr z0.h, z0.h, #6
@@ -267,8 +267,8 @@ define void @neg_add_has_two_uses(ptr %ptr, ptr %dst, ptr %dst2, i64 %index){
 define void @add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: add_lshr_rshrnb_s:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    rshrnb z0.s, z0.d, #6
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x1, x2, lsl #2]
 ; CHECK-NEXT:    ret
@@ -284,8 +284,8 @@ define void @add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 define void @neg_add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-LABEL: neg_add_lshr_rshrnb_s:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    add z0.d, z0.d, #32 // =0x20
 ; CHECK-NEXT:    lsr z0.d, z0.d, #6
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x1, x2, lsl #1]

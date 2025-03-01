@@ -1999,7 +1999,7 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
     fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
     body << getter << "Attr() != "
          << tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                  attr.getDefaultValue());
+                  tgfmt(attr.getDefaultValue(), &fctx));
   }
   if (optionalAndDefault)
     body << ")";
@@ -2007,8 +2007,10 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
 
 static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
                                     PropertyVariable &propElement) {
-  body << op.getGetterName(propElement.getVar()->name)
-       << "() != " << propElement.getVar()->prop.getDefaultValue();
+  FmtContext fctx;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << op.getGetterName(propElement.getVar()->name) << "() != "
+       << tgfmt(propElement.getVar()->prop.getDefaultValue(), &fctx);
 }
 
 /// Elide the variadic segment size attributes if necessary.
@@ -2045,8 +2047,9 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2059,8 +2062,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // Similarly, elide default-valued properties.
   for (const NamedProperty &prop : op.getProperties()) {
     if (prop.prop.hasDefaultValue()) {
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
       body << "  if (" << op.getGetterName(prop.name)
-           << "() == " << prop.prop.getDefaultValue() << ") {";
+           << "() == " << tgfmt(prop.prop.getDefaultValue(), &fctx) << ") {";
       body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
       body << "  }\n";
     }
@@ -2094,8 +2099,9 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)

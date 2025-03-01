@@ -66,6 +66,9 @@ BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
     : BytecodeWriterConfig(producer) {
   attachFallbackResourcePrinter(map);
 }
+BytecodeWriterConfig::BytecodeWriterConfig(BytecodeWriterConfig &&config)
+    : impl(std::move(config.impl)) {}
+
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 
 ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>
@@ -610,6 +613,9 @@ private:
 } // namespace
 
 void EncodingEmitter::writeTo(raw_ostream &os) const {
+  // Reserve space in the ostream for the encoded contents.
+  os.reserveExtraSpace(size());
+
   for (auto &prevResult : prevResultList)
     os.write((const char *)prevResult.data(), prevResult.size());
   os.write((const char *)currentResult.data(), currentResult.size());

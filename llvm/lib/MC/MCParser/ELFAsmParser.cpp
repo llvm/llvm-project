@@ -328,9 +328,12 @@ static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
       flags |= ELF::XCORE_SHF_DP_SECTION;
       break;
     case 'y':
-      if (!(TT.isARM() || TT.isThumb()))
+      if (TT.isARM() || TT.isThumb())
+        flags |= ELF::SHF_ARM_PURECODE;
+      else if (TT.isAArch64())
+        flags |= ELF::SHF_AARCH64_PURECODE;
+      else
         return -1U;
-      flags |= ELF::SHF_ARM_PURECODE;
       break;
     case 's':
       if (TT.getArch() != Triple::hexagon)

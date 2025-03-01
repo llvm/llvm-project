@@ -1040,6 +1040,12 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
          rhs_triple_os == llvm::Triple::IOS &&
          rhs_triple_env == llvm::Triple::MacABI))
       return true;
+    // x86_64-apple-driverkit, x86_64-apple-macosx are compatible, no match.
+    if ((lhs_triple_os == llvm::Triple::DriverKit &&
+         rhs_triple_os == llvm::Triple::MacOSX) ||
+        (lhs_triple_os == llvm::Triple::MacOSX &&
+         rhs_triple_os == llvm::Triple::DriverKit))
+      return true;
   }
 
   // x86_64-apple-ios-macabi and x86_64-apple-ios are not compatible.

@@ -4633,8 +4633,8 @@ public:
   }
 };
 
-/// Represents a reference to a function parameter pack or init-capture pack
-/// that has been substituted but not yet expanded.
+/// Represents a reference to a function parameter pack, init-capture pack,
+/// or binding pack that has been substituted but not yet expanded.
 ///
 /// When a pack expansion contains multiple parameter packs at different levels,
 /// this node is used to represent a function parameter pack at an outer level
@@ -4649,13 +4649,13 @@ public:
 /// \endcode
 class FunctionParmPackExpr final
     : public Expr,
-      private llvm::TrailingObjects<FunctionParmPackExpr, VarDecl *> {
+      private llvm::TrailingObjects<FunctionParmPackExpr, ValueDecl *> {
   friend class ASTReader;
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   /// The function parameter pack which was referenced.
-  VarDecl *ParamPack;
+  ValueDecl *ParamPack;
 
   /// The location of the function parameter pack reference.
   SourceLocation NameLoc;
@@ -4663,35 +4663,34 @@ class FunctionParmPackExpr final
   /// The number of expansions of this pack.
   unsigned NumParameters;
 
-  FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
-                       SourceLocation NameLoc, unsigned NumParams,
-                       VarDecl *const *Params);
+  FunctionParmPackExpr(QualType T, ValueDecl *ParamPack, SourceLocation NameLoc,
+                       unsigned NumParams, ValueDecl *const *Params);
 
 public:
   static FunctionParmPackExpr *Create(const ASTContext &Context, QualType T,
-                                      VarDecl *ParamPack,
+                                      ValueDecl *ParamPack,
                                       SourceLocation NameLoc,
-                                      ArrayRef<VarDecl *> Params);
+                                      ArrayRef<ValueDecl *> Params);
   static FunctionParmPackExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumParams);
 
   /// Get the parameter pack which this expression refers to.
-  VarDecl *getParameterPack() const { return ParamPack; }
+  ValueDecl *getParameterPack() const { return ParamPack; }
 
   /// Get the location of the parameter pack.
   SourceLocation getParameterPackLocation() const { return NameLoc; }
 
   /// Iterators over the parameters which the parameter pack expanded
   /// into.
-  using iterator = VarDecl * const *;
-  iterator begin() const { return getTrailingObjects<VarDecl *>(); }
+  using iterator = ValueDecl *const *;
+  iterator begin() const { return getTrailingObjects<ValueDecl *>(); }
   iterator end() const { return begin() + NumParameters; }
 
   /// Get the number of parameters in this parameter pack.
   unsigned getNumExpansions() const { return NumParameters; }
 
   /// Get an expansion of the parameter pack by index.
-  VarDecl *getExpansion(unsigned I) const { return begin()[I]; }
+  ValueDecl *getExpansion(unsigned I) const { return begin()[I]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return NameLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return NameLoc; }
@@ -5040,7 +5039,7 @@ public:
   }
 
   const FieldDecl *getInitializedFieldInUnion() const {
-    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+    return dyn_cast_if_present<FieldDecl *>(ArrayFillerOrUnionFieldInit);
   }
 
   child_range children() {
@@ -5316,59 +5315,6 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
-  }
-};
-
-// Represents an unexpanded pack where the list of expressions are
-// known. These are used when structured bindings introduce a pack.
-class ResolvedUnexpandedPackExpr final
-    : public Expr,
-      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Expr *> {
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
-  friend TrailingObjects;
-
-  SourceLocation BeginLoc;
-  unsigned NumExprs;
-
-  ResolvedUnexpandedPackExpr(SourceLocation BL, QualType QT, unsigned NumExprs);
-
-public:
-  static ResolvedUnexpandedPackExpr *CreateDeserialized(ASTContext &C,
-                                                        unsigned NumExprs);
-  static ResolvedUnexpandedPackExpr *
-  Create(ASTContext &C, SourceLocation BeginLoc, QualType T, unsigned NumExprs);
-  static ResolvedUnexpandedPackExpr *Create(ASTContext &C,
-                                            SourceLocation BeginLoc, QualType T,
-                                            llvm::ArrayRef<Expr *> Exprs);
-
-  unsigned getNumExprs() const { return NumExprs; }
-
-  llvm::MutableArrayRef<Expr *> getExprs() {
-    return {getTrailingObjects<Expr *>(), NumExprs};
-  }
-
-  llvm::ArrayRef<Expr *> getExprs() const {
-    return {getTrailingObjects<Expr *>(), NumExprs};
-  }
-
-  Expr *getExpansion(unsigned Idx) { return getExprs()[Idx]; }
-  Expr *getExpansion(unsigned Idx) const { return getExprs()[Idx]; }
-
-  // Iterators
-  child_range children() {
-    return child_range((Stmt **)getTrailingObjects<Expr *>(),
-                       (Stmt **)getTrailingObjects<Expr *>() + getNumExprs());
-  }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return BeginLoc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return BeginLoc; }
-
-  // Returns the resolved pack of a decl or nullptr
-  static ResolvedUnexpandedPackExpr *getFromDecl(Decl *);
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == ResolvedUnexpandedPackExprClass;
   }
 };
 

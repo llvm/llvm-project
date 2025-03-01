@@ -162,6 +162,11 @@ public:
 
   void set(SanitizerMask K, double V);
   void clear(SanitizerMask K = SanitizerKind::All);
+
+  // Returns nullopt if all the values are zero.
+  // Otherwise, return value contains a vector of all the scaled values.
+  std::optional<std::vector<unsigned>>
+  getAllScaled(unsigned ScalingFactor) const;
 };
 
 struct SanitizerSet {

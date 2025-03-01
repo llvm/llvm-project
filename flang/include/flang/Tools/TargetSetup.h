@@ -25,8 +25,6 @@ namespace Fortran::tools {
 
   const llvm::Triple &targetTriple{targetMachine.getTargetTriple()};
 
-  targetCharacteristics.set_ieeeFeature(evaluate::IeeeFeature::Halting, true);
-
   if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
@@ -37,6 +35,8 @@ namespace Fortran::tools {
     targetCharacteristics.set_haltingSupportIsUnknownAtCompileTime();
     targetCharacteristics.set_ieeeFeature(
         evaluate::IeeeFeature::Halting, false);
+    targetCharacteristics.set_ieeeFeature(
+        evaluate::IeeeFeature::Standard, false);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);

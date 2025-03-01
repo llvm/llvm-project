@@ -44,6 +44,8 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
+  /* Name of class/struct/union/interface definition. */                       \
+  TYPE(ClassHeadName)                                                          \
   TYPE(ClassRBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
   /* ternary ?: expression */                                                  \
@@ -739,29 +741,6 @@ public:
 
   bool isPointerOrReference() const {
     return isOneOf(tok::star, tok::amp, tok::ampamp);
-  }
-
-  bool isCppAlternativeOperatorKeyword() const {
-    assert(!TokenText.empty());
-    if (!isalpha(TokenText[0]))
-      return false;
-
-    switch (Tok.getKind()) {
-    case tok::ampamp:
-    case tok::ampequal:
-    case tok::amp:
-    case tok::pipe:
-    case tok::tilde:
-    case tok::exclaim:
-    case tok::exclaimequal:
-    case tok::pipepipe:
-    case tok::pipeequal:
-    case tok::caret:
-    case tok::caretequal:
-      return true;
-    default:
-      return false;
-    }
   }
 
   bool isUnaryOperator() const {

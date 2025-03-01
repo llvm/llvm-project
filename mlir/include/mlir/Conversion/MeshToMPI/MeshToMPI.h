@@ -18,10 +18,6 @@ class Pass;
 #define GEN_PASS_DECL_CONVERTMESHTOMPIPASS
 #include "mlir/Conversion/Passes.h.inc"
 
-/// Lowers Mesh communication operations (updateHalo, AllGater, ...)
-/// to MPI primitives.
-std::unique_ptr<::mlir::Pass> createConvertMeshToMPIPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MESHTOMPI_MESHTOMPI_H
