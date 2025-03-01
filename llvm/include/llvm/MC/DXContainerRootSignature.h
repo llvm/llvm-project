@@ -7,19 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstdint>
-#include <limits>
 
 namespace llvm {
 
 class raw_ostream;
-
 namespace mcdxbc {
+
+struct RootParameter {
+  dxbc::RootParameterHeader Header;
+  union {
+    dxbc::RootConstants Constants;
+  };
+};
 struct RootSignatureDesc {
 
   dxbc::RootSignatureHeader Header;
-  SmallVector<dxbc::RootParameter> Parameters;
-  RootSignatureDesc() : Header(dxbc::RootSignatureHeader{2, 0}) {}
+  SmallVector<mcdxbc::RootParameter> Parameters;
+  RootSignatureDesc()
+      : Header(dxbc::RootSignatureHeader{
+            2, 0, sizeof(dxbc::RootSignatureHeader), 0, 0, 0}) {}
 
   void write(raw_ostream &OS) const;
 };

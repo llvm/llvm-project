@@ -18,6 +18,7 @@
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -269,7 +270,25 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Header.Flags = P.RootSignature->getEncodedFlags();
       RS.Header.Version = P.RootSignature->Version;
-      RS.Parameters = std::move(P.RootSignature->Parameters);
+      for (const auto &Param : P.RootSignature->Parameters) {
+        mcdxbc::RootParameter NewParam;
+        NewParam.Header = dxbc::RootParameterHeader{
+            Param.Type, Param.Visibility, Param.Offset};
+
+        switch (Param.Type) {
+
+        case dxbc::RootParameterType::Constants32Bit: {
+          NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
+          NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
+          NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;
+        } break;
+        case dxbc::RootParameterType::Empty:
+          llvm_unreachable("Invalid parameter type");
+          break;
+        }
+
+        RS.Parameters.push_back(NewParam);
+      }
 
       RS.write(OS);
       break;

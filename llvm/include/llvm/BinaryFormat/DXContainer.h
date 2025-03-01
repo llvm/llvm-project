@@ -17,6 +17,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -572,33 +573,32 @@ struct RootConstants {
   }
 };
 
-struct RootParameter {
+struct RootParameterHeader {
   dxbc::RootParameterType ParameterType;
-  union {
-    dxbc::RootConstants Constants;
-  };
   dxbc::ShaderVisibility ShaderVisibility;
+  uint32_t ParameterOffset;
 
   void swapBytes() {
-    sys::swapByteOrder(ShaderVisibility);
-    switch (ParameterType) {
-    case RootParameterType::Constants32Bit:
-      Constants.swapBytes();
-      break;
-    case RootParameterType::Empty:
-      llvm_unreachable("invalid value for ParameterType");
-      break;
-    }
     sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
   }
 };
 
 struct RootSignatureHeader {
   uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
   uint32_t Flags;
 
   void swapBytes() {
     sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
     sys::swapByteOrder(Flags);
   }
 };

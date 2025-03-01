@@ -919,8 +919,8 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ(RS->getFlags(), 17u);
 
     const auto RootParam = RS->getParameters()[0];
-    ASSERT_EQ((uint32_t)RootParam.ParameterType, 1u);
-    ASSERT_EQ((uint32_t)RootParam.ShaderVisibility, 2u);
+    ASSERT_EQ((uint32_t)RootParam.Header.ParameterType, 1u);
+    ASSERT_EQ((uint32_t)RootParam.Header.ShaderVisibility, 2u);
     ASSERT_EQ(RootParam.Constants.ShaderRegister, 15u);
     ASSERT_EQ(RootParam.Constants.RegisterSpace, 14u);
     ASSERT_EQ(RootParam.Constants.Num32BitValues, 16u);

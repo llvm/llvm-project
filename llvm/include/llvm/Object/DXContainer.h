@@ -116,7 +116,12 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-
+struct RootParameter {
+  dxbc::RootParameterHeader Header;
+  union {
+    dxbc::RootConstants Constants;
+  };
+};
 class RootSignature {
 private:
   uint32_t Version = 2;
@@ -126,7 +131,7 @@ private:
   uint32_t StaticSamplersOffset = 0;
   uint32_t Flags = 0;
 
-  SmallVector<dxbc::RootParameter> Parameters;
+  SmallVector<DirectX::RootParameter> Parameters;
 
 public:
   RootSignature() {}
@@ -137,7 +142,7 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  const SmallVector<dxbc::RootParameter> &getParameters() const {
+  const SmallVector<DirectX::RootParameter> &getParameters() const {
     return Parameters;
   }
   uint32_t getFlags() const { return Flags; }

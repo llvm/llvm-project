@@ -291,36 +291,39 @@ Error DirectX::RootSignature::parse(StringRef Data) {
 
   Current = Begin + RootParametersOffset;
   for (uint32_t It = 0; It < NumParameters; It++) {
-    dxbc::RootParameter NewParam;
+    DirectX::RootParameter NewParam;
 
-    NewParam.ParameterType =
+    NewParam.Header.ParameterType =
         support::endian::read<dxbc::RootParameterType,
                               llvm::endianness::little>(Current);
     if (!dxbc::RootSignatureValidations::isValidParameterType(
-            NewParam.ParameterType))
-      return validationFailed("unsupported parameter type value read: " +
-                              llvm::Twine((uint32_t)NewParam.ParameterType));
+            NewParam.Header.ParameterType))
+      return validationFailed(
+          "unsupported parameter type value read: " +
+          llvm::Twine((uint32_t)NewParam.Header.ParameterType));
 
     Current += sizeof(dxbc::RootParameterType);
 
-    NewParam.ShaderVisibility =
+    NewParam.Header.ShaderVisibility =
         support::endian::read<dxbc::ShaderVisibility, llvm::endianness::little>(
             Current);
     if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
-            NewParam.ShaderVisibility))
-      return validationFailed("unsupported shader visility flag value read: " +
-                              llvm::Twine((uint32_t)NewParam.ShaderVisibility));
+            NewParam.Header.ShaderVisibility))
+      return validationFailed(
+          "unsupported shader visility flag value read: " +
+          llvm::Twine((uint32_t)NewParam.Header.ShaderVisibility));
 
     Current += sizeof(dxbc::ShaderVisibility);
 
-    uint32_t Offset =
+    NewParam.Header.ParameterOffset =
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
     Current += sizeof(uint32_t);
 
-    switch (NewParam.ParameterType) {
+    switch (NewParam.Header.ParameterType) {
 
     case dxbc::RootParameterType::Constants32Bit:
-      if (Error Err = readStruct(Data, Begin + Offset, NewParam.Constants))
+      if (Error Err = readStruct(Data, Begin + NewParam.Header.ParameterOffset,
+                                 NewParam.Constants))
         return Err;
       break;
     case dxbc::RootParameterType::Empty:

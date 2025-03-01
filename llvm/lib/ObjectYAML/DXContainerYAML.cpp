@@ -35,7 +35,9 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  Parameters = Data.getParameters();
+  for (const auto &P : Data.getParameters()) {
+    Parameters.push_back(RootParameterYamlDesc(P));
+  }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
@@ -219,18 +221,18 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-void MappingTraits<dxbc::RootConstants>::mapping(IO &IO,
-                                                 dxbc::RootConstants &C) {
+void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
   IO.mapRequired("Num32BitValues", C.Num32BitValues);
   IO.mapRequired("RegisterSpace", C.RegisterSpace);
   IO.mapRequired("ShaderRegister", C.ShaderRegister);
 }
 
-void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
-                                                 dxbc::RootParameter &P) {
-  IO.mapRequired("ParameterType", P.ParameterType);
-  IO.mapRequired("ShaderVisibility", P.ShaderVisibility);
-  switch (P.ParameterType) {
+void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P) {
+  IO.mapRequired("ParameterType", P.Type);
+  IO.mapRequired("ShaderVisibility", P.Visibility);
+  switch (P.Type) {
   case dxbc::RootParameterType::Constants32Bit:
     IO.mapRequired("Constants", P.Constants);
     break;
