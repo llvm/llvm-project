@@ -71,13 +71,12 @@
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_14:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 ! CHECK:             fir.store %[[VAL_12]]#0 to %[[VAL_14]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-! CHECK:             %[[VAL_15:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-! CHECK:             %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_18:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_19:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(byref @add_reduction_byref_box_Uxi32 %[[VAL_14]] -> %[[VAL_20:.*]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_15:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_Uxi32 %[[VAL_14]] -> %[[VAL_20:.*]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_21:.*]]) : i32 = (%[[VAL_17]]) to (%[[VAL_18]]) inclusive step (%[[VAL_19]]) {
+! CHECK:                 %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFsEc"} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.array<?xi32>>>)
 ! CHECK:                 fir.store %[[VAL_21]] to %[[VAL_16]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>

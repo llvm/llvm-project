@@ -885,10 +885,8 @@ define amdgpu_kernel void @extract_neg_offset_sgpr(ptr addrspace(1) %out, i32 %o
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GENERIC-NEXT:    s_addk_i32 s2, 0xfe00
 ; GENERIC-NEXT:    s_cmp_eq_u32 s2, 1
-; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GENERIC-NEXT:    s_cselect_b32 s4, 1, 0
 ; GENERIC-NEXT:    s_cmp_lg_u32 s2, 2
-; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
-; GENERIC-NEXT:    v_readfirstlane_b32 s4, v0
 ; GENERIC-NEXT:    s_cselect_b32 s4, s4, 2
 ; GENERIC-NEXT:    s_cmp_lg_u32 s2, 3
 ; GENERIC-NEXT:    s_cselect_b32 s4, s4, 3
@@ -3319,57 +3317,56 @@ define amdgpu_kernel void @insert_neg_offset_sgpr(ptr addrspace(1) %in, ptr addr
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    s_waitcnt lgkmcnt(0)
 ; GENERIC-NEXT:    s_addk_i32 s6, 0xfe00
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 0
-; GENERIC-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 3
-; GENERIC-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GENERIC-NEXT:    s_cselect_b32 s4, 16, 3
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 2
-; GENERIC-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GENERIC-NEXT:    s_cselect_b32 s5, 16, 2
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 1
 ; GENERIC-NEXT:    v_mov_b32_e32 v3, s4
 ; GENERIC-NEXT:    s_cselect_b32 s4, 16, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 7
+; GENERIC-NEXT:    s_cmp_eq_u32 s6, 0
 ; GENERIC-NEXT:    v_mov_b32_e32 v2, s5
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 7
-; GENERIC-NEXT:    s_cmp_eq_u32 s6, 6
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 0
+; GENERIC-NEXT:    s_cmp_eq_u32 s6, 7
 ; GENERIC-NEXT:    v_mov_b32_e32 v1, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 6
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 7
+; GENERIC-NEXT:    s_cmp_eq_u32 s6, 6
+; GENERIC-NEXT:    v_mov_b32_e32 v0, s5
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 6
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 5
-; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 5
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s4
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 5
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 4
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 4
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s5
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 4
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 11
-; GENERIC-NEXT:    v_mov_b32_e32 v5, s5
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 11
+; GENERIC-NEXT:    v_mov_b32_e32 v5, s4
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 11
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 10
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s4
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s5
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 10
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 10
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 9
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 9
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s4
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 9
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 8
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 8
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s5
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 8
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 15
-; GENERIC-NEXT:    v_mov_b32_e32 v5, s5
-; GENERIC-NEXT:    s_cselect_b32 s5, 16, 15
+; GENERIC-NEXT:    v_mov_b32_e32 v5, s4
+; GENERIC-NEXT:    s_cselect_b32 s4, 16, 15
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 14
-; GENERIC-NEXT:    v_mov_b32_e32 v4, s4
-; GENERIC-NEXT:    s_cselect_b32 s4, 16, 14
+; GENERIC-NEXT:    v_mov_b32_e32 v4, s5
+; GENERIC-NEXT:    s_cselect_b32 s5, 16, 14
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 13
 ; GENERIC-NEXT:    s_cselect_b32 s7, 16, 13
 ; GENERIC-NEXT:    s_cmp_eq_u32 s6, 12
 ; GENERIC-NEXT:    s_cselect_b32 s6, 16, 12
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:32
 ; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_mov_b32_e32 v7, s5
-; GENERIC-NEXT:    v_mov_b32_e32 v6, s4
+; GENERIC-NEXT:    v_mov_b32_e32 v7, s4
+; GENERIC-NEXT:    v_mov_b32_e32 v6, s5
 ; GENERIC-NEXT:    v_mov_b32_e32 v5, s7
 ; GENERIC-NEXT:    v_mov_b32_e32 v4, s6
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:48
@@ -8043,29 +8040,29 @@ define amdgpu_kernel void @extract_largest_inbounds_offset(ptr addrspace(1) %out
 ;
 ; SI-MOVREL-LABEL: extract_largest_inbounds_offset:
 ; SI-MOVREL:       ; %bb.0: ; %entry
-; SI-MOVREL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-MOVREL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-MOVREL-NEXT:    s_load_dword s12, s[4:5], 0xd
-; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
-; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
-; SI-MOVREL-NEXT:    s_mov_b32 s6, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-MOVREL-NEXT:    s_mov_b32 s6, -1
+; SI-MOVREL-NEXT:    s_mov_b32 s10, s6
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    s_mov_b32 s4, s10
-; SI-MOVREL-NEXT:    s_mov_b32 s5, s11
-; SI-MOVREL-NEXT:    s_mov_b32 s7, s3
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0 glc
+; SI-MOVREL-NEXT:    s_mov_b32 s8, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s9, s3
+; SI-MOVREL-NEXT:    s_mov_b32 s11, s7
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[4:7], 0 offset:32 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[4:7], 0 offset:48 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_add_i32 s12, s12, 15
 ; SI-MOVREL-NEXT:    s_mov_b32 m0, s12
-; SI-MOVREL-NEXT:    s_mov_b32 s0, s8
-; SI-MOVREL-NEXT:    s_mov_b32 s1, s9
+; SI-MOVREL-NEXT:    s_mov_b32 s4, s0
+; SI-MOVREL-NEXT:    s_mov_b32 s5, s1
 ; SI-MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
-; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: extract_largest_inbounds_offset:
@@ -8307,29 +8304,29 @@ define amdgpu_kernel void @extract_out_of_bounds_offset(ptr addrspace(1) %out, p
 ;
 ; SI-MOVREL-LABEL: extract_out_of_bounds_offset:
 ; SI-MOVREL:       ; %bb.0: ; %entry
-; SI-MOVREL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-MOVREL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-MOVREL-NEXT:    s_load_dword s12, s[4:5], 0xd
-; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
-; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
-; SI-MOVREL-NEXT:    s_mov_b32 s6, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-MOVREL-NEXT:    s_mov_b32 s6, -1
+; SI-MOVREL-NEXT:    s_mov_b32 s10, s6
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    s_mov_b32 s4, s10
-; SI-MOVREL-NEXT:    s_mov_b32 s5, s11
-; SI-MOVREL-NEXT:    s_mov_b32 s7, s3
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0 glc
+; SI-MOVREL-NEXT:    s_mov_b32 s8, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s9, s3
+; SI-MOVREL-NEXT:    s_mov_b32 s11, s7
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[4:7], 0 offset:32 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[4:7], 0 offset:48 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; SI-MOVREL-NEXT:    s_add_i32 s12, s12, 16
 ; SI-MOVREL-NEXT:    s_mov_b32 m0, s12
-; SI-MOVREL-NEXT:    s_mov_b32 s0, s8
-; SI-MOVREL-NEXT:    s_mov_b32 s1, s9
+; SI-MOVREL-NEXT:    s_mov_b32 s4, s0
+; SI-MOVREL-NEXT:    s_mov_b32 s5, s1
 ; SI-MOVREL-NEXT:    v_movrels_b32_e32 v0, v0
-; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: extract_out_of_bounds_offset:
@@ -8572,29 +8569,29 @@ define amdgpu_kernel void @extractelement_v16i32_or_index(ptr addrspace(1) %out,
 ;
 ; SI-MOVREL-LABEL: extractelement_v16i32_or_index:
 ; SI-MOVREL:       ; %bb.0: ; %entry
-; SI-MOVREL-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-MOVREL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-MOVREL-NEXT:    s_load_dword s12, s[4:5], 0xd
-; SI-MOVREL-NEXT:    s_mov_b32 s3, 0xf000
-; SI-MOVREL-NEXT:    s_mov_b32 s2, -1
-; SI-MOVREL-NEXT:    s_mov_b32 s6, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-MOVREL-NEXT:    s_mov_b32 s6, -1
+; SI-MOVREL-NEXT:    s_mov_b32 s10, s6
 ; SI-MOVREL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-MOVREL-NEXT:    s_mov_b32 s4, s10
-; SI-MOVREL-NEXT:    s_mov_b32 s5, s11
-; SI-MOVREL-NEXT:    s_mov_b32 s7, s3
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0 glc
+; SI-MOVREL-NEXT:    s_mov_b32 s8, s2
+; SI-MOVREL-NEXT:    s_mov_b32 s9, s3
+; SI-MOVREL-NEXT:    s_mov_b32 s11, s7
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[4:7], 0 offset:16 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[4:7], 0 offset:32 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[4:7], 0 offset:48 glc
+; SI-MOVREL-NEXT:    buffer_load_dwordx4 v[12:15], off, s[8:11], 0 offset:48 glc
 ; SI-MOVREL-NEXT:    s_waitcnt vmcnt(0)
-; SI-MOVREL-NEXT:    s_lshl_b32 s4, s12, 2
-; SI-MOVREL-NEXT:    s_mov_b32 m0, s4
-; SI-MOVREL-NEXT:    s_mov_b32 s0, s8
-; SI-MOVREL-NEXT:    s_mov_b32 s1, s9
+; SI-MOVREL-NEXT:    s_mov_b32 s4, s0
+; SI-MOVREL-NEXT:    s_lshl_b32 s0, s12, 2
+; SI-MOVREL-NEXT:    s_mov_b32 m0, s0
+; SI-MOVREL-NEXT:    s_mov_b32 s5, s1
 ; SI-MOVREL-NEXT:    v_movrels_b32_e32 v0, v1
-; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-MOVREL-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-MOVREL-NEXT:    s_endpgm
 ;
 ; VI-MOVREL-LABEL: extractelement_v16i32_or_index:

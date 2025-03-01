@@ -395,7 +395,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
-    // Check for the presense of global destructors at initialization time. This
+    // Check for the presence of global destructors at initialization time. This
     // is required when the image may be deallocated before destructors are run.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
     if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
@@ -495,15 +495,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// We want to set up the RPC server for host services to the GPU if it is
-  /// availible.
+  /// available.
   bool shouldSetupRPCServer() const override { return true; }
 
-  /// The RPC interface should have enough space for all availible parallelism.
+  /// The RPC interface should have enough space for all available parallelism.
   uint64_t requestedRPCPortCount() const override {
     return getHardwareParallelism();
   }
 
-  /// Get the stream of the asynchronous info sructure or get a new one.
+  /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper, CUstream &Stream) {
     // Get the stream (if any) from the async info.
     Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
@@ -675,7 +675,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Size >= Free) {
       *Addr = nullptr;
       return Plugin::error(
-          "Canot map memory size larger than the available device memory");
+          "Cannot map memory size larger than the available device memory");
     }
 
     // currently NVidia only supports pinned device types

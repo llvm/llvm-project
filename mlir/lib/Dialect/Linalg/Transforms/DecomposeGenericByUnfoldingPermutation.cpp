@@ -223,21 +223,21 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     newMap[i] = rewriter.getMultiDimIdentityMap(map.getNumDims());
   }
 
-  if (isChanged) {
-    SmallVector<Value> operands = op->getOperands();
-    ValueRange operandsRef(operands);
+  if (!isChanged)
+    return failure();
 
-    auto newOp = rewriter.create<linalg::GenericOp>(
-        /*location=*/op.getLoc(),
-        /*resultTensorTypes=*/op->getResultTypes(),
-        /*inputs=*/newInitValues,
-        /*outputs=*/operandsRef.drop_front(op.getNumDpsInputs()),
-        /*indexingMaps=*/newMap,
-        /*iteratorTypes=*/op.getIteratorTypesArray());
+  SmallVector<Value> operands = op->getOperands();
+  ValueRange operandsRef(operands);
 
-    newOp.getRegion().takeBody(op->getRegion(0));
-    rewriter.replaceOp(op, newOp->getResults());
-  }
+  auto newOp = rewriter.create<linalg::GenericOp>(
+      /*location=*/op.getLoc(),
+      /*resultTensorTypes=*/op->getResultTypes(),
+      /*inputs=*/newInitValues,
+      /*outputs=*/operandsRef.drop_front(op.getNumDpsInputs()),
+      /*indexingMaps=*/newMap,
+      /*iteratorTypes=*/op.getIteratorTypesArray());
+  newOp.getRegion().takeBody(op->getRegion(0));
+  rewriter.replaceOp(op, newOp->getResults());
   return success();
 }
 

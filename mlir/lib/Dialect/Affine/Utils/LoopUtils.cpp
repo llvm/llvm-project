@@ -1351,10 +1351,12 @@ static bool checkLoopInterchangeDependences(
 /// nested sequence of loops in 'loops' would violate dependences.
 bool mlir::affine::isValidLoopInterchangePermutation(
     ArrayRef<AffineForOp> loops, ArrayRef<unsigned> loopPermMap) {
+  assert(loopPermMap.size() == loops.size() && "invalid loop perm map");
+  unsigned maxLoopDepth = loops.size();
+  if (maxLoopDepth == 1)
+    return true;
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
-  assert(loopPermMap.size() == loops.size());
-  unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
   getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
@@ -1828,14 +1830,14 @@ static void getMultiLevelStrides(const MemRefRegion &region,
   }
 }
 
-/// Generates a point-wise copy from/to `memref' to/from `fastMemRef' and
-/// returns the outermost AffineForOp of the copy loop nest. `lbMaps` and
-/// `ubMaps` along with `lbOperands` and `ubOperands` hold the lower and upper
-/// bound information for the copy loop nest. `fastBufOffsets` contain the
-/// expressions to be subtracted out from the respective copy loop iterators in
-/// order to index the fast buffer. If `copyOut' is true, generates a copy-out;
-/// otherwise a copy-in. Builder `b` should be set to the point the copy nest is
-/// inserted.
+/// Generates a point-wise copy from/to a non-zero ranked `memref' to/from
+/// `fastMemRef' and returns the outermost AffineForOp of the copy loop nest.
+/// `lbMaps` and `ubMaps` along with `lbOperands` and `ubOperands` hold the
+/// lower and upper bound information for the copy loop nest. `fastBufOffsets`
+/// contain the expressions to be subtracted out from the respective copy loop
+/// iterators in order to index the fast buffer. If `copyOut' is true, generates
+/// a copy-out; otherwise a copy-in. Builder `b` should be set to the point the
+/// copy nest is inserted.
 //
 /// The copy-in nest is generated as follows as an example for a 2-d region:
 /// for x = ...
@@ -1856,6 +1858,8 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
   }));
 
   unsigned rank = cast<MemRefType>(memref.getType()).getRank();
+  // A copy nest can't be generated for 0-ranked memrefs.
+  assert(rank != 0 && "non-zero rank memref expected");
   assert(lbMaps.size() == rank && "wrong number of lb maps");
   assert(ubMaps.size() == rank && "wrong number of ub maps");
 
@@ -1919,19 +1923,20 @@ emitRemarkForBlock(Block &block) {
   return block.getParentOp()->emitRemark();
 }
 
-/// Creates a buffer in the faster memory space for the specified memref region;
-/// generates a copy from the lower memory space to this one, and replaces all
-/// loads/stores in the block range [`begin', `end') of `block' to load/store
-/// from that buffer. Returns failure if copies could not be generated due to
-/// yet unimplemented cases. `copyInPlacementStart` and `copyOutPlacementStart`
-/// in copyPlacementBlock specify the insertion points where the incoming copies
-/// and outgoing copies, respectively, should be inserted (the insertion happens
-/// right before the insertion point). Since `begin` can itself be invalidated
-/// due to the memref rewriting done from this method, the output argument
-/// `nBegin` is set to its replacement (set to `begin` if no invalidation
-/// happens). Since outgoing copies could have  been inserted at `end`, the
-/// output argument `nEnd` is set to the new end. `sizeInBytes` is set to the
-/// size of the fast buffer allocated.
+/// Creates a buffer in the faster memory space for the specified memref region
+/// (memref has to be non-zero ranked); generates a copy from the lower memory
+/// space to this one, and replaces all loads/stores in the block range
+/// [`begin', `end') of `block' to load/store from that buffer. Returns failure
+/// if copies could not be generated due to yet unimplemented cases.
+/// `copyInPlacementStart` and `copyOutPlacementStart` in copyPlacementBlock
+/// specify the insertion points where the incoming copies and outgoing copies,
+/// respectively, should be inserted (the insertion happens right before the
+/// insertion point). Since `begin` can itself be invalidated due to the memref
+/// rewriting done from this method, the output argument `nBegin` is set to its
+/// replacement (set to `begin` if no invalidation happens). Since outgoing
+/// copies could have  been inserted at `end`, the output argument `nEnd` is set
+/// to the new end. `sizeInBytes` is set to the size of the fast buffer
+/// allocated.
 static LogicalResult generateCopy(
     const MemRefRegion &region, Block *block, Block::iterator begin,
     Block::iterator end, Block *copyPlacementBlock,
@@ -1982,6 +1987,11 @@ static LogicalResult generateCopy(
   SmallVector<Value, 4> bufIndices;
 
   unsigned rank = memRefType.getRank();
+  if (rank == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "Non-zero ranked memrefs supported\n");
+    return failure();
+  }
+
   SmallVector<int64_t, 4> fastBufferShape;
 
   // Compute the extents of the buffer.
@@ -2001,8 +2011,15 @@ static LogicalResult generateCopy(
   }
 
   SmallVector<AffineMap, 4> lbMaps(rank), ubMaps(rank);
-  for (unsigned i = 0; i < rank; ++i)
+  for (unsigned i = 0; i < rank; ++i) {
     region.getLowerAndUpperBound(i, lbMaps[i], ubMaps[i]);
+    if (lbMaps[i].getNumResults() == 0 || ubMaps[i].getNumResults() == 0) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Missing lower or upper bound for region along dimension: "
+                 << i << '\n');
+      return failure();
+    }
+  }
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
   // 'regionSymbols' hold values that this memory region is symbolic/parametric
@@ -2315,16 +2332,20 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
       memref = storeOp.getMemRef();
       memrefType = storeOp.getMemRefType();
     }
-    // Neither load nor a store op.
+    // Not an affine.load/store op.
     if (!memref)
       return;
 
-    auto memorySpaceAttr =
-        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
     if ((filterMemRef.has_value() && filterMemRef != memref) ||
-        (memorySpaceAttr &&
+        (isa_and_nonnull<IntegerAttr>(memrefType.getMemorySpace()) &&
          memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
       return;
+
+    if (!memref.getParentRegion()->isAncestor(block->getParent())) {
+      LLVM_DEBUG(llvm::dbgs() << "memref definition is inside of the depth at "
+                                 "which copy-in/copy-out would happen\n");
+      return;
+    }
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());

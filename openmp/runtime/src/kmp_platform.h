@@ -116,6 +116,7 @@
 #define KMP_ARCH_PPC64_ELFv2 0
 #define KMP_ARCH_PPC64_XCOFF 0
 #define KMP_ARCH_PPC_XCOFF 0
+#define KMP_ARCH_PPC 0
 #define KMP_ARCH_MIPS 0
 #define KMP_ARCH_MIPS64 0
 #define KMP_ARCH_RISCV64 0
@@ -162,6 +163,9 @@
 #elif defined(__powerpc__) && defined(KMP_OS_AIX)
 #undef KMP_ARCH_PPC_XCOFF
 #define KMP_ARCH_PPC_XCOFF 1
+#undef KMP_ARCH_PPC
+#define KMP_ARCH_PPC 1
+#elif defined(__powerpc__) && !defined(__LP64__)
 #undef KMP_ARCH_PPC
 #define KMP_ARCH_PPC 1
 #elif defined __ARM64_ARCH_8_32__

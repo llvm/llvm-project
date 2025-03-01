@@ -295,6 +295,16 @@ ANALYZER_OPTION(
     "Whether the analysis should try to unroll loops with known bounds.", false)
 
 ANALYZER_OPTION(
+    bool, ShouldAssumeAtLeastOneIteration, "assume-at-least-one-iteration",
+    "Whether the analyzer should always assume at least one iteration in "
+    "loops where the loop condition is opaque (i.e. the analyzer cannot "
+    "determine if it's true or false). Setting this to true eliminates some "
+    "false positives (where e.g. a structure is nonempty, but the analyzer "
+    "does not notice this); but it also eliminates some true positives (e.g. "
+    "cases where a structure can be empty and this causes buggy behavior).",
+    false)
+
+ANALYZER_OPTION(
     bool, ShouldDisplayNotesAsEvents, "notes-as-events",
     "Whether the bug reporter should transparently treat extra note diagnostic "
     "pieces as event diagnostic pieces. Useful when the diagnostic consumer "
@@ -472,6 +482,14 @@ ANALYZER_OPTION(
     "a LazyCompoundVal on bind. To disable all small-array-dependent "
     "behavior, set the option to 0.",
     5)
+
+ANALYZER_OPTION(
+    unsigned, RegionStoreMaxBindingFanOut, "region-store-max-binding-fanout",
+    "This option limits how many sub-bindings a single binding operation can "
+    "scatter into. For example, binding an array would scatter into binding "
+    "each individual element. Setting this to zero means unlimited, but then "
+    "modelling large array initializers may take proportional time to their "
+    "size.", 128)
 
 //===----------------------------------------------------------------------===//
 // String analyzer options.

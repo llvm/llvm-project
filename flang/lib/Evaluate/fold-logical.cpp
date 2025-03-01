@@ -882,7 +882,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         IeeeFeature::Flags)};
   } else if (name == "__builtin_ieee_support_halting") {
     if (!context.targetCharacteristics()
-             .haltingSupportIsUnknownAtCompileTime()) {
+            .haltingSupportIsUnknownAtCompileTime()) {
       return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
           IeeeFeature::Halting)};
     }
@@ -906,8 +906,12 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{
         context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Sqrt)};
   } else if (name == "__builtin_ieee_support_standard") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::Standard)};
+    // ieee_support_standard depends in part on ieee_support_halting.
+    if (!context.targetCharacteristics()
+            .haltingSupportIsUnknownAtCompileTime()) {
+      return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+          IeeeFeature::Standard)};
+    }
   } else if (name == "__builtin_ieee_support_subnormal") {
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Subnormal)};
