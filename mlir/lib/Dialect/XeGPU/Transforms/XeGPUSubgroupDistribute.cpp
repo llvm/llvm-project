@@ -9,11 +9,13 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -238,12 +240,27 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
 
   // Print analysis results
   auto &os = llvm::outs();
-  op->walk([&](Operation *op) {
-    if (op->getResults().empty())
-      return;
-    auto layouts = solver.getSGMap(op->getResult(0));
-    os << "SGMap for " << op->getName() << ": ";
-    layouts.print(os);
-    os << "\n";
-  });
+  // check if op is a function
+  // llvm::errs() << op->getName() << "\n";
+  if (auto modOp = dyn_cast<ModuleOp>(op)) {
+    for (auto funcOp : modOp.getOps<func::FuncOp>()) {
+      os << "SGMap for " << funcOp.getName() << ":\n";
+      // Function args
+      for (auto arg : funcOp.getArguments()) {
+        auto layouts = solver.getSGMap(arg);
+        os << "SGMap for " << arg << ": ";
+        layouts.print(os);
+        os << "\n";
+      }
+      // Function ops
+      funcOp.walk([&](Operation *op) {
+        if (op->getResults().empty())
+          return;
+        auto layouts = solver.getSGMap(op->getResult(0));
+        os << "SGMap for " << op->getName() << ": ";
+        layouts.print(os);
+        os << "\n";
+      });
+    }
+  }
 }
