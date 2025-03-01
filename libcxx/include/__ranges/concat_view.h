@@ -349,15 +349,19 @@ public:
         __parent_(__i.parent_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
-    return std::visit(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    return __variant_detail::__visitation::__variant::__visit_value(
         [](auto&& __it) -> __concat_reference_t<__maybe_const<_Const, _Views>...> { return *__it; }, __it_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
     __apply_at_index<variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
       constexpr size_t __i = __index_constant.value;
-      ++std::get<__i>(__it_);
+      ++std::__unchecked_get<__i>(__it_);
       __satisfy<__i>();
     });
     return *this;
@@ -376,6 +380,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
     requires __concat_is_bidirectional<_Const, _Views...>
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
     __apply_at_index<variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
       constexpr size_t __i = __index_constant.value;
@@ -395,6 +401,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires(equality_comparable<iterator_t<__maybe_const<_Const, _Views>>> && ...)
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     return __x.__it_ == __y.__it_;
   }
 
@@ -421,9 +429,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
     if (__n > 0) {
-      std::visit(
+      __variant_detail::__visitation::__variant::__visit_value(
           [&](auto& __active_it) {
             __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
               constexpr size_t __i  = __index_constant.value;
@@ -436,7 +446,7 @@ public:
     }
 
     else if (__n < 0) {
-      std::visit(
+      __variant_detail::__visitation::__variant::__visit_value(
           [&](auto& __active_it) {
             __apply_at_index<tuple_size_v<decltype(__parent_->__views_)>>(__active_index, [&](auto __index_constant) {
               constexpr size_t __i  = __index_constant.value;
@@ -459,9 +469,12 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     constexpr auto __last_idx = sizeof...(_Views) - 1;
     return __it.__it_.index() == __last_idx &&
-           std::get<__last_idx>(__it.__it_) == ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
+           std::__unchecked_get<__last_idx>(__it.__it_) ==
+               ranges::end(std::__unchecked_get<__last_idx>(__it.__parent_->__views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
@@ -492,6 +505,8 @@ public:
     requires((random_access_range<__maybe_const<_Const, _Views>> && ...) &&
              (three_way_comparable<__maybe_const<_Const, _Views>> && ...))
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     return __x.__it_ <=> __y.__it_;
   }
 
@@ -536,11 +551,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
     requires __concat_is_random_access<_Const, _Views...>
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __ix = __x.__it_.index();
     size_t __iy = __y.__it_.index();
 
     if (__ix > __iy) {
-      std::visit(
+      __variant_detail::__visitation::__variant::__visit_value(
           [&](auto& __it_x, auto& __it_y) {
             __it_x.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
                 __ix, [&](auto __index_constant_x) {
@@ -565,7 +582,8 @@ public:
     } else if (__ix < __iy) {
       return -(__y - __x);
     } else {
-      std::visit([&](const auto& __it1, const auto& __it2) { return __it1 - __it2; }, __x.__it_, __y.__it_);
+      __variant_detail::__visitation::__variant::__visit_value(
+          [&](const auto& __it1, const auto& __it2) { return __it1 - __it2; }, __x.__it_, __y.__it_);
     }
   }
 
@@ -582,8 +600,10 @@ public:
              ...) &&
             (__apply_drop_first<_Const, _Views...>::value)
   {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __ix = __x.__it_.index();
-    std::visit(
+    __variant_detail::__visitation::__variant::__visit_value(
         [&](auto& __it_x) {
           __it_x.template __apply_at_index<tuple_size_v<decltype(__x.__parent_->__views_)>>(
               __ix, [&](auto __index_constant) {

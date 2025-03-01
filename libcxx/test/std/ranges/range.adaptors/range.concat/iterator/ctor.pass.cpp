@@ -91,11 +91,11 @@ constexpr bool test() {
 
   {
     //valueless by exception test
-    std::ranges::concat_view<ThrowOnCopyView> concatView;
+    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
     std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
     std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it2;
     try {
-      it1 = concatView.begin();
+      it1 = concatView_2.begin();
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE(
           [&] {
