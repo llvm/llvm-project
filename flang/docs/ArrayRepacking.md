@@ -125,8 +125,9 @@ So it does not seem practical/reasonable to enable the array repacking by defaul
 ### Correctness
 
 1. Support repacking of assumed-shape array dummy arguments or actual array arguments associated with such dummy arguments of any data types.
-2. When array repacking is enabled, Flang should guarantee correct program behavior when OpenACC/OpenMP features are explicitly enabled during the compilation.
-   * [TBD] not sure if it is always possible to prevent runtime issues, especially, for programs with target offload.
+2. When array repacking is enabled, Flang should strive to provide correct program behavior when OpenACC/OpenMP features are explicitly enabled during the compilation.
+   * It is unclear if the compiler/runtime can always prevent the array repacking to produce incorrect code. Thus, the implementation should do its best to prevent incorrect behavior or diagnose the incorrect behavior in runtime as soon as possible.
+   * To stress again, such implementation can only be enabled when users enable OpenACC/OpenMP explicitly during the compilation, so that the compiler can rely on the appropriate OpenACC/OpenMP runtime libraries to be linked into the resulting module.
 
 ### Performance
 
@@ -208,16 +209,14 @@ Arguments:
 Memory effects are conservative, assuming that an allocation and copy may happen:
 
 * `MemAlloc` effect on either `AutomaticAllocationScopeResource` or `DefaultResource` depending on `stack` attribute.
+  * The memory allocation effect is especially important for operations with `stack` attribute so that `fir.pack_array` operations are not reordered inconsistently with their corresponding `fir.unpack_array` operations. This may cause issues with later lowering of this operations into `stacksave/stackrestore` pairs.
 * If there is no `no_copy`:
-  * `MemRead` effect on unknown value to indicate potential read from the original array.
+  * `MemRead` effect on unknown value to indicate potential read from the original array. This effect prevents hoisting a `fir.pack_array` above any write to the original array.
     * [TBD] we can relax that by having an additional argument taking `fir.box_addr %var` value, though, this adds some redundancy to the argument list.
-  * `MemWrite` effect on unknown value to indicate potential write into the temporary array.
-  * [TBD] maybe we do not need the `MemRead`/`MemWrite` effects at all, because the temporary array is not distinguishable from the original array (at least until the repacking operations stay in IR), so any read/writes from the original array can be moved across `fir.pack_array`.
 
 Alias analysis:
 
-* For the purpose of alias analysis `fir.pack_array` should be considered a pass-though operation, and its value should be treated as `MayAlias` with the original array.
-* It might be unsafe to use `MustAlias` because then the memory effects described below may be considered applicable to both the original and the temporary array, e.g. with `MustAlias` a `MemFree` effect on the temporary array may be incorrectly thought as a `MemFree` effect on the original array.
+* For the purpose of alias analysis `fir.pack_array` should be considered a pass-through operation, meaning that when FIR alias analysis is looking for the source of a pointer, emboxed in the result box of `fir.pack_array`, the search is continued through the operation's argument box def-use.
 
 #### fir.unpack_array operation
 
@@ -239,8 +238,7 @@ Memory effects are conservative, assuming that a copy and deallocation may happe
 
 * `MemFree` effect on either `AutomaticAllocationScopeResource` or `DefaultResource` depending on `stack` attribute.
 * If there is no `no_copy`:
-  * `MemRead` effect on unknown value to indicate potential read from the temporary array.
-  * `MemWrite` effect on unknown value to indicate potential write into the original array.
+  * `MemWrite` effect on unknown value to indicate potential write into the original array. This effect should prevent hoisting any reads/writes of the original array above a `fir.unpack_array`, since those hoisted reads/writes may address the original array memory that has not been updated from the temporary copy yet.
 
 ### New attribute interface
 
