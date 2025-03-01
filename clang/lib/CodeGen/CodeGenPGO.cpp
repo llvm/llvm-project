@@ -231,7 +231,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   struct DecisionState {
     llvm::DenseSet<const Stmt *> Leaves; // Not BinOp
     const Expr *DecisionExpr;            // Root
-    bool Split;
+    bool Split;                          // In splitting with Leaves.
 
     DecisionState() = delete;
     DecisionState(const Expr *E, bool Split = false)
@@ -297,18 +297,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     auto &DecisionEntry =
         MCDCState
             .DecisionByStmt[CodeGenFunction::stripCond(StackTop.DecisionExpr)];
-
-    /// Was the "split-nested" logical operator case encountered?
-    if (false && DecisionStack.size() > 1) {
-      unsigned DiagID = Diag.getCustomDiagID(
-          DiagnosticsEngine::Warning,
-          "unsupported MC/DC boolean expression; "
-          "contains an operation with a nested boolean expression. "
-          "Expression will not be covered");
-      Diag.Report(S->getBeginLoc(), DiagID);
-      DecisionStack.pop_back();
-      return true;
-    }
 
     /// Was the maximum number of conditions encountered?
     auto NumCond = StackTop.Leaves.size();
