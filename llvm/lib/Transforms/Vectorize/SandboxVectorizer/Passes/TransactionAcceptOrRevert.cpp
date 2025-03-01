@@ -21,8 +21,8 @@ namespace sandboxir {
 
 bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
   const auto &SB = Rgn.getScoreboard();
-  auto CostBefore = SB.getBeforeCost();
-  auto CostAfter = SB.getAfterCost();
+  [[maybe_unused]] auto CostBefore = SB.getBeforeCost();
+  [[maybe_unused]] auto CostAfter = SB.getAfterCost();
   InstructionCost CostAfterMinusBefore = SB.getAfterCost() - SB.getBeforeCost();
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Cost gain: " << CostAfterMinusBefore
                     << " (before/after/threshold: " << CostBefore << "/"
