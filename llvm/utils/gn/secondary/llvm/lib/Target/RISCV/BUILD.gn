@@ -72,6 +72,7 @@ tablegen("RISCVGenPostLegalizeGICombiner") {
 tablegen("RISCVGenRegisterBank") {
   visibility = [
     ":LLVMRISCVCodeGen",
+    "MCA",
     "//llvm/tools/llvm-exegesis/lib/RISCV",
   ]
   args = [ "-gen-register-bank" ]
