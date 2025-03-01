@@ -47,6 +47,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -88,6 +89,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Telemetry/Telemetry.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -1883,9 +1885,27 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
+  lldb_private::telemetry::ScopedDispatcher<
+      lldb_private::telemetry:CommandInfo> helper;
+  const int command_id = helper.GetIfEnable<int>([](lldb_private::telemetry::TelemetryManager* ins){
+    return ins->MakeNextCommandId(); }, 0);
+
   std::string command_string(command_line);
   std::string original_command_string(command_string);
   std::string real_original_command_string(command_string);
+
+  helper.DispatchIfEnable([&](lldb_private::telemetry:CommandInfo* info,
+                              lldb_private::telemetry::TelemetryManager* ins){
+    info.command_id = command_id;
+    if (Target* target = GetExecutionContext().GetTargetPtr()) {
+      // If we have a target attached to this command, then get the UUID.
+      info.target_uuid = target->GetExecutableModule() != nullptr
+                         ? GetExecutableModule()->GetUUID().GetAsString()
+                         : "";
+    }
+    if (ins->GetConfig()->m_collect_original_command)
+      info.original_command = original_command_string;
+  });
 
   Log *log = GetLog(LLDBLog::Commands);
   LLDB_LOGF(log, "Processing command: %s", command_line);

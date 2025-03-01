@@ -43,6 +43,16 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
+void CommandInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serializer(serializer);
+
+  serializer.write("target_uuid", target_uuid);
+  serializer.write("command_id", command_id);
+  serializer.write("command_name", command_name);
+  serializer.write("ret_status", ret_status);
+  serializer.write("error_data", error_data);
+}
+
 [[maybe_unused]] static std::string MakeUUID(Debugger *debugger) {
   uint8_t random_bytes[16];
   if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
@@ -64,6 +74,10 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   // In up-coming patch, this would be where the manager
   // attach the session_uuid to the entry.
   return llvm::Error::success();
+}
+
+int TelemetryManager::MakeNextCommandId() {
+
 }
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
