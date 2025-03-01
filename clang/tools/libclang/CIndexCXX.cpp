@@ -70,8 +70,7 @@ unsigned clang_visitCXXMethods(CXType PT, CXFieldVisitor visitor,
   for (const auto *Method : RD->methods()) {
     // Callback to the client.
     switch (
-        visitor(cxcursor::MakeCXCursor(Method, getCursorTU(PC)),
-                client_data)) {
+        visitor(cxcursor::MakeCXCursor(Method, getCursorTU(PC)), client_data)) {
     case CXVisit_Break:
       return true;
     case CXVisit_Continue:
