@@ -168,8 +168,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
   unsigned MCDCMaxCond;
-  /// Take single conditions into account.
-  bool MCDCSingleCond;
   /// The profile version.
   uint64_t ProfileVersion;
   /// Diagnostics Engine used to report warnings.
@@ -178,11 +176,10 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
                     llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
-                    bool MCDCSingleCond, DiagnosticsEngine &Diag)
+                    DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
         MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
-        MCDCSingleCond(MCDCSingleCond), ProfileVersion(ProfileVersion),
-        Diag(Diag) {}
+        ProfileVersion(ProfileVersion), Diag(Diag) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -243,30 +240,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
 
   SmallVector<DecisionState, 1> DecisionStack;
 
-  llvm::DenseSet<const Expr *> StagingDecisions;
-
-  template <class T> bool pushInstrumentedCond(Stmt *S) {
-    if (auto *St = dyn_cast<T>(S)) {
-      if (auto *Cond = St->getCond();
-          Cond && CodeGenFunction::isInstrumentedCondition(Cond)) {
-        StagingDecisions.insert(CodeGenFunction::stripCond(Cond));
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   // Hook: dataTraverseStmtPre() is invoked prior to visiting an AST Stmt node.
   bool dataTraverseStmtPre(Stmt *S) {
     /// If MC/DC is not enabled, MCDCMaxCond will be set to 0. Do nothing.
     if (MCDCMaxCond == 0)
       return true;
-
-    const auto *E = dyn_cast<Expr>(S);
-
-    if (StagingDecisions.contains(E))
-      DecisionStack.emplace_back(E, true);
 
     /// Mark "in splitting" when a leaf is met.
     if (!DecisionStack.empty()) {
@@ -284,18 +262,11 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       assert(!StackTop.Leaves.contains(S));
     }
 
-    if (E) {
+    if (const auto *E = dyn_cast<Expr>(S)) {
       if (const auto *BinOp =
               dyn_cast<BinaryOperator>(CodeGenFunction::stripCond(E));
           BinOp && BinOp->isLogicalOp())
         DecisionStack.emplace_back(E);
-    }
-
-    if (MCDCSingleCond) {
-      pushInstrumentedCond<AbstractConditionalOperator>(S) ||
-          pushInstrumentedCond<DoStmt>(S) || pushInstrumentedCond<IfStmt>(S) ||
-          pushInstrumentedCond<ForStmt>(S) ||
-          pushInstrumentedCond<WhileStmt>(S);
     }
 
     return true;
@@ -1127,8 +1098,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, CounterPair>);
   RegionMCDCState.reset(new MCDC::State);
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
-                           *RegionMCDCState, MCDCMaxConditions,
-                           CGM.getCodeGenOpts().MCDCSingleCond, CGM.getDiags());
+                           *RegionMCDCState, MCDCMaxConditions, CGM.getDiags());
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))

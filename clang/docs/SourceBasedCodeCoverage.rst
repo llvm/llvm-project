@@ -510,10 +510,6 @@ requires 8 test vectors.
 Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
 number of test vectors to increase exponentially.
 
-Clang handles only binary logical operators as MC/DC coverage. Single
-conditions without logcal operators on `do/for/while/if/?!` can be
-included with `-Xclang -fmcdc-single-conditions`.
-
 Switch statements
 -----------------
 

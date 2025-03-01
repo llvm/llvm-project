@@ -196,36 +196,20 @@ RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
 /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
-  auto DecisionExpr = stripCond(E);
-  if (isMCDCDecisionExpr(DecisionExpr) && isInstrumentedCondition(DecisionExpr))
-    maybeResetMCDCCondBitmap(DecisionExpr);
-  else
-    DecisionExpr = nullptr;
-
   PGO.setCurrentStmt(E);
-  llvm::Value *Result;
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     llvm::Value *MemPtr = EmitScalarExpr(E);
-    Result = CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
-  } else {
-    QualType BoolTy = getContext().BoolTy;
-    SourceLocation Loc = E->getExprLoc();
-    CGFPOptionsRAII FPOptsRAII(*this, E);
-    if (!E->getType()->isAnyComplexType())
-      Result =
-          EmitScalarConversion(EmitScalarExpr(E), E->getType(), BoolTy, Loc);
-    else
-      Result = EmitComplexToScalarConversion(EmitComplexExpr(E), E->getType(),
-                                             BoolTy, Loc);
+    return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
   }
 
-  if (DecisionExpr) {
-    if (isMCDCBranchExpr(stripCond(E)))
-      maybeUpdateMCDCCondBitmap(stripCond(E), Result);
-    maybeUpdateMCDCTestVectorBitmap(DecisionExpr);
-  }
+  QualType BoolTy = getContext().BoolTy;
+  SourceLocation Loc = E->getExprLoc();
+  CGFPOptionsRAII FPOptsRAII(*this, E);
+  if (!E->getType()->isAnyComplexType())
+    return EmitScalarConversion(EmitScalarExpr(E), E->getType(), BoolTy, Loc);
 
-  return Result;
+  return EmitComplexToScalarConversion(EmitComplexExpr(E), E->getType(), BoolTy,
+                                       Loc);
 }
 
 /// EmitIgnoredExpr - Emit code to compute the specified expression,

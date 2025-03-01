@@ -1164,7 +1164,9 @@ struct CounterCoverageMappingBuilder
   /// result in the generation of a branch.
   void createBranchRegion(const Expr *C, Counter TrueCnt, Counter FalseCnt,
                           const mcdc::ConditionIDs &Conds = {}) {
-    assert(C && "Condition Expr shouldn't be null!");
+    // Check for NULL conditions.
+    if (!C)
+      return;
 
     // Ensure we are an instrumentable condition (i.e. no "&&" or "||").  Push
     // region onto RegionStack but immediately pop it (which adds it to the
@@ -1628,9 +1630,6 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitWhileStmt(const WhileStmt *S) {
-    unsigned SourceRegionsSince = SourceRegions.size();
-    MCDCBuilder.checkDecisionRootOrPush(S->getCond());
-
     extendRegion(S);
 
     Counter ParentCount = getRegion().getCounter();
@@ -1677,15 +1676,10 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around condition.
     if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped,
-                         MCDCBuilder.getCurCondIDs());
-    createOrCancelDecision(S->getCond(), SourceRegionsSince);
+      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitDoStmt(const DoStmt *S) {
-    unsigned SourceRegionsSince = SourceRegions.size();
-    MCDCBuilder.checkDecisionRootOrPush(S->getCond());
-
     extendRegion(S);
 
     Counter ParentCount = getRegion().getCounter();
@@ -1728,20 +1722,13 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around condition.
     if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped,
-                         MCDCBuilder.getCurCondIDs());
-    createOrCancelDecision(S->getCond(), SourceRegionsSince);
+      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
 
     if (BodyHasTerminateStmt)
       HasTerminateStmt = true;
   }
 
   void VisitForStmt(const ForStmt *S) {
-    const Expr *Cond = S->getCond();
-    unsigned SourceRegionsSince = SourceRegions.size();
-    if (Cond)
-      MCDCBuilder.checkDecisionRootOrPush(Cond);
-
     extendRegion(S);
     if (S->getInit())
       Visit(S->getInit());
@@ -1788,7 +1775,7 @@ struct CounterCoverageMappingBuilder
     assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount ||
            llvm::EnableSingleByteCoverage);
 
-    if (Cond) {
+    if (const Expr *Cond = S->getCond()) {
       propagateCounts(CondCount, Cond);
       adjustForOutOfOrderTraversal(getEnd(S));
     }
@@ -1810,11 +1797,8 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    if (!llvm::EnableSingleByteCoverage && Cond) {
-      createBranchRegion(Cond, BodyCount, BranchCount.Skipped,
-                         MCDCBuilder.getCurCondIDs());
-      createOrCancelDecision(Cond, SourceRegionsSince);
-    }
+    if (!llvm::EnableSingleByteCoverage)
+      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
@@ -2085,9 +2069,6 @@ struct CounterCoverageMappingBuilder
     else if (S->isConstexpr())
       return coverIfConstexpr(S);
 
-    unsigned SourceRegionsSince = SourceRegions.size();
-    MCDCBuilder.checkDecisionRootOrPush(S->getCond());
-
     extendRegion(S);
     if (S->getInit())
       Visit(S->getInit());
@@ -2146,9 +2127,7 @@ struct CounterCoverageMappingBuilder
 
     if (!llvm::EnableSingleByteCoverage)
       // Create Branch Region around condition.
-      createBranchRegion(S->getCond(), ThenCount, ElseCount,
-                         MCDCBuilder.getCurCondIDs());
-    createOrCancelDecision(S->getCond(), SourceRegionsSince);
+      createBranchRegion(S->getCond(), ThenCount, ElseCount);
   }
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {
@@ -2171,9 +2150,6 @@ struct CounterCoverageMappingBuilder
   }
 
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
-    unsigned SourceRegionsSince = SourceRegions.size();
-    MCDCBuilder.checkDecisionRootOrPush(E->getCond());
-
     extendRegion(E);
 
     Counter ParentCount = getRegion().getCounter();
@@ -2213,9 +2189,7 @@ struct CounterCoverageMappingBuilder
 
     // Create Branch Region around condition.
     if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(E->getCond(), TrueCount, FalseCount,
-                         MCDCBuilder.getCurCondIDs());
-    createOrCancelDecision(E->getCond(), SourceRegionsSince);
+      createBranchRegion(E->getCond(), TrueCount, FalseCount);
   }
 
   inline unsigned findMCDCBranchesInSourceRegion(
