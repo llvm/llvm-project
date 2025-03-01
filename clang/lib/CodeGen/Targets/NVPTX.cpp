@@ -192,14 +192,18 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
         return ABIArgInfo::getDirect(
             CGInfo.getCUDADeviceBuiltinTextureDeviceType());
     }
-    return getNaturalAlignIndirect(Ty, /* byval */ true);
+    return getNaturalAlignIndirect(
+        Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+        /* byval */ true);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
     if ((EIT->getNumBits() > 128) ||
         (!getContext().getTargetInfo().hasInt128Type() &&
          EIT->getNumBits() > 64))
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      return getNaturalAlignIndirect(
+          Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+          /* byval */ true);
   }
 
   return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)

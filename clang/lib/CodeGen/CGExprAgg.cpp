@@ -297,7 +297,6 @@ void AggExprEmitter::withReturnValueSlot(
                  (RequiresDestruction && Dest.isIgnored());
 
   Address RetAddr = Address::invalid();
-  RawAddress RetAllocaAddr = RawAddress::invalid();
 
   EHScopeStack::stable_iterator LifetimeEndBlock;
   llvm::Value *LifetimeSizePtr = nullptr;
@@ -305,10 +304,10 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
   } else {
-    RetAddr = CGF.CreateMemTemp(RetTy, "tmp", &RetAllocaAddr);
+    RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     llvm::TypeSize Size =
         CGF.CGM.getDataLayout().getTypeAllocSize(CGF.ConvertTypeForMem(RetTy));
-    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAllocaAddr.getPointer());
+    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAddr.getBasePointer());
     if (LifetimeSizePtr) {
       LifetimeStartInst =
           cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
@@ -317,7 +316,7 @@ void AggExprEmitter::withReturnValueSlot(
              "Last insertion wasn't a lifetime.start?");
 
       CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
-          NormalEHLifetimeMarker, RetAllocaAddr, LifetimeSizePtr);
+          NormalEHLifetimeMarker, RetAddr, LifetimeSizePtr);
       LifetimeEndBlock = CGF.EHStack.stable_begin();
     }
   }
@@ -338,7 +337,7 @@ void AggExprEmitter::withReturnValueSlot(
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
     CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
-    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAllocaAddr.getPointer());
+    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAddr.getBasePointer());
   }
 }
 
