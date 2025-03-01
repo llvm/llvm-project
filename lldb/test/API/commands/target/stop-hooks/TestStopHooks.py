@@ -27,12 +27,12 @@ class TestStopHooks(TestBase):
 
     def test_stop_hooks_after_expr(self):
         """Test that a stop hook fires when hitting a breakpoint that
-           runs an expression"""
+        runs an expression"""
         self.after_expr_test()
 
     def test_stop_hooks_before_and_after_creation(self):
         """Test that if we add a stop hook in the dummy target, we can
-           they don't collide with ones set directly in the target."""
+        they don't collide with ones set directly in the target."""
         self.before_and_after_target()
 
     def step_out_test(self):
@@ -103,5 +103,6 @@ class TestStopHooks(TestBase):
 
         interp.HandleCommand("target stop-hook add -o 'thread backtrace'", result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")
-        self.expect("target stop-hook list", substrs=["expr g_var++", "thread backtrace"])
-
+        self.expect(
+            "target stop-hook list", substrs=["expr g_var++", "thread backtrace"]
+        )
