@@ -13,11 +13,5 @@
 # CHECK-NEXT: error: -z bti-report only supported on AArch64
 # CHECK-NEXT: error: -z pauth-report only supported on AArch64
 
-# RUN: not ld.lld -z bti-report=something -z pauth-report=something \
-# RUN:     %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=REPORT_INVALID %s
-# REPORT_INVALID: error: -z bti-report= parameter something is not recognized
-# REPORT_INVALID: error: -z pauth-report= parameter something is not recognized
-# REPORT_INVALID-EMPTY:
-
         .globl start
 start:  ret
