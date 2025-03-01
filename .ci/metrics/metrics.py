@@ -193,6 +193,10 @@ def get_per_workflow_metrics(
             # in nanoseconds.
             created_at_ns = int(created_at.timestamp()) * 10**9
 
+            logging.info(
+                f"Adding a job metric for job {workflow_job.id} in workflow {workflow_run.id}"
+            )
+
             workflow_metrics.append(
                 JobMetrics(
                     workflow_run.name + "-" + workflow_job.name,
