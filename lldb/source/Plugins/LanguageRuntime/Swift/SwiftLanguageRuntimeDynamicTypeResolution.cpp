@@ -815,6 +815,10 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
       return llvm::createStringError("could not typeref for " +
                                      type.GetMangledTypeName().GetString());
 
+    // Indirect enums.
+    if (type.GetTypeInfo() & lldb::eTypeIsEnumeration)
+      return 1;
+
     // Existentials.
     if (size_t n = GetExistentialSyntheticChildren(ts, tr, ti).size())
       return n;
@@ -1029,6 +1033,8 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
     return {SwiftLanguageRuntime::eError, {}};
+  if (!exe_ctx)
+    return {SwiftLanguageRuntime::eError, {}};
 
   using namespace swift::reflection;
   // Try the static type metadata.
@@ -1086,6 +1092,29 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
                                            exe_ctx, omit_empty_base_classes,
                                            child_indexes);
     case ReferenceKind::Strong: {
+      // Indirect enums.
+      if (type.GetTypeInfo() & lldb::eTypeIsEnumeration) {
+        const swift::reflection::TypeRef *tr = nullptr;
+        auto ti_or_err = GetSwiftRuntimeTypeInfo(
+            type, exe_ctx->GetBestExecutionContextScope(), &tr);
+        if (!ti_or_err) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ti_or_err.takeError(),
+                         "Could not get enum type info: {0}");
+          return {SwiftLanguageRuntime::eError, {}};
+        }
+        auto *eti = llvm::dyn_cast<EnumTypeInfo>(&*ti_or_err);
+        if (!eti) {
+          // This is probably a generic single-payload enum.
+          // Let's pretend we found it.
+          LLDB_LOG(GetLog(LLDBLog::Types),
+                   "Presuming generic single-payload enum.");
+          child_indexes.push_back(0);
+          return {SwiftLanguageRuntime::eFound, child_indexes.size()};
+        }
+        return findFieldWithName(eti->getCases(), tr, name, true,
+                                 child_indexes);
+      }
+
       ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
       if (!reflection_ctx)
         return {SwiftLanguageRuntime::eError, {}};
@@ -1197,6 +1226,47 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     return pack_element_type;
   }
 
+  auto get_from_indirect_enum = [&]() -> llvm::Expected<CompilerType> {
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return llvm::createStringError("no reflection context");
+    // The indirect enum field should point to a closure context.
+    LLDBTypeInfoProvider tip(*this, &exe_ctx);
+    lldb::addr_t instance = ::MaskMaybeBridgedPointer(GetProcess(), pointer);
+    auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
+        instance, &tip, ts->GetDescriptorFinder());
+    if (!ti_or_err) {
+      llvm::consumeError(ti_or_err.takeError());
+      return CompilerType();
+    }
+    auto *ti = &*ti_or_err;
+    if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
+      switch (rti->getRecordKind()) {
+      case swift::reflection::RecordKind::ClosureContext: {
+        auto &field = rti->getFields()[0];
+        auto *type_ref = field.TR;
+        language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
+        child_byte_offset = field.Offset;
+        child_byte_size = field.TI.getSize();
+        return GetTypeFromTypeRef(*ts, type_ref);
+      }
+      case swift::reflection::RecordKind::Tuple: {
+        std::vector<TypeSystemSwift::TupleElement> elts;
+        for (auto &field : rti->getFields())
+          elts.emplace_back(ConstString(), GetTypeFromTypeRef(*ts, field.TR));
+        return ts->CreateTupleType(elts);
+      }
+      default:
+        return llvm::createStringError(
+            "unexpected kind of indirect record enum");
+      }
+    }
+    language_flags |= TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
+    child_byte_offset = 0;
+    child_byte_size = ti->getSize();
+    return ts->GetBuiltinRawPointerType();
+  };
+
   // The actual conversion from the FieldInfo record.
   auto get_from_field_info =
       [&](const swift::reflection::FieldInfo &field,
@@ -1225,27 +1295,16 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     CompilerType result;
     if (tuple)
       result = tuple->element_type;
-    else if (is_indirect_enum) {
-      ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-      if (!reflection_ctx)
-        return llvm::createStringError("no reflection context");
-      // The indirect enum field should point to a closure context.
-      LLDBTypeInfoProvider tip(*this, &exe_ctx);
-      lldb::addr_t instance = ::MaskMaybeBridgedPointer(GetProcess(), pointer);
-      auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
-          instance, &tip, ts->GetDescriptorFinder());
-      if (!ti_or_err)
-        return ti_or_err.takeError();
-      auto *ti = &*ti_or_err;
-      auto *rti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti);
-      if (rti->getFields().size() < 1)
-        return llvm::createStringError("no fields in indirect enum");
-      auto &field = rti->getFields()[0];
-      auto *type_ref = field.TR;
-      result = GetTypeFromTypeRef(*ts, type_ref);
-      child_byte_offset = field.Offset;
-    } else
+    else {
+      if (is_indirect_enum) {
+        auto type_or_err = get_from_indirect_enum();
+        // Only if this couldn't be resolved as an instance pointer, carry on.
+        if (!type_or_err || *type_or_err)
+          return type_or_err;
+      }
       result = GetTypeFromTypeRef(*ts, field.TR);
+    }
+
     // Bug-for-bug compatibility. See comment in
     // SwiftASTContext::GetBitSize().
     if (result.IsFunctionType())
@@ -1394,6 +1453,10 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
     ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
       return llvm::createStringError("no reflection context");
+
+    // Indirect enums.
+    if (type.GetTypeInfo() & lldb::eTypeIsEnumeration)
+      return get_from_indirect_enum();
 
     CompilerType instance_type = valobj->GetCompilerType();
     auto instance_ts =
