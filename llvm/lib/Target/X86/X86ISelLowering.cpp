@@ -53761,9 +53761,7 @@ static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
 
   if (Opcode == ISD::ADD)
     return DAG.getZeroExtendInReg(NewOpNode, DL, CleanUpVT);
-
-  SDValue CleanUp = DAG.getAnyExtOrTrunc(NewOpNode, DL, CleanUpVT);
-  return DAG.getAnyExtOrTrunc(CleanUp, DL, VT);
+  return NewOpNode;
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify

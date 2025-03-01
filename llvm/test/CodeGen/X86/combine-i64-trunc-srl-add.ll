@@ -131,12 +131,12 @@ define i32 @test_trunc_add(i64 %x) {
 define i32 @test_trunc_sub(i64 %x) {
 ; X64-LABEL: test_trunc_sub:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    addl $65522, %edi # imm = 0xFFF2
-; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    shrq $49, %rdi
+; X64-NEXT:    leal 32762(%rdi), %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    retq
-  %sub = sub i64 %x, 3940649673949184
-  %shr = lshr i64 %sub, 48
+  %sub = sub i64 %x, 3377699720527872
+  %shr = lshr i64 %sub, 49
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -145,12 +145,12 @@ define i32 @test_trunc_and_1(i64 %x) {
 ; X64-LABEL: test_trunc_and_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    andl $14, %eax
+; X64-NEXT:    shrq $50, %rax
+; X64-NEXT:    andl $3, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %and = and i64 %x, 3940649673949184
-  %shr = lshr i64 %and, 48
+  %shr = lshr i64 %and, 50
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -159,12 +159,12 @@ define i32 @test_trunc_or_1(i64 %x) {
 ; X64-LABEL: test_trunc_or_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    orl $14, %eax
+; X64-NEXT:    shrq $50, %rax
+; X64-NEXT:    orl $3, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %or = or i64 %x, 3940649673949184
-  %shr = lshr i64 %or, 48
+  %shr = lshr i64 %or, 50
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -173,12 +173,12 @@ define i32 @test_trunc_xor_1(i64 %x) {
 ; X64-LABEL: test_trunc_xor_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    xorl $14, %eax
+; X64-NEXT:    shrq $50, %rax
+; X64-NEXT:    xorl $3, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %xor = xor i64 %x, 3940649673949184
-  %shr = lshr i64 %xor, 48
+  %shr = lshr i64 %xor, 50
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -187,12 +187,12 @@ define i32 @test_trunc_and_2(i64 %x) {
 ; X64-LABEL: test_trunc_and_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    andl $13, %eax
+; X64-NEXT:    shrq $45, %rax
+; X64-NEXT:    andl $111, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %and = and i64 %x, 3940649673949183
-  %shr = lshr i64 %and, 48
+  %shr = lshr i64 %and, 45
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -201,12 +201,12 @@ define i32 @test_trunc_or_2(i64 %x) {
 ; X64-LABEL: test_trunc_or_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    orl $13, %eax
+; X64-NEXT:    shrq $45, %rax
+; X64-NEXT:    orl $111, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %or = or i64 %x, 3940649673949183
-  %shr = lshr i64 %or, 48
+  %shr = lshr i64 %or, 45
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
@@ -215,12 +215,12 @@ define i32 @test_trunc_xor_2(i64 %x) {
 ; X64-LABEL: test_trunc_xor_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $48, %rax
-; X64-NEXT:    xorl $13, %eax
+; X64-NEXT:    shrq $45, %rax
+; X64-NEXT:    xorl $111, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %xor = xor i64 %x, 3940649673949183
-  %shr = lshr i64 %xor, 48
+  %shr = lshr i64 %xor, 45
   %conv = trunc i64 %shr to i32
   ret i32 %conv
 }
