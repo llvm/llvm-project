@@ -771,23 +771,15 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
 
 // Helper to compare the InlinedCallStack computed from an instruction's debug
 // info to a list of Frames from profile data (either the allocation data or a
-// callsite). For callsites, the StartIndex to use in the Frame array may be
-// non-zero.
+// callsite).
 static bool
 stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
                                    ArrayRef<uint64_t> InlinedCallStack) {
-  auto StackFrame = ProfileCallStack.begin();
-  auto InlCallStackIter = InlinedCallStack.begin();
-  for (; StackFrame != ProfileCallStack.end() &&
-         InlCallStackIter != InlinedCallStack.end();
-       ++StackFrame, ++InlCallStackIter) {
-    uint64_t StackId = computeStackId(*StackFrame);
-    if (StackId != *InlCallStackIter)
-      return false;
-  }
-  // Return true if we found and matched all stack ids from the call
-  // instruction.
-  return InlCallStackIter == InlinedCallStack.end();
+  return ProfileCallStack.size() >= InlinedCallStack.size() &&
+         llvm::equal(ProfileCallStack.take_front(InlinedCallStack.size()),
+                     InlinedCallStack, [](const Frame &F, uint64_t StackId) {
+                       return computeStackId(F) == StackId;
+                     });
 }
 
 static bool isAllocationWithHotColdVariant(const Function *Callee,
