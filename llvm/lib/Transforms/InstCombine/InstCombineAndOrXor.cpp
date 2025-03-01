@@ -3122,7 +3122,9 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
   Value *X;
   if (match(LowerSrc, m_SExt(m_Value(X))) &&
       match(UpperSrc,
-            m_SExt(m_AShr(m_Specific(X), m_SpecificInt(HalfWidth / 2 - 1))))) {
+            m_SExt(m_AShr(
+                m_Specific(X),
+                m_SpecificInt(X->getType()->getScalarSizeInBits() - 1))))) {
     return Builder.CreateSExt(X, Ty);
   }
 
