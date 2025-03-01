@@ -219,21 +219,23 @@ struct VPTransformState {
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
-    DenseMap<VPValue *, Value *> VPV2Vector;
+    DenseMap<const VPValue *, Value *> VPV2Vector;
 
-    DenseMap<VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
+    DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
   /// is false, otherwise return the generated scalar. \See set.
-  Value *get(VPValue *Def, bool IsScalar = false);
+  Value *get(const VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(VPValue *Def, const VPLane &Lane);
+  Value *get(const VPValue *Def, const VPLane &Lane);
 
-  bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
+  bool hasVectorValue(const VPValue *Def) {
+    return Data.VPV2Vector.contains(Def);
+  }
 
-  bool hasScalarValue(VPValue *Def, VPLane Lane) {
+  bool hasScalarValue(const VPValue *Def, VPLane Lane) {
     auto I = Data.VPV2Scalars.find(Def);
     if (I == Data.VPV2Scalars.end())
       return false;
@@ -243,7 +245,7 @@ struct VPTransformState {
 
   /// Set the generated vector Value for a given VPValue, if \p
   /// IsScalar is false. If \p IsScalar is true, set the scalar in lane 0.
-  void set(VPValue *Def, Value *V, bool IsScalar = false) {
+  void set(const VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
       set(Def, V, VPLane(0));
       return;
@@ -254,13 +256,13 @@ struct VPTransformState {
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(VPValue *Def, Value *V) {
+  void reset(const VPValue *Def, Value *V) {
     assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
     Data.VPV2Vector[Def] = V;
   }
 
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
-  void set(VPValue *Def, Value *V, const VPLane &Lane) {
+  void set(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto &Scalars = Data.VPV2Scalars[Def];
     unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
@@ -270,7 +272,7 @@ struct VPTransformState {
   }
 
   /// Reset an existing scalar value for \p Def and a given \p Lane.
-  void reset(VPValue *Def, Value *V, const VPLane &Lane) {
+  void reset(const VPValue *Def, Value *V, const VPLane &Lane) {
     auto Iter = Data.VPV2Scalars.find(Def);
     assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
@@ -299,7 +301,7 @@ struct VPTransformState {
 
   /// Construct the vectorized value of a scalarized value \p V one lane at a
   /// time.
-  void packScalarIntoVectorizedValue(VPValue *Def, const VPLane &Lane);
+  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
