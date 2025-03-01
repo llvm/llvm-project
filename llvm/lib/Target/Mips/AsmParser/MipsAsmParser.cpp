@@ -1311,11 +1311,23 @@ public:
   }
 
   template <unsigned Bits> bool isSImm() const {
-    return isConstantImm() ? isInt<Bits>(getConstantImm()) : isImm();
+    if (!isImm())
+      return false;
+    int64_t Res;
+    if (getImm()->evaluateAsAbsolute(Res))
+      return isInt<Bits>(Res);
+    // Allow conservatively if not a parse-time constant.
+    return true;
   }
 
   template <unsigned Bits> bool isUImm() const {
-    return isConstantImm() ? isUInt<Bits>(getConstantImm()) : isImm();
+    if (!isImm())
+      return false;
+    int64_t Res;
+    if (getImm()->evaluateAsAbsolute(Res))
+      return isUInt<Bits>(Res);
+    // Allow conservatively if not a parse-time constant.
+    return true;
   }
 
   template <unsigned Bits> bool isAnyImm() const {
