@@ -4,7 +4,7 @@
 ; Verify that the stress testing flag for the VPlan H-CFG builder works as
 ; expected with and without enabling the VPlan H-CFG Verifier.
 
-; CHECK: VPlan 'HCFGBuilder: Plain CFG
+; CHECK: VPlan 'Plain CFG
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
