@@ -73,6 +73,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -88,6 +89,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -186,7 +188,9 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::modf:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
@@ -441,8 +445,8 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
     if (!Match)
       return false;
   }
-  assert(SrcInfo[0].first != -1 && "Must find one slide");
-  return true;
+  // Avoid all undef masks
+  return SrcInfo[0].first != -1;
 }
 
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,

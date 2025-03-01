@@ -32,19 +32,16 @@ func.func @transpose_conv2d_quantized(%arg0: tensor<2x16x14x3xi8>, %arg1: tensor
 
 // CHECK-LABEL: @transpose_conv2d_quantized_padded
 func.func @transpose_conv2d_quantized_padded(%arg0: tensor<2x16x14x3xi8>, %arg1: tensor<5x3x6x3xi8>, %arg2: tensor<5xi32>) -> (tensor<2x21x26x5xi32>) {
-  // CHECK-DAG: %[[INPUT_ZP:.+]]  = "tosa.const"() <{value = dense<-22> : tensor<1xi8>}
-  // CHECK-DAG: %[[WEIGHT_ZP:.+]]  = "tosa.const"() <{value = dense<42> : tensor<1xi8>}
-  // CHECK-DAG: %[[REV0:.+]] = tosa.reverse %2 {axis = 2 : i32}
-  // CHECK-DAG: %[[REV1:.+]] = tosa.reverse %arg1 {axis = 1 : i32}
-  // CHECK: tosa.conv2d %arg0, %3, %arg2, %[[INPUT_ZP]], %[[WEIGHT_ZP]]
-  // CHECK-SAME: dilation = array<i64: 1, 1>, pad = array<i64: 3, 4, 8, 9>,
-  // CHECK-SAME: stride = array<i64: 1, 1>}
-  %input_zp = "tosa.const"() {value = dense<-22> : tensor<1xi8>} : () -> tensor<1xi8>
-  %weight_zp = "tosa.const"() {value = dense<42> : tensor<1xi8>} : () -> tensor<1xi8>
+  // CHECK-DAG: %[[INPUT_ZP:.+]] = "tosa.const"() <{value = dense<-22> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK-DAG: %[[WEIGHT_ZP:.+]] = "tosa.const"() <{value = dense<42> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK-DAG: %[[REV0:.+]] = tosa.reverse %arg1 {axis = 1 : i32}
+  // CHECK-DAG: %[[REV1:.+]] = tosa.reverse %[[REV0]] {axis = 2 : i32}
+  // CHECK: tosa.conv2d %arg0, %[[REV1]], %arg2, %[[INPUT_ZP]], %[[WEIGHT_ZP]] {acc_type = i32, dilation = array<i64: 1, 1>, pad = array<i64: 3, 4, 8, 9>, stride = array<i64: 1, 1>}
+  %input_zp = "tosa.const"() <{value = dense<-22> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %weight_zp = "tosa.const"() <{value = dense<42> : tensor<1xi8>}> : () -> tensor<1xi8>
   %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {
     acc_type = i32,
     out_pad = array<i64: 1, 2, 3, 4>,
-    out_shape = array<i64: -1, -1, -1, -1>,
     stride = array<i64: 1, 1>} : (tensor<2x16x14x3xi8>, tensor<5x3x6x3xi8>, tensor<5xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x21x26x5xi32>
   return %0 : tensor<2x21x26x5xi32>
 }
@@ -160,12 +157,11 @@ func.func @transpose_conv2d_strided_overpad(%arg0 : tensor<1x16x1x1xi8>, %arg1 :
   // CHECK: %[[PAD_RESULT:.+]] = tosa.pad %[[RESHAPE_RESULT_1]], %[[RESULT_PAD]]
   // CHECK: %[[RESHAPE_ARG2:.+]] = tosa.reshape %arg2, %[[CONST10]]
   // CHECK: %[[ADD:.+]] = tosa.add %[[PAD_RESULT]], %[[RESHAPE_ARG2]]
-  %input_zp = "tosa.const"() {value = dense<-103> : tensor<1xi8>} : () -> tensor<1xi8>
-  %weight_zp = "tosa.const"() {value = dense<93> : tensor<1xi8>} : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{value = dense<-103> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %weight_zp = "tosa.const"() <{value = dense<93> : tensor<1xi8>}> : () -> tensor<1xi8>
   %2 =  tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {
     acc_type = i32,
     out_pad = array<i64: 2, 0, 0, 1>,
-    out_shape = array<i64: 1, -1, -1, 1>,
     stride = array<i64: 1, 2>} :
     (tensor<1x16x1x1xi8>, tensor<1x2x1x1xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x19x2x1xi32>
   "func.return" (%2) : (tensor<1x19x2x1xi32>) -> ()

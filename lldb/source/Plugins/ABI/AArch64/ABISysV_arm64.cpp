@@ -102,12 +102,7 @@ static Status PushToLinuxGuardedControlStack(addr_t return_addr,
   size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
                                                   sizeof(return_addr), error);
   if ((wrote != sizeof(return_addr) || error.Fail())) {
-    // When PrepareTrivialCall fails, the register context is not restored,
-    // unlike when an expression fails to execute. This is arguably a bug,
-    // see https://github.com/llvm/llvm-project/issues/124269.
-    // For now we are handling this here specifically. We can assume this
-    // write will work as the one to decrement the register did.
-    reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0 + 8);
+    // gcspr_el0 will be restored by the ThreadPlan's DoTakedown.
     return Status("Failed to write new Guarded Control Stack entry.");
   }
 
@@ -150,8 +145,6 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (args.size() > 8)
     return false;
 
-  // Do this first, as it's got the most chance of failing (though still very
-  // low).
   if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
     Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
     // If we could not manage the GCS, the expression will certainly fail,
