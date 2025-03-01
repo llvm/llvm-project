@@ -37,6 +37,26 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #endif
 
+#define GEN_VEC_SCALAR_OVERLOADS(FUNC_NAME, BASE_TYPE, AVAIL)                  \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##2, AVAIL)                \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##3, AVAIL)                \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##4, AVAIL)
+
+#define GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, VECTOR_TYPE, AVAIL)           \
+  IF_TRUE_##AVAIL(                                                             \
+      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
+  FUNC_NAME(VECTOR_TYPE p0, BASE_TYPE p1) {                                    \
+    return __builtin_elementwise_##FUNC_NAME(p0, (VECTOR_TYPE)p1);             \
+  }                                                                            \
+  IF_TRUE_##AVAIL(                                                             \
+      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
+  FUNC_NAME(BASE_TYPE p0, VECTOR_TYPE p1) {                                    \
+    return __builtin_elementwise_##FUNC_NAME((VECTOR_TYPE)p0, p1);             \
+  }
+
+#define IF_TRUE_0(EXPR)
+#define IF_TRUE_1(EXPR) EXPR
+
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -1716,30 +1736,7 @@ int16_t3 max(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int16_t4 max(int16_t4, int16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t2 max(int16_t2 p0, int16_t p1) {
-  return __builtin_elementwise_max(p0, (int16_t2)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t2 max(int16_t p0, int16_t2 p1) {
-  return __builtin_elementwise_max((int16_t2)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t3 max(int16_t3 p0, int16_t p1) {
-  return __builtin_elementwise_max(p0, (int16_t3)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t3 max(int16_t p0, int16_t3 p1) {
-  return __builtin_elementwise_max((int16_t3)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t4 max(int16_t4 p0, int16_t p1) {
-  return __builtin_elementwise_max(p0, (int16_t4)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t4 max(int16_t p0, int16_t4 p1) {
-  return __builtin_elementwise_max((int16_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1753,30 +1750,7 @@ uint16_t3 max(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint16_t4 max(uint16_t4, uint16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t2 max(uint16_t2 p0, uint16_t p1) {
-  return __builtin_elementwise_max(p0, (uint16_t2)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t2 max(uint16_t p0, uint16_t2 p1) {
-  return __builtin_elementwise_max((uint16_t2)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t3 max(uint16_t3 p0, uint16_t p1) {
-  return __builtin_elementwise_max(p0, (uint16_t3)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t3 max(uint16_t p0, uint16_t3 p1) {
-  return __builtin_elementwise_max((uint16_t3)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t4 max(uint16_t4 p0, uint16_t p1) {
-  return __builtin_elementwise_max(p0, (uint16_t4)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t4 max(uint16_t p0, uint16_t4 p1) {
-  return __builtin_elementwise_max((uint16_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1787,24 +1761,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int3 max(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int4 max(int4, int4);
-constexpr int2 max(int2 p0, int p1) {
-  return __builtin_elementwise_max(p0, (int2)p1);
-}
-constexpr int2 max(int p0, int2 p1) {
-  return __builtin_elementwise_max((int2)p0, p1);
-}
-constexpr int3 max(int3 p0, int p1) {
-  return __builtin_elementwise_max(p0, (int3)p1);
-}
-constexpr int3 max(int p0, int3 p1) {
-  return __builtin_elementwise_max((int3)p0, p1);
-}
-constexpr int4 max(int4 p0, int p1) {
-  return __builtin_elementwise_max(p0, (int4)p1);
-}
-constexpr int4 max(int p0, int4 p1) {
-  return __builtin_elementwise_max((int4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint max(uint, uint);
@@ -1814,24 +1771,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint3 max(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint4 max(uint4, uint4);
-constexpr uint2 max(uint2 p0, uint p1) {
-  return __builtin_elementwise_max(p0, (uint2)p1);
-}
-constexpr uint2 max(uint p0, uint2 p1) {
-  return __builtin_elementwise_max((uint2)p0, p1);
-}
-constexpr uint3 max(uint3 p0, uint p1) {
-  return __builtin_elementwise_max(p0, (uint3)p1);
-}
-constexpr uint3 max(uint p0, uint3 p1) {
-  return __builtin_elementwise_max((uint3)p0, p1);
-}
-constexpr uint4 max(uint4 p0, uint p1) {
-  return __builtin_elementwise_max(p0, (uint4)p1);
-}
-constexpr uint4 max(uint p0, uint4 p1) {
-  return __builtin_elementwise_max((uint4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t max(int64_t, int64_t);
@@ -1841,24 +1781,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t3 max(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t4 max(int64_t4, int64_t4);
-constexpr int64_t2 max(int64_t2 p0, int64_t p1) {
-  return __builtin_elementwise_max(p0, (int64_t2)p1);
-}
-constexpr int64_t2 max(int64_t p0, int64_t2 p1) {
-  return __builtin_elementwise_max((int64_t2)p0, p1);
-}
-constexpr int64_t3 max(int64_t3 p0, int64_t p1) {
-  return __builtin_elementwise_max(p0, (int64_t3)p1);
-}
-constexpr int64_t3 max(int64_t p0, int64_t3 p1) {
-  return __builtin_elementwise_max((int64_t3)p0, p1);
-}
-constexpr int64_t4 max(int64_t4 p0, int64_t p1) {
-  return __builtin_elementwise_max(p0, (int64_t4)p1);
-}
-constexpr int64_t4 max(int64_t p0, int64_t4 p1) {
-  return __builtin_elementwise_max((int64_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t max(uint64_t, uint64_t);
@@ -1868,24 +1791,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t3 max(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t4 max(uint64_t4, uint64_t4);
-constexpr uint64_t2 max(uint64_t2 p0, uint64_t p1) {
-  return __builtin_elementwise_max(p0, (uint64_t2)p1);
-}
-constexpr uint64_t2 max(uint64_t p0, uint64_t2 p1) {
-  return __builtin_elementwise_max((uint64_t2)p0, p1);
-}
-constexpr uint64_t3 max(uint64_t3 p0, uint64_t p1) {
-  return __builtin_elementwise_max(p0, (uint64_t3)p1);
-}
-constexpr uint64_t3 max(uint64_t p0, uint64_t3 p1) {
-  return __builtin_elementwise_max((uint64_t3)p0, p1);
-}
-constexpr uint64_t4 max(uint64_t4 p0, uint64_t p1) {
-  return __builtin_elementwise_max(p0, (uint64_t4)p1);
-}
-constexpr uint64_t4 max(uint64_t p0, uint64_t4 p1) {
-  return __builtin_elementwise_max((uint64_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float max(float, float);
@@ -1895,24 +1801,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float3 max(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float4 max(float4, float4);
-constexpr float2 max(float2 p0, float p1) {
-  return __builtin_elementwise_max(p0, (float2)p1);
-}
-constexpr float2 max(float p0, float2 p1) {
-  return __builtin_elementwise_max((float2)p0, p1);
-}
-constexpr float3 max(float3 p0, float p1) {
-  return __builtin_elementwise_max(p0, (float3)p1);
-}
-constexpr float3 max(float p0, float3 p1) {
-  return __builtin_elementwise_max((float3)p0, p1);
-}
-constexpr float4 max(float4 p0, float p1) {
-  return __builtin_elementwise_max(p0, (float4)p1);
-}
-constexpr float4 max(float p0, float4 p1) {
-  return __builtin_elementwise_max((float4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double max(double, double);
@@ -1922,24 +1811,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double3 max(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double4 max(double4, double4);
-constexpr double2 max(double2 p0, double p1) {
-  return __builtin_elementwise_max(p0, (double2)p1);
-}
-constexpr double2 max(double p0, double2 p1) {
-  return __builtin_elementwise_max((double2)p0, p1);
-}
-constexpr double3 max(double3 p0, double p1) {
-  return __builtin_elementwise_max(p0, (double3)p1);
-}
-constexpr double3 max(double p0, double3 p1) {
-  return __builtin_elementwise_max((double3)p0, p1);
-}
-constexpr double4 max(double4 p0, double p1) {
-  return __builtin_elementwise_max(p0, (double4)p1);
-}
-constexpr double4 max(double p0, double4 p1) {
-  return __builtin_elementwise_max((double4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, double, 0)
 
 //===----------------------------------------------------------------------===//
 // min builtins
@@ -1962,30 +1834,7 @@ half3 min(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half4 min(half4, half4);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half2 min(half2 p0, half p1) {
-  return __builtin_elementwise_min(p0, (half2)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half2 min(half p0, half2 p1) {
-  return __builtin_elementwise_min((half2)p0, p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half3 min(half3 p0, half p1) {
-  return __builtin_elementwise_min(p0, (half3)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half3 min(half p0, half3 p1) {
-  return __builtin_elementwise_min((half3)p0, p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half4 min(half4 p0, half p1) {
-  return __builtin_elementwise_min(p0, (half4)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half4 min(half p0, half4 p1) {
-  return __builtin_elementwise_min((half4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
@@ -2000,30 +1849,7 @@ int16_t3 min(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int16_t4 min(int16_t4, int16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t2 min(int16_t2 p0, int16_t p1) {
-  return __builtin_elementwise_min(p0, (int16_t2)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t2 min(int16_t p0, int16_t2 p1) {
-  return __builtin_elementwise_min((int16_t2)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t3 min(int16_t3 p0, int16_t p1) {
-  return __builtin_elementwise_min(p0, (int16_t3)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t3 min(int16_t p0, int16_t3 p1) {
-  return __builtin_elementwise_min((int16_t3)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t4 min(int16_t4 p0, int16_t p1) {
-  return __builtin_elementwise_min(p0, (int16_t4)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr int16_t4 min(int16_t p0, int16_t4 p1) {
-  return __builtin_elementwise_min((int16_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -2037,30 +1863,7 @@ uint16_t3 min(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint16_t4 min(uint16_t4, uint16_t4);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t2 min(uint16_t2 p0, uint16_t p1) {
-  return __builtin_elementwise_min(p0, (uint16_t2)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t2 min(uint16_t p0, uint16_t2 p1) {
-  return __builtin_elementwise_min((uint16_t2)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t3 min(uint16_t3 p0, uint16_t p1) {
-  return __builtin_elementwise_min(p0, (uint16_t3)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t3 min(uint16_t p0, uint16_t3 p1) {
-  return __builtin_elementwise_min((uint16_t3)p0, p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t4 min(uint16_t4 p0, uint16_t p1) {
-  return __builtin_elementwise_min(p0, (uint16_t4)p1);
-}
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-constexpr uint16_t4 min(uint16_t p0, uint16_t4 p1) {
-  return __builtin_elementwise_min((uint16_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -2071,24 +1874,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int3 min(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int4 min(int4, int4);
-constexpr int2 min(int2 p0, int p1) {
-  return __builtin_elementwise_min(p0, (int2)p1);
-}
-constexpr int2 min(int p0, int2 p1) {
-  return __builtin_elementwise_min((int2)p0, p1);
-}
-constexpr int3 min(int3 p0, int p1) {
-  return __builtin_elementwise_min(p0, (int3)p1);
-}
-constexpr int3 min(int p0, int3 p1) {
-  return __builtin_elementwise_min((int3)p0, p1);
-}
-constexpr int4 min(int4 p0, int p1) {
-  return __builtin_elementwise_min(p0, (int4)p1);
-}
-constexpr int4 min(int p0, int4 p1) {
-  return __builtin_elementwise_min((int4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint min(uint, uint);
@@ -2098,24 +1884,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint3 min(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint4 min(uint4, uint4);
-constexpr uint2 min(uint2 p0, uint p1) {
-  return __builtin_elementwise_min(p0, (uint2)p1);
-}
-constexpr uint2 min(uint p0, uint2 p1) {
-  return __builtin_elementwise_min((uint2)p0, p1);
-}
-constexpr uint3 min(uint3 p0, uint p1) {
-  return __builtin_elementwise_min(p0, (uint3)p1);
-}
-constexpr uint3 min(uint p0, uint3 p1) {
-  return __builtin_elementwise_min((uint3)p0, p1);
-}
-constexpr uint4 min(uint4 p0, uint p1) {
-  return __builtin_elementwise_min(p0, (uint4)p1);
-}
-constexpr uint4 min(uint p0, uint4 p1) {
-  return __builtin_elementwise_min((uint4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float min(float, float);
@@ -2125,24 +1894,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float3 min(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float4 min(float4, float4);
-constexpr float2 min(float2 p0, float p1) {
-  return __builtin_elementwise_min(p0, (float2)p1);
-}
-constexpr float2 min(float p0, float2 p1) {
-  return __builtin_elementwise_min((float2)p0, p1);
-}
-constexpr float3 min(float3 p0, float p1) {
-  return __builtin_elementwise_min(p0, (float3)p1);
-}
-constexpr float3 min(float p0, float3 p1) {
-  return __builtin_elementwise_min((float3)p0, p1);
-}
-constexpr float4 min(float4 p0, float p1) {
-  return __builtin_elementwise_min(p0, (float4)p1);
-}
-constexpr float4 min(float p0, float4 p1) {
-  return __builtin_elementwise_min((float4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t min(int64_t, int64_t);
@@ -2152,24 +1904,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t3 min(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t4 min(int64_t4, int64_t4);
-constexpr int64_t2 min(int64_t2 p0, int64_t p1) {
-  return __builtin_elementwise_min(p0, (int64_t2)p1);
-}
-constexpr int64_t2 min(int64_t p0, int64_t2 p1) {
-  return __builtin_elementwise_min((int64_t2)p0, p1);
-}
-constexpr int64_t3 min(int64_t3 p0, int64_t p1) {
-  return __builtin_elementwise_min(p0, (int64_t3)p1);
-}
-constexpr int64_t3 min(int64_t p0, int64_t3 p1) {
-  return __builtin_elementwise_min((int64_t3)p0, p1);
-}
-constexpr int64_t4 min(int64_t4 p0, int64_t p1) {
-  return __builtin_elementwise_min(p0, (int64_t4)p1);
-}
-constexpr int64_t4 min(int64_t p0, int64_t4 p1) {
-  return __builtin_elementwise_min((int64_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t min(uint64_t, uint64_t);
@@ -2179,24 +1914,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t3 min(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t4 min(uint64_t4, uint64_t4);
-constexpr uint64_t2 min(uint64_t2 p0, uint64_t p1) {
-  return __builtin_elementwise_min(p0, (uint64_t2)p1);
-}
-constexpr uint64_t2 min(uint64_t p0, uint64_t2 p1) {
-  return __builtin_elementwise_min((uint64_t2)p0, p1);
-}
-constexpr uint64_t3 min(uint64_t3 p0, uint64_t p1) {
-  return __builtin_elementwise_min(p0, (uint64_t3)p1);
-}
-constexpr uint64_t3 min(uint64_t p0, uint64_t3 p1) {
-  return __builtin_elementwise_min((uint64_t3)p0, p1);
-}
-constexpr uint64_t4 min(uint64_t4 p0, uint64_t p1) {
-  return __builtin_elementwise_min(p0, (uint64_t4)p1);
-}
-constexpr uint64_t4 min(uint64_t p0, uint64_t4 p1) {
-  return __builtin_elementwise_min((uint64_t4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double min(double, double);
@@ -2206,24 +1924,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double3 min(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
-constexpr double2 min(double2 p0, double p1) {
-  return __builtin_elementwise_min(p0, (double2)p1);
-}
-constexpr double2 min(double p0, double2 p1) {
-  return __builtin_elementwise_min((double2)p0, p1);
-}
-constexpr double3 min(double3 p0, double p1) {
-  return __builtin_elementwise_min(p0, (double3)p1);
-}
-constexpr double3 min(double p0, double3 p1) {
-  return __builtin_elementwise_min((double3)p0, p1);
-}
-constexpr double4 min(double4 p0, double p1) {
-  return __builtin_elementwise_min(p0, (double4)p1);
-}
-constexpr double4 min(double p0, double4 p1) {
-  return __builtin_elementwise_min((double4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(min, double, 0)
 
 //===----------------------------------------------------------------------===//
 // normalize builtins
