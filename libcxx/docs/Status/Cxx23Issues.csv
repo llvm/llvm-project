@@ -194,7 +194,7 @@
 "`LWG3569 <https://wg21.link/LWG3569>`__","``join_view`` fails to support ranges of ranges with non-default_initializable iterators","2022-11 (Kona)","","",""
 "`LWG3594 <https://wg21.link/LWG3594>`__","``inout_ptr`` — inconsistent ``release()`` in destructor","2022-11 (Kona)","|Complete|","19",""
 "`LWG3597 <https://wg21.link/LWG3597>`__","Unsigned integer types don't model advanceable","2022-11 (Kona)","","",""
-"`LWG3600 <https://wg21.link/LWG3600>`__","Making ``istream_iterator`` copy constructor trivial is an ABI break","2022-11 (Kona)","","",""
+"`LWG3600 <https://wg21.link/LWG3600>`__","Making ``istream_iterator`` copy constructor trivial is an ABI break","2022-11 (Kona)","|Nothing To Do|","",""
 "`LWG3629 <https://wg21.link/LWG3629>`__","``make_error_code`` and ``make_error_condition`` are customization points","2022-11 (Kona)","|Complete|","16",""
 "`LWG3636 <https://wg21.link/LWG3636>`__","``formatter<T>::format`` should be ``const``-qualified","2022-11 (Kona)","|Complete|","16",""
 "`LWG3646 <https://wg21.link/LWG3646>`__","``std::ranges::view_interface::size`` returns a signed type","2022-11 (Kona)","|Complete|","16",""
