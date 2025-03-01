@@ -6647,8 +6647,7 @@ CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
  * \returns A non-zero value if the traversal was terminated
  * prematurely by the visitor returning \c CXFieldVisit_Break.
  */
-CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T,
-                                              CXFieldVisitor visitor,
+CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T, CXFieldVisitor visitor,
                                               CXClientData client_data);
 
 /**
