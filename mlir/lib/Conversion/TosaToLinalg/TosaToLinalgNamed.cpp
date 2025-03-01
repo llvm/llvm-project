@@ -748,6 +748,11 @@ public:
         dilationAttr);
 
     rewriter.replaceOp(op, resultOp);
+
+    // NaN propagation has no meaning for non floating point types.
+    if (!isa<FloatType>(getElementTypeOrSelf(inputTy)))
+      return success();
+
     // "PROPAGATE" mode matches the behaviour of the LinAlg named op, so no
     // compare and select materialization is required.
     //

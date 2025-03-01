@@ -5238,6 +5238,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             "failed to inline `dealloc` region of `omp.private` "
             "op in the target region");
       }
+      return builder.saveIP();
     }
 
     return InsertPointTy(exitBlock.get(), exitBlock.get()->end());

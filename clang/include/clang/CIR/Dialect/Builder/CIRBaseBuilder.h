@@ -69,6 +69,11 @@ public:
     return create<cir::LoadOp>(loc, ptr);
   }
 
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
+                           mlir::Value dst) {
+    return create<cir::StoreOp>(loc, val, dst);
+  }
+
   //
   // Block handling helpers
   // ----------------------
