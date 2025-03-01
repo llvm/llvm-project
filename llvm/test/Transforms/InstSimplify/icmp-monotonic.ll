@@ -232,6 +232,21 @@ define i1 @mul_nuw_nonzero_rhs_monotonic(i8 %x, i8 %c) {
   ret i1 %cmp
 }
 
+define i1 @mul_nuw_nonzero_rhs_commuted_monotonic(i8 %x, i8 %c) {
+; CHECK-LABEL: define i1 @mul_nuw_nonzero_rhs_commuted_monotonic(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[C_NONZERO:%.*]] = icmp ne i8 [[C]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_NONZERO]])
+; CHECK-NEXT:    ret i1 true
+;
+  %c_nonzero = icmp ne i8 %c, 0
+  call void @llvm.assume(i1 %c_nonzero)
+
+  %prod = mul nuw i8 %c, %x
+  %cmp = icmp uge i8 %prod, %x
+  ret i1 %cmp
+}
+
 define i1 @mul_nuw_nonzero_rhs_monotonic_inverse_predicate(i8 %x, i8 %c) {
 ; CHECK-LABEL: define i1 @mul_nuw_nonzero_rhs_monotonic_inverse_predicate(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
