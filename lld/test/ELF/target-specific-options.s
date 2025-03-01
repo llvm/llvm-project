@@ -21,7 +21,7 @@
 
 # RUN: not ld.lld %t -z execute-only-report=foo -o /dev/null 2>&1 | \
 # RUN:     FileCheck %s --check-prefix=ERR-EXECUTE-ONLY-INVALID
-# ERR-EXECUTE-ONLY-INVALID: error: -z execute-only-report= parameter foo is not recognized
+# ERR-EXECUTE-ONLY-INVALID: error: unknown -z execute-only-report= value: foo
 
 .globl _start
 _start:
