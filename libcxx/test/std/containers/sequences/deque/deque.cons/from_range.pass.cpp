@@ -17,7 +17,7 @@
 // template<container-compatible-range<T> R>
 //   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_sequence_container<std::deque, int, Iter, Sent, Alloc>([]([[maybe_unused]] const auto& c) {
       LIBCPP_ASSERT(c.__invariants());
@@ -31,6 +31,14 @@ int main(int, char**) {
   // See https://github.com/llvm/llvm-project/issues/62056.
   //test_exception_safety_throwing_copy<std::deque>();
   //test_exception_safety_throwing_allocator<std::deque, int>();
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
