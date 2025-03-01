@@ -213,6 +213,36 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBaseMethodOpLowering
+    : public mlir::OpConversionPattern<cir::BaseMethodOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMBaseMethodOpLowering(const mlir::TypeConverter &typeConverter,
+                                mlir::MLIRContext *context,
+                                cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BaseMethodOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMDerivedMethodOpLowering
+    : public mlir::OpConversionPattern<cir::DerivedMethodOp> {
+  cir::LowerModule *lowerMod;
+
+public:
+  CIRToLLVMDerivedMethodOpLowering(const mlir::TypeConverter &typeConverter,
+                                   mlir::MLIRContext *context,
+                                   cir::LowerModule *lowerModule)
+      : OpConversionPattern(typeConverter, context), lowerMod(lowerModule) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::DerivedMethodOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMVTTAddrPointOpLowering
     : public mlir::OpConversionPattern<cir::VTTAddrPointOp> {
 public:
@@ -889,6 +919,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ExtractMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMInsertMemberOpLowering
+    : public mlir::OpConversionPattern<cir::InsertMemberOp> {
+public:
+  using mlir::OpConversionPattern<cir::InsertMemberOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::InsertMemberOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

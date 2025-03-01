@@ -1755,6 +1755,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(E);
 
+    if (E->getType()->isMemberFunctionPointerType())
+      assert(!cir::MissingFeatures::memberFuncPtrAuthInfo());
+
     QualType derivedTy =
         Kind == CK_DerivedToBaseMemberPointer ? E->getType() : CE->getType();
     const CXXRecordDecl *derivedClass = derivedTy->castAs<MemberPointerType>()
@@ -1763,12 +1766,16 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     CharUnits offset = CGF.CGM.computeNonVirtualBaseClassOffset(
         derivedClass, CE->path_begin(), CE->path_end());
 
-    if (E->getType()->isMemberFunctionPointerType())
-      llvm_unreachable("NYI");
-
     mlir::Location loc = CGF.getLoc(E->getExprLoc());
     mlir::Type resultTy = CGF.convertType(DestTy);
     mlir::IntegerAttr offsetAttr = Builder.getIndexAttr(offset.getQuantity());
+
+    if (E->getType()->isMemberFunctionPointerType()) {
+      if (Kind == CK_BaseToDerivedMemberPointer)
+        return Builder.create<cir::DerivedMethodOp>(loc, resultTy, src,
+                                                    offsetAttr);
+      return Builder.create<cir::BaseMethodOp>(loc, resultTy, src, offsetAttr);
+    }
 
     if (Kind == CK_BaseToDerivedMemberPointer)
       return Builder.create<cir::DerivedDataMemberOp>(loc, resultTy, src,

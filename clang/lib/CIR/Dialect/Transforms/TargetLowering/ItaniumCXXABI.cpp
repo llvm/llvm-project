@@ -99,6 +99,13 @@ public:
                                      mlir::Value loweredSrc,
                                      mlir::OpBuilder &builder) const override;
 
+  mlir::Value lowerBaseMethod(cir::BaseMethodOp op, mlir::Value loweredSrc,
+                              mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDerivedMethod(cir::DerivedMethodOp op,
+                                 mlir::Value loweredSrc,
+                                 mlir::OpBuilder &builder) const override;
+
   mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                  mlir::Value loweredRhs,
                                  mlir::OpBuilder &builder) const override;
@@ -466,6 +473,27 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
                                        isNull, nullValue, adjustedPtr);
 }
 
+static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
+                                   std::int64_t offset, bool isDerivedToBase,
+                                   LowerModule &lowerMod,
+                                   mlir::OpBuilder &builder) {
+  if (offset == 0)
+    return loweredSrc;
+
+  cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lowerMod);
+  auto adjField = builder.create<cir::ExtractMemberOp>(
+      op->getLoc(), ptrdiffCIRTy, loweredSrc, 1);
+
+  auto offsetValue = builder.create<cir::ConstantOp>(
+      op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
+  auto binOpKind = isDerivedToBase ? cir::BinOpKind::Sub : cir::BinOpKind::Add;
+  auto adjustedAdjField = builder.create<cir::BinOp>(
+      op->getLoc(), ptrdiffCIRTy, binOpKind, adjField, offsetValue);
+
+  return builder.create<cir::InsertMemberOp>(op->getLoc(), loweredSrc, 1,
+                                             adjustedAdjField);
+}
+
 mlir::Value ItaniumCXXABI::lowerBaseDataMember(cir::BaseDataMemberOp op,
                                                mlir::Value loweredSrc,
                                                mlir::OpBuilder &builder) const {
@@ -479,6 +507,20 @@ ItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                       mlir::OpBuilder &builder) const {
   return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
                              /*isDerivedToBase=*/false, builder);
+}
+
+mlir::Value ItaniumCXXABI::lowerBaseMethod(cir::BaseMethodOp op,
+                                           mlir::Value loweredSrc,
+                                           mlir::OpBuilder &builder) const {
+  return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                         /*isDerivedToBase=*/true, LM, builder);
+}
+
+mlir::Value ItaniumCXXABI::lowerDerivedMethod(cir::DerivedMethodOp op,
+                                              mlir::Value loweredSrc,
+                                              mlir::OpBuilder &builder) const {
+  return lowerMethodCast(op, loweredSrc, op.getOffset().getSExtValue(),
+                         /*isDerivedToBase=*/false, LM, builder);
 }
 
 mlir::Value ItaniumCXXABI::lowerDataMemberCmp(cir::CmpOp op,

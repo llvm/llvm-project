@@ -2931,6 +2931,67 @@ def ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// InsertMemberOp
+//===----------------------------------------------------------------------===//
+
+def InsertMemberOp : CIR_Op<"insert_member",
+                            [Pure, AllTypesMatch<["record", "result"]>]> {
+  let summary = "Overwrite the value of a member of a struct value";
+  let description = [{
+    The `cir.insert_member` operation overwrites the value of a particular
+    member in the input struct value, and returns the modified struct value. The
+    result of this operation is equal to the input struct value, except for the
+    member specified by `index_attr` whose value is equal to the given value.
+
+    This operation is named after the LLVM instruction `insertvalue`.
+
+    Currently `cir.insert_member` does not work on unions.
+
+    Example:
+
+    ```mlir
+    // Suppose we have a struct with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 32>
+    !struct_ty = !cir.struct<"struct.Bar" {!s32i, !s8i}>
+
+    // And suppose we have a value of the struct type.
+    %0 = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i}> : !struct_ty
+    // %0 is {1, 2}
+
+    // Overwrite the second member of the struct value.
+    %1 = cir.const #cir.int<3> : !s8i
+    %2 = cir.insert_member %0[1], %1 : !struct_ty, !s8i
+    // %2 is {1, 3}
+    ```
+  }];
+
+  let arguments = (ins CIR_StructType:$record, IndexAttr:$index_attr,
+                       CIR_AnyType:$value);
+  let results = (outs CIR_StructType:$result);
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$record, "uint64_t":$index,
+                   "mlir::Value":$value), [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, record, fieldIdx, value);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Get the index of the struct member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+  }];
+
+  let assemblyFormat = [{
+    $record `[` $index_attr `]` `,` $value attr-dict
+    `:` qualified(type($record)) `,` qualified(type($value))
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GetRuntimeMemberOp
 //===----------------------------------------------------------------------===//
 
@@ -3412,6 +3473,74 @@ def DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
 
   let arguments = (ins CIR_DataMemberType:$src, IndexAttr:$offset);
   let results = (outs CIR_DataMemberType:$result);
+
+  let assemblyFormat = [{
+    `(` $src `:` qualified(type($src)) `)`
+    `[` $offset `]` `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+def BaseMethodOp : CIR_Op<"base_method", [Pure]> {
+  let summary = [{
+    Cast a derived class pointer-to-member-function to a base class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.base_method` operation casts a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Base::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.base_method(%0 : !cir.method<!cir.func<(!s32i)> in !ty_Derived>) [16] -> !cir.method<!cir.func<(!s32i)> in !ty_Base>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
+
+  let assemblyFormat = [{
+    `(` $src `:` qualified(type($src)) `)`
+    `[` $offset `]` `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
+  let summary = [{
+    Cast a base class pointer-to-member-function to a derived class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.derived_method` operation casts a pointer-to-member-function of
+    type `Ret (Base::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.derived_method(%0 : !cir.method<!cir.func<(!s32i)> in !ty_Base>) [16] -> !cir.method<!cir.func<(!s32i)> in !ty_Derived>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
 
   let assemblyFormat = [{
     `(` $src `:` qualified(type($src)) `)`

@@ -154,3 +154,81 @@ auto memfunc_reinterpret(void (Foo::*func)(int)) -> void (Bar::*)() {
 // LLVM-NEXT:   %[[#ret:]] = load { i64, i64 }, ptr %[[#ret_slot]]
 // LLVM-NEXT:   ret { i64, i64 } %[[#ret]]
 // LLVM-NEXT: }
+
+struct Base1 {
+  int x;
+  virtual void m1(int);
+};
+
+struct Base2 {
+  int y;
+  virtual void m2(int);
+};
+
+struct Derived : Base1, Base2 {
+  virtual void m3(int);
+};
+
+using Base1MemFunc = void (Base1::*)(int);
+using Base2MemFunc = void (Base2::*)(int);
+using DerivedMemFunc = void (Derived::*)(int);
+
+DerivedMemFunc base_to_derived_zero_offset(Base1MemFunc ptr) {
+  return static_cast<DerivedMemFunc>(ptr);
+}
+
+// CIR-LABEL: @_Z27base_to_derived_zero_offsetM5Base1FviE
+// CIR: %{{.+}} = cir.derived_method(%{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Base1_>) [0] -> !cir.method<!cir.func<(!s32i)> in !ty_Derived>
+
+// LLVM-LABEL: @_Z27base_to_derived_zero_offsetM5Base1FviE
+// LLVM-NEXT:   %[[#arg_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   %[[#ret_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   store { i64, i64 } %{{.+}}, ptr %[[#arg_slot]]
+// LLVM-NEXT:   %[[#tmp:]] = load { i64, i64 }, ptr %[[#arg_slot]]
+// LLVM-NEXT:   store { i64, i64 } %[[#tmp]], ptr %[[#ret_slot]]
+// LLVM-NEXT:   %[[#ret:]] = load { i64, i64 }, ptr %[[#ret_slot]]
+// LLVM-NEXT:   ret { i64, i64 } %[[#ret]]
+// LLVM-NEXT: }
+
+DerivedMemFunc base_to_derived(Base2MemFunc ptr) {
+  return static_cast<DerivedMemFunc>(ptr);
+}
+
+// CIR-LABEL: @_Z15base_to_derivedM5Base2FviE
+// CIR: %{{.+}} = cir.derived_method(%{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Base2_>) [16] -> !cir.method<!cir.func<(!s32i)> in !ty_Derived>
+
+// LLVM-LABEL: @_Z15base_to_derivedM5Base2FviE
+//      LLVM: %[[#arg:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#adj:]] = extractvalue { i64, i64 } %[[#arg]], 1
+// LLVM-NEXT: %[[#adj_adj:]] = add i64 %[[#adj]], 16
+// LLVM-NEXT: %{{.+}} = insertvalue { i64, i64 } %[[#arg]], i64 %[[#adj_adj]], 1
+
+Base1MemFunc derived_to_base_zero_offset(DerivedMemFunc ptr) {
+  return static_cast<Base1MemFunc>(ptr);
+}
+
+// CIR-LABEL: @_Z27derived_to_base_zero_offsetM7DerivedFviE
+// CIR: %{{.+}} = cir.base_method(%{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Derived>) [0] -> !cir.method<!cir.func<(!s32i)> in !ty_Base1_>
+
+// LLVM-LABEL: @_Z27derived_to_base_zero_offsetM7DerivedFviE
+// LLVM-NEXT:   %[[#arg_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   %[[#ret_slot:]] = alloca { i64, i64 }, i64 1
+// LLVM-NEXT:   store { i64, i64 } %{{.+}}, ptr %[[#arg_slot]]
+// LLVM-NEXT:   %[[#tmp:]] = load { i64, i64 }, ptr %[[#arg_slot]]
+// LLVM-NEXT:   store { i64, i64 } %[[#tmp]], ptr %[[#ret_slot]]
+// LLVM-NEXT:   %[[#ret:]] = load { i64, i64 }, ptr %[[#ret_slot]]
+// LLVM-NEXT:   ret { i64, i64 } %[[#ret]]
+// LLVM-NEXT: }
+
+Base2MemFunc derived_to_base(DerivedMemFunc ptr) {
+  return static_cast<Base2MemFunc>(ptr);
+}
+
+// CIR-LABEL: @_Z15derived_to_baseM7DerivedFviE
+// CIR: %{{.+}} = cir.base_method(%{{.+}} : !cir.method<!cir.func<(!s32i)> in !ty_Derived>) [16] -> !cir.method<!cir.func<(!s32i)> in !ty_Base2_>
+
+// LLVM-LABEL: @_Z15derived_to_baseM7DerivedFviE
+//      LLVM: %[[#arg:]] = load { i64, i64 }, ptr %{{.+}}
+// LLVM-NEXT: %[[#adj:]] = extractvalue { i64, i64 } %[[#arg]], 1
+// LLVM-NEXT: %[[#adj_adj:]] = sub i64 %[[#adj]], 16
+// LLVM-NEXT: %{{.+}} = insertvalue { i64, i64 } %[[#arg]], i64 %[[#adj_adj]], 1

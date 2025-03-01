@@ -1038,6 +1038,24 @@ mlir::LogicalResult CIRToLLVMDerivedDataMemberOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMBaseMethodOpLowering::matchAndRewrite(
+    cir::BaseMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerMod->getCXXABI().lowerBaseMethod(op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMDerivedMethodOpLowering::matchAndRewrite(
+    cir::DerivedMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerMod->getCXXABI().lowerDerivedMethod(op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 static mlir::Value
 getValueForVTableSymbol(mlir::Operation *op,
                         mlir::ConversionPatternRewriter &rewriter,
@@ -3527,6 +3545,24 @@ mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
   }
 }
 
+mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
+    cir::InsertMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::int64_t indecies[1] = {static_cast<std::int64_t>(op.getIndex())};
+  mlir::Type recordTy = op.getRecord().getType();
+
+  if (auto cirStructTy = mlir::dyn_cast<cir::StructType>(recordTy)) {
+    if (cirStructTy.getKind() == cir::StructType::Union) {
+      op.emitError("cir.update_member cannot update member of a union");
+      return mlir::failure();
+    }
+  }
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, adaptor.getRecord(), adaptor.getValue(), indecies);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMGetMethodOpLowering::matchAndRewrite(
     cir::GetMethodOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4179,8 +4215,10 @@ void populateCIRToLLVMConversionPatterns(
   patterns.add<
       // clang-format off
       CIRToLLVMBaseDataMemberOpLowering,
+      CIRToLLVMBaseMethodOpLowering,
       CIRToLLVMCmpOpLowering,
       CIRToLLVMDerivedDataMemberOpLowering,
+      CIRToLLVMDerivedMethodOpLowering,
       CIRToLLVMGetMethodOpLowering,
       CIRToLLVMGetRuntimeMemberOpLowering,
       CIRToLLVMInvariantGroupOpLowering
@@ -4236,6 +4274,7 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMGetBitfieldOpLowering,
       CIRToLLVMGetGlobalOpLowering,
       CIRToLLVMGetMemberOpLowering,
+      CIRToLLVMInsertMemberOpLowering,
       CIRToLLVMIsConstantOpLowering,
       CIRToLLVMIsFPClassOpLowering,
       CIRToLLVMLLVMIntrinsicCallOpLowering,

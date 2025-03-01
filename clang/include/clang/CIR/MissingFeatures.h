@@ -70,6 +70,7 @@ struct MissingFeatures {
   static bool tbaaPointer() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool ptrAuth() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
   static bool emitCFICheck() { return false; }
   static bool emitVFEInfo() { return false; }
   static bool emitWPDInfo() { return false; }

@@ -841,13 +841,21 @@ LogicalResult cir::DynamicCastOp::verify() {
 // BaseDataMemberOp & DerivedDataMemberOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyDataMemberCast(Operation *op, mlir::Value src,
-                                          mlir::Type resultTy) {
+static LogicalResult verifyMemberPtrCast(Operation *op, mlir::Value src,
+                                         mlir::Type resultTy) {
   // Let the operand type be T1 C1::*, let the result type be T2 C2::*.
   // Verify that T1 and T2 are the same type.
-  auto inputMemberTy =
-      mlir::cast<cir::DataMemberType>(src.getType()).getMemberTy();
-  auto resultMemberTy = mlir::cast<cir::DataMemberType>(resultTy).getMemberTy();
+  mlir::Type inputMemberTy;
+  mlir::Type resultMemberTy;
+  if (mlir::isa<cir::DataMemberType>(src.getType())) {
+    inputMemberTy =
+        mlir::cast<cir::DataMemberType>(src.getType()).getMemberTy();
+    resultMemberTy = mlir::cast<cir::DataMemberType>(resultTy).getMemberTy();
+  } else {
+    inputMemberTy =
+        mlir::cast<cir::MethodType>(src.getType()).getMemberFuncTy();
+    resultMemberTy = mlir::cast<cir::MethodType>(resultTy).getMemberFuncTy();
+  }
   if (inputMemberTy != resultMemberTy)
     return op->emitOpError()
            << "member types of the operand and the result do not match";
@@ -856,11 +864,23 @@ static LogicalResult verifyDataMemberCast(Operation *op, mlir::Value src,
 }
 
 LogicalResult cir::BaseDataMemberOp::verify() {
-  return verifyDataMemberCast(getOperation(), getSrc(), getType());
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
 }
 
 LogicalResult cir::DerivedDataMemberOp::verify() {
-  return verifyDataMemberCast(getOperation(), getSrc(), getType());
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3577,6 +3597,22 @@ LogicalResult cir::ExtractMemberOp::verify() {
     return emitError() << "member index out of bounds";
   if (recordTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::InsertMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (recordTy.getKind() == cir::StructType::Union)
+    return emitError() << "cir.update_member currently does not work on unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of range";
+  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+    return emitError() << "member type mismatch";
+  // The op trait already checks that the types of $result and $record match.
   return mlir::success();
 }
 
