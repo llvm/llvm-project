@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -427,24 +428,15 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // If the NVVM IR has some of reqntid* specified, then output
   // the reqntid directive, and set the unspecified ones to 1.
   // If none of Reqntid* is specified, don't output reqntid directive.
-  std::optional<unsigned> Reqntidx = getReqNTIDx(F);
-  std::optional<unsigned> Reqntidy = getReqNTIDy(F);
-  std::optional<unsigned> Reqntidz = getReqNTIDz(F);
+  const auto ReqNTID = getReqNTID(F);
+  if (!ReqNTID.empty())
+    O << formatv(".reqntid {0:$[, ]}\n",
+                 make_range(ReqNTID.begin(), ReqNTID.end()));
 
-  if (Reqntidx || Reqntidy || Reqntidz)
-    O << ".reqntid " << Reqntidx.value_or(1) << ", " << Reqntidy.value_or(1)
-      << ", " << Reqntidz.value_or(1) << "\n";
-
-  // If the NVVM IR has some of maxntid* specified, then output
-  // the maxntid directive, and set the unspecified ones to 1.
-  // If none of maxntid* is specified, don't output maxntid directive.
-  std::optional<unsigned> Maxntidx = getMaxNTIDx(F);
-  std::optional<unsigned> Maxntidy = getMaxNTIDy(F);
-  std::optional<unsigned> Maxntidz = getMaxNTIDz(F);
-
-  if (Maxntidx || Maxntidy || Maxntidz)
-    O << ".maxntid " << Maxntidx.value_or(1) << ", " << Maxntidy.value_or(1)
-      << ", " << Maxntidz.value_or(1) << "\n";
+  const auto MaxNTID = getMaxNTID(F);
+  if (!MaxNTID.empty())
+    O << formatv(".maxntid {0:$[, ]}\n",
+                 make_range(MaxNTID.begin(), MaxNTID.end()));
 
   if (const auto Mincta = getMinCTASm(F))
     O << ".minnctapersm " << *Mincta << "\n";
@@ -458,21 +450,19 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
 
   if (STI->getSmVersion() >= 90) {
-    std::optional<unsigned> ClusterX = getClusterDimx(F);
-    std::optional<unsigned> ClusterY = getClusterDimy(F);
-    std::optional<unsigned> ClusterZ = getClusterDimz(F);
+    const auto ClusterDim = getClusterDim(F);
 
-    if (ClusterX || ClusterY || ClusterZ) {
+    if (!ClusterDim.empty()) {
       O << ".explicitcluster\n";
-      if (ClusterX.value_or(1) != 0) {
-        assert(ClusterY.value_or(1) && ClusterZ.value_or(1) &&
+      if (ClusterDim[0] != 0) {
+        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
                "should be non-zero as well");
 
-        O << ".reqnctapercluster " << ClusterX.value_or(1) << ", "
-          << ClusterY.value_or(1) << ", " << ClusterZ.value_or(1) << "\n";
+        O << formatv(".reqnctapercluster {0:$[, ]}\n",
+                     make_range(ClusterDim.begin(), ClusterDim.end()));
       } else {
-        assert(!ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
+        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D == 0; }) &&
                "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
                "should be 0 as well");
       }

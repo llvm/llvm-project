@@ -5671,6 +5671,14 @@ define i1 @test_is_shared_undef() nounwind {
   ret i1 %val
 }
 
+define i1 @test_is_shared_poison() nounwind {
+; CHECK-LABEL: @test_is_shared_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.shared(ptr poison)
+  ret i1 %val
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.is.private
 ; --------------------------------------------------------------------
@@ -5690,6 +5698,14 @@ define i1 @test_is_private_undef() nounwind {
 ; CHECK-NEXT:    ret i1 undef
 ;
   %val = call i1 @llvm.amdgcn.is.private(ptr undef)
+  ret i1 %val
+}
+
+define i1 @test_is_private_poison() nounwind {
+; CHECK-LABEL: @test_is_private_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.private(ptr poison)
   ret i1 %val
 }
 

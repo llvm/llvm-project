@@ -1632,8 +1632,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
-                       << option.second << " is not recognized";
+        ErrAlways(ctx) << "unknown -z " << reportArg.first
+                       << "= value: " << option.second;
         continue;
       }
       *reportArg.second = option.second;

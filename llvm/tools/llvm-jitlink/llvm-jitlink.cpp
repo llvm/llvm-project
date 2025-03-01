@@ -29,7 +29,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/GetTapiInterface.h"
+#include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
@@ -2117,17 +2117,8 @@ static SmallVector<StringRef, 5> getSearchPathsFromEnvVar(Session &S) {
 }
 
 static Expected<std::unique_ptr<DefinitionGenerator>>
-LoadLibraryWeak(Session &S, StringRef InterfacePath) {
-  auto TapiFileBuffer = getFile(InterfacePath);
-  if (!TapiFileBuffer)
-    return TapiFileBuffer.takeError();
-
-  auto Tapi =
-      object::TapiUniversal::create((*TapiFileBuffer)->getMemBufferRef());
-  if (!Tapi)
-    return Tapi.takeError();
-
-  auto Symbols = getInterfaceFromTapiFile(S.ES, **Tapi);
+LoadLibraryWeak(Session &S, StringRef Path) {
+  auto Symbols = getDylibInterface(S.ES, Path);
   if (!Symbols)
     return Symbols.takeError();
 
@@ -2227,7 +2218,7 @@ static Error addLibraries(Session &S,
   StringRef StandardExtensions[] = {".so", ".dylib", ".dll", ".a", ".lib"};
   StringRef DynLibExtensionsOnly[] = {".so", ".dylib", ".dll"};
   StringRef ArchiveExtensionsOnly[] = {".a", ".lib"};
-  StringRef InterfaceExtensionsOnly = {".tbd"};
+  StringRef WeakLinkExtensionsOnly[] = {".dylib", ".tbd"};
 
   // Add -lx arguments to LibraryLoads.
   for (auto LibItr = Libraries.begin(), LibEnd = Libraries.end();
@@ -2260,7 +2251,7 @@ static Error addLibraries(Session &S,
     LibraryLoad LL;
     LL.LibName = *LibWeakItr;
     LL.Position = LibrariesWeak.getPosition(LibWeakItr - LibrariesWeak.begin());
-    LL.CandidateExtensions = InterfaceExtensionsOnly;
+    LL.CandidateExtensions = WeakLinkExtensionsOnly;
     LL.Modifier = LibraryLoad::Weak;
     LibraryLoadQueue.push_back(std::move(LL));
   }
@@ -2403,8 +2394,15 @@ static Error addLibraries(Session &S,
         case file_magic::pecoff_executable:
         case file_magic::elf_shared_object:
         case file_magic::macho_dynamically_linked_shared_lib: {
-          if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
-            return Err;
+          if (LL.Modifier == LibraryLoad::Weak) {
+            if (auto G = LoadLibraryWeak(S, LibPath.data()))
+              JD.addGenerator(std::move(*G));
+            else
+              return G.takeError();
+          } else {
+            if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
+              return Err;
+          }
           break;
         }
         case file_magic::archive:

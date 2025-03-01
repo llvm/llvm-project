@@ -276,6 +276,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
     return recipeIface.getAllocaBlock(getRegion());
   }
 
+  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
+    return &cufKernelOp.getRegion().front();
+
   return getEntryBlock();
 }
 

@@ -34,7 +34,7 @@ static_library("Orc") {
     "EPCIndirectionUtils.cpp",
     "ExecutionUtils.cpp",
     "ExecutorProcessControl.cpp",
-    "GetTapiInterface.cpp",
+    "GetDylibInterface.cpp",
     "IRCompileLayer.cpp",
     "IRPartitionLayer.cpp",
     "IRTransformLayer.cpp",

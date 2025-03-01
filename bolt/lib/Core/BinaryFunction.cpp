@@ -15,6 +15,7 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
@@ -1543,15 +1544,11 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
 }
 
 void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
+  for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst); ++OpNum) {
+    const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, OpNum);
+    if (!Symbol)
       continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() != MCExpr::SymbolRef)
-      continue;
-    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAddressTaken for a function regardless of the ICF level.
-    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(Symbol))
       BF->setHasAddressTaken(true);
   }
 }
@@ -1753,8 +1750,8 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    // In BAT mode, register any known entry points for CFG construction.
-    if (!BC.HasRelocations && !BC.HasBATSection)
+    // In aggregation, register any known entry points for CFG construction.
+    if (!BC.HasRelocations && !opts::AggregateOnly)
       setSimple(false);
 
     const uint32_t Offset = KV.first;

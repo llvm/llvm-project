@@ -25,7 +25,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ObjectFileInterface.cpp
-  GetTapiInterface.cpp
+  GetDylibInterface.cpp
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
