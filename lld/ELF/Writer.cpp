@@ -2200,13 +2200,17 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
                                    ? "SHF_AARCH64_PURECODE"
                                    : "SHF_ARM_PURECODE";
   SmallVector<InputSection *, 0> storage;
-  for (OutputSection *osec : ctx.outputSections)
-    if (osec->getPhdrFlags() == (PF_R | PF_X))
-      for (InputSection *sec : getInputSections(*osec, storage))
-        if (!isa<SyntheticSection>(sec))
-          reportUnless(sec->flags & purecodeFlag)
-              << "-z execute-only-report: " << sec << " does not have "
-              << purecodeFlagName << " flag set";
+  for (OutputSection *osec : ctx.outputSections) {
+    if (osec->getPhdrFlags() != (PF_R | PF_X))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (isa<SyntheticSection>(sec))
+        continue;
+      reportUnless(sec->flags & purecodeFlag)
+          << "-z execute-only-report: " << sec << " does not have "
+          << purecodeFlagName << " flag set";
+    }
+  }
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
