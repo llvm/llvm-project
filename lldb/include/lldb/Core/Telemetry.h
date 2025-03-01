@@ -151,16 +151,6 @@ template <typename Info> struct ScopedDispatcher {
     debugger = debugger;
   }
 
-
-  template typename<T>
-      T GetIfEnable(llvm::unique_function<T(TelemetryManager*)> callable,
-                                   T default_value) {
-    TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
-    if (!manager)
-      return default_value;
-    return callable(manager);
-  }
-
   void SetDebugger(Debugger *debugger) { debugger = debugger; }
 
   void SetFinalCallback(llvm::unique_function<void(Info *info)> final_callback) {
