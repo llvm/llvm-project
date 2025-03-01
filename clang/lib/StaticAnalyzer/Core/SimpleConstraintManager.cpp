@@ -57,10 +57,14 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   // We cannot reason about SymSymExprs, and can only reason about some
   // SymIntExprs.
   if (!canReasonAbout(Cond)) {
-    // Just add the constraint to the expression without trying to simplify.
     SymbolRef Sym = Cond.getAsSymbol();
-    assert(Sym);
-    return assumeSymUnsupported(State, Sym, Assumption);
+    if (Sym) {
+      // this will simplify the symbol, so only call this if we have a
+      // symbol.
+      return assumeSymUnsupported(State, Sym, Assumption);
+    } else {
+      return State;
+    }
   }
 
   switch (Cond.getKind()) {
