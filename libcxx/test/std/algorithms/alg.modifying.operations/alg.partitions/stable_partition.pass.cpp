@@ -23,21 +23,16 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-struct is_odd
-{
-    TEST_CONSTEXPR_CXX26 bool operator()(const int& i) const {return i & 1;}
+struct is_odd {
+  TEST_CONSTEXPR_CXX26 bool operator()(const int& i) const { return i & 1; }
 };
 
-struct odd_first
-{
-    TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int,int>& p) const
-        {return p.first & 1;}
+struct odd_first {
+  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& p) const { return p.first & 1; }
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX26 void
-test()
-{
+TEST_CONSTEXPR_CXX26 void test() {
   { // check mixed
     typedef std::pair<int,int> P;
     P array[] =
@@ -285,8 +280,7 @@ test()
   // TODO: Re-enable this test for GCC once we get recursive inlining fixed.
   // For now it trips up GCC due to the use of always_inline.
 #  if !defined(TEST_COMPILER_GCC)
-  if (!TEST_IS_CONSTANT_EVALUATED)
-  { // check that the algorithm still works when no memory is available
+  if (!TEST_IS_CONSTANT_EVALUATED) { // check that the algorithm still works when no memory is available
     std::vector<int> vec(150, 3);
     vec[5]                             = 6;
     getGlobalMemCounter()->throw_after = 0;
@@ -307,20 +301,19 @@ test()
 
 #if TEST_STD_VER >= 11
 
-struct is_null
-{
-    template <class P>
-        TEST_CONSTEXPR_CXX26 bool operator()(const P& p) {return p == 0;}
+struct is_null {
+  template <class P>
+  TEST_CONSTEXPR_CXX26 bool operator()(const P& p) {
+    return p == 0;
+  }
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX26 void
-test1()
-{
-    const unsigned size = 5;
-    std::unique_ptr<int> array[size];
-    Iter r = std::stable_partition(Iter(array), Iter(array+size), is_null());
-    assert(r == Iter(array+size));
+TEST_CONSTEXPR_CXX26 void test1() {
+  const unsigned size = 5;
+  std::unique_ptr<int> array[size];
+  Iter r = std::stable_partition(Iter(array), Iter(array + size), is_null());
+  assert(r == Iter(array + size));
 }
 
 #endif // TEST_STD_VER >= 11

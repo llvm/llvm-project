@@ -739,15 +739,15 @@ TEST_CONSTEXPR_CXX20 bool test() {
   if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
-    test(simple_in, [&](I b, I e) { (void) std::stable_partition(b, e, is_neg); });
+    test(simple_in, [&](I b, I e) { (void)std::stable_partition(b, e, is_neg); });
   }
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(sort_test_in, [&](I b, I e) { (void) std::sort(b, e); });
+    test(sort_test_in, [&](I b, I e) { (void)std::sort(b, e); });
 #if TEST_STD_VER < 26
   if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
-    test(sort_test_in, [&](I b, I e) { (void) std::stable_sort(b, e); });
+    test(sort_test_in, [&](I b, I e) { (void)std::stable_sort(b, e); });
   }
   // TODO: partial_sort
   // TODO: nth_element
