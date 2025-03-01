@@ -395,24 +395,25 @@ static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
   return true;
 }
 
-static Type *convertPointerToIntegerType(const DataLayout &DL, Type *Ty) {
+static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
+  assert(Ty->isIntOrPtrTy() && "Expected integer or pointer type");
+
   if (Ty->isPointerTy())
-    return DL.getIntPtrType(Ty);
+    return DL.getIntPtrType(Ty->getContext(), Ty->getPointerAddressSpace());
 
   // It is possible that char's or short's overflow when we ask for the loop's
   // trip count, work around this by changing the type size.
   if (Ty->getScalarSizeInBits() < 32)
     return Type::getInt32Ty(Ty->getContext());
 
-  return Ty;
+  return cast<IntegerType>(Ty);
 }
 
-static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
-  Ty0 = convertPointerToIntegerType(DL, Ty0);
-  Ty1 = convertPointerToIntegerType(DL, Ty1);
-  if (Ty0->getScalarSizeInBits() > Ty1->getScalarSizeInBits())
-    return Ty0;
-  return Ty1;
+static IntegerType *getWiderInductionTy(const DataLayout &DL, Type *Ty0,
+                                        Type *Ty1) {
+  IntegerType *TyA = getInductionIntegerTy(DL, Ty0);
+  IntegerType *TyB = getInductionIntegerTy(DL, Ty1);
+  return TyA->getScalarSizeInBits() > TyB->getScalarSizeInBits() ? TyA : TyB;
 }
 
 /// Check that the instruction has outside loop users and is not an
@@ -692,12 +693,15 @@ void LoopVectorizationLegality::addInductionPhi(
   Type *PhiTy = Phi->getType();
   const DataLayout &DL = Phi->getDataLayout();
 
+  assert((PhiTy->isIntOrPtrTy() || PhiTy->isFloatingPointTy()) &&
+         "Expected int, ptr, or FP induction phi type");
+
   // Get the widest type.
-  if (!PhiTy->isFloatingPointTy()) {
+  if (PhiTy->isIntOrPtrTy()) {
     if (!WidestIndTy)
-      WidestIndTy = convertPointerToIntegerType(DL, PhiTy);
+      WidestIndTy = getInductionIntegerTy(DL, PhiTy);
     else
-      WidestIndTy = getWiderType(DL, PhiTy, WidestIndTy);
+      WidestIndTy = getWiderInductionTy(DL, PhiTy, WidestIndTy);
   }
 
   // Int inductions are special because we only allow one IV.
@@ -954,7 +958,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       if (CI && !VFDatabase::getMappings(*CI).empty())
         VecCallVariantsFound = true;
 
-      auto CanWidenInstructionTy = [this](Instruction const &Inst) {
+      auto CanWidenInstructionTy = [](Instruction const &Inst) {
         Type *InstTy = Inst.getType();
         if (!isa<StructType>(InstTy))
           return canVectorizeTy(InstTy);
@@ -962,15 +966,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // For now, we only recognize struct values returned from calls where
         // all users are extractvalue as vectorizable. All element types of the
         // struct must be types that can be widened.
-        if (isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
-            all_of(Inst.users(), IsaPred<ExtractValueInst>)) {
-          // TODO: Remove the `StructVecCallFound` flag once vectorizing calls
-          // with struct returns is supported.
-          StructVecCallFound = true;
-          return true;
-        }
-
-        return false;
+        return isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
+               all_of(Inst.users(), IsaPred<ExtractValueInst>);
       };
 
       // Check that the instruction return type is vectorizable.

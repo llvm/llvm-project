@@ -7,18 +7,17 @@
 # ===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build both images using:
+# This images are tagged with <tag>. You can build both images using:
 #
-#   docker compose build
+#   TAG=<tag> docker compose build
 #
 # Or you can select a single image to build
 #
-#  docker compose build buildkite-builder
+#  TAG=test docker compose build actions-builder
 #
 # The final images can be found at
 #
-#  ghcr.io/libcxx/buildkite-builder
-#  ghcr.io/libcxx/actions-builder
+#  ghcr.io/libcxx/libcxx-linux-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
 # Members of the github.com/libcxx/ organizations can push new images to the CI.

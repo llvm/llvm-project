@@ -13,8 +13,12 @@
 #define SHRT_MAX 32767
 #define SHRT_MIN (-32767 - 1)
 #define UCHAR_MAX 255
+#define UCHAR_MIN 0
 #define USHRT_MAX 65535
+#define USHRT_MIN 0
 #define UINT_MAX 0xffffffff
+#define UINT_MIN 0
 #define ULONG_MAX 0xffffffffffffffffUL
+#define ULONG_MIN 0UL
 
 #endif // __CLC_INTEGER_DEFINITIONS_H__

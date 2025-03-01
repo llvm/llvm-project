@@ -864,10 +864,10 @@ define void @concat_v32i8_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i8>, ptr %a
-  %res = shufflevector <16 x i8> %op1, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                                                                    i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
-                                                                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %res = shufflevector <16 x i8> %op1, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                                                                     i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                                                                     i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   store <32 x i8> %res, ptr %b
   ret void
 }
@@ -880,8 +880,8 @@ define void @concat_v16i16_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i16>, ptr %a
-  %res = shufflevector <8 x i16> %op1, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res = shufflevector <8 x i16> %op1, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   store <16 x i16> %res, ptr %b
   ret void
 }
@@ -894,7 +894,7 @@ define void @concat_v8i32_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i32>, ptr %a
-  %res = shufflevector <4 x i32> %op1, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res = shufflevector <4 x i32> %op1, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <8 x i32> %res, ptr %b
   ret void
 }
@@ -907,7 +907,7 @@ define void @concat_v4i64_undef(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i64>, ptr %a
-  %res = shufflevector <2 x i64> %op1, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = shufflevector <2 x i64> %op1, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i64> %res, ptr %b
   ret void
 }
@@ -924,12 +924,12 @@ define void @concat_v32i8_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i8>, ptr %a
-  %shuffle = shufflevector <8 x i8> %op1, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %res = shufflevector <16 x i8> %shuffle, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
-                                                                        i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
-                                                                        i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %shuffle = shufflevector <8 x i8> %op1, <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %res = shufflevector <16 x i8> %shuffle, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                         i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                                                                         i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                                                                         i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   store <32 x i8> %res, ptr %b
   ret void
 }
@@ -942,9 +942,9 @@ define void @concat_v16i16_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i16>, ptr %a
-  %shuffle = shufflevector <4 x i16> %op1, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %res = shufflevector <8 x i16> %shuffle, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %shuffle = shufflevector <4 x i16> %op1, <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res = shufflevector <8 x i16> %shuffle, <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                         i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   store <16 x i16> %res, ptr %b
   ret void
 }
@@ -957,8 +957,8 @@ define void @concat_v8i32_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i32>, ptr %a
-  %shuffle = shufflevector <2 x i32> %op1, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %res = shufflevector <4 x i32> %shuffle, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shuffle = shufflevector <2 x i32> %op1, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %res = shufflevector <4 x i32> %shuffle, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <8 x i32> %res, ptr %b
   ret void
 }
@@ -971,8 +971,8 @@ define void @concat_v4i64_4op(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <1 x i64>, ptr %a
-  %shuffle = shufflevector <1 x i64> %op1, <1 x i64> undef, <2 x i32> <i32 0, i32 1>
-  %res = shufflevector <2 x i64> %shuffle, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle = shufflevector <1 x i64> %op1, <1 x i64> poison, <2 x i32> <i32 0, i32 1>
+  %res = shufflevector <2 x i64> %shuffle, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i64> %res, ptr %b
   ret void
 }

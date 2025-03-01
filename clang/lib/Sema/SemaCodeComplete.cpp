@@ -5796,24 +5796,11 @@ QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
         return QualType(Common, 0);
     }
   }
-  // A dependent member: approximate-resolve the base, then lookup.
+  // A dependent member: resolve using HeuristicResolver.
   if (const auto *CDSME = llvm::dyn_cast<CXXDependentScopeMemberExpr>(E)) {
-    QualType Base = CDSME->isImplicitAccess()
-                        ? CDSME->getBaseType()
-                        : getApproximateType(CDSME->getBase(), Resolver);
-    if (CDSME->isArrow() && !Base.isNull())
-      Base = Base->getPointeeType(); // could handle unique_ptr etc here?
-    auto *RD =
-        Base.isNull()
-            ? nullptr
-            : llvm::dyn_cast_or_null<CXXRecordDecl>(getAsRecordDecl(Base));
-    if (RD && RD->isCompleteDefinition()) {
-      // Look up member heuristically, including in bases.
-      for (const auto *Member : RD->lookupDependentName(
-               CDSME->getMember(), [](const NamedDecl *Member) {
-                 return llvm::isa<ValueDecl>(Member);
-               })) {
-        return llvm::cast<ValueDecl>(Member)->getType().getNonReferenceType();
+    for (const auto *Member : Resolver.resolveMemberExpr(CDSME)) {
+      if (const auto *VD = dyn_cast<ValueDecl>(Member)) {
+        return VD->getType().getNonReferenceType();
       }
     }
   }

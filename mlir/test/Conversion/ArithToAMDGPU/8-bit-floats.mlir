@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx940" | FileCheck %s
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx942" | FileCheck %s
 
 // CHECK-LABEL: func.func @scalar_ext
 // CHECK-SAME: ([[V:%.+]]: f8E5M2FNUZ)
@@ -10,7 +10,19 @@ func.func @scalar_ext(%v: f8E5M2FNUZ) -> f16 {
   return %w : f16
 }
 
-// No 0-D test because arith.extf hasn't been extended to support it.
+// -----
+
+// CHECK-LABEL: func.func @vector_zero_d(
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: vector<f8E5M2FNUZ>) -> vector<f32>
+// CHECK: %[[CONST:.+]] = arith.constant dense<0.000000e+00> : vector<f32>
+// CHECK: %[[EXTRACT:.+]] = vector.extract %[[ARG0]][] : f8E5M2FNUZ from vector<f8E5M2FNUZ>
+// CHECK: %[[CONVERT:.+]] = amdgpu.ext_packed_fp8 %[[EXTRACT]][0] : f8E5M2FNUZ to f32
+// CHECK: %[[RESULT:.+]] = vector.insert %[[CONVERT]], %[[CONST]] [] : f32 into vector<f32>
+// CHECK: return %[[RESULT]] : vector<f32>
+func.func @vector_zero_d(%v: vector<f8E5M2FNUZ>) -> vector<f32> {
+  %w = arith.extf %v : vector<f8E5M2FNUZ> to vector<f32>
+  return %w : vector<f32>
+}
 
 // -----
 

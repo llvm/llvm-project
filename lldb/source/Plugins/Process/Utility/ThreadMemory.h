@@ -33,7 +33,7 @@ public:
 
   const char *GetInfo() override {
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetInfo();
+      return m_backing_thread_sp->GetInfo();
     return nullptr;
   }
 
@@ -41,7 +41,7 @@ public:
     if (!m_name.empty())
       return m_name.c_str();
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetName();
+      return m_backing_thread_sp->GetName();
     return nullptr;
   }
 
@@ -49,7 +49,7 @@ public:
     if (!m_queue.empty())
       return m_queue.c_str();
     if (m_backing_thread_sp)
-      m_backing_thread_sp->GetQueueName();
+      return m_backing_thread_sp->GetQueueName();
     return nullptr;
   }
 
@@ -72,12 +72,17 @@ public:
 
   void ClearStackFrames() override;
 
-  void ClearBackingThread() override { m_backing_thread_sp.reset(); }
+  void ClearBackingThread() override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->ClearBackedThread();
+    m_backing_thread_sp.reset();
+  }
 
   bool SetBackingThread(const lldb::ThreadSP &thread_sp) override {
     // printf ("Thread 0x%llx is being backed by thread 0x%llx\n", GetID(),
     // thread_sp->GetID());
     m_backing_thread_sp = thread_sp;
+    thread_sp->SetBackedThread(*this);
     return (bool)thread_sp;
   }
 

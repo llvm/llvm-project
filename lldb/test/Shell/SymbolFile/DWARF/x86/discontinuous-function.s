@@ -6,17 +6,29 @@
 # The function bar has been placed "in the middle" of foo, and the function
 # entry point is deliberately not its lowest address.
 
-# RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o %t
-# RUN: %lldb %t -o "image lookup -v -n foo" -o "expr -- &foo" -o exit | FileCheck %s
+# RUN: split-file %s %t
+# RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %t/input.s -o %t/input.o
+# RUN: %lldb %t/input.o -s %t/commands -o exit | FileCheck %s
 
-# CHECK-LABEL: image lookup
+#--- commands
+
+image lookup -v -n foo
+# CHECK-LABEL: image lookup -v -n foo
 # CHECK: 1 match found in {{.*}}
-# CHECK: Summary: {{.*}}`foo
+# CHECK: Summary: input.o`foo
 # CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
 
+image lookup -v --regex -n '^foo$'
+# CHECK-LABEL: image lookup -v --regex -n '^foo$'
+# CHECK: 1 match found in {{.*}}
+# CHECK: Summary: input.o`foo
+# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
+
+expr -- &foo
 # CHECK-LABEL: expr -- &foo
 # CHECK: (void (*)()) $0 = 0x0000000000000007
 
+#--- input.s
         .text
 
 foo.__part.1:

@@ -9,6 +9,7 @@
 ; CHECK-PRETTY:        SRV     u32         buf      T3      t3,space5        24
 ; CHECK-PRETTY:        UAV     i32         buf      U0      u7,space2         1
 ; CHECK-PRETTY:        UAV     f32         buf      U1      u5,space3         1
+; CHECK-PRETTY:    cbuffer      NA          NA     CB0            cb0         1
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
@@ -63,6 +64,12 @@ define void @test_bindings() {
   ; CHECK: [[BUF5:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 7, i32 -1, i32 0, i8 0 }, i32 %[[IX]], i1 false) #[[#ATTR]]
   ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF5]], %dx.types.ResourceProperties { i32 10, i32 1033 }) #[[#ATTR]]
 
+  ; cbuffer cb0 : register(b0) { int4 i; float4 f; }
+  %cb0 = call target("dx.CBuffer", target("dx.Layout", {<4 x i32>, <4 x float>}, 32, 0, 16))
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  ; CHECK: [[BUF6:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 0, i32 0, i32 0, i8 2 }, i32 0, i1 false) #[[#ATTR]]
+  ; CHECK: call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF6]], %dx.types.ResourceProperties { i32 13, i32 32 }) #[[#ATTR]]
+
   ret void
 }
 
@@ -72,8 +79,9 @@ define void @test_bindings() {
 ; contents of the metadata are tested elsewhere.
 ;
 ; CHECK: !dx.resources = !{[[RESMD:![0-9]+]]}
-; CHECK: [[RESMD]] = !{[[SRVMD:![0-9]+]], [[UAVMD:![0-9]+]], null, null}
+; CHECK: [[RESMD]] = !{[[SRVMD:![0-9]+]], [[UAVMD:![0-9]+]], [[CBUFMD:![0-9]+]], null}
 ; CHECK-DAG: [[SRVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}, !{{[0-9]+}}}
 ; CHECK-DAG: [[UAVMD]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
+; CHECK-DAG: [[CBUFMD]] = !{!{{[0-9]+}}}
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

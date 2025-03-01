@@ -12,7 +12,6 @@
 // Simple predicates and look-up functions that are best defined
 // canonically for use in semantic checking.
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
@@ -23,6 +22,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran.h"
 #include <functional>
 
 namespace Fortran::semantics {
@@ -231,6 +231,7 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
             *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
@@ -630,6 +631,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(

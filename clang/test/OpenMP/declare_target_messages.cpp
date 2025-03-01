@@ -33,6 +33,11 @@
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp51,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51 -fopenmp %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp52,ompvar,omp5-or-later,omp5-or-later-var %{openmp60} %{limit} -o - %s
 
+#pragma omp begin declare target
+static int gg;
+// expected-warning@+1 {{variable 'recursive' is uninitialized when used within its own initialization}}
+int recursive = recursive ^ 3 + gg;
+#pragma omp end declare target
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 #pragma omp end declare target 
