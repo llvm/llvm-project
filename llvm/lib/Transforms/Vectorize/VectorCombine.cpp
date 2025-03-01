@@ -1581,7 +1581,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
     // If any extract is waiting to be erased, then bail out as this will
     // distort the cost calculation and possibly lead to infinite loops.
-    if (isInstructionTriviallyDead(UI))
+    if (UI->use_empty())
       return false;
 
     // Check if any instruction between the load and the extract may modify
