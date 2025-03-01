@@ -12,7 +12,8 @@ The LLVM C Library
   LLVM-libc is not fully complete right now. Some programs may fail to build due
   to missing functions. If you would like to help us finish LLVM-libc, check
   out "`Contributing to the libc project <contributing.html>`__" in the sidebar
-  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__.
+  or ask on `discord <https://discord.com/channels/636084430946959380/636732994891284500>`__
+  (`invite link <https://discord.gg/xS7Z362>`__).
 
 Introduction
 ============

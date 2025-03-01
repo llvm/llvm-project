@@ -930,6 +930,13 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
         .Case<fir::VectorType>([&](auto) {
           TODO(loc, "passing vector argument to C by value is not supported");
           return NRegs{};
+        })
+        .Default([&](auto ty) {
+          if (fir::conformsWithPassByRef(ty))
+            return NRegs{1, false}; // Pointers take 1 integer register
+          TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                    "type argument");
+          return NRegs{};
         });
   }
 

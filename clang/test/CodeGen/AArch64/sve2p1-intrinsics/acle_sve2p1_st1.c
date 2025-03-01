@@ -306,6 +306,21 @@ void test_svst1_f64_x2(svcount_t pn, float64_t *base, svfloat64x2_t v) ATTR
   return SVE_ACLE_FUNC(svst1,_f64_x2,,)(pn, base, v);
 }
 
+// CHECK-LABEL: @test_svst1_mf8_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[BASE:%.*]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z17test_svst1_mf8_x2u11__SVCount_tPu6__mfp813svmfloat8x2_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_mf8_x2(svcount_t pn, mfloat8_t *base, svmfloat8x2_t v) ATTR
+{
+  return SVE_ACLE_FUNC(svst1,_mf8_x2,,)(pn, base, v);
+}
+
 // CHECK-LABEL: @test_svst1_f16_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x4.nxv8f16(<vscale x 8 x half> [[V_COERCE0:%.*]], <vscale x 8 x half> [[V_COERCE1:%.*]], <vscale x 8 x half> [[V_COERCE2:%.*]], <vscale x 8 x half> [[V_COERCE3:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[BASE:%.*]])
@@ -349,6 +364,21 @@ void test_svst1_f32_x4(svcount_t pn, float32_t *base, svfloat32x4_t v) ATTR
 void test_svst1_f64_x4(svcount_t pn, float64_t *base, svfloat64x4_t v) ATTR
 {
   return SVE_ACLE_FUNC(svst1,_f64_x4,,)(pn, base, v);
+}
+
+// CHECK-LABEL: @test_svst1_mf8_x4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], <vscale x 16 x i8> [[V_COERCE2:%.*]], <vscale x 16 x i8> [[V_COERCE3:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[BASE:%.*]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z17test_svst1_mf8_x4u11__SVCount_tPu6__mfp813svmfloat8x4_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], <vscale x 16 x i8> [[V_COERCE2:%.*]], <vscale x 16 x i8> [[V_COERCE3:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[BASE:%.*]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_mf8_x4(svcount_t pn, mfloat8_t *base, svmfloat8x4_t v) ATTR
+{
+  return SVE_ACLE_FUNC(svst1,_mf8_x4,,)(pn, base, v);
 }
 
 
@@ -798,6 +828,29 @@ void test_svst1_vnum_f64_x2(svcount_t pn, float64_t *base, float64_t vnum, svflo
   return SVE_ACLE_FUNC(svst1_vnum,_f64_x2,,)(pn, base, vnum, v);
 }
 
+// CHECK-LABEL: @test_svst1_vnum_mf8_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z22test_svst1_vnum_mf8_x2u11__SVCount_tPu6__mfp8l13svmfloat8x2_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x2.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_vnum_mf8_x2(svcount_t pn, mfloat8_t *base, int64_t vnum, svmfloat8x2_t v) ATTR
+{
+  return SVE_ACLE_FUNC(svst1_vnum,_mf8_x2,,)(pn, base, vnum, v);
+}
+
 // CHECK-LABEL: @test_svst1_vnum_f16_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[VNUM:%.*]] to i64
@@ -871,4 +924,27 @@ void test_svst1_vnum_f32_x4(svcount_t pn, float32_t *base, float64_t vnum, svflo
 void test_svst1_vnum_f64_x4(svcount_t pn, float64_t *base, float64_t vnum, svfloat64x4_t v) ATTR
 {
   return SVE_ACLE_FUNC(svst1_vnum,_f64_x4,,)(pn, base, vnum, v);
+}
+
+// CHECK-LABEL: @test_svst1_vnum_mf8_x4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], <vscale x 16 x i8> [[V_COERCE2:%.*]], <vscale x 16 x i8> [[V_COERCE3:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z22test_svst1_vnum_mf8_x4u11__SVCount_tPu6__mfp8l13svmfloat8x4_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1.pn.x4.nxv16i8(<vscale x 16 x i8> [[V_COERCE0:%.*]], <vscale x 16 x i8> [[V_COERCE1:%.*]], <vscale x 16 x i8> [[V_COERCE2:%.*]], <vscale x 16 x i8> [[V_COERCE3:%.*]], target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_vnum_mf8_x4(svcount_t pn, mfloat8_t *base, int64_t vnum, svmfloat8x4_t v) ATTR
+{
+  return SVE_ACLE_FUNC(svst1_vnum,_mf8_x4,,)(pn, base, vnum, v);
 }

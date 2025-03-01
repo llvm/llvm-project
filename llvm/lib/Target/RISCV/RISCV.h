@@ -52,6 +52,9 @@ void initializeRISCVVectorPeepholePass(PassRegistry &);
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
 
+FunctionPass *createRISCVFoldMemOffsetPass();
+void initializeRISCVFoldMemOffsetPass(PassRegistry &);
+
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
@@ -107,6 +110,9 @@ void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 
 FunctionPass *createRISCVVLOptimizerPass();
 void initializeRISCVVLOptimizerPass(PassRegistry &);
+
+FunctionPass *createRISCVVMV0EliminationPass();
+void initializeRISCVVMV0EliminationPass(PassRegistry &);
 } // namespace llvm
 
 #endif

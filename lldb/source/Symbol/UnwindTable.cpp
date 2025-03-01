@@ -86,6 +86,7 @@ void UnwindTable::Initialize() {
 void UnwindTable::ModuleWasUpdated() {
   std::lock_guard<std::mutex> guard(m_mutex);
   m_scanned_all_unwind_sources = false;
+  m_unwinds.clear();
 }
 
 UnwindTable::~UnwindTable() = default;
@@ -118,7 +119,7 @@ UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
 
 FuncUnwindersSP
 UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
-                                               SymbolContext &sc) {
+                                               const SymbolContext &sc) {
   Initialize();
 
   std::lock_guard<std::mutex> guard(m_mutex);

@@ -22,9 +22,9 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -2642,7 +2642,7 @@ WRAPPER_CLASS(FileUnitNumber, ScalarIntExpr);
 // symbols are known.
 struct IoUnit {
   UNION_CLASS_BOILERPLATE(IoUnit);
-  std::variant<Variable, FileUnitNumber, Star> u;
+  std::variant<Variable, common::Indirection<Expr>, Star> u;
 };
 
 // R1206 file-name-expr -> scalar-default-char-expr
@@ -3349,6 +3349,8 @@ struct StmtFunctionStmt {
 // !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name[=value] [, name[=value]]...    = can be :
+// !DIR$ UNROLL [N]
+// !DIR$ UNROLL_AND_JAM [N]
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3371,10 +3373,13 @@ struct CompilerDirective {
   struct Unroll {
     WRAPPER_CLASS_BOILERPLATE(Unroll, std::optional<std::uint64_t>);
   };
+  struct UnrollAndJam {
+    WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
+  };
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, Unrecognized>
+      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized>
       u;
 };
 
@@ -3457,15 +3462,7 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 // --- Common definitions
 
 struct OmpClause;
-struct OmpClauseList;
-
-struct OmpDirectiveSpecification {
-  TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
-  std::tuple<llvm::omp::Directive,
-      std::optional<common::Indirection<OmpClauseList>>>
-      t;
-  CharBlock source;
-};
+struct OmpDirectiveSpecification;
 
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
@@ -3478,15 +3475,76 @@ struct OmpObject {
 
 WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 
-#define MODIFIER_BOILERPLATE(...) \
-  struct Modifier { \
-    using Variant = std::variant<__VA_ARGS__>; \
-    UNION_CLASS_BOILERPLATE(Modifier); \
-    CharBlock source; \
-    Variant u; \
-  }
+// Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
+//
+// reduction-identifier ->
+//    base-language-identifier |                    // since 4.5
+//    - |                                           // since 4.5, until 5.2
+//    + | * | .AND. | .OR. | .EQV. | .NEQV. |       // since 4.5
+//    MIN | MAX | IAND | IOR | IEOR                 // since 4.5
+struct OmpReductionIdentifier {
+  UNION_CLASS_BOILERPLATE(OmpReductionIdentifier);
+  std::variant<DefinedOperator, ProcedureDesignator> u;
+};
 
-#define MODIFIERS() std::optional<std::list<Modifier>>
+// Ref: [4.5:222:6], [5.0:305:27], [5.1:337:19], [5.2:126:3-4], [6.0:240:27-28]
+//
+// combiner-expression ->                           // since 4.5
+//    assignment-statement |
+//    function-reference
+struct OmpReductionCombiner {
+  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
+  std::variant<AssignmentStmt, FunctionReference> u;
+};
+
+inline namespace arguments {
+struct OmpTypeSpecifier {
+  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+WRAPPER_CLASS(OmpTypeNameList, std::list<OmpTypeSpecifier>);
+
+struct OmpLocator {
+  UNION_CLASS_BOILERPLATE(OmpLocator);
+  std::variant<OmpObject, FunctionReference> u;
+};
+
+WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
+
+// Ref: [5.0:326:10-16], [5.1:359:5-11], [5.2:163:2-7], [6.0:293:16-21]
+//
+// mapper-specifier ->
+//    [mapper-identifier :] type :: var |           // since 5.0
+//    DEFAULT type :: var
+struct OmpMapperSpecifier {
+  // Absent mapper-identifier is equivalent to DEFAULT.
+  TUPLE_CLASS_BOILERPLATE(OmpMapperSpecifier);
+  std::tuple<std::optional<Name>, TypeSpec, Name> t;
+};
+
+// Ref: [4.5:222:1-5], [5.0:305:20-27], [5.1:337:11-19], [5.2:139:18-23],
+// [6.0:260:16-20]
+//
+// reduction-specifier ->
+//    reduction-identifier : typename-list
+//        : combiner-expression                     // since 4.5, until 5.2
+//    reduction-identifier : typename-list          // since 6.0
+struct OmpReductionSpecifier {
+  TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
+  std::tuple<OmpReductionIdentifier, OmpTypeNameList,
+      std::optional<OmpReductionCombiner>>
+      t;
+};
+
+struct OmpArgument {
+  CharBlock source;
+  UNION_CLASS_BOILERPLATE(OmpArgument);
+  std::variant<OmpLocator, // {variable, extended, locator}-list-item
+      OmpMapperSpecifier, OmpReductionSpecifier>
+      u;
+};
+} // namespace arguments
 
 inline namespace traits {
 // trait-property-name ->
@@ -3572,6 +3630,7 @@ struct OmpTraitProperty {
 // Trait-set-selectors:
 //    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
 struct OmpTraitSelectorName {
+  std::string ToString() const;
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
   ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
@@ -3596,6 +3655,7 @@ struct OmpTraitSelector {
 //    CONSTRUCT | DEVICE | IMPLEMENTATION | USER |  // since 5.0
 //    TARGET_DEVICE                                 // since 5.1
 struct OmpTraitSetSelectorName {
+  std::string ToString() const;
   CharBlock source;
   ENUM_CLASS(Value, Construct, Device, Implementation, Target_Device, User)
   WRAPPER_CLASS_BOILERPLATE(OmpTraitSetSelectorName, Value);
@@ -3617,6 +3677,16 @@ struct OmpContextSelectorSpecification { // Modifier
       OmpContextSelectorSpecification, std::list<OmpTraitSetSelector>);
 };
 } // namespace traits
+
+#define MODIFIER_BOILERPLATE(...) \
+  struct Modifier { \
+    using Variant = std::variant<__VA_ARGS__>; \
+    UNION_CLASS_BOILERPLATE(Modifier); \
+    CharBlock source; \
+    Variant u; \
+  }
+
+#define MODIFIERS() std::optional<std::list<Modifier>>
 
 inline namespace modifier {
 // For uniformity, in all keyword modifiers the name of the type defined
@@ -3830,18 +3900,6 @@ struct OmpPrescriptiveness {
   WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
-// Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
-//
-// reduction-identifier ->
-//    base-language-identifier |                    // since 4.5
-//    - |                                           // since 4.5, until 5.2
-//    + | * | .AND. | .OR. | .EQV. | .NEQV. |       // since 4.5
-//    MIN | MAX | IAND | IOR | IEOR                 // since 4.5
-struct OmpReductionIdentifier {
-  UNION_CLASS_BOILERPLATE(OmpReductionIdentifier);
-  std::variant<DefinedOperator, ProcedureDesignator> u;
-};
-
 // Ref: [5.0:300-302], [5.1:332-334], [5.2:134-137]
 //
 // reduction-modifier ->
@@ -3894,6 +3952,16 @@ using OmpContextSelector = traits::OmpContextSelectorSpecification;
 } // namespace modifier
 
 // --- Clauses
+
+using OmpDirectiveList = std::list<llvm::omp::Directive>;
+
+// Ref: [5.2:214]
+//
+// absent-clause ->
+//   ABSENT(directive-name[, directive-name])
+struct OmpAbsentClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpAbsentClause, OmpDirectiveList);
+};
 
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:264-265]
 //
@@ -3968,6 +4036,14 @@ struct OmpBindClause {
   WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
 };
 
+// Ref: [5.2:214]
+//
+// contains-clause ->
+//   CONTAINS(directive-name[, directive-name])
+struct OmpContainsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpContainsClause, OmpDirectiveList);
+};
+
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
 //
 // When used as a data-sharing clause:
@@ -3984,7 +4060,9 @@ struct OmpBindClause {
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
   UNION_CLASS_BOILERPLATE(OmpDefaultClause);
-  std::variant<DataSharingAttribute, OmpDirectiveSpecification> u;
+  std::variant<DataSharingAttribute,
+      common::Indirection<OmpDirectiveSpecification>>
+      u;
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -4138,6 +4216,14 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [5.2: 214]
+//
+// holds-clause ->
+//   HOLDS(expr)
+struct OmpHoldsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHoldsClause, common::Indirection<Expr>);
+};
+
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
 // that allow the IF clause.
 //
@@ -4219,6 +4305,21 @@ struct OmpMessageClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, Expr);
 };
 
+// Ref: [5.2: 214]
+//
+// no_openmp_clause -> NO_OPENMP
+EMPTY_CLASS(OmpNoOpenMPClause);
+
+// Ref: [5.2: 214]
+//
+// no_openmp_routines_clause -> NO_OPENMP_ROUTINES
+EMPTY_CLASS(OmpNoOpenMPRoutinesClause);
+
+// Ref: [5.2: 214]
+//
+// no_parallelism_clause -> NO_PARALELISM
+EMPTY_CLASS(OmpNoParallelismClause);
+
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
 //
 // num-tasks-clause ->
@@ -4249,8 +4350,8 @@ struct OmpOrderClause {
 // otherwise-clause ->
 //    OTHERWISE ([directive-specification])]        // since 5.2
 struct OmpOtherwiseClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpOtherwiseClause, std::optional<OmpDirectiveSpecification>);
+  WRAPPER_CLASS_BOILERPLATE(OmpOtherwiseClause,
+      std::optional<common::Indirection<OmpDirectiveSpecification>>);
 };
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:229-230]
@@ -4346,7 +4447,9 @@ struct OmpUpdateClause {
 struct OmpWhenClause {
   TUPLE_CLASS_BOILERPLATE(OmpWhenClause);
   MODIFIER_BOILERPLATE(OmpContextSelector);
-  std::tuple<MODIFIERS(), std::optional<OmpDirectiveSpecification>> t;
+  std::tuple<MODIFIERS(),
+      std::optional<common::Indirection<OmpDirectiveSpecification>>>
+      t;
 };
 
 // OpenMP Clauses
@@ -4372,6 +4475,14 @@ struct OmpClauseList {
 };
 
 // --- Directives and constructs
+
+struct OmpDirectiveSpecification {
+  CharBlock source;
+  TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  std::tuple<llvm::omp::Directive, std::optional<std::list<OmpArgument>>,
+      std::optional<OmpClauseList>>
+      t;
+};
 
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
@@ -4401,6 +4512,41 @@ struct OpenMPUtilityConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
   CharBlock source;
   std::variant<OmpErrorDirective, OmpNothingDirective> u;
+};
+
+// Ref: [5.2: 213-216]
+//
+// assumes-construct ->
+//   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
+//          no-openmp-routines-clause | no-parallelism-clause
+struct OpenMPDeclarativeAssumes {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAssumes);
+  std::tuple<Verbatim, OmpClauseList> t;
+  CharBlock source;
+};
+
+struct OmpAssumeDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective);
+  std::tuple<Verbatim, OmpClauseList> t;
+  CharBlock source;
+};
+
+struct OmpEndAssumeDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpEndAssumeDirective, Verbatim);
+  CharBlock source;
+};
+
+// Ref: [5.2: 213-216]
+//
+// assume-construct ->
+//   ASSUME absent-clause | contains-clause | holds_clause | no-openmp-clause
+//          no-openmp-routines-clause | no-parallelism-clause
+//       block
+//   [END ASSUME]
+struct OpenMPAssumeConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct);
+  std::tuple<OmpAssumeDirective, Block, std::optional<OmpEndAssumeDirective>> t;
+  CharBlock source;
 };
 
 // 2.7.2 SECTIONS
@@ -4473,34 +4619,23 @@ struct OpenMPDeclareTargetConstruct {
   std::tuple<Verbatim, OmpDeclareTargetSpecifier> t;
 };
 
-struct OmpDeclareMapperSpecifier {
-  TUPLE_CLASS_BOILERPLATE(OmpDeclareMapperSpecifier);
-  std::tuple<std::optional<Name>, TypeSpec, Name> t;
-};
-
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
 struct OpenMPDeclareMapperConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareMapperConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpDeclareMapperSpecifier, OmpClauseList> t;
+  std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
-  WRAPPER_CLASS(FunctionCombiner, Call);
-  std::variant<AssignmentStmt, FunctionCombiner> u;
-};
-
 WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
 
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpReductionIdentifier, std::list<DeclarationTypeSpec>,
-      OmpReductionCombiner, std::optional<OmpReductionInitializerClause>>
+  std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
+      std::optional<OmpReductionInitializerClause>>
       t;
 };
 
@@ -4536,10 +4671,11 @@ struct OpenMPDeclarativeAllocate {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
-      OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
-      OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
+  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
+      OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
+      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
+      OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OmpMetadirectiveDirective>
       u;
 };
 
@@ -4826,7 +4962,7 @@ struct OpenMPConstruct {
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
       OpenMPUtilityConstruct, OpenMPExecutableAllocate,
-      OpenMPAllocatorsConstruct, OpenMPCriticalConstruct>
+      OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
       u;
 };
 

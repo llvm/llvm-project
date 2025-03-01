@@ -2158,6 +2158,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPAssumeDirective = 309,
 
+  /** OpenMP assume directive.
+   */
+  CXCursor_OMPStripeDirective = 310,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2206,7 +2210,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCUpdateConstruct = 331,
 
-  CXCursor_LastStmt = CXCursor_OpenACCUpdateConstruct,
+  /** OpenACC atomic Construct.
+   */
+  CXCursor_OpenACCAtomicConstruct = 332,
+
+  CXCursor_LastStmt = CXCursor_OpenACCAtomicConstruct,
 
   /**
    * Cursor that represents the translation unit itself.

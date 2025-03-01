@@ -11,7 +11,6 @@ define void @new_position(i32 %pos) {
 ; CHECK-SD-LABEL: new_position:
 ; CHECK-SD:       ; %bb.0: ; %entry
 ; CHECK-SD-NEXT:    adrp x8, _board@GOTPAGE
-; CHECK-SD-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-SD-NEXT:    ldr x8, [x8, _board@GOTPAGEOFF]
 ; CHECK-SD-NEXT:    ldrb w8, [x8, w0, sxtw]
 ; CHECK-SD-NEXT:    sub w8, w8, #1

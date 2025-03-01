@@ -143,6 +143,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            "Enable flush to zero for denormals.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+    Option<"cmdOptions", "ptxas-cmd-options", "std::string",
+           /*default=*/ [{""}],
+           "Command line options passed to downstream compiler">,
   ];
 }
 

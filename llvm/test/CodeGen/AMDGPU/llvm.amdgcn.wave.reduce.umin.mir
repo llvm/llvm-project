@@ -58,7 +58,7 @@ body:             |
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sgpr_32 = PHI [[S_MOV_B32_]], %bb.0, %4, %bb.2
   ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_64_xexec = PHI [[S_MOV_B64_]], %bb.0, %11, %bb.2
   ; GCN-NEXT:   [[S_FF1_I32_B64_:%[0-9]+]]:sgpr_32 = S_FF1_I32_B64 [[PHI1]]
-  ; GCN-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sgpr_32 = V_READLANE_B32 [[COPY1]], [[S_FF1_I32_B64_]]
+  ; GCN-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READLANE_B32 [[COPY1]], [[S_FF1_I32_B64_]]
   ; GCN-NEXT:   [[S_MIN_U32_:%[0-9]+]]:sgpr_32 = S_MIN_U32 [[PHI]], [[V_READLANE_B32_]], implicit-def $scc
   ; GCN-NEXT:   [[S_BITSET0_B64_:%[0-9]+]]:sreg_64_xexec = S_BITSET0_B64 [[S_FF1_I32_B64_]], [[PHI1]]
   ; GCN-NEXT:   S_CMP_LG_U64 [[S_BITSET0_B64_]], 0, implicit-def $scc
