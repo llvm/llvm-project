@@ -129,10 +129,7 @@ STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
   STATS_DECL_(BUILD_STAT_NAME(NAME, TYPE), MSG);
 #define STATS_TRACK(NAME, TYPE) ++(BUILD_STAT_NAME(NAME, TYPE));
 #define STATS_DECLTRACK(NAME, TYPE, MSG)                                       \
-  {                                                                            \
-    STATS_DECL(NAME, TYPE, MSG)                                                \
-    STATS_TRACK(NAME, TYPE)                                                    \
-  }
+  {STATS_DECL(NAME, TYPE, MSG) STATS_TRACK(NAME, TYPE)}
 #define STATS_DECLTRACK_ARG_ATTR(NAME)                                         \
   STATS_DECLTRACK(NAME, Arguments, BUILD_STAT_MSG_IR_ATTR(arguments, NAME))
 #define STATS_DECLTRACK_CSARG_ATTR(NAME)                                       \
@@ -2420,7 +2417,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nofree)};
+  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nofree) };
 };
 
 /// NoFree attribute for function return value.
@@ -6078,7 +6075,9 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nocapture)};
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(nocapture)
+  };
 };
 
 /// NoCapture attribute for floating values.

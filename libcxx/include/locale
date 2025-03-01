@@ -207,6 +207,7 @@ template <class charT> class messages_byname;
 #    include <__iterator/ostreambuf_iterator.h>
 #    include <__locale>
 #    include <__locale_dir/pad_and_output.h>
+#    include <__memory/addressof.h>
 #    include <__memory/unique_ptr.h>
 #    include <__new/exceptions.h>
 #    include <__type_traits/make_unsigned.h>
@@ -2453,14 +2454,14 @@ bool money_get<_CharT, _InputIterator>::__do_get(
         ++__b;
         __neg = false;
         if (__psn.size() > 1)
-          __trailing_sign = &__psn;
+          __trailing_sign = std::addressof(__psn);
         break;
       }
       if (__nsn.size() > 0 && *__b == __nsn[0]) {
         ++__b;
         __neg = true;
         if (__nsn.size() > 1)
-          __trailing_sign = &__nsn;
+          __trailing_sign = std::addressof(__nsn);
         break;
       }
       if (__psn.size() > 0 && __nsn.size() > 0) { // sign is required

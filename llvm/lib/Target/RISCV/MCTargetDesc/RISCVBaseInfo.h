@@ -432,7 +432,44 @@ enum RoundingMode {
   RNE = 1,
   RDN = 2,
   ROD = 3,
+  Invalid
 };
+
+inline static StringRef roundingModeToString(RoundingMode RndMode) {
+  switch (RndMode) {
+  default:
+    llvm_unreachable("Unknown vector fixed-point rounding mode");
+  case RISCVVXRndMode::RNU:
+    return "rnu";
+  case RISCVVXRndMode::RNE:
+    return "rne";
+  case RISCVVXRndMode::RDN:
+    return "rdn";
+  case RISCVVXRndMode::ROD:
+    return "rod";
+  }
+}
+
+inline static RoundingMode stringToRoundingMode(StringRef Str) {
+  return StringSwitch<RoundingMode>(Str)
+      .Case("rnu", RISCVVXRndMode::RNU)
+      .Case("rne", RISCVVXRndMode::RNE)
+      .Case("rdn", RISCVVXRndMode::RDN)
+      .Case("rod", RISCVVXRndMode::ROD)
+      .Default(RISCVVXRndMode::Invalid);
+}
+
+inline static bool isValidRoundingMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case RISCVVXRndMode::RNU:
+  case RISCVVXRndMode::RNE:
+  case RISCVVXRndMode::RDN:
+  case RISCVVXRndMode::ROD:
+    return true;
+  }
+}
 } // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
@@ -484,8 +521,8 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  const char *Name;
-  unsigned Value;
+  char Name[10];
+  uint8_t Value;
 };
 
 #define GET_RISCVOpcodesList_DECL
@@ -580,8 +617,6 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
     return RLISTENCODE::RA_S0_S8;
   case RISCV::X25:
     return RLISTENCODE::RA_S0_S9;
-  case RISCV::X26:
-    return RLISTENCODE::INVALID_RLIST;
   case RISCV::X27:
     return RLISTENCODE::RA_S0_S11;
   default:
@@ -592,67 +627,106 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (!IsRV64) {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 16;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 32;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-    case RLISTENCODE::RA_S0_S9:
-      return 48;
-    case RLISTENCODE::RA_S0_S11:
-      return 64;
-    }
-  } else {
-    switch (RlistVal) {
-    case RLISTENCODE::RA:
-    case RLISTENCODE::RA_S0:
-      return 16;
-    case RLISTENCODE::RA_S0_S1:
-    case RLISTENCODE::RA_S0_S2:
-      return 32;
-    case RLISTENCODE::RA_S0_S3:
-    case RLISTENCODE::RA_S0_S4:
-      return 48;
-    case RLISTENCODE::RA_S0_S5:
-    case RLISTENCODE::RA_S0_S6:
-      return 64;
-    case RLISTENCODE::RA_S0_S7:
-    case RLISTENCODE::RA_S0_S8:
-      return 80;
-    case RLISTENCODE::RA_S0_S9:
-      return 96;
-    case RLISTENCODE::RA_S0_S11:
-      return 112;
-    }
-  }
-  llvm_unreachable("Unexpected RlistVal");
-}
+  unsigned NumRegs = (RlistVal - RLISTENCODE::RA) + 1;
+  // s10 and s11 are saved together.
+  if (RlistVal == RLISTENCODE::RA_S0_S11)
+    ++NumRegs;
 
-inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64) {
-  if (RlistVal == RLISTENCODE::INVALID_RLIST)
-    return false;
-  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
-  StackAdjustment -= StackAdjBase;
-  if (StackAdjustment % 16 != 0)
-    return false;
-  SpimmVal = StackAdjustment / 16;
-  if (SpimmVal > 3)
-    return false;
-  return true;
+  unsigned RegSize = IsRV64 ? 8 : 4;
+  return alignTo(NumRegs * RegSize, 16);
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
 } // namespace RISCVZC
+
+namespace RISCVVInversePseudosTable {
+struct PseudoInfo {
+  uint16_t Pseudo;
+  uint16_t BaseInstr;
+  uint8_t VLMul;
+  uint8_t SEW;
+};
+
+#define GET_RISCVVInversePseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
+namespace RISCV {
+struct VLSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t FF : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLXSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSXSEGPseudo {
+  uint16_t NF : 4;
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLEPseudo {
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t FF : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VSEPseudo {
+  uint16_t Masked : 1;
+  uint16_t Strided : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
+struct VLX_VSXPseudo {
+  uint16_t Masked : 1;
+  uint16_t Ordered : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t IndexLMUL : 3;
+  uint16_t Pseudo;
+};
+
+#define GET_RISCVVSSEGTable_DECL
+#define GET_RISCVVLSEGTable_DECL
+#define GET_RISCVVLXSEGTable_DECL
+#define GET_RISCVVSXSEGTable_DECL
+#define GET_RISCVVLETable_DECL
+#define GET_RISCVVSETable_DECL
+#define GET_RISCVVLXTable_DECL
+#define GET_RISCVVSXTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCV
 
 } // namespace llvm
 

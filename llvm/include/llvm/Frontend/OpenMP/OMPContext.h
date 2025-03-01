@@ -188,7 +188,7 @@ bool isVariantApplicableInContext(const VariantMatchInfo &VMI,
                                   bool DeviceSetOnly = false);
 
 /// Return the index (into \p VMIs) of the variant with the highest score
-/// from the ones applicble in \p Ctx. See llvm::isVariantApplicableInContext.
+/// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
 int getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
                                   const OMPContext &Ctx);
 

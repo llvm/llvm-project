@@ -1612,6 +1612,10 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
   }
 
+  LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I
+                    << "\n  LoadExtractCost: " << OriginalCost
+                    << " vs ScalarizedCost: " << ScalarizedCost << "\n");
+
   if (ScalarizedCost >= OriginalCost)
     return false;
 
