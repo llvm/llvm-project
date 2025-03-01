@@ -48,7 +48,7 @@ void structAtomicExchange(unsigned referenceCount, wPtr item) {
 }
 
 // CHECK-LABEL: @structAtomicExchange
-// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, {{.*}} : !u32i, success = seq_cst, failure = seq_cst) align(8) weak : (!u32i, !cir.bool)
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, {{.*}} : !u32i, success = seq_cst, failure = seq_cst) syncscope(system) align(8) weak : (!u32i, !cir.bool)
 
 // LLVM-LABEL: @structAtomicExchange
 // LLVM:   load i32

@@ -415,7 +415,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                               Address Val2, uint64_t Size,
                               cir::MemOrder SuccessOrder,
                               cir::MemOrder FailureOrder,
-                              llvm::SyncScope::ID Scope) {
+                              cir::MemScopeKind Scope) {
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
   auto Expected = builder.createLoad(loc, Val1);
@@ -425,6 +425,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
       loc, Expected.getType(), boolTy, Ptr.getPointer(), Expected, Desired,
       cir::MemOrderAttr::get(&CGF.getMLIRContext(), SuccessOrder),
       cir::MemOrderAttr::get(&CGF.getMLIRContext(), FailureOrder),
+      cir::MemScopeKindAttr::get(&CGF.getMLIRContext(), Scope),
       builder.getI64IntegerAttr(Ptr.getAlignment().getAsAlign().value()));
   cmpxchg.setIsVolatile(E->isVolatile());
   cmpxchg.setWeak(IsWeak);
@@ -452,7 +453,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
 static void emitAtomicCmpXchgFailureSet(
     CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak, Address Dest, Address Ptr,
     Address Val1, Address Val2, mlir::Value FailureOrderVal, uint64_t Size,
-    cir::MemOrder SuccessOrder, llvm::SyncScope::ID Scope) {
+    cir::MemOrder SuccessOrder, cir::MemScopeKind Scope) {
 
   cir::MemOrder FailureOrder;
   if (auto ordAttr = getConstOpIntAttr(FailureOrderVal)) {
@@ -541,7 +542,8 @@ static void emitAtomicCmpXchgFailureSet(
 static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                          Address Ptr, Address Val1, Address Val2,
                          mlir::Value IsWeak, mlir::Value FailureOrder,
-                         uint64_t Size, cir::MemOrder Order, uint8_t Scope) {
+                         uint64_t Size, cir::MemOrder Order,
+                         cir::MemScopeKind Scope) {
   assert(!cir::MissingFeatures::syncScopeID());
   StringRef Op;
 
@@ -797,7 +799,7 @@ static void emitAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
   if (!ScopeModel) {
     assert(!cir::MissingFeatures::syncScopeID());
     emitAtomicOp(CGF, Expr, Dest, Ptr, Val1, Val2, IsWeak, FailureOrder, Size,
-                 Order, /*FIXME(cir): LLVM default scope*/ 1);
+                 Order, cir::MemScopeKind::MemScope_System);
     return;
   }
 

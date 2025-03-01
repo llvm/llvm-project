@@ -3210,11 +3210,12 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
   auto expected = adaptor.getExpected();
   auto desired = adaptor.getDesired();
 
-  // FIXME: add syncscope.
   auto cmpxchg = rewriter.create<mlir::LLVM::AtomicCmpXchgOp>(
       op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMAtomicOrder(adaptor.getSuccOrder()),
       getLLVMAtomicOrder(adaptor.getFailOrder()));
+  if (const auto ss = adaptor.getSyncscope(); ss.has_value())
+    cmpxchg.setSyncscope(getLLVMSyncScope(ss.value()));
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());

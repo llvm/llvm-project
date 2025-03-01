@@ -120,7 +120,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(default, []) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = relaxed) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = relaxed) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -131,7 +131,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = acquire) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = acquire) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -142,7 +142,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(equal, [#cir.int<5> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = seq_cst) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = relaxed, failure = seq_cst) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -158,7 +158,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(default, []) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = relaxed) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = relaxed) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -169,7 +169,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = acquire) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = acquire) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -180,7 +180,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(equal, [#cir.int<5> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = seq_cst) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acquire, failure = seq_cst) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -196,7 +196,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(default, []) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = relaxed) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = relaxed) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -207,7 +207,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = acquire) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = acquire) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -218,7 +218,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(equal, [#cir.int<5> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = seq_cst) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = release, failure = seq_cst) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -234,7 +234,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(default, []) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = relaxed) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = relaxed) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -245,7 +245,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = acquire) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = acquire) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -256,7 +256,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(equal, [#cir.int<5> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = seq_cst) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = acq_rel, failure = seq_cst) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -272,7 +272,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(default, []) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = relaxed) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = relaxed) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -283,7 +283,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = acquire) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = acquire) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>
@@ -294,7 +294,7 @@ bool atomic_compare_exchange_n(int* ptr, int* expected,
 // CHECK:   cir.case(equal, [#cir.int<5> : !s32i]) {
 // CHECK:     %[[expected:.*]] = cir.load %[[expected_addr]] : !cir.ptr<!s32i>, !s32i
 // CHECK:     %[[desired:.*]] = cir.load %[[desired_var]] : !cir.ptr<!s32i>, !s32i
-// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = seq_cst) align(4) : (!s32i, !cir.bool)
+// CHECK:     %old, %cmp = cir.atomic.cmp_xchg(%[[ptr]] : !cir.ptr<!s32i>, %[[expected]] : !s32i, %[[desired]] : !s32i, success = seq_cst, failure = seq_cst) syncscope(system) align(4) : (!s32i, !cir.bool)
 // CHECK:     %[[succeeded:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK:     cir.if %[[succeeded]] {
 // CHECK:       cir.store %old, %[[expected_addr]] : !s32i, !cir.ptr<!s32i>

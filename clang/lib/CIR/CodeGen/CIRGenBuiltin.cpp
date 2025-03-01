@@ -318,7 +318,7 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   return RValue::get(result);
 }
 
-static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
+static mlir::Value makeAtomicCmpXchgValue(CIRGenFunction &cgf,
                                           const CallExpr *expr,
                                           bool returnBool) {
   QualType typ = returnBool ? expr->getArg(1)->getType() : expr->getType();
@@ -341,6 +341,8 @@ static mlir::Value MakeAtomicCmpXchgValue(CIRGenFunction &cgf,
                         cir::MemOrder::SequentiallyConsistent),
       MemOrderAttr::get(&cgf.getMLIRContext(),
                         cir::MemOrder::SequentiallyConsistent),
+      MemScopeKindAttr::get(&cgf.getMLIRContext(),
+                            cir::MemScopeKind::MemScope_System),
       builder.getI64IntegerAttr(destAddr.getAlignment().getAsAlign().value()));
 
   return returnBool ? op.getResult(1) : op.getResult(0);
@@ -1854,14 +1856,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
   case Builtin::BI__sync_val_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, false));
+    return RValue::get(makeAtomicCmpXchgValue(*this, E, false));
 
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
+    return RValue::get(makeAtomicCmpXchgValue(*this, E, true));
 
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:
