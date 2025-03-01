@@ -3,6 +3,7 @@ import time
 import os
 from dataclasses import dataclass
 import sys
+import logging
 
 import github
 from github import Github
@@ -220,7 +221,7 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
     """
 
     if len(workflow_metrics) == 0:
-        print("No metrics found to upload.", file=sys.stderr)
+        logging.info("No metrics found to upload.")
         return
 
     metrics_batch = []
@@ -249,9 +250,7 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
     )
 
     if response.status_code < 200 or response.status_code >= 300:
-        print(
-            f"Failed to submit data to Grafana: {response.status_code}", file=sys.stderr
-        )
+        logging.info(f"Failed to submit data to Grafana: {response.status_code}")
 
 
 def main():
@@ -275,7 +274,7 @@ def main():
         current_metrics += get_sampled_workflow_metrics(github_repo)
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
-        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
+        logging.info(f"Uploaded {len(current_metrics)} metrics")
 
         for workflow_metric in reversed(current_metrics):
             if isinstance(workflow_metric, JobMetrics):
@@ -287,4 +286,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()
