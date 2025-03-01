@@ -41,14 +41,17 @@ public:
     typedef Arg2 second_argument_type;
     typedef bool result_type;
 
-    TEST_CONSTEXPR_CXX20 binary_counting_predicate( Predicate p ) : p_(p), count_(0) {}
+    TEST_CONSTEXPR_CXX20 binary_counting_predicate(Predicate p) : p_(p), count_(0) {}
     TEST_CONSTEXPR_CXX20 ~binary_counting_predicate() {}
 
-    TEST_CONSTEXPR_CXX20 bool operator () (const Arg1 &a1, const Arg2 &a2) const { ++count_; return p_(a1, a2); }
+    TEST_CONSTEXPR_CXX20 bool operator()(const Arg1& a1, const Arg2& a2) const {
+      ++count_;
+      return p_(a1, a2);
+    }
     TEST_CONSTEXPR_CXX20 std::size_t count() const { return count_; }
     TEST_CONSTEXPR_CXX20 void reset() { count_ = 0; }
 
-private:
+  private:
     Predicate p_;
     mutable std::size_t count_;
 };
