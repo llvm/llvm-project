@@ -2543,7 +2543,8 @@ inline void deque<_Tp, _Allocator>::clear() _NOEXCEPT {
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator==(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr bool
+operator==(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y) {
   const typename deque<_Tp, _Allocator>::size_type __sz = __x.size();
   return __sz == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
@@ -2578,7 +2579,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const deque<_Tp, _Allocator>& __x, 
 #  else // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
+_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp> constexpr
 operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
@@ -2586,14 +2587,14 @@ operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y
 #  endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI void swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
+inline _LIBCPP_HIDE_FROM_ABI constexpr void swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Allocator, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::size_type
+inline _LIBCPP_HIDE_FROM_ABI constexpr typename deque<_Tp, _Allocator>::size_type
 erase(deque<_Tp, _Allocator>& __c, const _Up& __v) {
   auto __old_size = __c.size();
   __c.erase(std::remove(__c.begin(), __c.end(), __v), __c.end());
@@ -2601,7 +2602,7 @@ erase(deque<_Tp, _Allocator>& __c, const _Up& __v) {
 }
 
 template <class _Tp, class _Allocator, class _Predicate>
-inline _LIBCPP_HIDE_FROM_ABI typename deque<_Tp, _Allocator>::size_type
+inline _LIBCPP_HIDE_FROM_ABI constexpr typename deque<_Tp, _Allocator>::size_type
 erase_if(deque<_Tp, _Allocator>& __c, _Predicate __pred) {
   auto __old_size = __c.size();
   __c.erase(std::remove_if(__c.begin(), __c.end(), __pred), __c.end());
