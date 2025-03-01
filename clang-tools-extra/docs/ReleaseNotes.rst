@@ -120,6 +120,11 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers 
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`modernize/use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding the
+  option ``EvenWhenVoid`` that applies the check to ``void``-returning functions
+  that by default are excluded from this check.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
