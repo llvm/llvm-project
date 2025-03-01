@@ -167,15 +167,16 @@ void InputChunk::relocate(uint8_t *buf) const {
   }
 }
 
-static bool relocIsLive(const WasmRelocation& rel, ObjFile* file) {
+static bool relocIsLive(const WasmRelocation &rel, ObjFile *file) {
   return rel.Type == R_WASM_TYPE_INDEX_LEB ||
-    file->getSymbol(rel.Index)->isLive();
+         file->getSymbol(rel.Index)->isLive();
 }
 
 size_t InputChunk::getNumLiveRelocations() const {
   size_t result = 0;
-  for (const WasmRelocation& rel : relocations) {
-    if (relocIsLive(rel, file)) result ++;
+  for (const WasmRelocation &rel : relocations) {
+    if (relocIsLive(rel, file))
+      result++;
   }
   return result;
 }
