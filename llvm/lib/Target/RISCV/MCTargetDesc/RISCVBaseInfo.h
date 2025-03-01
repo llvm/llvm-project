@@ -617,8 +617,6 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
     return RLISTENCODE::RA_S0_S8;
   case RISCV::X25:
     return RLISTENCODE::RA_S0_S9;
-  case RISCV::X26:
-    return RLISTENCODE::INVALID_RLIST;
   case RISCV::X27:
     return RLISTENCODE::RA_S0_S11;
   default:
