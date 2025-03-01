@@ -959,13 +959,35 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     // TODO: support more ops.
     static const unsigned ZvfhminZvfbfminPromoteOps[] = {
-        ISD::FMINNUM,     ISD::FMAXNUM,     ISD::FADD,        ISD::FSUB,
-        ISD::FMUL,        ISD::FMA,         ISD::FDIV,        ISD::FSQRT,
-        ISD::FCEIL,       ISD::FTRUNC,      ISD::FFLOOR,      ISD::FROUND,
-        ISD::FROUNDEVEN,  ISD::FRINT,       ISD::FNEARBYINT,  ISD::IS_FPCLASS,
-        ISD::SETCC,       ISD::FMAXIMUM,    ISD::FMINIMUM,    ISD::STRICT_FADD,
-        ISD::STRICT_FSUB, ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FSQRT,
-        ISD::STRICT_FMA};
+        ISD::FMINNUM,
+        ISD::FMAXNUM,
+        ISD::FADD,
+        ISD::FSUB,
+        ISD::FMUL,
+        ISD::FMA,
+        ISD::FDIV,
+        ISD::FSQRT,
+        ISD::FCEIL,
+        ISD::FTRUNC,
+        ISD::FFLOOR,
+        ISD::FROUND,
+        ISD::FROUNDEVEN,
+        ISD::FRINT,
+        ISD::FNEARBYINT,
+        ISD::IS_FPCLASS,
+        ISD::SETCC,
+        ISD::FMAXIMUM,
+        ISD::FMINIMUM,
+        ISD::STRICT_FADD,
+        ISD::STRICT_FSUB,
+        ISD::STRICT_FMUL,
+        ISD::STRICT_FDIV,
+        ISD::STRICT_FSQRT,
+        ISD::STRICT_FMA,
+        ISD::VECREDUCE_FMIN,
+        ISD::VECREDUCE_FMAX,
+        ISD::VECREDUCE_FMINIMUM,
+        ISD::VECREDUCE_FMAXIMUM};
 
     // TODO: support more vp ops.
     static const unsigned ZvfhminZvfbfminPromoteVPOps[] = {
@@ -4562,32 +4584,9 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
 
 /// Is this mask representing a masked combination of two slides?
 static bool isMaskedSlidePair(ArrayRef<int> Mask,
-                              std::pair<int, int> SrcInfo[2]) {
-  int NumElts = Mask.size();
-  int SignalValue = NumElts * 2;
-  SrcInfo[0] = {-1, SignalValue};
-  SrcInfo[1] = {-1, SignalValue};
-  for (unsigned i = 0; i != Mask.size(); ++i) {
-    int M = Mask[i];
-    if (M < 0)
-      continue;
-    int Src = M >= (int)NumElts;
-    int Diff = (int)i - (M % NumElts);
-    bool Match = false;
-    for (int j = 0; j < 2; j++) {
-      if (SrcInfo[j].first == -1) {
-        assert(SrcInfo[j].second == SignalValue);
-        SrcInfo[j].first = Src;
-        SrcInfo[j].second = Diff;
-      }
-      if (SrcInfo[j].first == Src && SrcInfo[j].second == Diff) {
-        Match = true;
-        break;
-      }
-    }
-    if (!Match)
-      return false;
-  }
+                              std::array<std::pair<int, int>, 2> &SrcInfo) {
+  if (!llvm::isMaskedSlidePair(Mask, Mask.size(), SrcInfo))
+    return false;
 
   // Avoid matching vselect idioms
   if (SrcInfo[0].second == 0 && SrcInfo[1].second == 0)
@@ -4603,7 +4602,8 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
 
 // Exactly matches the semantics of a previously existing custom matcher
 // to allow migration to new matcher without changing output.
-static bool isElementRotate(std::pair<int, int> SrcInfo[2], unsigned NumElts) {
+static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
+                            unsigned NumElts) {
   if (SrcInfo[1].first == -1)
     return true;
   return SrcInfo[0].second < 0 && SrcInfo[1].second > 0 &&
@@ -5604,10 +5604,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // without masking.  Avoid matching bit rotates (which are not also element
   // rotates) as slide pairs.  This is a performance heuristic, not a
   // functional check.
-  std::pair<int, int> SrcInfo[2];
+  std::array<std::pair<int, int>, 2> SrcInfo;
   unsigned RotateAmt;
   MVT RotateVT;
-  if (isMaskedSlidePair(Mask, SrcInfo) &&
+  if (::isMaskedSlidePair(Mask, SrcInfo) &&
       (isElementRotate(SrcInfo, NumElts) ||
        !isLegalBitRotate(Mask, VT, Subtarget, RotateVT, RotateAmt))) {
     SDValue Sources[2];
@@ -5964,10 +5964,11 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   if (SVT.getScalarType() == MVT::i1)
     return false;
 
-  std::pair<int, int> SrcInfo[2];
+  std::array<std::pair<int, int>, 2> SrcInfo;
   int Dummy1, Dummy2;
   return ShuffleVectorInst::isReverseMask(M, NumElts) ||
-         (isMaskedSlidePair(M, SrcInfo) && isElementRotate(SrcInfo, NumElts)) ||
+         (::isMaskedSlidePair(M, SrcInfo) &&
+          isElementRotate(SrcInfo, NumElts)) ||
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);
 }
 

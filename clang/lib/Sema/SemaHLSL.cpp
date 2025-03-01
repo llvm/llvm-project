@@ -2293,7 +2293,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_and: {
+  case Builtin::BI__builtin_hlsl_and:
+  case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 module m
   type t
@@ -35,9 +35,6 @@ module m
   ! CHECK-LABEL: @_QMmPtest1
   subroutine test1
     import, all
-    ! CHECK:   %[[V_14:[0-9]+]] = fir.field_index n, !fir.type<_QMmTt{n:i32}>
-    ! CHECK:   %[[V_15:[0-9]+]] = fir.coordinate_of %{{.*}}, %[[V_14]] : (!fir.ref<!fir.type<_QMmTt{n:i32}>>, !fir.field) -> !fir.ref<i32>
-    ! CHECK:   fir.store %c1{{.*}} to %[[V_15]] : !fir.ref<i32>
     ! CHECK:   %[[V_16:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
     ! CHECK:   %[[V_17:[0-9]+]] = fir.convert %[[V_16]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
     ! CHECK:   %[[V_18:[0-9]+]] = fir.address_of(@_QQMmFtest1.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
@@ -46,9 +43,6 @@ module m
     print *, 'test1 outer, should call wft: ', t(1)
     block
       import, only: t
-      ! CHECK:   %[[V_35:[0-9]+]] = fir.field_index n, !fir.type<_QMmTt{n:i32}>
-      ! CHECK:   %[[V_36:[0-9]+]] = fir.coordinate_of %{{.*}}, %[[V_35]] : (!fir.ref<!fir.type<_QMmTt{n:i32}>>, !fir.field) -> !fir.ref<i32>
-      ! CHECK:   fir.store %c2{{.*}} to %[[V_36]] : !fir.ref<i32>
       ! CHECK:   %[[V_37:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
       ! CHECK:   %[[V_38:[0-9]+]] = fir.convert %[[V_37]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
       ! CHECK:   %[[V_39:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
@@ -60,9 +54,6 @@ module m
 
   ! CHECK-LABEL: @_QMmPtest2
   subroutine test2
-    ! CHECK:   %[[V_13:[0-9]+]] = fir.field_index n, !fir.type<_QMmTt{n:i32}>
-    ! CHECK:   %[[V_14:[0-9]+]] = fir.coordinate_of %{{.*}}, %[[V_13]] : (!fir.ref<!fir.type<_QMmTt{n:i32}>>, !fir.field) -> !fir.ref<i32>
-    ! CHECK:   fir.store %c3{{.*}} to %[[V_14]] : !fir.ref<i32>
     ! CHECK:   %[[V_15:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
     ! CHECK:   %[[V_16:[0-9]+]] = fir.convert %[[V_15]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
     ! CHECK:   %[[V_17:[0-9]+]] = fir.address_of(@_QQdefault.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<0xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
@@ -81,7 +72,7 @@ module m
       procedure p
     end interface
 
-    ! CHECK:     %[[V_3:[0-9]+]] = fir.embox %arg1 : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
+    ! CHECK:     %[[V_3:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
     ! CHECK:     %[[V_4:[0-9]+]] = fir.convert %[[V_3]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
     ! CHECK:     %[[V_5:[0-9]+]] = fir.alloca !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
     ! CHECK:     %[[V_6:[0-9]+]] = fir.undefined !fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>
@@ -118,9 +109,6 @@ program p
   ! CHECK:   fir.call @_QMmPtest3
   call test3(wftd, t(17))
 
-  ! CHECK:   %[[V_95:[0-9]+]] = fir.field_index n, !fir.type<_QMmTt{n:i32}>
-  ! CHECK:   %[[V_96:[0-9]+]] = fir.coordinate_of %{{.*}}, %[[V_95]] : (!fir.ref<!fir.type<_QMmTt{n:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:   fir.store %c4{{.*}} to %[[V_96]] : !fir.ref<i32>
   ! CHECK:   %[[V_97:[0-9]+]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<!fir.type<_QMmTt{n:i32}>>
   ! CHECK:   %[[V_98:[0-9]+]] = fir.convert %[[V_97]] : (!fir.box<!fir.type<_QMmTt{n:i32}>>) -> !fir.box<none>
   ! CHECK:   %[[V_99:[0-9]+]] = fir.address_of(@_QQF.nonTbpDefinedIoTable) : !fir.ref<tuple<i64, !fir.ref<!fir.array<1xtuple<!fir.ref<none>, !fir.ref<none>, i32, i1>>>, i1>>
