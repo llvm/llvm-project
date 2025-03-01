@@ -402,7 +402,9 @@ public:
     requires(equality_comparable<iterator_t<__maybe_const<_Const, _Views>>> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     return __x.__it_ == __y.__it_;
   }
 
@@ -470,7 +472,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__it.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     constexpr auto __last_idx = sizeof...(_Views) - 1;
     return __it.__it_.index() == __last_idx &&
            std::__unchecked_get<__last_idx>(__it.__it_) == ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
@@ -505,7 +507,9 @@ public:
              (three_way_comparable<__maybe_const<_Const, _Views>> && ...))
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     return __x.__it_ <=> __y.__it_;
   }
 
