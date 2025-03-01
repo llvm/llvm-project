@@ -5,6 +5,7 @@
 # LLVM libc project.
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_python//python:defs.bzl", "py_binary")
 load(
     ":libc_build_rules.bzl",
     "libc_function",
@@ -49,6 +50,14 @@ config_setting(
 config_setting(
     name = "mpfr_system",
     flag_values = {":mpfr": "system"},
+)
+
+########################### Header Generation ##################################
+
+py_binary(
+    name = "hdrgen",
+    srcs = glob(["utils/hdrgen/hdrgen/**/*.py"]),
+    imports = ["utils/hdrgen"],
 )
 
 ################################## Base Config #################################

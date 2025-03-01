@@ -942,9 +942,16 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   if (Stmt *Ret = S.getReturnStmt()) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
-    if (GroManager.DirectEmit)
+    Expr *PreviousRetValue = nullptr;
+    if (GroManager.DirectEmit) {
+      PreviousRetValue = cast<ReturnStmt>(Ret)->getRetValue();
       cast<ReturnStmt>(Ret)->setRetValue(nullptr);
+    }
     EmitStmt(Ret);
+    // Set the return value back. The code generator, as the AST **Consumer**,
+    // shouldn't change the AST.
+    if (PreviousRetValue)
+      cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
   }
 
   // LLVM require the frontend to mark the coroutine.
