@@ -1120,6 +1120,9 @@ let Command = "thread info" in {
     " JSON format.">;
   def thread_info_stop_info : Option<"stop-info", "s">, Desc<"Display the "
     "extended stop info in JSON format.">;
+  def thread_info_backing_thread : Option<"backing-thread", "b">,
+    Desc<"If this is an OS plugin thread, query the backing thread instead; has"
+    " no effect otherwise.">;
 }
 
 let Command = "thread return" in {
