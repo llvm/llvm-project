@@ -998,13 +998,12 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
-    telemetry::ScopedDispatcher<telemetry::DebuggerInfo>
-        helper(
-            [this](lldb_private::telemetry::DebuggerInfo *info) {
-              assert(this == info->debugger);
-              info->is_exit_entry = true;
-            },
-            this);
+    telemetry::ScopedDispatcher<telemetry::DebuggerInfo> helper(
+        [this](lldb_private::telemetry::DebuggerInfo *info) {
+          assert(this == info->debugger);
+          info->is_exit_entry = true;
+        },
+        this);
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();
