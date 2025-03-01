@@ -139,6 +139,10 @@ enum OperandType : unsigned {
   OPERAND_MEM_SIMM9 = OPERAND_FIRST_MIPS_MEM_IMM,
   OPERAND_LAST_MIPS_MEM_IMM = OPERAND_MEM_SIMM9
 };
+
+static inline unsigned getFormat(uint64_t TSFlags) {
+  return TSFlags & FormMask;
+}
 } // namespace MipsII
 
 inline static MCRegister getMSARegFromFReg(MCRegister Reg) {
