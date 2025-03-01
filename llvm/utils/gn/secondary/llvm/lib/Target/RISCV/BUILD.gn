@@ -17,6 +17,7 @@ tablegen("RISCVGenCompressInstEmitter") {
 tablegen("RISCVGenMacroFusion") {
   visibility = [
     ":LLVMRISCVCodeGen",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
     "//llvm/unittests/Target/RISCV:RISCVTests",
   ]
   args = [ "-gen-macro-fusion-pred" ]
@@ -69,7 +70,10 @@ tablegen("RISCVGenPostLegalizeGICombiner") {
 }
 
 tablegen("RISCVGenRegisterBank") {
-  visibility = [ ":LLVMRISCVCodeGen" ]
+  visibility = [
+    ":LLVMRISCVCodeGen",
+    "//llvm/tools/llvm-exegesis/lib/RISCV",
+  ]
   args = [ "-gen-register-bank" ]
   td_file = "RISCV.td"
 }
