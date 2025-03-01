@@ -256,6 +256,11 @@ jobs:
         path: |
           ${{ needs.prepare.outputs.release-binary-filename }}
 
+    - name: Test
+      shell: bash
+      run: | 
+        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
     # Clean up some build files to reduce size of artifact.
     - name: Clean Up Build Directory
       shell: bash
