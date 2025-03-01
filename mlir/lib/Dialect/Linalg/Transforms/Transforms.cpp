@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
@@ -410,13 +411,8 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
         stripMinedType.cast<RankedTensorType>(),
         packingMetadata.reassociations);
   } else if (stripMinedType.isa<MemRefType>()) {
-    auto memrefTy = stripMinedType.cast<MemRefType>();
-    auto tensorTy =
-        RankedTensorType::get(memrefTy.getShape(), memrefTy.getElementType());
-    auto collapsedTensorType = tensor::CollapseShapeOp::inferCollapsedType(
-        tensorTy, packingMetadata.reassociations);
-    collapsedType = MemRefType::get(collapsedTensorType.getShape(),
-                                    collapsedTensorType.getElementType());
+    collapsedType = memref::CollapseShapeOp::inferCollapsedType(
+        stripMinedType.cast<MemRefType>(), packingMetadata.reassociations);
   }
 
   // Get dynamic dims from input tensor based on packedToStripMinedShapePerm
