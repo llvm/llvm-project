@@ -178,7 +178,8 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   VPBasicBlock *VPBB = Plan.createVPBasicBlock(Name);
   BB2VPBB[BB] = VPBB;
 
-  // Get or create a region for the loop containing BB.
+  // Get or create a region for the loop containing BB, except for the top
+  // region of TheLoop which is created later.
   Loop *LoopOfBB = LI->getLoopFor(BB);
   if (!LoopOfBB || LoopOfBB == TheLoop || !doesContainLoop(LoopOfBB, TheLoop))
     return VPBB;
@@ -194,12 +195,8 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   assert(!RegionOfVPBB &&
          "First visit of a header basic block expects to register its region.");
   // Handle a header - take care of its Region.
-  if (LoopOfBB == TheLoop) {
-    RegionOfVPBB = Plan.getVectorLoopRegion();
-  } else {
-    RegionOfVPBB = Plan.createVPRegionBlock(Name.str(), false /*isReplicator*/);
-    RegionOfVPBB->setParent(Loop2Region[LoopOfBB->getParentLoop()]);
-  }
+  RegionOfVPBB = Plan.createVPRegionBlock(Name.str(), false /*isReplicator*/);
+  RegionOfVPBB->setParent(Loop2Region[LoopOfBB->getParentLoop()]);
   RegionOfVPBB->setEntry(VPBB);
   Loop2Region[LoopOfBB] = RegionOfVPBB;
   return VPBB;
@@ -383,11 +380,10 @@ void PlainCFGBuilder::buildPlainCFG(
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     if (!isHeaderBB(BB, LoopForBB)) {
       setVPBBPredsFromBB(VPBB, BB);
-    } else {
-      // BB is a loop header, set the predecessor for the region, except for the
-      // top region, whose predecessor was set when creating VPlan's skeleton.
-      if (LoopForBB != TheLoop)
-        setRegionPredsFromBB(Region, BB);
+    } else if (Region) {
+      // BB is a loop header and there's a corresponding region , set the
+      // predecessor for it.
+      setRegionPredsFromBB(Region, BB);
     }
 
     // Create VPInstructions for BB.
@@ -427,21 +423,14 @@ void PlainCFGBuilder::buildPlainCFG(
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
     if (BB == LoopForBB->getLoopLatch()) {
-      // For a latch we need to set the successor of the region rather
-      // than that
-      // of VPBB and it should be set to the exit, i.e., non-header
-      // successor,
-      // except for the top region, whose successor was set when creating
-      // VPlan's skeleton.
+      // For a latch we need to set the successor of the region rather than that
+      // of VPBB and it should be set to the exit, i.e., non-header successor,
+      // except for the top region, which is handled elsewhere.
       assert(LoopForBB != TheLoop &&
              "Latch of the top region should have been handled earlier");
       Region->setOneSuccessor(isHeaderVPBB(Successor0) ? Successor1
                                                        : Successor0);
       Region->setExiting(VPBB);
-      continue;
-
-      VPBasicBlock *HeaderVPBB = getOrCreateVPBB(LoopForBB->getHeader());
-      VPBlockUtils::connectBlocks(VPBB, HeaderVPBB);
       continue;
     }
 

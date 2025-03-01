@@ -3602,11 +3602,17 @@ public:
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
     assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
-           "TripCount always must be set");
+           "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
 
-  void setTripCount(VPValue *NewTripCount) { TripCount = NewTripCount; }
+  // Set the trip count assuming it is currently null; if it is not - use
+  // resetTripCount().
+  void setTripCount(VPValue *NewTripCount) {
+    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
+
+    TripCount = NewTripCount;
+  }
 
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {

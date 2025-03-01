@@ -53,9 +53,9 @@ struct VPlanTransforms {
   }
 
   /// Introduce the top-level VPRegionBlock for the main loop in \p Plan. Coming
-  /// in this function, \p Plan's top-level loop is modeled using a plain CFG.
-  /// This transforms replaces the plain CFG with a VPRegionBlock wrapping the
-  /// top-level loop and creates a VPValue expressions for the original trip
+  /// into this function, \p Plan's top-level loop is modeled using a plain CFG.
+  /// This transform wraps the plain CFG of the top-level loop within a
+  /// VPRegionBlock and creates a VPValue expressions for the original trip
   /// count. It will also introduce a dedicated VPBasicBlock for the vector
   /// pre-header as well a VPBasicBlock as exit block of the region
   /// (middle.block). If a check is needed to guard executing the scalar

@@ -35,6 +35,7 @@ using namespace llvm;
 void VPlanTransforms::introduceTopLevelVectorLoopRegion(
     VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
     bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop) {
+  // TODO: Generalize to introduce all loop regions.
   auto *HeaderVPBB = cast<VPBasicBlock>(Plan.getEntry()->getSingleSuccessor());
   VPBlockUtils::disconnectBlocks(Plan.getEntry(), HeaderVPBB);
 
@@ -43,6 +44,7 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   VPBlockUtils::disconnectBlocks(OriginalLatch, HeaderVPBB);
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::connectBlocks(Plan.getEntry(), VecPreheader);
+  assert(OriginalLatch->getNumSuccessors() == 0 && "expected no predecessors");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -56,15 +58,14 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   Plan.setTripCount(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
 
-  // Create VPRegionBlock, with empty header and latch blocks, to be filled
-  // during processing later.
+  // Create VPRegionBlock, with existing header and new empty latch block, to be
+  // filled
   VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
   VPBlockUtils::insertBlockAfter(LatchVPBB, OriginalLatch);
   auto *TopRegion = Plan.createVPRegionBlock(
       HeaderVPBB, LatchVPBB, "vector loop", false /*isReplicator*/);
-  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB)) {
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
     VPBB->setParent(TopRegion);
-  }
 
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
