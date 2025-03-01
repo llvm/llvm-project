@@ -1544,15 +1544,11 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
 }
 
 void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
+  for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst); ++OpNum) {
+    const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, OpNum);
+    if (!Symbol)
       continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() != MCExpr::SymbolRef)
-      continue;
-    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAddressTaken for a function regardless of the ICF level.
-    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(Symbol))
       BF->setHasAddressTaken(true);
   }
 }
