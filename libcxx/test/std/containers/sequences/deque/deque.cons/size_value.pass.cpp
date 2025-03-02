@@ -31,8 +31,8 @@ void test(unsigned n, const T& x) {
     assert(*i == x);
 }
 
-int main(int, char**) {
-  test<int, std::allocator<int> >(0, 5);
+TEST_CONSTEXPR_CXX26 bool tests() {
+   test<int, std::allocator<int> >(0, 5);
   test<int, std::allocator<int> >(1, 10);
   test<int, std::allocator<int> >(10, 11);
   test<int, std::allocator<int> >(1023, -11);
@@ -47,6 +47,15 @@ int main(int, char**) {
   LIBCPP_ONLY(test<int, limited_allocator<int, 4096> >(4095, 90));
 #if TEST_STD_VER >= 11
   test<int, min_allocator<int> >(4095, 90);
+#endif
+  return true;
+}
+
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;
