@@ -30,6 +30,9 @@ namespace tooling {
 ///
 ///   - SelectionRange: an optional source selection ranges that can be used
 ///     to represent a selection in an editor.
+///
+///   - Location: an optional source location that can be used
+///     to represent a cursor in an editor.
 class RefactoringRuleContext {
 public:
   RefactoringRuleContext(const SourceManager &SM) : SM(SM) {}
@@ -40,7 +43,13 @@ public:
   /// refactoring engine. Can be invalid.
   SourceRange getSelectionRange() const { return SelectionRange; }
 
+  /// Returns the current source location as set by the
+  /// refactoring engine. Can be invalid.
+  SourceLocation getLocation() const { return Location; }
+
   void setSelectionRange(SourceRange R) { SelectionRange = R; }
+
+  void setLocation(SourceLocation L) { Location = L; }
 
   bool hasASTContext() const { return AST; }
 
@@ -73,6 +82,9 @@ private:
   /// An optional source selection range that's commonly used to represent
   /// a selection in an editor.
   SourceRange SelectionRange;
+  /// An optional source location that's commonly used to represent
+  /// a cursor in an editor.
+  SourceLocation Location;
   /// An optional AST for the translation unit on which a refactoring action
   /// might operate on.
   ASTContext *AST = nullptr;

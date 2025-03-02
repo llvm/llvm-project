@@ -164,6 +164,85 @@ SourceSelectionArgument::fromString(StringRef Value) {
   return nullptr;
 }
 
+/// Stores the parsed `-location` argument.
+class AbstractSourceLocationArgument {
+public:
+  virtual ~AbstractSourceLocationArgument() {}
+
+  /// Parse the `-location` argument.
+  ///
+  /// \returns A valid argument when the parse succedeed, null otherwise.
+  static std::unique_ptr<AbstractSourceLocationArgument>
+  fromString(StringRef Value);
+
+  /// Prints any additional state associated with the location argument to
+  /// the given output stream.
+  virtual void print(raw_ostream &OS) {}
+
+  /// Returns a replacement refactoring result consumer (if any) that should
+  /// consume the results of a refactoring operation.
+  ///
+  /// The replacement refactoring result consumer is used by \c
+  /// TestSourceLocationArgument to inject a test-specific result handling
+  /// logic into the refactoring operation. The test-specific consumer
+  /// ensures that the individual results in a particular test group are
+  /// identical.
+  virtual std::unique_ptr<ClangRefactorToolConsumerInterface>
+  createCustomConsumer() {
+    return nullptr;
+  }
+
+  /// Runs the given refactoring function for each specified location.
+  ///
+  /// \returns true if an error occurred, false otherwise.
+  virtual bool
+  forAllLocations(const SourceManager &SM,
+                  llvm::function_ref<void(SourceLocation L)> Callback) = 0;
+};
+
+/// Stores the parsed -location=filename:line:column option.
+class SourceLocationArgument final : public AbstractSourceLocationArgument {
+public:
+  SourceLocationArgument(ParsedSourceLocation Location)
+      : Location(std::move(Location)) {}
+
+  bool forAllLocations(
+      const SourceManager &SM,
+      llvm::function_ref<void(SourceLocation L)> Callback) override {
+    auto FE = SM.getFileManager().getFile(Location.FileName);
+    FileID FID = FE ? SM.translateFile(*FE) : FileID();
+    if (!FE || FID.isInvalid()) {
+      llvm::errs() << "error: -location=" << Location.FileName
+                   << ":... : given file is not in the target TU\n";
+      return true;
+    }
+
+    SourceLocation Loc = SM.getMacroArgExpandedLocation(
+        SM.translateLineCol(FID, Location.Line, Location.Column));
+    if (Loc.isInvalid()) {
+      llvm::errs() << "error: -location=" << Location.FileName << ':'
+                   << Location.Line << ':' << Location.Column
+                   << " : invalid source location\n";
+      return true;
+    }
+    Callback(Loc);
+    return false;
+  }
+
+private:
+  ParsedSourceLocation Location;
+};
+
+std::unique_ptr<AbstractSourceLocationArgument>
+AbstractSourceLocationArgument::fromString(StringRef Value) {
+  ParsedSourceLocation Location = ParsedSourceLocation::FromString(Value);
+  if (Location.FileName != "")
+    return std::make_unique<SourceLocationArgument>(std::move(Location));
+  llvm::errs() << "error: '-location' option must be specified using "
+                  "<file>:<line>:<column>\n";
+  return nullptr;
+}
+
 /// A container that stores the command-line options used by a single
 /// refactoring option.
 class RefactoringActionCommandLineOptions {
@@ -272,6 +351,17 @@ public:
         break;
       }
     }
+    // Check if the location option is supported.
+    for (const auto &Rule : this->ActionRules) {
+      if (Rule->hasLocationRequirement()) {
+        Location = std::make_unique<cl::opt<std::string>>(
+            "location",
+            cl::desc("Location where refactoring should "
+                     "be initiated( <file>:<line>:<column>)"),
+            cl::cat(Category), cl::sub(*this));
+        break;
+      }
+    }
     // Create the refactoring options.
     for (const auto &Rule : this->ActionRules) {
       CommandLineRefactoringOptionCreator OptionCreator(Category, *this,
@@ -296,9 +386,26 @@ public:
     return false;
   }
 
+  /// Parses the "-location" command-line argument.
+  ///
+  /// \returns true on error, false otherwise.
+  bool parseLocationArgument() {
+    if (Location) {
+      ParsedLocation = AbstractSourceLocationArgument::fromString(*Location);
+      if (!ParsedLocation)
+        return true;
+    }
+    return false;
+  }
+
   SourceSelectionArgument *getSelection() const {
     assert(Selection && "selection not supported!");
     return ParsedSelection.get();
+  }
+
+  AbstractSourceLocationArgument *getLocation() const {
+    assert(Location && "location not supported!");
+    return ParsedLocation.get();
   }
 
   const RefactoringActionCommandLineOptions &getOptions() const {
@@ -309,7 +416,9 @@ private:
   std::unique_ptr<RefactoringAction> Action;
   RefactoringActionRules ActionRules;
   std::unique_ptr<cl::opt<std::string>> Selection;
+  std::unique_ptr<cl::opt<std::string>> Location;
   std::unique_ptr<SourceSelectionArgument> ParsedSelection;
+  std::unique_ptr<AbstractSourceLocationArgument> ParsedLocation;
   RefactoringActionCommandLineOptions Options;
 };
 
@@ -399,6 +508,7 @@ public:
     // consumer.
     std::unique_ptr<ClangRefactorToolConsumerInterface> TestConsumer;
     bool HasSelection = MatchingRule->hasSelectionRequirement();
+    bool HasLocation = MatchingRule->hasLocationRequirement();
     if (HasSelection)
       TestConsumer = SelectedSubcommand->getSelection()->createCustomConsumer();
     ClangRefactorToolConsumerInterface *ActiveConsumer =
@@ -418,6 +528,19 @@ public:
       if (SelectedSubcommand->getSelection()->forAllRanges(
               Context.getSources(), [&](SourceRange R) {
                 Context.setSelectionRange(R);
+                InvokeRule(*ActiveConsumer);
+              }))
+        HasFailed = true;
+      ActiveConsumer->endTU();
+      return;
+    }
+    if (HasLocation) {
+      assert(SelectedSubcommand->getLocation() && "Missing location argument?");
+      if (opts::Verbose)
+        SelectedSubcommand->getLocation()->print(llvm::outs());
+      if (SelectedSubcommand->getLocation()->forAllLocations(
+              Context.getSources(), [&](SourceLocation L) {
+                Context.setLocation(L);
                 InvokeRule(*ActiveConsumer);
               }))
         HasFailed = true;
@@ -528,6 +651,12 @@ private:
       R.getEnd().print(llvm::outs(), Context.getSources());
       llvm::outs() << "\n";
     }
+    if (Context.getLocation().isValid()) {
+      SourceLocation L = Context.getLocation();
+      llvm::outs() << "  -location=";
+      L.print(llvm::outs(), Context.getSources());
+      llvm::outs() << "\n";
+    }
   }
 
   llvm::Expected<RefactoringActionRule *>
@@ -539,15 +668,23 @@ private:
       CommandLineRefactoringOptionVisitor Visitor(Subcommand.getOptions());
       Rule->visitRefactoringOptions(Visitor);
       if (Visitor.getMissingRequiredOptions().empty()) {
-        if (!Rule->hasSelectionRequirement()) {
-          MatchingRules.push_back(Rule.get());
-        } else {
+        bool HasMissingOptions = false;
+        if (Rule->hasSelectionRequirement()) {
           Subcommand.parseSelectionArgument();
-          if (Subcommand.getSelection()) {
-            MatchingRules.push_back(Rule.get());
-          } else {
+          if (!Subcommand.getSelection()) {
             MissingOptions.insert("selection");
+            HasMissingOptions = true;
           }
+        }
+        if (Rule->hasLocationRequirement()) {
+          Subcommand.parseLocationArgument();
+          if (!Subcommand.getLocation()) {
+            MissingOptions.insert("location");
+            HasMissingOptions = true;
+          }
+        }
+        if (!HasMissingOptions) {
+          MatchingRules.push_back(Rule.get());
         }
       }
       for (const RefactoringOption *Opt : Visitor.getMissingRequiredOptions())
