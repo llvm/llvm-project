@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test1:
 ; CHECK: v{{[0-9]+}} = vand(v{{[0-9]+}},v{{[0-9]+}})

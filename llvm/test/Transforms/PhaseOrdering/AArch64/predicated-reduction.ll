@@ -6,57 +6,57 @@ target triple = "aarch64"
 
 define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef %RAND_BLOCK_LENGTH, ptr noundef %samples, double noundef nofpclass(nan inf) %Y, double noundef nofpclass(nan inf) %Z) {
 ; CHECK-LABEL: define nofpclass(nan inf) double @monte_simple(
-; CHECK-SAME: i32 noundef [[NBLOCKS:%.*]], i32 noundef [[RAND_BLOCK_LENGTH:%.*]], ptr nocapture noundef readonly [[SAMPLES:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 noundef [[NBLOCKS:%.*]], i32 noundef [[RAND_BLOCK_LENGTH:%.*]], ptr noundef readonly captures(none) [[SAMPLES:%.*]], double noundef nofpclass(nan inf) [[Y:%.*]], double noundef nofpclass(nan inf) [[Z:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[RAND_BLOCK_LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[RAND_BLOCK_LENGTH]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER23:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <2 x double> poison, double [[Z]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT19]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483640
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[Y]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT19:%.*]] = insertelement <4 x double> poison, double [[Z]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT20:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT19]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX1]], i64 8
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <2 x float>, ptr [[TMP23]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[WIDE_LOAD18]] to <2 x double>
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x double> [[BROADCAST_SPLAT]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[BROADCAST_SPLAT]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x double> [[TMP4]], [[BROADCAST_SPLAT20]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <2 x double> [[TMP5]], [[BROADCAST_SPLAT20]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp fast ogt <2 x double> [[TMP6]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <2 x double> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <2 x double> [[TMP6]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <2 x double> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP6]], <2 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP7]], <2 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI16]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI17]], [[TMP13]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP8]], <2 x double> [[TMP10]], <2 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP9]], <2 x double> [[TMP11]], <2 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI15]], [[TMP17]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 4
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI15:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI17:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX1]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x float>, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext <4 x float> [[WIDE_LOAD]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD18]] to <4 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[BROADCAST_SPLAT]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[BROADCAST_SPLAT]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <4 x double> [[TMP4]], [[BROADCAST_SPLAT20]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <4 x double> [[TMP5]], [[BROADCAST_SPLAT20]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp fast ogt <4 x double> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <4 x double> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x double> [[TMP6]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP6]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP7]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI16]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI17]], [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP8]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP9]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI15]], [[TMP17]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP19]], [[TMP18]]
-; CHECK-NEXT:    [[TMP21:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
-; CHECK-NEXT:    [[BIN_RDX21:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP15]], [[TMP14]]
-; CHECK-NEXT:    [[TMP22:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX21]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP19]], [[TMP18]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX21:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP22:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX21]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY_PREHEADER23]]
 ; CHECK:       [[FOR_BODY_PREHEADER23]]:
@@ -189,12 +189,12 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    br i1 [[CMP211]], label %[[FOR_BODY_US_PREHEADER:.*]], label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY_US_PREHEADER]]:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[RAND_BLOCK_LENGTH]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 4
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483644
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Y]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT35:%.*]] = insertelement <2 x double> poison, double [[Z]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT36:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT35]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[RAND_BLOCK_LENGTH]], 8
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483640
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[Y]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT35:%.*]] = insertelement <4 x double> poison, double [[Z]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT36:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT35]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br label %[[FOR_BODY_US:.*]]
 ; CHECK:       [[FOR_BODY_US]]:
@@ -204,47 +204,47 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    tail call void @resample(i32 noundef [[RAND_BLOCK_LENGTH]], ptr noundef [[SAMPLES]])
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[FOR_BODY3_US_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[V1_021_US]], i64 0
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[V0_020_US]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, double [[V1_021_US]], i64 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, double [[V0_020_US]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI31:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI32:%.*]] = phi <2 x double> [ [[TMP27]], %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US1:%.*]] = getelementptr inbounds float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_US1]], i64 8
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[ARRAYIDX_US1]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD34:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = fpext <2 x float> [[WIDE_LOAD34]] to <2 x double>
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast <2 x double> @llvm.exp2.v2f64(<2 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call fast <2 x double> @llvm.exp2.v2f64(<2 x double> [[TMP5]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x double> [[TMP6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP7]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <2 x double> [[TMP8]], [[BROADCAST_SPLAT36]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <2 x double> [[TMP9]], [[BROADCAST_SPLAT36]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fcmp fast ogt <2 x double> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = fcmp fast ogt <2 x double> [[TMP11]], zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP11]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP10]], <2 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP11]], <2 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI32]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI33]], [[TMP17]]
-; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP12]], <2 x double> [[TMP14]], <2 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP13]], <2 x double> [[TMP15]], <2 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP22]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23]] = fadd reassoc arcp contract afn <2 x double> [[VEC_PHI31]], [[TMP21]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 4
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI31:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI32:%.*]] = phi <4 x double> [ [[TMP27]], %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI33:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX_US1:%.*]] = getelementptr inbounds nuw float, ptr [[SAMPLES]], i64 [[INDVARS_IV1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_US1]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[ARRAYIDX_US1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD34:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[WIDE_LOAD]] to <4 x double>
+; CHECK-NEXT:    [[TMP5:%.*]] = fpext <4 x float> [[WIDE_LOAD34]] to <4 x double>
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast <4 x double> @llvm.exp2.v4f64(<4 x double> [[TMP4]])
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call fast <4 x double> @llvm.exp2.v4f64(<4 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x double> [[TMP6]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x double> [[TMP7]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <4 x double> [[TMP8]], [[BROADCAST_SPLAT36]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <4 x double> [[TMP9]], [[BROADCAST_SPLAT36]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fcmp fast ogt <4 x double> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = fcmp fast ogt <4 x double> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x double> [[TMP10]], [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x double> [[TMP11]], [[TMP11]]
+; CHECK-NEXT:    [[TMP16:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI32]], [[TMP16]]
+; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI33]], [[TMP17]]
+; CHECK-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP14]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP13]], <4 x double> [[TMP15]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP22]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP20]]
+; CHECK-NEXT:    [[TMP23]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI31]], [[TMP21]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP23]], [[TMP22]]
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
-; CHECK-NEXT:    [[BIN_RDX37:%.*]] = fadd reassoc arcp contract afn <2 x double> [[TMP19]], [[TMP18]]
-; CHECK-NEXT:    [[TMP26:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX37]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP23]], [[TMP22]]
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX37:%.*]] = fadd reassoc arcp contract afn <4 x double> [[TMP19]], [[TMP18]]
+; CHECK-NEXT:    [[TMP26:%.*]] = tail call reassoc arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX37]])
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND1_FOR_INC8_CRIT_EDGE_US]], label %[[FOR_BODY3_US_PREHEADER]]
 ; CHECK:       [[FOR_BODY3_US_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, %[[FOR_BODY_US]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]

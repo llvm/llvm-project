@@ -662,9 +662,9 @@ define void @uninterestingSub(ptr nocapture %row) #0 {
 @.str.89 = external unnamed_addr constant [12 x i8], align 1
 @.str.90 = external unnamed_addr constant [5 x i8], align 1
 ; CHECK-LABEL: test_r274582
-define void @test_r274582(double %x) {
+define void @test_r274582(double %x, i1 %arg) {
 entry:
-  br i1 undef, label %if.then.i, label %if.end.i
+  br i1 %arg, label %if.then.i, label %if.end.i
 if.then.i:
   ret void
 if.end.i:

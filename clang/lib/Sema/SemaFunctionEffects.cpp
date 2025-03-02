@@ -567,7 +567,7 @@ public:
     while (!VerificationQueue.empty()) {
       const Decl *D = VerificationQueue.back();
       if (FuncAnalysisPtr AP = DeclAnalysis.lookup(D)) {
-        if (auto *Pending = AP.dyn_cast<PendingFunctionAnalysis *>()) {
+        if (auto *Pending = dyn_cast<PendingFunctionAnalysis *>(AP)) {
           // All children have been traversed; finish analysis.
           finishPendingAnalysis(D, Pending);
         }

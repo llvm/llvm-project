@@ -218,9 +218,7 @@ struct OperandsSignature {
 
     const CodeGenRegisterClass *DstRC = nullptr;
 
-    for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
-      TreePatternNode &Op = InstPatNode.getChild(i);
-
+    for (const TreePatternNode &Op : InstPatNode.children()) {
       // Handle imm operands specially.
       if (!Op.isLeaf() && Op.getOperator()->getName() == "imm") {
         unsigned PredNo = 0;
@@ -431,8 +429,8 @@ static std::string getLegalCName(std::string OpName) {
 
 FastISelMap::FastISelMap(StringRef instns) : InstNS(instns) {}
 
-static std::string PhyRegForNode(TreePatternNode &Op,
-                                 const CodeGenTarget &Target) {
+static std::string PhysRegForNode(const TreePatternNode &Op,
+                                  const CodeGenTarget &Target) {
   std::string PhysReg;
 
   if (!Op.isLeaf())
@@ -478,8 +476,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     // For now, ignore multi-instruction patterns.
     bool MultiInsts = false;
-    for (unsigned i = 0, e = Dst.getNumChildren(); i != e; ++i) {
-      TreePatternNode &ChildOp = Dst.getChild(i);
+    for (const TreePatternNode &ChildOp : Dst.children()) {
       if (ChildOp.isLeaf())
         continue;
       if (ChildOp.getOperator()->isSubClassOf("Instruction")) {
@@ -555,12 +552,11 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
       // the mapping from the src to dst patterns is simple.
       bool FoundNonSimplePattern = false;
       unsigned DstIndex = 0;
-      for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
-        std::string PhysReg = PhyRegForNode(InstPatNode.getChild(i), Target);
+      for (const TreePatternNode &SrcChild : InstPatNode.children()) {
+        std::string PhysReg = PhysRegForNode(SrcChild, Target);
         if (PhysReg.empty()) {
           if (DstIndex >= Dst.getNumChildren() ||
-              Dst.getChild(DstIndex).getName() !=
-                  InstPatNode.getChild(i).getName()) {
+              Dst.getChild(DstIndex).getName() != SrcChild.getName()) {
             FoundNonSimplePattern = true;
             break;
           }
@@ -597,7 +593,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     int complexity = Pattern.getPatternComplexity(CGP);
 
     auto inserted_simple_pattern = SimplePatternsCheck.insert(
-        std::tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
+        {Operands, OpcodeName, VT, RetVT, PredicateCheck});
     if (!inserted_simple_pattern.second) {
       PrintFatalError(Pattern.getSrcRecord()->getLoc(),
                       "Duplicate predicate in FastISel table!");

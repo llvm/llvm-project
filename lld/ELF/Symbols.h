@@ -51,6 +51,10 @@ enum {
   NEEDS_TLSGD_TO_IE = 1 << 6,
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
+  NEEDS_GOT_AUTH = 1 << 9,
+  NEEDS_GOT_NONAUTH = 1 << 10,
+  NEEDS_TLSDESC_AUTH = 1 << 11,
+  NEEDS_TLSDESC_NONAUTH = 1 << 12,
 };
 
 // The base class for real symbol classes.
@@ -101,6 +105,9 @@ public:
   uint8_t partition;
 
   // True if this symbol is preemptible at load time.
+  //
+  // Primarily set in two locations, (a) parseVersionAndComputeIsPreemptible and
+  // (b) demoteSymbolsAndComputeIsPreemptible.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t isPreemptible : 1;
 
@@ -128,22 +135,10 @@ public:
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t exportDynamic : 1;
+  uint8_t isExported : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   uint8_t ltoCanOmit : 1;
-
-  // Used to track if there has been at least one undefined reference to the
-  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
-  // if the first undefined reference from a non-shared object is weak.
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referenced : 1;
-
-  // Used to track if this symbol will be referenced after wrapping is performed
-  // (i.e. this will be true for foo if __real_foo is referenced, and will be
-  // true for __wrap_foo if foo is referenced).
-  LLVM_PREFERRED_TYPE(bool)
-  uint8_t referencedAfterWrap : 1;
 
   // True if this symbol is specified by --trace-symbol option.
   LLVM_PREFERRED_TYPE(bool)
@@ -160,7 +155,6 @@ public:
     stOther = (stOther & ~3) | visibility;
   }
 
-  bool includeInDynsym(Ctx &) const;
   uint8_t computeBinding(Ctx &) const;
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
@@ -248,8 +242,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
-        ltoCanOmit(false), archSpecificBit(false) {}
+        binding(binding), stOther(stOther), symbolKind(k), ltoCanOmit(false),
+        archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -332,6 +326,18 @@ public:
   // exported into .dynsym.
   LLVM_PREFERRED_TYPE(bool)
   uint8_t inDynamicList : 1;
+
+  // Used to track if there has been at least one undefined reference to the
+  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
+  // if the first undefined reference from a non-shared object is weak.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referenced : 1;
+
+  // Used to track if this symbol will be referenced after wrapping is performed
+  // (i.e. this will be true for foo if __real_foo is referenced, and will be
+  // true for __wrap_foo if foo is referenced).
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t referencedAfterWrap : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);

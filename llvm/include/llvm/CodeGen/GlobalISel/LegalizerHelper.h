@@ -22,6 +22,7 @@
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -296,6 +297,13 @@ public:
   /// Create a stack temporary based on the size in bytes and the alignment
   MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
                                            MachinePointerInfo &PtrInfo);
+
+  /// Create a store of \p Val to a stack temporary and return a load as the
+  /// same type as \p Res.
+  MachineInstrBuilder createStackStoreLoad(const DstOp &Res, const SrcOp &Val);
+
+  /// Given a store of a boolean vector, scalarize it.
+  LegalizeResult scalarizeVectorBooleanStore(GStore &MI);
 
   /// Get a pointer to vector element \p Index located in memory for a vector of
   /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out

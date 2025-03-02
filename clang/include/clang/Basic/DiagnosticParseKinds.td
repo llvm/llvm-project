@@ -721,6 +721,9 @@ def warn_empty_init_statement : Warning<
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 def err_keyword_as_parameter : Error <
   "invalid parameter name: '%0' is a keyword">;
+def warn_pre_cxx26_ambiguous_pack_indexing_type : Warning<
+  "%0 is no longer a pack expansion but a pack "
+  "indexing type; add a name to specify a pack expansion">, InGroup<CXXPre26Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -1096,6 +1099,16 @@ def err_lambda_capture_misplaced_ellipsis : Error<
   "the name of the capture">;
 def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
+def err_binding_multiple_ellipses : Error<
+  "multiple packs in structured binding declaration">;
+def note_previous_ellipsis : Note<
+  "previous binding pack specified here">;
+def ext_cxx_binding_pack : ExtWarn<
+  "structured binding packs are a C++2c extension ">,
+  InGroup<CXX26>;
+def warn_cxx23_compat_binding_pack : Warning<
+  "structured binding packs are incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
@@ -1655,6 +1668,8 @@ def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
 def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' clause only allows "
   "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
   "%0 is ignored">, InGroup<OpenMPExtensions>;
+def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
+def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

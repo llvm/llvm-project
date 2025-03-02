@@ -918,7 +918,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
   VarDecl *CatchParam = S->getExceptionDecl();
   llvm::BasicBlock *CatchPadBB = CGF.Builder.GetInsertBlock();
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   CGF.CurrentFuncletPad = CPI;
 
   // If this is a catch-all or the catch parameter is unnamed, we don't need to
@@ -1172,7 +1172,9 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getIndirect(
+        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());
@@ -1996,8 +1998,8 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
     Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
-  auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
-  auto *D = E.dyn_cast<const CXXDeleteExpr *>();
+  auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
+  auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
@@ -3454,7 +3456,7 @@ llvm::Value *MicrosoftCXXABI::EmitNonNullMemberPointerConversion(
   if (inheritanceModelHasOnlyOneField(IsFunc, DstInheritance)) {
     Dst = FirstField;
   } else {
-    Dst = llvm::UndefValue::get(ConvertMemberPointerType(DstTy));
+    Dst = llvm::PoisonValue::get(ConvertMemberPointerType(DstTy));
     unsigned Idx = 0;
     Dst = Builder.CreateInsertValue(Dst, FirstField, Idx++);
     if (inheritanceModelHasNVOffsetField(IsFunc, DstInheritance))

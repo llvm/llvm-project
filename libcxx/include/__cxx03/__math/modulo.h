@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_MODULO_H
-#define _LIBCPP___MATH_MODULO_H
+#ifndef _LIBCPP___CXX03___MATH_MODULO_H
+#define _LIBCPP___CXX03___MATH_MODULO_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -60,4 +60,4 @@ inline _LIBCPP_HIDE_FROM_ABI long double modf(long double __x, long double* __y)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_MODULO_H
+#endif // _LIBCPP___CXX03___MATH_MODULO_H

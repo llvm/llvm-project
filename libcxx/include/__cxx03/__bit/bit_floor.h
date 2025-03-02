@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_FLOOR_H
-#define _LIBCPP___BIT_BIT_FLOOR_H
+#ifndef _LIBCPP___CXX03___BIT_BIT_FLOOR_H
+#define _LIBCPP___CXX03___BIT_BIT_FLOOR_H
 
 #include <__cxx03/__bit/bit_log2.h>
 #include <__cxx03/__concepts/arithmetic.h>
@@ -31,4 +31,4 @@ template <__libcpp_unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BIT_FLOOR_H
+#endif // _LIBCPP___CXX03___BIT_BIT_FLOOR_H

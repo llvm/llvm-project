@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
 # REQUIRES: asserts
 #
 # This testcase used to trigger an incorrect assertion. Make sure it no

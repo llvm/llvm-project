@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Generator: vdeal(0x37), vdeal(0x53), vshuff(0x2f), vdeal(0x4b), vdeal(0x27), vdeal(0x43), vshuff(0x1f), vdeal(0x5b), vshuff(0x7e), vshuff(0x6c), vdeal(0x5a), vdeal(0x38), vshuff(0x16), vshuff(0x44), vdeal(0x72)
 ; CHECK-LABEL: test_0000:

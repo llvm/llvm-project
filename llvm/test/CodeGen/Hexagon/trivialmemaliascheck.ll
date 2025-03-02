@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-aa-sched-mi < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-aa-sched-mi < %s | FileCheck %s
 
 ; The two memory addresses in the load and the memop below are trivially
 ; non-aliasing. However, there are some cases where the scheduler cannot

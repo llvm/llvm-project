@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_BUILTIN_NEW_ALLOCATOR_H
-#define _LIBCPP___MEMORY_BUILTIN_NEW_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_BUILTIN_NEW_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_BUILTIN_NEW_ALLOCATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__memory/unique_ptr.h>
@@ -64,4 +64,4 @@ struct __builtin_new_allocator {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_BUILTIN_NEW_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_BUILTIN_NEW_ALLOCATOR_H

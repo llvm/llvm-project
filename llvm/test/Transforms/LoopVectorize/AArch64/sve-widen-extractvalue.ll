@@ -23,7 +23,7 @@ loop.body:
   %add = add i64 %a, %b
   store i64 %add, ptr %addr
   %iv.next = add nsw i32 %iv, 1
-  %cond = icmp ne i32 %iv.next, 0
+  %cond = icmp ne i32 %iv.next, 1000
   br i1 %cond, label %loop.body, label %exit, !llvm.loop !0
 
 exit:

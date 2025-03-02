@@ -141,10 +141,9 @@ MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
   return TM.getSymbol(GV);
 }
 
-void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
-                                                    const DataLayout &,
-                                                    const MCSymbol *Sym) const {
-}
+void TargetLoweringObjectFile::emitPersonalityValue(
+    MCStreamer &Streamer, const DataLayout &, const MCSymbol *Sym,
+    const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                                                      Module &M) const {
@@ -349,6 +348,12 @@ TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
+    const Function &F, const TargetMachine &TM,
+    const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
   return getSectionForConstant(F.getDataLayout(),
                                SectionKind::getReadOnly(), /*C=*/nullptr,

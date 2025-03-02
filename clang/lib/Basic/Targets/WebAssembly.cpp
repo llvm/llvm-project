@@ -23,19 +23,22 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::WebAssembly::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsWebAssembly.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
 #define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
 #include "clang/Basic/BuiltinsWebAssembly.def"
-      });
+});
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime"}};
+    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
 
@@ -364,9 +367,9 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
   return true;
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-WebAssemblyTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+WebAssemblyTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,

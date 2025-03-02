@@ -911,7 +911,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
     if (auto val = dyn_cast<Value>(offset))
       return val;
 
-    int64_t attrVal = cast<IntegerAttr>(offset.get<Attribute>()).getInt();
+    int64_t attrVal = cast<IntegerAttr>(cast<Attribute>(offset)).getInt();
     Attribute attr = rewriter.getIntegerAttr(intType, attrVal);
     return rewriter.createOrFold<spirv::ConstantOp>(loc, intType, attr);
   }();

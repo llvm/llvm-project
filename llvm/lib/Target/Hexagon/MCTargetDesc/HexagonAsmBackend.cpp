@@ -54,7 +54,7 @@ class HexagonAsmBackend : public MCAsmBackend {
 
     // Update the fragment.
     RF.setInst(HMB);
-    RF.getContents() = Code;
+    RF.setContents(Code);
     RF.getFixups() = Fixups;
   }
 
@@ -201,7 +201,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t,
                              const MCSubtargetInfo *STI) override {
     switch(Fixup.getTargetKind()) {
       default:

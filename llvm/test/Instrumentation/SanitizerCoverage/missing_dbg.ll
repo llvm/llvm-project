@@ -12,7 +12,7 @@ define i32 @with_dbg(ptr %a, ptr %b) !dbg !3 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[BB0:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB0]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr inttoptr (i64 add (i64 ptrtoint (ptr @__sancov_gen_ to i64), i64 4) to ptr)) #[[ATTR1]], !dbg [[DBG7:![0-9]+]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds ([2 x i32], ptr @__sancov_gen_, i64 0, i64 1)) #[[ATTR1]], !dbg [[DBG7:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[BB1]]
 ; CHECK:       [[BB1]]:
@@ -38,7 +38,7 @@ define i32 @without_dbg(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 42
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[BB0:.*]], label %[[BB1:.*]]
 ; CHECK:       [[BB0]]:
-; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr inttoptr (i64 add (i64 ptrtoint (ptr @__sancov_gen_.1 to i64), i64 4) to ptr)) #[[ATTR1]]
+; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc_guard(ptr getelementptr inbounds ([2 x i32], ptr @__sancov_gen_.1, i64 0, i64 1)) #[[ATTR1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[B]], align 4
 ; CHECK-NEXT:    br label %[[BB1]]
 ; CHECK:       [[BB1]]:

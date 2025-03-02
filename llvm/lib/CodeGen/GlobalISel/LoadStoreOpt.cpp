@@ -317,7 +317,6 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
 #endif
 
-  const auto &DL = MF->getFunction().getDataLayout();
   bool AnyMerged = false;
   do {
     unsigned NumPow2 = llvm::bit_floor(StoresToMerge.size());
@@ -327,7 +326,7 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     for (MergeSizeBits = MaxSizeBits; MergeSizeBits > 1; MergeSizeBits /= 2) {
       LLT StoreTy = LLT::scalar(MergeSizeBits);
       EVT StoreEVT =
-          getApproximateEVTForLLT(StoreTy, DL, MF->getFunction().getContext());
+          getApproximateEVTForLLT(StoreTy, MF->getFunction().getContext());
       if (LegalSizes.size() > MergeSizeBits && LegalSizes[MergeSizeBits] &&
           TLI->canMergeStoresTo(AS, StoreEVT, *MF) &&
           (TLI->isTypeLegal(StoreEVT)))

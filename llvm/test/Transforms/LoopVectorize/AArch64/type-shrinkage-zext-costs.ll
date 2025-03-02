@@ -8,17 +8,17 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @zext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'zext_i8_i16'
-; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
-; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = zext ir<%0> to i16
 ; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %conv = zext i8 %0 to i32
 ; CHECK-LABEL: define void @zext_i8_i16
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
@@ -85,16 +85,16 @@ exit:                                 ; preds = %for.body
 
 define void @sext_i8_i16(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-COST-LABEL: LV: Checking a loop in 'sext_i8_i16'
-; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
-; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = sext  ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 2 for VF 16: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 2: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 1 for VF vscale x 4: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN-CAST ir<%conv> = sext ir<%0> to i16
 ; CHECK-LABEL: define void @sext_i8_i16
-; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], ptr noalias nocapture [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr noalias readonly captures(none) [[P:%.*]], ptr noalias captures(none) [[Q:%.*]], i32 [[LEN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LEN]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64

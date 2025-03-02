@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
-#define _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
+#define _LIBCPP___CXX03___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__filesystem/directory_entry.h>
@@ -161,4 +161,4 @@ _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H

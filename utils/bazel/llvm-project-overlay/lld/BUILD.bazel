@@ -43,6 +43,7 @@ cc_library(
     srcs = [":config_version_gen"] + glob(["Common/*.cpp"]),
     hdrs = glob(["include/lld/Common/*.h"]),
     includes = ["include"],
+    textual_hdrs = glob(["include/lld/Common/*.inc"]),
     deps = [
         ":vcs_version",
         "//llvm:CodeGen",
@@ -50,6 +51,7 @@ cc_library(
         "//llvm:DebugInfoDWARF",
         "//llvm:IRPrinter",
         "//llvm:Option",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",

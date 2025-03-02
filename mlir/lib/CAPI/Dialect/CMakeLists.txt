@@ -40,6 +40,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIControlFlow
   MLIRControlFlowDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIEmitC
+  EmitC.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIREmitCDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIMath
   Math.cpp
 
@@ -70,6 +79,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   MLIRCAPIIR
   MLIRGPUTransforms
   MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIIndex
+  Index.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRIndexDialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIIRDL

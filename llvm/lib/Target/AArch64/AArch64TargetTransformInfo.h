@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/InstructionCost.h"
 #include <cstdint>
 #include <optional>
 
@@ -46,6 +47,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
 
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
+
+  static const FeatureBitset InlineInverseFeatures;
 
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
@@ -87,6 +90,10 @@ public:
 
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
+
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -357,6 +364,13 @@ public:
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const;
+
   bool enableOrderedReductions() const { return true; }
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -387,9 +401,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const {
-    return ST->useFixedOverScalableIfEqualCost();
-  }
+  bool preferFixedOverScalableIfEqualCost() const;
 
   unsigned getEpilogueVectorizationMinVF() const;
 
@@ -412,6 +424,15 @@ public:
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                              std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *ValTy,
+                                           FastMathFlags FMF,
+                                           TTI::TargetCostKind CostKind);
+
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,

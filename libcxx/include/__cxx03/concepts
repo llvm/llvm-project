@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONCEPTS
-#define _LIBCPP_CONCEPTS
+#ifndef _LIBCPP___CXX03_CONCEPTS
+#define _LIBCPP___CXX03_CONCEPTS
 
 /*
     concepts synopsis
@@ -170,4 +170,4 @@ namespace std {
 #  pragma GCC system_header
 #endif
 
-#endif // _LIBCPP_CONCEPTS
+#endif // _LIBCPP___CXX03_CONCEPTS

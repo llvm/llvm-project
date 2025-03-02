@@ -33,10 +33,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void replaceWithRawStringLiteral(
-      const ast_matchers::MatchFinder::MatchResult &Result,
-      const StringLiteral *Literal, StringRef Replacement);
-
   std::string DelimiterStem;
   CharsBitSet DisallowedChars;
   const bool ReplaceShorterLiterals;

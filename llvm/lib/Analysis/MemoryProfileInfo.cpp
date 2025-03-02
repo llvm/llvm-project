@@ -42,9 +42,21 @@ cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
     cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
              "allocation to be considered hot"));
 
+cl::opt<bool>
+    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
+                       cl::desc("Enable use of hot hints (only supported for "
+                                "unambigously hot allocations)"));
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
+
+// This is useful if we have enabled reporting of hinted sizes, and want to get
+// information from the indexing step for all contexts (especially for testing),
+// or have specified a value less than 100% for -memprof-cloning-cold-threshold.
+cl::opt<bool> MemProfKeepAllNotColdContexts(
+    "memprof-keep-all-not-cold-contexts", cl::init(false), cl::Hidden,
+    cl::desc("Keep all non-cold contexts (increases cloning overheads)"));
 
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,
@@ -60,8 +72,9 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
   // The access densities are multiplied by 100 to hold 2 decimal places of
   // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-      MemProfMinAveLifetimeAccessDensityHotThreshold)
+  if (MemProfUseHotHints &&
+      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+          MemProfMinAveLifetimeAccessDensityHotThreshold)
     return AllocationType::Hot;
 
   return AllocationType::NotCold;
@@ -141,7 +154,7 @@ void CallStackTrie::addCallStack(
       First = false;
       if (Alloc) {
         assert(AllocStackId == StackId);
-        Alloc->AllocTypes |= static_cast<uint8_t>(AllocType);
+        Alloc->addAllocType(AllocType);
       } else {
         AllocStackId = StackId;
         Alloc = new CallStackTrieNode(AllocType);
@@ -150,22 +163,26 @@ void CallStackTrie::addCallStack(
       continue;
     }
     // Update existing caller node if it exists.
-    auto Next = Curr->Callers.find(StackId);
-    if (Next != Curr->Callers.end()) {
+    CallStackTrieNode *Prev = nullptr;
+    auto [Next, Inserted] = Curr->Callers.try_emplace(StackId);
+    if (!Inserted) {
+      Prev = Curr;
       Curr = Next->second;
-      Curr->AllocTypes |= static_cast<uint8_t>(AllocType);
+      Curr->addAllocType(AllocType);
+      // If this node has an ambiguous alloc type, its callee is not the deepest
+      // point where we have an ambigous allocation type.
+      if (!hasSingleAllocType(Curr->AllocTypes))
+        Prev->DeepestAmbiguousAllocType = false;
       continue;
     }
     // Otherwise add a new caller node.
     auto *New = new CallStackTrieNode(AllocType);
-    Curr->Callers[StackId] = New;
+    Next->second = New;
     Curr = New;
   }
   assert(Curr);
   Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
                                ContextSizeInfo.begin(), ContextSizeInfo.end());
-  std::vector<ContextTotalSize> AllContextSizeInfo;
-  collectContextSizeInfo(Curr, AllContextSizeInfo);
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -224,20 +241,50 @@ void CallStackTrie::collectContextSizeInfo(
     collectContextSizeInfo(Caller.second, ContextSizeInfo);
 }
 
+void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
+  if (Node->hasAllocType(AllocationType::Hot)) {
+    Node->removeAllocType(AllocationType::Hot);
+    Node->addAllocType(AllocationType::NotCold);
+  }
+  for (auto &Caller : Node->Callers)
+    convertHotToNotCold(Caller.second);
+}
+
 // Recursive helper to trim contexts and create metadata nodes.
 // Caller should have pushed Node's loc to MIBCallStack. Doing this in the
 // caller makes it simpler to handle the many early returns in this method.
 bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                                   std::vector<uint64_t> &MIBCallStack,
                                   std::vector<Metadata *> &MIBNodes,
-                                  bool CalleeHasAmbiguousCallerContext) {
+                                  bool CalleeHasAmbiguousCallerContext,
+                                  bool &CalleeDeepestAmbiguousAllocType) {
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
-    std::vector<ContextTotalSize> ContextSizeInfo;
-    collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(createMIBNode(
-        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo));
+    // Because we only clone cold contexts (we don't clone for exposing NotCold
+    // contexts as that is the default allocation behavior), we create MIB
+    // metadata for this context if any of the following are true:
+    // 1) It is cold.
+    // 2) The immediate callee is the deepest point where we have an ambiguous
+    //    allocation type (i.e. the other callers that are cold need to know
+    //    that we have a not cold context overlapping to this point so that we
+    //    know how deep to clone).
+    // 3) MemProfKeepAllNotColdContexts is enabled, which is useful if we are
+    //    reporting hinted sizes, and want to get information from the indexing
+    //    step for all contexts, or have specified a value less than 100% for
+    //    -memprof-cloning-cold-threshold.
+    if (Node->hasAllocType(AllocationType::Cold) ||
+        CalleeDeepestAmbiguousAllocType || MemProfKeepAllNotColdContexts) {
+      std::vector<ContextTotalSize> ContextSizeInfo;
+      collectContextSizeInfo(Node, ContextSizeInfo);
+      MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
+                                       (AllocationType)Node->AllocTypes,
+                                       ContextSizeInfo));
+      // If we just emitted an MIB for a not cold caller, don't need to emit
+      // another one for the callee to correctly disambiguate its cold callers.
+      if (!Node->hasAllocType(AllocationType::Cold))
+        CalleeDeepestAmbiguousAllocType = false;
+    }
     return true;
   }
 
@@ -248,9 +295,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     bool AddedMIBNodesForAllCallerContexts = true;
     for (auto &Caller : Node->Callers) {
       MIBCallStack.push_back(Caller.first);
-      AddedMIBNodesForAllCallerContexts &=
-          buildMIBNodes(Caller.second, Ctx, MIBCallStack, MIBNodes,
-                        NodeHasAmbiguousCallerContext);
+      AddedMIBNodesForAllCallerContexts &= buildMIBNodes(
+          Caller.second, Ctx, MIBCallStack, MIBNodes,
+          NodeHasAmbiguousCallerContext, Node->DeepestAmbiguousAllocType);
       // Remove Caller.
       MIBCallStack.pop_back();
     }
@@ -280,34 +327,60 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   return true;
 }
 
+void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                                StringRef Descriptor) {
+  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  if (MemProfReportHintedSizes) {
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Alloc, ContextSizeInfo);
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+      errs() << "MemProf hinting: Total size for full allocation context hash "
+             << FullStackId << " and " << Descriptor << " alloc type "
+             << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
+    }
+  }
+}
+
 // Build and attach the minimal necessary MIB metadata. If the alloc has a
 // single allocation type, add a function attribute instead. Returns true if
 // memprof metadata attached, false if not (attribute added).
 bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
-  auto &Ctx = CI->getContext();
   if (hasSingleAllocType(Alloc->AllocTypes)) {
-    addAllocTypeAttribute(Ctx, CI, (AllocationType)Alloc->AllocTypes);
-    if (MemProfReportHintedSizes) {
-      std::vector<ContextTotalSize> ContextSizeInfo;
-      collectContextSizeInfo(Alloc, ContextSizeInfo);
-      for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
-        errs()
-            << "MemProf hinting: Total size for full allocation context hash "
-            << FullStackId << " and single alloc type "
-            << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
-            << ": " << TotalSize << "\n";
-      }
-    }
+    addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                "single");
     return false;
   }
+  // If there were any hot allocation contexts, the Alloc trie node would have
+  // the Hot type set. If so, because we don't currently support cloning for hot
+  // contexts, they should be converted to NotCold. This happens in the cloning
+  // support anyway, however, doing this now enables more aggressive context
+  // trimming when building the MIB metadata (and possibly may make the
+  // allocation have a single NotCold allocation type), greatly reducing
+  // overheads in bitcode, cloning memory and cloning time.
+  if (Alloc->hasAllocType(AllocationType::Hot)) {
+    convertHotToNotCold(Alloc);
+    // Check whether we now have a single alloc type.
+    if (hasSingleAllocType(Alloc->AllocTypes)) {
+      addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                  "single");
+      return false;
+    }
+  }
+  auto &Ctx = CI->getContext();
   std::vector<uint64_t> MIBCallStack;
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
   assert(!Alloc->Callers.empty() && "addCallStack has not been called yet");
-  // The last parameter is meant to say whether the callee of the given node
-  // has more than one caller. Here the node being passed in is the alloc
-  // and it has no callees. So it's false.
-  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes, false)) {
+  // The CalleeHasAmbiguousCallerContext flag is meant to say whether the
+  // callee of the given node has more than one caller. Here the node being
+  // passed in is the alloc and it has no callees. So it's false.
+  // Similarly, the last parameter is meant to say whether the callee of the
+  // given node is the deepest point where we have ambiguous alloc types, which
+  // is also false as the alloc has no callees.
+  bool DeepestAmbiguousAllocType = true;
+  if (buildMIBNodes(Alloc, Ctx, MIBCallStack, MIBNodes,
+                    /*CalleeHasAmbiguousCallerContext=*/false,
+                    DeepestAmbiguousAllocType)) {
     assert(MIBCallStack.size() == 1 &&
            "Should only be left with Alloc's location in stack");
     CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
@@ -316,8 +389,9 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   // If there exists corner case that CallStackTrie has one chain to leaf
   // and all node in the chain have multi alloc type, conservatively give
   // it non-cold allocation type.
-  // FIXME: Avoid this case before memory profile created.
-  addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
+  // FIXME: Avoid this case before memory profile created. Alternatively, select
+  // hint based on fraction cold.
+  addSingleAllocTypeAttribute(CI, AllocationType::NotCold, "indistinguishable");
   return false;
 }
 
@@ -343,4 +417,21 @@ template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
   assert(N);
   return mdconst::dyn_extract<ConstantInt>(N->operands().back())
       ->getZExtValue();
+}
+
+MDNode *MDNode::getMergedMemProfMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, such as selecting the one with
+  // more bytes allocated, or implement support for carrying multiple allocation
+  // leaf contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
+
+MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, which will require support for
+  // carrying multiple contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
 }

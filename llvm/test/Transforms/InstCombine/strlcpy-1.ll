@@ -229,18 +229,18 @@ define void @fold_strlcpy_s_0(ptr %dst, ptr %s, i64 %n) {
 define void @call_strlcpy_s0_n(ptr %dst, ptr %s, i64 %n) {
 ; ANY-LABEL: @call_strlcpy_s0_n(
 ; ANY-NEXT:    [[NS_2:%.*]] = call i64 @strlcpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[S:%.*]], i64 2)
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS_2]])
-; ANY-NEXT:    [[NS_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) [[S]], i64 [[N:%.*]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS_N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS_2]])
+; ANY-NEXT:    [[NS_N:%.*]] = call i64 @strlcpy(ptr nonnull [[DST]], ptr noundef nonnull dereferenceable(1) [[S]], i64 [[N:%.*]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS_N]])
 ; ANY-NEXT:    [[NZ:%.*]] = or i64 [[N]], 1
 ; ANY-NEXT:    [[NS_NZ:%.*]] = call i64 @strlcpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[S]], i64 [[NZ]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS_NZ]])
-; ANY-NEXT:    [[NS0_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) getelementptr inbounds (i8, ptr @s4, i64 4), i64 [[N]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS0_N]])
-; ANY-NEXT:    [[NS1_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) getelementptr inbounds (i8, ptr @s4, i64 3), i64 [[N]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS1_N]])
-; ANY-NEXT:    [[NS4_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) @s4, i64 [[N]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS4_N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS_NZ]])
+; ANY-NEXT:    [[NS0_N:%.*]] = call i64 @strlcpy(ptr nonnull [[DST]], ptr noundef nonnull dereferenceable(1) getelementptr inbounds nuw (i8, ptr @s4, i64 4), i64 [[N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS0_N]])
+; ANY-NEXT:    [[NS1_N:%.*]] = call i64 @strlcpy(ptr nonnull [[DST]], ptr noundef nonnull dereferenceable(1) getelementptr inbounds nuw (i8, ptr @s4, i64 3), i64 [[N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS1_N]])
+; ANY-NEXT:    [[NS4_N:%.*]] = call i64 @strlcpy(ptr nonnull [[DST]], ptr noundef nonnull dereferenceable(1) @s4, i64 [[N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], i64 [[NS4_N]])
 ; ANY-NEXT:    ret void
 ;
   %ns_2 = call i64 @strlcpy(ptr %dst, ptr %s, i64 2)

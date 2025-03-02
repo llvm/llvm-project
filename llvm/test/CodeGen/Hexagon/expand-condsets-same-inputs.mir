@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass expand-condsets -expand-condsets-coa-limit=0 -o - %s -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets -expand-condsets-coa-limit=0 -o - %s -verify-machineinstrs | FileCheck %s
 
 # CHECK-LABEL: name: fred
 

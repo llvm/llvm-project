@@ -72,8 +72,7 @@ public:
     mlirCtx->loadDialect<test::DummyDialect>();
 
     mlir::Location loc(mlir::UnknownLoc::get(mlirCtx.get()));
-    mlirModule =
-        std::make_unique<mlir::ModuleOp>(mlir::ModuleOp::create(loc, "mod"));
+    mlirModule = mlir::ModuleOp::create(loc, "mod");
 
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());

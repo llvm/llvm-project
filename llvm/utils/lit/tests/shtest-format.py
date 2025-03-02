@@ -18,7 +18,7 @@
 # CHECK: Command Output (stderr):
 # CHECK-NEXT: --
 # CHECK-NOT: --
-# CHECK: cat{{(_64)?(\.exe)?}}: {{cannot open does-not-exist|does-not-exist: No such file or directory}}
+# CHECK: cat{{(_64)?(\.exe)?}}: {{(cannot open does-not-exist|.*does-not-exist.*: No such file or directory)}}
 # CHECK: --
 
 # CHECK: FAIL: shtest-format :: external_shell/fail_with_bad_encoding.txt

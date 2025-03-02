@@ -83,7 +83,7 @@ protected:
 
   /// Loads multiple bitcode files.
   LogicalResult loadBitcodeFilesFromList(
-      llvm::LLVMContext &context, ArrayRef<std::string> fileList,
+      llvm::LLVMContext &context, ArrayRef<Attribute> librariesToLink,
       SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
       bool failureOnError = true);
 

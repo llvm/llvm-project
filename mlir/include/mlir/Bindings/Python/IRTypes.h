@@ -9,7 +9,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRTYPES_H
 #define MLIR_BINDINGS_PYTHON_IRTYPES_H
 
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace mlir {
 

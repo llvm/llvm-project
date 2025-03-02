@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_HASH_MAP
-#define _LIBCPP_HASH_MAP
+#ifndef _LIBCPP___CXX03_HASH_MAP
+#define _LIBCPP___CXX03_HASH_MAP
 
 /*
 
@@ -869,4 +869,4 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multimap<_Key, _Tp, _Has
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_HASH_MAP
+#endif // _LIBCPP___CXX03_HASH_MAP

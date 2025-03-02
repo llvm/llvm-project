@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; Used to fail with "Cannot select: 0x16cb2d0: v4i16 = zero_extend"
 
 ; ModuleID = 'bugpoint-reduced-simplified.bc'

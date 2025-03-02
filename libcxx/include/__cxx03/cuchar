@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CUCHAR
-#define _LIBCPP_CUCHAR
+#ifndef _LIBCPP___CXX03_CUCHAR
+#define _LIBCPP___CXX03_CUCHAR
 
 /*
     cuchar synopsis // since C++11
@@ -40,7 +40,7 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 
 #include <__cxx03/uchar.h>
 
-#ifndef _LIBCPP_UCHAR_H
+#ifndef _LIBCPP___CXX03_UCHAR_H
 #   error <cuchar> tried including <uchar.h> but didn't find libc++'s <uchar.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -72,4 +72,4 @@ using ::c32rtomb _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_CUCHAR
+#endif // _LIBCPP___CXX03_CUCHAR

@@ -70,11 +70,11 @@ define void @fold_stpncpy_overlap(ptr %dst, i64 %n) {
 define void @call_stpncpy_overlap(ptr %dst, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_overlap(
 ; ANY-NEXT:    [[ES_2:%.*]] = call ptr @stpncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 2)
-; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES_2]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ES_2]])
 ; ANY-NEXT:    [[ES_3:%.*]] = call ptr @stpncpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 3)
-; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES_3]])
-; ANY-NEXT:    [[ES_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr [[DST]], i64 [[N:%.*]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES_N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ES_3]])
+; ANY-NEXT:    [[ES_N:%.*]] = call ptr @stpncpy(ptr nonnull [[DST]], ptr nonnull [[DST]], i64 [[N:%.*]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ES_N]])
 ; ANY-NEXT:    ret void
 ;
 ; Do not transform stpncpy(D, D, 2).
@@ -273,11 +273,11 @@ define void @fold_stpncpy_s4(ptr %dst, i64 %n) {
 
 define void @call_stpncpy_xx_n(ptr %dst, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_xx_n(
-; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @a4, i64 3), i64 [[N:%.*]])
+; ANY-NEXT:    [[EA1_N:%.*]] = call ptr @stpncpy(ptr [[DST:%.*]], ptr nonnull dereferenceable(2) getelementptr inbounds nuw (i8, ptr @a4, i64 3), i64 [[N:%.*]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA1_N]])
 ; ANY-NEXT:    [[EA4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @a4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[EA4_N]])
-; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds (i8, ptr @s4, i64 3), i64 [[N]])
+; ANY-NEXT:    [[ES1_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(2) getelementptr inbounds nuw (i8, ptr @s4, i64 3), i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES1_N]])
 ; ANY-NEXT:    [[ES4_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr nonnull dereferenceable(5) @s4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES4_N]])
@@ -428,9 +428,9 @@ define void @fold_stpncpy_s(ptr %dst, ptr %src) {
 define void @call_stpncpy_s(ptr %dst, ptr %src, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_s(
 ; ANY-NEXT:    [[ES_2:%.*]] = call ptr @stpncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[SRC:%.*]], i64 2)
-; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES_2]])
-; ANY-NEXT:    [[ES_N:%.*]] = call ptr @stpncpy(ptr [[DST]], ptr [[SRC]], i64 [[N:%.*]])
-; ANY-NEXT:    call void @sink(ptr [[DST]], ptr [[ES_N]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ES_2]])
+; ANY-NEXT:    [[ES_N:%.*]] = call ptr @stpncpy(ptr nonnull [[DST]], ptr nonnull [[SRC]], i64 [[N:%.*]])
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ES_N]])
 ; ANY-NEXT:    ret void
 ;
 ; Do not transform stpncpy(D, S, 2).  Both *D and *S must be derefernceable

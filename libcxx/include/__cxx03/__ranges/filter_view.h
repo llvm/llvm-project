@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_FILTER_VIEW_H
-#define _LIBCPP___RANGES_FILTER_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_FILTER_VIEW_H
+#define _LIBCPP___CXX03___RANGES_FILTER_VIEW_H
 
 #include <__cxx03/__algorithm/ranges_find_if.h>
 #include <__cxx03/__assert>
@@ -257,4 +257,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_FILTER_VIEW_H
+#endif // _LIBCPP___CXX03___RANGES_FILTER_VIEW_H

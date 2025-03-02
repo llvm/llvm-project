@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_COPY_CV_H
-#define _LIBCPP___TYPE_TRAITS_COPY_CV_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_COPY_CV_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_COPY_CV_H
 
 #include <__cxx03/__config>
 
@@ -48,4 +48,4 @@ using __copy_cv_t = typename __copy_cv<_From>::template __apply<_To>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_COPY_CV_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_COPY_CV_H

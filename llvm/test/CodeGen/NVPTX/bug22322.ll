@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -8,7 +8,7 @@ target triple = "nvptx64-nvidia-cuda"
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: some_kernel
-define void @some_kernel(ptr nocapture %dst) #0 {
+define ptx_kernel void @some_kernel(ptr nocapture %dst) #0 {
 _ZL11compute_vecRK6float3jb.exit:
   %ret_vec.sroa.8.i = alloca float, align 4
   %0 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
@@ -55,8 +55,5 @@ attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "n
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 
-!nvvm.annotations = !{!0}
 !llvm.ident = !{!1}
-
-!0 = !{ptr @some_kernel, !"kernel", i32 1}
 !1 = !{!"clang version 3.5.1 (tags/RELEASE_351/final)"}

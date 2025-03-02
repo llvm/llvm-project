@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef _LIBCPP___EXPECTED_UNEXPECTED_H
-#define _LIBCPP___EXPECTED_UNEXPECTED_H
+#ifndef _LIBCPP___CXX03___EXPECTED_UNEXPECTED_H
+#define _LIBCPP___CXX03___EXPECTED_UNEXPECTED_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conjunction.h>
@@ -124,4 +124,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___EXPECTED_UNEXPECTED_H
+#endif // _LIBCPP___CXX03___EXPECTED_UNEXPECTED_H

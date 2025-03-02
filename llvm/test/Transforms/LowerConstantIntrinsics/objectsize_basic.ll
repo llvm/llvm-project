@@ -214,7 +214,7 @@ define i64 @wrapping_gep_neg(i1 %c) {
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 9223372036854775807
 ; CHECK-NEXT:    [[SLIDE_BIS:%.*]] = getelementptr i8, ptr [[SLIDE]], i64 9223372036854775807
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -1
 ;
   %obj = alloca i8, i64 4
   %slide = getelementptr i8, ptr %obj, i64 9223372036854775807
@@ -269,7 +269,7 @@ define i64 @out_of_bound_negative_gep(i1 %c) {
 ; CHECK-LABEL: @out_of_bound_negative_gep(
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i32 4, align 1
 ; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i8 -8
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 -1
 ;
   %obj = alloca i8, i32 4
   %slide = getelementptr i8, ptr %obj, i8 -8

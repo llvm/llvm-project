@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ADJACENT_FIND_H
-#define _LIBCPP___ALGORITHM_ADJACENT_FIND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ADJACENT_FIND_H
+#define _LIBCPP___CXX03___ALGORITHM_ADJACENT_FIND_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/iterator_operations.h>
@@ -55,4 +55,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_ADJACENT_FIND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ADJACENT_FIND_H

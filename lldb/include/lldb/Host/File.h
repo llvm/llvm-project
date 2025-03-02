@@ -377,6 +377,11 @@ private:
 
 class NativeFile : public File {
 public:
+  enum TransferOwnership : bool {
+    Owned = true,
+    Unowned = false,
+  };
+
   NativeFile() : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
 
   NativeFile(FILE *fh, bool transfer_ownership)

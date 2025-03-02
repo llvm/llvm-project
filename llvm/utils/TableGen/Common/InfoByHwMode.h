@@ -144,7 +144,7 @@ template <typename InfoT> struct InfoByHwMode {
     assert(hasMode(Mode) || hasDefault());
     InfoT I = get(Mode);
     Map.clear();
-    Map.insert(std::pair(DefaultMode, I));
+    Map.try_emplace(DefaultMode, I);
   }
 
 protected:
@@ -212,7 +212,7 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   void writeToStream(raw_ostream &OS) const;
 
   void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 
@@ -233,7 +233,7 @@ struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
   SubRegRangeByHwMode() = default;
 
   void insertSubRegRangeForMode(unsigned Mode, SubRegRange Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 

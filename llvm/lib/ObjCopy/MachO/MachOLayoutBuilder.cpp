@@ -116,6 +116,11 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
   const bool IsObjectFile =
       O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
   uint64_t Offset = IsObjectFile ? (HeaderSize + O.Header.SizeOfCmds) : 0;
+  if (O.EncryptionInfoCommandIndex) {
+    // If we are emitting an encryptable binary, our load commands must have a
+    // separate (non-encrypted) page to themselves.
+    Offset = alignToPowerOf2(HeaderSize + O.Header.SizeOfCmds, PageSize);
+  }
   for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     StringRef Segname;

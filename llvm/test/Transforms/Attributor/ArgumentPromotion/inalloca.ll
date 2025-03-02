@@ -10,7 +10,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @f(ptr inalloca(%struct.ss) %s) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 captures(none) dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[S]], align 4
@@ -35,7 +35,7 @@ define i32 @main() {
 ; TUNIT-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 4
 ; TUNIT-NEXT:    store i32 2, ptr [[F1]], align 4
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 captures(none) dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -46,7 +46,7 @@ define i32 @main() {
 ; CGSCC-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CGSCC-NEXT:    store i32 1, ptr [[S]], align 4
 ; CGSCC-NEXT:    store i32 2, ptr [[F1]], align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 captures(none) dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -62,7 +62,7 @@ entry:
 define internal i1 @g(ptr %a, ptr inalloca(%struct.ss) %b) nounwind  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@g
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull readnone align 4 captures(none) dereferenceable(8) [[A:%.*]], ptr noalias nofree noundef nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 captures(none) dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    ret i1 undef
 ;

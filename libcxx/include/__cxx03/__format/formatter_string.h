@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_STRING_H
-#define _LIBCPP___FORMAT_FORMATTER_STRING_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_STRING_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_STRING_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__format/concepts.h>
@@ -147,4 +147,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter<basic_string_view<_CharT, _Traits>, _CharT
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_STRING_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_STRING_H

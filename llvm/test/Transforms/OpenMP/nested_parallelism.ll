@@ -43,7 +43,7 @@ target triple = "nvptx64"
 ; CHECK: @__omp_offloading_10302_bd7e0_main_l13_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @__omp_offloading_10302_bd7e0_main_l16_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected ptx_kernel void @__omp_offloading_10302_bd7e0_main_l13(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
@@ -127,7 +127,7 @@ entry:
 
 declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
 
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected ptx_kernel void @__omp_offloading_10302_bd7e0_main_l16(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
@@ -315,13 +315,10 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #11
 
 
 !omp_offload.info = !{!0, !1}
-!nvvm.annotations = !{!2, !3}
 !llvm.module.flags = !{!4, !5}
 
 !0 = !{i32 0, i32 66306, i32 776160, !"main", i32 13, i32 0, i32 0}
 !1 = !{i32 0, i32 66306, i32 776160, !"main", i32 16, i32 0, i32 1}
-!2 = !{ptr @__omp_offloading_10302_bd7e0_main_l13, !"kernel", i32 1}
-!3 = !{ptr @__omp_offloading_10302_bd7e0_main_l16, !"kernel", i32 1}
 
 !4 = !{i32 7, !"openmp", i32 50}
 !5 = !{i32 7, !"openmp-device", i32 50}
@@ -336,8 +333,6 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #11
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 66306, i32 776160, !"main", i32 13, i32 0, i32 0}
 ; CHECK: [[META1:![0-9]+]] = !{i32 0, i32 66306, i32 776160, !"main", i32 16, i32 0, i32 1}
-; CHECK: [[META2:![0-9]+]] = !{ptr @__omp_offloading_10302_bd7e0_main_l13, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @__omp_offloading_10302_bd7e0_main_l16, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.

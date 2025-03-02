@@ -659,6 +659,7 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
 
     IDecl->setSuperClass(SuperClassTInfo);
     IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getEndLoc());
+    getASTContext().addObjCSubClass(IDecl->getSuperClass(), IDecl);
   }
 }
 
@@ -1584,7 +1585,7 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     const char* prevSpec; // unused
     unsigned diagID; // unused
     QualType type;
-    if (auto *actualTypeDecl = typeDecl.dyn_cast<TypeDecl *>())
+    if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
       type = Context.getTypeDeclType(actualTypeDecl);
     else
       type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
@@ -2129,6 +2130,12 @@ SemaObjC::ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
 
   DeclsInGroup.push_back(ObjCImpDecl);
 
+  // Reset the cached layout if there are any ivars added to
+  // the implementation.
+  if (auto *ImplD = dyn_cast<ObjCImplementationDecl>(ObjCImpDecl))
+    if (!ImplD->ivar_empty())
+      getASTContext().ResetObjCLayout(ImplD->getClassInterface());
+
   return SemaRef.BuildDeclaratorGroup(DeclsInGroup);
 }
 
@@ -2210,8 +2217,7 @@ void SemaObjC::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
         << ImplIvar->getType() << ClsIvar->getType();
       Diag(ClsIvar->getLocation(), diag::note_previous_definition);
     } else if (ImplIvar->isBitField() && ClsIvar->isBitField() &&
-               ImplIvar->getBitWidthValue(Context) !=
-               ClsIvar->getBitWidthValue(Context)) {
+               ImplIvar->getBitWidthValue() != ClsIvar->getBitWidthValue()) {
       Diag(ImplIvar->getBitWidth()->getBeginLoc(),
            diag::err_conflicting_ivar_bitwidth)
           << ImplIvar->getIdentifier();

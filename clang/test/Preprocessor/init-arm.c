@@ -46,26 +46,31 @@
 // ARM:#define __FLT_MIN_EXP__ (-125)
 // ARM:#define __FLT_MIN__ 1.17549435e-38F
 // ARM:#define __FLT_RADIX__ 2
+// ARM:#define __INT16_C(c) c
 // ARM:#define __INT16_C_SUFFIX__
 // ARM:#define __INT16_FMTd__ "hd"
 // ARM:#define __INT16_FMTi__ "hi"
 // ARM:#define __INT16_MAX__ 32767
 // ARM:#define __INT16_TYPE__ short
+// ARM:#define __INT32_C(c) c
 // ARM:#define __INT32_C_SUFFIX__
 // ARM:#define __INT32_FMTd__ "d"
 // ARM:#define __INT32_FMTi__ "i"
 // ARM:#define __INT32_MAX__ 2147483647
 // ARM:#define __INT32_TYPE__ int
+// ARM:#define __INT64_C(c) c##LL
 // ARM:#define __INT64_C_SUFFIX__ LL
 // ARM:#define __INT64_FMTd__ "lld"
 // ARM:#define __INT64_FMTi__ "lli"
 // ARM:#define __INT64_MAX__ 9223372036854775807LL
 // ARM:#define __INT64_TYPE__ long long int
+// ARM:#define __INT8_C(c) c
 // ARM:#define __INT8_C_SUFFIX__
 // ARM:#define __INT8_FMTd__ "hhd"
 // ARM:#define __INT8_FMTi__ "hhi"
 // ARM:#define __INT8_MAX__ 127
 // ARM:#define __INT8_TYPE__ signed char
+// ARM:#define __INTMAX_C(c) c##LL
 // ARM:#define __INTMAX_C_SUFFIX__ LL
 // ARM:#define __INTMAX_FMTd__ "lld"
 // ARM:#define __INTMAX_FMTi__ "lli"
@@ -151,18 +156,23 @@
 // ARM:#define __SIZE_TYPE__ unsigned int
 // ARM:#define __SIZE_WIDTH__ 32
 // ARM-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
+// ARM:#define __UINT16_C(c) c
 // ARM:#define __UINT16_C_SUFFIX__
 // ARM:#define __UINT16_MAX__ 65535
 // ARM:#define __UINT16_TYPE__ unsigned short
+// ARM:#define __UINT32_C(c) c##U
 // ARM:#define __UINT32_C_SUFFIX__ U
 // ARM:#define __UINT32_MAX__ 4294967295U
 // ARM:#define __UINT32_TYPE__ unsigned int
+// ARM:#define __UINT64_C(c) c##ULL
 // ARM:#define __UINT64_C_SUFFIX__ ULL
 // ARM:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARM:#define __UINT64_TYPE__ long long unsigned int
+// ARM:#define __UINT8_C(c) c
 // ARM:#define __UINT8_C_SUFFIX__
 // ARM:#define __UINT8_MAX__ 255
 // ARM:#define __UINT8_TYPE__ unsigned char
+// ARM:#define __UINTMAX_C(c) c##ULL
 // ARM:#define __UINTMAX_C_SUFFIX__ ULL
 // ARM:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM:#define __UINTMAX_TYPE__ long long unsigned int
@@ -248,26 +258,31 @@
 // ARM-BE:#define __FLT_MIN_EXP__ (-125)
 // ARM-BE:#define __FLT_MIN__ 1.17549435e-38F
 // ARM-BE:#define __FLT_RADIX__ 2
+// ARM-BE:#define __INT16_C(c) c
 // ARM-BE:#define __INT16_C_SUFFIX__
 // ARM-BE:#define __INT16_FMTd__ "hd"
 // ARM-BE:#define __INT16_FMTi__ "hi"
 // ARM-BE:#define __INT16_MAX__ 32767
 // ARM-BE:#define __INT16_TYPE__ short
+// ARM-BE:#define __INT32_C(c) c
 // ARM-BE:#define __INT32_C_SUFFIX__
 // ARM-BE:#define __INT32_FMTd__ "d"
 // ARM-BE:#define __INT32_FMTi__ "i"
 // ARM-BE:#define __INT32_MAX__ 2147483647
 // ARM-BE:#define __INT32_TYPE__ int
+// ARM-BE:#define __INT64_C(c) c##LL
 // ARM-BE:#define __INT64_C_SUFFIX__ LL
 // ARM-BE:#define __INT64_FMTd__ "lld"
 // ARM-BE:#define __INT64_FMTi__ "lli"
 // ARM-BE:#define __INT64_MAX__ 9223372036854775807LL
 // ARM-BE:#define __INT64_TYPE__ long long int
+// ARM-BE:#define __INT8_C(c) c
 // ARM-BE:#define __INT8_C_SUFFIX__
 // ARM-BE:#define __INT8_FMTd__ "hhd"
 // ARM-BE:#define __INT8_FMTi__ "hhi"
 // ARM-BE:#define __INT8_MAX__ 127
 // ARM-BE:#define __INT8_TYPE__ signed char
+// ARM-BE:#define __INTMAX_C(c) c##LL
 // ARM-BE:#define __INTMAX_C_SUFFIX__ LL
 // ARM-BE:#define __INTMAX_FMTd__ "lld"
 // ARM-BE:#define __INTMAX_FMTi__ "lli"
@@ -351,18 +366,23 @@
 // ARM-BE:#define __SIZE_MAX__ 4294967295U
 // ARM-BE:#define __SIZE_TYPE__ unsigned int
 // ARM-BE:#define __SIZE_WIDTH__ 32
+// ARM-BE:#define __UINT16_C(c) c
 // ARM-BE:#define __UINT16_C_SUFFIX__
 // ARM-BE:#define __UINT16_MAX__ 65535
 // ARM-BE:#define __UINT16_TYPE__ unsigned short
+// ARM-BE:#define __UINT32_C(c) c##U
 // ARM-BE:#define __UINT32_C_SUFFIX__ U
 // ARM-BE:#define __UINT32_MAX__ 4294967295U
 // ARM-BE:#define __UINT32_TYPE__ unsigned int
+// ARM-BE:#define __UINT64_C(c) c##ULL
 // ARM-BE:#define __UINT64_C_SUFFIX__ ULL
 // ARM-BE:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARM-BE:#define __UINT64_TYPE__ long long unsigned int
+// ARM-BE:#define __UINT8_C(c) c
 // ARM-BE:#define __UINT8_C_SUFFIX__
 // ARM-BE:#define __UINT8_MAX__ 255
 // ARM-BE:#define __UINT8_TYPE__ unsigned char
+// ARM-BE:#define __UINTMAX_C(c) c##ULL
 // ARM-BE:#define __UINTMAX_C_SUFFIX__ ULL
 // ARM-BE:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM-BE:#define __UINTMAX_TYPE__ long long unsigned int
@@ -440,26 +460,31 @@
 // ARMEABISOFT:#define __FLT_MIN_EXP__ (-125)
 // ARMEABISOFT:#define __FLT_MIN__ 1.17549435e-38F
 // ARMEABISOFT:#define __FLT_RADIX__ 2
+// ARMEABISOFT:#define __INT16_C(c) c
 // ARMEABISOFT:#define __INT16_C_SUFFIX__
 // ARMEABISOFT:#define __INT16_FMTd__ "hd"
 // ARMEABISOFT:#define __INT16_FMTi__ "hi"
 // ARMEABISOFT:#define __INT16_MAX__ 32767
 // ARMEABISOFT:#define __INT16_TYPE__ short
+// ARMEABISOFT:#define __INT32_C(c) c
 // ARMEABISOFT:#define __INT32_C_SUFFIX__
 // ARMEABISOFT:#define __INT32_FMTd__ "d"
 // ARMEABISOFT:#define __INT32_FMTi__ "i"
 // ARMEABISOFT:#define __INT32_MAX__ 2147483647
 // ARMEABISOFT:#define __INT32_TYPE__ int
+// ARMEABISOFT:#define __INT64_C(c) c##LL
 // ARMEABISOFT:#define __INT64_C_SUFFIX__ LL
 // ARMEABISOFT:#define __INT64_FMTd__ "lld"
 // ARMEABISOFT:#define __INT64_FMTi__ "lli"
 // ARMEABISOFT:#define __INT64_MAX__ 9223372036854775807LL
 // ARMEABISOFT:#define __INT64_TYPE__ long long int
+// ARMEABISOFT:#define __INT8_C(c) c
 // ARMEABISOFT:#define __INT8_C_SUFFIX__
 // ARMEABISOFT:#define __INT8_FMTd__ "hhd"
 // ARMEABISOFT:#define __INT8_FMTi__ "hhi"
 // ARMEABISOFT:#define __INT8_MAX__ 127
 // ARMEABISOFT:#define __INT8_TYPE__ signed char
+// ARMEABISOFT:#define __INTMAX_C(c) c##LL
 // ARMEABISOFT:#define __INTMAX_C_SUFFIX__ LL
 // ARMEABISOFT:#define __INTMAX_FMTd__ "lld"
 // ARMEABISOFT:#define __INTMAX_FMTi__ "lli"
@@ -545,18 +570,23 @@
 // ARMEABISOFT:#define __SIZE_TYPE__ unsigned int
 // ARMEABISOFT:#define __SIZE_WIDTH__ 32
 // ARMEABISOFT:#define __SOFTFP__ 1
+// ARMEABISOFT:#define __UINT16_C(c) c
 // ARMEABISOFT:#define __UINT16_C_SUFFIX__
 // ARMEABISOFT:#define __UINT16_MAX__ 65535
 // ARMEABISOFT:#define __UINT16_TYPE__ unsigned short
+// ARMEABISOFT:#define __UINT32_C(c) c##U
 // ARMEABISOFT:#define __UINT32_C_SUFFIX__ U
 // ARMEABISOFT:#define __UINT32_MAX__ 4294967295U
 // ARMEABISOFT:#define __UINT32_TYPE__ unsigned int
+// ARMEABISOFT:#define __UINT64_C(c) c##ULL
 // ARMEABISOFT:#define __UINT64_C_SUFFIX__ ULL
 // ARMEABISOFT:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARMEABISOFT:#define __UINT64_TYPE__ long long unsigned int
+// ARMEABISOFT:#define __UINT8_C(c) c
 // ARMEABISOFT:#define __UINT8_C_SUFFIX__
 // ARMEABISOFT:#define __UINT8_MAX__ 255
 // ARMEABISOFT:#define __UINT8_TYPE__ unsigned char
+// ARMEABISOFT:#define __UINTMAX_C(c) c##ULL
 // ARMEABISOFT:#define __UINTMAX_C_SUFFIX__ ULL
 // ARMEABISOFT:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABISOFT:#define __UINTMAX_TYPE__ long long unsigned int
@@ -640,26 +670,31 @@
 // ARMEABISOFTFP_NOFP:#define __FLT_MIN_EXP__ (-125)
 // ARMEABISOFTFP_NOFP:#define __FLT_MIN__ 1.17549435e-38F
 // ARMEABISOFTFP_NOFP:#define __FLT_RADIX__ 2
+// ARMEABISOFTFP_NOFP:#define __INT16_C(c) c
 // ARMEABISOFTFP_NOFP:#define __INT16_C_SUFFIX__
 // ARMEABISOFTFP_NOFP:#define __INT16_FMTd__ "hd"
 // ARMEABISOFTFP_NOFP:#define __INT16_FMTi__ "hi"
 // ARMEABISOFTFP_NOFP:#define __INT16_MAX__ 32767
 // ARMEABISOFTFP_NOFP:#define __INT16_TYPE__ short
+// ARMEABISOFTFP_NOFP:#define __INT32_C(c) c
 // ARMEABISOFTFP_NOFP:#define __INT32_C_SUFFIX__
 // ARMEABISOFTFP_NOFP:#define __INT32_FMTd__ "d"
 // ARMEABISOFTFP_NOFP:#define __INT32_FMTi__ "i"
 // ARMEABISOFTFP_NOFP:#define __INT32_MAX__ 2147483647
 // ARMEABISOFTFP_NOFP:#define __INT32_TYPE__ int
+// ARMEABISOFTFP_NOFP:#define __INT64_C(c) c##LL
 // ARMEABISOFTFP_NOFP:#define __INT64_C_SUFFIX__ LL
 // ARMEABISOFTFP_NOFP:#define __INT64_FMTd__ "lld"
 // ARMEABISOFTFP_NOFP:#define __INT64_FMTi__ "lli"
 // ARMEABISOFTFP_NOFP:#define __INT64_MAX__ 9223372036854775807LL
 // ARMEABISOFTFP_NOFP:#define __INT64_TYPE__ long long int
+// ARMEABISOFTFP_NOFP:#define __INT8_C(c) c
 // ARMEABISOFTFP_NOFP:#define __INT8_C_SUFFIX__
 // ARMEABISOFTFP_NOFP:#define __INT8_FMTd__ "hhd"
 // ARMEABISOFTFP_NOFP:#define __INT8_FMTi__ "hhi"
 // ARMEABISOFTFP_NOFP:#define __INT8_MAX__ 127
 // ARMEABISOFTFP_NOFP:#define __INT8_TYPE__ signed char
+// ARMEABISOFTFP_NOFP:#define __INTMAX_C(c) c##LL
 // ARMEABISOFTFP_NOFP:#define __INTMAX_C_SUFFIX__ LL
 // ARMEABISOFTFP_NOFP:#define __INTMAX_FMTd__ "lld"
 // ARMEABISOFTFP_NOFP:#define __INTMAX_FMTi__ "lli"
@@ -745,18 +780,23 @@
 // ARMEABISOFTFP_NOFP:#define __SIZE_TYPE__ unsigned int
 // ARMEABISOFTFP_NOFP:#define __SIZE_WIDTH__ 32
 // ARMEABISOFTFP_NOFP:#define __SOFTFP__ 1
+// ARMEABISOFTFP_NOFP:#define __UINT16_C(c) c
 // ARMEABISOFTFP_NOFP:#define __UINT16_C_SUFFIX__
 // ARMEABISOFTFP_NOFP:#define __UINT16_MAX__ 65535
 // ARMEABISOFTFP_NOFP:#define __UINT16_TYPE__ unsigned short
+// ARMEABISOFTFP_NOFP:#define __UINT32_C(c) c##U
 // ARMEABISOFTFP_NOFP:#define __UINT32_C_SUFFIX__ U
 // ARMEABISOFTFP_NOFP:#define __UINT32_MAX__ 4294967295U
 // ARMEABISOFTFP_NOFP:#define __UINT32_TYPE__ unsigned int
+// ARMEABISOFTFP_NOFP:#define __UINT64_C(c) c##ULL
 // ARMEABISOFTFP_NOFP:#define __UINT64_C_SUFFIX__ ULL
 // ARMEABISOFTFP_NOFP:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARMEABISOFTFP_NOFP:#define __UINT64_TYPE__ long long unsigned int
+// ARMEABISOFTFP_NOFP:#define __UINT8_C(c) c
 // ARMEABISOFTFP_NOFP:#define __UINT8_C_SUFFIX__
 // ARMEABISOFTFP_NOFP:#define __UINT8_MAX__ 255
 // ARMEABISOFTFP_NOFP:#define __UINT8_TYPE__ unsigned char
+// ARMEABISOFTFP_NOFP:#define __UINTMAX_C(c) c##ULL
 // ARMEABISOFTFP_NOFP:#define __UINTMAX_C_SUFFIX__ ULL
 // ARMEABISOFTFP_NOFP:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABISOFTFP_NOFP:#define __UINTMAX_TYPE__ long long unsigned int
@@ -834,26 +874,31 @@
 // ARMEABISOFTFP_FP:#define __FLT_MIN_EXP__ (-125)
 // ARMEABISOFTFP_FP:#define __FLT_MIN__ 1.17549435e-38F
 // ARMEABISOFTFP_FP:#define __FLT_RADIX__ 2
+// ARMEABISOFTFP_FP:#define __INT16_C(c) c
 // ARMEABISOFTFP_FP:#define __INT16_C_SUFFIX__
 // ARMEABISOFTFP_FP:#define __INT16_FMTd__ "hd"
 // ARMEABISOFTFP_FP:#define __INT16_FMTi__ "hi"
 // ARMEABISOFTFP_FP:#define __INT16_MAX__ 32767
 // ARMEABISOFTFP_FP:#define __INT16_TYPE__ short
+// ARMEABISOFTFP_FP:#define __INT32_C(c) c
 // ARMEABISOFTFP_FP:#define __INT32_C_SUFFIX__
 // ARMEABISOFTFP_FP:#define __INT32_FMTd__ "d"
 // ARMEABISOFTFP_FP:#define __INT32_FMTi__ "i"
 // ARMEABISOFTFP_FP:#define __INT32_MAX__ 2147483647
 // ARMEABISOFTFP_FP:#define __INT32_TYPE__ int
+// ARMEABISOFTFP_FP:#define __INT64_C(c) c##LL
 // ARMEABISOFTFP_FP:#define __INT64_C_SUFFIX__ LL
 // ARMEABISOFTFP_FP:#define __INT64_FMTd__ "lld"
 // ARMEABISOFTFP_FP:#define __INT64_FMTi__ "lli"
 // ARMEABISOFTFP_FP:#define __INT64_MAX__ 9223372036854775807LL
 // ARMEABISOFTFP_FP:#define __INT64_TYPE__ long long int
+// ARMEABISOFTFP_FP:#define __INT8_C(c) c
 // ARMEABISOFTFP_FP:#define __INT8_C_SUFFIX__
 // ARMEABISOFTFP_FP:#define __INT8_FMTd__ "hhd"
 // ARMEABISOFTFP_FP:#define __INT8_FMTi__ "hhi"
 // ARMEABISOFTFP_FP:#define __INT8_MAX__ 127
 // ARMEABISOFTFP_FP:#define __INT8_TYPE__ signed char
+// ARMEABISOFTFP_FP:#define __INTMAX_C(c) c##LL
 // ARMEABISOFTFP_FP:#define __INTMAX_C_SUFFIX__ LL
 // ARMEABISOFTFP_FP:#define __INTMAX_FMTd__ "lld"
 // ARMEABISOFTFP_FP:#define __INTMAX_FMTi__ "lli"
@@ -939,18 +984,23 @@
 // ARMEABISOFTFP_FP:#define __SIZE_TYPE__ unsigned int
 // ARMEABISOFTFP_FP:#define __SIZE_WIDTH__ 32
 // ARMEABISOFTFP_FP-NOT:#define __SOFTFP__ 1
+// ARMEABISOFTFP_FP:#define __UINT16_C(c) c
 // ARMEABISOFTFP_FP:#define __UINT16_C_SUFFIX__
 // ARMEABISOFTFP_FP:#define __UINT16_MAX__ 65535
 // ARMEABISOFTFP_FP:#define __UINT16_TYPE__ unsigned short
+// ARMEABISOFTFP_FP:#define __UINT32_C(c) c##U
 // ARMEABISOFTFP_FP:#define __UINT32_C_SUFFIX__ U
 // ARMEABISOFTFP_FP:#define __UINT32_MAX__ 4294967295U
 // ARMEABISOFTFP_FP:#define __UINT32_TYPE__ unsigned int
+// ARMEABISOFTFP_FP:#define __UINT64_C(c) c##ULL
 // ARMEABISOFTFP_FP:#define __UINT64_C_SUFFIX__ ULL
 // ARMEABISOFTFP_FP:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARMEABISOFTFP_FP:#define __UINT64_TYPE__ long long unsigned int
+// ARMEABISOFTFP_FP:#define __UINT8_C(c) c
 // ARMEABISOFTFP_FP:#define __UINT8_C_SUFFIX__
 // ARMEABISOFTFP_FP:#define __UINT8_MAX__ 255
 // ARMEABISOFTFP_FP:#define __UINT8_TYPE__ unsigned char
+// ARMEABISOFTFP_FP:#define __UINTMAX_C(c) c##ULL
 // ARMEABISOFTFP_FP:#define __UINTMAX_C_SUFFIX__ ULL
 // ARMEABISOFTFP_FP:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABISOFTFP_FP:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1028,26 +1078,31 @@
 // ARMEABIHARDFP:#define __FLT_MIN_EXP__ (-125)
 // ARMEABIHARDFP:#define __FLT_MIN__ 1.17549435e-38F
 // ARMEABIHARDFP:#define __FLT_RADIX__ 2
+// ARMEABIHARDFP:#define __INT16_C(c) c
 // ARMEABIHARDFP:#define __INT16_C_SUFFIX__
 // ARMEABIHARDFP:#define __INT16_FMTd__ "hd"
 // ARMEABIHARDFP:#define __INT16_FMTi__ "hi"
 // ARMEABIHARDFP:#define __INT16_MAX__ 32767
 // ARMEABIHARDFP:#define __INT16_TYPE__ short
+// ARMEABIHARDFP:#define __INT32_C(c) c
 // ARMEABIHARDFP:#define __INT32_C_SUFFIX__
 // ARMEABIHARDFP:#define __INT32_FMTd__ "d"
 // ARMEABIHARDFP:#define __INT32_FMTi__ "i"
 // ARMEABIHARDFP:#define __INT32_MAX__ 2147483647
 // ARMEABIHARDFP:#define __INT32_TYPE__ int
+// ARMEABIHARDFP:#define __INT64_C(c) c##LL
 // ARMEABIHARDFP:#define __INT64_C_SUFFIX__ LL
 // ARMEABIHARDFP:#define __INT64_FMTd__ "lld"
 // ARMEABIHARDFP:#define __INT64_FMTi__ "lli"
 // ARMEABIHARDFP:#define __INT64_MAX__ 9223372036854775807LL
 // ARMEABIHARDFP:#define __INT64_TYPE__ long long int
+// ARMEABIHARDFP:#define __INT8_C(c) c
 // ARMEABIHARDFP:#define __INT8_C_SUFFIX__
 // ARMEABIHARDFP:#define __INT8_FMTd__ "hhd"
 // ARMEABIHARDFP:#define __INT8_FMTi__ "hhi"
 // ARMEABIHARDFP:#define __INT8_MAX__ 127
 // ARMEABIHARDFP:#define __INT8_TYPE__ signed char
+// ARMEABIHARDFP:#define __INTMAX_C(c) c##LL
 // ARMEABIHARDFP:#define __INTMAX_C_SUFFIX__ LL
 // ARMEABIHARDFP:#define __INTMAX_FMTd__ "lld"
 // ARMEABIHARDFP:#define __INTMAX_FMTi__ "lli"
@@ -1133,18 +1188,23 @@
 // ARMEABIHARDFP:#define __SIZE_TYPE__ unsigned int
 // ARMEABIHARDFP:#define __SIZE_WIDTH__ 32
 // ARMEABIHARDFP-NOT:#define __SOFTFP__ 1
+// ARMEABIHARDFP:#define __UINT16_C(c) c
 // ARMEABIHARDFP:#define __UINT16_C_SUFFIX__
 // ARMEABIHARDFP:#define __UINT16_MAX__ 65535
 // ARMEABIHARDFP:#define __UINT16_TYPE__ unsigned short
+// ARMEABIHARDFP:#define __UINT32_C(c) c##U
 // ARMEABIHARDFP:#define __UINT32_C_SUFFIX__ U
 // ARMEABIHARDFP:#define __UINT32_MAX__ 4294967295U
 // ARMEABIHARDFP:#define __UINT32_TYPE__ unsigned int
+// ARMEABIHARDFP:#define __UINT64_C(c) c##ULL
 // ARMEABIHARDFP:#define __UINT64_C_SUFFIX__ ULL
 // ARMEABIHARDFP:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARMEABIHARDFP:#define __UINT64_TYPE__ long long unsigned int
+// ARMEABIHARDFP:#define __UINT8_C(c) c
 // ARMEABIHARDFP:#define __UINT8_C_SUFFIX__
 // ARMEABIHARDFP:#define __UINT8_MAX__ 255
 // ARMEABIHARDFP:#define __UINT8_TYPE__ unsigned char
+// ARMEABIHARDFP:#define __UINTMAX_C(c) c##ULL
 // ARMEABIHARDFP:#define __UINTMAX_C_SUFFIX__ ULL
 // ARMEABIHARDFP:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARMEABIHARDFP:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1220,26 +1280,31 @@
 // ARM-NETBSD:#define __FLT_MIN_EXP__ (-125)
 // ARM-NETBSD:#define __FLT_MIN__ 1.17549435e-38F
 // ARM-NETBSD:#define __FLT_RADIX__ 2
+// ARM-NETBSD:#define __INT16_C(c) c
 // ARM-NETBSD:#define __INT16_C_SUFFIX__
 // ARM-NETBSD:#define __INT16_FMTd__ "hd"
 // ARM-NETBSD:#define __INT16_FMTi__ "hi"
 // ARM-NETBSD:#define __INT16_MAX__ 32767
 // ARM-NETBSD:#define __INT16_TYPE__ short
+// ARM-NETBSD:#define __INT32_C(c) c
 // ARM-NETBSD:#define __INT32_C_SUFFIX__
 // ARM-NETBSD:#define __INT32_FMTd__ "d"
 // ARM-NETBSD:#define __INT32_FMTi__ "i"
 // ARM-NETBSD:#define __INT32_MAX__ 2147483647
 // ARM-NETBSD:#define __INT32_TYPE__ int
+// ARM-NETBSD:#define __INT64_C(c) c##LL
 // ARM-NETBSD:#define __INT64_C_SUFFIX__ LL
 // ARM-NETBSD:#define __INT64_FMTd__ "lld"
 // ARM-NETBSD:#define __INT64_FMTi__ "lli"
 // ARM-NETBSD:#define __INT64_MAX__ 9223372036854775807LL
 // ARM-NETBSD:#define __INT64_TYPE__ long long int
+// ARM-NETBSD:#define __INT8_C(c) c
 // ARM-NETBSD:#define __INT8_C_SUFFIX__
 // ARM-NETBSD:#define __INT8_FMTd__ "hhd"
 // ARM-NETBSD:#define __INT8_FMTi__ "hhi"
 // ARM-NETBSD:#define __INT8_MAX__ 127
 // ARM-NETBSD:#define __INT8_TYPE__ signed char
+// ARM-NETBSD:#define __INTMAX_C(c) c##LL
 // ARM-NETBSD:#define __INTMAX_C_SUFFIX__ LL
 // ARM-NETBSD:#define __INTMAX_FMTd__ "lld"
 // ARM-NETBSD:#define __INTMAX_FMTi__ "lli"
@@ -1325,18 +1390,23 @@
 // ARM-NETBSD:#define __SIZE_TYPE__ long unsigned int
 // ARM-NETBSD:#define __SIZE_WIDTH__ 32
 // ARM-NETBSD:#define __SOFTFP__ 1
+// ARM-NETBSD:#define __UINT16_C(c) c
 // ARM-NETBSD:#define __UINT16_C_SUFFIX__
 // ARM-NETBSD:#define __UINT16_MAX__ 65535
 // ARM-NETBSD:#define __UINT16_TYPE__ unsigned short
+// ARM-NETBSD:#define __UINT32_C(c) c##U
 // ARM-NETBSD:#define __UINT32_C_SUFFIX__ U
 // ARM-NETBSD:#define __UINT32_MAX__ 4294967295U
 // ARM-NETBSD:#define __UINT32_TYPE__ unsigned int
+// ARM-NETBSD:#define __UINT64_C(c) c##ULL
 // ARM-NETBSD:#define __UINT64_C_SUFFIX__ ULL
 // ARM-NETBSD:#define __UINT64_MAX__ 18446744073709551615ULL
 // ARM-NETBSD:#define __UINT64_TYPE__ long long unsigned int
+// ARM-NETBSD:#define __UINT8_C(c) c
 // ARM-NETBSD:#define __UINT8_C_SUFFIX__
 // ARM-NETBSD:#define __UINT8_MAX__ 255
 // ARM-NETBSD:#define __UINT8_TYPE__ unsigned char
+// ARM-NETBSD:#define __UINTMAX_C(c) c##ULL
 // ARM-NETBSD:#define __UINTMAX_C_SUFFIX__ ULL
 // ARM-NETBSD:#define __UINTMAX_MAX__ 18446744073709551615ULL
 // ARM-NETBSD:#define __UINTMAX_TYPE__ long long unsigned int
@@ -1372,6 +1442,7 @@
 // RUN: %clang -E -dM -ffreestanding -target arm-netbsd-eabihf %s -o - | FileCheck -match-full-lines -check-prefix ARMHF-NETBSD %s
 // ARMHF-NETBSD:#define __SIZE_WIDTH__ 32
 // ARMHF-NETBSD-NOT:#define __SOFTFP__ 1
+// ARMHF-NETBSD:#define __UINT16_C(c) c
 // ARMHF-NETBSD:#define __UINT16_C_SUFFIX__
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s

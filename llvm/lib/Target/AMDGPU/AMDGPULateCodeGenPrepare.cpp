@@ -367,11 +367,11 @@ bool LiveRegOptimizer::optimizeLiveType(
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op) && ValMap[Op]) {
+      if (Value *Val = ValMap.lookup(Op)) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
-            BBUseValMap[U->getParent()].contains(ValMap[Op]))
-          NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
+            BBUseValMap[U->getParent()].contains(Val))
+          NewVal = BBUseValMap[U->getParent()][Val];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
           // We may pick up ops that were previously converted for users in
@@ -464,8 +464,11 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);
 
   unsigned ShAmt = Adjust * 8;
-  auto *NewVal = IRB.CreateBitCast(
-      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt), IntNTy), LI.getType());
+  Value *NewVal = IRB.CreateBitCast(
+      IRB.CreateTrunc(IRB.CreateLShr(NewLd, ShAmt),
+                      DL.typeSizeEqualsStoreSize(LI.getType()) ? IntNTy
+                                                               : LI.getType()),
+      LI.getType());
   LI.replaceAllUsesWith(NewVal);
   DeadInsts.emplace_back(&LI);
 

@@ -154,22 +154,23 @@ public:
     if (find(V, MF).isValid())
       return;
 
-    Storage[V][MF] = R;
+    auto &S = Storage[V];
+    S[MF] = R;
     if (std::is_same<Function,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>() ||
         std::is_same<Argument,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsFunc(true);
+      S.setIsFunc(true);
     if (std::is_same<GlobalVariable,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsGV(true);
+      S.setIsGV(true);
     if (std::is_same<Constant,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsConst(true);
+      S.setIsConst(true);
   }
 
   Register find(KeyTy V, const MachineFunction *MF) const {
@@ -211,23 +212,7 @@ class SPIRVGeneralDuplicatesTracker {
   SPIRVDuplicatesTracker<MachineInstr> MT;
   SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
 
-  // NOTE: using MOs instead of regs to get rid of MF dependency to be able
-  // to use flat data structure.
-  // NOTE: replacing DenseMap with MapVector doesn't affect overall correctness
-  // but makes LITs more stable, should prefer DenseMap still due to
-  // significant perf difference.
-  using SPIRVReg2EntryTy =
-      MapVector<MachineOperand *, SPIRV::DTSortableEntry *>;
-
-  template <typename T>
-  void prebuildReg2Entry(SPIRVDuplicatesTracker<T> &DT,
-                         SPIRVReg2EntryTy &Reg2Entry,
-                         const SPIRVInstrInfo *TII);
-
 public:
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      const SPIRVInstrInfo *TII, MachineModuleInfo *MMI);
-
   void add(const Type *Ty, const MachineFunction *MF, Register R) {
     TT.add(unifyPtrType(Ty), MF, R);
   }
