@@ -7025,7 +7025,7 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
   if (CGF.CGM.getOpenMPRuntime().needsHintsForFastFPAtomics()) {
 
     userRequestsAMDGPUFastFPAtomics =
-        Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();
+      CGF.CGM.getLangOpts().AtomicIgnoreDenormalMode;
 
     if (Hint) {
       if (Hint->getIntegerConstantExpr(Context).value() ==

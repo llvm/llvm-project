@@ -146,7 +146,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   std::string name;
-  llvm::StringRef debug_adaptor_path;
+  llvm::StringRef debug_adapter_path;
   std::ofstream *log;
   InputStream input;
   OutputStream output;
