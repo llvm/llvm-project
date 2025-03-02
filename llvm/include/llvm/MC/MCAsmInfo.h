@@ -432,10 +432,6 @@ protected:
   /// expressions as logical rather than arithmetic.
   bool UseLogicalShr = true;
 
-  // If true, then the lexer and expression parser will support %neg(),
-  // %hi(), and similar unary operators.
-  bool HasMipsExpressions = false;
-
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
@@ -723,7 +719,6 @@ public:
 
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
-  bool hasMipsExpressions() const { return HasMipsExpressions; }
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 };
 
