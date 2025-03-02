@@ -1249,7 +1249,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     // Functions that are readonly (or readnone) and nounwind and don't return
     // a value can't capture arguments. Don't analyze them.
-    if (F->onlyReadsMemory() && F->doesNotThrow() &&
+    if (F->onlyReadsMemory() && F->doesNotThrow() && F->willReturn() &&
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
