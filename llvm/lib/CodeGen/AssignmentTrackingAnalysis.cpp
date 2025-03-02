@@ -2054,17 +2054,17 @@ bool AssignmentTrackingLowering::join(
   // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
   if (VisitedPreds.size() == 1) {
     const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
-    if (CurrentLiveInEntry == LiveIn.end())
-      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
-    else if (PredLiveOut != CurrentLiveInEntry->second)
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
+    if (Inserted)
+      return /*Changed*/ true;
+    if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
-    else
-      return /*Changed*/ false;
-    return /*Changed*/ true;
+      return /*Changed*/ true;
+    }
+    return /*Changed*/ false;
   }
 
   // More than one pred. Join LiveOuts of blocks 1 and 2.

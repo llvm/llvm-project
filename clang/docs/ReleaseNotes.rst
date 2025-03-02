@@ -349,6 +349,8 @@ clang-format
 
 libclang
 --------
+- Added ``clang_visitCXXMethods``, which allows visiting the methods
+  of a class.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -386,8 +388,12 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
+- Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
+  allows visiting the methods of a class.
 
 OpenMP Support
 --------------
