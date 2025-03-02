@@ -10,6 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Target/LLVMIR/LLVMImportInterface.h"
+#include "mlir/Target/LLVMIR/Import.h"
+#include "mlir/Target/LLVMIR/ModuleImport.h"
+
+using namespace mlir;
+using namespace mlir::LLVM;
+using namespace mlir::LLVM::detail;
+
 LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     OpBuilder &builder, llvm::CallInst *inst,
     LLVM::ModuleImport &moduleImport) {
