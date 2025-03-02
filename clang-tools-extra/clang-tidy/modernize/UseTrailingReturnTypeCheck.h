@@ -29,7 +29,7 @@ class UseTrailingReturnTypeCheck : public ClangTidyCheck {
 public:
   UseTrailingReturnTypeCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        EvenWhenVoid(Options.get("EvenWhenVoid", false)) {}
+        WarnOnNontrailingVoid(Options.get("WarnOnNontrailingVoid", false)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
@@ -40,7 +40,7 @@ public:
 
 private:
   Preprocessor *PP = nullptr;
-  bool const EvenWhenVoid;
+  bool const WarnOnNontrailingVoid;
 
   SourceLocation findTrailingReturnTypeSourceLocation(
       const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,

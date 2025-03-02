@@ -1,11 +1,11 @@
-// RUN: %check_clang_tidy                                                   \
-// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --   \
+// RUN: %check_clang_tidy                                                            \
+// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --            \
 // RUN:   -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
-// RUN: %check_clang_tidy -check-suffixes=,EVEN-WHEN-VOID                   \
-// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --   \
-// RUN:   -config="{CheckOptions: {                                         \
-// RUN:              modernize-use-trailing-return-type.EvenWhenVoid: true, \
-// RUN:            }}"                                                      \
+// RUN: %check_clang_tidy -check-suffixes=,EVEN-WHEN-VOID                            \
+// RUN:   -std=c++14-or-later %s modernize-use-trailing-return-type %t --            \
+// RUN:   -config="{CheckOptions: {                                                  \
+// RUN:              modernize-use-trailing-return-type.WarnOnNontrailingVoid: true, \
+// RUN:            }}"                                                               \
 // RUN:   -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
 
 namespace std {
@@ -575,7 +575,7 @@ ostream& operator<<(ostream& ostream, int i);
 // CHECK-FIXES: {{^}}ostream& operator<<(ostream& ostream, int i);{{$}}
 
 //
-// EvenWhenVoid option
+// WarnOnNontrailingVoid option
 //
 
 void leadingVoid();

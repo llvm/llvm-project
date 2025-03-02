@@ -389,9 +389,9 @@ void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(cxxConversionDecl(), cxxConstructorDecl(), cxxDestructorDecl(),
             cxxMethodDecl(isImplicit()));
 
-  const auto Where = functionDecl(
-      unless(anyOf(hasTrailingReturn(), HasNoWrittenReturnType,
-                   EvenWhenVoid ? unless(anything()) : returns(voidType()))));
+  const auto Where = functionDecl(unless(
+      anyOf(hasTrailingReturn(), HasNoWrittenReturnType,
+            WarnOnNontrailingVoid ? unless(anything()) : returns(voidType()))));
 
   auto F = Where.bind("Func");
 
@@ -502,7 +502,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
 
 auto UseTrailingReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts)
     -> void {
-  Options.store(Opts, "EvenWhenVoid", EvenWhenVoid);
+  Options.store(Opts, "WarnOnNontrailingVoid", WarnOnNontrailingVoid);
 }
 
 } // namespace clang::tidy::modernize

@@ -28,7 +28,7 @@ transforms to:
 Options
 -------
 
-.. option:: EvenWhenVoid
+.. option:: WarnOnNontrailingVoid
 
   If the option is set to `true`, the check will apply even to function signatures
   with return type ``void``. Default is `false`.
