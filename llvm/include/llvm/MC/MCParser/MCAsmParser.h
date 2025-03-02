@@ -270,7 +270,7 @@ public:
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);
 
-  bool parseIntToken(int64_t &V, const Twine &ErrMsg);
+  bool parseIntToken(int64_t &V, const Twine &ErrMsg = "expected integer");
 
   bool check(bool P, const Twine &Msg);
   bool check(bool P, SMLoc Loc, const Twine &Msg);
