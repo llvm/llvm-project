@@ -6516,7 +6516,7 @@ bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
   SMLoc S;
 
   if (isParenExpr)
-    return getParser().parseParenExprOfDepth(0, Res, S);
+    return getParser().parseExpression(Res, S) || getParser().parseRParen();
   return getParser().parseExpression(Res);
 }
 
