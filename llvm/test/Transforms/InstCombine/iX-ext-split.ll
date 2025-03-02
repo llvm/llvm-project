@@ -88,3 +88,109 @@ entry:
   store i128 %res, ptr %out, align 16
   ret void
 }
+
+; negative test - wrong constant value
+define i128 @i128_ext_split_neg1(i32 %x) {
+; CHECK-LABEL: define i128 @i128_ext_split_neg1(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOWERSRC:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[LOWERSRC]] to i128
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X]], 31
+; CHECK-NEXT:    [[UPPERSRC:%.*]] = sext i32 [[SIGN]] to i64
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext i64 [[UPPERSRC]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw i128 [[WIDEN]], 65
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i128 [[RES]]
+;
+entry:
+  %LowerSrc = sext i32 %x to i64
+  %lo = zext i64 %LowerSrc to i128
+
+  %sign = ashr i32 %x, 31
+  %UpperSrc = sext i32 %sign to i64
+  %widen = zext i64 %UpperSrc to i128
+  %hi = shl nuw i128 %widen, 65
+
+  %res = or disjoint i128 %hi, %lo
+  ret i128 %res
+}
+
+; negative test - wrong shift value
+define i128 @i128_ext_split_neg2(i32 %x) {
+; CHECK-LABEL: define i128 @i128_ext_split_neg2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOWERSRC:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[LOWERSRC]] to i128
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X]], 3
+; CHECK-NEXT:    [[UPPERSRC:%.*]] = sext i32 [[SIGN]] to i64
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext i64 [[UPPERSRC]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw i128 [[WIDEN]], 64
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i128 [[RES]]
+;
+entry:
+  %LowerSrc = sext i32 %x to i64
+  %lo = zext i64 %LowerSrc to i128
+
+  %sign = ashr i32 %x, 3
+  %UpperSrc = sext i32 %sign to i64
+  %widen = zext i64 %UpperSrc to i128
+  %hi = shl nuw i128 %widen, 64
+
+  %res = or disjoint i128 %hi, %lo
+  ret i128 %res
+}
+
+; negative test - wrong ext instruction
+define i128 @i128_ext_split_neg3(i32 %x) {
+; CHECK-LABEL: define i128 @i128_ext_split_neg3(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = zext i32 [[X]] to i128
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i32 [[X]], 31
+; CHECK-NEXT:    [[UPPERSRC:%.*]] = sext i32 [[SIGN]] to i64
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext i64 [[UPPERSRC]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw i128 [[WIDEN]], 64
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i128 [[RES]]
+;
+entry:
+  %LowerSrc = zext i32 %x to i64
+  %lo = zext i64 %LowerSrc to i128
+
+  %sign = ashr i32 %x, 31
+  %UpperSrc = sext i32 %sign to i64
+  %widen = zext i64 %UpperSrc to i128
+  %hi = shl nuw i128 %widen, 64
+
+  %res = or disjoint i128 %hi, %lo
+  ret i128 %res
+}
+
+; negative test - wrong shift
+define i128 @i128_ext_split_neg4(i32 %x) {
+; CHECK-LABEL: define i128 @i128_ext_split_neg4(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOWERSRC:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[LOWERSRC]] to i128
+; CHECK-NEXT:    [[SIGN:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext nneg i32 [[SIGN]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw nsw i128 [[WIDEN]], 64
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    ret i128 [[RES]]
+;
+entry:
+  %LowerSrc = sext i32 %x to i64
+  %lo = zext i64 %LowerSrc to i128
+
+  %sign = lshr i32 %x, 31
+  %UpperSrc = sext i32 %sign to i64
+  %widen = zext i64 %UpperSrc to i128
+  %hi = shl nuw i128 %widen, 64
+
+  %res = or disjoint i128 %hi, %lo
+  ret i128 %res
+}
