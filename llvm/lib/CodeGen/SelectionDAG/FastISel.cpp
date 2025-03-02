@@ -1769,7 +1769,7 @@ bool FastISel::selectExtractValue(const User *U) {
   Type *AggTy = Op0->getType();
 
   // Get the base result register.
-  unsigned ResultReg;
+  Register ResultReg;
   DenseMap<const Value *, Register>::iterator I = FuncInfo.ValueMap.find(Op0);
   if (I != FuncInfo.ValueMap.end())
     ResultReg = I->second;
@@ -1785,7 +1785,8 @@ bool FastISel::selectExtractValue(const User *U) {
   ComputeValueVTs(TLI, DL, AggTy, AggValueVTs);
 
   for (unsigned i = 0; i < VTIndex; i++)
-    ResultReg += TLI.getNumRegisters(FuncInfo.Fn->getContext(), AggValueVTs[i]);
+    ResultReg = ResultReg.id() +
+                TLI.getNumRegisters(FuncInfo.Fn->getContext(), AggValueVTs[i]);
 
   updateValueMap(EVI, ResultReg);
   return true;
