@@ -10,14 +10,14 @@ define i128 @i128_ext_split(i32 noundef %x) {
 ; CHECK-NEXT:    [[XX:%.*]] = sext i32 [[X]] to i128
 ; CHECK-NEXT:    ret i128 [[XX]]
 ;
-  %coerce.sroa.0.0.extract.trunc = sext i32 %x to i64
-  %ashr = ashr i32 %x, 31
-  %coerce.sroa.2.0.extract.trunc = sext i32 %ashr to i64
-  %x.sroa.2.0.insert.ext.i = zext i64 %coerce.sroa.2.0.extract.trunc to i128
-  %x.sroa.2.0.insert.shift.i = shl nuw i128 %x.sroa.2.0.insert.ext.i, 64
-  %x.sroa.0.0.insert.ext.i = zext i64 %coerce.sroa.0.0.extract.trunc to i128
-  %x.sroa.0.0.insert.insert.i = or disjoint i128 %x.sroa.2.0.insert.shift.i, %x.sroa.0.0.insert.ext.i
-  ret i128 %x.sroa.0.0.insert.insert.i
+  %LowerSrc = sext i32 %x to i64
+  %sign = ashr i32 %x, 31
+  %UpperSrc = sext i32 %sign to i64
+  %widen = zext i64 %UpperSrc to i128
+  %hi = shl nuw i128 %widen, 64
+  %lo = zext i64 %LowerSrc to i128
+  %res = or disjoint i128 %hi, %lo
+  ret i128 %res
 }
 
 ; ext split from i32 to i128
