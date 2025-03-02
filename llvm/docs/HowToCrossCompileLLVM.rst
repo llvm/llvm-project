@@ -6,210 +6,202 @@ Introduction
 ============
 
 This document contains information about building LLVM and
-Clang on host machine, targeting another platform.
+Clang on a host machine, targeting another platform.
 
 For more information on how to use Clang as a cross-compiler,
 please check https://clang.llvm.org/docs/CrossCompilation.html.
 
-TODO: Add MIPS and other platforms to this document.
+This document describes cross-building a compiler in a single stage, using an
+existing ``clang`` install as the host compiler.
 
-Cross-Compiling from x86_64 to ARM
-==================================
 
-In this use case, we'll be using CMake and Ninja, on a Debian-based Linux
-system, cross-compiling from an x86_64 host (most Intel and AMD chips
-nowadays) to a hard-float ARM target (most ARM targets nowadays).
+Cross-Compiling from x86_64 to ARM, AArch64, or RISC-V
+======================================================
 
-The packages you'll need are:
+These instructions have been tested for targeting 32-bit ARM, AArch64, or
+RISC-V but should be equally applicable to any other target.
 
- * ``cmake``
- * ``ninja-build`` (from backports in Ubuntu)
- * ``gcc-4.7-arm-linux-gnueabihf``
- * ``gcc-4.7-multilib-arm-linux-gnueabihf``
- * ``binutils-arm-linux-gnueabihf``
- * ``libgcc1-armhf-cross``
- * ``libsfgcc1-armhf-cross``
- * ``libstdc++6-armhf-cross``
- * ``libstdc++6-4.7-dev-armhf-cross``
+
+Setting up an appropriate sysroot
+---------------------------------
+
+You will need a sysroot that contains essential build dependencies compiled
+for the target architecture. In this case, we'll be using CMake and Ninja on a
+Linux host and compiling against a Debian sysroot. Detailed instructions on
+producing sysroots are outside of the scope of this documentation, but the
+following should work on any Linux distribution with the following
+pre-requisites:
+
+ * ``binfmt_misc`` configured to execute ``qemu-user`` for binaries of the
+   target architecture. This is done by installing the ``qemu-user-static``
+   and ``binfmt-support`` packages on Debian-derived distributions.
+ * Root access (setups involving ``proot`` or other tools to avoid this
+   requirement may be possible, but aren't described here).
+ * The ``debootstrap`` tool. This is available in most distributions.
+
+The following snippet will initialise sysroots for 32-bit Arm, AArch64, and
+RISC-V (you can of course just pick the target you're interested in):
+
+   .. code-block:: bash
+
+    sudo debootstrap --arch=armhf --variant=minbase --include=build-essential,symlinks stable sysroot-deb-armhf-stable
+    sudo debootstrap --arch=arm64 --variant=minbase --include=build-essential,symlinks stable sysroot-deb-arm64-stable
+    sudo debootstrap --arch=riscv64 --variant=minbase --include=build-essential,symlinks unstable sysroot-deb-riscv64-unstable
+
+The created sysroot may contain absolute symlinks, which will resolve to a
+location within the host when accessed during compilation, so we must convert
+any absolute symlinks to relative ones:
+
+   .. code-block:: bash
+
+    sudo chroot sysroot-of-your-choice symlinks -cr .
+
 
 Configuring CMake
 -----------------
 
 For more information on how to configure CMake for LLVM/Clang,
-see :doc:`CMake`.
+see :doc:`CMake`. Following CMake's recommended practice, we will create a
+`toolchain file
+<https://cmake.org/cmake/help/book/mastering-cmake/chapter/Cross%20Compiling%20With%20CMake.html#toolchain-files>`_. 
 
-The CMake options you need to add are:
+The following assumes you have a system install of ``clang`` and ``lld`` that
+will be used for cross compiling and that the listed commands are executed
+from within the root of a checkout of the ``llvm-project`` git repository.
 
- * ``-DCMAKE_SYSTEM_NAME=<target-system>``
- * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
- * ``-DLLVM_HOST_TRIPLE=arm-linux-gnueabihf``
- * ``-DLLVM_TARGETS_TO_BUILD=ARM``
-
-Note: ``CMAKE_CROSSCOMPILING`` is always set automatically when ``CMAKE_SYSTEM_NAME`` is set. Don't put ``-DCMAKE_CROSSCOMPILING=TRUE`` in your options.
-
-Also note that ``LLVM_HOST_TRIPLE`` specifies the triple of the system
-that the cross built LLVM is going to run on - the flag is named based
-on the autoconf build/host/target nomenclature. (This flag implicitly sets
-other defaults, such as ``LLVM_DEFAULT_TARGET_TRIPLE``.)
-
-If you're compiling with GCC, you can use architecture options for your target,
-and the compiler driver will detect everything that it needs:
-
- * ``-DCMAKE_CXX_FLAGS='-march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard'``
-
-However, if you're using Clang, the driver might not be up-to-date with your
-specific Linux distribution, version or GCC layout, so you'll need to fudge.
-
-In addition to the ones above, you'll also need:
-
- * ``--target=arm-linux-gnueabihf`` or whatever is the triple of your cross GCC.
- * ``'--sysroot=/usr/arm-linux-gnueabihf'``, ``'--sysroot=/opt/gcc/arm-linux-gnueabihf'``
-   or whatever is the location of your GCC's sysroot (where /lib, /bin etc are).
- * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,
-   and where are the libraries and headers.
-
-You may also want to set the ``LLVM_NATIVE_TOOL_DIR`` option - pointing
-at a directory with prebuilt LLVM tools (``llvm-tblgen``, ``clang-tblgen``
-etc) for the build host, allowing you to them reuse them if available.
-E.g. ``-DLLVM_NATIVE_TOOL_DIR=<path-to-native-llvm-build>/bin``.
-If the option isn't set (or the directory doesn't contain all needed tools),
-the LLVM cross build will automatically launch a nested build to build the
-tools that are required.
-
-The CXX flags define the target, cpu (which in this case
-defaults to ``fpu=VFP3`` with NEON), and forcing the hard-float ABI. If you're
-using Clang as a cross-compiler, you will *also* have to set ``--sysroot``
-to make sure it picks the correct linker.
-
-When using Clang, it's important that you choose the triple to be *identical*
-to the GCC triple and the sysroot. This will make it easier for Clang to
-find the correct tools and include headers. But that won't mean all headers and
-libraries will be found. You'll still need to use ``-I`` and ``-L`` to locate
-those extra ones, depending on your distribution.
-
-Most of the time, what you want is to have a native compiler to the
-platform itself, but not others. So there's rarely a point in compiling
-all back-ends. For that reason, you should also set the
-``TARGETS_TO_BUILD`` to only build the back-end you're targeting to.
-
-You must set the ``CMAKE_INSTALL_PREFIX``, otherwise a ``ninja install``
-will copy ARM binaries to your root filesystem, which is not what you
-want.
-
-Hacks
------
-
-There are some bugs in current LLVM, which require some fiddling before
-running CMake:
-
-#. If you're using Clang as the cross-compiler, there is a problem in
-   the LLVM ARM back-end that is producing absolute relocations on
-   position-independent code (``R_ARM_THM_MOVW_ABS_NC``), so for now, you
-   should disable PIC:
+First create a appropriate toolchain file:
 
    .. code-block:: bash
 
-      -DLLVM_ENABLE_PIC=False
+    SYSROOT=$HOME/sysroot-deb-arm64-stable
+    TARGET=aarch64-linux-gnu
+    CFLAGS=""
 
-   This is not a problem, since Clang/LLVM libraries are statically
-   linked anyway, it shouldn't affect much.
+    cat - <<EOF > $TARGET-clang.cmake
+    set(CMAKE_SYSTEM_NAME Linux)
+    set(CMAKE_SYSROOT "$SYSROOT")
+    set(CMAKE_C_COMPILER_TARGET $TARGET)
+    set(CMAKE_CXX_COMPILER_TARGET $TARGET)
+    set(CMAKE_C_FLAGS_INIT "$CFLAGS")
+    set(CMAKE_CXX_FLAGS_INIT "$CFLAGS")
+    set(CMAKE_LINKER_TYPE LLD)
+    set(CMAKE_C_COMPILER clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+    EOF
 
-#. The ARM libraries won't be installed in your system.
-   But the CMake prepare step, which checks for
-   dependencies, will check the *host* libraries, not the *target*
-   ones. Below there's a list of some dependencies, but your project could
-   have more, or this document could be outdated. You'll see the errors
-   while linking as an indication of that.
+To customise details of the compilation target or choose a different
+architecture altogether, just change the ``SYSROOT``,
+``TARGET``, and ``CFLAGS`` variables before copy and pasting the rest (e.g.
+for RISC-V you might set ``SYSROOT=$HOME/sysroot-deb-riscv64-unstable``,
+``TARGET=riscv64-linux-gnu``, ``CFLAGS="-march=rva20u64"``).
 
-   Debian based distros have a way to add ``multiarch``, which adds
-   a new architecture and allows you to install packages for those
-   systems. See https://wiki.debian.org/Multiarch/HOWTO for more info.
-
-   But not all distros will have that, and possibly not an easy way to
-   install them in any anyway, so you'll have to build/download
-   them separately.
-
-   A quick way of getting the libraries is to download them from
-   a distribution repository, like Debian (http://packages.debian.org/jessie/),
-   and download the missing libraries. Note that the ``libXXX``
-   will have the shared objects (``.so``) and the ``libXXX-dev`` will
-   give you the headers and the static (``.a``) library. Just in
-   case, download both.
-
-   The ones you need for ARM are: ``libtinfo``, ``zlib1g``,
-   ``libxml2`` and ``liblzma``. In the Debian repository you'll
-   find downloads for all architectures.
-
-   After you download and unpack all ``.deb`` packages, copy all
-   ``.so`` and ``.a`` to a directory, make the appropriate
-   symbolic links (if necessary), and add the relevant ``-L``
-   and ``-I`` paths to ``-DCMAKE_CXX_FLAGS`` above.
-
-
-Running CMake and Building
---------------------------
-
-Finally, if you're using your platform compiler, run:
+Then configure and build with ``cmake`` invocations such as the following:
 
    .. code-block:: bash
 
-     $ cmake -G Ninja <source-dir> -DCMAKE_BUILD_TYPE=<type> <options above>
+    cmake -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_ENABLE_PROJECTS="lld;clang" \
+      -DCMAKE_TOOLCHAIN_FILE=$(pwd)/$TARGET-clang.cmake \
+      -DLLVM_HOST_TRIPLE=$TARGET \
+      -DCMAKE_INSTALL_PREFIX=$HOME/clang-$TARGET \
+      -S llvm \
+      -B build/$TARGET
+    cmake --build build/$TARGET
 
-If you're using Clang as the cross-compiler, run:
+The following options from the toolchain file and ``cmake`` invocation above
+are worth highlighting:
+
+ * ``CMAKE_SYSTEM_NAME``: Perhaps surprisingly, explicitly setting this
+   variable `causes CMake to set
+   CMAKE_CROSSCOMPIILING <https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html#variable:CMAKE_CROSSCOMPILING>`_.
+ * ``CMAKE_{C,CXX}_COMPILER_TARGET``: This will be used to set the
+   ``--target`` argument to ``clang``. The triple should match the triple used
+   within the sysroot (i.e. ``$SYSROOT/usr/lib/$TARGET`` should exist).
+ * ``CMAKE_FIND_ROOT_PATH_MODE_*``: These `control the search behaviour for
+   finding libraries, includes or binaries
+   <https://cmake.org/cmake/help/book/mastering-cmake/chapter/Cross%20Compiling%20With%20CMake.html#finding-external-libraries-programs-and-other-files>`_
+   and are set so as to avoid files for the host being used in the build.
+ * ``LLVM_HOST_TRIPLE``: Specifies the target triple the built LLVM will run
+   on, which also implicitly sets other defaults such as
+   ``LLVM_DEFAULT_TARGET_TRIPLE``.
+ * ``CMAKE_SYSROOT``: Gives the path to the sysroot containing libraries and
+   headers for the target, as generated earlier in this document.
+ * ``CMAKE_INSTALL_PREFIX``: Unnecessary if you don't intend to use the
+   ``install`` target. But setting it avoids installing binaries compiled for
+   the target across system directories on the host system.
+
+See `LLVM's build documentation
+<https://llvm.org/docs/CMake.html#frequently-used-cmake-variables>`_ for more
+guidance on CMake variables (e.g. ``LLVM_TARGETS_TO_BUILD`` may be useful if
+your cross-compiled binaries only need to support compiling for one target).
+
+Assuming you have ``qemu-user`` installed you can test the produced target
+binaries either by relying on binfmt_misc (as was necessary for debootstrap)
+or invoking ``qemu-{tgt}-static`` directly. For instance, to first check the
+type of executable and then run ``clang --version`` both ways:
 
    .. code-block:: bash
 
-     $ CC='clang' CXX='clang++' cmake -G Ninja <source-dir> -DCMAKE_BUILD_TYPE=<type> <options above>
+    $ file -L ./build/aarch64-linux-gnu/bin/clang
+    ./build/aarch64-linux-gnu/bin/clang: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[sha1]=516b8b366a790fcd3563bee4aec0cdfcb90bb1c7, not stripped
 
-If you have ``clang``/``clang++`` on the path, it should just work, and special
-Ninja files will be created in the build directory. I strongly suggest
-you to run ``cmake`` on a separate build directory, *not* inside the
-source tree.
+    $ qemu-aarch64-static -L $SYSROOT ./build/aarch64-linux-gnu/bin/clang --version
+    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
+    Target: aarch64-unknown-linux-gnu
+    Thread model: posix
+    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
 
-To build, simply type:
+    $ export QEMU_LD_PREFIX=$SYSROOT; ./build/aarch64-linux-gnu/bin/clang --version
+    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
+    Target: aarch64-unknown-linux-gnu
+    Thread model: posix
+    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
+
+Working around a ninja dependency issue
+---------------------------------------
+
+If you followed the instructions above to create a sysroot, you may run into a
+`longstanding problem related to path canonicalization in ninja
+<https://github.com/ninja-build/ninja/issues/1330>_`. GCC canonicalizes system
+headers in dependency files, so when ninja reads them it doesn't need to do
+so. Clang doesn't, and unfortunately ninja doesn't implement the
+canonicalization logic at all, meaning for some system headers with symlinks
+in the paths, it can incorrectly compute a non-existing path and consider it
+as always dirty. If you are suffering from this issue, you will find at any
+attempt at an incremental build (including the suggested command to build the
+``install`` target in the next section) results in recompiling everything.
+``ninja -C build/$TARGET -t deps`` shows files in ``$SYSROOT/include/*`` that
+don't (as the ``$SYSROOT/include`` folder doesn't exist) and you can
+further confirm these files are causing the build to be seen as dirty with
+``ninja -C build/$TARGET -d deps``. Until such time as the issue is avoided
+due to a change in behaviour for Clang or for Ninja, a functional workaround
+is to create a symlink so that the incorrect ``$SYSROOT/include/*``
+dependencies resolve to files within ``$SYSROOT/usr/include/*``. This works in
+practice for the simple cross-compilation use case described here, but isn't
+a general solution.
 
    .. code-block:: bash
 
-     $ ninja
+    sudo ln -s usr/include $SYSROOT/include
 
-It should automatically find out how many cores you have, what are
-the rules that needs building and will build the whole thing.
-
-You can't run ``ninja check-all`` on this tree because the created
-binaries are targeted to ARM, not x86_64.
-
-Installing and Using
+Installing and using
 --------------------
 
-After the LLVM/Clang has built successfully, you should install it
-via:
+After LLVM/Clang has built successfully, you can install it via:
 
    .. code-block:: bash
 
-     $ ninja install
+    cmake --build build/$TARGET --target=install
 
-which will create a sysroot on the install-dir. You can then tar
-that directory into a binary with the full triple name (for easy
-identification), like:
-
-   .. code-block:: bash
-
-     $ ln -sf <install-dir> arm-linux-gnueabihf-clang
-     $ tar zchf arm-linux-gnueabihf-clang.tar.gz arm-linux-gnueabihf-clang
-
-If you copy that tarball to your target board, you'll be able to use
-it for running the test-suite, for example. Follow the guidelines at
-https://llvm.org/docs/lnt/quickstart.html, unpack the tarball in the
-test directory, and use options:
+This will install the LLVM/Clang headers, binaries, libraries, and other files
+to paths within ``CMAKE_INSTALL_PREFIX`` You can then tar that directory for
+transfer to a device that runs the target architecture natively:
 
    .. code-block:: bash
 
-     $ ./sandbox/bin/python sandbox/bin/lnt runtest nt \
-         --sandbox sandbox \
-         --test-suite `pwd`/test-suite \
-         --cc `pwd`/arm-linux-gnueabihf-clang/bin/clang \
-         --cxx `pwd`/arm-linux-gnueabihf-clang/bin/clang++
-
-Remember to add the ``-jN`` options to ``lnt`` to the number of CPUs
-on your board. Also, the path to your clang has to be absolute, so
-you'll need the `pwd` trick above.
+    tar -czvf clang-$TARGET.tar.gz -C $HOME clang-$TARGET
