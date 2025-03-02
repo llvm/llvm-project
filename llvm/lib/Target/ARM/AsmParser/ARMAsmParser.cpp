@@ -288,6 +288,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   SmallVector<MCInst, 4> PendingConditionalInsts;
 
+  void onEndOfFile() override {
+    flushPendingInstructions(getParser().getStreamer());
+  }
+
   void flushPendingInstructions(MCStreamer &Out) override {
     if (!inImplicitITBlock()) {
       assert(PendingConditionalInsts.size() == 0);
