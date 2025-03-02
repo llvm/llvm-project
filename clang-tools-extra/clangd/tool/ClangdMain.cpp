@@ -962,11 +962,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       vlog("User config file is {0}", UserConfig);
       ProviderStack.push_back(config::Provider::fromYAMLFile(
           UserConfig, /*Directory=*/"", TFS, /*Trusted=*/true));
-      ProviderStack.push_back(
-          config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
     } else {
       elog("Couldn't determine user config file, not loading");
     }
+    ProviderStack.push_back(
+        config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
   }
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
   std::vector<const config::Provider *> ProviderPointers;
