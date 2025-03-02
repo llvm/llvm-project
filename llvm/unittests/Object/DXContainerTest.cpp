@@ -909,7 +909,7 @@ TEST(RootSignature, ParseRootConstant) {
     DXContainer C =
         llvm::cantFail(DXContainer::create(getMemoryBuffer<133>(Buffer)));
 
-    const auto &RS = C.getRootSignature();
+    auto RS = C.getRootSignature();
     ASSERT_TRUE(RS.has_value());
     ASSERT_EQ(RS->getVersion(), 2u);
     ASSERT_EQ(RS->getNumParameters(), 1);
@@ -918,12 +918,12 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ(RS->getStaticSamplersOffset(), 44u);
     ASSERT_EQ(RS->getFlags(), 17u);
 
-    const auto RootParam = RS->getParameters()[0];
-    ASSERT_EQ((uint32_t)RootParam.Header.ParameterType, 1u);
-    ASSERT_EQ((uint32_t)RootParam.Header.ShaderVisibility, 2u);
-    ASSERT_EQ(RootParam.Constants.ShaderRegister, 15u);
-    ASSERT_EQ(RootParam.Constants.RegisterSpace, 14u);
-    ASSERT_EQ(RootParam.Constants.Num32BitValues, 16u);
+    object::DirectX::RootParameter *RootParam = RS->beginParams();
+    ASSERT_EQ((uint32_t)RootParam->Header.ParameterType, 1u);
+    ASSERT_EQ((uint32_t)RootParam->Header.ShaderVisibility, 2u);
+    ASSERT_EQ(RootParam->Constants.ShaderRegister, 15u);
+    ASSERT_EQ(RootParam->Constants.RegisterSpace, 14u);
+    ASSERT_EQ(RootParam->Constants.Num32BitValues, 16u);
   }
   {
     // ParameterType has been set to an invalid value

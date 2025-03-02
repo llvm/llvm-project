@@ -133,6 +133,8 @@ private:
 
   SmallVector<DirectX::RootParameter> Parameters;
 
+  using ParamsIter = SmallVector<DirectX::RootParameter>::iterator;
+
 public:
   RootSignature() {}
 
@@ -142,9 +144,9 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  const SmallVector<DirectX::RootParameter> &getParameters() const {
-    return Parameters;
-  }
+  ParamsIter beginParams() { return Parameters.begin(); }
+
+  ParamsIter endParams() { return Parameters.end(); }
   uint32_t getFlags() const { return Flags; }
 };
 

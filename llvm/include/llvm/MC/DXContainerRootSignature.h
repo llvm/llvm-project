@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
 
@@ -28,6 +30,10 @@ struct RootSignatureDesc {
             2, 0, sizeof(dxbc::RootSignatureHeader), 0, 0, 0}) {}
 
   void write(raw_ostream &OS) const;
+
+  size_t getSize() const {
+    return sizeof(dxbc::RootSignatureHeader) + Parameters.size_in_bytes();
+  }
 };
 } // namespace mcdxbc
 } // namespace llvm

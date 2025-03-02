@@ -7,19 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
-static uint32_t writePlaceholder(raw_ostream &Stream) {
+static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
   const uint32_t DummyValue = std::numeric_limits<uint32_t>::max();
   uint32_t Offset = Stream.tell();
   support::endian::write(Stream, DummyValue, llvm::endianness::little);
   return Offset;
 }
 
-static void rewriteOffset(buffer_ostream &Stream, uint32_t Offset) {
+static void rewriteOffset(raw_svector_ostream &Stream, uint32_t Offset) {
   uint32_t Value =
       support::endian::byte_swap<uint32_t, llvm::endianness::little>(
           Stream.tell());
@@ -27,20 +31,22 @@ static void rewriteOffset(buffer_ostream &Stream, uint32_t Offset) {
 }
 
 void RootSignatureDesc::write(raw_ostream &OS) const {
-  buffer_ostream BOS(OS);
+  SmallString<256> Storage;
+  raw_svector_ostream BOS(Storage);
+  BOS.reserveExtraSpace(getSize());
   const uint32_t NumParameters = Parameters.size();
   const uint32_t Zero = 0;
 
   support::endian::write(BOS, Header.Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
 
-  uint32_t HeaderPoint = writePlaceholder(BOS);
+  // Root Parameters offset should always start after the
+  support::endian::write(BOS, (uint32_t)sizeof(dxbc::RootSignatureHeader),
+                         llvm::endianness::little);
 
   support::endian::write(BOS, Zero, llvm::endianness::little);
   support::endian::write(BOS, Zero, llvm::endianness::little);
   support::endian::write(BOS, Header.Flags, llvm::endianness::little);
-
-  rewriteOffset(BOS, HeaderPoint);
 
   SmallVector<uint32_t> ParamsOffsets;
   for (const auto &P : Parameters) {
@@ -70,4 +76,6 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
       llvm_unreachable("Invalid RootParameterType");
     }
   }
+
+  OS.write(Storage.data(), Storage.size());
 }

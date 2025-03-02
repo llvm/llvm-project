@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -30,12 +31,13 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 }
 
 DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
-    const object::DirectX::RootSignature &Data)
+    object::DirectX::RootSignature Data)
     : Version(Data.getVersion()),
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  for (const auto &P : Data.getParameters()) {
+  for (auto *P = Data.beginParams(); P != Data.endParams(); ++P) {
+
     Parameters.push_back(RootParameterYamlDesc(P));
   }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
