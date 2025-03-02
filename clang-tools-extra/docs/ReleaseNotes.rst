@@ -128,6 +128,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
 
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check by detecting
+  explicit casting of built-in types within member list initialization.
+
 - Improved :doc:`performance/unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers 
