@@ -90,6 +90,14 @@ void MCTargetStreamer::emitRawBytes(StringRef Data) {
 
 void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
+void MCTargetStreamer::emitGPRel32Value(const MCExpr *) {
+  report_fatal_error("unsupported directive");
+}
+
+void MCTargetStreamer::emitGPRel64Value(const MCExpr *) {
+  report_fatal_error("unsupported directive");
+}
+
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
       CurrentProcWinFrameInfoStartIndex(0) {
@@ -189,30 +197,6 @@ void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
     emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
   else
     emitCOFFSecRel32(Sym, /*Offset=*/0);
-}
-
-void MCStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
 }
 
 /// Emit NumBytes bytes worth of the value specified by FillValue.

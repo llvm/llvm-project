@@ -3068,7 +3068,8 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
     // with a relocation as gp-relative, e.g.:
     //     .gprel32 LBB123
     MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
+    OutStreamer->getTargetStreamer()->emitGPRel32Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
     return;
   }
 
@@ -3077,7 +3078,8 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
     // with a relocation as gp-relative, e.g.:
     //     .gpdword LBB123
     MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
+    OutStreamer->getTargetStreamer()->emitGPRel64Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
     return;
   }
 
