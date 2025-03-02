@@ -39,6 +39,9 @@ class BottomUpVec final : public RegionPass {
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
   std::unique_ptr<InstrMaps> IMaps;
+  /// Counter used for force-stopping the vectorizer after this many
+  /// invocations. Used for debugging miscompiles.
+  unsigned long BottomUpInvocationCnt = 0;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
@@ -78,6 +81,10 @@ class BottomUpVec final : public RegionPass {
 #endif // NDEBUG
   };
   ActionsVector Actions;
+  /// Helper counter for debugging. It counts the bundles that we attempt to
+  /// vectorize in vectorizeRec().
+  unsigned DebugBndlCnt = 0;
+
   /// Recursively try to vectorize \p Bndl and its operands. This populates the
   /// `Actions` vector.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,

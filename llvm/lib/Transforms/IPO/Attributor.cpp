@@ -1478,7 +1478,8 @@ bool Attributor::getAssumedSimplifiedValues(
       // AAPotentialValues.
       const auto *PotentialValuesAA =
           getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
-      if (PotentialValuesAA && PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S)) {
+      if (PotentialValuesAA &&
+          PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S)) {
         UsedAssumedInformation |= !PotentialValuesAA->isAtFixpoint();
       } else if (IRP.getPositionKind() != IRPosition::IRP_RETURNED) {
         Values.push_back({IRP.getAssociatedValue(), IRP.getCtxI()});

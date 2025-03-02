@@ -1904,6 +1904,8 @@ def IFunc : Attr, TargetSpecificAttr<TargetIFuncSupport> {
 
 def Restrict : InheritableAttr {
   let Spellings = [Declspec<"restrict">, GCC<"malloc">];
+  let Args = [ExprArgument<"Deallocator", /*opt=*/ 1>,
+              ParamIdxArgument<"DeallocatorPtrArgIndex", /*opt=*/ 1>];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [RestrictDocs];
 }
@@ -5000,4 +5002,19 @@ def NoTrivialAutoVarInit: InheritableAttr {
   let Subjects = SubjectList<[Function, Tag]>;
   let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
+}
+
+def Atomic : StmtAttr {
+  let Spellings = [Clang<"atomic">];
+  let Args = [VariadicEnumArgument<"AtomicOptions", "ConsumedOption",
+                                   /*is_string=*/false,
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"],
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"]>];
+  let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
+  let Documentation = [AtomicDocs];
+  let StrictEnumParameters = 1;
 }

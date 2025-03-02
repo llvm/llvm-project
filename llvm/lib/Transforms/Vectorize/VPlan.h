@@ -864,6 +864,7 @@ public:
     CanonicalIVIncrementForPart,
     BranchOnCount,
     BranchOnCond,
+    Broadcast,
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
@@ -1460,6 +1461,13 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags {
   bool isInvariantCond() const {
     return getCond()->isDefinedOutsideLoopRegions();
   }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getCond() && isInvariantCond();
+  }
 };
 
 /// A recipe for handling GEP instructions.
@@ -1507,6 +1515,13 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(0) && isPointerLoopInvariant();
+  }
 };
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy
@@ -1822,6 +1837,16 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return getNumOperands() == 5 ? getOperand(4) : this;
   }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // The recipe creates its own wide start value, so it only requests the
+    // first lane of the operand.
+    // TODO: Remove once creating the start value is modeled separately.
+    return Op == getStartValue();
+  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
@@ -1853,6 +1878,13 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getOperand(0);
+  }
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
@@ -1975,6 +2007,13 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getStartValue();
+  }
 };
 
 /// A recipe for handling reduction phis. The start value is the first operand
@@ -2041,6 +2080,13 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getStartValue();
+  }
 };
 
 /// A recipe for forming partial reductions. In the loop, an accumulator and
@@ -2456,14 +2502,11 @@ public:
 /// A recipe for generating conditional branches on the bits of a mask.
 class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask)
-      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {}) {
-    if (BlockInMask) // nullptr means all-one mask.
-      addOperand(BlockInMask);
-  }
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {BlockInMask}, DL) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0));
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBranchOnMaskSC)
@@ -2481,20 +2524,9 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {
     O << Indent << "BRANCH-ON-MASK ";
-    if (VPValue *Mask = getMask())
-      Mask->printAsOperand(O, SlotTracker);
-    else
-      O << " All-One";
+    printOperands(O, SlotTracker);
   }
 #endif
-
-  /// Return the mask used by this recipe. Note that a full mask is represented
-  /// by a nullptr.
-  VPValue *getMask() const {
-    assert(getNumOperands() <= 1 && "should have either 0 or 1 operands");
-    // Mask is optional.
-    return getNumOperands() == 1 ? getOperand(0) : nullptr;
-  }
 
   /// Returns true if the recipe uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
@@ -3464,7 +3496,7 @@ class VPlan {
 
   /// Contains all the external definitions created for this VPlan. External
   /// definitions are VPValues that hold a pointer to their underlying IR.
-  SmallVector<VPValue *, 16> VPLiveInsToFree;
+  SmallVector<VPValue *, 16> VPLiveIns;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
   /// NOTE: This mapping is temporary and will be removed once all users have
@@ -3656,7 +3688,7 @@ public:
     auto [It, Inserted] = Value2VPValue.try_emplace(V);
     if (Inserted) {
       VPValue *VPV = new VPValue(V);
-      VPLiveInsToFree.push_back(VPV);
+      VPLiveIns.push_back(VPV);
       assert(VPV->isLiveIn() && "VPV must be a live-in.");
       It->second = VPV;
     }
@@ -3667,6 +3699,16 @@ public:
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
   VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
+
+  /// Return the list of live-in VPValues available in the VPlan.
+  ArrayRef<VPValue *> getLiveIns() const {
+    assert(all_of(Value2VPValue,
+                  [this](const auto &P) {
+                    return is_contained(VPLiveIns, P.second);
+                  }) &&
+           "all VPValues in Value2VPValue must also be in VPLiveIns");
+    return VPLiveIns;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
