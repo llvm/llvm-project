@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers, std-at-least-c++26
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: libcpp-hardening-mode=none, no-exceptions
 
 #include <ranges>
 
@@ -74,7 +74,10 @@ struct ThrowOnCopyView : std::ranges::view_base {
   constexpr ThrowOnCopyView(ThrowOnCopyView&&) = default;
   constexpr ThrowOnCopyView(const ThrowOnCopyView&) { throw 42; };
   constexpr ThrowOnCopyView& operator=(ThrowOnCopyView&&) = default;
-  constexpr ThrowOnCopyView& operator=(const ThrowOnCopyView&) { throw 42; return *this;};
+  constexpr ThrowOnCopyView& operator=(const ThrowOnCopyView&) {
+    throw 42;
+    return *this;
+  };
   constexpr int* begin() const { return ptr_ + start_; }
   constexpr int* end() const { return ptr_ + 8; }
 };
