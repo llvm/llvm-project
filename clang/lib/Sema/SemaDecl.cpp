@@ -13427,9 +13427,13 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
         FunDcl->getTemplateSpecializationKind() != TSK_Undeclared;
   }
 
-  // Non-inline functions/variables can only legally appear in one TU,
-  // unless they were part of a template.
-  if (!TargetIsInline && !TargetWasTemplated)
+  // Non-inline functions/variables can only legally appear in one TU
+  // unless they were part of a template. Unfortunately, making complex
+  // template instantiations visible is infeasible in practice, since
+  // everything the template depends on also has to be visible. To avoid
+  // giving impractical-to-fix warnings, don't warn if we're inside
+  // something that was templated, even on inline stuff.
+  if (!TargetIsInline || TargetWasTemplated)
     return false;
 
   // If the object isn't hidden, the dynamic linker will prevent duplication.
@@ -13469,8 +13473,8 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
   // handle that yet. Disable the warning on Windows for now.
 
-  // Don't diagnose if we're inside a template;
-  // we'll diagnose during instantiation instead.
+  // Don't diagnose if we're inside a template, because it's not practical to
+  // fix the warning in most cases.
   if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
       !VD->isTemplated() &&
       GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
@@ -20469,6 +20473,21 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
+
+    // If FD is a virtual destructor of an explicit instantiation
+    // of a template class, return Emitted.
+    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
+      if (Destructor->isVirtual()) {
+        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
+                Destructor->getParent())) {
+          TemplateSpecializationKind TSK =
+              Spec->getTemplateSpecializationKind();
+          if (TSK == TSK_ExplicitInstantiationDeclaration ||
+              TSK == TSK_ExplicitInstantiationDefinition)
+            return FunctionEmissionStatus::Emitted;
+        }
+      }
+    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of
