@@ -16,7 +16,6 @@
 #include <concepts>
 #include <type_traits>
 #include <utility>
-#include "check_assertion.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"

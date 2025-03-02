@@ -12,7 +12,6 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "check_assertion.h"
 #include "../types.h"
 
 int globalBuff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
