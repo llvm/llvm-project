@@ -1,5 +1,36 @@
-; RUN: opt -passes=loop-unroll %s -o - | llc -O3 - -mtriple=arm64e-apple-darwin -o - | FileCheck %s
+; RUN: opt -passes=loop-unroll %s -o - | llc -O3 - -mtriple=arm64e-apple-darwin -machine-combiner-recurse -o - | FileCheck %s
 
+define i8 @mla_i8_accumulation(ptr %ptr1, ptr %ptr2) {
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ 0, %entry ], [ %next_i, %loop ]
+  %acc_phi = phi <8 x i8> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
+  %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
+  %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
+  %a = load <8 x i8>, <8 x i8>* %ptr1_i, align 1
+  %b = load <8 x i8>, <8 x i8>* %ptr2_i, align 1
+  %mul = mul <8 x i8> %a, %b
+  %acc_next = add <8 x i8> %acc_phi, %mul
+  %next_i = add i32 %i, 8
+  %cmp = icmp slt i32 %next_i, 64
+  br i1 %cmp, label %loop, label %exit
+exit:
+  %reduce = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> %acc_next)
+  ret i8 %reduce
+}
+; CHECK-LABEL: mla_i8_accumulation
+; CHECK: mul.8b v1
+; CHECK: mul.8b v0
+; CHECK: mul.8b v2
+; CHECK: mla.8b v1
+; CHECK: mla.8b v0
+; CHECK: mla.8b v2
+; CHECK: mla.8b v1
+; CHECK: mla.8b v0
+; CHECK: add.8b v1, v2, v1
+; CHECK: add.8b v0, v1, v0
+; CHECK: addv.8b
 
 define i16 @sabal_i8_to_i16_accumulation(ptr %ptr1, ptr %ptr2) {
 entry:

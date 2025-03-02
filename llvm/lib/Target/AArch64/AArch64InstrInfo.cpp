@@ -6709,6 +6709,7 @@ bool AArch64InstrInfo::isAccumulationOpcode(unsigned Opcode) const {
   case AArch64::SABAv4i32:
   case AArch64::SABAv8i16:
   case AArch64::SABAv8i8:
+  case AArch64::MLAv8i8:
     return true;
   }
 
@@ -6720,6 +6721,8 @@ std::optional<unsigned> AArch64InstrInfo::getAccumulationStartOpcode(
   switch (AccumulationOpcode) {
   default:
     llvm_unreachable("Unknown accumulator opcode");
+  case AArch64::MLAv8i8:
+    return AArch64::MULv8i8;
   case AArch64::UABALB_ZZZ_D:
     return AArch64::UABDLB_ZZZ_D;
   case AArch64::UABALB_ZZZ_H:
@@ -7593,6 +7596,7 @@ std::optional<unsigned> AArch64InstrInfo::getReduceOpcodeForAccumulator(
     return AArch64::ADDv2i32;
   case AArch64::UABAv8i8:
   case AArch64::SABAv8i8:
+  case AArch64::MLAv8i8:
     return AArch64::ADDv8i8;
   default:
     llvm_unreachable("Unknown accumulator opcode");
