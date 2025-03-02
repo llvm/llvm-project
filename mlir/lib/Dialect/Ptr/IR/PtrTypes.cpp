@@ -49,7 +49,8 @@ static SpecAttr getPointerSpec(DataLayoutEntryListRef params, PtrType type,
 
 bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
                             DataLayoutEntryListRef newLayout,
-                            DataLayoutSpecInterface newSpec) const {
+                            DataLayoutSpecInterface newSpec,
+                            const DataLayoutIdentifiedEntryMap &map) const {
   for (DataLayoutEntryInterface newEntry : newLayout) {
     if (!newEntry.isTypeEntry())
       continue;
@@ -65,9 +66,8 @@ bool PtrType::areCompatible(DataLayoutEntryListRef oldLayout,
           return false;
         });
     if (it == oldLayout.end()) {
-      Attribute defaultMemorySpace =
-          mlir::detail::getDefaultMemorySpace(newSpec.getSpecForIdentifier(
-              newSpec.getDefaultMemorySpaceIdentifier(getContext())));
+      Attribute defaultMemorySpace = mlir::detail::getDefaultMemorySpace(
+          map.lookup(newSpec.getDefaultMemorySpaceIdentifier(getContext())));
       it = llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
         if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
           auto ptrTy = llvm::cast<PtrType>(type);

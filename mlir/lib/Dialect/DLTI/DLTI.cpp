@@ -305,6 +305,28 @@ combineOneSpec(DataLayoutSpecInterface spec,
   DenseMap<StringAttr, DataLayoutEntryInterface> newEntriesForID;
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
 
+  // Combine non-Type DL entries first so they are visible to the
+  // `type.areCompatible` method, allowing to query global properties.
+  for (const auto &kvp : newEntriesForID) {
+    StringAttr id = cast<StringAttr>(kvp.second.getKey());
+    Dialect *dialect = id.getReferencedDialect();
+    if (!entriesForID.count(id)) {
+      entriesForID[id] = kvp.second;
+      continue;
+    }
+
+    // Attempt to combine the entries using the dialect interface. If the
+    // dialect is not loaded for some reason, use the default combinator
+    // that conservatively accepts identical entries only.
+    entriesForID[id] =
+        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
+                      entriesForID[id], kvp.second)
+                : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
+                                                             kvp.second);
+    if (!entriesForID[id])
+      return failure();
+  }
+
   // Try overwriting the old entries with the new ones.
   for (auto &kvp : newEntriesForType) {
     if (!entriesForType.count(kvp.first)) {
@@ -319,30 +341,10 @@ combineOneSpec(DataLayoutSpecInterface spec,
 
     auto interface = cast<DataLayoutTypeInterface>(typeSample);
     if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
-                                 spec))
+                                 spec, entriesForID))
       return failure();
 
     overwriteDuplicateEntries(entriesForType[kvp.first], kvp.second);
-  }
-
-  for (const auto &kvp : newEntriesForID) {
-    StringAttr id = cast<StringAttr>(kvp.second.getKey());
-    Dialect *dialect = id.getReferencedDialect();
-    if (!entriesForID.count(id)) {
-      entriesForID[id] = kvp.second;
-      continue;
-    }
-
-    // Attempt to combine the enties using the dialect interface. If the
-    // dialect is not loaded for some reason, use the default combinator
-    // that conservatively accepts identical entries only.
-    entriesForID[id] =
-        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
-                      entriesForID[id], kvp.second)
-                : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
-                                                             kvp.second);
-    if (!entriesForID[id])
-      return failure();
   }
 
   return success();
