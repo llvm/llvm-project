@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers, std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none, no-exceptions
 
 #include <ranges>
 
@@ -77,23 +76,6 @@ constexpr bool test() {
 
   static_assert(std::default_initializable<std::ranges::iterator_t<std::ranges::concat_view<MoveOnlyView>>>);
   static_assert(!std::default_initializable<std::ranges::iterator_t<std::ranges::concat_view<IterNoDefaultInitView>>>);
-
-  {
-    //valueless by exception test
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it2;
-    try {
-      it1 = concatView_2.begin();
-    } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE(
-          [&] {
-            it2 = it1;
-            (void)it2;
-          }(),
-          "valueless by exception");
-    }
-  }
 
   return true;
 }

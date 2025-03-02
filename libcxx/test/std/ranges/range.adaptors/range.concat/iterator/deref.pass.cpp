@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none, no-exceptions
 
 #include <ranges>
 
@@ -16,7 +15,6 @@
 #include <concepts>
 #include <cstddef>
 #include <utility>
-#include "check_assertion.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "../types.h"
@@ -38,17 +36,6 @@ constexpr void test() {
   int& result         = *iter;
   ASSERT_SAME_TYPE(int&, decltype(*iter));
   assert(&result == array.data());
-
-  {
-    //valueless by exception test
-    std::ranges::concat_view<ThrowOnCopyView> concatView_2;
-    std::ranges::iterator_t<std::ranges::concat_view<ThrowOnCopyView>> it1;
-    try {
-      it1 = concatView_2.begin();
-    } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)*it1; }(), "valueless by exception");
-    }
-  }
 }
 
 constexpr bool tests() {

@@ -15,7 +15,6 @@
 #include <concepts>
 #include <utility>
 #include <__type_traits/maybe_const.h>
-
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "test_range.h"
