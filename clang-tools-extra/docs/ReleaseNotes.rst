@@ -117,7 +117,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-trailing-return-type
   <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding the
-  option ``EvenWhenVoid`` that applies the check to ``void``-returning functions
+  option `EvenWhenVoid` that applies the check to ``void``-returning functions
   that by default are excluded from this check.
 
 - Improved :doc:`performance-unnecessary-value-param

@@ -31,7 +31,7 @@ Options
 .. option:: EvenWhenVoid
 
   If the option is set to `true`, the check will apply even to function signatures
-  with return type `void`. Default is `false`.
+  with return type ``void``. Default is `false`.
 
 Known Limitations
 -----------------
