@@ -32,7 +32,7 @@ void test(unsigned n, const T& x) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-   test<int, std::allocator<int> >(0, 5);
+  test<int, std::allocator<int> >(0, 5);
   test<int, std::allocator<int> >(1, 10);
   test<int, std::allocator<int> >(10, 11);
   test<int, std::allocator<int> >(1023, -11);
@@ -50,7 +50,6 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 #endif
   return true;
 }
-
 
 int main(int, char**) {
   tests();

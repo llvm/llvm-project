@@ -30,7 +30,7 @@ struct some_alloc {
 };
 
 TEST_CONSTEXPR_CXX26 bool test() {
-  #if defined(_LIBCPP_VERSION)
+#if defined(_LIBCPP_VERSION)
   {
     typedef std::deque<MoveOnly> C;
     static_assert(std::is_nothrow_move_constructible<C>::value, "");

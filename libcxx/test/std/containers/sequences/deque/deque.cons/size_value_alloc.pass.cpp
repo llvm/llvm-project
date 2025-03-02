@@ -32,7 +32,7 @@ void test(unsigned n, const T& x, const Allocator& a) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-   {
+  {
     std::allocator<int> a;
     test(0, 5, a);
     test(1, 10, a);

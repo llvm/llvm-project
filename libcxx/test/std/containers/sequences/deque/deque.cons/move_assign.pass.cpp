@@ -22,7 +22,7 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX26 bool test() {
-   {
+  {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);
     typedef test_allocator<MoveOnly> A;
