@@ -12,6 +12,8 @@
 #include <ranges>
 #include <utility>
 
+int globalArray[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
 struct TrackInitialization {
   constexpr explicit TrackInitialization(bool* moved, bool* copied) : moved_(moved), copied_(copied) {}
   constexpr TrackInitialization(TrackInitialization const& other) : moved_(other.moved_), copied_(other.copied_) {
@@ -39,6 +41,21 @@ struct minimal_view : std::ranges::view_base {
 private:
   decltype(base(std::declval<Iter>())) it_;
   decltype(base(std::declval<Sent>())) sent_;
+};
+
+struct ThrowOnCopyView : std::ranges::view_base {
+  int start_;
+  int* ptr_;
+  constexpr explicit ThrowOnCopyView(int* ptr = globalArray, int start = 0) : start_(start), ptr_(ptr) {}
+  constexpr ThrowOnCopyView(ThrowOnCopyView&&) = default;
+  constexpr ThrowOnCopyView(const ThrowOnCopyView&) { throw 42; };
+  constexpr ThrowOnCopyView& operator=(ThrowOnCopyView&&) = default;
+  constexpr ThrowOnCopyView& operator=(const ThrowOnCopyView&) {
+    throw 42;
+    return *this;
+  };
+  constexpr int* begin() const { return ptr_ + start_; }
+  constexpr int* end() const { return ptr_ + 8; }
 };
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_CONCAT_FILTER_TYPES_H

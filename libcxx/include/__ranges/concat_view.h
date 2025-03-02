@@ -522,7 +522,9 @@ public:
        ...))
 
   {
-    return std::visit(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    return __variant_detail::__visitation::__variant::__visit_value(
         [](const auto& __i) -> __concat_rvalue_reference_t<__maybe_const<_Const, _Views>...> {
           return ranges::iter_move(__i);
         },
@@ -539,7 +541,11 @@ public:
     requires swappable_with<iter_reference_t<__iterator>, iter_reference_t<__iterator>> &&
              (... && indirectly_swappable<iterator_t<__maybe_const<_Const, _Views>>>)
   {
-    std::visit(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+    __variant_detail::__visitation::__variant::__visit_value(
         [&](const auto& __it1, const auto& __it2) {
           if constexpr (is_same_v<decltype(__it1), decltype(__it2)>) {
             ranges::iter_swap(__it1, __it2);
