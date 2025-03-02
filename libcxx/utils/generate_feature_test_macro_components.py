@@ -342,13 +342,13 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_complex",
-            "values": {"c++26": 201711},
-            "headers": ["deque"],
+            "values": {"c++20": 201711},
+            "headers": ["complex"],
         },
         {
             "name": "__cpp_lib_constexpr_deque",
-            "values": {"c++20": 202502},
-            "headers": ["complex"],
+            "values": {"c++26": 202502},
+            "headers": ["deque"],
         },
         {
             "name": "__cpp_lib_constexpr_dynamic_alloc",
