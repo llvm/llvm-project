@@ -422,10 +422,13 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
                                  &Error, &ExecutionFailed);
+
     EXPECT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
-    EXPECT_TRUE(ExecutionFailed);
     EXPECT_FALSE(Error.empty());
+
+    // Note ExecutionFailed may or may not be false. When using fork, the error
+    // is produced on the wait for the child, not the execution point.
   }
 
   {
