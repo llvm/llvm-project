@@ -168,6 +168,7 @@ Changes to LLDB
 ### Changes to lldb-dap
 
 * Breakpoints can now be set for specific columns within a line.
+* Function return value is now displayed on step-out.
 
 Changes to BOLT
 ---------------------------------

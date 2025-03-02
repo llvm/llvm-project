@@ -64,6 +64,7 @@ private:
   void sortOrphanSections();
   void finalizeSections();
   void checkExecuteOnly();
+  void checkExecuteOnlyReport();
   void setReservedSymbolSections();
 
   SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs(Partition &part);
@@ -323,6 +324,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // finalizeSections does that.
   finalizeSections();
   checkExecuteOnly();
+  checkExecuteOnlyReport();
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
@@ -2174,6 +2176,41 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
           ErrAlways(ctx) << "cannot place " << isec << " into " << osec->name
                          << ": --execute-only does not support intermingling "
                             "data and code";
+}
+
+// Check which input sections of RX output sections don't have the
+// SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
+template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
+  if (ctx.arg.zExecuteOnlyReport == "none")
+    return;
+
+  auto reportUnless = [&](bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    if (ctx.arg.zExecuteOnlyReport == "error")
+      return {ctx, DiagLevel::Err};
+    if (ctx.arg.zExecuteOnlyReport == "warning")
+      return {ctx, DiagLevel::Warn};
+    return {ctx, DiagLevel::None};
+  };
+
+  uint64_t purecodeFlag =
+      ctx.arg.emachine == EM_AARCH64 ? SHF_AARCH64_PURECODE : SHF_ARM_PURECODE;
+  StringRef purecodeFlagName = ctx.arg.emachine == EM_AARCH64
+                                   ? "SHF_AARCH64_PURECODE"
+                                   : "SHF_ARM_PURECODE";
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (osec->getPhdrFlags() != (PF_R | PF_X))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (isa<SyntheticSection>(sec))
+        continue;
+      reportUnless(sec->flags & purecodeFlag)
+          << "-z execute-only-report: " << sec << " does not have "
+          << purecodeFlagName << " flag set";
+    }
+  }
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
