@@ -39,7 +39,6 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
   ZeroDirective               = "\t.space\t";
-  GPRel32Directive            = "\t.gpword\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;

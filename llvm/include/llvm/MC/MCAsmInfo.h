@@ -241,11 +241,6 @@ protected:
   /// True if data directives support signed values
   bool SupportsSignedData = true;
 
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
-  /// on Alpha.  Defaults to nullptr.
-  const char *GPRel32Directive = nullptr;
-
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
@@ -450,7 +445,6 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-  const char *getGPRel32Directive() const { return GPRel32Directive; }
 
   /// Targets can implement this method to specify a section to switch to if the
   /// translation unit doesn't have any trampolines that require an executable
