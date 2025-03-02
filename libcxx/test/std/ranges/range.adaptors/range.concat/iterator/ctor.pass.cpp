@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// REQUIRES: has-unix-headers, std-at-least-c++26
 // UNSUPPORTED: no-exceptions
 
 #include <ranges>
