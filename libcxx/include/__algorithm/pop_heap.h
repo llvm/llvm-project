@@ -51,9 +51,8 @@ __pop_heap(_RandomAccessIterator __first,
       *__hole = std::move(__top);
     } else {
       *__hole = _IterOps<_AlgPolicy>::__iter_move(__last);
-      ++__hole;
       *__last = std::move(__top);
-      std::__sift_up<_AlgPolicy>(__first, __hole, __comp_ref, __hole - __first);
+      std::__sift_up<_AlgPolicy>(__first, __hole, __comp_ref);
     }
   }
 }
