@@ -681,8 +681,8 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits.
-  if (LoadSize1 < 8 || LoadSize2 < 8)
+  // Support Loadsizes that equal to the corresponding store sizes.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) || !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
