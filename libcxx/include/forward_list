@@ -343,9 +343,7 @@ private:
   _ALIGNAS_TYPE(_Tp) char __buffer_[sizeof(_Tp)];
 
 public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() {
-    return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_));
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return *std::__launder(reinterpret_cast<_Tp*>(&__buffer_)); }
 #  endif
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit __forward_list_node(_NodePtr __next) : _Base(__next) {}
@@ -1213,7 +1211,6 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n, const
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
     __r             = __forward_node_traits<__node_pointer>::__as_iter_node(__last);
-    // __r             = static_cast<__begin_node_pointer>(__last);
   }
   return iterator(__r);
 }
@@ -1255,7 +1252,6 @@ forward_list<_Tp, _Alloc>::__insert_after_with_sentinel(const_iterator __p, _Inp
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
     __r             = __forward_node_traits<__node_pointer>::__as_iter_node(__last);
-    // __r             = static_cast<__begin_node_pointer>(__last);
   }
 
   return iterator(__r);
