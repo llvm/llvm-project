@@ -59,9 +59,7 @@ private:
                       const FriendDecl *Fr, const ASTContext &Ctx,
                       const SourceManager &SM, const LangOptions &LangOpts);
 
-  auto storeOptions(ClangTidyOptions::OptionMap &Opts) -> void override {
-    Options.store(Opts, "EvenWhenVoid", EvenWhenVoid);
-  }
+  auto storeOptions(ClangTidyOptions::OptionMap &Opts) -> void override;
 };
 
 } // namespace clang::tidy::modernize

@@ -500,4 +500,9 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
 }
 
+auto UseTrailingReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts)
+    -> void {
+  Options.store(Opts, "EvenWhenVoid", EvenWhenVoid);
+}
+
 } // namespace clang::tidy::modernize
