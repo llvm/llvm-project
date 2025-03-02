@@ -130,10 +130,6 @@ public:
   virtual void emitConstantPools();
 
   virtual void finish();
-
-  // MIPS specific functions called by AsmPrinter.
-  virtual void emitGPRel32Value(const MCExpr *);
-  virtual void emitGPRel64Value(const MCExpr *);
 };
 
 // FIXME: declared here because it is used from
