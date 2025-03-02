@@ -1790,8 +1790,8 @@ define i16 @loadCombine_mixsize_4bit(ptr %p) {
   ret i16 %o2
 }
 
-define i32 @loadCombine_2consecutive_mixsize_4bit(ptr %p) {
-; ALL-LABEL: @loadCombine_2consecutive_mixsize_4bit(
+define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_equal_store_size(
 ; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 1
 ; ALL-NEXT:    [[L1:%.*]] = load i4, ptr [[P]], align 1
 ; ALL-NEXT:    [[L2:%.*]] = load i28, ptr [[P1]], align 4
@@ -1811,8 +1811,8 @@ define i32 @loadCombine_2consecutive_mixsize_4bit(ptr %p) {
   ret i32 %o1
 }
 
-define i32 @loadCombine_2consecutive_mixsize_4bit2(ptr %p) {
-; ALL-LABEL: @loadCombine_2consecutive_mixsize_4bit2(
+define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size2(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_equal_store_size2(
 ; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 7
 ; ALL-NEXT:    [[L1:%.*]] = load i28, ptr [[P]], align 4
 ; ALL-NEXT:    [[L2:%.*]] = load i4, ptr [[P1]], align 1
