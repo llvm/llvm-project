@@ -14,17 +14,17 @@
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://PROJECT_DIR/foo.c","languageId":"c","text":"int FOO = CONFIG;"}}}
-# No errors in the config file.
+# No errors in either config.
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file://{{.*}}/config.yaml"
+# CHECK-NEXT:    "uri": [[URI:"file://.*/config\.yaml|\.clangd"]]
 # CHECK-NEXT:  }
-# No errors in the config file.
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file://{{.*}}/.clangd"
+#  CHECK-NOT:    "uri": [[URI]]
+# CHECK-NEXT:    "uri": "file://{{.*}}/{{config\.yaml|\.clangd}}"
 # CHECK-NEXT:  }
 # LOCAL rather than USER means the local .clangd applied later and overrode the user config.
 #      CHECK:  "method": "textDocument/publishDiagnostics",
