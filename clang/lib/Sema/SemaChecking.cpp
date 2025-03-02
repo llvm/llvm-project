@@ -10619,7 +10619,20 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     case UO_AddrOf: // should be impossible
       return IntRange::forValueOfType(C, GetExprType(E));
 
-    case UO_Minus:
+    case UO_Minus: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      return IntRange(SubRange->Width + 1, false);
+    }
     case UO_Not: {
       if (E->getType()->isUnsignedIntegerType()) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
