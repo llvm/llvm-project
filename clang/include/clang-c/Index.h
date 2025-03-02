@@ -6629,6 +6629,28 @@ CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
                                                   CXClientData client_data);
 
 /**
+ * Visit the class methods of a type.
+ *
+ * This function visits all the methods of the given cursor,
+ * invoking the given \p visitor function with the cursors of each
+ * visited method. The traversal may be ended prematurely, if
+ * the visitor returns \c CXFieldVisit_Break.
+ *
+ * \param T The record type whose field may be visited.
+ *
+ * \param visitor The visitor function that will be invoked for each
+ * field of \p T.
+ *
+ * \param client_data Pointer data supplied by the client, which will
+ * be passed to the visitor each time it is invoked.
+ *
+ * \returns A non-zero value if the traversal was terminated
+ * prematurely by the visitor returning \c CXFieldVisit_Break.
+ */
+CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T, CXFieldVisitor visitor,
+                                              CXClientData client_data);
+
+/**
  * Describes the kind of binary operators.
  */
 enum CXBinaryOperatorKind {

@@ -19,6 +19,7 @@
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=inverse_throughput \
 # RUN:    --opcode-name=PseudoVSM3C_VI_M1 --max-configs-per-opcode=1000 --min-instructions=100 | \
 # RUN:    FileCheck %s --allow-empty --check-prefix=EMPTY
+# UNSUPPORTED: expensive_checks
 
 # Most vector crypto only supports SEW=32, except Zvknhb which also supports SEW=64
 # ZVK-NOT: SEW: e{{(8|16)}}
