@@ -1226,10 +1226,10 @@ void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
     if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
-        OutStreamer->emitDTPRel32Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
         break;
       case 8:
-        OutStreamer->emitDTPRel64Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel64Value(MipsExpr->getSubExpr());
         break;
       default:
         llvm_unreachable("Unexpected size of expression value.");

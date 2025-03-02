@@ -8072,109 +8072,61 @@ bool MipsAsmParser::parseDirectiveSet() {
 /// parseDirectiveGpWord
 ///  ::= .gpword local_sym
 bool MipsAsmParser::parseDirectiveGpWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitGPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitGPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitGPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveGpDWord
 ///  ::= .gpdword local_sym
 bool MipsAsmParser::parseDirectiveGpDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitGPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitGPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitGPRel64Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveDtpRelWord
 ///  ::= .dtprelword tls_sym
 bool MipsAsmParser::parseDirectiveDtpRelWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitDTPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitDTPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitDTPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveDtpRelDWord
 ///  ::= .dtpreldword tls_sym
 bool MipsAsmParser::parseDirectiveDtpRelDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitDTPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitDTPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitDTPRel64Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveTpRelWord
 ///  ::= .tprelword tls_sym
 bool MipsAsmParser::parseDirectiveTpRelWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitTPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitTPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitTPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveTpRelDWord
 ///  ::= .tpreldword tls_sym
 bool MipsAsmParser::parseDirectiveTpRelDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitTPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitTPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitTPRel64Value(Value);
+  return parseEOL();
 }
 
 bool MipsAsmParser::parseDirectiveOption() {
