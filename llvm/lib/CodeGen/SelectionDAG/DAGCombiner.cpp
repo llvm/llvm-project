@@ -8528,6 +8528,13 @@ SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
       return DAG.getNode(ISD::FSHL, DL, VT, N0, N1.getOperand(0), Pos);
     }
 
+    SDValue X1, Y;
+    if (sd_match(N1, m_Srl(X1, m_SpecificInt(1))) &&
+        sd_match(InnerNeg, m_Xor(Y, m_SpecificInt(EltBits - 1))) &&
+        Y == InnerPos && TLI.isOperationLegalOrCustom(ISD::FSHL, VT)) {
+      return DAG.getNode(ISD::FSHL, DL, VT, N0, N1.getOperand(0), Pos);
+    }
+
     // fold (or (shl (shl x0, 1), (xor y, 31)), (srl x1, y))
     //   -> (fshr x0, x1, y)
     if (IsBinOpImm(N0, ISD::SHL, 1) &&
