@@ -385,15 +385,15 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  const auto hasNoWrittenReturnType =
+  const auto HasNoWrittenReturnType =
       anyOf(cxxConversionDecl(), cxxConstructorDecl(), cxxDestructorDecl(),
             cxxMethodDecl(isImplicit()));
 
-  const auto where = functionDecl(
-      unless(anyOf(hasTrailingReturn(), hasNoWrittenReturnType,
+  const auto Where = functionDecl(
+      unless(anyOf(hasTrailingReturn(), HasNoWrittenReturnType,
                    EvenWhenVoid ? unless(anything()) : returns(voidType()))));
 
-  auto F = where.bind("Func");
+  auto F = Where.bind("Func");
 
   Finder->addMatcher(F, this);
   Finder->addMatcher(friendDecl(hasDescendant(F)).bind("Friend"), this);
