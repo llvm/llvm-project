@@ -491,8 +491,9 @@ static Value *getAddrSizeInt(Module *M, uint64_t C) {
 Function *
 WebAssemblyLowerEmscriptenEHSjLj::getFindMatchingCatch(Module &M,
                                                        unsigned NumClauses) {
-  if (FindMatchingCatches.count(NumClauses))
-    return FindMatchingCatches[NumClauses];
+  if (auto It = FindMatchingCatches.find(NumClauses);
+      It != FindMatchingCatches.end())
+    return It->second;
   PointerType *Int8PtrTy = PointerType::getUnqual(M.getContext());
   SmallVector<Type *, 16> Args(NumClauses, Int8PtrTy);
   FunctionType *FTy = FunctionType::get(Int8PtrTy, Args, false);
