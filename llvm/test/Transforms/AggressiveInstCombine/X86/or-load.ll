@@ -1874,6 +1874,136 @@ define i16 @loadCombine_mixsize_4bit(ptr %p) {
   ret i16 %o2
 }
 
+define i32 @loadCombine_2consecutive_mixsize_4bit(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_mixsize_4bit(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 1
+; ALL-NEXT:    [[L1:%.*]] = load i4, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i28, ptr [[P1]], align 4
+; ALL-NEXT:    [[E1:%.*]] = zext i4 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i28 [[L2]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 4
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i4, ptr %p, i32 1
+  %l1 = load i4, ptr %p
+  %l2 = load i28, ptr %p1
+  %e1 = zext i4 %l1 to i32
+  %e2 = zext i28 %l2 to i32
+  %s2 = shl i32 %e2, 4
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
+define i32 @loadCombine_2consecutive_mixsize_4bit2(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_mixsize_4bit2(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 7
+; ALL-NEXT:    [[L1:%.*]] = load i28, ptr [[P]], align 4
+; ALL-NEXT:    [[L2:%.*]] = load i4, ptr [[P1]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i28 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i4 [[L2]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 28
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i4, ptr %p, i32 7
+  %l1 = load i28, ptr %p
+  %l2 = load i4, ptr %p1
+  %e1 = zext i28 %l1 to i32
+  %e2 = zext i4 %l2 to i32
+  %s2 = shl i32 %e2, 28
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
+define i32 @loadCombine_2consecutive_mixsize_not_power_of_two(ptr %p) {
+; LE-LABEL: @loadCombine_2consecutive_mixsize_not_power_of_two(
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; LE-NEXT:    ret i32 [[L1]]
+;
+; BE-LABEL: @loadCombine_2consecutive_mixsize_not_power_of_two(
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; BE-NEXT:    [[L2:%.*]] = load i24, ptr [[P1]], align 4
+; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; BE-NEXT:    [[E2:%.*]] = zext i24 [[L2]] to i32
+; BE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; BE-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; BE-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %l1 = load i8, ptr %p
+  %l2 = load i24, ptr %p1
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i24 %l2 to i32
+  %s2 = shl i32 %e2, 8
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
+define i32 @loadCombine_2consecutive_mixsize_not_power_of_two2(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_power_of_two2(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 3
+; ALL-NEXT:    [[L1:%.*]] = load i24, ptr [[P]], align 4
+; ALL-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i24 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 24
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 3
+  %l1 = load i24, ptr %p
+  %l2 = load i8, ptr %p1
+  %e1 = zext i24 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %s2 = shl i32 %e2, 24
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
+define i32 @loadCombine_2consecutive_sum_size_not_legal(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_sum_size_not_legal(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 2
+; ALL-NEXT:    [[L1:%.*]] = load i16, ptr [[P]], align 2
+; ALL-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; ALL-NEXT:    [[E1:%.*]] = zext i16 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 16
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 2
+  %l1 = load i16, ptr %p
+  %l2 = load i8, ptr %p1
+  %e1 = zext i16 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %s2 = shl i32 %e2, 16
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
+define i32 @loadCombine_2consecutive_sum_size_not_legal2(ptr %p) {
+; ALL-LABEL: @loadCombine_2consecutive_sum_size_not_legal2(
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; ALL-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; ALL-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 2
+; ALL-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; ALL-NEXT:    [[E2:%.*]] = zext i16 [[L2]] to i32
+; ALL-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; ALL-NEXT:    ret i32 [[O1]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %l1 = load i8, ptr %p
+  %l2 = load i16, ptr %p1
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i16 %l2 to i32
+  %s2 = shl i32 %e2, 8
+  %o1 = or i32 %e1, %s2
+  ret i32 %o1
+}
+
 define i64 @loadCombine_8consecutive_mixsize(ptr %p) {
 ; LE-LABEL: @loadCombine_8consecutive_mixsize(
 ; LE-NEXT:    [[O3:%.*]] = load i64, ptr [[P:%.*]], align 1
