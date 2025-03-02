@@ -2006,12 +2006,12 @@ bool FastISel::fastLowerIntrinsicCall(const IntrinsicInst * /*II*/) {
 
 unsigned FastISel::fastEmit_(MVT, MVT, unsigned) { return 0; }
 
-unsigned FastISel::fastEmit_r(MVT, MVT, unsigned, unsigned /*Op0*/) {
+unsigned FastISel::fastEmit_r(MVT, MVT, unsigned, Register /*Op0*/) {
   return 0;
 }
 
-unsigned FastISel::fastEmit_rr(MVT, MVT, unsigned, unsigned /*Op0*/,
-                               unsigned /*Op1*/) {
+unsigned FastISel::fastEmit_rr(MVT, MVT, unsigned, Register /*Op0*/,
+                               Register /*Op1*/) {
   return 0;
 }
 
@@ -2024,7 +2024,7 @@ unsigned FastISel::fastEmit_f(MVT, MVT, unsigned,
   return 0;
 }
 
-unsigned FastISel::fastEmit_ri(MVT, MVT, unsigned, unsigned /*Op0*/,
+unsigned FastISel::fastEmit_ri(MVT, MVT, unsigned, Register /*Op0*/,
                                uint64_t /*Imm*/) {
   return 0;
 }
@@ -2033,7 +2033,7 @@ unsigned FastISel::fastEmit_ri(MVT, MVT, unsigned, unsigned /*Op0*/,
 /// instruction with an immediate operand using fastEmit_ri.
 /// If that fails, it materializes the immediate into a register and try
 /// fastEmit_rr instead.
-Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, unsigned Op0,
+Register FastISel::fastEmit_ri_(MVT VT, unsigned Opcode, Register Op0,
                                 uint64_t Imm, MVT ImmType) {
   // If this is a multiply by a power of two, emit this as a shift left.
   if (Opcode == ISD::MUL && isPowerOf2_64(Imm)) {
@@ -2099,7 +2099,7 @@ Register FastISel::fastEmitInst_(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
-                                  const TargetRegisterClass *RC, unsigned Op0) {
+                                  const TargetRegisterClass *RC, Register Op0) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2120,8 +2120,8 @@ Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
-                                   const TargetRegisterClass *RC, unsigned Op0,
-                                   unsigned Op1) {
+                                   const TargetRegisterClass *RC, Register Op0,
+                                   Register Op1) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2144,8 +2144,8 @@ Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
-                                    unsigned Op1, unsigned Op2) {
+                                    const TargetRegisterClass *RC, Register Op0,
+                                    Register Op1, Register Op2) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2171,7 +2171,7 @@ Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
-                                   const TargetRegisterClass *RC, unsigned Op0,
+                                   const TargetRegisterClass *RC, Register Op0,
                                    uint64_t Imm) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
@@ -2194,7 +2194,7 @@ Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rii(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
+                                    const TargetRegisterClass *RC, Register Op0,
                                     uint64_t Imm1, uint64_t Imm2) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
@@ -2239,8 +2239,8 @@ Register FastISel::fastEmitInst_f(unsigned MachineInstOpcode,
 }
 
 Register FastISel::fastEmitInst_rri(unsigned MachineInstOpcode,
-                                    const TargetRegisterClass *RC, unsigned Op0,
-                                    unsigned Op1, uint64_t Imm) {
+                                    const TargetRegisterClass *RC, Register Op0,
+                                    Register Op1, uint64_t Imm) {
   const MCInstrDesc &II = TII.get(MachineInstOpcode);
 
   Register ResultReg = createResultReg(RC);
@@ -2281,11 +2281,10 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
   return ResultReg;
 }
 
-Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
+Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, Register Op0,
                                               uint32_t Idx) {
   Register ResultReg = createResultReg(TLI.getRegClassFor(RetVT));
-  assert(Register::isVirtualRegister(Op0) &&
-         "Cannot yet extract from physregs");
+  assert(Op0.isVirtual() && "Cannot yet extract from physregs");
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
@@ -2295,7 +2294,7 @@ Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, unsigned Op0,
 
 /// Emit MachineInstrs to compute the value of Op with all but the least
 /// significant bit set to zero.
-Register FastISel::fastEmitZExtFromI1(MVT VT, unsigned Op0) {
+Register FastISel::fastEmitZExtFromI1(MVT VT, Register Op0) {
   return fastEmit_ri(VT, VT, ISD::AND, Op0, 1);
 }
 
