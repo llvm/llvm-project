@@ -101,7 +101,7 @@ protected:
   /// The scheduler bundle that this node belongs to.
   SchedBundle *SB = nullptr;
 
-  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void setSchedBundle(SchedBundle &SB);
   void clearSchedBundle() { this->SB = nullptr; }
   friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 

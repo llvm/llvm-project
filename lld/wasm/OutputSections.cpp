@@ -101,7 +101,8 @@ void DataSection::finalizeContents() {
   });
 #ifndef NDEBUG
   unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
-    return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+    return segment->requiredInBinary() &&
+           (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
   });
 #endif
 

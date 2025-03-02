@@ -163,7 +163,7 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot check memory dependencies at runtime
+; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -204,7 +204,7 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot check memory dependencies at runtime
+; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

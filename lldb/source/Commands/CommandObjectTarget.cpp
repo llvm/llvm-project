@@ -57,6 +57,7 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 #include "clang/Frontend/CompilerInstance.h"
@@ -3762,20 +3763,18 @@ protected:
 
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
-        UnwindPlan arch_default(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateDefaultUnwindPlan(arch_default)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
-          arch_default.Dump(result.GetOutputStream(), thread.get(),
-                            LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
 
-        UnwindPlan arch_entry(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateFunctionEntryUnwindPlan(arch_entry)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateFunctionEntryUnwindPlan()) {
           result.GetOutputStream().Printf(
               "Arch default at entry point UnwindPlan:\n");
-          arch_entry.Dump(result.GetOutputStream(), thread.get(),
-                          LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
       }
@@ -4923,11 +4922,13 @@ Filter Options:
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(
-          "Enter your stop hook command(s).  Type 'DONE' to end.\n");
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter your stop hook command(s).  Type 'DONE' to end.\n");
+      }
     }
   }
 
@@ -4935,12 +4936,12 @@ protected:
                               std::string &line) override {
     if (m_stop_hook_sp) {
       if (line.empty()) {
-        StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
-        if (error_sp) {
-          error_sp->Printf("error: stop hook #%" PRIu64
-                           " aborted, no commands.\n",
-                           m_stop_hook_sp->GetID());
-          error_sp->Flush();
+        if (lldb::LockableStreamFileSP error_sp =
+                io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: stop hook #%" PRIu64
+                               " aborted, no commands.\n",
+                               m_stop_hook_sp->GetID());
         }
         GetTarget().UndoCreateStopHook(m_stop_hook_sp->GetID());
       } else {
@@ -4949,11 +4950,11 @@ protected:
             static_cast<Target::StopHookCommandLine *>(m_stop_hook_sp.get());
 
         hook_ptr->SetActionFromString(line);
-        StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-        if (output_sp) {
-          output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
-                            m_stop_hook_sp->GetID());
-          output_sp->Flush();
+        if (lldb::LockableStreamFileSP output_sp =
+                io_handler.GetOutputStreamFileSP()) {
+          LockedStreamFile locked_stream = output_sp->Lock();
+          locked_stream.Printf("Stop hook #%" PRIu64 " added.\n",
+                               m_stop_hook_sp->GetID());
         }
       }
       m_stop_hook_sp.reset();

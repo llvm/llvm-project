@@ -481,7 +481,7 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
       if (CS.isSpilledToReg())
         continue;
 
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
       int FrameIdx;
@@ -570,7 +570,7 @@ static void updateLiveness(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCPhysReg Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -605,7 +605,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
 
       if (CS.isSpilledToReg()) {
         BuildMI(SaveBlock, I, DebugLoc(),
@@ -634,7 +634,7 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      unsigned Reg = CI.getReg();
+      MCRegister Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
           .addReg(CI.getDstReg(), getKillRegState(true));

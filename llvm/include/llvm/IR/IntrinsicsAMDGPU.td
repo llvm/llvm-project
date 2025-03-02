@@ -2529,13 +2529,13 @@ def int_amdgcn_set_inactive_chain_arg :
 // Return if the given flat pointer points to a local memory address.
 def int_amdgcn_is_shared : ClangBuiltin<"__builtin_amdgcn_is_shared">,
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
-  [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
+  [IntrNoMem, IntrSpeculatable] // FIXME: This should be captures(ret: address)
 >;
 
 // Return if the given flat pointer points to a prvate memory address.
 def int_amdgcn_is_private : ClangBuiltin<"__builtin_amdgcn_is_private">,
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
-  [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
+  [IntrNoMem, IntrSpeculatable] // FIXME: This should be captures(ret: address)
 >;
 
 // A uniform tail call to a function with the `amdgpu_cs_chain` or
@@ -3463,4 +3463,11 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
   [llvm_anyptr_ty], [llvm_anyptr_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+/// Make it clear to the backend that this value is really dead. For instance,
+/// when used as an input to a phi node, it will make it possible for the
+/// backend to allocate the dead lanes for operations within the corresponding
+/// incoming block.
+def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
+    [IntrNoMem, IntrWillReturn, IntrNoCallback]>;
 }
