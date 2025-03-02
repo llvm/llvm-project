@@ -331,17 +331,6 @@ public:
   /// \return - False on success.
   virtual bool checkForValidSection() = 0;
 
-  /// Parse an arbitrary expression of a specified parenthesis depth,
-  /// assuming that the initial '(' characters have already been consumed.
-  ///
-  /// \param ParenDepth - Specifies how many trailing expressions outside the
-  /// current parentheses we have to parse.
-  /// \param Res - The value of the expression. The result is undefined
-  /// on error.
-  /// \return - False on success.
-  virtual bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
-                                     SMLoc &EndLoc) = 0;
-
   /// Parse a .gnu_attribute.
   bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
 };
