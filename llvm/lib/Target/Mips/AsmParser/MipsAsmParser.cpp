@@ -4290,7 +4290,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   // Temporary label for first branch traget
-  MCContext &Context = TOut.getStreamer().getContext();
+  MCContext &Context = TOut.getContext();
   MCSymbol *BrTarget;
   MCOperand LabelOp;
 
@@ -5222,7 +5222,7 @@ bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   if (useTraps()) {
     TOut.emitRRI(Mips::TNE, DstReg, ATReg, 6, IDLoc, STI);
   } else {
-    MCContext & Context = TOut.getStreamer().getContext();
+    MCContext &Context = TOut.getContext();
     MCSymbol * BrTarget = Context.createTempSymbol();
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
@@ -5259,7 +5259,7 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   if (useTraps()) {
     TOut.emitRRI(Mips::TNE, ATReg, Mips::ZERO, 6, IDLoc, STI);
   } else {
-    MCContext & Context = TOut.getStreamer().getContext();
+    MCContext &Context = TOut.getContext();
     MCSymbol * BrTarget = Context.createTempSymbol();
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));

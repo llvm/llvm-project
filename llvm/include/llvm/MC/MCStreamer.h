@@ -100,6 +100,7 @@ public:
   virtual ~MCTargetStreamer();
 
   MCStreamer &getStreamer() { return Streamer; }
+  MCContext &getContext();
 
   // Allow a target to add behavior to the EmitLabel of MCStreamer.
   virtual void emitLabel(MCSymbol *Symbol);
@@ -1169,6 +1170,10 @@ public:
                                         const MCSymbol *Label,
                                         unsigned PointerSize) {}
 };
+
+inline MCContext &MCTargetStreamer::getContext() {
+  return Streamer.getContext();
+}
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
