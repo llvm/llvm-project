@@ -556,8 +556,14 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
     if (NumPreds == 1)
       continue;
 
-    // Try to replace the PHI node with a constant value.
-    if (Value *PhiConstant = Phi.hasConstantValue()) {
+    // Try to replace the PHI node with a constant value, but make sure that
+    // this value isn't using the PHI node. (Except it's a PHI node itself. PHI
+    // nodes are allowed to reference themselves.)
+    if (Value *PhiConstant = Phi.hasConstantValue();
+        PhiConstant &&
+        (!isa<Instruction>(PhiConstant) || isa<PHINode>(PhiConstant) ||
+         llvm::all_of(Phi.users(),
+                      [PhiConstant](User *U) { return U != PhiConstant; }))) {
       Phi.replaceAllUsesWith(PhiConstant);
       Phi.eraseFromParent();
     }
