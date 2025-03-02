@@ -807,6 +807,17 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   SetVector<GlobalAlias *> PatchableFns;
 
   for (Function &F : Mod) {
+    if (F.hasPersonalityFn()) {
+      GlobalValue *PersFn =
+          cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+      if (PersFn->getValueType() && PersFn->getValueType()->isFunctionTy()) {
+        if (std::optional<std::string> MangledName =
+                getArm64ECMangledFunctionName(PersFn->getName().str())) {
+          PersFn->setName(MangledName.value());
+        }
+      }
+    }
+
     if (!F.hasFnAttribute(Attribute::HybridPatchable) || F.isDeclaration() ||
         F.hasLocalLinkage() || F.getName().ends_with("$hp_target"))
       continue;
