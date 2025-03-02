@@ -416,17 +416,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-// attribute is present.  This can check for preconditions of the
-// getNumArguments hook not failing.
-LogicalResult cir::FuncOp::verifyType() {
-  auto type = getFunctionType();
-  if (!isa<cir::FuncType>(type))
-    return emitOpError("requires '" + getFunctionTypeAttrName().str() +
-                       "' attribute of function type");
-  return success();
-}
-
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
