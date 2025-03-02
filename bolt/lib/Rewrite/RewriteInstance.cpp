@@ -19,6 +19,8 @@
 #include "bolt/Core/Relocation.h"
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
+#include "bolt/Passes/IdenticalCodeFolding.h"
+#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -78,7 +80,6 @@ namespace opts {
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
-extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> ReorderData;
@@ -86,6 +87,9 @@ extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 extern cl::opt<bool> TimeRewrite;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -242,6 +246,13 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
+cl::list<GadgetScannerKind>
+    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
+                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
+                                   clEnumValN(GS_ALL, "all", "all")),
+                        cl::ZeroOrMore, cl::CommaSeparated,
+                        cl::cat(BinaryAnalysisCategory));
+
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
@@ -356,7 +367,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
 
   Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
-      TheTriple, File->getFileName(), Features.get(), IsPIC,
+      TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
+      Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
@@ -616,6 +628,11 @@ Error RewriteInstance::discoverStorage() {
     unsigned Phnum = Obj.getHeader().e_phnum;
     Phnum += 3;
 
+    // Reserve two more pheaders to avoid having writeable and executable
+    // segment in instrumented binary.
+    if (opts::Instrument)
+      Phnum += 2;
+
     NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
     NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
   }
@@ -697,6 +714,11 @@ Error RewriteInstance::run() {
 
   if (opts::DiffOnly)
     return Error::success();
+
+  if (opts::BinaryAnalysisMode) {
+    runBinaryAnalyses();
+    return Error::success();
+  }
 
   preregisterSections();
 
@@ -2050,6 +2072,13 @@ void RewriteInstance::adjustCommandLineOptions() {
     exit(1);
   }
 
+  if (!BC->HasRelocations &&
+      opts::ICF == IdenticalCodeFolding::ICFLevel::Safe) {
+    BC->errs() << "BOLT-ERROR: binary built without relocations. Safe ICF is "
+                  "not supported\n";
+    exit(1);
+  }
+
   if (opts::Instrument ||
       (opts::ReorderFunctions != ReorderFunctions::RT_NONE &&
        !opts::HotText.getNumOccurrences())) {
@@ -2057,6 +2086,13 @@ void RewriteInstance::adjustCommandLineOptions() {
   } else if (opts::HotText && !BC->HasRelocations) {
     BC->errs() << "BOLT-WARNING: hot text is disabled in non-relocation mode\n";
     opts::HotText = false;
+  }
+
+  if (opts::Instrument && opts::UseGnuStack) {
+    BC->errs() << "BOLT-ERROR: cannot avoid having writeable and executable "
+                  "segment in instrumented binary if program headers will be "
+                  "updated in place\n";
+    exit(1);
   }
 
   if (opts::HotText && opts::HotTextMoveSections.getNumOccurrences() == 0) {
@@ -3474,6 +3510,25 @@ void RewriteInstance::runOptimizationPasses() {
   BC->logBOLTErrorsAndQuitOnFatal(BinaryFunctionPassManager::runAllPasses(*BC));
 }
 
+void RewriteInstance::runBinaryAnalyses() {
+  NamedRegionTimer T("runBinaryAnalyses", "run binary analysis passes",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
+  BinaryFunctionPassManager Manager(*BC);
+  // FIXME: add a pass that warns about which functions do not have CFG,
+  // and therefore, analysis is most likely to be less accurate.
+  using GSK = opts::GadgetScannerKind;
+  // if no command line option was given, act as if "all" was specified.
+  if (opts::GadgetScannersToRun.empty())
+    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
+  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
+    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
+      Manager.registerPass(
+          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+  }
+
+  BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
+}
+
 void RewriteInstance::preregisterSections() {
   // Preregister sections before emission to set their order in the output.
   const unsigned ROFlags = BinarySection::getFlags(/*IsReadOnly*/ true,
@@ -3569,11 +3624,13 @@ void RewriteInstance::emitAndLink() {
         static_cast<MCObjectStreamer &>(*Streamer).getAssembler());
   }
 
-  if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
+  if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary()) {
+    StartLinkingRuntimeLib = true;
     RtLibrary->link(*BC, ToolPath, *Linker, [this](auto MapSection) {
       // Map newly registered sections.
       this->mapAllocatableSections(MapSection);
     });
+  }
 
   // Once the code is emitted, we can rename function sections to actual
   // output sections and de-register sections used for emission.
@@ -3840,20 +3897,6 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     assert(Function.getImageSize() <= Function.getMaxSize() &&
            "Unexpected large function");
 
-    // Map jump tables if updating in-place.
-    if (opts::JumpTables == JTS_BASIC) {
-      for (auto &JTI : Function.JumpTables) {
-        JumpTable *JT = JTI.second;
-        BinarySection &Section = JT->getOutputSection();
-        Section.setOutputAddress(JT->getAddress());
-        Section.setOutputFileOffset(getFileOffsetForAddress(JT->getAddress()));
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: mapping JT " << Section.getName()
-                          << " to 0x" << Twine::utohexstr(JT->getAddress())
-                          << '\n');
-        MapSection(Section, JT->getAddress());
-      }
-    }
-
     if (!Function.isSplit())
       continue;
 
@@ -3982,12 +4025,17 @@ void RewriteInstance::mapAllocatableSections(
         Section.setOutputFileOffset(Section.getInputFileOffset());
         MapSection(Section, Section.getAddress());
       } else {
-        NextAvailableAddress =
-            alignTo(NextAvailableAddress, Section.getAlignment());
+        uint64_t Alignment = Section.getAlignment();
+        if (opts::Instrument && StartLinkingRuntimeLib) {
+          Alignment = BC->RegularPageSize;
+          StartLinkingRuntimeLib = false;
+        }
+        NextAvailableAddress = alignTo(NextAvailableAddress, Alignment);
+
         LLVM_DEBUG({
-          dbgs() << "BOLT: mapping section " << Section.getName() << " (0x"
-                 << Twine::utohexstr(Section.getAllocAddress()) << ") to 0x"
-                 << Twine::utohexstr(NextAvailableAddress) << ":0x"
+          dbgs() << "BOLT-DEBUG: mapping section " << Section.getName()
+                 << " (0x" << Twine::utohexstr(Section.getAllocAddress())
+                 << ") to 0x" << Twine::utohexstr(NextAvailableAddress) << ":0x"
                  << Twine::utohexstr(NextAvailableAddress +
                                      Section.getOutputSize())
                  << '\n';
@@ -4050,6 +4098,9 @@ void RewriteInstance::patchELFPHDRTable() {
     }
   }
 
+  if (opts::Instrument)
+    Phnum += 2;
+
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
@@ -4064,7 +4115,8 @@ void RewriteInstance::patchELFPHDRTable() {
   const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);
 
-  auto createNewTextPhdr = [&]() {
+  auto createNewPhdrs = [&]() {
+    SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
     ELF64LEPhdrTy NewPhdr;
     NewPhdr.p_type = ELF::PT_LOAD;
     if (PHDRTableAddress) {
@@ -4079,20 +4131,67 @@ void RewriteInstance::patchELFPHDRTable() {
     NewPhdr.p_filesz = NewTextSegmentSize;
     NewPhdr.p_memsz = NewTextSegmentSize;
     NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
-    if (opts::Instrument) {
-      // FIXME: Currently instrumentation is experimental and the runtime data
-      // is emitted with code, thus everything needs to be writable.
-      NewPhdr.p_flags |= ELF::PF_W;
-    }
     NewPhdr.p_align = BC->PageAlign;
 
-    return NewPhdr;
+    if (!opts::Instrument) {
+      NewPhdrs.push_back(NewPhdr);
+    } else {
+      ErrorOr<BinarySection &> Sec =
+          BC->getUniqueSectionByName(".bolt.instr.counters");
+      assert(Sec && "expected one and only one `.bolt.instr.counters` section");
+      const uint64_t Addr = Sec->getOutputAddress();
+      const uint64_t Offset = Sec->getOutputFileOffset();
+      const uint64_t Size = Sec->getOutputSize();
+      assert(Addr > NewPhdr.p_vaddr &&
+             Addr + Size < NewPhdr.p_vaddr + NewPhdr.p_memsz &&
+             "`.bolt.instr.counters` section is expected to be included in the "
+             "new text sgement");
+
+      // Set correct size for the previous header since we are breaking the
+      // new text segment into three segments.
+      uint64_t Delta = Addr - NewPhdr.p_vaddr;
+      NewPhdr.p_filesz = Delta;
+      NewPhdr.p_memsz = Delta;
+      NewPhdrs.push_back(NewPhdr);
+
+      // Create a program header for a RW segment that includes the
+      // `.bolt.instr.counters` section only.
+      ELF64LEPhdrTy NewPhdrRWSegment;
+      NewPhdrRWSegment.p_type = ELF::PT_LOAD;
+      NewPhdrRWSegment.p_offset = Offset;
+      NewPhdrRWSegment.p_vaddr = Addr;
+      NewPhdrRWSegment.p_paddr = Addr;
+      NewPhdrRWSegment.p_filesz = Size;
+      NewPhdrRWSegment.p_memsz = Size;
+      NewPhdrRWSegment.p_flags = ELF::PF_R | ELF::PF_W;
+      NewPhdrRWSegment.p_align = BC->RegularPageSize;
+      NewPhdrs.push_back(NewPhdrRWSegment);
+
+      // Create a program header for a RX segment that includes all the RX
+      // sections from runtime library.
+      ELF64LEPhdrTy NewPhdrRXSegment;
+      NewPhdrRXSegment.p_type = ELF::PT_LOAD;
+      const uint64_t AddrRX = alignTo(Addr + Size, BC->RegularPageSize);
+      const uint64_t OffsetRX = alignTo(Offset + Size, BC->RegularPageSize);
+      const uint64_t SizeRX = NewTextSegmentSize - (AddrRX - NewPhdr.p_paddr);
+      NewPhdrRXSegment.p_offset = OffsetRX;
+      NewPhdrRXSegment.p_vaddr = AddrRX;
+      NewPhdrRXSegment.p_paddr = AddrRX;
+      NewPhdrRXSegment.p_filesz = SizeRX;
+      NewPhdrRXSegment.p_memsz = SizeRX;
+      NewPhdrRXSegment.p_flags = ELF::PF_X | ELF::PF_R;
+      NewPhdrRXSegment.p_align = BC->RegularPageSize;
+      NewPhdrs.push_back(NewPhdrRXSegment);
+    }
+
+    return NewPhdrs;
   };
 
   auto writeNewSegmentPhdrs = [&]() {
     if (PHDRTableAddress || NewTextSegmentSize) {
-      ELF64LE::Phdr NewPhdr = createNewTextPhdr();
-      OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
+      SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
+      OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
+               sizeof(ELF64LE::Phdr) * NewPhdrs.size());
     }
 
     if (NewWritableSegmentSize) {
@@ -4140,8 +4239,12 @@ void RewriteInstance::patchELFPHDRTable() {
     }
     case ELF::PT_GNU_STACK:
       if (opts::UseGnuStack) {
-        // Overwrite the header with the new text segment header.
-        NewPhdr = createNewTextPhdr();
+        // Overwrite the header with the new segment header.
+        assert(!opts::Instrument);
+        SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
+        assert(NewPhdrs.size() == 1 &&
+               "expect exactly one program header was created");
+        NewPhdr = NewPhdrs[0];
         ModdedGnuStack = true;
       }
       break;
@@ -5636,26 +5739,8 @@ void RewriteInstance::rewriteFile() {
     if (Function->getImageAddress() == 0 || Function->getImageSize() == 0)
       continue;
 
-    if (Function->getImageSize() > Function->getMaxSize()) {
-      assert(!BC->isX86() && "Unexpected large function.");
-      if (opts::Verbosity >= 1)
-        BC->errs() << "BOLT-WARNING: new function size (0x"
-                   << Twine::utohexstr(Function->getImageSize())
-                   << ") is larger than maximum allowed size (0x"
-                   << Twine::utohexstr(Function->getMaxSize())
-                   << ") for function " << *Function << '\n';
-
-      // Remove jump table sections that this function owns in non-reloc mode
-      // because we don't want to write them anymore.
-      if (!BC->HasRelocations && opts::JumpTables == JTS_BASIC) {
-        for (auto &JTI : Function->JumpTables) {
-          JumpTable *JT = JTI.second;
-          BinarySection &Section = JT->getOutputSection();
-          BC->deregisterSection(Section);
-        }
-      }
-      continue;
-    }
+    assert(Function->getImageSize() <= Function->getMaxSize() &&
+           "Unexpected large function");
 
     const auto HasAddress = [](const FunctionFragment &FF) {
       return FF.empty() ||
@@ -5921,9 +6006,9 @@ void RewriteInstance::writeEHFrameHeader() {
 }
 
 uint64_t RewriteInstance::getNewValueForSymbol(const StringRef Name) {
-  auto Value = Linker->lookupSymbol(Name);
+  auto Value = Linker->lookupSymbolInfo(Name);
   if (Value)
-    return *Value;
+    return Value->Address;
 
   // Return the original value if we haven't emitted the symbol.
   BinaryData *BD = BC->getBinaryDataByName(Name);

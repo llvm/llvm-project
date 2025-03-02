@@ -41,6 +41,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "isl/ast.h"
 #include <cassert>
 
@@ -232,6 +233,15 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // ScopAnnotator::buildAliasScopes.
   NodeBuilder.allocateNewArrays(StartExitBlocks);
   Annotator.buildAliasScopes(S);
+
+  // The code below annotates the "llvm.loop.vectorize.enable" to false
+  // for the code flow taken when RTCs fail. Because we don't want the
+  // Loop Vectorizer to come in later and vectorize the original fall back
+  // loop when Polly is enabled.
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    if (S.contains(L))
+      addStringMetadataToLoop(L, "llvm.loop.vectorize.enable", 0);
+  }
 
   if (PerfMonitoring) {
     PerfMonitor P(S, EnteringBB->getParent()->getParent());

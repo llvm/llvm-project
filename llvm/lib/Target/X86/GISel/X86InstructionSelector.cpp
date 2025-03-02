@@ -1048,6 +1048,13 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     break;
   }
 
+  assert((LhsReg.isVirtual() && RhsReg.isVirtual()) &&
+         "Both arguments of FCMP need to be virtual!");
+  auto *LhsBank = RBI.getRegBank(LhsReg, MRI, TRI);
+  [[maybe_unused]] auto *RhsBank = RBI.getRegBank(RhsReg, MRI, TRI);
+  assert((LhsBank == RhsBank) &&
+         "Both banks assigned to FCMP arguments need to be same!");
+
   // Compute the opcode for the CMP instruction.
   unsigned OpCmp;
   LLT Ty = MRI.getType(LhsReg);
@@ -1055,10 +1062,15 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   default:
     return false;
   case 32:
-    OpCmp = X86::UCOMISSrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr32
+                                                  : X86::UCOMISSrr;
     break;
   case 64:
-    OpCmp = X86::UCOMISDrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr64
+                                                  : X86::UCOMISDrr;
+    break;
+  case 80:
+    OpCmp = X86::UCOM_FpIr80;
     break;
   }
 

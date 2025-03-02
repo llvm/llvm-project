@@ -25,8 +25,10 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -555,25 +557,42 @@ void handleConstMemberCall(const CallExpr *CE,
                            LatticeTransferState &State) {
   // If the const method returns an optional or reference to an optional.
   if (RecordLoc != nullptr && isSupportedOptionalType(CE->getType())) {
-    StorageLocation *Loc =
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return;
+    StorageLocation &Loc =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, CE, State.Env, [&](StorageLocation &Loc) {
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
               setHasValue(cast<RecordStorageLocation>(Loc),
                           State.Env.makeAtomicBoolValue(), State.Env);
             });
-    if (Loc == nullptr)
-      return;
     if (CE->isGLValue()) {
       // If the call to the const method returns a reference to an optional,
       // link the call expression to the cached StorageLocation.
-      State.Env.setStorageLocation(*CE, *Loc);
+      State.Env.setStorageLocation(*CE, Loc);
     } else {
       // If the call to the const method returns an optional by value, we
       // need to use CopyRecord to link the optional to the result object
       // of the call expression.
       auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
-      copyRecord(*cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+      copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
     }
+    return;
+  }
+
+  // Cache if the const method returns a reference
+  if (RecordLoc != nullptr && CE->isGLValue()) {
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return;
+
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+              // no-op
+            });
+
+    State.Env.setStorageLocation(*CE, Loc);
     return;
   }
 
@@ -1029,6 +1048,48 @@ auto buildTransferMatchSwitch() {
           [](const clang::CXXOperatorCallExpr *Cmp,
              const MatchFinder::MatchResult &, LatticeTransferState &State) {
             transferOptionalAndValueCmp(Cmp, Cmp->getArg(1), State.Env);
+          })
+
+      // Smart-pointer-like operator* and operator-> calls that may look like
+      // const accessors (below) but need special handling to allow mixing
+      // the accessor calls.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorStar(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
           })
 
       // const accessor calls

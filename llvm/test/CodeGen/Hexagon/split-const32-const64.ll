@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
 
 ; Check that CONST32/CONST64 instructions are 'not' generated when the
 ; small data threshold is set to 0.

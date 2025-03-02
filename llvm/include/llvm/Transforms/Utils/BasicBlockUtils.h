@@ -540,7 +540,7 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
 std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -550,9 +550,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    Instruction *InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -563,7 +563,7 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
 /// the given index, and a value which is (at runtime) the index to access. This
 /// index *may* be a constant.
 void SplitBlockAndInsertForEachLane(
-    Value *End, Instruction *InsertBefore,
+    Value *End, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.

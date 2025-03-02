@@ -52,10 +52,13 @@ private:
   }
 
   Error getOrCreateGOTSymbol(LinkGraph &G) {
+    auto InteredGOTSymbolName =
+        G.getSymbolStringPool()->intern(ELFGOTSymbolName);
+
     auto DefineExternalGOTSymbolIfPresent =
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
-              if (Sym.getName() == ELFGOTSymbolName)
+              if (*Sym.getName() == ELFGOTSymbolName)
                 if (auto *GOTSection = G.findSectionByName(
                         aarch64::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
@@ -81,7 +84,7 @@ private:
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
-        if (Sym->getName() == ELFGOTSymbolName) {
+        if (Sym->getName() == InteredGOTSymbolName) {
           GOTSymbol = Sym;
           return Error::success();
         }
@@ -90,11 +93,12 @@ private:
       SectionRange SR(*GOTSection);
       if (SR.empty())
         GOTSymbol =
-            &G.addAbsoluteSymbol(ELFGOTSymbolName, orc::ExecutorAddr(), 0,
+            // FIXME: we should only do this once
+            &G.addAbsoluteSymbol(InteredGOTSymbolName, orc::ExecutorAddr(), 0,
                                  Linkage::Strong, Scope::Local, true);
       else
         GOTSymbol =
-            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, ELFGOTSymbolName, 0,
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, InteredGOTSymbolName, 0,
                                 Linkage::Strong, Scope::Local, false, true);
     }
 
@@ -103,7 +107,7 @@ private:
     // we just need to point the GOT symbol at some address in this graph.
     if (!GOTSymbol) {
       for (auto *Sym : G.external_symbols()) {
-        if (Sym->getName() == ELFGOTSymbolName) {
+        if (*Sym->getName() == ELFGOTSymbolName) {
           auto Blocks = G.blocks();
           if (!Blocks.empty()) {
             G.makeAbsolute(*Sym, (*Blocks.begin())->getAddress());
@@ -525,10 +529,13 @@ private:
 
 public:
   ELFLinkGraphBuilder_aarch64(StringRef FileName,
-                              const object::ELFFile<ELFT> &Obj, Triple TT,
-                              SubtargetFeatures Features)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
-                                  FileName, aarch64::getEdgeKindName) {}
+                              const object::ELFFile<ELFT> &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              Triple TT, SubtargetFeatures Features)
+
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
+                                  std::move(Features), FileName,
+                                  aarch64::getEdgeKindName) {}
 };
 
 // TLS Info Builder.
@@ -652,8 +659,8 @@ const uint8_t TLSDescTableManager_ELF_aarch64::TLSDescEntryContent[16] = {
 Error buildTables_ELF_aarch64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch64::GOTTableManager GOT;
-  aarch64::PLTTableManager PLT(GOT);
+  aarch64::GOTTableManager GOT(G);
+  aarch64::PLTTableManager PLT(G, GOT);
   TLSInfoTableManager_ELF_aarch64 TLSInfo;
   TLSDescTableManager_ELF_aarch64 TLSDesc(TLSInfo);
   visitExistingEdges(G, GOT, PLT, TLSDesc, TLSInfo);
@@ -665,8 +672,8 @@ Error buildTables_ELF_aarch64(LinkGraph &G) {
 namespace llvm {
 namespace jitlink {
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -685,7 +692,7 @@ createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
   return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
              (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }

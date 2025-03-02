@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H
-#define _LIBCPP___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H
+#ifndef _LIBCPP___CXX03___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H
+#define _LIBCPP___CXX03___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__concepts/invocable.h>
@@ -41,4 +41,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H
+#endif // _LIBCPP___CXX03___RANDOM_UNIFORM_RANDOM_BIT_GENERATOR_H

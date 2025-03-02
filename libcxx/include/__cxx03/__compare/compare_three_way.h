@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
-#define _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
+#ifndef _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H
+#define _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H
 
 #include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
@@ -37,4 +37,4 @@ struct _LIBCPP_TEMPLATE_VIS compare_three_way {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_H
+#endif // _LIBCPP___CXX03___COMPARE_COMPARE_THREE_WAY_H

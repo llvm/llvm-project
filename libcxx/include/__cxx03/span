@@ -7,8 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_SPAN
-#define _LIBCPP_SPAN
+#ifndef _LIBCPP___CXX03_SPAN
+#define _LIBCPP___CXX03_SPAN
 
 /*
     span synopsis
@@ -633,4 +633,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_SPAN
+#endif // _LIBCPP___CXX03_SPAN

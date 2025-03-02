@@ -200,7 +200,6 @@ IncrementalCompilerBuilder::CreateCpp() {
 #ifdef __EMSCRIPTEN__
   Argv.push_back("-target");
   Argv.push_back("wasm32-unknown-emscripten");
-  Argv.push_back("-shared");
   Argv.push_back("-fvisibility=default");
 #endif
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());

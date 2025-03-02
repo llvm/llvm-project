@@ -129,6 +129,8 @@ Marshaller::fromProtobuf(const RefsRequest *Message) {
 llvm::Expected<clangd::ContainedRefsRequest>
 Marshaller::fromProtobuf(const ContainedRefsRequest *Message) {
   clangd::ContainedRefsRequest Req;
+  if (!Message->has_id())
+    return error("ContainedRefsRequest requires an id.");
   auto ID = SymbolID::fromStr(Message->id());
   if (!ID)
     return ID.takeError();
@@ -207,6 +209,12 @@ llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
 llvm::Expected<clangd::ContainedRefsResult>
 Marshaller::fromProtobuf(const ContainedRef &Message) {
   clangd::ContainedRefsResult Result;
+  if (!Message.has_location())
+    return error("ContainedRef must have a location.");
+  if (!Message.has_kind())
+    return error("ContainedRef must have a kind.");
+  if (!Message.has_symbol())
+    return error("ContainedRef must have a symbol.");
   auto Location = fromProtobuf(Message.location());
   if (!Location)
     return Location.takeError();

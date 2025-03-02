@@ -158,11 +158,11 @@ STATISTIC(NumCoveredBlocks, "Number of basic blocks that were executed");
 
 // Command line option to specify the file to read profile from. This is
 // mainly used for testing.
-static cl::opt<std::string>
-    PGOTestProfileFile("pgo-test-profile-file", cl::init(""), cl::Hidden,
-                       cl::value_desc("filename"),
-                       cl::desc("Specify the path of profile data file. This is"
-                                "mainly for test purpose."));
+static cl::opt<std::string> PGOTestProfileFile(
+    "pgo-test-profile-file", cl::init(""), cl::Hidden,
+    cl::value_desc("filename"),
+    cl::desc("Specify the path of profile data file. This is "
+             "mainly for test purpose."));
 static cl::opt<std::string> PGOTestProfileRemappingFile(
     "pgo-test-profile-remapping-file", cl::init(""), cl::Hidden,
     cl::value_desc("filename"),
@@ -186,7 +186,7 @@ static cl::opt<unsigned> MaxNumAnnotations(
 // to write to the metadata for a single memop intrinsic.
 static cl::opt<unsigned> MaxNumMemOPAnnotations(
     "memop-max-annotations", cl::init(4), cl::Hidden,
-    cl::desc("Max number of preicise value annotations for a single memop"
+    cl::desc("Max number of precise value annotations for a single memop"
              "intrinsic"));
 
 // Command line option to control appending FunctionHash to the name of a COMDAT
@@ -291,13 +291,13 @@ static cl::opt<bool> PGOVerifyHotBFI(
     cl::desc("Print out the non-match BFI count if a hot raw profile count "
              "becomes non-hot, or a cold raw profile count becomes hot. "
              "The print is enabled under -Rpass-analysis=pgo, or "
-             "internal option -pass-remakrs-analysis=pgo."));
+             "internal option -pass-remarks-analysis=pgo."));
 
 static cl::opt<bool> PGOVerifyBFI(
     "pgo-verify-bfi", cl::init(false), cl::Hidden,
     cl::desc("Print out mismatched BFI counts after setting profile metadata "
              "The print is enabled under -Rpass-analysis=pgo, or "
-             "internal option -pass-remakrs-analysis=pgo."));
+             "internal option -pass-remarks-analysis=pgo."));
 
 static cl::opt<unsigned> PGOVerifyBFIRatio(
     "pgo-verify-bfi-ratio", cl::init(2), cl::Hidden,
@@ -910,9 +910,9 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
     if (!BlockColors.empty()) {
       const ColorVector &CV = BlockColors.find(OrigCall->getParent())->second;
       assert(CV.size() == 1 && "non-unique color for block!");
-      Instruction *EHPad = CV.front()->getFirstNonPHI();
-      if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+      BasicBlock::iterator EHPadIt = CV.front()->getFirstNonPHIIt();
+      if (EHPadIt->isEHPad())
+        OpBundles.emplace_back("funclet", &*EHPadIt);
     }
   }
 }

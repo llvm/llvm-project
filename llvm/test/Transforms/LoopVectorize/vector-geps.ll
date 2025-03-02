@@ -31,8 +31,8 @@ define void @vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
@@ -65,7 +65,7 @@ define void @uniform_vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -84,8 +84,8 @@ define void @uniform_vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 4
-; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

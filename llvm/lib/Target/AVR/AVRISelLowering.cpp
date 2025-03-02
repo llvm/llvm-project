@@ -1670,7 +1670,8 @@ SDValue AVRTargetLowering::LowerCallResult(
 
 bool AVRTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   if (CallConv == CallingConv::AVR_BUILTIN) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);

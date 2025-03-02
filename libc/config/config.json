@@ -30,6 +30,10 @@
       "value": false,
       "doc": "Use the same mode for double and long double in printf."
     },
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320": {
+      "value": false,
+      "doc": "Use an alternative printf float implementation based on 320-bit floats"
+    },
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_ROTATE_H
-#define _LIBCPP___BIT_ROTATE_H
+#ifndef _LIBCPP___CXX03___BIT_ROTATE_H
+#define _LIBCPP___CXX03___BIT_ROTATE_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
@@ -69,4 +69,4 @@ template <__libcpp_unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_ROTATE_H
+#endif // _LIBCPP___CXX03___BIT_ROTATE_H

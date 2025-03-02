@@ -150,7 +150,7 @@ private:
   unsigned MacrosEnabledFlag : 1;
 
   /// Keeps track of how many .macro's have been instantiated.
-  unsigned NumOfMacroInstantiations;
+  unsigned NumOfMacroInstantiations = 0;
 
   /// The values from the last parsed cpp hash file line comment if any.
   struct CppHashInfoTy {
@@ -162,8 +162,8 @@ private:
   };
   CppHashInfoTy CppHashInfo;
 
-  /// The filename from the first cpp hash file line comment, if any.
-  StringRef FirstCppHashFilename;
+  /// Have we seen any file line comment.
+  bool HadCppHashFilename = false;
 
   /// List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
@@ -272,8 +272,6 @@ public:
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
                         AsmTypeInfo *TypeInfo) override;
   bool parseParenExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
-  bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
-                             SMLoc &EndLoc) override;
   bool parseAbsoluteExpression(int64_t &Res) override;
 
   /// Parse a floating point expression using the float \p Semantics
@@ -821,8 +819,6 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   PlatformParser->Initialize(*this);
   initializeDirectiveKindMap();
   initializeCVDefRangeTypeMap();
-
-  NumOfMacroInstantiations = 0;
 }
 
 AsmParser::~AsmParser() {
@@ -952,12 +948,6 @@ bool AsmParser::enabledGenDwarfForAssembly() {
   // the assembler source was produced with debug info already) then emit one
   // describing the assembler source file itself.
   if (getContext().getGenDwarfFileNumber() == 0) {
-    // Use the first #line directive for this, if any. It's preprocessed, so
-    // there is no checksum, and of course no source directive.
-    if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(
-          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
-          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
     const MCDwarfFile &RootFile =
         getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
     getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
@@ -1024,8 +1014,6 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   // All errors should have been emitted.
   assert(!hasPendingError() && "unexpected error from parseStatement");
-
-  getTargetParser().flushPendingInstructions(getStreamer());
 
   if (TheCondState.TheCond != StartingCondState.TheCond ||
       TheCondState.Ignore != StartingCondState.Ignore)
@@ -1187,7 +1175,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (getTok().is(AsmToken::Dollar) || getTok().is(AsmToken::Star)) {
         bool ShouldGenerateTempSymbol = false;
         if ((getTok().is(AsmToken::Dollar) && MAI.getDollarIsPC()) ||
-            (getTok().is(AsmToken::Star) && MAI.getStarIsPC()))
+            (getTok().is(AsmToken::Star) && MAI.isHLASM()))
           ShouldGenerateTempSymbol = true;
 
         if (!ShouldGenerateTempSymbol)
@@ -1254,8 +1242,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
     if (!Sym)
-      Sym = getContext().getOrCreateSymbol(
-          MAI.shouldEmitLabelsInUpperCase() ? SymbolName.upper() : SymbolName);
+      Sym = getContext().getOrCreateSymbol(MAI.isHLASM() ? SymbolName.upper()
+                                                         : SymbolName);
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -1318,7 +1306,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     return false;
   }
   case AsmToken::Dot: {
-    if (!MAI.getDotIsPC())
+    if (MAI.isHLASM())
       return TokError("cannot use . as current PC");
 
     // This is a '.' reference, which references the current PC.  Emit a
@@ -1544,26 +1532,6 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
 bool AsmParser::parseParenExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   Res = nullptr;
   return parseParenExpr(Res, EndLoc) || parseBinOpRHS(1, Res, EndLoc);
-}
-
-bool AsmParser::parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
-                                      SMLoc &EndLoc) {
-  if (parseParenExpr(Res, EndLoc))
-    return true;
-
-  for (; ParenDepth > 0; --ParenDepth) {
-    if (parseBinOpRHS(1, Res, EndLoc))
-      return true;
-
-    // We don't Lex() the last RParen.
-    // This is the same behavior as parseParenExpression().
-    if (ParenDepth - 1 > 0) {
-      EndLoc = getTok().getEndLoc();
-      if (parseRParen())
-        return true;
-    }
-  }
-  return false;
 }
 
 bool AsmParser::parseAbsoluteExpression(int64_t &Res) {
@@ -2440,8 +2408,20 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L, bool SaveLocInfo) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-  if (FirstCppHashFilename.empty())
-    FirstCppHashFilename = Filename;
+  if (!HadCppHashFilename) {
+    HadCppHashFilename = true;
+    // If we haven't encountered any .file directives, then the first #line
+    // directive describes the "root" file and directory of the compilation
+    // unit.
+    if (getContext().getGenDwarfForAssembly() &&
+        getContext().getGenDwarfFileNumber() == 0) {
+      // It's preprocessed, so there is no checksum, and of course no source
+      // directive.
+      getContext().setMCLineTableRootFile(
+          /*CUID=*/0, getContext().getCompilationDir(), Filename,
+          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
+    }
+  }
   return false;
 }
 
@@ -3636,13 +3616,7 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
 /// parseDirectiveLine
 /// ::= .line [number]
 bool AsmParser::parseDirectiveLine() {
-  int64_t LineNumber;
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(LineNumber, "unexpected token in '.line' directive"))
-      return true;
-    (void)LineNumber;
-    // FIXME: Do something with the .line.
-  }
+  parseOptionalToken(AsmToken::Integer);
   return parseEOL();
 }
 
@@ -3656,7 +3630,7 @@ bool AsmParser::parseDirectiveLine() {
 bool AsmParser::parseDirectiveLoc() {
   int64_t FileNumber = 0, LineNumber = 0;
   SMLoc Loc = getTok().getLoc();
-  if (parseIntToken(FileNumber, "unexpected token in '.loc' directive") ||
+  if (parseIntToken(FileNumber) ||
       check(FileNumber < 1 && Ctx.getDwarfVersion() < 5, Loc,
             "file number less than one in '.loc' directive") ||
       check(!getContext().isValidDwarfFileNumber(FileNumber), Loc,
@@ -3773,8 +3747,7 @@ bool AsmParser::parseDirectiveCVFile() {
   std::string Checksum;
   int64_t ChecksumKind = 0;
 
-  if (parseIntToken(FileNumber,
-                    "expected file number in '.cv_file' directive") ||
+  if (parseIntToken(FileNumber, "expected file number") ||
       check(FileNumber < 1, FileNumberLoc, "file number less than one") ||
       check(getTok().isNot(AsmToken::String),
             "unexpected token in '.cv_file' directive") ||
@@ -3807,8 +3780,7 @@ bool AsmParser::parseCVFunctionId(int64_t &FunctionId,
                                   StringRef DirectiveName) {
   SMLoc Loc;
   return parseTokenLoc(Loc) ||
-         parseIntToken(FunctionId, "expected function id in '" + DirectiveName +
-                                       "' directive") ||
+         parseIntToken(FunctionId, "expected function id") ||
          check(FunctionId < 0 || FunctionId >= UINT_MAX, Loc,
                "expected function id within range [0, UINT_MAX)");
 }
@@ -3816,10 +3788,10 @@ bool AsmParser::parseCVFunctionId(int64_t &FunctionId,
 bool AsmParser::parseCVFileId(int64_t &FileNumber, StringRef DirectiveName) {
   SMLoc Loc;
   return parseTokenLoc(Loc) ||
-         parseIntToken(FileNumber, "expected integer in '" + DirectiveName +
-                                       "' directive") ||
-         check(FileNumber < 1, Loc, "file number less than one in '" +
-                                        DirectiveName + "' directive") ||
+         parseIntToken(FileNumber, "expected file number") ||
+         check(FileNumber < 1, Loc,
+               "file number less than one in '" + DirectiveName +
+                   "' directive") ||
          check(!getCVContext().isValidFileNumber(FileNumber), Loc,
                "unassigned file number in '" + DirectiveName + "' directive");
 }
@@ -3998,21 +3970,15 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
   SMLoc Loc = getTok().getLoc();
   if (parseCVFunctionId(PrimaryFunctionId, ".cv_inline_linetable") ||
       parseTokenLoc(Loc) ||
-      parseIntToken(
-          SourceFileId,
-          "expected SourceField in '.cv_inline_linetable' directive") ||
-      check(SourceFileId <= 0, Loc,
-            "File id less than zero in '.cv_inline_linetable' directive") ||
+      parseIntToken(SourceFileId, "expected SourceField") ||
+      check(SourceFileId <= 0, Loc, "File id less than zero") ||
       parseTokenLoc(Loc) ||
-      parseIntToken(
-          SourceLineNum,
-          "expected SourceLineNum in '.cv_inline_linetable' directive") ||
-      check(SourceLineNum < 0, Loc,
-            "Line number less than zero in '.cv_inline_linetable' directive") ||
-      parseTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
-                                  "expected identifier in directive") ||
-      parseTokenLoc(Loc) || check(parseIdentifier(FnEndName), Loc,
-                                  "expected identifier in directive"))
+      parseIntToken(SourceLineNum, "expected SourceLineNum") ||
+      check(SourceLineNum < 0, Loc, "Line number less than zero") ||
+      parseTokenLoc(Loc) ||
+      check(parseIdentifier(FnStartName), Loc, "expected identifier") ||
+      parseTokenLoc(Loc) ||
+      check(parseIdentifier(FnEndName), Loc, "expected identifier"))
     return true;
 
   if (parseEOL())
@@ -4174,7 +4140,7 @@ bool AsmParser::parseDirectiveCVFileChecksums() {
 /// ::= .cv_filechecksumoffset fileno
 bool AsmParser::parseDirectiveCVFileChecksumOffset() {
   int64_t FileNo;
-  if (parseIntToken(FileNo, "expected identifier in directive"))
+  if (parseIntToken(FileNo))
     return true;
   if (parseEOL())
     return true;
@@ -5916,24 +5882,16 @@ bool AsmParser::parseDirectivePseudoProbe() {
   int64_t Type;
   int64_t Attr;
   int64_t Discriminator = 0;
-
-  if (parseIntToken(Guid, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Guid))
     return true;
-
-  if (parseIntToken(Index, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Index))
     return true;
-
-  if (parseIntToken(Type, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Type))
     return true;
-
-  if (parseIntToken(Attr, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Attr))
     return true;
-
-  if (hasDiscriminator(Attr)) {
-    if (parseIntToken(Discriminator,
-                      "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (hasDiscriminator(Attr) && parseIntToken(Discriminator))
+    return true;
 
   // Parse inline stack like @ GUID:11:12 @ GUID:1:11 @ GUID:3:21
   MCPseudoProbeInlineStack InlineStack;
@@ -5944,9 +5902,8 @@ bool AsmParser::parseDirectivePseudoProbe() {
 
     int64_t CallerGuid = 0;
     if (getLexer().is(AsmToken::Integer)) {
-      if (parseIntToken(CallerGuid,
-                        "unexpected token in '.pseudoprobe' directive"))
-        return true;
+      CallerGuid = getTok().getIntVal();
+      Lex();
     }
 
     // eat colon
@@ -5955,9 +5912,8 @@ bool AsmParser::parseDirectivePseudoProbe() {
 
     int64_t CallerProbeId = 0;
     if (getLexer().is(AsmToken::Integer)) {
-      if (parseIntToken(CallerProbeId,
-                        "unexpected token in '.pseudoprobe' directive"))
-        return true;
+      CallerProbeId = getTok().getIntVal();
+      Lex();
     }
 
     InlineSite Site(CallerGuid, CallerProbeId);
@@ -5967,7 +5923,7 @@ bool AsmParser::parseDirectivePseudoProbe() {
   // Parse function entry name
   StringRef FnName;
   if (parseIdentifier(FnName))
-    return Error(getLexer().getLoc(), "unexpected token in '.pseudoprobe' directive");
+    return Error(getLexer().getLoc(), "expected identifier");
   MCSymbol *FnSym = getContext().lookupSymbol(FnName);
 
   if (parseEOL())
@@ -6287,7 +6243,7 @@ bool AsmParser::parseMSInlineAsm(
   if (AsmStart != AsmEnd)
     OS << StringRef(AsmStart, AsmEnd - AsmStart);
 
-  AsmString = AsmStringIR;
+  AsmString = std::move(AsmStringIR);
   return false;
 }
 
@@ -6316,11 +6272,7 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
                  "Cannot have just a label for an HLASM inline asm statement");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(
-      getContext().getAsmInfo()->shouldEmitLabelsInUpperCase()
-          ? LabelVal.upper()
-          : LabelVal);
-
-  getTargetParser().doBeforeLabelEmit(Sym, LabelLoc);
+      getContext().getAsmInfo()->isHLASM() ? LabelVal.upper() : LabelVal);
 
   // Emit the label.
   Out.emitLabel(Sym, LabelLoc);
@@ -6330,8 +6282,6 @@ bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
   if (enabledGenDwarfForAssembly())
     MCGenDwarfLabelEntry::Make(Sym, &getStreamer(), getSourceManager(),
                                LabelLoc);
-
-  getTargetParser().onLabelParsed(Sym);
 
   return false;
 }

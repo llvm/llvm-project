@@ -140,8 +140,8 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   case X86::VCMPPSZ128rmik:  case X86::VCMPPSZ128rrik:
   case X86::VCMPPSZ256rmik:  case X86::VCMPPSZ256rrik:
   case X86::VCMPPSZrmik:     case X86::VCMPPSZrrik:
-  case X86::VCMPSDZrmi_Intk: case X86::VCMPSDZrri_Intk:
-  case X86::VCMPSSZrmi_Intk: case X86::VCMPSSZrri_Intk:
+  case X86::VCMPSDZrmik_Int: case X86::VCMPSDZrrik_Int:
+  case X86::VCMPSSZrmik_Int: case X86::VCMPSSZrrik_Int:
   case X86::VCMPPDZ128rmbi:  case X86::VCMPPDZ128rmbik:
   case X86::VCMPPDZ256rmbi:  case X86::VCMPPDZ256rmbik:
   case X86::VCMPPDZrmbi:     case X86::VCMPPDZrmbik:
@@ -150,8 +150,8 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   case X86::VCMPPSZrmbi:     case X86::VCMPPSZrmbik:
   case X86::VCMPPDZrrib:     case X86::VCMPPDZrribk:
   case X86::VCMPPSZrrib:     case X86::VCMPPSZrribk:
-  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrrib_Intk:
-  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrrib_Intk:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrribk_Int:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrribk_Int:
   case X86::VCMPPHZ128rmi:   case X86::VCMPPHZ128rri:
   case X86::VCMPPHZ256rmi:   case X86::VCMPPHZ256rri:
   case X86::VCMPPHZrmi:      case X86::VCMPPHZrri:
@@ -160,21 +160,21 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   case X86::VCMPPHZ128rmik:  case X86::VCMPPHZ128rrik:
   case X86::VCMPPHZ256rmik:  case X86::VCMPPHZ256rrik:
   case X86::VCMPPHZrmik:     case X86::VCMPPHZrrik:
-  case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
+  case X86::VCMPSHZrmik_Int: case X86::VCMPSHZrrik_Int:
   case X86::VCMPPHZ128rmbi:  case X86::VCMPPHZ128rmbik:
   case X86::VCMPPHZ256rmbi:  case X86::VCMPPHZ256rmbik:
   case X86::VCMPPHZrmbi:     case X86::VCMPPHZrmbik:
   case X86::VCMPPHZrrib:     case X86::VCMPPHZrribk:
-  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
-  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
-  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
-  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
-  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
-  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
-  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
-  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
-  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
-  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
+  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);

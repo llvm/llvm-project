@@ -215,9 +215,9 @@ define void @copy_stride4(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], [[TMP5]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP2]], [[TMP9]]
@@ -225,8 +225,7 @@ define void @copy_stride4(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i64> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = mul <vscale x 4 x i64> [[TMP14]], splat (i64 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = mul <vscale x 4 x i64> [[TMP13]], splat (i64 4)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 4, [[TMP7]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP18]], i64 0

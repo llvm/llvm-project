@@ -22,6 +22,9 @@ module __fortran_builtins
   intrinsic :: __builtin_c_loc
   public :: __builtin_c_loc
 
+  intrinsic :: __builtin_c_devloc
+  public :: __builtin_c_devloc
+
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
 
@@ -40,15 +43,15 @@ module __fortran_builtins
   end type
 
   type, public :: __builtin_event_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_notify_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_lock_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_ieee_flag_type
@@ -88,7 +91,7 @@ module __fortran_builtins
       __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
   type, public :: __builtin_team_type
-    integer(kind=int64), private :: __id
+    integer(kind=int64), private :: __id = -1
   end type
 
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
@@ -144,6 +147,7 @@ module __fortran_builtins
 
   type :: __force_derived_type_instantiations
     type(__builtin_c_ptr) :: c_ptr
+    type(__builtin_c_devptr) :: c_devptr
     type(__builtin_c_funptr) :: c_funptr
     type(__builtin_event_type) :: event_type
     type(__builtin_lock_type) :: lock_type

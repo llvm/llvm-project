@@ -101,7 +101,7 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
 
   Value zero = b.create<arith::ConstantIndexOp>(0);
   Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
-                                            value.get<Value>(), zero);
+                                            cast<Value>(value), zero);
   b.create<cf::AssertOp>(
       condition,
       b.getStringAttr("expected strictly positive tile size and divisor"));

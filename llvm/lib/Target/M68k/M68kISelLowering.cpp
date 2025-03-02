@@ -1060,7 +1060,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
 bool M68kTargetLowering::CanLowerReturn(
     CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);
@@ -1848,12 +1849,12 @@ static SDValue LowerTruncateToBTST(SDValue Op, ISD::CondCode CC,
 static bool hasNonFlagsUse(SDValue Op) {
   for (SDNode::use_iterator UI = Op->use_begin(), UE = Op->use_end(); UI != UE;
        ++UI) {
-    SDNode *User = *UI;
-    unsigned UOpNo = UI.getOperandNo();
+    SDNode *User = UI->getUser();
+    unsigned UOpNo = UI->getOperandNo();
     if (User->getOpcode() == ISD::TRUNCATE && User->hasOneUse()) {
-      // Look pass truncate.
-      UOpNo = User->use_begin().getOperandNo();
-      User = *User->use_begin();
+      // Look past truncate.
+      UOpNo = User->use_begin()->getOperandNo();
+      User = User->use_begin()->getUser();
     }
 
     if (User->getOpcode() != ISD::BRCOND && User->getOpcode() != ISD::SETCC &&
@@ -1990,7 +1991,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
   case ISD::XOR:
     // Due to the ISEL shortcoming noted above, be conservative if this op is
     // likely to be selected as part of a load-modify-store instruction.
-    for (const auto *U : Op.getNode()->uses())
+    for (const auto *U : Op.getNode()->users())
       if (U->getOpcode() == ISD::STORE)
         goto default_case;
 
@@ -2542,7 +2543,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
               (M68k::CondCode)Cond.getOperand(0).getConstantOperandVal(0);
           CCode = M68k::GetOppositeBranchCondition(CCode);
           CC = DAG.getConstant(CCode, DL, MVT::i8);
-          SDNode *User = *Op.getNode()->use_begin();
+          SDNode *User = *Op.getNode()->user_begin();
           // Look for an unconditional branch following this conditional branch.
           // We need this because we need to reverse the successors in order
           // to implement FCMP_OEQ.

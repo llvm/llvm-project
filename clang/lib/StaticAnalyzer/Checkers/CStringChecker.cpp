@@ -547,8 +547,10 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   }
   return State;
 }
-
-// FIXME: This was originally copied from ArrayBoundChecker.cpp. Refactor?
+// FIXME: The root of this logic was copied from the old checker
+// alpha.security.ArrayBound (which is removed within this commit).
+// It should be refactored to use the different, more sophisticated bounds
+// checking logic used by the new checker ``security.ArrayBound``.
 ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
                                               ProgramStateRef state,
                                               AnyArgExpr Buffer, SVal Element,
@@ -1025,8 +1027,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
       const llvm::APSInt &maxValInt = BVF.getMaxValue(sizeTy);
       llvm::APSInt fourInt = APSIntType(maxValInt).getValue(4);
-      const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
-                                                        fourInt);
+      std::optional<APSIntPtr> maxLengthInt =
+          BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
       SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
                                                 svalBuilder.getConditionType());

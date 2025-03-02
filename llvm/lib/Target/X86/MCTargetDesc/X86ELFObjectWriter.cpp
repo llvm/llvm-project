@@ -54,10 +54,6 @@ static X86_64RelType getType64(MCFixupKind Kind,
     llvm_unreachable("Unimplemented");
   case FK_NONE:
     return RT64_NONE;
-  case X86::reloc_global_offset_table8:
-    Modifier = MCSymbolRefExpr::VK_GOT;
-    IsPCRel = true;
-    return RT64_64;
   case FK_Data_8:
     return RT64_64;
   case X86::reloc_signed_4byte:
@@ -77,7 +73,7 @@ static X86_64RelType getType64(MCFixupKind Kind,
   case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_riprel_4byte_movq_load_rex2:
-  case X86::reloc_riprel_6byte_relax:
+  case X86::reloc_riprel_4byte_relax_evex:
     return RT64_32;
   case X86::reloc_branch_4byte_pcrel:
     Modifier = MCSymbolRefExpr::VK_PLT;
@@ -203,7 +199,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
         (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
       return ELF::R_X86_64_CODE_4_GOTTPOFF;
-    else if ((unsigned)Kind == X86::reloc_riprel_6byte_relax)
+    else if ((unsigned)Kind == X86::reloc_riprel_4byte_relax_evex)
       return ELF::R_X86_64_CODE_6_GOTTPOFF;
     return ELF::R_X86_64_GOTTPOFF;
   case MCSymbolRefExpr::VK_TLSLD:
@@ -230,8 +226,6 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case X86::reloc_riprel_4byte_relax_rex2:
     case X86::reloc_riprel_4byte_movq_load_rex2:
       return ELF::R_X86_64_CODE_4_GOTPCRELX;
-    case X86::reloc_riprel_6byte_relax:
-      return ELF::R_X86_64_CODE_6_GOTTPOFF;
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:

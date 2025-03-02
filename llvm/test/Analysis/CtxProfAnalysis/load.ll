@@ -2,7 +2,7 @@
 ;
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   %t/example.ll -S 2>&1 | FileCheck %s --check-prefix=NO-CTX
 
@@ -23,38 +23,16 @@
 ;
 ; This is the reference profile, laid out in the format the json formatter will
 ; output it from opt.
-;--- profile.json
-[
-  {
-    "Counters": [
-      9
-    ],
-    "Guid": 12341
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 12074870348631550642
-  },
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 728453322856651412
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 11872291593386833696
-  }
-]
+;--- profile.yaml
+- Guid: 12341
+  Counters: [9]
+- Guid: 12074870348631550642
+  Counters: [5]
+- Guid: 11872291593386833696
+  Counters: [1]
+  Callsites:  -
+                - Guid: 728453322856651412
+                  Counters: [6, 7]
 ;--- expected-profile-output.txt
 Function Info:
 4909520559318251808 : an_entrypoint. MaxCounterID: 2. MaxCallsiteID: 1
@@ -62,31 +40,14 @@ Function Info:
 12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 728453322856651412
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 11872291593386833696
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 12074870348631550642
-  }
-]
+
+- Guid:            11872291593386833696
+  Counters:        [ 1 ]
+  Callsites:
+    - - Guid:            728453322856651412
+        Counters:        [ 6, 7 ]
+- Guid:            12074870348631550642
+  Counters:        [ 5 ]
 
 Flat Profile:
 728453322856651412 : 6 7 

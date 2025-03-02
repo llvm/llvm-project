@@ -420,7 +420,7 @@ void AggressiveAntiDepBreaker::PrescanInstruction(
       if (TRI->isSuperRegister(Reg, *AI) && State->IsLive(*AI))
         continue;
 
-      DefIndices[*AI] = Count;
+      DefIndices[(*AI).id()] = Count;
     }
   }
 }

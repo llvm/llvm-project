@@ -55,15 +55,18 @@ enum class ScanningOptimizations {
   HeaderSearch = 1,
 
   /// Remove warnings from system modules.
-  SystemWarnings = 2,
+  SystemWarnings = (1 << 1),
 
   /// Remove unused -ivfsoverlay arguments.
-  VFS = 4,
+  VFS = (1 << 2),
 
   /// Canonicalize -D and -U options.
-  Macros = 8,
+  Macros = (1 << 3),
 
-  DSS_LAST_BITMASK_ENUM(Macros),
+  /// Ignore the compiler's working directory if it is safe.
+  IgnoreCWD = (1 << 4),
+
+  DSS_LAST_BITMASK_ENUM(IgnoreCWD),
   Default = All
 };
 

@@ -712,8 +712,8 @@ define dso_local void @arm_mat_mult_q15(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:  @ %bb.12: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2
 ; CHECK-NEXT:    vaddv.u32 r10, q4
-; CHECK-NEXT:    cmp r2, r12
 ; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    cmp r2, r12
 ; CHECK-NEXT:    beq .LBB10_7
 ; CHECK-NEXT:  .LBB10_13: @ %for.body8.us.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB10_8 Depth=2

@@ -156,8 +156,8 @@ private:   // Intermediate data structures
 
   void HandlePhysRegUse(Register Reg, MachineInstr &MI);
   void HandlePhysRegDef(Register Reg, MachineInstr *MI,
-                        SmallVectorImpl<unsigned> &Defs);
-  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
+                        SmallVectorImpl<Register> &Defs);
+  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<Register> &Defs);
 
   /// FindLastRefOrPartRef - Return the last reference or partial reference of
   /// the specified register.
@@ -167,7 +167,7 @@ private:   // Intermediate data structures
   /// register. Also returns the sub-registers that're defined by the
   /// instruction.
   MachineInstr *FindLastPartialDef(Register Reg,
-                                   SmallSet<unsigned, 4> &PartDefRegs);
+                                   SmallSet<Register, 4> &PartDefRegs);
 
   /// analyzePHINodes - Gather information about the PHI nodes in here. In
   /// particular, we want to map the variable information of a virtual
@@ -175,7 +175,7 @@ private:   // Intermediate data structures
   /// is coming from.
   void analyzePHINodes(const MachineFunction& Fn);
 
-  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs,
+  void runOnInstr(MachineInstr &MI, SmallVectorImpl<Register> &Defs,
                   unsigned NumRegs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);

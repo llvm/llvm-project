@@ -15,8 +15,8 @@
 
 #  include_next <stdlib.h>
 
-#elif !defined(_LIBCPP_STDLIB_H)
-#  define _LIBCPP_STDLIB_H
+#elif !defined(_LIBCPP___CXX03_STDLIB_H)
+#  define _LIBCPP___CXX03_STDLIB_H
 
 /*
     stdlib.h synopsis
@@ -148,4 +148,4 @@ inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT
 } // extern "C++"
 #  endif   // __cplusplus
 
-#endif // _LIBCPP_STDLIB_H
+#endif // _LIBCPP___CXX03_STDLIB_H

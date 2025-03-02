@@ -57,10 +57,13 @@ void Option::print(raw_ostream &O, bool AddNewLine) const {
 #undef P
   }
 
-  if (!Info->Prefixes.empty()) {
+  if (!Info->hasNoPrefix()) {
     O << " Prefixes:[";
-    for (size_t I = 0, N = Info->Prefixes.size(); I != N; ++I)
-      O << '"' << Info->Prefixes[I] << (I == N - 1 ? "\"" : "\", ");
+    for (size_t I = 0, N = Info->getNumPrefixes(Owner->getPrefixesTable());
+         I != N; ++I)
+      O << '"'
+        << Info->getPrefix(Owner->getStrTable(), Owner->getPrefixesTable(), I)
+        << (I == N - 1 ? "\"" : "\", ");
     O << ']';
   }
 

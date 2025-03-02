@@ -79,6 +79,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::IOS:
     case llvm::Triple::OSType::TvOS:
     case llvm::Triple::OSType::WatchOS:
+    case llvm::Triple::OSType::XROS:
       switch (os_env) {
       case llvm::Triple::EnvironmentType::MacABI:
       case llvm::Triple::EnvironmentType::Simulator:
@@ -95,6 +96,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::MacOSX:
     case llvm::Triple::OSType::NetBSD:
+    case llvm::Triple::OSType::OpenBSD:
     case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::UnknownOS:
       return ABISP(
@@ -856,10 +858,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
 // the saved pc is at CFA-8 (i.e. rsp+0)
 // The saved rsp is CFA+0
 
-bool ABISysV_x86_64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_x86_64::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
@@ -867,10 +866,12 @@ bool ABISysV_x86_64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("x86_64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("x86_64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
 // This defines the CFA as rbp+16
@@ -878,10 +879,7 @@ bool ABISysV_x86_64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
 // The saved rbp is at CFA-16 (i.e. rbp+0)
 // The saved rsp is CFA+0
 
-bool ABISysV_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_x86_64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = dwarf_rbp;
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
@@ -897,12 +895,13 @@ bool ABISysV_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("x86_64 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("x86_64 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_x86_64::RegisterIsVolatile(const RegisterInfo *reg_info) {

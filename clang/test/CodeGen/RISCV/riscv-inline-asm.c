@@ -46,6 +46,14 @@ double_xlen_t test_R_wide_scalar(double_xlen_t p) {
   return ret;
 }
 
+double_xlen_t test_cR_wide_scalar(double_xlen_t p) {
+// CHECK-LABEL: define{{.*}} {{i128|i64}} @test_cR_wide_scalar(
+// CHECK: call {{i128|i64}} asm sideeffect "", "=^cR,^cR"({{i128|i64}} %{{.*}})
+  double_xlen_t ret;
+  asm volatile("" : "=cR"(ret) : "cR"(p));
+  return ret;
+}
+
 void test_I(void) {
 // CHECK-LABEL: define{{.*}} void @test_I()
 // CHECK: call void asm sideeffect "", "I"(i32 2047)
@@ -90,9 +98,9 @@ extern int var, arr[2][2];
 struct Pair { int a, b; } pair;
 
 // CHECK-LABEL: test_s(
-// CHECK:         call void asm sideeffect "// $0 $1 $2", "s,s,s"(ptr nonnull @var, ptr nonnull getelementptr inbounds (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
+// CHECK:         call void asm sideeffect "// $0 $1 $2", "s,s,s"(ptr nonnull @var, ptr nonnull getelementptr inbounds nuw (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
 // CHECK:         call void asm sideeffect "// $0", "s"(ptr nonnull getelementptr inbounds nuw (i8, ptr @pair, {{.*}}))
-// CHECK:         call void asm sideeffect "// $0 $1 $2", "S,S,S"(ptr nonnull @var, ptr nonnull getelementptr inbounds (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
+// CHECK:         call void asm sideeffect "// $0 $1 $2", "S,S,S"(ptr nonnull @var, ptr nonnull getelementptr inbounds nuw (i8, ptr @arr, {{.*}}), ptr nonnull @test_s)
 void test_s(void) {
   asm("// %0 %1 %2" :: "s"(&var), "s"(&arr[1][1]), "s"(test_s));
   asm("// %0" :: "s"(&pair.b));

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CHARCONV
-#define _LIBCPP_CHARCONV
+#ifndef _LIBCPP___CXX03_CHARCONV
+#define _LIBCPP___CXX03_CHARCONV
 
 /*
     charconv synopsis
@@ -112,4 +112,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_CHARCONV
+#endif // _LIBCPP___CXX03_CHARCONV

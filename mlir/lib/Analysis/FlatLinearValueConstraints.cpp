@@ -445,6 +445,58 @@ static bool detectAsFloorDiv(const FlatLinearConstraints &cst, unsigned pos,
   return true;
 }
 
+void FlatLinearConstraints::dumpRow(ArrayRef<int64_t> row,
+                                    bool fixedColWidth) const {
+  unsigned ncols = getNumCols();
+  bool firstNonZero = true;
+  for (unsigned j = 0; j < ncols; j++) {
+    if (j == ncols - 1) {
+      // Constant.
+      if (row[j] == 0 && !firstNonZero) {
+        if (fixedColWidth)
+          llvm::errs().indent(7);
+      } else {
+        llvm::errs() << ((row[j] >= 0) ? "+ " : "") << row[j] << ' ';
+      }
+    } else {
+      std::string var = std::string("c_") + std::to_string(j);
+      if (row[j] == 1)
+        llvm::errs() << "+ " << var << ' ';
+      else if (row[j] == -1)
+        llvm::errs() << "- " << var << ' ';
+      else if (row[j] >= 2)
+        llvm::errs() << "+ " << row[j] << '*' << var << ' ';
+      else if (row[j] <= -2)
+        llvm::errs() << "- " << -row[j] << '*' << var << ' ';
+      else if (fixedColWidth)
+        // Zero coeff.
+        llvm::errs().indent(7);
+      if (row[j] != 0)
+        firstNonZero = false;
+    }
+  }
+}
+
+void FlatLinearConstraints::dumpPretty() const {
+  assert(hasConsistentState());
+  llvm::errs() << "Constraints (" << getNumDimVars() << " dims, "
+               << getNumSymbolVars() << " symbols, " << getNumLocalVars()
+               << " locals), (" << getNumConstraints() << " constraints)\n";
+  auto dumpConstraint = [&](unsigned rowPos, bool isEq) {
+    // Is it the first non-zero entry?
+    SmallVector<int64_t> row =
+        isEq ? getEquality64(rowPos) : getInequality64(rowPos);
+    dumpRow(row);
+    llvm::errs() << (isEq ? "=" : ">=") << " 0\n";
+  };
+
+  for (unsigned i = 0, e = getNumInequalities(); i < e; i++)
+    dumpConstraint(i, /*isEq=*/false);
+  for (unsigned i = 0, e = getNumEqualities(); i < e; i++)
+    dumpConstraint(i, /*isEq=*/true);
+  llvm::errs() << '\n';
+}
+
 std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
     unsigned pos, unsigned offset, unsigned num, unsigned symStartPos,
     ArrayRef<AffineExpr> localExprs, MLIRContext *context,
@@ -529,6 +581,103 @@ std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
   return {lbMap, ubMap};
 }
 
+/// Compute a representation of `num` identifiers starting at `offset` in `cst`
+/// as affine expressions involving other known identifiers. Each identifier's
+/// expression (in terms of known identifiers) is populated into `memo`.
+static void computeUnknownVars(const FlatLinearConstraints &cst,
+                               MLIRContext *context, unsigned offset,
+                               unsigned num,
+                               SmallVectorImpl<AffineExpr> &memo) {
+  // Initialize dimensional and symbolic variables.
+  for (unsigned i = 0, e = cst.getNumDimVars(); i < e; i++) {
+    if (i < offset)
+      memo[i] = getAffineDimExpr(i, context);
+    else if (i >= offset + num)
+      memo[i] = getAffineDimExpr(i - num, context);
+  }
+  for (unsigned i = cst.getNumDimVars(), e = cst.getNumDimAndSymbolVars();
+       i < e; i++)
+    memo[i] = getAffineSymbolExpr(i - cst.getNumDimVars(), context);
+
+  bool changed;
+  do {
+    changed = false;
+    // Identify yet unknown variables as constants or mod's / floordiv's of
+    // other variables if possible.
+    for (unsigned pos = 0, f = cst.getNumVars(); pos < f; pos++) {
+      if (memo[pos])
+        continue;
+
+      auto lbConst = cst.getConstantBound64(BoundType::LB, pos);
+      auto ubConst = cst.getConstantBound64(BoundType::UB, pos);
+      if (lbConst.has_value() && ubConst.has_value()) {
+        // Detect equality to a constant.
+        if (*lbConst == *ubConst) {
+          memo[pos] = getAffineConstantExpr(*lbConst, context);
+          changed = true;
+          continue;
+        }
+
+        // Detect a variable as modulo of another variable w.r.t a
+        // constant.
+        if (detectAsMod(cst, pos, offset, num, *lbConst, *ubConst, context,
+                        memo)) {
+          changed = true;
+          continue;
+        }
+      }
+
+      // Detect a variable as a floordiv of an affine function of other
+      // variables (divisor is a positive constant).
+      if (detectAsFloorDiv(cst, pos, context, memo)) {
+        changed = true;
+        continue;
+      }
+
+      // Detect a variable as an expression of other variables.
+      std::optional<unsigned> idx;
+      if (!(idx = cst.findConstraintWithNonZeroAt(pos, /*isEq=*/true))) {
+        continue;
+      }
+
+      // Build AffineExpr solving for variable 'pos' in terms of all others.
+      auto expr = getAffineConstantExpr(0, context);
+      unsigned j, e;
+      for (j = 0, e = cst.getNumVars(); j < e; ++j) {
+        if (j == pos)
+          continue;
+        int64_t c = cst.atEq64(*idx, j);
+        if (c == 0)
+          continue;
+        // If any of the involved IDs hasn't been found yet, we can't proceed.
+        if (!memo[j])
+          break;
+        expr = expr + memo[j] * c;
+      }
+      if (j < e)
+        // Can't construct expression as it depends on a yet uncomputed
+        // variable.
+        continue;
+
+      // Add constant term to AffineExpr.
+      expr = expr + cst.atEq64(*idx, cst.getNumVars());
+      int64_t vPos = cst.atEq64(*idx, pos);
+      assert(vPos != 0 && "expected non-zero here");
+      if (vPos > 0)
+        expr = (-expr).floorDiv(vPos);
+      else
+        // vPos < 0.
+        expr = expr.floorDiv(-vPos);
+      // Successfully constructed expression.
+      memo[pos] = expr;
+      changed = true;
+    }
+    // This loop is guaranteed to reach a fixed point - since once an
+    // variable's explicit form is computed (in memo[pos]), it's not updated
+    // again.
+  } while (changed);
+}
+
 /// Computes the lower and upper bounds of the first 'num' dimensional
 /// variables (starting at 'offset') as affine maps of the remaining
 /// variables (dimensional and symbolic variables). Local variables are
@@ -544,99 +693,13 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
   // Basic simplification.
   normalizeConstraintsByGCD();
 
-  LLVM_DEBUG(llvm::dbgs() << "getSliceBounds for first " << num
-                          << " variables\n");
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG(llvm::dbgs() << "getSliceBounds for variables at positions ["
+                          << offset << ", " << offset + num << ")\n");
+  LLVM_DEBUG(dumpPretty());
 
   // Record computed/detected variables.
   SmallVector<AffineExpr, 8> memo(getNumVars());
-  // Initialize dimensional and symbolic variables.
-  for (unsigned i = 0, e = getNumDimVars(); i < e; i++) {
-    if (i < offset)
-      memo[i] = getAffineDimExpr(i, context);
-    else if (i >= offset + num)
-      memo[i] = getAffineDimExpr(i - num, context);
-  }
-  for (unsigned i = getNumDimVars(), e = getNumDimAndSymbolVars(); i < e; i++)
-    memo[i] = getAffineSymbolExpr(i - getNumDimVars(), context);
-
-  bool changed;
-  do {
-    changed = false;
-    // Identify yet unknown variables as constants or mod's / floordiv's of
-    // other variables if possible.
-    for (unsigned pos = 0; pos < getNumVars(); pos++) {
-      if (memo[pos])
-        continue;
-
-      auto lbConst = getConstantBound64(BoundType::LB, pos);
-      auto ubConst = getConstantBound64(BoundType::UB, pos);
-      if (lbConst.has_value() && ubConst.has_value()) {
-        // Detect equality to a constant.
-        if (*lbConst == *ubConst) {
-          memo[pos] = getAffineConstantExpr(*lbConst, context);
-          changed = true;
-          continue;
-        }
-
-        // Detect a variable as modulo of another variable w.r.t a
-        // constant.
-        if (detectAsMod(*this, pos, offset, num, *lbConst, *ubConst, context,
-                        memo)) {
-          changed = true;
-          continue;
-        }
-      }
-
-      // Detect a variable as a floordiv of an affine function of other
-      // variables (divisor is a positive constant).
-      if (detectAsFloorDiv(*this, pos, context, memo)) {
-        changed = true;
-        continue;
-      }
-
-      // Detect a variable as an expression of other variables.
-      unsigned idx;
-      if (!findConstraintWithNonZeroAt(pos, /*isEq=*/true, &idx)) {
-        continue;
-      }
-
-      // Build AffineExpr solving for variable 'pos' in terms of all others.
-      auto expr = getAffineConstantExpr(0, context);
-      unsigned j, e;
-      for (j = 0, e = getNumVars(); j < e; ++j) {
-        if (j == pos)
-          continue;
-        int64_t c = atEq64(idx, j);
-        if (c == 0)
-          continue;
-        // If any of the involved IDs hasn't been found yet, we can't proceed.
-        if (!memo[j])
-          break;
-        expr = expr + memo[j] * c;
-      }
-      if (j < e)
-        // Can't construct expression as it depends on a yet uncomputed
-        // variable.
-        continue;
-
-      // Add constant term to AffineExpr.
-      expr = expr + atEq64(idx, getNumVars());
-      int64_t vPos = atEq64(idx, pos);
-      assert(vPos != 0 && "expected non-zero here");
-      if (vPos > 0)
-        expr = (-expr).floorDiv(vPos);
-      else
-        // vPos < 0.
-        expr = expr.floorDiv(-vPos);
-      // Successfully constructed expression.
-      memo[pos] = expr;
-      changed = true;
-    }
-    // This loop is guaranteed to reach a fixed point - since once an
-    // variable's explicit form is computed (in memo[pos]), it's not updated
-    // again.
-  } while (changed);
+  computeUnknownVars(*this, context, offset, num, memo);
 
   int64_t ubAdjustment = closedUB ? 0 : 1;
 
@@ -679,7 +742,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
       // TODO: being conservative for the moment in cases that
       // lead to multiple bounds - until getConstDifference in LoopFusion.cpp is
       // fixed (b/126426796).
-      if (!lbMap || lbMap.getNumResults() > 1) {
+      if (!lbMap || lbMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound64(BoundType::LB, pos + offset);
@@ -688,7 +751,7 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
                                  getAffineConstantExpr(*lbConst, context));
         }
       }
-      if (!ubMap || ubMap.getNumResults() > 1) {
+      if (!ubMap || ubMap.getNumResults() != 1) {
         LLVM_DEBUG(llvm::dbgs()
                    << "WARNING: Potentially over-approximating slice ub\n");
         auto ubConst = getConstantBound64(BoundType::UB, pos + offset);
@@ -699,12 +762,12 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
         }
       }
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << "lb map for pos = " << Twine(pos + offset) << ", expr: ");
-    LLVM_DEBUG(lbMap.dump(););
-    LLVM_DEBUG(llvm::dbgs()
-               << "ub map for pos = " << Twine(pos + offset) << ", expr: ");
-    LLVM_DEBUG(ubMap.dump(););
+
+    LLVM_DEBUG(llvm::dbgs() << "Slice bounds:\n");
+    LLVM_DEBUG(llvm::dbgs() << "lb map for pos = " << Twine(pos + offset)
+                            << ", expr: " << lbMap << '\n');
+    LLVM_DEBUG(llvm::dbgs() << "ub map for pos = " << Twine(pos + offset)
+                            << ", expr: " << ubMap << '\n');
   }
 }
 

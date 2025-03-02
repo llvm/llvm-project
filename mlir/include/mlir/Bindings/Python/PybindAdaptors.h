@@ -1,4 +1,4 @@
-//===- PybindAdaptors.h - Adaptors for interop with MLIR APIs -------------===//
+//===- PybindAdaptors.h - Interop with MLIR APIs via pybind11 -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 // This file contains adaptors for clients of the core MLIR Python APIs to
-// interop via MLIR CAPI types. The facilities here do not depend on
-// implementation details of the MLIR Python API and do not introduce C++-level
-// dependencies with it (requiring only Python and CAPI-level dependencies).
+// interop via MLIR CAPI types, using pybind11. The facilities here do not
+// depend on implementation details of the MLIR Python API and do not introduce
+// C++-level dependencies with it (requiring only Python and CAPI-level
+// dependencies).
 //
 // It is encouraged to be used both in-tree and out-of-tree. For in-tree use
 // cases, it should be used for dialect implementations (versus relying on
@@ -373,9 +374,8 @@ public:
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_staticmethod(...) called with a non-static member "
                   "function pointer");
-    py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::scope(thisClass),
-        py::sibling(py::getattr(thisClass, name, py::none())), extra...);
+    py::cpp_function cf(std::forward<Func>(f), py::name(name),
+                        py::scope(thisClass), extra...);
     thisClass.attr(cf.name()) = py::staticmethod(cf);
     return *this;
   }
@@ -386,9 +386,8 @@ public:
     static_assert(!std::is_member_function_pointer<Func>::value,
                   "def_classmethod(...) called with a non-static member "
                   "function pointer");
-    py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::scope(thisClass),
-        py::sibling(py::getattr(thisClass, name, py::none())), extra...);
+    py::cpp_function cf(std::forward<Func>(f), py::name(name),
+                        py::scope(thisClass), extra...);
     thisClass.attr(cf.name()) =
         py::reinterpret_borrow<py::object>(PyClassMethod_New(cf.ptr()));
     return *this;
@@ -610,40 +609,6 @@ public:
 };
 
 } // namespace adaptors
-
-/// RAII scope intercepting all diagnostics into a string. The message must be
-/// checked before this goes out of scope.
-class CollectDiagnosticsToStringScope {
-public:
-  explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
-    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
-                                                   /*deleteUserData=*/nullptr);
-  }
-  ~CollectDiagnosticsToStringScope() {
-    assert(errorMessage.empty() && "unchecked error message");
-    mlirContextDetachDiagnosticHandler(context, handlerID);
-  }
-
-  [[nodiscard]] std::string takeMessage() { return std::move(errorMessage); }
-
-private:
-  static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
-    auto printer = +[](MlirStringRef message, void *data) {
-      *static_cast<std::string *>(data) +=
-          llvm::StringRef(message.data, message.length);
-    };
-    MlirLocation loc = mlirDiagnosticGetLocation(diag);
-    *static_cast<std::string *>(data) += "at ";
-    mlirLocationPrint(loc, printer, data);
-    *static_cast<std::string *>(data) += ": ";
-    mlirDiagnosticPrint(diag, printer, data);
-    return mlirLogicalResultSuccess();
-  }
-
-  MlirContext context;
-  MlirDiagnosticHandlerID handlerID;
-  std::string errorMessage = "";
-};
 
 } // namespace python
 } // namespace mlir

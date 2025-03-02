@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=avr6 | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=avr6 | FileCheck %s
 
 declare i16 @allocate(ptr, ptr)
 

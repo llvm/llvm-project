@@ -184,6 +184,7 @@ namespace {
 struct ToyToLLVMLoweringPass
     : public PassWrapper<ToyToLLVMLoweringPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToLLVMLoweringPass)
+  StringRef getArgument() const override { return "toy-to-llvm"; }
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect>();

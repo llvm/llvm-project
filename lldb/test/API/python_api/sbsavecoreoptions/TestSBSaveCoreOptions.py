@@ -4,15 +4,18 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 class SBSaveCoreOptionsAPICase(TestBase):
     basic_minidump = "basic_minidump.yaml"
     basic_minidump_different_pid = "basic_minidump_different_pid.yaml"
 
     def get_process_from_yaml(self, yaml_file):
         minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
-        print ("minidump_path: " + minidump_path)
+        print("minidump_path: " + minidump_path)
         self.yaml2obj(yaml_file, minidump_path)
-        self.assertTrue(os.path.exists(minidump_path), "yaml2obj did not emit a minidump file")
+        self.assertTrue(
+            os.path.exists(minidump_path), "yaml2obj did not emit a minidump file"
+        )
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(minidump_path)
         self.assertTrue(process.IsValid(), "Process is not valid")
@@ -59,7 +62,6 @@ class SBSaveCoreOptionsAPICase(TestBase):
         removed_success = options.RemoveThread(thread)
         self.assertFalse(removed_success)
 
-
     def test_adding_thread_different_process(self):
         """Test adding and removing a thread from save core options."""
         options = lldb.SBSaveCoreOptions()
@@ -79,3 +81,26 @@ class SBSaveCoreOptionsAPICase(TestBase):
         self.assertTrue(error.Fail())
         error = options.AddThread(thread)
         self.assertTrue(error.Success())
+
+    def test_removing_and_adding_insertion_order(self):
+        """Test insertion order is maintained when removing and adding threads."""
+        options = lldb.SBSaveCoreOptions()
+        process = self.get_basic_process()
+        threads = []
+        for x in range(0, 3):
+            thread = process.GetThreadAtIndex(x)
+            threads.append(thread)
+            error = options.AddThread(thread)
+            self.assertTrue(error.Success())
+
+        # Get the middle thread, remove it, and insert it back.
+        middle_thread = threads[1]
+        self.assertTrue(options.RemoveThread(middle_thread))
+        thread_collection = options.GetThreadsToSave()
+        self.assertTrue(thread_collection is not None)
+        self.assertEqual(thread_collection.GetSize(), 2)
+        error = options.AddThread(middle_thread)
+        self.assertTrue(error.Success())
+        thread_collection = options.GetThreadsToSave()
+        self.assertEqual(thread_collection.GetSize(), 3)
+        self.assertIn(middle_thread, thread_collection)

@@ -27,6 +27,16 @@ static cl::opt<bool>
     UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
                      cl::desc("Use fast short rep mov in memcpy lowering"));
 
+bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= X86ISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= X86ISD::LAST_MEMORY_OPCODE;
+}
+
+bool X86SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= X86ISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= X86ISD::LAST_STRICTFP_OPCODE;
+}
+
 /// Returns the best type to use with repmovs/repstos depending on alignment.
 static MVT getOptimalRepType(const X86Subtarget &Subtarget, Align Alignment) {
   uint64_t Align = Alignment.value();

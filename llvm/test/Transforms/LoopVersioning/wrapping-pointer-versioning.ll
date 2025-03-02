@@ -36,9 +36,9 @@ define void @f1(ptr noalias %a,
 ; LV-NEXT:    [[TMP2:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[A]]
-; LV-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
-; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP1]], [[TMP5]]
-; LV-NEXT:    br i1 [[TMP6]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP7:%.*]] = or i1 [[TMP1]], [[TMP6]]
+; LV-NEXT:    br i1 [[TMP7]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:

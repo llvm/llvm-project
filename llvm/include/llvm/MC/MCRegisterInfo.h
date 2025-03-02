@@ -404,6 +404,11 @@ public:
   /// be modelled, such as the top 16-bits of a 32-bit GPR.
   bool isArtificial(MCRegister RegNo) const { return get(RegNo).IsArtificial; }
 
+  /// Returns true when the given register unit is considered artificial.
+  /// Register units are considered artificial when at least one of the
+  /// root registers is artificial.
+  bool isArtificialRegUnit(MCRegUnit Unit) const;
+
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
   unsigned getNumRegs() const {
@@ -525,7 +530,7 @@ public:
 
   MCSubRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                    bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SubRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -595,7 +600,7 @@ public:
 
   MCSuperRegIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
                      bool IncludeSelf = false) {
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     I.init(Reg.id(), MCRI->DiffLists + MCRI->get(Reg).SuperRegs);
     // Initially, the iterator points to Reg itself.
     Val = MCPhysReg(*I);
@@ -641,8 +646,7 @@ public:
   MCRegUnitIterator() = default;
 
   MCRegUnitIterator(MCRegister Reg, const MCRegisterInfo *MCRI) {
-    assert(Reg && "Null register has no regunits");
-    assert(MCRegister::isPhysicalRegister(Reg.id()));
+    assert(Reg.isPhysical());
     // Decode the RegUnits MCRegisterDesc field.
     unsigned RU = MCRI->get(Reg).RegUnits;
     unsigned FirstRU = RU & ((1u << RegUnitBits) - 1);

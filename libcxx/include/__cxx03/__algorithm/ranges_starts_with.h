@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_STARTS_WITH_H
-#define _LIBCPP___ALGORITHM_RANGES_STARTS_WITH_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_STARTS_WITH_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_STARTS_WITH_H
 
 #include <__cxx03/__algorithm/in_in_result.h>
 #include <__cxx03/__algorithm/ranges_mismatch.h>
@@ -92,4 +92,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_STARTS_WITH_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_STARTS_WITH_H

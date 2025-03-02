@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_GENERATE_H
-#define _LIBCPP___ALGORITHM_GENERATE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_GENERATE_H
+#define _LIBCPP___CXX03___ALGORITHM_GENERATE_H
 
 #include <__cxx03/__config>
 
@@ -26,4 +26,4 @@ generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_GENERATE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_GENERATE_H

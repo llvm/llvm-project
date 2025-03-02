@@ -161,7 +161,7 @@ void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
   }
 
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,

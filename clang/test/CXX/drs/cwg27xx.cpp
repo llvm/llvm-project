@@ -204,7 +204,7 @@ void test() {
     //   since-cxx23-note@#cwg2789-g2 {{candidate function}}
 }
 #endif
-}
+} // namespace cwg2789
 
 namespace cwg2798 { // cwg2798: 17
 #if __cplusplus > 202302L

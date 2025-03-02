@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TUPLE
-#define _LIBCPP_TUPLE
+#ifndef _LIBCPP___CXX03_TUPLE
+#define _LIBCPP___CXX03_TUPLE
 
 // clang-format off
 
@@ -1416,4 +1416,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/utility>
 #endif
 
-#endif // _LIBCPP_TUPLE
+#endif // _LIBCPP___CXX03_TUPLE

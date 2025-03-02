@@ -48,7 +48,7 @@ LIBC_INLINE void stdc_at_exit_func(void *payload) {
 LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks) {
   handler_list_mtx.lock();
   while (!callbacks.empty()) {
-    AtExitUnit &unit = callbacks.back();
+    AtExitUnit unit = callbacks.back();
     callbacks.pop_back();
     handler_list_mtx.unlock();
     unit.callback(unit.payload);

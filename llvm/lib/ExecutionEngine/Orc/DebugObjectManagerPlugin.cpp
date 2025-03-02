@@ -149,9 +149,9 @@ protected:
 
   JITLinkMemoryManager &MemMgr;
   const JITLinkDylib *JD = nullptr;
+  ExecutionSession &ES;
 
 private:
-  ExecutionSession &ES;
   DebugObjectFlags Flags;
   FinalizedAlloc Alloc;
 };
@@ -332,7 +332,8 @@ Expected<SimpleSegmentAlloc> ELFDebugObject::finalizeWorkingMemory() {
 
   // Allocate working memory for debug object in read-only segment.
   auto Alloc = SimpleSegmentAlloc::Create(
-      MemMgr, JD, {{MemProt::Read, {Size, Align(PageSize)}}});
+      MemMgr, ES.getSymbolStringPool(), ES.getTargetTriple(), JD,
+      {{MemProt::Read, {Size, Align(PageSize)}}});
   if (!Alloc)
     return Alloc;
 

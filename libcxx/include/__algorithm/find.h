@@ -24,7 +24,6 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
 #include <__utility/move.h>
 #include <limits>
@@ -98,7 +97,7 @@ __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
 // __bit_iterator implementation
 template <bool _ToFind, class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
-__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
+__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_type_traits<_Cp>::size_type __n) {
   using _It            = __bit_iterator<_Cp, _IsConst>;
   using __storage_type = typename _It::__storage_type;
 
@@ -136,8 +135,10 @@ template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_i
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
 __find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (static_cast<bool>(__value))
-    return std::__find_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
-  return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return std::__find_bool<true>(
+        __first, static_cast<typename __size_difference_type_traits<_Cp>::size_type>(__last - __first));
+  return std::__find_bool<false>(
+      __first, static_cast<typename __size_difference_type_traits<_Cp>::size_type>(__last - __first));
 }
 
 // segmented iterator implementation

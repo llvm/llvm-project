@@ -15,6 +15,7 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -51,6 +52,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
+  initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -195,13 +198,8 @@ FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
 }
 
-// Disable passes that may break CFG.
+// A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
-  // Some standard passes that optimize machine instructions in SSA form uses
-  // MI.isPHI() that doesn't account for OpPhi in SPIR-V and so are able to
-  // break the CFG (e.g., MachineSink).
-  disablePass(&MachineSinkingID);
-
   TargetPassConfig::addMachineSSAOptimization();
 }
 
@@ -282,6 +280,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerCombiner());
   addPass(createSPIRVPreLegalizerPass());
 }
 

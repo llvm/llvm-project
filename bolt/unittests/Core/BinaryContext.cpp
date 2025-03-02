@@ -27,12 +27,15 @@ struct BinaryContextTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -48,7 +51,8 @@ protected:
   void initializeBOLT() {
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), ObjFile->getFileName(), nullptr, true,
+        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), nullptr, true,
         DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
   }
@@ -92,12 +96,13 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
       DataSize, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0});
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0});
 
-  std::error_code EC;
   SmallVector<char> Vect(DataSize);
   raw_svector_ostream OS(Vect);
 
@@ -133,12 +138,13 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       (uint8_t *)Data, Size, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0});
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0, true);
+  BS.addPendingRelocation(
+      Relocation{12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0});
 
-  std::error_code EC;
   SmallVector<char> Vect(Size);
   raw_svector_ostream OS(Vect);
 

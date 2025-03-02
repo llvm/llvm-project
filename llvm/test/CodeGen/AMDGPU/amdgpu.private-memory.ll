@@ -504,7 +504,7 @@ define amdgpu_kernel void @v2float_stack(ptr addrspace(1) %out, i32 %a) {
 }
 
 ; OPT-LABEL: @direct_alloca_read_0xi32(
-; OPT: store [0 x i32] undef, ptr addrspace(3)
+; OPT: store [0 x i32] poison, ptr addrspace(3)
 ; OPT: load [0 x i32], ptr addrspace(3)
 define amdgpu_kernel void @direct_alloca_read_0xi32(ptr addrspace(1) %out, i32 %index) {
 entry:

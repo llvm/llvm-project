@@ -450,6 +450,37 @@ static bool isTriviallyUniform(const Use &U) {
   return false;
 }
 
+/// Simplify a lane index operand (e.g. llvm.amdgcn.readlane src1).
+///
+/// The instruction only reads the low 5 bits for wave32, and 6 bits for wave64.
+bool GCNTTIImpl::simplifyDemandedLaneMaskArg(InstCombiner &IC,
+                                             IntrinsicInst &II,
+                                             unsigned LaneArgIdx) const {
+  unsigned MaskBits = ST->getWavefrontSizeLog2();
+  APInt DemandedMask(32, maskTrailingOnes<unsigned>(MaskBits));
+
+  KnownBits Known(32);
+  if (IC.SimplifyDemandedBits(&II, LaneArgIdx, DemandedMask, Known))
+    return true;
+
+  if (!Known.isConstant())
+    return false;
+
+  // Out of bounds indexes may appear in wave64 code compiled for wave32.
+  // Unlike the DAG version, SimplifyDemandedBits does not change constants, so
+  // manually fix it up.
+
+  Value *LaneArg = II.getArgOperand(LaneArgIdx);
+  Constant *MaskedConst =
+      ConstantInt::get(LaneArg->getType(), Known.getConstant() & DemandedMask);
+  if (MaskedConst != LaneArg) {
+    II.getOperandUse(LaneArgIdx).set(MaskedConst);
+    return true;
+  }
+
+  return false;
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -929,7 +960,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
 
-    CmpInst::Predicate SrcPred;
+    CmpPredicate SrcPred;
     Value *SrcLHS;
     Value *SrcRHS;
 
@@ -1092,7 +1123,42 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const Use &Src = II.getArgOperandUse(0);
     if (isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
-    break;
+
+    if (IID == Intrinsic::amdgcn_readlane &&
+        simplifyDemandedLaneMaskArg(IC, II, 1))
+      return &II;
+
+    // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
+    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+      Value *BCSrc = BC->getOperand(0);
+
+      // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
+      if (isTypeLegal(BCSrc->getType())) {
+        Module *M = IC.Builder.GetInsertBlock()->getModule();
+        Function *Remangled =
+            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
+
+        // Make sure convergence tokens are preserved.
+        // TODO: CreateIntrinsic should allow directly copying bundles
+        SmallVector<OperandBundleDef, 2> OpBundles;
+        II.getOperandBundlesAsDefs(OpBundles);
+
+        SmallVector<Value *, 3> Args(II.args());
+        Args[0] = BCSrc;
+
+        CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
+        NewCall->takeName(&II);
+        return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
+    return std::nullopt;
+  }
+  case Intrinsic::amdgcn_writelane: {
+    // TODO: Fold bitcast like readlane.
+    if (simplifyDemandedLaneMaskArg(IC, II, 1))
+      return &II;
+    return std::nullopt;
   }
   case Intrinsic::amdgcn_trig_preop: {
     // The intrinsic is declared with name mangling, but currently the
@@ -1215,7 +1281,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
-    if (isa<UndefValue>(II.getArgOperand(0)))
+    Value *Src = II.getArgOperand(0);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    if (isa<UndefValue>(Src))
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
 
     if (isa<ConstantPointerNull>(II.getArgOperand(0)))
@@ -1305,7 +1374,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     if (Src1Ty->getNumElements() > Src1NumElts) {
       Src1 = IC.Builder.CreateExtractVector(
-          FixedVectorType::get(Src0Ty->getElementType(), Src1NumElts), Src1,
+          FixedVectorType::get(Src1Ty->getElementType(), Src1NumElts), Src1,
           IC.Builder.getInt64(0));
       MadeChange = true;
     }
@@ -1500,6 +1569,10 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
+  case Intrinsic::amdgcn_readfirstlane:
+    // TODO: For a vector extract, should reduce the intrinsic call type.
+    SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    return std::nullopt;
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:

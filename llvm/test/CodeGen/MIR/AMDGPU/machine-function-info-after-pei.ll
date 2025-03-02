@@ -29,6 +29,7 @@
 ; AFTER-PEI-NEXT:   workItemIDX:     { reg: '$vgpr0' }
 ; AFTER-PEI-NEXT: psInputAddr:     0
 ; AFTER-PEI-NEXT: psInputEnable:   0
+; AFTER-PEI-NEXT: maxMemoryClusterDWords:   8
 ; AFTER-PEI-NEXT: mode:
 ; AFTER-PEI-NEXT:   ieee:            true
 ; AFTER-PEI-NEXT:   dx10-clamp:      true

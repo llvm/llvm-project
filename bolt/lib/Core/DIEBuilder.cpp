@@ -622,7 +622,7 @@ DWARFDie DIEBuilder::resolveDIEReference(
 }
 
 void DIEBuilder::cloneDieOffsetReferenceAttribute(
-    DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
+    DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref) {
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;
@@ -654,7 +654,7 @@ void DIEBuilder::cloneDieOffsetReferenceAttribute(
     // Adding referenced DIE to DebugNames to be used when entries are created
     // that contain cross cu references.
     if (DebugNamesTable.canGenerateEntryWithCrossCUReference(U, Die, AttrSpec))
-      DebugNamesTable.addCrossCUDie(DieInfo.Die);
+      DebugNamesTable.addCrossCUDie(&U, DieInfo.Die);
     // no matter forward reference or backward reference, we are supposed
     // to calculate them in `finish` due to the possible modification of
     // the DIE.

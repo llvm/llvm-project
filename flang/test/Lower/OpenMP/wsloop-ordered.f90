@@ -6,7 +6,7 @@
 subroutine wsloop_ordered_no_para()
   integer :: a(10), i
 
-! CHECK:  omp.wsloop ordered(0) {
+! CHECK:  omp.wsloop ordered(0) private({{.*}}) {
 ! CHECK-NEXT: omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:        omp.yield
 ! CHECK:      }
@@ -27,7 +27,7 @@ subroutine wsloop_ordered_with_para()
   integer :: a(10), i
 
 ! CHECK: func @_QPwsloop_ordered_with_para() {
-! CHECK:  omp.wsloop ordered(1) {
+! CHECK:  omp.wsloop ordered(1) private({{.*}}) {
 ! CHECK-NEXT: omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 ! CHECK:        omp.yield
 ! CHECK:      }
