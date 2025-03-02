@@ -6,6 +6,7 @@
 
 // RUN: %clang --target=powerpc64-ibm-aix -fprofile-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=RELOC
 // RUN: %clang --target=x86_64-unknown-fuchsia -fprofile-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=RELOC
+// RUN: %clang --target=x86_64-windows-msvc -fprofile-generate -fprofile-continuous -### -c %s 2>&1 | FileCheck %s --check-prefix=RELOC
 // RELOC: "-cc1" {{.*}} "-fprofile-continuous" "-mllvm" "-runtime-counter-relocation"
 
 // 2) test -fprofile-continuous with cs-profile-generate and -fprofile-instr-generate

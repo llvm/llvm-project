@@ -844,6 +844,17 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
     specified by an attribute.
+
+    Example:
+
+    ```mlir
+    %p0 = emitc.literal "M_PI" : f32
+    %1 = "emitc.add" (%arg0, %p0) : (f32, f32) -> f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    float v2 = v1 + M_PI;
+    ```
   }];
 
   let arguments = (ins StrAttr:$value);
@@ -1278,6 +1289,18 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     `%dest` became `b` in the C code.
     `{{` in the format string is interpreted as a single `{` and doesn't introduce
     a placeholder.
+
+    Example:
+
+    ```mlir
+    emitc.verbatim "typedef float f32;"
+    emitc.verbatim "#pragma my var={} property" args %arg : f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    typedef float f32;
+    #pragma my var=v1 property
+    ```
   }];
 
   let extraClassDeclaration = [{

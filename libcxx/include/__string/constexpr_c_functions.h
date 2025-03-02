@@ -146,7 +146,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp*
     return nullptr;
   } else {
     char __value_buffer = 0;
-    __builtin_memcpy(&__value_buffer, &__value, sizeof(char));
+    __builtin_memcpy(&__value_buffer, std::addressof(__value), sizeof(char));
     return static_cast<_Tp*>(__builtin_memchr(__str, __value_buffer, __count));
   }
 }
