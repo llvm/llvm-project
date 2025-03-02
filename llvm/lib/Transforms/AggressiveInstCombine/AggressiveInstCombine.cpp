@@ -682,7 +682,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     return false;
 
   // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  if (LoadSize1 < 8 || LoadSize2 < 8)
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
