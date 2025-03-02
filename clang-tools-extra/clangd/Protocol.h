@@ -257,6 +257,10 @@ inline bool operator==(const TextEdit &L, const TextEdit &R) {
   return std::tie(L.newText, L.range, L.annotationId) ==
          std::tie(R.newText, R.range, L.annotationId);
 }
+inline bool operator<(const TextEdit &L, const TextEdit &R) {
+  return std::tie(L.newText, L.range, L.annotationId) <
+         std::tie(R.newText, R.range, L.annotationId);
+}
 bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
@@ -281,7 +285,7 @@ struct TextDocumentEdit {
   /// The text document to change.
   VersionedTextDocumentIdentifier textDocument;
 
-	/// The edits to be applied.
+  /// The edits to be applied.
   /// FIXME: support the AnnotatedTextEdit variant.
   std::vector<TextEdit> edits;
 };
@@ -559,7 +563,7 @@ struct ClientCapabilities {
 
   /// The client supports versioned document changes for WorkspaceEdit.
   bool DocumentChanges = false;
-  
+
   /// The client supports change annotations on text edits,
   bool ChangeAnnotation = false;
 
@@ -1016,12 +1020,12 @@ struct WorkspaceEdit {
   /// Versioned document edits.
   ///
   /// If a client neither supports `documentChanges` nor
-	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
-	/// using the `changes` property are supported.
+  /// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+  /// using the `changes` property are supported.
   std::optional<std::vector<TextDocumentEdit>> documentChanges;
-  
+
   /// A map of change annotations that can be referenced in
-	/// AnnotatedTextEdit.
+  /// AnnotatedTextEdit.
   std::map<std::string, ChangeAnnotation> changeAnnotations;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
@@ -1277,13 +1281,13 @@ enum class InsertTextFormat {
 /// Additional details for a completion item label.
 struct CompletionItemLabelDetails {
   /// An optional string which is rendered less prominently directly after label
-	/// without any spacing. Should be used for function signatures or type
+  /// without any spacing. Should be used for function signatures or type
   /// annotations.
   std::string detail;
 
   /// An optional string which is rendered less prominently after
-	/// CompletionItemLabelDetails.detail. Should be used for fully qualified
-	/// names or file path.
+  /// CompletionItemLabelDetails.detail. Should be used for fully qualified
+  /// names or file path.
   std::string description;
 };
 llvm::json::Value toJSON(const CompletionItemLabelDetails &);
