@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "check_assertion.h"
-#include "../types.h"
+#include "types.h"
 
 int main() {
   {
