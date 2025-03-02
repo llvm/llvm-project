@@ -57,7 +57,9 @@ struct __allocation_guard {
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI ~__allocation_guard() _NOEXCEPT { __destroy(); }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __allocation_guard(const __allocation_guard&) = delete;
+  __allocation_guard(const __allocation_guard&)                    = delete;
+  __allocation_guard& operator=(const __allocation_guard& __other) = delete;
+
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __allocation_guard(__allocation_guard&& __other) _NOEXCEPT
       : __alloc_(std::move(__other.__alloc_)),
         __n_(__other.__n_),
@@ -65,8 +67,6 @@ struct __allocation_guard {
     __other.__ptr_ = nullptr;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __allocation_guard&
-  operator=(const __allocation_guard& __other) = delete;
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __allocation_guard&
   operator=(__allocation_guard&& __other) _NOEXCEPT {
     if (std::addressof(__other) != this) {
