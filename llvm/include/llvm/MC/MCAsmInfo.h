@@ -242,22 +242,9 @@ protected:
   bool SupportsSignedData = true;
 
   /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 64-bit GP-relative offset, e.g. .gpdword on Mips.  Defaults
-  /// to nullptr.
-  const char *GPRel64Directive = nullptr;
-
-  /// If non-null, a directive that is used to emit a word which should be
   /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
   /// on Alpha.  Defaults to nullptr.
   const char *GPRel32Directive = nullptr;
-
-  /// If non-null, directives that are used to emit a word/dword which should
-  /// be relocated as a 32/64-bit DTP/TP-relative offset, e.g. .dtprelword/
-  /// .dtpreldword/.tprelword/.tpreldword on Mips.
-  const char *DTPRel32Directive = nullptr;
-  const char *DTPRel64Directive = nullptr;
-  const char *TPRel32Directive = nullptr;
-  const char *TPRel64Directive = nullptr;
 
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
@@ -463,12 +450,7 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-  const char *getGPRel64Directive() const { return GPRel64Directive; }
   const char *getGPRel32Directive() const { return GPRel32Directive; }
-  const char *getDTPRel64Directive() const { return DTPRel64Directive; }
-  const char *getDTPRel32Directive() const { return DTPRel32Directive; }
-  const char *getTPRel64Directive() const { return TPRel64Directive; }
-  const char *getTPRel32Directive() const { return TPRel32Directive; }
 
   /// Targets can implement this method to specify a section to switch to if the
   /// translation unit doesn't have any trampolines that require an executable
