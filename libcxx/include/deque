@@ -2587,8 +2587,8 @@ operator<=>(const deque<_Tp, _Allocator>& __x, const deque<_Tp, _Allocator>& __y
 #  endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 
