@@ -22,13 +22,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -619,11 +617,6 @@ private:
   bool lookUpField(const StructInfo &Structure, StringRef Member,
                    AsmFieldInfo &Info) const;
 
-  /// Should we emit DWARF describing this assembler source?  (Returns false if
-  /// the source has .file directives, which means we don't want to generate
-  /// info describing the assembler source itself.)
-  bool enabledGenDwarfForAssembly();
-
   /// Enter the specified file. This returns true on failure.
   bool enterIncludeFile(const std::string &Filename);
 
@@ -656,8 +649,6 @@ private:
   bool parseBinOpRHS(unsigned Precedence, const MCExpr *&Res, SMLoc &EndLoc);
   bool parseParenExpr(const MCExpr *&Res, SMLoc &EndLoc);
   bool parseBracketExpr(const MCExpr *&Res, SMLoc &EndLoc);
-
-  bool parseRegisterOrRegisterNumber(int64_t &Register, SMLoc DirectiveLoc);
 
   // Generic (target and platform independent) directive parsing.
   enum DirectiveKind {
@@ -1205,29 +1196,6 @@ const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
   return Tok;
 }
 
-bool MasmParser::enabledGenDwarfForAssembly() {
-  // Check whether the user specified -g.
-  if (!getContext().getGenDwarfForAssembly())
-    return false;
-  // If we haven't encountered any .file directives (which would imply that
-  // the assembler source was produced with debug info already) then emit one
-  // describing the assembler source file itself.
-  if (getContext().getGenDwarfFileNumber() == 0) {
-    // Use the first #line directive for this, if any. It's preprocessed, so
-    // there is no checksum, and of course no source directive.
-    if (!FirstCppHashFilename.empty())
-      getContext().setMCLineTableRootFile(
-          /*CUID=*/0, getContext().getCompilationDir(), FirstCppHashFilename,
-          /*Cksum=*/std::nullopt, /*Source=*/std::nullopt);
-    const MCDwarfFile &RootFile =
-        getContext().getMCDwarfLineTable(/*CUID=*/0).getRootFile();
-    getContext().setGenDwarfFileNumber(getStreamer().emitDwarfFileDirective(
-        /*CUID=*/0, getContext().getCompilationDir(), RootFile.Name,
-        RootFile.Checksum, RootFile.Source));
-  }
-  return true;
-}
-
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
@@ -1239,22 +1207,6 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   HadError = false;
   AsmCond StartingCondState = TheCondState;
   SmallVector<AsmRewrite, 4> AsmStrRewrites;
-
-  // If we are generating dwarf for assembly source files save the initial text
-  // section.  (Don't use enabledGenDwarfForAssembly() here, as we aren't
-  // emitting any actual debug info yet and haven't had a chance to parse any
-  // embedded .file directives.)
-  if (getContext().getGenDwarfForAssembly()) {
-    MCSection *Sec = getStreamer().getCurrentSectionOnly();
-    if (!Sec->getBeginSymbol()) {
-      MCSymbol *SectionStartSym = getContext().createTempSymbol();
-      getStreamer().emitLabel(SectionStartSym);
-      Sec->setBeginSymbol(SectionStartSym);
-    }
-    bool InsertResult = getContext().addGenDwarfSection(Sec);
-    assert(InsertResult && ".text section should not have debug info yet");
-    (void)InsertResult;
-  }
 
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof) ||
@@ -1289,40 +1241,12 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   if (TheCondState.TheCond != StartingCondState.TheCond ||
       TheCondState.Ignore != StartingCondState.Ignore)
     printError(getTok().getLoc(), "unmatched .ifs or .elses");
-  // Check to see there are no empty DwarfFile slots.
-  const auto &LineTables = getContext().getMCDwarfLineTables();
-  if (!LineTables.empty()) {
-    unsigned Index = 0;
-    for (const auto &File : LineTables.begin()->second.getMCDwarfFiles()) {
-      if (File.Name.empty() && Index != 0)
-        printError(getTok().getLoc(), "unassigned file number: " +
-                                          Twine(Index) +
-                                          " for .file directives");
-      ++Index;
-    }
-  }
 
   // Check to see that all assembler local symbols were actually defined.
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
   // as otherwise we won't necessarily have seen everything yet.
   if (!NoFinalize) {
-    if (MAI.hasSubsectionsViaSymbols()) {
-      for (const auto &TableEntry : getContext().getSymbols()) {
-        MCSymbol *Sym = TableEntry.getValue().Symbol;
-        // Variable symbols may not be marked as defined, so check those
-        // explicitly. If we know it's a variable, we have a definition for
-        // the purposes of this check.
-        if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
-            !Sym->isDefined())
-          // FIXME: We would really like to refer back to where the symbol was
-          // first referenced for a source location. We need to add something
-          // to track that. Currently, we just point to the end of the file.
-          printError(getTok().getLoc(), "assembler local symbol '" +
-                                            Sym->getName() + "' not defined");
-      }
-    }
-
     // Temporary symbols like the ones for directional jumps don't go in the
     // symbol table. They also need to be diagnosed in all (final) cases.
     for (std::tuple<SMLoc, CppHashInfoTy, MCSymbol *> &LocSym : DirLabels) {
@@ -2121,20 +2045,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    getTargetParser().doBeforeLabelEmit(Sym, IDLoc);
-
     // Emit the label.
     if (!getTargetParser().isParsingMSInlineAsm())
       Out.emitLabel(Sym, IDLoc);
-
-    // If we are generating dwarf for assembly source files then gather the
-    // info to make a dwarf label entry for this label if needed.
-    if (enabledGenDwarfForAssembly())
-      MCGenDwarfLabelEntry::Make(Sym, &getStreamer(), getSourceManager(),
-                                 IDLoc);
-
-    getTargetParser().onLabelParsed(Sym);
-
     return false;
   }
 
@@ -2156,8 +2069,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     //    all the directives that behave in a target and platform independent
     //    manner, or at least have a default behavior that's shared between
     //    all targets and platforms.
-
-    getTargetParser().flushPendingInstructions(getStreamer());
 
     // Special-case handling of structure-end directives at higher priority,
     // since ENDS is overloaded as a segment-end directive.
@@ -2474,37 +2385,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
   // Fail even if ParseInstruction erroneously returns false.
   if (hasPendingError() || ParseHadError)
     return true;
-
-  // If we are generating dwarf for the current section then generate a .loc
-  // directive for the instruction.
-  if (!ParseHadError && enabledGenDwarfForAssembly() &&
-      getContext().getGenDwarfSectionSyms().count(
-          getStreamer().getCurrentSectionOnly())) {
-    unsigned Line;
-    if (ActiveMacros.empty())
-      Line = SrcMgr.FindLineNumber(IDLoc, CurBuffer);
-    else
-      Line = SrcMgr.FindLineNumber(ActiveMacros.front()->InstantiationLoc,
-                                   ActiveMacros.front()->ExitBuffer);
-
-    // If we previously parsed a cpp hash file line comment then make sure the
-    // current Dwarf File is for the CppHashFilename if not then emit the
-    // Dwarf File table for it and adjust the line number for the .loc.
-    if (!CppHashInfo.Filename.empty()) {
-      unsigned FileNumber = getStreamer().emitDwarfFileDirective(
-          0, StringRef(), CppHashInfo.Filename);
-      getContext().setGenDwarfFileNumber(FileNumber);
-
-      unsigned CppHashLocLineNo =
-        SrcMgr.FindLineNumber(CppHashInfo.Loc, CppHashInfo.Buf);
-      Line = CppHashInfo.LineNumber - 1 + (Line - CppHashLocLineNo);
-    }
-
-    getStreamer().emitDwarfLocDirective(
-        getContext().getGenDwarfFileNumber(), Line, 0,
-        DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0, 0, 0,
-        StringRef());
-  }
 
   // If parsing succeeded, match the instruction.
   if (!ParseHadError) {
@@ -4536,21 +4416,6 @@ bool MasmParser::parseDirectiveAlign() {
 bool MasmParser::parseDirectiveEven() {
   if (parseEOL() || emitAlignTo(2))
     return addErrorSuffix(" in even directive");
-
-  return false;
-}
-
-/// parse register name or number.
-bool MasmParser::parseRegisterOrRegisterNumber(int64_t &Register,
-                                               SMLoc DirectiveLoc) {
-  MCRegister RegNo;
-
-  if (getLexer().isNot(AsmToken::Integer)) {
-    if (getTargetParser().parseRegister(RegNo, DirectiveLoc, DirectiveLoc))
-      return true;
-    Register = getContext().getRegisterInfo()->getDwarfRegNum(RegNo, true);
-  } else
-    return parseAbsoluteExpression(Register);
 
   return false;
 }
