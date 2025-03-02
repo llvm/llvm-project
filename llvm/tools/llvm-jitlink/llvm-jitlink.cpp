@@ -479,8 +479,8 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
       continue;
 
     if (Sym->getLinkage() == Linkage::Weak) {
-      if (!S.CanonicalWeakDefs.count(*Sym->getName()) ||
-          S.CanonicalWeakDefs[*Sym->getName()] != G.getName()) {
+      auto It = S.CanonicalWeakDefs.find(*Sym->getName());
+      if (It == S.CanonicalWeakDefs.end() || It->second != G.getName()) {
         LLVM_DEBUG({
           dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
         });
