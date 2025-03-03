@@ -399,16 +399,23 @@ SFI0 Part
 
 The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
 This denotes which optional features the shader requires. The flag values are
-defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
+defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def 
+<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
 
 
 Root Signature (RTS0) Part
 --------------------------
 .. _RTS0:
 
-The Root Signature defines the interface between the shader and the pipeline, specifying which resources are bound to the shader and how they are accessed. This structure serves as a contract between the application and the GPU, establishing a layout for resource binding that both the shader compiler and the runtime can understand.
+The Root Signature defines the interface between the shader and the pipeline, 
+specifying which resources are bound to the shader and how they are accessed. 
+This structure serves as a contract between the application and the GPU, 
+establishing a layout for resource binding that both the shader compiler and 
+the runtime can understand.
 
-The Root Signature consists of a header followed by a collection of root parameters and static samplers. The structure uses a versioned design with offset-based references to allow for flexible serialization and deserialization.
+The Root Signature consists of a header followed by a collection of root parameters 
+and static samplers. The structure uses a versioned design with offset-based references 
+to allow for flexible serialization and deserialization.
 
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -427,14 +434,17 @@ Root Signature Header
 
 The `RootSignatureHeader` structure contains the top-level information about a root signature:
 
-- **Version**: Specifies the version of the root signature format. This allows for backward compatibility as the format evolves.
+- **Version**: Specifies the version of the root signature format. This allows for 
+backward compatibility as the format evolves.
 - **NumParameters**: The number of root parameters contained in this root signature.
 - **ParametersOffset**: Byte offset from the beginning to the array of root parameters header.
 - **NumStaticSamplers**: The number of static samplers defined in the root signature.
 - **StaticSamplerOffset**: Byte offset from the beginning to the array of static samplers.
-- **Flags**: Bit flags that define global behaviors for the root signature, such as whether to deny vertex shader access to certain resources.
+- **Flags**: Bit flags that define global behaviors for the root signature, such as whether 
+to deny vertex shader access to certain resources.
 
-This header allows readers to navigate the binary representation of the root signature by providing counts and offsets to locate each component within the serialized data.
+This header allows readers to navigate the binary representation of the root signature by 
+providing counts and offsets to locate each component within the serialized data.
 
 Root Parameter Header
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -448,18 +458,25 @@ Root Parameter Header
    };
 
 
-Each root parameter in the signature is preceded by a `RootParameterHeader` that describes the parameter's basic attributes:
+Each root parameter in the signature is preceded by a `RootParameterHeader` that describes 
+the parameter's basic attributes:
 
-- **ParameterType**: Enumeration indicating what type of parameter this is (e.g., descriptor table, constants, CBV, SRV, UAV).
-- **ShaderVisibility**: Specifies which shader stages can access this parameter (e.g., all stages, vertex shader only, pixel shader only).
-- **ParameterOffset**: Byte offset from the beginning to the specific parameter data structure for this entry.
+- **ParameterType**: Enumeration indicating what type of parameter this is (e.g., descriptor 
+table, constants, CBV, SRV, UAV).
+- **ShaderVisibility**: Specifies which shader stages can access this parameter (e.g., all stages, 
+vertex shader only, pixel shader only).
+- **ParameterOffset**: Byte offset from the beginning to the specific parameter data structure 
+for this entry.
 
-The header uses a parameter type field rather than encoding the version of the parameter through size, allowing for a more explicit representation of the parameter's nature.
+The header uses a parameter type field rather than encoding the version of the parameter through 
+size, allowing for a more explicit representation of the parameter's nature.
 
 Root Parameters
 ~~~~~~~~~~~~~~~
 
-The Root Parameters section contains structured definitions for each type of root parameter that can be included in a root signature. Each structure corresponds to a specific parameter type as identified by the ``ParameterType`` field in the ``RootParameterHeader``.
+The Root Parameters section contains structured definitions for each type of root parameter that can 
+be included in a root signature. Each structure corresponds to a specific parameter type as identified 
+by the ``ParameterType`` field in the ``RootParameterHeader``.
 
 Root Constants
 ~~~~~~~~~~~~~~
@@ -472,7 +489,8 @@ Root Constants
     uint32_t Num32BitValues;
   };
 
-The ``RootConstants`` structure represents inline root constants that are directly embedded in the root signature and passed to the shader without requiring a constant buffer resource:
+The ``RootConstants`` structure represents inline root constants that are directly embedded in the root 
+signature and passed to the shader without requiring a constant buffer resource:
 
 - **ShaderRegister**: The shader register (b#) where these constants are bound.
 - **RegisterSpace**: The register space used for the binding.
