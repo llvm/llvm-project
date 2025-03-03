@@ -483,6 +483,33 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   return DefinitionAndSourceRegister{DefMI, DefSrcReg};
 }
 
+std::optional<DefinitionAndSourceRegister>
+llvm::getDefSrcRegIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI) {
+  Register DefSrcReg = Reg;
+  auto *DefMI = MRI.getVRegDef(Reg);
+  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+  if (!DstTy.isValid())
+    return std::nullopt;
+  unsigned Opc = DefMI->getOpcode();
+  while (Opc == TargetOpcode::G_BITCAST || isPreISelGenericOptimizationHint(Opc)) {
+    Register SrcReg = DefMI->getOperand(1).getReg();
+    auto SrcTy = MRI.getType(SrcReg);
+    if (!SrcTy.isValid())
+      break;
+    DefMI = MRI.getVRegDef(SrcReg);
+    DefSrcReg = SrcReg;
+    Opc = DefMI->getOpcode();
+  }
+  return DefinitionAndSourceRegister{DefMI, DefSrcReg};
+}
+
+MachineInstr *llvm::getDefIgnoringBitcasts(Register Reg,
+  const MachineRegisterInfo &MRI) {
+std::optional<DefinitionAndSourceRegister> DefSrcReg =
+getDefSrcRegIgnoringBitcasts(Reg, MRI);
+return DefSrcReg ? DefSrcReg->MI : nullptr;
+}
+
 MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
                                          const MachineRegisterInfo &MRI) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =

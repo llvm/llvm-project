@@ -4282,12 +4282,12 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PModsImpl(
   Register Src, const MachineRegisterInfo &MRI, bool IsDOT) const {
   unsigned Mods = 0;
-  MachineInstr *MI = MRI.getVRegDef(Src);
+  MachineInstr *MI = getDefIgnoringBitcasts(Src, MRI);
 
   if (MI->getOpcode() == AMDGPU::G_FNEG &&
       // It's possible to see an f32 fneg here, but unlikely.
       // TODO: Treat f32 fneg as only high bit.
-      MRI.getType(Src).isFixedVector(2, 16)) {
+      MRI.getType(MI->getOperand(0).getReg()) == LLT::fixed_vector(2, LLT::float16())) {
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
     Src = MI->getOperand(1).getReg();
     MI = MRI.getVRegDef(Src);
