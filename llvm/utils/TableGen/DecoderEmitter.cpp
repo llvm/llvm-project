@@ -829,7 +829,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS << (unsigned)Byte << ", ";
     NumToSkip |= Byte << 8;
     Byte = *I++;
-    OS << utostr(Byte) << ", ";
+    OS << (unsigned)(Byte) << ", ";
     NumToSkip |= Byte << 16;
     return NumToSkip;
   };
