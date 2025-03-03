@@ -461,11 +461,16 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
                             const TargetRegisterClass *DstRC,
                             const TargetRegisterClass *SrcRC, unsigned DstSub,
                             const MachineFunction &MF) {
+  const TargetRegisterClass *LargerDstRC =
+      TRI.getLargestLegalSuperClass(DstRC, MF);
 
   const TargetRegisterClass *LargerSrcRC =
       TRI.getLargestLegalSuperClass(SrcRC, MF);
   const TargetRegisterClass *NewSuperRC =
-      TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
+      TRI.getMatchingSuperRegClass(LargerDstRC, LargerSrcRC, DstSub);
+
+  dbgs() << "LargerDstRC: " << TRI.getRegClassName(LargerDstRC) << '\n';
+  dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';
 
   if (NewSuperRC) {
 
