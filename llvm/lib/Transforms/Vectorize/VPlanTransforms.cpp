@@ -730,6 +730,8 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
   return IsWideIVInc() ? WideIV : nullptr;
 }
 
+/// Attempts to optimize the induction variable exit values for users in the
+/// exit block coming from the latch in the original scalar loop.
 static VPValue *
 optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
                                VPBlockBase *PredVPBB, VPValue *Op,
@@ -748,35 +750,35 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
   VPValue *EndValue = EndValues.lookup(WideIV);
   assert(EndValue && "end value must have been pre-computed");
 
-  // This only happens if Incoming is the increment of an induction recipe.
+  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
+  // changed it means the exit is using the incremented value, so we don't
+  // need to subtract the step.
   if (Incoming != WideIV)
     return EndValue;
 
-  // Otherwise subtract the step from the EndValue.
+  // Otherwise, subtract the step from the EndValue.
   VPBuilder B(cast<VPBasicBlock>(PredVPBB)->getTerminator());
   VPValue *Step = WideIV->getStepValue();
   Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
-  VPValue *Escape = nullptr;
-  if (ScalarTy->isIntegerTy()) {
-    Escape =
-        B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
-  } else if (ScalarTy->isPointerTy()) {
+  if (ScalarTy->isIntegerTy())
+    return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+  if (ScalarTy->isPointerTy()) {
     auto *Zero = Plan.getOrAddLiveIn(
         ConstantInt::get(Step->getLiveInIRValue()->getType(), 0));
-    Escape =
-        B.createPtrAdd(EndValue, B.createNaryOp(Instruction::Sub, {Zero, Step}),
-                       {}, "ind.escape");
-  } else if (ScalarTy->isFloatingPointTy()) {
+    return B.createPtrAdd(EndValue,
+                          B.createNaryOp(Instruction::Sub, {Zero, Step}), {},
+                          "ind.escape");
+  }
+  if (ScalarTy->isFloatingPointTy()) {
     const auto &ID = WideIV->getInductionDescriptor();
-    Escape = B.createNaryOp(
+    return B.createNaryOp(
         ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
             ? Instruction::FSub
             : Instruction::FAdd,
         {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
-  } else {
-    llvm_unreachable("all possible induction types must be handled");
   }
-  return Escape;
+  llvm_unreachable("all possible induction types must be handled");
+  return nullptr;
 }
 
 void VPlanTransforms::optimizeInductionExitUsers(
