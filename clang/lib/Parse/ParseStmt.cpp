@@ -562,7 +562,6 @@ Retry:
 StmtResult Parser::ParseExprStatement(ParsedStmtContext StmtCtx) {
   // If a case keyword is missing, this is where it should be inserted.
   Token OldToken = Tok;
-
   ExprStatementTokLoc = Tok.getLocation();
 
   // expression[opt] ';'
@@ -3051,13 +3050,14 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
 
   // exception-declaration is equivalent to '...' or a parameter-declaration
   // without default arguments.
+
   Decl *ExceptionDecl = nullptr;
   if (is_catchresume) {
-    // skip/consume everything inside the () of '_CatchResume ( )`
+    // skip/consume everything inside the () of '_CatchResume (<expr>)`
     // we can maybe remove this case later
     SkipUntil(tok::r_paren, Parser::StopAtSemi | Parser::StopBeforeMatch);
   }
-  else if (Tok.isNot(tok::ellipsis)) { // Token is catchs
+  else if (Tok.isNot(tok::ellipsis)) {
     ParsedAttributes Attributes(AttrFactory);
     MaybeParseCXX11Attributes(Attributes);
 

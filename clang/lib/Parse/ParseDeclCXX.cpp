@@ -4241,7 +4241,7 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
 
   // Handle delayed parsing of exception-specifications.
   if (Delayed) {
-    if (Tok.isNot(tok::kw_throw) && Tok.isNot(tok::kw_noexcept) && Tok.isNot(tok::kw__Throw))
+    if (!Tok.isOneOf(tok::kw_throw, tok::kw_noexcept, tok::kw__Throw, tok::kw__Resume))
       return EST_None;
 
     // Consume and cache the starting token.
@@ -4277,7 +4277,7 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
   }
 
   // See if there's a dynamic specification.
-  if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw)) {
+  if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw, tok::kw__Resume)) {
     Result = ParseDynamicExceptionSpecification(
         SpecificationRange, DynamicExceptions, DynamicExceptionRanges);
     assert(DynamicExceptions.size() == DynamicExceptionRanges.size() &&
@@ -4325,7 +4325,7 @@ ExceptionSpecificationType Parser::tryParseExceptionSpecification(
 
     // If there's a dynamic specification after a noexcept specification,
     // parse that and ignore the results.
-    if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw)) {
+    if (Tok.isOneOf(tok::kw_throw, tok::kw__Throw, tok::kw__Resume)) {
       Diag(Tok.getLocation(), diag::err_dynamic_and_noexcept_specification);
       ParseDynamicExceptionSpecification(NoexceptRange, DynamicExceptions,
                                          DynamicExceptionRanges);
@@ -4364,7 +4364,7 @@ static void diagnoseDynamicExceptionSpecification(Parser &P, SourceRange Range,
 ExceptionSpecificationType Parser::ParseDynamicExceptionSpecification(
     SourceRange &SpecificationRange, SmallVectorImpl<ParsedType> &Exceptions,
     SmallVectorImpl<SourceRange> &Ranges) {
-  assert(Tok.isOneOf(tok::kw_throw, tok::kw__Throw) && "expected throw");
+  assert(Tok.isOneOf(tok::kw_throw, tok::kw__Throw, tok::kw__Resume) && "expected throw");
 
   SpecificationRange.setBegin(ConsumeToken());
   BalancedDelimiterTracker T(*this, tok::l_paren);

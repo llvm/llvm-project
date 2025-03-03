@@ -27,6 +27,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 using namespace clang;
@@ -1950,7 +1951,8 @@ ExprResult Parser::ParseCXXBoolLiteral() {
 ///       throw-expression: [C++ 15]
 ///         'throw' assignment-expression[opt]
 ExprResult Parser::ParseThrowExpression() {
-  assert(Tok.isOneOf(tok::kw_throw, tok::kw__Throw) && "Not throw!");
+  assert(Tok.isOneOf(tok::kw_throw, tok::kw__Throw, tok::kw__Resume) && "Not throw!");
+  bool isResumeStatement = Tok.is(tok::kw__Resume);
   SourceLocation ThrowLoc = ConsumeToken();           // Eat the throw token.
 
   // If the current token isn't the start of an assignment-expression,
@@ -1968,7 +1970,18 @@ ExprResult Parser::ParseThrowExpression() {
   default:
     ExprResult Expr(ParseAssignmentExpression());
     if (Expr.isInvalid()) return Expr;
-    return Actions.ActOnCXXThrow(getCurScope(), ThrowLoc, Expr.get());
+    auto res = Actions.ActOnCXXThrow(getCurScope(), ThrowLoc, Expr.get());
+
+    // If this is a resume statement, continue parsing
+    if(isResumeStatement && Tok.is(tok::kw__At)) {
+      // Eat the _At token
+      ConsumeToken();
+      // Parse the expression following the _At token
+      Expr = ParseAssignmentExpression();
+      res = Actions.ActOnCXXThrow(getCurScope(), ThrowLoc, Expr.get());
+    }
+
+    return res;
   }
 }
 
