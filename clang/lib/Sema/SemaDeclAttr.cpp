@@ -1780,13 +1780,89 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (ResultType->isAnyPointerType() || ResultType->isBlockPointerType()) {
+  if (!ResultType->isAnyPointerType() && !ResultType->isBlockPointerType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
+        << AL << getFunctionOrMethodResultSourceRange(D);
+    return;
+  }
+
+  if (AL.getNumArgs() == 0) {
     D->addAttr(::new (S.Context) RestrictAttr(S.Context, AL));
     return;
   }
 
-  S.Diag(AL.getLoc(), diag::warn_attribute_return_pointers_only)
-      << AL << getFunctionOrMethodResultSourceRange(D);
+  if (AL.getAttributeSpellingListIndex() == RestrictAttr::Declspec_restrict) {
+    // __declspec(restrict) accepts no arguments
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 0;
+    return;
+  }
+
+  // [[gnu::malloc(deallocator)]] with args specifies a deallocator function
+  Expr *DeallocE = AL.getArgAsExpr(0);
+  SourceLocation DeallocLoc = DeallocE->getExprLoc();
+  FunctionDecl *DeallocFD = nullptr;
+  DeclarationNameInfo DeallocNI;
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(DeallocE)) {
+    DeallocFD = dyn_cast<FunctionDecl>(DRE->getDecl());
+    DeallocNI = DRE->getNameInfo();
+    if (!DeallocFD) {
+      S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function)
+          << 1 << DeallocNI.getName();
+      return;
+    }
+  } else if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(DeallocE)) {
+    DeallocFD = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
+    DeallocNI = ULE->getNameInfo();
+    if (!DeallocFD) {
+      S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function)
+          << 2 << DeallocNI.getName();
+      if (ULE->getType() == S.Context.OverloadTy)
+        S.NoteAllOverloadCandidates(ULE);
+      return;
+    }
+  } else {
+    S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function) << 0;
+    return;
+  }
+
+  // 2nd arg of [[gnu::malloc(deallocator, 2)]] with args specifies the param
+  // of deallocator that deallocates the pointer (defaults to 1)
+  ParamIdx DeallocPtrIdx;
+  if (AL.getNumArgs() == 1) {
+    DeallocPtrIdx = ParamIdx(1, DeallocFD);
+
+    if (!DeallocPtrIdx.isValid() ||
+        !getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex())
+             .getCanonicalType()
+             ->isPointerType()) {
+      S.Diag(DeallocLoc,
+             diag::err_attribute_malloc_arg_not_function_with_pointer_arg)
+          << DeallocNI.getName();
+      return;
+    }
+  } else {
+    if (!S.checkFunctionOrMethodParameterIndex(
+            DeallocFD, AL, 2, AL.getArgAsExpr(1), DeallocPtrIdx,
+            /* CanIndexImplicitThis=*/false))
+      return;
+
+    QualType DeallocPtrArgType =
+        getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex());
+    if (!DeallocPtrArgType.getCanonicalType()->isPointerType()) {
+      S.Diag(DeallocLoc,
+             diag::err_attribute_malloc_arg_refers_to_non_pointer_type)
+          << DeallocPtrIdx.getSourceIndex() << DeallocPtrArgType
+          << DeallocNI.getName();
+      return;
+    }
+  }
+
+  // FIXME: we should add this attribute to Clang's AST, so that clang-analyzer
+  // can use it, see -Wmismatched-dealloc in GCC for what we can do with this.
+  S.Diag(AL.getLoc(), diag::warn_attribute_form_ignored) << AL;
+  D->addAttr(::new (S.Context)
+                 RestrictAttr(S.Context, AL, DeallocE, DeallocPtrIdx));
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -5130,6 +5206,25 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_RISCVVectorCC:
     D->addAttr(::new (S.Context) RISCVVectorCCAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, default ABI_VLEN is 128.
+    unsigned VectorLength = 128;
+    if (AL.getNumArgs() &&
+        !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), VectorLength))
+      return;
+    if (VectorLength < 32 || VectorLength > 65536) {
+      S.Diag(AL.getLoc(), diag::err_argument_invalid_range)
+          << VectorLength << 32 << 65536;
+      return;
+    }
+    if (!llvm::isPowerOf2_64(VectorLength)) {
+      S.Diag(AL.getLoc(), diag::err_argument_not_power_of_2);
+      return;
+    }
+
+    D->addAttr(::new (S.Context) RISCVVLSCCAttr(S.Context, AL, VectorLength));
+    return;
+  }
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -5249,10 +5344,19 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     return false;
   }
 
-  unsigned ReqArgs = Attrs.getKind() == ParsedAttr::AT_Pcs ? 1 : 0;
-  if (!Attrs.checkExactlyNumArgs(*this, ReqArgs)) {
-    Attrs.setInvalid();
-    return true;
+  if (Attrs.getKind() == ParsedAttr::AT_RISCVVLSCC) {
+    // riscv_vls_cc only accepts 0 or 1 argument.
+    if (!Attrs.checkAtLeastNumArgs(*this, 0) ||
+        !Attrs.checkAtMostNumArgs(*this, 1)) {
+      Attrs.setInvalid();
+      return true;
+    }
+  } else {
+    unsigned ReqArgs = Attrs.getKind() == ParsedAttr::AT_Pcs ? 1 : 0;
+    if (!Attrs.checkExactlyNumArgs(*this, ReqArgs)) {
+      Attrs.setInvalid();
+      return true;
+    }
   }
 
   // TODO: diagnose uses of these conventions on the wrong target.
@@ -5337,6 +5441,30 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
     break;
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
+    if (Attrs.getNumArgs() &&
+        !checkUInt32Argument(Attrs, Attrs.getArgAsExpr(0), ABIVLen)) {
+      Attrs.setInvalid();
+      return true;
+    }
+    if (Attrs.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
+      Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_invalid_range)
+          << ABIVLen << 32 << 65536;
+      return true;
+    }
+    if (!llvm::isPowerOf2_64(ABIVLen)) {
+      Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_not_power_of_2);
+      return true;
+    }
+    CC = static_cast<CallingConv>(CallingConv::CC_RISCVVLSCall_32 +
+                                  llvm::Log2_64(ABIVLen) - 5);
+    break;
+  }
   default: llvm_unreachable("unexpected attribute kind");
   }
 
@@ -7195,6 +7323,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_M68kRTD:
   case ParsedAttr::AT_PreserveNone:
   case ParsedAttr::AT_RISCVVectorCC:
+  case ParsedAttr::AT_RISCVVLSCC:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:

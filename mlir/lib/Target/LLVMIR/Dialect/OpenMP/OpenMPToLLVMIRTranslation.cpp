@@ -13,6 +13,7 @@
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/IRMapping.h"
@@ -24,10 +25,12 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
@@ -1349,24 +1352,23 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
 
 /// Initialize a single (first)private variable. You probably want to use
 /// allocateAndInitPrivateVars instead of this.
-static llvm::Error initPrivateVar(
+/// This returns the private variable which has been initialized. This
+/// variable should be mapped before constructing the body of the Op.
+static llvm::Expected<llvm::Value *> initPrivateVar(
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
     omp::PrivateClauseOp &privDecl, Value mlirPrivVar, BlockArgument &blockArg,
-    llvm::SmallVectorImpl<llvm::Value *>::iterator llvmPrivateVarIt,
-    llvm::BasicBlock *privInitBlock,
+    llvm::Value *llvmPrivateVar, llvm::BasicBlock *privInitBlock,
     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   Region &initRegion = privDecl.getInitRegion();
-  if (initRegion.empty()) {
-    moduleTranslation.mapValue(blockArg, *llvmPrivateVarIt);
-    return llvm::Error::success();
-  }
+  if (initRegion.empty())
+    return llvmPrivateVar;
 
   // map initialization region block arguments
   llvm::Value *nonPrivateVar = findAssociatedValue(
       mlirPrivVar, builder, moduleTranslation, mappedPrivateVars);
   assert(nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
-  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), *llvmPrivateVarIt);
+  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
 
   // in-place convert the private initialization region
   SmallVector<llvm::Value *, 1> phis;
@@ -1377,17 +1379,15 @@ static llvm::Error initPrivateVar(
 
   assert(phis.size() == 1 && "expected one allocation to be yielded");
 
-  // prefer the value yielded from the init region to the allocated private
-  // variable in case the region is operating on arguments by-value (e.g.
-  // Fortran character boxes).
-  moduleTranslation.mapValue(blockArg, phis[0]);
-  *llvmPrivateVarIt = phis[0];
-
   // clear init region block argument mapping in case it needs to be
   // re-created with a different source for another use of the same
   // reduction decl
   moduleTranslation.forgetMapping(initRegion);
-  return llvm::Error::success();
+
+  // Prefer the value yielded from the init region to the allocated private
+  // variable in case the region is operating on arguments by-value (e.g.
+  // Fortran character boxes).
+  return phis[0];
 }
 
 static llvm::Error
@@ -1404,15 +1404,18 @@ initPrivateVars(llvm::IRBuilderBase &builder,
   llvm::BasicBlock *privInitBlock = splitBB(builder, true, "omp.private.init");
   setInsertPointForPossiblyEmptyBlock(builder, privInitBlock);
 
-  for (auto [idx, zip] : llvm::enumerate(
-           llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs))) {
-    auto [privDecl, mlirPrivVar, blockArg] = zip;
-    llvm::Error err = initPrivateVar(
+  for (auto [idx, zip] : llvm::enumerate(llvm::zip_equal(
+           privateDecls, mlirPrivateVars, privateBlockArgs, llvmPrivateVars))) {
+    auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVar] = zip;
+    llvm::Expected<llvm::Value *> privVarOrErr = initPrivateVar(
         builder, moduleTranslation, privDecl, mlirPrivVar, blockArg,
-        llvmPrivateVars.begin() + idx, privInitBlock, mappedPrivateVars);
+        llvmPrivateVar, privInitBlock, mappedPrivateVars);
 
-    if (err)
-      return err;
+    if (!privVarOrErr)
+      return privVarOrErr.takeError();
+
+    llvmPrivateVar = privVarOrErr.get();
+    moduleTranslation.mapValue(blockArg, llvmPrivateVar);
 
     setInsertPointForPossiblyEmptyBlock(builder);
   }
@@ -1433,20 +1436,19 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                     const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Allocate private vars
-  llvm::BranchInst *allocaTerminator =
-      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  llvm::Instruction *allocaTerminator = allocaIP.getBlock()->getTerminator();
   splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
                                                allocaTerminator->getIterator()),
           true, allocaTerminator->getStableDebugLoc(),
           "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
-  // Update the allocaTerminator in case the alloca block was split above.
-  allocaTerminator =
-      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  // Update the allocaTerminator since the alloca block was split above.
+  allocaTerminator = allocaIP.getBlock()->getTerminator();
   builder.SetInsertPoint(allocaTerminator);
+  // The new terminator is an uncondition branch created by the splitBB above.
   assert(allocaTerminator->getNumSuccessors() == 1 &&
-         "This is an unconditional branch created by OpenMPIRBuilder");
+         "This is an unconditional branch created by splitBB");
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
@@ -1467,7 +1469,7 @@ static LogicalResult
 copyFirstPrivateVars(llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation,
                      SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                     SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
+                     ArrayRef<llvm::Value *> llvmPrivateVars,
                      SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
@@ -1764,6 +1766,119 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
   }
 }
 
+namespace {
+/// TaskContextStructManager takes care of creating and freeing a structure
+/// containing information needed by the task body to execute.
+class TaskContextStructManager {
+public:
+  TaskContextStructManager(llvm::IRBuilderBase &builder,
+                           LLVM::ModuleTranslation &moduleTranslation,
+                           MutableArrayRef<omp::PrivateClauseOp> privateDecls)
+      : builder{builder}, moduleTranslation{moduleTranslation},
+        privateDecls{privateDecls} {}
+
+  /// Creates a heap allocated struct containing space for each private
+  /// variable. Invariant: privateVarTypes, privateDecls, and the elements of
+  /// the structure should all have the same order (although privateDecls which
+  /// do not read from the mold argument are skipped).
+  void generateTaskContextStruct();
+
+  /// Create GEPs to access each member of the structure representing a private
+  /// variable, adding them to llvmPrivateVars. Null values are added where
+  /// private decls were skipped so that the ordering continues to match the
+  /// private decls.
+  void createGEPsToPrivateVars();
+
+  /// De-allocate the task context structure.
+  void freeStructPtr();
+
+  MutableArrayRef<llvm::Value *> getLLVMPrivateVarGEPs() {
+    return llvmPrivateVarGEPs;
+  }
+
+  llvm::Value *getStructPtr() { return structPtr; }
+
+private:
+  llvm::IRBuilderBase &builder;
+  LLVM::ModuleTranslation &moduleTranslation;
+  MutableArrayRef<omp::PrivateClauseOp> privateDecls;
+
+  /// The type of each member of the structure, in order.
+  SmallVector<llvm::Type *> privateVarTypes;
+
+  /// LLVM values for each private variable, or null if that private variable is
+  /// not included in the task context structure
+  SmallVector<llvm::Value *> llvmPrivateVarGEPs;
+
+  /// A pointer to the structure containing context for this task.
+  llvm::Value *structPtr = nullptr;
+  /// The type of the structure
+  llvm::Type *structTy = nullptr;
+};
+} // namespace
+
+void TaskContextStructManager::generateTaskContextStruct() {
+  if (privateDecls.empty())
+    return;
+  privateVarTypes.reserve(privateDecls.size());
+
+  for (omp::PrivateClauseOp &privOp : privateDecls) {
+    // Skip private variables which can safely be allocated and initialised
+    // inside of the task
+    if (!privOp.readsFromMold())
+      continue;
+    Type mlirType = privOp.getType();
+    privateVarTypes.push_back(moduleTranslation.convertType(mlirType));
+  }
+
+  structTy = llvm::StructType::get(moduleTranslation.getLLVMContext(),
+                                   privateVarTypes);
+
+  llvm::DataLayout dataLayout =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
+  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
+
+  // Heap allocate the structure
+  structPtr = builder.CreateMalloc(intPtrTy, structTy, allocSize,
+                                   /*ArraySize=*/nullptr, /*MallocF=*/nullptr,
+                                   "omp.task.context_ptr");
+}
+
+void TaskContextStructManager::createGEPsToPrivateVars() {
+  if (!structPtr) {
+    assert(privateVarTypes.empty());
+    return;
+  }
+
+  // Create GEPs for each struct member
+  llvmPrivateVarGEPs.clear();
+  llvmPrivateVarGEPs.reserve(privateDecls.size());
+  llvm::Value *zero = builder.getInt32(0);
+  unsigned i = 0;
+  for (auto privDecl : privateDecls) {
+    if (!privDecl.readsFromMold()) {
+      // Handle this inside of the task so we don't pass unnessecary vars in
+      llvmPrivateVarGEPs.push_back(nullptr);
+      continue;
+    }
+    llvm::Value *iVal = builder.getInt32(i);
+    llvm::Value *gep = builder.CreateGEP(structTy, structPtr, {zero, iVal});
+    llvmPrivateVarGEPs.push_back(gep);
+    i += 1;
+  }
+}
+
+void TaskContextStructManager::freeStructPtr() {
+  if (!structPtr)
+    return;
+
+  llvm::IRBuilderBase::InsertPointGuard guard{builder};
+  // Ensure we don't put the call to free() after the terminator
+  builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+  builder.CreateFree(structPtr);
+}
+
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
@@ -1781,8 +1896,114 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   mlirPrivateVars.reserve(privateBlockArgs.size());
   llvmPrivateVars.reserve(privateBlockArgs.size());
   collectPrivatizationDecls(taskOp, privateDecls);
+  TaskContextStructManager taskStructMgr{builder, moduleTranslation,
+                                         privateDecls};
   for (mlir::Value privateVar : taskOp.getPrivateVars())
     mlirPrivateVars.push_back(privateVar);
+
+  // Allocate and copy private variables before creating the task. This avoids
+  // accessing invalid memory if (after this scope ends) the private variables
+  // are initialized from host variables or if the variables are copied into
+  // from host variables (firstprivate). The insertion point is just before
+  // where the code for creating and scheduling the task will go. That puts this
+  // code outside of the outlined task region, which is what we want because
+  // this way the initialization and copy regions are executed immediately while
+  // the host variable data are still live.
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
+
+  // Not using splitBB() because that requires the current block to have a
+  // terminator.
+  assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end());
+  llvm::BasicBlock *taskStartBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "omp.task.start",
+      /*Parent=*/builder.GetInsertBlock()->getParent());
+  llvm::Instruction *branchToTaskStartBlock = builder.CreateBr(taskStartBlock);
+  builder.SetInsertPoint(branchToTaskStartBlock);
+
+  // Now do this again to make the initialization and copy blocks
+  llvm::BasicBlock *copyBlock =
+      splitBB(builder, /*CreateBranch=*/true, "omp.private.copy");
+  llvm::BasicBlock *initBlock =
+      splitBB(builder, /*CreateBranch=*/true, "omp.private.init");
+
+  // Now the control flow graph should look like
+  // starter_block:
+  //   <---- where we started when convertOmpTaskOp was called
+  //   br %omp.private.init
+  // omp.private.init:
+  //   br %omp.private.copy
+  // omp.private.copy:
+  //   br %omp.task.start
+  // omp.task.start:
+  //   <---- where we want the insertion point to be when we call createTask()
+
+  // Save the alloca insertion point on ModuleTranslation stack for use in
+  // nested regions.
+  LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
+      moduleTranslation, allocaIP);
+
+  // Allocate and initialize private variables
+  builder.SetInsertPoint(initBlock->getTerminator());
+
+  // Create task variable structure
+  taskStructMgr.generateTaskContextStruct();
+  // GEPs so that we can initialize the variables. Don't use these GEPs inside
+  // of the body otherwise it will be the GEP not the struct which is fowarded
+  // to the outlined function. GEPs forwarded in this way are passed in a
+  // stack-allocated (by OpenMPIRBuilder) structure which is not safe for tasks
+  // which may not be executed until after the current stack frame goes out of
+  // scope.
+  taskStructMgr.createGEPsToPrivateVars();
+
+  for (auto [privDecl, mlirPrivVar, blockArg, llvmPrivateVarAlloc] :
+       llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs,
+                       taskStructMgr.getLLVMPrivateVarGEPs())) {
+    // To be handled inside the task.
+    if (!privDecl.readsFromMold())
+      continue;
+    assert(llvmPrivateVarAlloc &&
+           "reads from mold so shouldn't have been skipped");
+
+    llvm::Expected<llvm::Value *> privateVarOrErr =
+        initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
+                       blockArg, llvmPrivateVarAlloc, initBlock);
+    if (!privateVarOrErr)
+      return handleError(privateVarOrErr, *taskOp.getOperation());
+
+    llvm::IRBuilderBase::InsertPointGuard guard(builder);
+    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+
+    // TODO: this is a bit of a hack for Fortran character boxes.
+    // Character boxes are passed by value into the init region and then the
+    // initialized character box is yielded by value. Here we need to store the
+    // yielded value into the private allocation, and load the private
+    // allocation to match the type expected by region block arguments.
+    if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
+        !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+      builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
+      // Load it so we have the value pointed to by the GEP
+      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                               llvmPrivateVarAlloc);
+    }
+    assert(llvmPrivateVarAlloc->getType() ==
+           moduleTranslation.convertType(blockArg.getType()));
+
+    // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body callback
+    // so that OpenMPIRBuilder doesn't try to pass each GEP address through a
+    // stack allocated structure.
+  }
+
+  // firstprivate copy region
+  setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
+  if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                  taskStructMgr.getLLVMPrivateVarGEPs(),
+                                  privateDecls)))
+    return llvm::failure();
+
+  // Set up for call to createTask()
+  builder.SetInsertPoint(taskStartBlock);
 
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codegenIP) -> llvm::Error {
@@ -1791,25 +2012,61 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocaStackFrame> frame(
         moduleTranslation, allocaIP);
 
-    llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
-        builder, moduleTranslation, privateBlockArgs, privateDecls,
-        mlirPrivateVars, llvmPrivateVars, allocaIP);
-    if (handleError(afterAllocas, *taskOp).failed())
-      return llvm::make_error<PreviouslyReportedError>();
-
-    builder.restoreIP(codegenIP);
-    if (handleError(initPrivateVars(builder, moduleTranslation,
-                                    privateBlockArgs, privateDecls,
-                                    mlirPrivateVars, llvmPrivateVars),
-                    *taskOp)
-            .failed())
-      return llvm::make_error<PreviouslyReportedError>();
-
-    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls)))
-      return llvm::make_error<PreviouslyReportedError>();
-
     // translate the body of the task:
+    builder.restoreIP(codegenIP);
+
+    llvm::BasicBlock *privInitBlock = nullptr;
+    llvmPrivateVars.resize(privateBlockArgs.size());
+    for (auto [i, zip] : llvm::enumerate(llvm::zip_equal(
+             privateBlockArgs, privateDecls, mlirPrivateVars))) {
+      auto [blockArg, privDecl, mlirPrivVar] = zip;
+      // This is handled before the task executes
+      if (privDecl.readsFromMold())
+        continue;
+
+      llvm::IRBuilderBase::InsertPointGuard guard(builder);
+      llvm::Type *llvmAllocType =
+          moduleTranslation.convertType(privDecl.getType());
+      builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
+      llvm::Value *llvmPrivateVar = builder.CreateAlloca(
+          llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
+
+      llvm::Expected<llvm::Value *> privateVarOrError =
+          initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
+                         blockArg, llvmPrivateVar, privInitBlock);
+      if (!privateVarOrError)
+        return privateVarOrError.takeError();
+      moduleTranslation.mapValue(blockArg, privateVarOrError.get());
+      llvmPrivateVars[i] = privateVarOrError.get();
+    }
+
+    taskStructMgr.createGEPsToPrivateVars();
+    for (auto [i, llvmPrivVar] :
+         llvm::enumerate(taskStructMgr.getLLVMPrivateVarGEPs())) {
+      if (!llvmPrivVar) {
+        assert(llvmPrivateVars[i] && "This is added in the loop above");
+        continue;
+      }
+      llvmPrivateVars[i] = llvmPrivVar;
+    }
+
+    // Find and map the addresses of each variable within the task context
+    // structure
+    for (auto [blockArg, llvmPrivateVar, privateDecl] :
+         llvm::zip_equal(privateBlockArgs, llvmPrivateVars, privateDecls)) {
+      // This was handled above.
+      if (!privateDecl.readsFromMold())
+        continue;
+      // Fix broken pass-by-value case for Fortran character boxes
+      if (!mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
+        llvmPrivateVar = builder.CreateLoad(
+            moduleTranslation.convertType(blockArg.getType()), llvmPrivateVar);
+      }
+      assert(llvmPrivateVar->getType() ==
+             moduleTranslation.convertType(blockArg.getType()));
+      moduleTranslation.mapValue(blockArg, llvmPrivateVar);
+    }
+
     auto continuationBlockOrError = convertOmpOpRegions(
         taskOp.getRegion(), "omp.task.region", builder, moduleTranslation);
     if (failed(handleError(continuationBlockOrError, *taskOp)))
@@ -1821,6 +2078,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
                                   llvmPrivateVars, privateDecls)))
       return llvm::make_error<PreviouslyReportedError>();
 
+    // Free heap allocated task context structure at the end of the task.
+    taskStructMgr.freeStructPtr();
+
     return llvm::Error::success();
   };
 
@@ -1828,8 +2088,6 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   buildDependData(taskOp.getDependKinds(), taskOp.getDependVars(),
                   moduleTranslation, dds);
 
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTask(
@@ -4574,6 +4832,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             "failed to inline `dealloc` region of `omp.private` "
             "op in the target region");
       }
+      return builder.saveIP();
     }
 
     return InsertPointTy(exitBlock.get(), exitBlock.get()->end());

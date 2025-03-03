@@ -90,6 +90,9 @@ Resolutions to C++ Defect Reports
   two releases. The improvements to template template parameter matching implemented
   in the previous release, as described in P3310 and P3579, made this flag unnecessary.
 
+- Implemented `CWG2918 Consideration of constraints for address of overloaded `
+  `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
+
 C Language Changes
 ------------------
 
@@ -106,8 +109,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
+
 New Compiler Flags
 ------------------
+
+- New option ``-Wundef-true`` added and enabled by default to warn when `true` is used in the C preprocessor without being defined before C23.
 
 - New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
@@ -119,11 +126,17 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The ARM AArch32 ``-mtp`` option accepts and defaults to ``auto``, a value of ``auto`` uses the best available method of providing the frame pointer supported by the hardware. This matches
+  the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
+  Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
+
 Removed Compiler Flags
 -------------------------
 
 Attribute Changes in Clang
 --------------------------
+Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns off all -Wunsafe-buffer-usage
+related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
@@ -176,6 +189,13 @@ Attribute Changes in Clang
   ``format_matches`` accepts an example valid format string as its third
   argument. For more information, see the Clang attributes documentation.
 
+- Introduced a new statement attribute ``[[clang::atomic]]`` that enables
+  fine-grained control over atomic code generation on a per-statement basis.
+  Supported options include ``[no_]remote_memory``,
+  ``[no_]fine_grained_memory``, and ``[no_]ignore_denormal_mode``. These are
+  particularly relevant for AMDGPU targets, where they map to corresponding IR
+  metadata.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -194,6 +214,12 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 
+- The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-pointer``,
+  which enables warning on passing or returning pointers to guarded variables
+  as function arguments or return value respectively. Note that
+  :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
+  feature will be default-enabled with ``-Wthread-safety`` in a future release.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -205,6 +231,8 @@ Bug Fixes in This Version
 
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fixed rejects-valid problem when #embed appears in std::initializer_list or
+  when it can affect template argument deduction (#GH122306).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -214,6 +242,11 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
+
+- Clang now emits a warning instead of an error when using the one or two
+  argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
+  or ``__attribute__((malloc(deallocator, ptr-index)))``
+  (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -322,6 +355,8 @@ clang-format
 
 libclang
 --------
+- Added ``clang_visitCXXMethods``, which allows visiting the methods
+  of a class.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -359,8 +394,12 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
+- Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
+  allows visiting the methods of a class.
 
 OpenMP Support
 --------------

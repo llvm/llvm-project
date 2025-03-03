@@ -66,6 +66,7 @@ executable("lldb-dap") {
     "Handler/PauseRequestHandler.cpp",
     "Handler/ReadMemoryRequestHandler.cpp",
     "Handler/RequestHandler.cpp",
+    "Handler/ResponseHandler.cpp",
     "Handler/RestartRequestHandler.cpp",
     "Handler/ScopesRequestHandler.cpp",
     "Handler/SetBreakpointsRequestHandler.cpp",

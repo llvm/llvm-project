@@ -130,7 +130,6 @@ math/half_tan.cl
 math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
-math/clc_ldexp.cl
 math/ldexp.cl
 math/lgamma.cl
 math/lgamma_r.cl
@@ -180,7 +179,6 @@ math/sincos.cl
 math/sincos_helpers.cl
 math/sinh.cl
 math/sinpi.cl
-math/clc_sqrt.cl
 math/sqrt.cl
 math/clc_tan.cl
 math/tan.cl

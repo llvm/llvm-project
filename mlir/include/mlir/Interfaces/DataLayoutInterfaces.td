@@ -598,7 +598,11 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*retTy=*/"uint64_t",
       /*methodName=*/"getPreferredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params)
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.getABIAlignment(dataLayout, params);
+      }]
     >,
     InterfaceMethod<
       /*description=*/"Returns the bitwidth that should be used when "
