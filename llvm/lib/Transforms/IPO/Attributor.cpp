@@ -260,9 +260,8 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
       return nullptr;
   } else {
     if (GV->hasLocalLinkage()) {
-      // Uninitialized global with local linkage.
-      if (!GV->hasInitializer())
-        return UndefValue::get(&Ty);
+      // Globals with local linkage are always initialized.
+      assert(GV->hasInitializer());
     } else {
       // Externally visible global that's either non-constant,
       // or a constant with an uncertain initializer.
