@@ -526,9 +526,6 @@ protected:
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
 
-  /// Returns pointer to kmpc_micro type.
-  llvm::Type *getKmpc_MicroPointerTy();
-
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of
   /// storage that's reserved for use by the OpenMP runtime.
