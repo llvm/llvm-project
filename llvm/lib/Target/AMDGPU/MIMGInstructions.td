@@ -1249,6 +1249,16 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                              isFP, renamed>;
 }
 
+multiclass MIMG_Atomic_With_Payload<mimgopc op, string asm, MIMGBaseOpcode BaseOpc = !cast<MIMGBaseOpcode>(NAME)> {
+  let AtomicX2 = 1 in
+  def "": MIMGBaseOpcodeAtomic;
+
+  let mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
+      VDataDwords = 4, VAddrDwords = 4, FPAtomic = 0, IsAtomicRet = 1,
+      BaseOpcode = BaseOpc in
+  def _V4_V4_gfx13 : VIMAGE_Atomic_gfx13 <op, asm, VReg_128, 4, 1>;
+}
+
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
                                 bit isCmpSwap = 0, bit isFP = 0>
   : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
@@ -1874,6 +1884,9 @@ defm IMAGE_ATOMIC_MIN_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1e, MIMG.NOP
 def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1f, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
+
+defm IMAGE_ATOMIC_MIN_U64_IN_B128 : MIMG_Atomic_With_Payload <mimgopc<0x88, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_min_u64_in_b128">;
+defm IMAGE_ATOMIC_MAX_U64_IN_B128 : MIMG_Atomic_With_Payload <mimgopc<0x89, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_u64_in_b128">;
 
 defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1, 0, 0>;
 defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1, 0, 0>;

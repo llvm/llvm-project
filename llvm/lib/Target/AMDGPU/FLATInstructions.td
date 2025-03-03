@@ -1207,11 +1207,17 @@ defm GLOBAL_ATOMIC_SMIN_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_smin_x2",
 defm GLOBAL_ATOMIC_UMIN_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_umin_x2",
                                VReg_64, i64>;
 
+defm GLOBAL_ATOMIC_MIN_U64_IN_B128 : FLAT_Global_Atomic_Pseudo <"global_atomic_min_u64_in_b128",
+                               VReg_128, i128>;
+
 defm GLOBAL_ATOMIC_SMAX_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_smax_x2",
                                VReg_64, i64>;
 
 defm GLOBAL_ATOMIC_UMAX_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_umax_x2",
                                VReg_64, i64>;
+
+defm GLOBAL_ATOMIC_MAX_U64_IN_B128 : FLAT_Global_Atomic_Pseudo <"global_atomic_max_u64_in_b128",
+                               VReg_128, i128>;
 
 defm GLOBAL_ATOMIC_AND_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_and_x2",
                               VReg_64, i64>;
@@ -3963,6 +3969,8 @@ defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VFLAT_Real_AllAddr_gfx13<0x6f, "global_l
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VFLAT_Real_AllAddr_Atomics_gfx13<0x75>;
 defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
+defm GLOBAL_ATOMIC_MIN_U64_IN_B128    : VFLAT_Real_AllAddr_Atomics_gfx13<0x79, "global_atomic_min_u64_in_b128">;
+defm GLOBAL_ATOMIC_MAX_U64_IN_B128    : VFLAT_Real_AllAddr_Atomics_gfx13<0x7a, "global_atomic_max_u64_in_b128">;
 
 // TODO-GFX13: Hide under predicate for now.
 let AssemblerPredicate = HasSGPRVMEM in {

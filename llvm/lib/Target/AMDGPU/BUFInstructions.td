@@ -1190,11 +1190,17 @@ defm BUFFER_ATOMIC_SMIN_X2 : MUBUF_Pseudo_Atomics <
 defm BUFFER_ATOMIC_UMIN_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_umin_x2", VReg_64, i64
 >;
+defm BUFFER_ATOMIC_MIN_U64_IN_B128 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_min_u64_in_b128", VReg_128, i128
+>;
 defm BUFFER_ATOMIC_SMAX_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_smax_x2", VReg_64, i64
 >;
 defm BUFFER_ATOMIC_UMAX_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_umax_x2", VReg_64, i64
+>;
+defm BUFFER_ATOMIC_UMAX_U64_IN_B128 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_max_u64_in_b128", VReg_128, i128
 >;
 defm BUFFER_ATOMIC_AND_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_and_x2", VReg_64, i64
@@ -2727,12 +2733,14 @@ multiclass MUBUF_Real_Discard_gfx13<bits<8> op, string real_name = get_BUF_ps<NA
 }
 
 // TODO-GFX13: SP3 does not accept buffer_atomic_min/max_f64 as aliases.
-defm BUFFER_ATOMIC_MIN_F64      : MUBUF_Real_Atomics_gfx13<0x5f, "buffer_atomic_min_num_f64", "buffer_atomic_fmin_x2">;
-defm BUFFER_ATOMIC_MAX_F64      : MUBUF_Real_Atomics_gfx13<0x60, "buffer_atomic_max_num_f64", "buffer_atomic_fmax_x2">;
-defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Real_Atomics_gfx13<0x47>;
-defm BUFFER_ATOMIC_PK_ADD_F16   : MUBUF_Real_Atomics_gfx13<0x4a>;
-defm BUFFER_ATOMIC_PK_ADD_BF16  : MUBUF_Real_Atomics_gfx13<0x4b>;
-defm BUFFER_ATOMIC_ADD_F32      : MUBUF_Real_Atomics_gfx13<0x54>;
+defm BUFFER_ATOMIC_MIN_F64          : MUBUF_Real_Atomics_gfx13<0x5f, "buffer_atomic_min_num_f64", "buffer_atomic_fmin_x2">;
+defm BUFFER_ATOMIC_MAX_F64          : MUBUF_Real_Atomics_gfx13<0x60, "buffer_atomic_max_num_f64", "buffer_atomic_fmax_x2">;
+defm BUFFER_ATOMIC_COND_SUB_U32     : MUBUF_Real_Atomics_gfx13<0x47>;
+defm BUFFER_ATOMIC_PK_ADD_F16       : MUBUF_Real_Atomics_gfx13<0x4a>;
+defm BUFFER_ATOMIC_PK_ADD_BF16      : MUBUF_Real_Atomics_gfx13<0x4b>;
+defm BUFFER_ATOMIC_ADD_F32          : MUBUF_Real_Atomics_gfx13<0x54>;
+defm BUFFER_ATOMIC_MIN_U64_IN_B128  : MUBUF_Real_Atomics_gfx13<0x79>;
+defm BUFFER_ATOMIC_UMAX_U64_IN_B128 : MUBUF_Real_Atomics_gfx13<0x7a>;
 
 defm BUFFER_DISCARD_B32         : MUBUF_Real_Discard_gfx13<0x04c>;
 defm BUFFER_DISCARD_B128        : MUBUF_Real_Discard_gfx13<0x04d>;
