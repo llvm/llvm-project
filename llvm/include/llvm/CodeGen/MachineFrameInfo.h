@@ -825,10 +825,18 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  const std::vector<MachineBasicBlock *> &getSavePoints() const { return SavePoints; }
-  void setSavePoints(std::vector<MachineBasicBlock *> NewSavePoints) { SavePoints = std::move(NewSavePoints); }
-  const std::vector<MachineBasicBlock *> getRestorePoints() const { return RestorePoints; }
-  void setRestorePoints(std::vector<MachineBasicBlock *> NewRestorePoints) { RestorePoints = std::move(NewRestorePoints); }
+  const std::vector<MachineBasicBlock *> &getSavePoints() const {
+    return SavePoints;
+  }
+  void setSavePoints(std::vector<MachineBasicBlock *> NewSavePoints) {
+    SavePoints = std::move(NewSavePoints);
+  }
+  const std::vector<MachineBasicBlock *> getRestorePoints() const {
+    return RestorePoints;
+  }
+  void setRestorePoints(std::vector<MachineBasicBlock *> NewRestorePoints) {
+    RestorePoints = std::move(NewRestorePoints);
+  }
 
   void clearSavePoints() { SavePoints.clear(); }
   void clearRestorePoints() { RestorePoints.clear(); }

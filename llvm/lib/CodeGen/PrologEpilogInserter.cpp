@@ -429,10 +429,13 @@ void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
 
   // Use the points found by shrink-wrapping, if any.
   if (!MFI.getSavePoints().empty()) {
-    assert(MFI.getSavePoints().size() < 2 && "MFI can't contain multiple save points!");
+    assert(MFI.getSavePoints().size() < 2 &&
+           "MFI can't contain multiple save points!");
     SaveBlocks.push_back(MFI.getSavePoints().front());
-    assert(!MFI.getRestorePoints().empty() && "Both restore and save must be set");
-    assert(MFI.getRestorePoints().size() < 2 && "MFI can't contain multiple restore points!");
+    assert(!MFI.getRestorePoints().empty() &&
+           "Both restore and save must be set");
+    assert(MFI.getRestorePoints().size() < 2 &&
+           "MFI can't contain multiple restore points!");
     MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
@@ -562,9 +565,10 @@ static void updateLiveness(MachineFunction &MF) {
   SmallVector<MachineBasicBlock *, 8> WorkList;
   MachineBasicBlock *Entry = &MF.front();
 
-  assert(MFI.getSavePoints().size() < 2 && "MFI can't contain multiple save points!");
-  MachineBasicBlock *Save = MFI.getSavePoints().empty() ? nullptr : MFI.getSavePoints().front();
- 
+  assert(MFI.getSavePoints().size() < 2 &&
+         "MFI can't contain multiple save points!");
+  MachineBasicBlock *Save =
+      MFI.getSavePoints().empty() ? nullptr : MFI.getSavePoints().front();
 
   if (!Save)
     Save = Entry;
@@ -575,8 +579,10 @@ static void updateLiveness(MachineFunction &MF) {
   }
   Visited.insert(Save);
 
-  assert(MFI.getRestorePoints().size() < 2 && "MFI can't contain multiple restore points!");
-  MachineBasicBlock *Restore = MFI.getRestorePoints().empty() ? nullptr : MFI.getRestorePoints().front();
+  assert(MFI.getRestorePoints().size() < 2 &&
+         "MFI can't contain multiple restore points!");
+  MachineBasicBlock *Restore =
+      MFI.getRestorePoints().empty() ? nullptr : MFI.getRestorePoints().front();
   if (Restore)
     // By construction Restore cannot be visited, otherwise it
     // means there exists a path to Restore that does not go

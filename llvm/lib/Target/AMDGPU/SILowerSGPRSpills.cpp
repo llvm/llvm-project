@@ -210,10 +210,13 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
 
   // Use the points found by shrink-wrapping, if any.
   if (!MFI.getSavePoints().empty()) {
-    assert(MFI.getSavePoints().size() < 2 && "MFI can't contain multiple save points!");
+    assert(MFI.getSavePoints().size() < 2 &&
+           "MFI can't contain multiple save points!");
     SaveBlocks.push_back(MFI.getSavePoints().front());
-    assert(!MFI.getRestorePoints().empty() && "Both restore and save must be set");
-    assert(MFI.getRestorePoints().size() < 2 && "MFI can't contain multiple restore points!");
+    assert(!MFI.getRestorePoints().empty() &&
+           "Both restore and save must be set");
+    assert(MFI.getRestorePoints().size() < 2 &&
+           "MFI can't contain multiple restore points!");
     MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
