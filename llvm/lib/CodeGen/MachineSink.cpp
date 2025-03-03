@@ -320,8 +320,8 @@ char MachineSinkingLegacy::ID = 0;
 
 char &llvm::MachineSinkingLegacyID = MachineSinkingLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachineSinkingLegacy, DEBUG_TYPE, "Machine code sinking", false,
-                      false)
+INITIALIZE_PASS_BEGIN(MachineSinkingLegacy, DEBUG_TYPE, "Machine code sinking",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)

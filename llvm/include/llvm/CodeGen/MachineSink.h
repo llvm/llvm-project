@@ -22,7 +22,8 @@ public:
 
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 
-  void printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // namespace llvm
