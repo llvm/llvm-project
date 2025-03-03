@@ -88,19 +88,28 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK:      VPlan 'Final VPlan for VF={8},UF={1}'
-; CHECK:      <x1> vector loop: {
+; CHECK:      ir-bb<vector.ph>:
+; CHECK-NEXT:     IR   %n.mod.vf = urem i64 %n, 8
+; CHECK-NEXT:     IR   %n.vec = sub i64 %n, %n.mod.vf
+; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector ir<0>
+; CHECK-NEXT:     EMIT vp<[[MUL:%.+]]> = mul vp<[[STEP_VECTOR]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = add ir<0>, vp<[[MUL]]>
+; CHECK-NEXT:     EMIT vp<[[INC:%.+]]> = mul ir<1>, ir<8>
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:   <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<%3> = phi ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-PHI ir<%i> = phi vp<%induction>, vp<%vec.ind.next>
-; CHECK-NEXT:     vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
-; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<%4>
-; CHECK-NEXT:     vp<%5> = vector-pointer ir<%q>
-; CHECK-NEXT:     WIDEN ir<%x> = load vp<%5>
+; CHECK-NEXT:     SCALAR-PHI vp<[[SCALAR_PHI:%.+]]> = phi ir<0>, vp<%index.next>
+; CHECK-NEXT:     WIDEN-PHI ir<%i> = phi vp<[[INDUCTION]]>, vp<%vec.ind.next>
+; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[SCALAR_PHI]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_STEPS]]>
+; CHECK-NEXT:     vp<[[VEC_PTR_1:%.+]]> = vector-pointer ir<%q>
+; CHECK-NEXT:     WIDEN ir<%x> = load vp<[[VEC_PTR_1]]>
 ; CHECK-NEXT:     WIDEN ir<%y> = add ir<%x>, ir<%i>
-; CHECK-NEXT:     vp<%6> = vector-pointer ir<%q>
-; CHECK-NEXT:     WIDEN store vp<%6>, ir<%y>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%3>, ir<8>
-; CHECK-NEXT:     EMIT vp<%vec.ind.next> = add ir<%i>, vp<%2>
+; CHECK-NEXT:     vp<[[VEC_PTR_2:%.+]]> = vector-pointer ir<%q>
+; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR_2]]>, ir<%y>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[SCALAR_PHI]]>, ir<8>
+; CHECK-NEXT:     EMIT vp<%vec.ind.next> = add ir<%i>, vp<[[INC]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

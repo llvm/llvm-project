@@ -1761,8 +1761,7 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector values. This won't execute any LLVM IR and will get
-/// expanded later into VPWidenIntOrFpInitialRecipe, VPWidenIntOrFpPHIRecipe and
-/// VPWidenIntOrFpBackedgeRecipe.
+/// expanded later into several other recipes in convertToConcreteRecipes.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
@@ -1949,7 +1948,7 @@ class VPWidenPHIRecipe : public VPSingleDefRecipe {
 
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
-  /// debug location \p DL..
+  /// debug location \p DL.
   VPWidenPHIRecipe(Instruction *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
                    const Twine &Name = "vec.phi")
       : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
