@@ -471,6 +471,7 @@ CODEGENOPT(CtorDtorReturnThis, 1, 0)
 /// Enables emitting Import Call sections on supported targets that can be used
 /// by the Windows kernel to enable import call optimization.
 CODEGENOPT(ImportCallOptimization, 1, 0)
+CODEGENOPT(DebugTemplateParameterAsType, 1, 0)
 
 /// Controls whether we generate code for static linking of libclosure
 /// (BlocksRuntime) on Windows.
