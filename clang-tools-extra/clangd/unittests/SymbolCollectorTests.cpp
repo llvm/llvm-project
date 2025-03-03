@@ -1145,12 +1145,14 @@ o]] f{};
                ImplicitRefs = std::move(ImplicitSlabBuilder).build();
     EXPECT_EQ(SpelledRanges.empty(), SpelledRefs.empty());
     EXPECT_EQ(ImplicitRanges.empty(), ImplicitRefs.empty());
-    if (!SpelledRanges.empty())
+    if (!SpelledRanges.empty()) {
       EXPECT_THAT(SpelledRefs,
                   Contains(Pair(TargetID, haveRanges(SpelledRanges))));
-    if (!ImplicitRanges.empty())
+    }
+    if (!ImplicitRanges.empty()) {
       EXPECT_THAT(ImplicitRefs,
                   Contains(Pair(TargetID, haveRanges(ImplicitRanges))));
+    }
   }
 }
 
