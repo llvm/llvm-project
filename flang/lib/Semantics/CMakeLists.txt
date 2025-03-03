@@ -1,31 +1,10 @@
-add_flang_library(FortranSemantics
+add_flang_library(FortranSemantics PARTIAL_SOURCES_INTENDED
   assignment.cpp
   attr.cpp
   canonicalize-acc.cpp
   canonicalize-directives.cpp
   canonicalize-do.cpp
   canonicalize-omp.cpp
-  check-acc-structure.cpp
-  check-allocate.cpp
-  check-arithmeticif.cpp
-  check-call.cpp
-  check-case.cpp
-  check-coarray.cpp
-  check-cuda.cpp
-  check-data.cpp
-  check-deallocate.cpp
-  check-declarations.cpp
-  check-do-forall.cpp
-  check-if-stmt.cpp
-  check-io.cpp
-  check-namelist.cpp
-  check-nullify.cpp
-  check-omp-structure.cpp
-  check-purity.cpp
-  check-return.cpp
-  check-select-rank.cpp
-  check-select-type.cpp
-  check-stop.cpp
   compute-offsets.cpp
   data-to-inits.cpp
   definable.cpp
@@ -63,3 +42,45 @@ add_flang_library(FortranSemantics
   FrontendOpenACC
   TargetParser
 )
+
+
+add_flang_library(FortranSemanticsCheck PARTIAL_SOURCES_INTENDED
+  check-acc-structure.cpp
+  check-allocate.cpp
+  check-arithmeticif.cpp
+  check-call.cpp
+  check-case.cpp
+  check-coarray.cpp
+  check-cuda.cpp
+  check-data.cpp
+  check-deallocate.cpp
+  check-declarations.cpp
+  check-do-forall.cpp
+  check-if-stmt.cpp
+  check-io.cpp
+  check-namelist.cpp
+  check-nullify.cpp
+  check-omp-structure.cpp
+  check-purity.cpp
+  check-return.cpp
+  check-select-rank.cpp
+  check-select-type.cpp
+  check-stop.cpp
+
+  DEPENDS
+  acc_gen
+  omp_gen
+
+  LINK_LIBS
+  FortranSupport
+  FortranParser
+  FortranEvaluate
+
+  LINK_COMPONENTS
+  Support
+  FrontendOpenMP
+  FrontendOpenACC
+  TargetParser
+)
+
+target_link_libraries(FortranSemantics PUBLIC FortranSemanticsCheck)
