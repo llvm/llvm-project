@@ -133,15 +133,35 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
       if (auto *ICmp = dyn_cast<ICmpInst>(U)) {
         Value *Op0 = ICmp->getOperand(0);
         Value *Op1 = ICmp->getOperand(1);
+        ICmpInst::Predicate Pred = ICmp->getPredicate();
+        IRBuilder<> Builder(ICmp);
 
-        if (ICmp->getPredicate() == ICmpInst::ICMP_EQ &&
-            ((Op0 == &II && match(Op1, m_Zero())) ||
-             (Op1 == &II && match(Op0, m_Zero())))) {
+        // Ensure ballot is one of the operands
+        Value *OtherOp = nullptr;
+        if (Op0 == &II)
+          OtherOp = Op1;
+        else if (Op1 == &II)
+          OtherOp = Op0;
+        else
+          continue; // Skip if ballot isn't involved
 
-          IRBuilder<> Builder(ICmp);
+        // Case (icmp eq %ballot, 0) OR (icmp ne %ballot, 1)  -->  xor
+        // %ballot_arg, 1
+        if ((Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) ||
+            (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_One()))) {
           Value *Xor = Builder.CreateXor(Src, Builder.getTrue());
-          LLVM_DEBUG(dbgs() << "Replacing with XOR: " << *Xor << "\n");
+          LLVM_DEBUG(dbgs()
+                     << "Replacing ICMP_EQ/ICMP_NE with XOR: " << *Xor << "\n");
           ICmp->replaceAllUsesWith(Xor);
+          Changed = true;
+        }
+        // Case (icmp eq %ballot, 1) OR (icmp ne %ballot, 0)  -->  %ballot_arg
+        else if ((Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_One())) ||
+                 (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero()))) {
+          LLVM_DEBUG(dbgs()
+                     << "Replacing ICMP_EQ/ICMP_NE with ballot argument: "
+                     << *Src << "\n");
+          ICmp->replaceAllUsesWith(Src);
           Changed = true;
         }
       }
