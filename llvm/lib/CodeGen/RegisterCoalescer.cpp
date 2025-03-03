@@ -469,8 +469,9 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
   const TargetRegisterClass *NewSuperRC =
       TRI.getMatchingSuperRegClass(LargerDstRC, LargerSrcRC, DstSub);
 
-  dbgs() << "LargerDstRC: " << TRI.getRegClassName(LargerDstRC) << '\n';
-  dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';
+  LLVM_DEBUG(
+      dbgs() << "LargerDstRC: " << TRI.getRegClassName(LargerDstRC) << '\n';
+      dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';);
 
   if (NewSuperRC) {
 
@@ -544,18 +545,19 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       SrcIdx = DstSub;
 
       const TargetRegisterClass *OldRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
-      dbgs() << "SrcRC = " << TRI.getRegClassName(SrcRC) << '\n';
-      dbgs() << "DstRC = " << TRI.getRegClassName(DstRC) << '\n';
-      dbgs() << "DstSub = " << TRI.getSubRegIndexName(DstSub) << '\n';
-      dbgs() << "OldRC " << (OldRC ? TRI.getRegClassName(OldRC) : "<null>") << '\n';
+
+      LLVM_DEBUG(
+          dbgs() << "SrcRC = " << TRI.getRegClassName(SrcRC) << '\n';
+          dbgs() << "DstRC = " << TRI.getRegClassName(DstRC) << '\n';
+          dbgs() << "DstSub = " << TRI.getSubRegIndexName(DstSub) << '\n';
+          dbgs() << "OldRC " << (OldRC ? TRI.getRegClassName(OldRC) : "<null>")
+                 << '\n';);
 
       NewRC = getCommonSubClassWithSubReg(TRI, DstRC, SrcRC, DstSub, *MF);
 
-
-      dbgs() << "NewRC " << (NewRC ? TRI.getRegClassName(NewRC) : "<null>") << '\n';
-
-
-
+      LLVM_DEBUG(dbgs() << "NewRC "
+                        << (NewRC ? TRI.getRegClassName(NewRC) : "<null>")
+                        << '\n';);
 
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
