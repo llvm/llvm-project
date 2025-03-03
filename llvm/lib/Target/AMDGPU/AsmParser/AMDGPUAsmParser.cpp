@@ -1612,8 +1612,6 @@ public:
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
   bool ParseDirective(AsmToken DirectiveID) override;
   ParseStatus parseOperand(OperandVector &Operands, StringRef Mnemonic,
                            OperandMode Mode = OperandMode_Default);
@@ -5450,20 +5448,6 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     llvm_unreachable("Invalid instructions should have been handled already");
   }
   llvm_unreachable("Implement any new match types added!");
-}
-
-MCSymbolRefExpr::VariantKind
-AMDGPUAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("gotpcrel", MCSymbolRefExpr::VK_GOTPCREL)
-      .Case("gotpcrel32@lo", MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO)
-      .Case("gotpcrel32@hi", MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI)
-      .Case("rel32@lo", MCSymbolRefExpr::VK_AMDGPU_REL32_LO)
-      .Case("rel32@hi", MCSymbolRefExpr::VK_AMDGPU_REL32_HI)
-      .Case("rel64", MCSymbolRefExpr::VK_AMDGPU_REL64)
-      .Case("abs32@lo", MCSymbolRefExpr::VK_AMDGPU_ABS32_LO)
-      .Case("abs32@hi", MCSymbolRefExpr::VK_AMDGPU_ABS32_HI)
-      .Default(MCSymbolRefExpr::VK_Invalid);
 }
 
 bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
