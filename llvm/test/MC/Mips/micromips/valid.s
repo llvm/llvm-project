@@ -302,13 +302,13 @@ sce $2, 8($4)               # CHECK: sce $2, 8($4)          # encoding: [0x60,0x
 syscall                     # CHECK: syscall                # encoding: [0x00,0x00,0x8b,0x7c]
 syscall 396                 # CHECK: syscall 396            # encoding: [0x01,0x8c,0x8b,0x7c]
 # FIXME: ldc1 should accept uneven registers
-# ldc1 $f7, 300($10)        # -CHECK: ldc1 $f7, 300($10)    # encoding: [0xbc,0xea,0x01,0x2c]
+# ldc1 $f7, 300($10)        # COM: CHECK: ldc1 $f7, 300($10)    # encoding: [0xbc,0xea,0x01,0x2c]
 ldc1 $f8, 300($10)          # CHECK: ldc1 $f8, 300($10)     # encoding: [0xbd,0x0a,0x01,0x2c]
 lwc1 $f2, 4($6)             # CHECK: lwc1 $f2, 4($6)        # encoding: [0x9c,0x46,0x00,0x04]
                             # CHECK-NEXT:                   # <MCInst #{{.*}} LWC1_MM
 sdc1 $f2, 4($6)             # CHECK: sdc1 $f2, 4($6)        # encoding: [0xb8,0x46,0x00,0x04]
 # FIXME: sdc1 should accept uneven registers
-# sdc1 $f7, 64($10)         # -CHECK: sdc1 $f7, 64($10)     # encoding: [0xb8,0xea,0x00,0x40]
+# sdc1 $f7, 64($10)         # COM: CHECK: sdc1 $f7, 64($10)     # encoding: [0xb8,0xea,0x00,0x40]
 swc1 $f2, 4($6)             # CHECK: swc1 $f2, 4($6)        # encoding: [0x98,0x46,0x00,0x04]
                             # CHECK-NEXT:                   # <MCInst #{{.*}} SWC1_MM
 cfc1 $1, $2                 # CHECK: cfc1 $1, $2            # encoding: [0x54,0x22,0x10,0x3b]

@@ -11,7 +11,7 @@
 ; RESULT: define void @foo() {
 ; RESULT-NEXT: store i32
 ; RESULT-NEXT: ret void
-; RESULT0-NOT: attributes
+; RESULT-NOT: attributes
 
 ; ERROR: unknown pass "foo"
 define void @foo() #0 {

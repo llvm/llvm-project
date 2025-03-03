@@ -76,9 +76,9 @@ Lfunc_end0:
 # PDB-NEXT:    0B26      code 0x1F (+0x6) line 2 (+1)
 # PDB-NEXT:    0B27      code 0x26 (+0x7) line 3 (+1)
 # PDB-NEXT:    0407      code end 0x2D (+0x7)
-# PEB: S_INLINESITE_END
-# PEB: S_INLINESITE_END
-# PEB: S_PROC_ID_END
+# PDB: S_INLINESITE_END
+# PDB: S_INLINESITE_END
+# PDB: S_PROC_ID_END
 
 	.section	.debug$T,"dr"
 	.long	4

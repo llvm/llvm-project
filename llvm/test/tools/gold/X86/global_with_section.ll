@@ -45,7 +45,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Confirm via a variable with a non-C identifier section that we are getting
 ; the expected internalization.
-; CHECK-REGULARLTO-DAG: @var_with_nonC_section = internal global i32 0, section ".nonCsection"
+; CHECK2-REGULARLTO-DAG: @var_with_nonC_section = internal global i32 0, section ".nonCsection"
 ; Check we dropped definition of dead variable.
 ; CHECK-THINLTO-NOT: @var_with_nonC_section
 @var_with_nonC_section = global i32 0, section ".nonCsection"

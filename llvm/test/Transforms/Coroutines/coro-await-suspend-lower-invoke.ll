@@ -26,7 +26,7 @@ step:
   invoke void @llvm.coro.await.suspend.void(ptr %awaiter, ptr %hdl, ptr @await_suspend_wrapper_void)
     to label %step.continue unwind label %pad
 
-; CHECK       [[STEP_CONT]]:
+; CHECK:      [[STEP_CONT]]:
 step.continue:
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %ret [

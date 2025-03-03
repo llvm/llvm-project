@@ -43,7 +43,7 @@ debugValueSubstitutions:
 body:  |
   bb.0.entry:
     successors: %bb.1, %bb.2
-    ; CHECK-LABE: bb.0.entry:
+    ; CHECK-LABEL: bb.0.entry:
 
     $rax = MOV64ri 1, debug-instr-number 1, debug-location !17
     DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !17
@@ -69,8 +69,8 @@ body:  |
     ;KILL implicit killed $eflags, debug-instr-number 4, debug-location !17
     ;DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(4, 0), debug-location !17
     ;;; Test non-def operand
-    ;; check:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
-    ;; check-next: DBG_VALUE_LIST {{.+}}, $noreg
+    ; COM: CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+    ; COM: CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
 
     $noreg = MOV32ri 1, debug-instr-number 5, debug-location !17
     DBG_INSTR_REF !16, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !17

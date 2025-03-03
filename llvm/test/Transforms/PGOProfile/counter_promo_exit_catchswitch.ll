@@ -37,7 +37,7 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
 ; CHECK: for.body:
 ; NOTENTRY: %pgocount1 = load i64, ptr @"__profc_?run@@YAXH@Z"
-; TENTRY: %pgocount1 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; ENTRY: %pgocount1 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
 ; CHECK: %1 = add i64 %pgocount1, 1
 ; NOTENTRY: store i64 %1, ptr @"__profc_?run@@YAXH@Z"
 ; ENTRY: store i64 %1, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)

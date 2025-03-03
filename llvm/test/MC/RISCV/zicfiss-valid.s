@@ -44,14 +44,14 @@ sspush x1
 # CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
 sspush ra
 
-# check-asm-and-obj: sspush t0
-# check-asm: encoding: [0x73,0x40,0x50,0xce]
-# check-no-ext: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-ASM-AND-OBJ: sspush t0
+# CHECK-ASM: encoding: [0x73,0x40,0x50,0xce]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
 sspush x5
 
-# check-asm-and-obj: sspush t0
-# check-asm: encoding: [0x73,0x40,0x50,0xce]
-# check-no-ext: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-ASM-AND-OBJ: sspush t0
+# CHECK-ASM: encoding: [0x73,0x40,0x50,0xce]
+# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
 sspush t0
 
 # CHECK-ASM-AND-OBJ: ssrdp ra

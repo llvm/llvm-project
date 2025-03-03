@@ -57,14 +57,14 @@ a:
 # CHECK:      Symbol {
 # CHECK-NEXT:   Name: m
 # CHECK:        Flags [
-# CHECK-NOT :     NoDeadStrip
+# CHECK-NOT:     NoDeadStrip
 # CHECK:        Value: 0x2
 m:
 
 # CHECK:      Symbol {
 # CHECK-NEXT:   Name: h
 # CHECK:        Flags [
-# CHECK-NOT :     NoDeadStrip
+# CHECK-NOT:     NoDeadStrip
 # CHECK:        Value: 0x2
 .lto_set_conditional h, m
 

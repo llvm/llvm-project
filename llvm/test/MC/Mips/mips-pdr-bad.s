@@ -5,8 +5,8 @@
         
         .ent # ASM: :[[@LINE]]:14: error: expected identifier after .ent
         .ent bar, # ASM: :[[@LINE]]:19: error: expected number after comma
-        .ent foo, bar # AMS: :[[@LINE]]:23: error: expected an absolute expression after comma
-        .ent foo, 5, bar # AMS: :[[@LINE]]:20: error: unexpected token, expected end of statement
+        .ent foo, bar # ASM: :[[@LINE]]:23: error: expected an absolute expression after comma
+        .ent foo, 5, bar # ASM: :[[@LINE]]:20: error: unexpected token, expected end of statement
  
         .frame # ASM: :[[@LINE]]:16: error: expected stack register
         .frame bar # ASM: :[[@LINE]]:16: error: expected stack register

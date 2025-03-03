@@ -73,14 +73,14 @@
 ; CHECK:  3: 1
 ; CHECK:  5: 4 fb:4
 ; CHECK:  6: 1 fa:1
-; CHECK !CFGChecksum: 563022570642068
+; CHECK: !CFGChecksum: 563022570642068
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa]:6:2
 ; CHECK:  1: 2
 ; CHECK:  3: 2
 ; CHECK:  4: 1
 ; CHECK:  7: 1 fb:1
 ; CHECK:  !CFGChecksum: 563070469352221
- CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa]:4:1
+; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa]:4:1
 ; CHECK:  1: 1
 ; CHECK:  3: 1
 ; CHECK:  5: 1

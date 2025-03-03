@@ -33,7 +33,7 @@ global3:
 global4:
 
 # CHECK: .globl  read_global
-# CNEXT: .globl  write_global
+# CHECK: .globl  write_global
 # CHECK: .globaltype foo_global, i32
 # CHECK: foo_global:
 

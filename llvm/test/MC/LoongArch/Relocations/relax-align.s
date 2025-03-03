@@ -58,7 +58,7 @@ break 6
 # RELAX-INSTR-NEXT: nop
 
 ret
-# INSNR-NEXT: ret
+# INSTR-NEXT: ret
 
 ## Test the symbol index is different from .text.
 .section .text2, "ax"
