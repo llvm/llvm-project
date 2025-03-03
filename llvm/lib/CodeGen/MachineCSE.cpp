@@ -110,8 +110,8 @@ private:
                              SmallSet<MCRegister, 8> &PhysRefs,
                              PhysDefVector &PhysDefs, bool &PhysUseDef) const;
   bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                        SmallSet<MCRegister, 8> &PhysRefs,
-                        PhysDefVector &PhysDefs, bool &NonLocal) const;
+                        const SmallSet<MCRegister, 8> &PhysRefs,
+                        const PhysDefVector &PhysDefs, bool &NonLocal) const;
   bool isCSECandidate(MachineInstr *MI);
   bool isProfitableToCSE(Register CSReg, Register Reg, MachineBasicBlock *CSBB,
                          MachineInstr *MI);
@@ -334,8 +334,8 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
 }
 
 bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                      SmallSet<MCRegister, 8> &PhysRefs,
-                                      PhysDefVector &PhysDefs,
+                                      const SmallSet<MCRegister, 8> &PhysRefs,
+                                      const PhysDefVector &PhysDefs,
                                       bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
   // not in the same basic block as the given instruction. The only exception
