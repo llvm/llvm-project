@@ -246,6 +246,7 @@ const MCSymbolRefExpr *MCSymbolRefExpr::create(StringRef Name, VariantKind Kind,
   return create(Ctx.getOrCreateSymbol(Name), Kind, Ctx);
 }
 
+// TODO: Move target-specific Kinds to lib/Target/.
 StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
     // clang-format off
@@ -444,11 +445,9 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
       .Case("gotrel", VK_GOTREL)
       .Case("pcrel", VK_PCREL)
       .Case("gotpcrel", VK_GOTPCREL)
-      .Case("gotpcrel_norelax", VK_GOTPCREL_NORELAX)
       .Case("gottpoff", VK_GOTTPOFF)
       .Case("indntpoff", VK_INDNTPOFF)
       .Case("ntpoff", VK_NTPOFF)
-      .Case("gotntpoff", VK_GOTNTPOFF)
       .Case("plt", VK_PLT)
       .Case("tlscall", VK_TLSCALL)
       .Case("tlsdesc", VK_TLSDESC)
@@ -466,45 +465,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
       .Case("gotpageoff", VK_GOTPAGEOFF)
       .Case("imgrel", VK_COFF_IMGREL32)
       .Case("secrel32", VK_SECREL)
-      .Case("size", VK_SIZE)
-      .Case("abs8", VK_X86_ABS8)
-      .Case("pltoff", VK_X86_PLTOFF)
-      .Case("gdgot", VK_Hexagon_GD_GOT)
-      .Case("gdplt", VK_Hexagon_GD_PLT)
-      .Case("iegot", VK_Hexagon_IE_GOT)
-      .Case("ie", VK_Hexagon_IE)
-      .Case("ldgot", VK_Hexagon_LD_GOT)
-      .Case("ldplt", VK_Hexagon_LD_PLT)
-      .Case("lo8", VK_AVR_LO8)
-      .Case("hi8", VK_AVR_HI8)
-      .Case("hlo8", VK_AVR_HLO8)
-      .Case("typeindex", VK_WASM_TYPEINDEX)
-      .Case("tbrel", VK_WASM_TBREL)
-      .Case("mbrel", VK_WASM_MBREL)
-      .Case("tlsrel", VK_WASM_TLSREL)
-      .Case("got@tls", VK_WASM_GOT_TLS)
-      .Case("funcindex", VK_WASM_FUNCINDEX)
-      .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
-      .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
-      .Case("rel32@lo", VK_AMDGPU_REL32_LO)
-      .Case("rel32@hi", VK_AMDGPU_REL32_HI)
-      .Case("rel64", VK_AMDGPU_REL64)
-      .Case("abs32@lo", VK_AMDGPU_ABS32_LO)
-      .Case("abs32@hi", VK_AMDGPU_ABS32_HI)
-      .Case("hi", VK_VE_HI32)
-      .Case("lo", VK_VE_LO32)
-      .Case("pc_hi", VK_VE_PC_HI32)
-      .Case("pc_lo", VK_VE_PC_LO32)
-      .Case("got_hi", VK_VE_GOT_HI32)
-      .Case("got_lo", VK_VE_GOT_LO32)
-      .Case("gotoff_hi", VK_VE_GOTOFF_HI32)
-      .Case("gotoff_lo", VK_VE_GOTOFF_LO32)
-      .Case("plt_hi", VK_VE_PLT_HI32)
-      .Case("plt_lo", VK_VE_PLT_LO32)
-      .Case("tls_gd_hi", VK_VE_TLS_GD_HI32)
-      .Case("tls_gd_lo", VK_VE_TLS_GD_LO32)
-      .Case("tpoff_hi", VK_VE_TPOFF_HI32)
-      .Case("tpoff_lo", VK_VE_TPOFF_LO32)
       .Default(VK_Invalid);
 }
 
