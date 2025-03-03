@@ -575,7 +575,7 @@ add_header_macro(
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
-    .llvm-libc-types.struct_sockaddr_un
+    .llvm-libc-types.struct_sockaddr_un #TODO: move this to sys/un.h
 )
 
 add_header_macro(
