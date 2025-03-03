@@ -56,10 +56,6 @@ public:
              std::next(odsOperands.begin(), valueRange.first + valueRange.second)};
   }
 
-  RangeT getArgs() {
-    return getODSOperands(0);
-  }
-
   RangeT getOperands() {
     return odsOperands;
   }
@@ -123,24 +119,9 @@ public:
              std::next(getOperation()->operand_begin(), valueRange.first + valueRange.second)};
   }
 
-  ::mlir::Operation::operand_range getArgs() {
-    return getODSOperands(0);
-  }
-
-  ::mlir::MutableOperandRange getArgsMutable();
-  std::pair<unsigned, unsigned> getODSResultIndexAndLength(unsigned index) {
-    return {index, __OP_RESULT_COUNT__};
-  }
-
-  ::mlir::Operation::result_range getODSResults(unsigned index) {
-    auto valueRange = getODSResultIndexAndLength(index);
-    return {std::next(getOperation()->result_begin(), valueRange.first),
-             std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
-  }
-
-  __OP_BUILD_DECLS__
-
   __OP_GETTER_DECLS__
+  
+  __OP_BUILD_DECLS__
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
   
   ::llvm::LogicalResult verifyInvariantsImpl();
