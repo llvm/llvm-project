@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCINSTRANALYSIS_H
 #define LLVM_MC_MCINSTRANALYSIS_H
 
+#include "TargetRegistry.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -180,6 +181,11 @@ public:
   virtual bool
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                  uint64_t &Target) const;
+
+  /// Given an instruction that accesses a menory address, try to compute
+  /// the target address. Return true success, and the address in Target.
+  virtual bool evaluateInstruction(const MCInst &Inst, uint64_t Addr,
+                                   uint64_t Size, uint64_t &Target) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
