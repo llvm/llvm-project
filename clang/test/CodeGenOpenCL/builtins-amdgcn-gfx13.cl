@@ -10,6 +10,8 @@ typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
+typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
+typedef float __attribute__((ext_vector_type(32))) float32;
 
 // CHECK-LABEL: @test_wavegroup_id(
 // CHECK-NEXT:  entry:
@@ -632,4 +634,50 @@ short2 test_local_add_2f16(local short2 *addr, short2 x) {
 //
 half2 test_local_add_2bf16(local half2 *addr, half2 x) {
   return __builtin_amdgcn_ds_atomic_fadd_v2f16(addr, x);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk32_bf6_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRCF32_ADDR:%.*]] = alloca <32 x float>, align 128, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRCF32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRCF32_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <32 x float> [[SRCF32:%.*]], ptr [[SRCF32_ADDR_ASCAST]], align 128
+// CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[SRCF32_ADDR_ASCAST]], align 128
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32(<32 x float> [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <6 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 32
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk32_bf6_f32(global uint6 *out, float32 srcf32, float src)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk32_bf6_f32(srcf32, src);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk32_fp6_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRCF32_ADDR:%.*]] = alloca <32 x float>, align 128, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRCF32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRCF32_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <32 x float> [[SRCF32:%.*]], ptr [[SRCF32_ADDR_ASCAST]], align 128
+// CHECK-NEXT:    store float [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <32 x float>, ptr [[SRCF32_ADDR_ASCAST]], align 128
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SRC_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <6 x i32> @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32(<32 x float> [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <6 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 32
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk32_fp6_f32(global uint6 *out, float32 srcf32, float src)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk32_fp6_f32(srcf32, src);
 }

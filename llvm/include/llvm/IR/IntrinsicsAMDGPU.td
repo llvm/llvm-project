@@ -3258,6 +3258,12 @@ def int_amdgcn_pext_b32 :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_pext_b32">;
 
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
+
 // void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) %sem, i32 %state)
 // Sets the SEMA*_STATE wave state register for a semaphore owned by the current
 // rank.

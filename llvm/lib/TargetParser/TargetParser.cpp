@@ -403,6 +403,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1300:
       Features["gfx13-insts"] = true;
       Features["parallel-bit-insts"] = true;
+      Features["f32-to-f16bf16-cvt-sr-insts"] = true;
+      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       [[fallthrough]];
     case GK_GFX1251:
       Features["gfx1251-gemm-insts"] = true;
