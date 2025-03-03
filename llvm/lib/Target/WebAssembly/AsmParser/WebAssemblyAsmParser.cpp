@@ -1210,6 +1210,9 @@ public:
     llvm_unreachable("Implement any new match types added!");
   }
 
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
+
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
     auto *CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
@@ -1279,6 +1282,19 @@ public:
   void onEndOfFile() override { ensureEmptyNestingStack(); }
 };
 } // end anonymous namespace
+
+MCSymbolRefExpr::VariantKind
+WebAssemblyAsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("typeindex", MCSymbolRefExpr::VK_WASM_TYPEINDEX)
+      .Case("tbrel", MCSymbolRefExpr::VK_WASM_TBREL)
+      .Case("mbrel", MCSymbolRefExpr::VK_WASM_MBREL)
+      .Case("tlsrel", MCSymbolRefExpr::VK_WASM_TLSREL)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("got@tls", MCSymbolRefExpr::VK_WASM_GOT_TLS)
+      .Case("funcindex", MCSymbolRefExpr::VK_WASM_FUNCINDEX)
+      .Default(MCSymbolRefExpr::VK_Invalid);
+}
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
