@@ -137,20 +137,19 @@ static void EventThreadFunction(DAP &dap) {
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
           auto bp = Breakpoint(
               dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
-          // If the breakpoint was originated from DAP, it will have the
-          // BreakpointBase::GetBreakpointLabel() label attached. Regardless
+          // If the breakpoint was set through DAP, it will have the
+          // BreakpointBase::GetBreakpointLabel() label. Regardless
           // of whether  locations were added, removed, or resolved, the
           // breakpoint isn't going away and the reason is always "changed".
-          if (bp.MatchesName(BreakpointBase::GetBreakpointLabel()) &&
-              (event_type & lldb::eBreakpointEventTypeLocationsAdded ||
+          if ((event_type & lldb::eBreakpointEventTypeLocationsAdded ||
                event_type & lldb::eBreakpointEventTypeLocationsRemoved ||
-               event_type & lldb::eBreakpointEventTypeLocationsResolved)) {
+               event_type & lldb::eBreakpointEventTypeLocationsResolved) &&
+              bp.MatchesName(BreakpointBase::GetBreakpointLabel())) {
             // As the DAP client already knows the path of this breakpoint, we
             // don't need to send it back as part of the "changed" event. This
-            // prevent us from sending paths that should be source
-            // mapped. Note that CreateBreakpoint doesn't apply source mapping
-            // and certain implementation ignore the source part of this event
-            // anyway.
+            // avoids sending paths that should be source mapped. Note that
+            // CreateBreakpoint doesn't apply source mapping and certain
+            // implementation ignore the source part of this event anyway.
             llvm::json::Value source_bp = CreateBreakpoint(&bp);
             source_bp.getAsObject()->erase("source");
 
