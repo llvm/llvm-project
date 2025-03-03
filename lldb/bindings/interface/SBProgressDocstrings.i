@@ -17,8 +17,11 @@ Progress can either be deterministic, incrementing up to a known total or non-de
 with an unbounded total. Deterministic is better if you know the items of work in advance, but non-deterministic
 exposes a way to update a user during a long running process that work is taking place.
 
-For non-deterministic 
-
+For all progresses the details provided in the constructor will be sent until an increment detail
+is provided. This detail will also continue to be broadcasted on any subsequent update that doesn't
+specify a new detail. Some implementations differ on throttling updates and this behavior differs primarily
+if the progress is deterministic or non-deterministic. For DAP, non-deterministic update messages have a higher
+throttling rate than deterministic ones.
 ") lldb::SBProgress;
 
 %feature("docstring",

@@ -32,7 +32,6 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
                 start_found = True
             if "progressUpdate" in event_type:
                 message = event["body"]["message"]
-                print(f"Progress update: {message}")
                 if only_verify_first_update and update_found:
                     continue
                 if expected_message is not None:
