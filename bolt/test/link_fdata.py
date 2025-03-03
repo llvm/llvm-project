@@ -85,7 +85,9 @@ with open(args.input, "r") as f:
 
 # Read nm output: <symbol value> <symbol type> <symbol name>
 nm_output = subprocess.run(
-    [args.nmtool, "--defined-only", "--synthetic", args.objfile], text=True, capture_output=True
+    [args.nmtool, "--defined-only", "--synthetic", args.objfile],
+    text=True,
+    capture_output=True,
 ).stdout
 # Populate symbol map
 symbols = {}
