@@ -477,7 +477,8 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineFunction *MF = MI->getMF();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
@@ -514,7 +515,9 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
-      NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+      NewRC = TRI.getMatchingSuperRegClass(DstRC,
+                                           TRI.getLargestLegalSuperClass(SrcRC, *MF),
+                                           DstSub);
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
