@@ -36,8 +36,9 @@ define <2 x i64> @shl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_lshlrev_b64 v[0:1], v4, v[0:1]
 ; CHECK-NEXT:    v_lshlrev_b64 v[2:3], v6, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, v4, v0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !0
   %shl = shl <2 x i64> %arg0, %shift.amt
