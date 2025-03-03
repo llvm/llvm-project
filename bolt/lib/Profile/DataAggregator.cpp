@@ -1199,8 +1199,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  // Pre-aggregated profile with branches and fallthroughs needs to convert
-  // return profile into call to continuation fall-through.
   auto Type = AggregatedLBREntry::BRANCH;
   if (TypeOrErr.get() == "B") {
     Type = AggregatedLBREntry::BRANCH;

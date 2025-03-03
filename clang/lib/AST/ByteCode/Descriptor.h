@@ -124,6 +124,7 @@ struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
+  const Type *SourceType = nullptr;
   /// Size of an element, in host bytes.
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
@@ -186,8 +187,9 @@ public:
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
-             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
+             MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
   Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
