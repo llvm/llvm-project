@@ -176,8 +176,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
 
-  // Verify that defs in VPBB dominate all their uses. The current
-  // implementation is still incomplete.
+  // Verify that defs in VPBB dominate all their uses.
   DenseMap<const VPRecipeBase *, unsigned> RecipeNumbering;
   unsigned Cnt = 0;
   for (const VPRecipeBase &R : *VPBB)
@@ -204,27 +203,42 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
 
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
-        // TODO: check dominance of incoming values for phis properly.
-        if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
-            (isa<VPIRInstruction>(UI) &&
-             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())))
-          continue;
+        const VPBlockBase *UserVPBB = UI->getParent();
+        bool Ok =
+            TypeSwitch<VPRecipeBase *, bool>(
+                const_cast<VPRecipeBase *>(cast<VPRecipeBase>(U)))
+                .Case<VPWidenPHIRecipe, VPHeaderPHIRecipe, VPPredInstPHIRecipe,
+                      VPIRPhi>([&](auto *R) {
+                  for (const auto &[IncVPV, IncVPBB] :
+                       R->incoming_values_and_blocks()) {
+                    if (IncVPV != V)
+                      continue;
+                    if (IncVPBB != VPBB && !VPDT.dominates(VPBB, IncVPBB)) {
+                      errs() << "Use before def!\n";
+                      return false;
+                    }
+                  }
+                  return true;
+                })
+                .Default([&](const VPUser *U) {
+                  // If the user is in the same block, check it comes after R in
+                  // the block.
+                  if (UserVPBB == VPBB) {
+                    if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
+                      errs() << "Use before def!\n";
+                      return false;
+                    }
+                    return true;
+                  }
 
-        // If the user is in the same block, check it comes after R in the
-        // block.
-        if (UI->getParent() == VPBB) {
-          if (RecipeNumbering[UI] < RecipeNumbering[&R]) {
-            errs() << "Use before def!\n";
-            return false;
-          }
-          continue;
-        }
-
-        if (!VPDT.dominates(VPBB, UI->getParent())) {
-          errs() << "Use before def!\n";
+                  if (!VPDT.dominates(VPBB, UserVPBB)) {
+                    errs() << "Use before def!\n";
+                    return false;
+                  }
+                  return true;
+                });
+        if (!Ok)
           return false;
-        }
       }
     }
     if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {

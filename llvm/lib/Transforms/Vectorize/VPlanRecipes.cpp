@@ -961,30 +961,15 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPIRInstruction::execute(VPTransformState &State) {
-  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
-         "Only PHINodes can have extra operands");
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    VPValue *ExitValue = Op;
-    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
-                    ? VPLane::getFirstLane()
-                    : VPLane::getLastLaneForVF(State.VF);
-    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
-    auto *PredVPBB = Pred->getExitingBasicBlock();
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-    // Set insertion point in PredBB in case an extract needs to be generated.
-    // TODO: Model extracts explicitly.
-    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
-    Value *V = State.get(ExitValue, VPLane(Lane));
-    auto *Phi = cast<PHINode>(&I);
-    // If there is no existing block for PredBB in the phi, add a new incoming
-    // value. Otherwise update the existing incoming value for PredBB.
-    if (Phi->getBasicBlockIndex(PredBB) == -1)
-      Phi->addIncoming(V, PredBB);
-    else
-      Phi->setIncomingValueForBlock(PredBB, V);
-  }
+VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
+  if (auto *Phi = dyn_cast<PHINode>(&I))
+    return new VPIRPhi(*Phi);
+  return new VPIRInstruction(I);
+}
 
+void VPIRInstruction::execute(VPTransformState &State) {
+  assert(!isa<VPIRPhi>(this) && getNumOperands() == 0 &&
+         "PHINodes must be handled by VPIRPhi");
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
@@ -1017,15 +1002,74 @@ void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
 void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
                             VPSlotTracker &SlotTracker) const {
   O << Indent << "IR " << I;
+}
+#endif
+
+static const VPBasicBlock *getIncomingBlockForRecipe(const VPRecipeBase *R,
+                                                     unsigned I) {
+  const VPBasicBlock *Parent = R->getParent();
+  const VPBlockBase *Pred = nullptr;
+  if (Parent->getNumPredecessors() > 0) {
+    Pred = Parent->getPredecessors()[I];
+  } else {
+    auto *Region = Parent->getParent();
+    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
+           "must be in the entry block of a non-replicate region");
+    assert(
+        I < 2 &&
+        (R->getNumOperands() == 2 || isa<VPWidenIntOrFpInductionRecipe>(R)) &&
+        "when placed in an entry block, only 2 incoming blocks are available");
+
+    // I ==  0 selects the predecessor of the region, I == 1 selects the region
+    // itself whose exiting block feeds the phi across the backedge.
+    Pred = I == 0 ? Region->getSinglePredecessor() : Region;
+  }
+
+  return Pred->getExitingBasicBlock();
+}
+
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPIRPhi>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
+}
+
+void VPIRPhi::execute(VPTransformState &State) {
+  PHINode *Phi = &getIRPhi();
+  for (const auto &[ExitValue, IncVPBB] : incoming_values_and_blocks()) {
+    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                    ? VPLane::getFirstLane()
+                    : VPLane::getLastLaneForVF(State.VF);
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[IncVPBB];
+    // Set insertion point in PredBB in case an extract needs to be generated.
+    // TODO: Model extracts explicitly.
+    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    Value *V = State.get(ExitValue, VPLane(Lane));
+    // If there is no existing block for PredBB in the phi, add a new incoming
+    // value. Otherwise update the existing incoming value for PredBB.
+    if (Phi->getBasicBlockIndex(PredBB) == -1)
+      Phi->addIncoming(V, PredBB);
+    else
+      Phi->setIncomingValueForBlock(PredBB, V);
+  }
+
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
+  State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
+                    VPSlotTracker &SlotTracker) const {
+  VPIRInstruction::print(O, Indent, SlotTracker);
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
-    interleaveComma(
-        enumerate(operands()), O, [this, &O, &SlotTracker](auto Op) {
-          Op.value()->printAsOperand(O, SlotTracker);
-          O << " from ";
-          getParent()->getPredecessors()[Op.index()]->printAsOperand(O);
-        });
+    interleaveComma(incoming_values_and_blocks(), O, [&O, &SlotTracker](auto Op) {
+                    std::get<0>(Op)->printAsOperand(O, SlotTracker);
+      O << " from ";
+      std::get<1>(Op)->printAsOperand(O);
+    });
     O << ")";
   }
 }
@@ -1700,6 +1744,12 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " to " << *getResultType();
 }
 #endif
+
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPHeaderPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
+}
 
 InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
@@ -2492,6 +2542,14 @@ InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
   // replicate regions. Match the current behavior in the VPlan cost model for
   // now.
   return 0;
+}
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPPredInstPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  assert(Idx == 0 && "Only one incoming block available");
+  // VPPredInstPHIRecipe only has a single incoming value, which corresponds to
+  // the second predecessor.
+  return getIncomingBlockForRecipe(getAsRecipe(), 1);
 }
 
 void VPPredInstPHIRecipe::execute(VPTransformState &State) {
@@ -3580,25 +3638,10 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPBasicBlock *VPWidenPHIRecipe::getIncomingBlock(unsigned I) {
-  VPBasicBlock *Parent = getParent();
-  VPBlockBase *Pred = nullptr;
-  if (Parent->getNumPredecessors() > 0) {
-    Pred = Parent->getPredecessors()[I];
-  } else {
-    auto *Region = Parent->getParent();
-    assert(Region && !Region->isReplicator() && Region->getEntry() == Parent &&
-           "must be in the entry block of a non-replicate region");
-    assert(
-        I < 2 && getNumOperands() == 2 &&
-        "when placed in an entry block, only 2 incoming blocks are available");
-
-    // I ==  0 selects the predecessor of the region, I == 1 selects the region
-    // itself whose exiting block feeds the phi across the backedge.
-    Pred = I == 0 ? Region->getSinglePredecessor() : Region;
-  }
-
-  return Pred->getExitingBasicBlock();
+template <>
+const VPBasicBlock *
+VPPhiAccessors<VPWidenPHIRecipe>::getIncomingBlock(unsigned Idx) const {
+  return getIncomingBlockForRecipe(getAsRecipe(), Idx);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
