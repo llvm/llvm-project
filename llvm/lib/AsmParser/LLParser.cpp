@@ -2215,6 +2215,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'm68k_rtdcc'
 ///   ::= 'graalcc'
 ///   ::= 'riscv_vector_cc'
+///   ::= 'riscv_vls_cc'
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
@@ -2291,6 +2292,37 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_riscv_vector_cc:
     CC = CallingConv::RISCV_VectorCall;
     break;
+  case lltok::kw_riscv_vls_cc:
+    // Default ABI_VLEN
+    CC = CallingConv::RISCV_VLSCall_128;
+    Lex.Lex();
+    if (!EatIfPresent(lltok::lparen))
+      break;
+    uint32_t ABIVlen;
+    if (parseUInt32(ABIVlen) || !EatIfPresent(lltok::rparen))
+      return true;
+    switch (ABIVlen) {
+    default:
+      return tokError("unknown RISC-V ABI VLEN");
+#define CC_VLS_CASE(ABIVlen)                                                   \
+  case ABIVlen:                                                                \
+    CC = CallingConv::RISCV_VLSCall_##ABIVlen;                                 \
+    break;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    }
+    return false;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
