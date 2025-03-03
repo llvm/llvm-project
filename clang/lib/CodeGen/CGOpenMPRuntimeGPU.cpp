@@ -2743,9 +2743,19 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
                              ? llvm::ConstantInt::get(Int32Ty, 0)
                              : llvm::ConstantInt::get(Int64Ty, 0);
 
-  llvm::Value *Args[] = {Val,           SumPtr,           DTeamVals,
-                         DTeamsDonePtr, RfunPair.first,   RfunPair.second,
-                         ZeroVal,       ThreadStartIndex, NumTeams};
+  llvm::Value *Args[] = {
+      Val,
+      SumPtr,
+      DTeamVals,
+      DTeamsDonePtr,
+      RfunPair.first,
+      RfunPair.second,
+      ZeroVal,
+      ThreadStartIndex,
+      NumTeams,
+      CGF.CGM.getLangOpts().OpenMPTargetMultiDevice
+          ? llvm::ConstantInt::get(Int32Ty, 0) /* __MEMORY_SCOPE_SYSTEM */
+          : llvm::ConstantInt::get(Int32Ty, 1) /* __MEMORY_SCOPE_DEVICE */};
 
   unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   assert(WarpSize == 32 || WarpSize == 64);
