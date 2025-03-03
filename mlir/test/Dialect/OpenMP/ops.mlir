@@ -2417,6 +2417,22 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     }
   }
 
+  // CHECK: omp.taskloop grainsize(strict, %{{[^:]+}}: i64) {
+  omp.taskloop grainsize(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop num_tasks(strict, %{{[^:]+}}: i64) {
+  omp.taskloop num_tasks(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
   // CHECK: omp.taskloop nogroup {
   omp.taskloop nogroup {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {

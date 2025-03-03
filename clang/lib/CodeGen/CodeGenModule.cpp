@@ -342,7 +342,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
-      SanitizerMD(new SanitizerMetadata(*this)) {
+      SanitizerMD(new SanitizerMetadata(*this)),
+      AtomicOpts(Target.getAtomicOpts()) {
 
   // Initialize the type cache.
   Types.reset(new CodeGenTypes(*this));

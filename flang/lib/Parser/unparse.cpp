@@ -2699,9 +2699,19 @@ public:
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
   }
-  void Unparse(const OmpReductionInitializerClause &x) {
-    Word(" INITIALIZER(OMP_PRIV = ");
+  void Unparse(const OmpReductionInitializerProc &x) {
+    Walk(std::get<ProcedureDesignator>(x.t));
+    Put("(");
+    Walk(std::get<std::list<ActualArgSpec>>(x.t));
+    Put(")");
+  }
+  void Unparse(const OmpReductionInitializerExpr &x) {
+    Word("OMP_PRIV = ");
     Walk(x.v);
+  }
+  void Unparse(const OmpReductionInitializerClause &x) {
+    Word(" INITIALIZER(");
+    Walk(x.u);
     Put(")");
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
@@ -2874,9 +2884,14 @@ public:
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<std::list<OmpMemoryOrderClause>>>(x.t));
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH");
+    if (std::get</*ClausesTrailing=*/bool>(x.t)) {
+      Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+    } else {
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+      Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    }
     Put("\n");
     EndOpenMP();
   }

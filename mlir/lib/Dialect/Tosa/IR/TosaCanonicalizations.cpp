@@ -206,7 +206,7 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     }
 
     auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({}, elementTy), constantAttr);
+        RankedTensorType::get({1}, elementTy), constantAttr);
     auto constantVal = rewriter.create<tosa::ConstOp>(
         op.getLoc(), denseAttr.getType(), denseAttr);
 
@@ -949,7 +949,7 @@ REDUCE_FOLDER(ReduceAllOp)
 REDUCE_FOLDER(ReduceAnyOp)
 REDUCE_FOLDER(ReduceMaxOp)
 REDUCE_FOLDER(ReduceMinOp)
-REDUCE_FOLDER(ReduceProdOp)
+REDUCE_FOLDER(ReduceProductOp)
 REDUCE_FOLDER(ReduceSumOp)
 #undef REDUCE_FOLDER
 
