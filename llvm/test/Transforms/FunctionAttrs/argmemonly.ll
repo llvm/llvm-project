@@ -334,7 +334,7 @@ define void @test_inaccessiblememonly_readonly() {
 ; FNATTRS: Function Attrs: nofree memory(inaccessiblemem: read)
 ; FNATTRS-LABEL: define void @test_inaccessiblememonly_readonly
 ; FNATTRS-SAME: () #[[ATTR13:[0-9]+]] {
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19:[0-9]+]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR20:[0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(inaccessiblemem: read)
@@ -352,7 +352,7 @@ define void @test_inaccessibleorargmemonly_readonly(ptr %arg) {
 ; FNATTRS-LABEL: define void @test_inaccessibleorargmemonly_readonly
 ; FNATTRS-SAME: (ptr readonly captures(none) [[ARG:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG]], align 4
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR20]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(argmem: read, inaccessiblemem: read)
@@ -372,7 +372,7 @@ define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
 ; FNATTRS-LABEL: define void @test_inaccessibleorargmemonly_readwrite
 ; FNATTRS-SAME: (ptr writeonly captures(none) initializes((0, 4)) [[ARG:%.*]]) #[[ATTR15:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr [[ARG]], align 4
-; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19]]
+; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR20]]
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: nosync memory(argmem: readwrite, inaccessiblemem: readwrite)
@@ -518,9 +518,9 @@ entry:
 
 ; FIXME: This could be `memory(argmem: read)`.
 define i64 @select_different_obj(i1 %c, ptr %p, ptr %p2) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i64 @select_different_obj
-; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR19:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[P3:%.*]] = select i1 [[C]], ptr [[P]], ptr [[P2]]
 ; FNATTRS-NEXT:    [[R:%.*]] = load i64, ptr [[P3]], align 4
@@ -580,9 +580,9 @@ join:
 
 ; FIXME: This could be `memory(argmem: read)`.
 define i64 @phi_different_obj(i1 %c, ptr %p, ptr %p2) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read, inaccessiblemem: none, errnomem: none)
 ; FNATTRS-LABEL: define i64 @phi_different_obj
-; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (i1 [[C:%.*]], ptr readonly captures(none) [[P:%.*]], ptr readonly captures(none) [[P2:%.*]]) #[[ATTR19]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; FNATTRS:       if:

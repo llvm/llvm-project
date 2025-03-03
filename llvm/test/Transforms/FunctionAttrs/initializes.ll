@@ -91,8 +91,9 @@ define void @partial_load_before_store(ptr %p) {
 declare void @use(ptr)
 
 define void @call_clobber(ptr %p) {
+; CHECK: Function Attrs: memory(readwrite, errnomem: none)
 ; CHECK-LABEL: define void @call_clobber(
-; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @use(ptr [[P]])
 ; CHECK-NEXT:    store i64 123, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -130,7 +131,7 @@ define void @store_offset(ptr %p) {
 define void @store_volatile(ptr %p) {
 ; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @store_volatile(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store volatile i32 123, ptr [[G]], align 4
 ; CHECK-NEXT:    ret void
@@ -241,8 +242,9 @@ end:
 }
 
 define void @call_clobber_on_one_branch(ptr %p, i1 %i) {
+; CHECK: Function Attrs: memory(readwrite, errnomem: none)
 ; CHECK-LABEL: define void @call_clobber_on_one_branch(
-; CHECK-SAME: ptr [[P:%.*]], i1 [[I:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]], i1 [[I:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -306,8 +308,9 @@ define void @non_const_gep(ptr %p, i64 %i) {
 }
 
 define void @call_clobber_in_entry_block(ptr %p, i1 %i) {
+; CHECK: Function Attrs: memory(readwrite, errnomem: none)
 ; CHECK-LABEL: define void @call_clobber_in_entry_block(
-; CHECK-SAME: ptr [[P:%.*]], i1 [[I:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]], i1 [[I:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @use(ptr [[P]])
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
@@ -384,7 +387,7 @@ define void @call_initializes_escape_bundle(ptr %p) {
 define void @access_bundle() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define void @access_bundle(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[SINK:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    store i64 123, ptr [[SINK]], align 4
 ; CHECK-NEXT:    ret void
@@ -397,7 +400,7 @@ define void @access_bundle() {
 define void @call_operand_bundle(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define void @call_operand_bundle(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @access_bundle() [ "unknown"(ptr [[P]]) ]
 ; CHECK-NEXT:    ret void
 ;
@@ -445,7 +448,7 @@ define void @memset_neg(ptr %p) {
 define void @memset_volatile(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -480,7 +483,7 @@ define void @memcpy(ptr %p, ptr %p2) {
 define void @memcpy_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -543,7 +546,7 @@ define void @memmove(ptr %p, ptr %p2) {
 define void @memmove_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR7]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
