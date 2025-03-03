@@ -50,7 +50,7 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
 // must have their LLDBEntryKind in the similar form (ie., share common prefix)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
-   tatic const llvm::telemetry::KindType CommandInfo = 0b11010000;
+  static const llvm::telemetry::KindType CommandInfo = 0b11010000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
 };
 
@@ -109,7 +109,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
     return (T->getKind() & LLDBEntryKind::CommandInfo) == LLDBEntryKind::CommandInfo;
   }
 
-  void serialize(Serializer &serializer) const override;
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
  };
 
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
@@ -185,7 +185,9 @@ template <typename Info> struct ScopedDispatcher {
   void SetDebugger(Debugger *debugger) { debugger = debugger; }
 
   void DispatchOnExit(llvm::unique_function<void(Info *info)> final_callback) {
-    m_final_callback(std::move(final_callback));
+    // We probably should not be overriding previously set cb.
+    assert(!m_final_callback);
+    m_final_callback = std::move(final_callback);
   }
 
   void DispatchNow(llvm::unique_function<void(Info *info)> populate_fields_cb) {
@@ -202,13 +204,13 @@ template <typename Info> struct ScopedDispatcher {
     // And then we dispatch.
     if (llvm::Error er = manager->dispatch(&info)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                     "Failed to dispatch entry of type: {0}", m_info.getKind());
+                     "Failed to dispatch entry of type: {0}", info.getKind());
     }
   }
 
   ~ScopedDispatcher() {
     if (m_final_callback)
-     DispatchIfEnable(std::move(m_final_callback));
+      DispatchNow(std::move(m_final_callback));
   }
 
 private:

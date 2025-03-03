@@ -1886,7 +1886,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   lldb_private::telemetry::ScopedDispatcher<
-      lldb_private::telemetry:CommandInfo> helper(m_debugger);
+      lldb_private::telemetry::CommandInfo>
+      helper(m_debugger);
   lldb_private::telemetry::TelemetryManager *ins =
       lldb_private::telemetry::TelemetryManager::GetInstance();
   const int command_id = ins->MakeNextCommandId();
@@ -1897,35 +1898,36 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string parsed_command_args;
   CommandObject *cmd_obj = nullptr;
 
-  helper.DispatchNow([&](lldb_private::telemetry : CommandInfo *info) {
-    info.command_id = command_id;
+  helper.DispatchNow([&](lldb_private::telemetry::CommandInfo *info) {
+    info->command_id = command_id;
     if (Target* target = GetExecutionContext().GetTargetPtr()) {
       // If we have a target attached to this command, then get the UUID.
-      info.target_uuid = target->GetExecutableModule() != nullptr
-                         ? GetExecutableModule()->GetUUID().GetAsString()
-                         : "";
+      info->target_uuid =
+          target->GetExecutableModule() != nullptr
+              ? target->GetExecutableModule()->GetUUID().GetAsString()
+              : "";
     }
-    if (ins->GetConfig()->m_collect_original_command)
-      info.original_command = original_command_string;
+    if (ins->GetConfig()->m_detailed_command_telemetry)
+      info->original_command = original_command_string;
     // The rest (eg., command_name, args, etc) hasn't been parsed yet;
     // Those will be collected by the on-exit-callback.
   });
 
-  helper.DispatchOnExit([&](lldb_private::telemetry : CommandInfo *info) {
+  helper.DispatchOnExit([&](lldb_private::telemetry::CommandInfo *info) {
     // TODO: this is logging the time the command-handler finishes.
     // But we may want a finer-grain durations too?
     // (ie., the execute_time recorded below?)
-    info.command_id = command_id;
+    info->command_id = command_id;
     llvm::StringRef command_name =
         cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-    info.command_name = command_name.str();
-    info.ret_status = result.GetStatus();
+    info->command_name = command_name.str();
+    info->ret_status = result.GetStatus();
     if (llvm::StringRef error_data = result.GetErrorData();
       !error_data.empty())
-      info.error_data = error_data.str();
+      info->error_data = error_data.str();
 
-    if (ins->GetConfig()->m_collect_original_command)
-      info.args = parsed_command_args;
+    if (ins->GetConfig()->m_detailed_command_telemetry)
+      info->args = parsed_command_args;
   });
 
   Log *log = GetLog(LLDBLog::Commands);
