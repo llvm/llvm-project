@@ -549,11 +549,9 @@ private:
   //  Allocate space for __n objects
   //  throws length_error if __n > max_size()
   //  throws (probably bad_alloc) if memory run out
-  //  Precondition:  __begin_ == __end_ == __cap_ == nullptr
-  //  Precondition:  __n > 0
-  //  Postcondition:  capacity() >= __n
-  //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
+    _LIBCPP_ASSERT_INTERNAL(!__begin_ && !__end_ && !__cap_, "Trying to __vallocate on non-empty vector!");
+    _LIBCPP_ASSERT_INTERNAL(__n >= 0, "Trying to __vallocate zero elements!");
     if (__n > max_size())
       this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__alloc_, __n);
@@ -561,6 +559,8 @@ private:
     __end_            = __allocation.ptr;
     __cap_            = __begin_ + __allocation.count;
     __annotate_new(0);
+    _LIBCPP_ASSERT_INTERNAL(capacity() >= __n, "Allocated too few elements!");
+    _LIBCPP_ASSERT_INTERNAL(size() == 0, "vector isn't empty after __vallocate()!");
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vdeallocate() _NOEXCEPT;
@@ -877,10 +877,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__vdeallocate() _NOE
   }
 }
 
-//  Precondition:  __new_size > capacity()
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
 vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
+  _LIBCPP_ASSERT_INTERNAL(
+      __new_size > capacity(), "Asking for a new capacity, but there are still enough elements available!");
   const size_type __ms = max_size();
   if (__new_size > __ms)
     this->__throw_length_error();
@@ -892,32 +893,36 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 
 //  Default constructs __n objects starting at __end_
 //  throws if construction throws
-//  Precondition:  __n > 0
-//  Precondition:  size() + __n <= capacity()
-//  Postcondition:  size() == size() + __n
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
+  _LIBCPP_ASSERT_INTERNAL(__n > 0, "Trying to construct zero elements!");
+  _LIBCPP_ASSERT_INTERNAL(
+      size() + __n <= capacity(), "Trying to __construct_at_end more elements than there is space available!");
+  [[__maybe_unused__]] auto __old_size = size();
   _ConstructTransaction __tx(*this, __n);
   const_pointer __new_end = __tx.__new_end_;
   for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
     __alloc_traits::construct(this->__alloc_, std::__to_address(__pos));
   }
+  _LIBCPP_ASSERT_INTERNAL(size() == __old_size + __n, "Too few elements constructed!");
 }
 
 //  Copy constructs __n objects starting at __end_ from __x
 //  throws if construction throws
-//  Precondition:  __n > 0
-//  Precondition:  size() + __n <= capacity()
-//  Postcondition:  size() == old size() + __n
-//  Postcondition:  [i] == __x for all i in [size() - __n, __n)
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
+  _LIBCPP_ASSERT_INTERNAL(__n > 0, "Trying to construct zero elements!");
+  _LIBCPP_ASSERT_INTERNAL(
+      size() + __n <= capacity(), "Trying to __construct_at_end more elements than there is space available!");
+  [[__maybe_unused__]] auto __old_size = size();
   _ConstructTransaction __tx(*this, __n);
   const_pointer __new_end = __tx.__new_end_;
   for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
     __alloc_traits::construct(this->__alloc_, std::__to_address(__pos), __x);
   }
+  _LIBCPP_ASSERT_INTERNAL(size() == __old_size + __n, "Too few elements constructed!");
+  //  Postcondition:  [i] == __x for all i in [size() - __n, __n)
 }
 
 template <class _Tp, class _Allocator>
@@ -930,10 +935,10 @@ vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __
 
 //  Default constructs __n objects starting at __end_
 //  throws if construction throws
-//  Postcondition:  size() == size() + __n
 //  Exception safety: strong.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type __n) {
+  [[__maybe_unused__]] auto __old_size = size();
   if (static_cast<size_type>(this->__cap_ - this->__end_) >= __n)
     this->__construct_at_end(__n);
   else {
@@ -941,6 +946,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type _
     __v.__construct_at_end(__n);
     __swap_out_circular_buffer(__v);
   }
+  _LIBCPP_ASSERT_INTERNAL(size() == __old_size + __n, "Too few elements constructed!");
 }
 
 //  Default constructs __n objects starting at __end_
@@ -949,6 +955,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type _
 //  Exception safety: strong.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type __n, const_reference __x) {
+  [[__maybe_unused__]] auto __old_size = size();
   if (static_cast<size_type>(this->__cap_ - this->__end_) >= __n)
     this->__construct_at_end(__n, __x);
   else {
@@ -956,6 +963,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__append(size_type _
     __v.__construct_at_end(__n, __x);
     __swap_out_circular_buffer(__v);
   }
+  _LIBCPP_ASSERT_INTERNAL(size() == __old_size + __n, "Too few elements constructed!");
 }
 
 template <class _Tp, class _Allocator>
