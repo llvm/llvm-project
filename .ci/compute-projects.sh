@@ -32,7 +32,6 @@ function compute-projects-to-test() {
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
-        echo flang-rt
       fi
     ;;
     clang)
@@ -48,7 +47,6 @@ function compute-projects-to-test() {
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
-        echo flang-rt
       fi
     ;;
     *)
@@ -67,6 +65,10 @@ function compute-runtimes-to-test() {
         echo $p
       done
     ;;
+    flang)
+      for p in flang-rt; do
+        echo $p
+      done
     *)
       # Nothing to do
     ;;
