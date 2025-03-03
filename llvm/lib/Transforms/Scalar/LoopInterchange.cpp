@@ -55,6 +55,8 @@ using namespace llvm;
 /// Metadata attribute names
 static const char *const LLVMLoopInterchangeFollowupAll =
     "llvm.loop.interchange.followup_all";
+static const char *const LLVMLoopInterchangeFollowupNextOuter =
+    "llvm.loop.interchange.followup_next_outer";
 static const char *const LLVMLoopInterchangeFollowupOuter =
     "llvm.loop.interchange.followup_outer";
 static const char *const LLVMLoopInterchangeFollowupInner =
@@ -533,6 +535,8 @@ struct LoopInterchange {
       }
     }
 
+    // If OnlyWhenForced is true, only process loops for which interchange is
+    // explicitly enabled.
     if (OnlyWhenForced)
       return processEnabledLoop(LoopList, DependencyMatrix, CostMap);
 
@@ -564,8 +568,10 @@ struct LoopInterchange {
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    if (findMetadata(OuterLoop) == false || findMetadata(InnerLoop) == false)
+    if (findMetadata(OuterLoop) == false || findMetadata(InnerLoop) == false) {
+      LLVM_DEBUG(dbgs() << "Not interchanging loops. It is disabled.\n");
       return false;
+    }
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
@@ -608,41 +614,145 @@ struct LoopInterchange {
                           std::vector<std::vector<char>> &DependencyMatrix,
                           const DenseMap<const Loop *, unsigned> &CostMap) {
     bool Changed = false;
-    for (unsigned InnerLoopId = LoopList.size() - 1; InnerLoopId > 0;
-         InnerLoopId--) {
-      unsigned OuterLoopId = InnerLoopId - 1;
-      if (findMetadata(LoopList[OuterLoopId]) != true)
-        continue;
 
-      MDNode *MDOrigLoopID = LoopList[OuterLoopId]->getLoopID();
-      bool Interchanged =
-          processLoop(LoopList[InnerLoopId], LoopList[OuterLoopId], InnerLoopId,
-                      OuterLoopId, DependencyMatrix, CostMap);
+    // Manage the index so that LoopList[Loop2Index[L]] == L for each loop L.
+    DenseMap<Loop *, unsigned> Loop2Index;
+    for (unsigned I = 0; I != LoopList.size(); I++)
+      Loop2Index[LoopList[I]] = I;
 
-      // TODO: Consolidate the duplicate code in `processLoopList`.
-      if (Interchanged) {
-        std::swap(LoopList[OuterLoopId], LoopList[InnerLoopId]);
-        // Update the DependencyMatrix
-        interChangeDependencies(DependencyMatrix, InnerLoopId, OuterLoopId);
+    // Hold outer loops to be exchanged (i.e., loops that have
+    // "llvm.loop.interchange.enable" is true), in the current nest order.
+    SmallVector<Loop *, 4> Worklist;
 
-        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
-                   printDepMatrix(DependencyMatrix));
+    // Helper funciton to try to add a new loop into the Worklist. Return false
+    // if there is a duplicate in the loop to be interchanged.
+    auto AddLoopIfEnabled = [&](Loop *L) {
+      if (findMetadata(L) == true) {
+        if (!Worklist.empty()) {
+          // Because the loops are sorted in the order of the current nest, it
+          // is sufficient to compare with the last element.
+          unsigned InnerLoopId = Loop2Index[Worklist.back()] + 1;
+          unsigned OuterLoopId = Loop2Index[L];
+          if (OuterLoopId <= InnerLoopId) {
+            ORE->emit([&]() {
+              return OptimizationRemarkMissed(DEBUG_TYPE, "AmbiguousOrder",
+                                              L->getStartLoc(), L->getHeader())
+                     << "The loops to be interchanged are overlapping.";
+            });
+            return false;
+          }
+        }
+        Worklist.push_back(L);
+      }
+      return true;
+    };
+
+    // Initialize Worklist. To process the loops in inner-loop-first order, add
+    // them to the worklist in the outer-loop-first order.
+    for (unsigned I = 0; I != LoopList.size(); I++)
+      if (!AddLoopIfEnabled(LoopList[I]))
+        return Changed;
+
+    // Set an upper bound of the number of transformations to avoid infinite
+    // loop. There is no deep meaning behind the current value (square of the
+    // size of LoopList).
+    // TODO: Is this really necessary?
+    const unsigned MaxAttemptsCount = LoopList.size() * LoopList.size();
+    unsigned Attempts = 0;
+
+    // Process the loops. An exchange is applied to two loops, but a metadata
+    // replacement can be applied to three loops: the two loops plus the next
+    // outer loop, if it exists. This is because it's necessary to express the
+    // information about the order of the application of interchanges in cases
+    // where the target loops to be exchanged are overlapping, e.g.,
+    //
+    // #pragma clang loop interchange(enable)
+    // for(int i=0;i<N;i++)
+    //   #pragma clang loop interchange(enable)
+    //   for (int j=0;j<N;j++)
+    //     for (int k=0;k<N;k++)
+    //       ...
+    //
+    // In this case we will exchange the innermost two loops at first, the
+    // follow-up metadata including enabling interchange is attached on the
+    // outermost loop, and it is enqueued as the next candidate to be processed.
+    while (!Worklist.empty() && Attempts < MaxAttemptsCount) {
+      Loop *TargetLoop = Worklist.pop_back_val();
+      assert(findMetadata(TargetLoop) == true &&
+             "Some metadata was unexpectedlly removed");
+      unsigned OuterLoopId = Loop2Index[TargetLoop];
+      unsigned InnerLoopId = OuterLoopId + 1;
+      if (InnerLoopId >= LoopList.size()) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "InnermostLoop",
+                                          TargetLoop->getStartLoc(),
+                                          TargetLoop->getHeader())
+                 << "The metadata is invalid with an innermost loop.";
+        });
+        break;
+      }
+      MDNode *LoopID = TargetLoop->getLoopID();
+      bool Interchanged = processLoop(LoopList, InnerLoopId, OuterLoopId,
+                                      DependencyMatrix, CostMap);
+      if (!Interchanged) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInterchanged",
+                                          TargetLoop->getStartLoc(),
+                                          TargetLoop->getHeader())
+                 << "Failed to perform explicitly specified loop interchange.";
+        });
+        break;
       }
 
+      // The next outer loop, or nullptr if TargetLoop is the outermost one.
+      Loop *NextOuterLoop = nullptr;
+      if (0 < OuterLoopId)
+        NextOuterLoop = LoopList[OuterLoopId - 1];
+      Loop *OuterLoop = LoopList[OuterLoopId];
+      Loop *InnerLoop = LoopList[InnerLoopId];
+      Attempts++;
+      Changed = true;
+      Loop2Index[OuterLoop] = OuterLoopId;
+      Loop2Index[InnerLoop] = InnerLoopId;
+
+      // Update the metadata.
+      std::optional<MDNode *> MDNextOuterLoopID =
+          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                      LLVMLoopInterchangeFollowupNextOuter});
       std::optional<MDNode *> MDOuterLoopID =
-          makeFollowupLoopID(MDOrigLoopID, {LLVMLoopInterchangeFollowupAll,
-                                            LLVMLoopInterchangeFollowupOuter});
-      if (MDOuterLoopID)
-        LoopList[OuterLoopId]->setLoopID(*MDOuterLoopID);
-
+          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                      LLVMLoopInterchangeFollowupOuter});
       std::optional<MDNode *> MDInnerLoopID =
-          makeFollowupLoopID(MDOrigLoopID, {LLVMLoopInterchangeFollowupAll,
-                                            LLVMLoopInterchangeFollowupInner});
+          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                      LLVMLoopInterchangeFollowupInner});
+      if (MDNextOuterLoopID) {
+        if (NextOuterLoop) {
+          NextOuterLoop->setLoopID(*MDNextOuterLoopID);
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "New metadata for the next outer loop is ignored.\n");
+        }
+      }
+      if (MDOuterLoopID)
+        OuterLoop->setLoopID(*MDOuterLoopID);
       if (MDInnerLoopID)
-        LoopList[InnerLoopId]->setLoopID(*MDInnerLoopID);
+        InnerLoop->setLoopID(*MDInnerLoopID);
 
-      Changed |= Interchanged;
+      // Add new elements, paying attention to the order.
+      bool Valid = true;
+      if (NextOuterLoop)
+        Valid &= AddLoopIfEnabled(NextOuterLoop);
+      Valid &= AddLoopIfEnabled(OuterLoop);
+      Valid &= AddLoopIfEnabled(InnerLoop);
+      if (!Valid)
+        break;
     }
+
+    LLVM_DEBUG({
+      if (!Worklist.empty())
+        dbgs() << "Some metadata was ignored because the maximum number of "
+                  "attempts was reached.\n";
+    });
     return Changed;
   }
 };
