@@ -3064,6 +3064,114 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_usmopa_wide : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_usmops_wide : SME_OuterProduct_Intrinsic;
 
+  class SME_OuterProduct_QuarterTile_Single_Single
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>]>;
+
+  def int_aarch64_sme_mop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_mop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_mop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_mop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_smop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_umop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_sumop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+  def int_aarch64_sme_usmop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
+
+  class SME_OuterProduct_QuarterTile_Single_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>]>;
+
+  def int_aarch64_sme_mop4a_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_mop4s_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_mop4a_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_mop4s_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4a_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4s_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4a_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4s_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4a_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4s_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4a_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4s_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4a_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4s_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4a_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4s_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4a_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4s_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4a_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4s_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4a_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_smop4s_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4a_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_umop4s_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4a_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_sumop4s_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4a_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+  def int_aarch64_sme_usmop4s_za64_wide_1x2 : SME_OuterProduct_QuarterTile_Single_Multi;
+
+  class SME_OuterProduct_QuarterTile_Multi_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>]>;
+
+  def int_aarch64_sme_mop4a_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_mop4s_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_mop4a_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_mop4s_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4a_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4s_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4a_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4s_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4a_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4s_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4a_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4s_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4a_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4s_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4a_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4s_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4a_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4s_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4a_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4s_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4a_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_smop4s_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4a_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_umop4s_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4a_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_sumop4s_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4a_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+  def int_aarch64_sme_usmop4s_za64_wide_2x2 : SME_OuterProduct_QuarterTile_Multi_Multi;
+
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
@@ -3835,7 +3943,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
                             [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-                            
+
   //
   // Lookup table expand four registers
   //
