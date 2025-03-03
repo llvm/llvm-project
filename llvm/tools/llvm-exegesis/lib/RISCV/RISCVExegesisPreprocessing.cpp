@@ -12,9 +12,10 @@
 #include "RISCV.h"
 #include "RISCVExegesisPasses.h"
 #include "RISCVRegisterInfo.h"
-#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/MC/MCContext.h"
 
 using namespace llvm;
 
@@ -63,10 +64,13 @@ static bool processAVLOperand(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 bool RISCVExegesisPreprocessing::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (!STI.hasVInstructions())
+  // We could have use RISCVSubtarget::hasVInstructions here but including
+  // RISCVSubtarget.h would serialize the build of components outside
+  // LLVMRISCVCodeGen.
+  const MCSubtargetInfo &STI = *MF.getContext().getSubtargetInfo();
+  if (!STI.hasFeature(RISCV::FeatureStdExtZve32x))
     return false;
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   LLVM_DEBUG(MF.print(dbgs() << "===Before RISCVExegesisPoreprocessing===\n");
              dbgs() << "\n");
