@@ -825,6 +825,7 @@ protected:
 public:
   SymbolTableSection() { Type = OriginalType = ELF::SHT_SYMTAB; }
 
+  bool isVerboseFlag = false;
   void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
                  uint64_t Value, uint8_t Visibility, uint16_t Shndx,
                  uint64_t SymbolSize);
@@ -1195,6 +1196,7 @@ public:
   uint32_t Flags;
 
   bool HadShdrs = true;
+  bool isVerboseEnabled = false;
   bool MustBeRelocatable = false;
   StringTableSection *SectionNames = nullptr;
   SymbolTableSection *SymbolTable = nullptr;
