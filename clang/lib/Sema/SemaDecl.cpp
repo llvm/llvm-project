@@ -19406,8 +19406,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
     if (Record && FD->getType().isVolatileQualified())
       Record->setHasVolatileMember(true);
-    bool ReportMSBitfieldStoragePacking = Record && PreviousField &&
-      !Diags.isIgnored(diag::warn_ms_bitfield_mismatched_storage_packing, Record->getLocation());
+    bool ReportMSBitfieldStoragePacking =
+        Record && PreviousField &&
+        !Diags.isIgnored(diag::warn_ms_bitfield_mismatched_storage_packing,
+                         Record->getLocation());
     auto IsNonDependentBitField = [](const FieldDecl *FD) {
       return FD->isBitField() && !FD->getType()->isDependentType();
     };
