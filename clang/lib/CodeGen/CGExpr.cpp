@@ -103,11 +103,15 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
   if (AllocaAddr)
     *AllocaAddr = Alloca;
   llvm::Value *V = Alloca.getPointer();
+  assert((!getLangOpts().OpenCL ||
+          CGM.getTarget().getTargetAddressSpace(getASTAllocaAddressSpace()) ==
+              CGM.getTarget().getTargetAddressSpace(LangAS::opencl_private)) &&
+         "For OpenCL allocas must allocate in the private address space!");
   // Alloca always returns a pointer in alloca address space, which may
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  if (getASTAllocaAddressSpace() != LangAS::Default) {
+  if (!getLangOpts().OpenCL && getASTAllocaAddressSpace() != LangAS::Default) {
     auto DestAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
     llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
     // When ArraySize is nullptr, alloca is inserted at AllocaInsertPt,
