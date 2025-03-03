@@ -118,7 +118,6 @@ class NoOpTelemetryManager : final public TelemetryManager {
   }
 };
 
-  
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
   // If Telemetry is disabled or if there is no default instance, then use the NoOp manager.
