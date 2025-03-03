@@ -214,6 +214,13 @@ commonly used first:
   request will understand that you're rebasing just your patches, and display
   this result correctly with a note that a force push did occur.
 
+.. note::
+   When using `Squash and merge` in LLVM’s GitHub web interface, GitHub will
+   use the pull request title and description as the commit message. Only
+   users with commit access can edit the commit message just before merging a PR.
+
+   If you do not have write permissions, make sure the PR title and description
+   are **up to date** before the review process concludes.
 
 Pre-merge Continuous Integration (CI)
 -------------------------------------
