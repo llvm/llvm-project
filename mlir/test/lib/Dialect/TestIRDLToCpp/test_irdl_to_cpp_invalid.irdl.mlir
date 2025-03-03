@@ -3,9 +3,14 @@ irdl.dialect @test_irdl_to_cpp {
     irdl.operation @results_no_any_of {
         %0 = irdl.any
         %1 = irdl.any_of(%0, %0)
+        // expected-error@+1 {{IRDL C++ translation only supports irdl.any constraint for types}}
         irdl.results(res: %1)
     }
+}
+// ----- 
 
+// no support for split-buffer yet
+irdl.dialect @test_irdl_to_cpp_2 {
     irdl.operation @operands_no_any_of {
         %0 = irdl.any
         %1 = irdl.any_of(%0, %0)

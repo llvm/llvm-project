@@ -441,8 +441,9 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 
 static LogicalResult verify(irdl::DialectOp dialect) {
   auto &dialectBlock = getDialectBlock(dialect);
-  for (auto op : dialectBlock.getOps<irdl::OperationOp>()) {
-    for (auto operands : op.getOps<irdl::OperandsOp>()) {
+  for (auto operation : dialectBlock.getOps<irdl::OperationOp>()) {
+
+    for (auto operands : operation.getOps<irdl::OperandsOp>()) {
       for (auto operand : operands.getOperands()) {
         if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
           return operands.emitError(
@@ -451,7 +452,19 @@ static LogicalResult verify(irdl::DialectOp dialect) {
         }
       }
     }
+
+    for (auto results : operation.getOps<irdl::ResultsOp>()) {
+      for (auto operand : results.getOperands()) {
+        llvm::errs() << "HELP";
+        if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
+          return results.emitError(
+              "IRDL C++ translation only supports irdl.any "
+              "constraint for types");
+        }
+      }
+    }
   }
+
   return success();
 }
 
