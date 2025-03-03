@@ -58,6 +58,7 @@ py_binary(
     name = "hdrgen",
     srcs = glob(["utils/hdrgen/hdrgen/**/*.py"]),
     imports = ["utils/hdrgen"],
+    main = "utils/hdrgen/hdrgen/main.py",
 )
 
 ################################## Base Config #################################
