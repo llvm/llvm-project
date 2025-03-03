@@ -654,6 +654,10 @@ bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
          llvm::is_contained(getLeafConstructs(DKind), OMPD_simd);
 }
 
+bool clang::isOpenMPDispatchDirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_dispatch;
+}
+
 bool clang::isOpenMPNestingDistributeDirective(OpenMPDirectiveKind Kind) {
   if (Kind == OMPD_distribute)
     return true;
@@ -818,6 +822,8 @@ void clang::getOpenMPCaptureRegions(
         return true;
       break;
     case OMPD_dispatch:
+      CaptureRegions.push_back(OMPD_dispatch);
+      break;
     case OMPD_distribute:
     case OMPD_for:
     case OMPD_ordered:
