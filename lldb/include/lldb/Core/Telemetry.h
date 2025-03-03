@@ -189,8 +189,8 @@ template <typename Info> struct ScopedDispatcher {
   }
 
   void DispatchNow(llvm::unique_function<void(Info *info)> populate_fields_cb) {
-    TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
-    if (!manager)
+    TelemetryManager *manager = TelemetryManager::GetInstance();
+    if (!manager->GetConfig()->EnableTelemetry)
       return;
     Info info;
     // Populate the common fields we know aboutl
@@ -204,7 +204,6 @@ template <typename Info> struct ScopedDispatcher {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
                      "Failed to dispatch entry of type: {0}", m_info.getKind());
     }
-
   }
 
   ~ScopedDispatcher() {
