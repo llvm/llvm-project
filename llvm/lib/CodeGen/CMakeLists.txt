@@ -55,6 +55,7 @@ add_llvm_component_library(LLVMCodeGen
   EarlyIfConversion.cpp
   EdgeBundles.cpp
   EHContGuardCatchret.cpp
+  EVLIndVarSimplify.cpp
   ExecutionDomainFix.cpp
   ExpandLargeDivRem.cpp
   ExpandLargeFpConvert.cpp
