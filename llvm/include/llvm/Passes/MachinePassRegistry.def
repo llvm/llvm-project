@@ -106,6 +106,7 @@ MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
                           MachineBranchProbabilityAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-cycles", MachineCycleAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
@@ -162,6 +163,7 @@ MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
                       MachineBranchProbabilityPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
                       MachineDominatorTreePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(errs()))
@@ -189,6 +191,13 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
                                           PARAMS)
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "machine-sink", "MachineSinkingPass",
+    [](bool EnableSinkAndFold) {
+      return MachineSinkingPass(EnableSinkAndFold);
+    },
+    parseMachineSinkingPassOptions, "enable-sink-fold")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPass::Options Opts) { return RegAllocFastPass(Opts); },
     [PB = this](StringRef Params) {
@@ -196,13 +205,12 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     },
     "filter=reg-filter;no-clear-vregs")
 
+// 'all' is the default filter.
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "greedy", "RAGreedyPass",
     [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
     [PB = this](StringRef Params) {
-      // TODO: parseRegAllocGreedyFilterFunc(*PB, Params);
-      (void)PB;
-      return Expected<RAGreedyPass::Options>(RAGreedyPass::Options{});
+      return parseRegAllocGreedyFilterFunc(*PB, Params);
     }, "reg-filter"
 )
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
@@ -257,14 +265,12 @@ DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)
 DUMMY_MACHINE_FUNCTION_PASS("machine-function-splitter", MachineFunctionSplitterPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-sanmd", MachineSanitizerBinaryMetadata)
-DUMMY_MACHINE_FUNCTION_PASS("machine-sink", MachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-uniformity", MachineUniformityInfoWrapperPass)
 DUMMY_MACHINE_FUNCTION_PASS("machineinstr-printer", MachineFunctionPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("mirfs-discriminators", MIRAddFSDiscriminatorsPass)
 DUMMY_MACHINE_FUNCTION_PASS("patchable-function", PatchableFunctionPass)
 DUMMY_MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass)
 DUMMY_MACHINE_FUNCTION_PASS("postrapseudos", ExpandPostRAPseudosPass)
-DUMMY_MACHINE_FUNCTION_PASS("print-machine-cycles", MachineCycleInfoPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("print-machine-uniformity", MachineUniformityInfoPrinterPass)
 DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)

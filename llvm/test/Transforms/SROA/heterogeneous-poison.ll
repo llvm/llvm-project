@@ -71,7 +71,7 @@ define void @t3() !dbg !19 {
 define i32 @t4() !dbg !26 {
 ; CHECK-LABEL: define i32 @t4(
 ; CHECK-SAME: ) !dbg [[DBG26:![0-9]+]] {
-; CHECK-NEXT:      #dbg_value(ptr undef, [[META27:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META28:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(ptr poison, [[META27:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32)), [[META28:![0-9]+]])
 ; CHECK-NEXT:    ret i32 42
 ;
 
