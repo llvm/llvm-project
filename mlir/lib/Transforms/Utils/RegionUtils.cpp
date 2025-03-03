@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/RegionUtils.h"
+
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1053,4 +1056,66 @@ LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
   }
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
                  mergedIdenticalBlocks || droppedRedundantArguments);
+}
+
+//===---------------------------------------------------------------------===//
+// Move operation dependencies
+//===---------------------------------------------------------------------===//
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint,
+                                              DominanceInfo &dominance) {
+  // Currently unsupported case where the op and insertion point are
+  // in different basic blocks.
+  if (op->getBlock() != insertionPoint->getBlock()) {
+    return rewriter.notifyMatchFailure(
+        op, "unsupported caes where operation and insertion point are not in "
+            "the sme basic block");
+  }
+
+  // Find the backward slice of operation for each `Value` the operation
+  // depends on. Prune the slice to only include operations not already
+  // dominated by the `insertionPoint`
+  BackwardSliceOptions options;
+  options.inclusive = true;
+  options.filter = [&](Operation *sliceBoundaryOp) {
+    return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+  };
+  llvm::SetVector<Operation *> slice;
+
+  // Get the defined slice for operands.
+  for (Value operand : op->getOperands()) {
+    getBackwardSlice(operand, &slice, options);
+  }
+  auto regions = op->getRegions();
+  if (!regions.empty()) {
+    // If op has region, get the defined slice for all captured values.
+    llvm::SetVector<Value> capturedVals;
+    mlir::getUsedValuesDefinedAbove(regions, capturedVals);
+    for (auto value : capturedVals) {
+      getBackwardSlice(value, &slice, options);
+    }
+  }
+
+  // If the slice contains `insertionPoint` cannot move the dependencies.
+  if (slice.contains(insertionPoint)) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "cannot move dependencies before operation in backward slice of op");
+  }
+
+  // Sort the slice topologically, ad move in topological order.
+  mlir::topologicalSort(slice);
+  for (auto op : slice) {
+    rewriter.moveOpBefore(op, insertionPoint);
+  }
+  return success();
+}
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint) {
+  DominanceInfo dominance(op);
+  return moveOperationDependencies(rewriter, op, insertionPoint, dominance);
 }
