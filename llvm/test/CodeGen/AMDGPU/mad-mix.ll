@@ -209,21 +209,21 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
 ; GFX1100-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX900-LABEL: v_mad_mix_v2f32:
-; SDAG-GFX900:       ; %bb.0:
-; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX900-NEXT:    v_mov_b32_e32 v1, v3
-; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: v_mad_mix_v2f32:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mad_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX900-NEXT:    v_mad_mix_f32 v1, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT:    v_mov_b32_e32 v0, v3
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX906-LABEL: v_mad_mix_v2f32:
-; SDAG-GFX906:       ; %bb.0:
-; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX906-NEXT:    v_mov_b32_e32 v1, v3
-; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
+; GFX906-LABEL: v_mad_mix_v2f32:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    v_fma_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v1, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_mov_b32_e32 v0, v3
+; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_v2f32:
 ; SDAG-GFX9GEN:       ; %bb.0:
@@ -270,22 +270,6 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
 ; SDAG-CI-NEXT:    v_mov_b32_e32 v1, v3
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v0, v4, v2
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX900-LABEL: v_mad_mix_v2f32:
-; GISEL-GFX900:       ; %bb.0:
-; GISEL-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX900-NEXT:    v_mad_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX900-NEXT:    v_mad_mix_f32 v1, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GISEL-GFX900-NEXT:    v_mov_b32_e32 v0, v3
-; GISEL-GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX906-LABEL: v_mad_mix_v2f32:
-; GISEL-GFX906:       ; %bb.0:
-; GISEL-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX906-NEXT:    v_fma_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX906-NEXT:    v_fma_mix_f32 v1, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GISEL-GFX906-NEXT:    v_mov_b32_e32 v0, v3
-; GISEL-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9GEN-LABEL: v_mad_mix_v2f32:
 ; GISEL-GFX9GEN:       ; %bb.0:
@@ -1223,18 +1207,18 @@ define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) 
 ; SDAG-GFX900:       ; %bb.0:
 ; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX900-NEXT:    s_mov_b32 s4, 1.0
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX906-LABEL: v_mad_mix_v2f32_f32imm1:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX906-NEXT:    s_mov_b32 s4, 1.0
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_v2f32_f32imm1:
@@ -1355,18 +1339,18 @@ define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half>
 ; SDAG-GFX900:       ; %bb.0:
 ; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX900-NEXT:    s_mov_b32 s4, 0x3e230000
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX906-LABEL: v_mad_mix_v2f32_cvtf16imminv2pi:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX906-NEXT:    s_mov_b32 s4, 0x3e230000
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_v2f32_cvtf16imminv2pi:
@@ -1494,18 +1478,18 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
 ; SDAG-GFX900:       ; %bb.0:
 ; SDAG-GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX900-NEXT:    s_mov_b32 s4, 0.15915494
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mad_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX900-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mad_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX900-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX906-LABEL: v_mad_mix_v2f32_f32imminv2pi:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX906-NEXT:    s_mov_b32 s4, 0.15915494
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, v1, s4 op_sel_hi:[1,1,0]
-; SDAG-GFX906-NEXT:    v_mov_b32_e32 v1, v2
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v2, v0, v1, s4 op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v1, v0, v1, s4 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; SDAG-GFX906-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_v2f32_f32imminv2pi:
