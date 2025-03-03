@@ -799,6 +799,12 @@ public:
   /// Return the LHS Decision ([0,0] if not set).
   const mcdc::ConditionIDs &back() const { return DecisionStack.back(); }
 
+  void swapConds() {
+    if (DecisionStack.empty())
+      return;
+
+    std::swap(DecisionStack.back()[false], DecisionStack.back()[true]);
+  }
   /// Push the binary operator statement to track the nest level and assign IDs
   /// to the operator's LHS and RHS.  The RHS may be a larger subtree that is
   /// broken up on successive levels.
@@ -2239,6 +2245,12 @@ struct CounterCoverageMappingBuilder
             SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));
+  }
+
+  void VisitUnaryLNot(const UnaryOperator *E) {
+    MCDCBuilder.swapConds();
+    Visit(E->getSubExpr());
+    MCDCBuilder.swapConds();
   }
 
   void VisitBinLAnd(const BinaryOperator *E) {
