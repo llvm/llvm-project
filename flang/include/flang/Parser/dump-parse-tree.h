@@ -638,6 +638,8 @@ public:
   NODE(parser, OmpReductionCombiner)
   NODE(parser, OmpTaskReductionClause)
   NODE(OmpTaskReductionClause, Modifier)
+  NODE(parser, OmpReductionInitializerProc)
+  NODE(parser, OmpReductionInitializerExpr)
   NODE(parser, OmpReductionInitializerClause)
   NODE(parser, OmpReductionIdentifier)
   NODE(parser, OmpAllocateClause)

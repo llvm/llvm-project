@@ -30269,11 +30269,12 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       if (A.isUndef() || A->getAsAPIntVal().uge(EltSizeInBits))
         continue;
       unsigned CstAmt = A->getAsAPIntVal().getZExtValue();
-      if (UniqueCstAmt.count(CstAmt)) {
-        UniqueCstAmt[CstAmt].setBit(I);
+      auto [It, Inserted] = UniqueCstAmt.try_emplace(CstAmt);
+      if (!Inserted) {
+        It->second.setBit(I);
         continue;
       }
-      UniqueCstAmt[CstAmt] = APInt::getOneBitSet(NumElts, I);
+      It->second = APInt::getOneBitSet(NumElts, I);
     }
     assert(!UniqueCstAmt.empty() && "Illegal constant shift amounts");
   }
@@ -35113,6 +35114,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVTTP2SIS_SAE)
   NODE_NAME_CASE(CVTTP2UIS)
   NODE_NAME_CASE(MCVTTP2UIS)
+  NODE_NAME_CASE(POP_FROM_X87_REG)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -53788,36 +53790,35 @@ static SDValue combineLRINT_LLRINT(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::CVTP2SI, DL, VT, Src);
 }
 
-// Attempt to fold some (truncate (srl (add X, C1), C2)) patterns to
-// (add (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we are able
-// to avoid generating code with MOVABS and large constants in certain cases.
-static SDValue combinei64TruncSrlAdd(SDValue N, EVT VT, SelectionDAG &DAG,
-                                     const SDLoc &DL) {
-  using namespace llvm::SDPatternMatch;
+// Attempt to fold some (truncate (srl (add/or/xor X, C1), C2)) patterns to
+// (add/or/xor (truncate (srl X, C2)), C1'). C1' will be smaller than C1 so we
+// are able to avoid generating code with MOVABS and large constants in certain
+// cases.
+static SDValue combinei64TruncSrlConstant(SDValue N, EVT VT, SelectionDAG &DAG,
+                                          const SDLoc &DL) {
 
-  SDValue AddLhs;
-  APInt AddConst, SrlConst;
-  if (VT != MVT::i32 ||
-      !sd_match(N, m_AllOf(m_SpecificVT(MVT::i64),
-                           m_Srl(m_OneUse(m_Add(m_Value(AddLhs),
-                                                m_ConstInt(AddConst))),
-                                 m_ConstInt(SrlConst)))))
+  SDValue Op = N.getOperand(0);
+  APInt OpConst = Op.getConstantOperandAPInt(1);
+  APInt SrlConst = N.getConstantOperandAPInt(1);
+  uint64_t SrlConstVal = SrlConst.getZExtValue();
+  unsigned Opcode = Op.getOpcode();
+
+  if (SrlConst.ule(32) ||
+      (Opcode == ISD::ADD && OpConst.countr_zero() < SrlConstVal))
     return SDValue();
 
-  if (SrlConst.ule(32) || AddConst.countr_zero() < SrlConst.getZExtValue())
-    return SDValue();
+  SDValue OpLhsSrl =
+      DAG.getNode(ISD::SRL, DL, MVT::i64, Op.getOperand(0), N.getOperand(1));
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, OpLhsSrl);
 
-  SDValue AddLHSSrl =
-      DAG.getNode(ISD::SRL, DL, MVT::i64, AddLhs, N.getOperand(1));
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AddLHSSrl);
+  APInt NewOpConstVal = OpConst.lshr(SrlConst).trunc(VT.getSizeInBits());
+  SDValue NewOpConst = DAG.getConstant(NewOpConstVal, DL, VT);
+  SDValue NewOpNode = DAG.getNode(Opcode, DL, VT, Trunc, NewOpConst);
+  EVT CleanUpVT = EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConstVal);
 
-  APInt NewAddConstVal = AddConst.lshr(SrlConst).trunc(VT.getSizeInBits());
-  SDValue NewAddConst = DAG.getConstant(NewAddConstVal, DL, VT);
-  SDValue NewAddNode = DAG.getNode(ISD::ADD, DL, VT, Trunc, NewAddConst);
-
-  EVT CleanUpVT =
-      EVT::getIntegerVT(*DAG.getContext(), 64 - SrlConst.getZExtValue());
-  return DAG.getZeroExtendInReg(NewAddNode, DL, CleanUpVT);
+  if (Opcode == ISD::ADD)
+    return DAG.getZeroExtendInReg(NewOpNode, DL, CleanUpVT);
+  return NewOpNode;
 }
 
 /// Attempt to pre-truncate inputs to arithmetic ops if it will simplify
@@ -53865,11 +53866,21 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   if (!Src.hasOneUse())
     return SDValue();
 
-  if (SDValue R = combinei64TruncSrlAdd(Src, VT, DAG, DL))
-    return R;
+  if (VT == MVT::i32 && SrcVT == MVT::i64 && SrcOpcode == ISD::SRL &&
+      isa<ConstantSDNode>(Src.getOperand(1))) {
 
-  // Only support vector truncation for now.
-  // TODO: i64 scalar math would benefit as well.
+    unsigned SrcOpOpcode = Src.getOperand(0).getOpcode();
+    if ((SrcOpOpcode != ISD::ADD && SrcOpOpcode != ISD::OR &&
+         SrcOpOpcode != ISD::XOR) ||
+        !isa<ConstantSDNode>(Src.getOperand(0).getOperand(1)))
+      return SDValue();
+
+    if (SDValue R = combinei64TruncSrlConstant(Src, VT, DAG, DL))
+      return R;
+
+    return SDValue();
+  }
+
   if (!VT.isVector())
     return SDValue();
 
@@ -57964,7 +57975,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
               int Src = M < NumSrcElts ? 0 : 2;
               M += M < NumSrcElts ? 0 : NumSrcElts;
 
-              // Reference the lowest sub if they upper sub is the same.
+              // Reference the lowest sub if the upper sub is the same.
               if (Ops[0].getOperand(Src) != Ops[i].getOperand(Src))
                 M += i * NumSrcElts;
             }
@@ -57972,10 +57983,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           }
         }
         if (ConcatMask.size() == (NumOps * NumSrcElts)) {
-          SDValue Src0 = concatSubVectors(Ops[0].getOperand(0),
-                                          Ops[1].getOperand(0), DAG, DL);
-          SDValue Src1 = concatSubVectors(Ops[0].getOperand(2),
-                                          Ops[1].getOperand(2), DAG, DL);
+          SDValue Src0 = ConcatSubOperand(VT, Ops, 0);
+          SDValue Src1 = ConcatSubOperand(VT, Ops, 2);
           MVT IntMaskSVT = MVT::getIntegerVT(EltSizeInBits);
           MVT IntMaskVT = MVT::getVectorVT(IntMaskSVT, NumOps * NumSrcElts);
           SDValue Mask = getConstVector(ConcatMask, IntMaskVT, DAG, DL, true);

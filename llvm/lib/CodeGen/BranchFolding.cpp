@@ -264,7 +264,7 @@ static unsigned HashMachineInstr(const MachineInstr &MI) {
     unsigned OperandHash = 0;
     switch (Op.getType()) {
     case MachineOperand::MO_Register:
-      OperandHash = Op.getReg();
+      OperandHash = Op.getReg().id();
       break;
     case MachineOperand::MO_Immediate:
       OperandHash = Op.getImm();
