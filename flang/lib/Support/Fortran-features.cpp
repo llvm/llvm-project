@@ -31,6 +31,8 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::LogicalAbbreviations);
   disable_.set(LanguageFeature::XOROperator);
   disable_.set(LanguageFeature::OldStyleParameter);
+  disable_.set(LanguageFeature::UnusedDummyArgument);
+  disable_.set(LanguageFeature::UnusedVariable);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   // These warnings are enabled by default, but only because they used
