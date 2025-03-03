@@ -990,3 +990,23 @@ bb:
   ret void
 }
 
+define <8 x i64> @pr121147(<8 x i64> %a) {
+; AVX512F-LABEL: pr121147:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,2,0,2,4,6,4,6,8,10,8,10,12,14,12,14]
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: pr121147:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,2,0,2,4,6,4,6,8,10,8,10,12,14,12,14]
+; AVX512BW-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %a to <16 x i32>
+  %1 = shufflevector <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> %0, <16 x i32> <i32 0, i32 18, i32 2, i32 18, i32 4, i32 22, i32 6, i32 22, i32 8, i32 26, i32 10, i32 26, i32 12, i32 30, i32 14, i32 30>
+  %2 = bitcast <16 x i32> %1 to <8 x i64>
+  ret <8 x i64> %2
+}
