@@ -4446,7 +4446,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
     Register DstReg, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   // Return the global position in the grid where clusters are supported.
-  if (ST.hasClusters()) {
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  if (MFI->mayUseClusters()) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       return loadGlobalWorkGroupId(
@@ -4468,7 +4469,6 @@ bool AMDGPULegalizerInfo::loadInputValue(
     }
   }
 
-  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
   const ArgDescriptor *Arg = nullptr;
   const TargetRegisterClass *ArgRC;
   LLT ArgTy;

@@ -520,6 +520,8 @@ private:
   void MRI_NoteNewVirtualRegister(Register Reg) override;
   void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
+  bool MayUseClusters = false;
+
 public:
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
@@ -1177,6 +1179,8 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  bool mayUseClusters() const { return MayUseClusters; }
 };
 
 } // end namespace llvm

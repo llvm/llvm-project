@@ -170,6 +170,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  MayUseClusters = ST.hasClusters() && !F.hasFnAttribute("amdgpu-no-clusters");
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(

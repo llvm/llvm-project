@@ -121,6 +121,76 @@ define amdgpu_cs void @_amdgpu_cs_main() {
   ret void
 }
 
+define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-no-clusters" {
+; GFX9-SDAG-LABEL: workgroup_id_no_clusters:
+; GFX9-SDAG:       ; %bb.0: ; %.entry
+; GFX9-SDAG-NEXT:    s_lshr_b32 s0, ttmp7, 16
+; GFX9-SDAG-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, ttmp9
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX9-SDAG-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
+; GFX9-SDAG-NEXT:    s_endpgm
+;
+; GFX9-GISEL-LABEL: workgroup_id_no_clusters:
+; GFX9-GISEL:       ; %bb.0: ; %.entry
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, ttmp9
+; GFX9-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX9-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-GISEL-NEXT:    buffer_store_dwordx3 v[0:2], off, s[0:3], 0
+; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX12-SDAG-LABEL: workgroup_id_no_clusters:
+; GFX12-SDAG:       ; %bb.0: ; %.entry
+; GFX12-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX12-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s1
+; GFX12-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX12-SDAG-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: workgroup_id_no_clusters:
+; GFX12-GISEL:       ; %bb.0: ; %.entry
+; GFX12-GISEL-NEXT:    s_mov_b32 s0, ttmp9
+; GFX12-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX12-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX12-GISEL-NEXT:    s_endpgm
+;
+; GFX1250-SDAG-LABEL: workgroup_id_no_clusters:
+; GFX1250-SDAG:       ; %bb.0: ; %.entry
+; GFX1250-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX1250-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, ttmp9 :: v_dual_mov_b32 v1, s0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s1
+; GFX1250-SDAG-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: workgroup_id_no_clusters:
+; GFX1250-GISEL:       ; %bb.0: ; %.entry
+; GFX1250-GISEL-NEXT:    s_mov_b32 s0, ttmp9
+; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
+; GFX1250-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
+; GFX1250-GISEL-NEXT:    s_endpgm
+.entry:
+  %idx = call i32 @llvm.amdgcn.workgroup.id.x()
+  %idy = call i32 @llvm.amdgcn.workgroup.id.y()
+  %idz = call i32 @llvm.amdgcn.workgroup.id.z()
+  %ielemx = insertelement <3 x i32> undef, i32 %idx, i64 0
+  %ielemy = insertelement <3 x i32> %ielemx, i32 %idy, i64 1
+  %ielemz = insertelement <3 x i32> %ielemy, i32 %idz, i64 2
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %ielemz, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  ret void
+}
+
 define amdgpu_cs void @caller() {
 ; GFX9-SDAG-LABEL: caller:
 ; GFX9-SDAG:       ; %bb.0:

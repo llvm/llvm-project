@@ -2345,7 +2345,7 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   // Return the global position in the grid where clusters are supported.
-  if (Subtarget->hasClusters()) {
+  if (MFI.mayUseClusters()) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       return getGlobalWorkGroupId(
