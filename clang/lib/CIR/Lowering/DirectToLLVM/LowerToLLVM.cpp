@@ -24,10 +24,10 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/CIR/Dialect/IR/CIRAttrVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -37,41 +37,23 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
-class CIRAttrToValue : public CirAttrVisitor<CIRAttrToValue, mlir::Value> {
+class CIRAttrToValue {
 public:
   CIRAttrToValue(mlir::Operation *parentOp,
                  mlir::ConversionPatternRewriter &rewriter,
                  const mlir::TypeConverter *converter)
       : parentOp(parentOp), rewriter(rewriter), converter(converter) {}
 
-  mlir::Value lowerCirAttrAsValue(mlir::Attribute attr) { return visit(attr); }
-
-  mlir::Value visitCirIntAttr(cir::IntAttr intAttr) {
-    mlir::Location loc = parentOp->getLoc();
-    return rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, converter->convertType(intAttr.getType()), intAttr.getValue());
+  mlir::Value visit(mlir::Attribute attr) {
+    return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
+        .Case<cir::IntAttr, cir::FPAttr, cir::ConstPtrAttr>(
+            [&](auto attrT) { return visitCirAttr(attrT); })
+        .Default([&](auto attrT) { return mlir::Value(); });
   }
 
-  mlir::Value visitCirFPAttr(cir::FPAttr fltAttr) {
-    mlir::Location loc = parentOp->getLoc();
-    return rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
-  }
-
-  mlir::Value visitCirConstPtrAttr(cir::ConstPtrAttr ptrAttr) {
-    mlir::Location loc = parentOp->getLoc();
-    if (ptrAttr.isNullValue()) {
-      return rewriter.create<mlir::LLVM::ZeroOp>(
-          loc, converter->convertType(ptrAttr.getType()));
-    }
-    mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
-    mlir::Value ptrVal = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc,
-        rewriter.getIntegerType(layout.getTypeSizeInBits(ptrAttr.getType())),
-        ptrAttr.getValue().getInt());
-    return rewriter.create<mlir::LLVM::IntToPtrOp>(
-        loc, converter->convertType(ptrAttr.getType()), ptrVal);
-  }
+  mlir::Value visitCirAttr(cir::IntAttr intAttr);
+  mlir::Value visitCirAttr(cir::FPAttr fltAttr);
+  mlir::Value visitCirAttr(cir::ConstPtrAttr ptrAttr);
 
 private:
   mlir::Operation *parentOp;
@@ -79,21 +61,54 @@ private:
   const mlir::TypeConverter *converter;
 };
 
+/// IntAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  return rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, converter->convertType(intAttr.getType()), intAttr.getValue());
+}
+
+/// ConstPtrAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstPtrAttr ptrAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  if (ptrAttr.isNullValue()) {
+    return rewriter.create<mlir::LLVM::ZeroOp>(
+        loc, converter->convertType(ptrAttr.getType()));
+  }
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::Value ptrVal = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, rewriter.getIntegerType(layout.getTypeSizeInBits(ptrAttr.getType())),
+      ptrAttr.getValue().getInt());
+  return rewriter.create<mlir::LLVM::IntToPtrOp>(
+      loc, converter->convertType(ptrAttr.getType()), ptrVal);
+}
+
+/// FPAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::FPAttr fltAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  return rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
+}
+
 // This class handles rewriting initializer attributes for types that do not
 // require region initialization.
-class GlobalInitAttrRewriter
-    : public CirAttrVisitor<GlobalInitAttrRewriter, mlir::Attribute> {
+class GlobalInitAttrRewriter {
 public:
   GlobalInitAttrRewriter(mlir::Type type,
                          mlir::ConversionPatternRewriter &rewriter)
       : llvmType(type), rewriter(rewriter) {}
 
-  mlir::Attribute rewriteInitAttr(mlir::Attribute attr) { return visit(attr); }
+  mlir::Attribute visit(mlir::Attribute attr) {
+    return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
+        .Case<cir::IntAttr, cir::FPAttr>(
+            [&](auto attrT) { return visitCirAttr(attrT); })
+        .Default([&](auto attrT) { return mlir::Attribute(); });
+  }
 
-  mlir::Attribute visitCirIntAttr(cir::IntAttr attr) {
+  mlir::Attribute visitCirAttr(cir::IntAttr attr) {
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
   }
-  mlir::Attribute visitCirFPAttr(cir::FPAttr attr) {
+  mlir::Attribute visitCirAttr(cir::FPAttr attr) {
     return rewriter.getFloatAttr(llvmType, attr.getValue());
   }
 
@@ -123,12 +138,6 @@ struct ConvertCIRToLLVMPass
 
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
-
-bool CIRToLLVMGlobalOpLowering::attrRequiresRegionInitialization(
-    mlir::Attribute attr) const {
-  // There will be more cases added later.
-  return isa<cir::ConstPtrAttr>(attr);
-}
 
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
@@ -176,8 +185,8 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
   setupRegionInitializedLLVMGlobalOp(op, rewriter);
-  CIRAttrToValue attrVisitor(op, rewriter, typeConverter);
-  mlir::Value value = attrVisitor.lowerCirAttrAsValue(init);
+  CIRAttrToValue valueConverter(op, rewriter, typeConverter);
+  mlir::Value value = valueConverter.visit(init);
   rewriter.create<mlir::LLVM::ReturnOp>(loc, value);
   return mlir::success();
 }
@@ -187,12 +196,6 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
 
   std::optional<mlir::Attribute> init = op.getInitialValue();
-
-  // If we have an initializer and it requires region initialization, handle
-  // that separately
-  if (init.has_value() && attrRequiresRegionInitialization(init.value())) {
-    return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
-  }
 
   // Fetch required values to create LLVM op.
   const mlir::Type cirSymType = op.getSymType();
@@ -218,12 +221,25 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   SmallVector<mlir::NamedAttribute> attributes;
 
   if (init.has_value()) {
-    GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
-    init = initRewriter.rewriteInitAttr(init.value());
-    // If initRewriter returned a null attribute, init will have a value but
-    // the value will be null. If that happens, initRewriter didn't handle the
-    // attribute type. It probably needs to be added to GlobalInitAttrRewriter.
-    if (!init.value()) {
+    if (mlir::isa<cir::FPAttr, cir::IntAttr>(init.value())) {
+      GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
+      init = initRewriter.visit(init.value());
+      // If initRewriter returned a null attribute, init will have a value but
+      // the value will be null. If that happens, initRewriter didn't handle the
+      // attribute type. It probably needs to be added to
+      // GlobalInitAttrRewriter.
+      if (!init.value()) {
+        op.emitError() << "unsupported initializer '" << init.value() << "'";
+        return mlir::failure();
+      }
+    } else if (mlir::isa<cir::ConstPtrAttr>(init.value())) {
+      // TODO(cir): once LLVM's dialect has proper equivalent attributes this
+      // should be updated. For now, we use a custom op to initialize globals
+      // to the appropriate value.
+      return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+    } else {
+      // We will only get here if new initializer types are added and this
+      // code is not updated to handle them.
       op.emitError() << "unsupported initializer '" << init.value() << "'";
       return mlir::failure();
     }
