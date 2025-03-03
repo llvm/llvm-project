@@ -49,8 +49,12 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
                                   const MemoryLocation &LocB, AAQueryInfo &AAQI,
                                   const Instruction *) {
-  unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
-  unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
+  Type *TypeA = LocA.Ptr->getType();
+  Type *TypeB = LocB.Ptr->getType();
+  if (!TypeA->isPointerTy() || !TypeB->isPointerTy())
+    return AliasResult::MayAlias;
+  unsigned asA = TypeA->getPointerAddressSpace();
+  unsigned asB = TypeB->getPointerAddressSpace();
 
   if (!AMDGPU::addrspacesMayAlias(asA, asB))
     return AliasResult::NoAlias;
