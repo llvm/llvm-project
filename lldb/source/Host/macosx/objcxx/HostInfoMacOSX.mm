@@ -15,11 +15,14 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -569,8 +572,50 @@ find_cached_path(llvm::StringMap<ErrorOrPath> &cache, std::mutex &mutex,
     cache.insert({key, {error, true}});
     return llvm::createStringError(llvm::inconvertibleErrorCode(), error);
   }
+
+  if (path_or_err->empty())
+    return llvm::createStringError("Empty path determined for '%s'",
+                                   key.data());
+
   auto it_new = cache.insert({key, {*path_or_err, false}});
   return it_new.first->second.str;
+}
+
+static llvm::Expected<std::string>
+GetCommandLineToolsSDKRoot(llvm::VersionTuple version) {
+  std::string clt_root_dir;
+  FileSystem::Instance().EnumerateDirectory(
+      "/Library/Developer/CommandLineTools/SDKs/", /*find_directories=*/true,
+      /*find_files=*/false, /*find_other=*/false,
+      [&](void *baton, llvm::sys::fs::file_type file_type,
+          llvm::StringRef name) {
+        assert(file_type == llvm::sys::fs::file_type::directory_file);
+
+        if (!name.ends_with(".sdk"))
+          return FileSystem::eEnumerateDirectoryResultNext;
+
+        llvm::Expected<std::optional<clang::DarwinSDKInfo>> sdk_info =
+            clang::parseDarwinSDKInfo(
+                *FileSystem::Instance().GetVirtualFileSystem(), name);
+        if (!sdk_info) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), sdk_info.takeError(),
+                         "Error while parsing {1}: {0}", name);
+          return FileSystem::eEnumerateDirectoryResultNext;
+        }
+
+        if (!*sdk_info)
+          return FileSystem::eEnumerateDirectoryResultNext;
+
+        if (version == (*sdk_info)->getVersion()) {
+          clt_root_dir = name;
+          return FileSystem::eEnumerateDirectoryResultQuit;
+        }
+
+        return FileSystem::eEnumerateDirectoryResultNext;
+      },
+      /*baton=*/nullptr);
+
+  return clt_root_dir;
 }
 
 llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetSDKRoot(SDKOptions options) {
@@ -581,6 +626,21 @@ llvm::Expected<llvm::StringRef> HostInfoMacOSX::GetSDKRoot(SDKOptions options) {
                                    "XcodeSDK not specified");
   XcodeSDK sdk = *options.XcodeSDKSelection;
   auto key = sdk.GetString();
+
+  // xcrun doesn't search SDKs in the CommandLineTools (CLT) directory. So if
+  // a program was compiled against a CLT SDK, but that SDK wasn't present in
+  // any of the Xcode installations, then xcrun would fail to find the SDK
+  // (which is expensive). To avoid this we first try to find the specified SDK
+  // in the CLT directory.
+  auto clt_root_dir = find_cached_path(g_sdk_path, g_sdk_path_mutex, key, [&] {
+    return GetCommandLineToolsSDKRoot(sdk.GetVersion());
+  });
+
+  if (clt_root_dir)
+    return clt_root_dir;
+  else
+    llvm::consumeError(clt_root_dir.takeError());
+
   return find_cached_path(g_sdk_path, g_sdk_path_mutex, key, [&](){
     return GetXcodeSDK(sdk);
   });
