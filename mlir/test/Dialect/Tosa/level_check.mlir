@@ -477,38 +477,38 @@ func.func @test_depthwise_conv2d_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 
 // -----
 
-func.func @test_fft2d_real_h(%arg0: tensor<32x8193x32xf32>, %arg1: tensor<32x32x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>) {
+func.func @test_fft2d_real_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) {
   // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
-            (tensor<32x8193x32xf32>, tensor<32x32x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>)
-  return %0, %1 : tensor<32x32x32xf32>, tensor<32x32x32xf32>
+            (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>)
+  return %0, %1 : tensor<32x16384x32xf32>, tensor<32x16384x32xf32>
 }
 
 // -----
 
-func.func @test_fft2d_real_w(%arg0: tensor<32x32x8193xf32>, %arg1: tensor<32x32x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>) {
+func.func @test_fft2d_real_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) {
   // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
-            (tensor<32x32x8193xf32>, tensor<32x32x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>)
-  return %0, %1 : tensor<32x32x32xf32>, tensor<32x32x32xf32>
+            (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>)
+  return %0, %1 : tensor<32x32x16384xf32>, tensor<32x32x16384xf32>
 }
 
 // -----
 
-func.func @test_fft2d_imag_h(%arg0: tensor<32x32x32xf32>, %arg1: tensor<32x8193x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>) {
+func.func @test_fft2d_imag_h(%arg0: tensor<32x16384x32xf32>, %arg1: tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) {
   // expected-error@+1 {{'tosa.fft2d' op failed level check: H <= MAX_KERNEL}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
-            (tensor<32x32x32xf32>, tensor<32x8193x32xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>)
-  return %0, %1 : tensor<32x32x32xf32>, tensor<32x32x32xf32>
+            (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>) -> (tensor<32x16384x32xf32>, tensor<32x16384x32xf32>)
+  return %0, %1 : tensor<32x16384x32xf32>, tensor<32x16384x32xf32>
 }
 
 // -----
 
-func.func @test_fft2d_imag_w(%arg0: tensor<32x32x32xf32>, %arg1: tensor<32x32x8193xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>) {
+func.func @test_fft2d_imag_w(%arg0: tensor<32x32x16384xf32>, %arg1: tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) {
   // expected-error@+1 {{'tosa.fft2d' op failed level check: W <= MAX_KERNEL}}
   %0, %1 = "tosa.fft2d"(%arg0, %arg1) { inverse = false } :
-            (tensor<32x32x32xf32>, tensor<32x32x8193xf32>) -> (tensor<32x32x32xf32>, tensor<32x32x32xf32>)
-  return %0, %1 : tensor<32x32x32xf32>, tensor<32x32x32xf32>
+            (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>) -> (tensor<32x32x16384xf32>, tensor<32x32x16384xf32>)
+  return %0, %1 : tensor<32x32x16384xf32>, tensor<32x32x16384xf32>
 }
 
 // -----
@@ -577,18 +577,18 @@ func.func @test_maxpool2d_pad_right(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32
 
 // -----
 
-func.func @test_rfft2d_input_h(%arg0: tensor<13x8193x16xf32>) -> (tensor<13x8x9xf32>, tensor<13x8x9xf32>) {
+func.func @test_rfft2d_input_h(%arg0: tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>) {
   // expected-error@+1 {{'tosa.rfft2d' op failed level check: H <= MAX_KERNEL}}
-  %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x8193x16xf32>) -> (tensor<13x8x9xf32>, tensor<13x8x9xf32>)
-  return %0, %1 : tensor<13x8x9xf32>, tensor<13x8x9xf32>
+  %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x16384x16xf32>) -> (tensor<13x16384x9xf32>, tensor<13x16384x9xf32>)
+  return %0, %1 : tensor<13x16384x9xf32>, tensor<13x16384x9xf32>
 }
 
 // -----
 
-func.func @test_rfft2d_input_w(%arg0: tensor<13x8x8193xf32>) -> (tensor<13x8x9xf32>, tensor<13x8x9xf32>) {
+func.func @test_rfft2d_input_w(%arg0: tensor<13x8x16384xf32>) -> (tensor<13x8x8193xf32>, tensor<13x8x8193xf32>) {
   // expected-error@+1 {{'tosa.rfft2d' op failed level check: W <= MAX_KERNEL}}
-  %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x8x8193xf32>) -> (tensor<13x8x9xf32>, tensor<13x8x9xf32>)
-  return %0, %1 : tensor<13x8x9xf32>, tensor<13x8x9xf32>
+  %0, %1 = "tosa.rfft2d"(%arg0) {} : (tensor<13x8x16384xf32>) -> (tensor<13x8x8193xf32>, tensor<13x8x8193xf32>)
+  return %0, %1 : tensor<13x8x8193xf32>, tensor<13x8x8193xf32>
 }
 
 // -----
