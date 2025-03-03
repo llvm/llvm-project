@@ -38,6 +38,11 @@ We choose to use ``github.repository_owner`` rather than ``github.repository``
 to enable these workflows to run in forks inside the LLVM organization such as
 the ClangIR fork.
 
+There are some exceptions to this rule where ``github.repository`` might be
+used when it makes sense to limit a workflow to only running in the main
+monorepo repository. These include things like the issue subscriber and
+release tasks, which should not run anywhere else.
+
 Hash Pinning Dependencies
 -------------------------
 
@@ -55,6 +60,9 @@ just a release, which looks like the following:
 
 However, it is best practice to specify an exact commit SHA from which to pull
 the action from, noting the version in a comment:
+
+We plan on revisting this reccomendation once Github's immutable actions have
+been rolled out as GA.
 
 .. code-block:: yaml
 
