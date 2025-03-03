@@ -8,8 +8,10 @@
 
 #include "UseTrailingReturnTypeCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
@@ -287,7 +289,6 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     return {};
   }
 
-
   // If the return type has no local qualifiers, it's source range is accurate.
   if (!hasAnyNestedLocalQualifiers(F.getReturnType()))
     return ReturnTypeRange;
@@ -384,10 +385,15 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  auto F = functionDecl(
-               unless(anyOf(hasTrailingReturn(), returns(voidType()),
-                            cxxConversionDecl(), cxxMethodDecl(isImplicit()))))
-               .bind("Func");
+  const auto HasNoWrittenReturnType =
+      anyOf(cxxConversionDecl(), cxxConstructorDecl(), cxxDestructorDecl(),
+            cxxMethodDecl(isImplicit()));
+
+  const auto Where = functionDecl(unless(
+      anyOf(hasTrailingReturn(), HasNoWrittenReturnType,
+            WarnOnNontrailingVoid ? unless(anything()) : returns(voidType()))));
+
+  auto F = Where.bind("Func");
 
   Finder->addMatcher(F, this);
   Finder->addMatcher(friendDecl(hasDescendant(F)).bind("Friend"), this);
@@ -492,6 +498,11 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   diag(F->getLocation(), Message)
       << FixItHint::CreateReplacement(ReturnTypeCVRange, Auto)
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
+}
+
+auto UseTrailingReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts)
+    -> void {
+  Options.store(Opts, "WarnOnNontrailingVoid", WarnOnNontrailingVoid);
 }
 
 } // namespace clang::tidy::modernize
