@@ -12527,9 +12527,6 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (!ISD::isExtOpcode(LHSOpcode) || !ISD::isExtOpcode(RHSOpcode))
     return SDValue();
 
-  // For a 2-stage extend the signedness of both of the extends must be the
-  // same. This is so the node can be folded into only a signed or unsigned
-  // node.
   SDValue LHSExtOp = LHS->getOperand(0);
   SDValue RHSExtOp = RHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
@@ -12541,6 +12538,9 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
 
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
 
+  // For a 2-stage extend the signedness of both of the extends must be the
+  // same. This is so the node can be folded into only a signed or unsigned
+  // node.
   bool NodeIsSigned = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
   if (ExtIsSigned != NodeIsSigned &&
