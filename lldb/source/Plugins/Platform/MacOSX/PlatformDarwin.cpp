@@ -79,14 +79,6 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   return {};
 }
 
-static bool XcodeSysrootExists(XcodeSDK const &sdk) {
-  auto maybe_sysroot = sdk.GetSysroot();
-  if (!maybe_sysroot)
-    return false;
-
-  return FileSystem::Instance().Exists(*maybe_sysroot);
-}
-
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
@@ -1434,8 +1426,8 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
 
   auto [sdk, _] = std::move(*sdk_or_err);
 
-  if (XcodeSysrootExists(sdk))
-    return sdk.GetSysroot()->str();
+  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
+    return sdk.GetSysroot().GetPath();
 
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
