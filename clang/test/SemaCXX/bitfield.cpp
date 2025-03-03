@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify
+// RUN: %clang_cc1 %s -verify -Wms-bitfield-compatibility 
 
 // expected-no-diagnostics
 
