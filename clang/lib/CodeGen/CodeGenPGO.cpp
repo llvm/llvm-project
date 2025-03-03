@@ -310,7 +310,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
           }
 
           // Otherwise, allocate the Decision.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
+          MCDCState.DecisionByStmt[BinOp].ID = MCDCState.DecisionByStmt.size();
         }
         return true;
       }
