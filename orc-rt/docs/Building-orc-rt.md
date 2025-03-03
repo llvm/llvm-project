@@ -30,7 +30,7 @@ The basic steps needed to build orc-rt are:
 
 * **Optional**: Install orc-rt
 
-   Remember Use the CMake option ``CMAKE_INSTALL_PREFIX`` to select a safe
+   Remember to use the CMake option ``CMAKE_INSTALL_PREFIX`` to select a safe
    place to install orc-rt.
 
    * ``make install-orc-rt`` --- Will install the libraries and the headers
