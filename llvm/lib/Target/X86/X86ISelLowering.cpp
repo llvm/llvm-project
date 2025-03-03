@@ -30269,11 +30269,12 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       if (A.isUndef() || A->getAsAPIntVal().uge(EltSizeInBits))
         continue;
       unsigned CstAmt = A->getAsAPIntVal().getZExtValue();
-      if (UniqueCstAmt.count(CstAmt)) {
-        UniqueCstAmt[CstAmt].setBit(I);
+      auto [It, Inserted] = UniqueCstAmt.try_emplace(CstAmt);
+      if (!Inserted) {
+        It->second.setBit(I);
         continue;
       }
-      UniqueCstAmt[CstAmt] = APInt::getOneBitSet(NumElts, I);
+      It->second = APInt::getOneBitSet(NumElts, I);
     }
     assert(!UniqueCstAmt.empty() && "Illegal constant shift amounts");
   }
