@@ -610,19 +610,19 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg5e8.v v8, (a0)
-; CHECK-NEXT:    vlseg5e8.v v14, (a1)
-; CHECK-NEXT:    vmv2r.v v20, v8
-; CHECK-NEXT:    vmv2r.v v22, v10
-; CHECK-NEXT:    vmv1r.v v21, v14
+; CHECK-NEXT:    vlseg5e8.v v13, (a1)
+; CHECK-NEXT:    vmv1r.v v18, v9
+; CHECK-NEXT:    vmv1r.v v20, v11
+; CHECK-NEXT:    vmv1r.v v9, v13
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v20, 0
-; CHECK-NEXT:    vmv1r.v v14, v9
-; CHECK-NEXT:    vmsne.vi v8, v14, 0
-; CHECK-NEXT:    vmv1r.v v23, v16
-; CHECK-NEXT:    vmsne.vi v9, v22, 0
-; CHECK-NEXT:    vmv1r.v v16, v11
-; CHECK-NEXT:    vmsne.vi v10, v16, 0
-; CHECK-NEXT:    vmv1r.v v13, v18
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv1r.v v19, v14
+; CHECK-NEXT:    vmsne.vi v8, v18, 0
+; CHECK-NEXT:    vmv1r.v v11, v15
+; CHECK-NEXT:    vmsne.vi v9, v10, 0
+; CHECK-NEXT:    vmv1r.v v21, v16
+; CHECK-NEXT:    vmsne.vi v10, v20, 0
+; CHECK-NEXT:    vmv1r.v v13, v17
 ; CHECK-NEXT:    vmsne.vi v11, v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -654,17 +654,17 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v28, v17
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg5e8.v v12, (a0)
-; CHECK-NEXT:    vlseg5e8.v v18, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v12
-; CHECK-NEXT:    vmv1r.v v9, v18
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmv2r.v v12, v14
-; CHECK-NEXT:    vmv1r.v v13, v20
-; CHECK-NEXT:    vmv1r.v v20, v15
-; CHECK-NEXT:    vmv1r.v v17, v22
-; CHECK-NEXT:    vmv2r.v v10, v18
-; CHECK-NEXT:    vmv2r.v v14, v20
+; CHECK-NEXT:    vlseg5e8.v v11, (a0)
+; CHECK-NEXT:    vlseg5e8.v v17, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v12
+; CHECK-NEXT:    vmv1r.v v12, v13
+; CHECK-NEXT:    vmv1r.v v16, v15
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    vmv1r.v v9, v17
+; CHECK-NEXT:    vmv1r.v v11, v18
+; CHECK-NEXT:    vmv1r.v v13, v19
+; CHECK-NEXT:    vmv1r.v v15, v20
+; CHECK-NEXT:    vmv1r.v v17, v21
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -695,17 +695,17 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v28, v17
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg5e16.v v12, (a0)
-; CHECK-NEXT:    vlseg5e16.v v18, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v12
-; CHECK-NEXT:    vmv1r.v v9, v18
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmv2r.v v12, v14
-; CHECK-NEXT:    vmv1r.v v13, v20
-; CHECK-NEXT:    vmv1r.v v20, v15
-; CHECK-NEXT:    vmv1r.v v17, v22
-; CHECK-NEXT:    vmv2r.v v10, v18
-; CHECK-NEXT:    vmv2r.v v14, v20
+; CHECK-NEXT:    vlseg5e16.v v11, (a0)
+; CHECK-NEXT:    vlseg5e16.v v17, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v12
+; CHECK-NEXT:    vmv1r.v v12, v13
+; CHECK-NEXT:    vmv1r.v v16, v15
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    vmv1r.v v9, v17
+; CHECK-NEXT:    vmv1r.v v11, v18
+; CHECK-NEXT:    vmv1r.v v13, v19
+; CHECK-NEXT:    vmv1r.v v15, v20
+; CHECK-NEXT:    vmv1r.v v17, v21
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -736,17 +736,17 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v28, v17
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg5e32.v v12, (a0)
-; CHECK-NEXT:    vlseg5e32.v v18, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v12
-; CHECK-NEXT:    vmv1r.v v9, v18
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmv2r.v v12, v14
-; CHECK-NEXT:    vmv1r.v v13, v20
-; CHECK-NEXT:    vmv1r.v v20, v15
-; CHECK-NEXT:    vmv1r.v v17, v22
-; CHECK-NEXT:    vmv2r.v v10, v18
-; CHECK-NEXT:    vmv2r.v v14, v20
+; CHECK-NEXT:    vlseg5e32.v v11, (a0)
+; CHECK-NEXT:    vlseg5e32.v v17, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v12
+; CHECK-NEXT:    vmv1r.v v12, v13
+; CHECK-NEXT:    vmv1r.v v16, v15
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    vmv1r.v v9, v17
+; CHECK-NEXT:    vmv1r.v v11, v18
+; CHECK-NEXT:    vmv1r.v v13, v19
+; CHECK-NEXT:    vmv1r.v v15, v20
+; CHECK-NEXT:    vmv1r.v v17, v21
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -777,17 +777,17 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v28, v17
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg5e64.v v12, (a0)
-; CHECK-NEXT:    vlseg5e64.v v18, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v12
-; CHECK-NEXT:    vmv1r.v v9, v18
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmv2r.v v12, v14
-; CHECK-NEXT:    vmv1r.v v13, v20
-; CHECK-NEXT:    vmv1r.v v20, v15
-; CHECK-NEXT:    vmv1r.v v17, v22
-; CHECK-NEXT:    vmv2r.v v10, v18
-; CHECK-NEXT:    vmv2r.v v14, v20
+; CHECK-NEXT:    vlseg5e64.v v11, (a0)
+; CHECK-NEXT:    vlseg5e64.v v17, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v12
+; CHECK-NEXT:    vmv1r.v v12, v13
+; CHECK-NEXT:    vmv1r.v v16, v15
+; CHECK-NEXT:    vmv1r.v v8, v11
+; CHECK-NEXT:    vmv1r.v v9, v17
+; CHECK-NEXT:    vmv1r.v v11, v18
+; CHECK-NEXT:    vmv1r.v v13, v19
+; CHECK-NEXT:    vmv1r.v v15, v20
+; CHECK-NEXT:    vmv1r.v v17, v21
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -852,24 +852,24 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vlseg7e8.v v8, (a0)
-; CHECK-NEXT:    vlseg7e8.v v16, (a1)
-; CHECK-NEXT:    vmv2r.v v24, v8
-; CHECK-NEXT:    vmv2r.v v26, v10
-; CHECK-NEXT:    vmv2r.v v28, v12
-; CHECK-NEXT:    vmv1r.v v25, v16
+; CHECK-NEXT:    vlseg7e8.v v15, (a1)
+; CHECK-NEXT:    vmv1r.v v22, v9
+; CHECK-NEXT:    vmv1r.v v24, v11
+; CHECK-NEXT:    vmv1r.v v26, v13
+; CHECK-NEXT:    vmv1r.v v9, v15
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v24, 0
-; CHECK-NEXT:    vmv1r.v v16, v9
-; CHECK-NEXT:    vmsne.vi v8, v16, 0
-; CHECK-NEXT:    vmv1r.v v27, v18
-; CHECK-NEXT:    vmsne.vi v9, v26, 0
-; CHECK-NEXT:    vmv1r.v v18, v11
-; CHECK-NEXT:    vmsne.vi v10, v18, 0
-; CHECK-NEXT:    vmv1r.v v29, v20
-; CHECK-NEXT:    vmsne.vi v11, v28, 0
-; CHECK-NEXT:    vmv1r.v v20, v13
-; CHECK-NEXT:    vmsne.vi v12, v20, 0
-; CHECK-NEXT:    vmv1r.v v15, v22
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmv1r.v v23, v16
+; CHECK-NEXT:    vmsne.vi v8, v22, 0
+; CHECK-NEXT:    vmv1r.v v11, v17
+; CHECK-NEXT:    vmsne.vi v9, v10, 0
+; CHECK-NEXT:    vmv1r.v v25, v18
+; CHECK-NEXT:    vmsne.vi v10, v24, 0
+; CHECK-NEXT:    vmv1r.v v13, v19
+; CHECK-NEXT:    vmsne.vi v11, v12, 0
+; CHECK-NEXT:    vmv1r.v v27, v20
+; CHECK-NEXT:    vmsne.vi v12, v26, 0
+; CHECK-NEXT:    vmv1r.v v15, v21
 ; CHECK-NEXT:    vmsne.vi v13, v14, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -903,21 +903,21 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v25, v16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg7e8.v v14, (a0)
-; CHECK-NEXT:    vlseg7e8.v v22, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v14
-; CHECK-NEXT:    vmv1r.v v9, v22
-; CHECK-NEXT:    vmv1r.v v22, v15
-; CHECK-NEXT:    vmv2r.v v12, v16
-; CHECK-NEXT:    vmv1r.v v13, v24
-; CHECK-NEXT:    vmv1r.v v24, v17
-; CHECK-NEXT:    vmv2r.v v16, v18
-; CHECK-NEXT:    vmv1r.v v17, v26
-; CHECK-NEXT:    vmv1r.v v26, v19
-; CHECK-NEXT:    vmv1r.v v21, v28
-; CHECK-NEXT:    vmv2r.v v10, v22
-; CHECK-NEXT:    vmv2r.v v14, v24
-; CHECK-NEXT:    vmv2r.v v18, v26
+; CHECK-NEXT:    vlseg7e8.v v13, (a0)
+; CHECK-NEXT:    vlseg7e8.v v21, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v14
+; CHECK-NEXT:    vmv1r.v v12, v15
+; CHECK-NEXT:    vmv1r.v v14, v16
+; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vmv1r.v v20, v19
+; CHECK-NEXT:    vmv1r.v v8, v13
+; CHECK-NEXT:    vmv1r.v v9, v21
+; CHECK-NEXT:    vmv1r.v v11, v22
+; CHECK-NEXT:    vmv1r.v v13, v23
+; CHECK-NEXT:    vmv1r.v v15, v24
+; CHECK-NEXT:    vmv1r.v v17, v25
+; CHECK-NEXT:    vmv1r.v v19, v26
+; CHECK-NEXT:    vmv1r.v v21, v27
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -950,21 +950,21 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v25, v16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg7e16.v v14, (a0)
-; CHECK-NEXT:    vlseg7e16.v v22, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v14
-; CHECK-NEXT:    vmv1r.v v9, v22
-; CHECK-NEXT:    vmv1r.v v22, v15
-; CHECK-NEXT:    vmv2r.v v12, v16
-; CHECK-NEXT:    vmv1r.v v13, v24
-; CHECK-NEXT:    vmv1r.v v24, v17
-; CHECK-NEXT:    vmv2r.v v16, v18
-; CHECK-NEXT:    vmv1r.v v17, v26
-; CHECK-NEXT:    vmv1r.v v26, v19
-; CHECK-NEXT:    vmv1r.v v21, v28
-; CHECK-NEXT:    vmv2r.v v10, v22
-; CHECK-NEXT:    vmv2r.v v14, v24
-; CHECK-NEXT:    vmv2r.v v18, v26
+; CHECK-NEXT:    vlseg7e16.v v13, (a0)
+; CHECK-NEXT:    vlseg7e16.v v21, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v14
+; CHECK-NEXT:    vmv1r.v v12, v15
+; CHECK-NEXT:    vmv1r.v v14, v16
+; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vmv1r.v v20, v19
+; CHECK-NEXT:    vmv1r.v v8, v13
+; CHECK-NEXT:    vmv1r.v v9, v21
+; CHECK-NEXT:    vmv1r.v v11, v22
+; CHECK-NEXT:    vmv1r.v v13, v23
+; CHECK-NEXT:    vmv1r.v v15, v24
+; CHECK-NEXT:    vmv1r.v v17, v25
+; CHECK-NEXT:    vmv1r.v v19, v26
+; CHECK-NEXT:    vmv1r.v v21, v27
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -997,21 +997,21 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v25, v16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg7e32.v v14, (a0)
-; CHECK-NEXT:    vlseg7e32.v v22, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v14
-; CHECK-NEXT:    vmv1r.v v9, v22
-; CHECK-NEXT:    vmv1r.v v22, v15
-; CHECK-NEXT:    vmv2r.v v12, v16
-; CHECK-NEXT:    vmv1r.v v13, v24
-; CHECK-NEXT:    vmv1r.v v24, v17
-; CHECK-NEXT:    vmv2r.v v16, v18
-; CHECK-NEXT:    vmv1r.v v17, v26
-; CHECK-NEXT:    vmv1r.v v26, v19
-; CHECK-NEXT:    vmv1r.v v21, v28
-; CHECK-NEXT:    vmv2r.v v10, v22
-; CHECK-NEXT:    vmv2r.v v14, v24
-; CHECK-NEXT:    vmv2r.v v18, v26
+; CHECK-NEXT:    vlseg7e32.v v13, (a0)
+; CHECK-NEXT:    vlseg7e32.v v21, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v14
+; CHECK-NEXT:    vmv1r.v v12, v15
+; CHECK-NEXT:    vmv1r.v v14, v16
+; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vmv1r.v v20, v19
+; CHECK-NEXT:    vmv1r.v v8, v13
+; CHECK-NEXT:    vmv1r.v v9, v21
+; CHECK-NEXT:    vmv1r.v v11, v22
+; CHECK-NEXT:    vmv1r.v v13, v23
+; CHECK-NEXT:    vmv1r.v v15, v24
+; CHECK-NEXT:    vmv1r.v v17, v25
+; CHECK-NEXT:    vmv1r.v v19, v26
+; CHECK-NEXT:    vmv1r.v v21, v27
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
@@ -1044,21 +1044,21 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv1r.v v25, v16
 ; CHECK-NEXT:    vs8r.v v24, (a1)
-; CHECK-NEXT:    vlseg7e64.v v14, (a0)
-; CHECK-NEXT:    vlseg7e64.v v22, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v14
-; CHECK-NEXT:    vmv1r.v v9, v22
-; CHECK-NEXT:    vmv1r.v v22, v15
-; CHECK-NEXT:    vmv2r.v v12, v16
-; CHECK-NEXT:    vmv1r.v v13, v24
-; CHECK-NEXT:    vmv1r.v v24, v17
-; CHECK-NEXT:    vmv2r.v v16, v18
-; CHECK-NEXT:    vmv1r.v v17, v26
-; CHECK-NEXT:    vmv1r.v v26, v19
-; CHECK-NEXT:    vmv1r.v v21, v28
-; CHECK-NEXT:    vmv2r.v v10, v22
-; CHECK-NEXT:    vmv2r.v v14, v24
-; CHECK-NEXT:    vmv2r.v v18, v26
+; CHECK-NEXT:    vlseg7e64.v v13, (a0)
+; CHECK-NEXT:    vlseg7e64.v v21, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v14
+; CHECK-NEXT:    vmv1r.v v12, v15
+; CHECK-NEXT:    vmv1r.v v14, v16
+; CHECK-NEXT:    vmv1r.v v16, v17
+; CHECK-NEXT:    vmv1r.v v20, v19
+; CHECK-NEXT:    vmv1r.v v8, v13
+; CHECK-NEXT:    vmv1r.v v9, v21
+; CHECK-NEXT:    vmv1r.v v11, v22
+; CHECK-NEXT:    vmv1r.v v13, v23
+; CHECK-NEXT:    vmv1r.v v15, v24
+; CHECK-NEXT:    vmv1r.v v17, v25
+; CHECK-NEXT:    vmv1r.v v19, v26
+; CHECK-NEXT:    vmv1r.v v21, v27
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0

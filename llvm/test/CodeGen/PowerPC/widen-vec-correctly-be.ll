@@ -31,13 +31,13 @@ define void @test() local_unnamed_addr #0 align 2 {
 ; CHECK-P9-BE-LABEL: test:
 ; CHECK-P9-BE:       # %bb.0: # %bb
 ; CHECK-P9-BE-NEXT:    lhz r3, 0(r3)
-; CHECK-P9-BE-NEXT:    vspltisw v2, -16
+; CHECK-P9-BE-NEXT:    vspltisw v3, -16
 ; CHECK-P9-BE-NEXT:    xxlxor vs0, vs0, vs0
 ; CHECK-P9-BE-NEXT:    addi r3, r3, 1
-; CHECK-P9-BE-NEXT:    vsrw v2, v2, v2
+; CHECK-P9-BE-NEXT:    vsrw v3, v3, v3
 ; CHECK-P9-BE-NEXT:    sldi r3, r3, 48
-; CHECK-P9-BE-NEXT:    mtfprd f1, r3
-; CHECK-P9-BE-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-P9-BE-NEXT:    mtvsrd v2, r3
+; CHECK-P9-BE-NEXT:    xxsel v2, v2, vs0, v3
 ; CHECK-P9-BE-NEXT:    xxsldwi vs0, v2, v2, 3
 ; CHECK-P9-BE-NEXT:    stfiwx f0, 0, r3
 ; CHECK-P9-BE-NEXT:    .p2align 4
