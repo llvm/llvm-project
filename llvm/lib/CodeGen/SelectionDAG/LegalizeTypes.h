@@ -957,6 +957,7 @@ private:
   void SplitVecRes_FPOp_MultiType(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_IS_FPCLASS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD);
   void SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD, SDValue &Lo,
