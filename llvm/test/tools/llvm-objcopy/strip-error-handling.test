@@ -1,0 +1,23 @@
+## Checks that llvm-strip continues to strip objects after encountering a bad
+## one while emitting an error for each bad one.
+
+# RUN: echo "bad" > %t1
+# RUN: yaml2obj %s -o %t2
+# RUN: not llvm-strip %t1 %t2 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: error: {{.*}}: The file was not recognized as a valid object file
+
+# RUN: llvm-readobj --sections %t2 | FileCheck %s --check-prefix=DEBUG
+
+# DEBUG-NOT: .debugGlobal
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:            .debugGlobal
+    Type:            SHT_PROGBITS
+    Content:         "00000000"
