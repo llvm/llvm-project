@@ -36,45 +36,37 @@ void test_mov_dpp8_long(global long* out, long a) {
 }
 
 // CHECK-LABEL: @test_mov_dpp8_float(
-// CHECK:      %0 = bitcast float %a to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: store i32 %1,
+// CHECK:      %0 = tail call{{.*}} float @llvm.amdgcn.mov.dpp8.f32(float %a, i32 1)
+// CHECK-NEXT: store float %0,
 void test_mov_dpp8_float(global float* out, float a) {
   *out = __builtin_amdgcn_mov_dpp8(a, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_double
-// CHECK:      %0 = bitcast double %x to i64
-// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.mov.dpp8.i64(i64 %0, i32 1)
-// CHECK-NEXT: store i64 %1,
+// CHECK:      %0 = tail call{{.*}} double @llvm.amdgcn.mov.dpp8.f64(double %x, i32 1)
+// CHECK-NEXT: store double %0,
 void test_mov_dpp8_double(double x, global double *p) {
   *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_short
-// CHECK:      %0 = zext i16 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: %2 = trunc i32 %1 to i16
-// CHECK-NEXT: store i16 %2,
+// CHECK:      %0 = tail call{{.*}} i16 @llvm.amdgcn.mov.dpp8.i16(i16 %x, i32 1)
+// CHECK-NEXT: store i16 %0,
 void test_mov_dpp8_short(short x, global short *p) {
   *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_char
-// CHECK:      %0 = zext i8 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: %2 = trunc i32 %1 to i8
-// CHECK-NEXT: store i8 %2,
+// CHECK:      %0 = tail call{{.*}} i8 @llvm.amdgcn.mov.dpp8.i8(i8 %x, i32 1)
+// CHECK-NEXT: store i8 %0,
 void test_mov_dpp8_char(char x, global char *p) {
   *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_half
-// CHECK:      %0 = load i16,
-// CHECK:      %1 = zext i16 %0 to i32
-// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %1, i32 1)
-// CHECK-NEXT: %3 = trunc i32 %2 to i16
-// CHECK-NEXT: store i16 %3,
+// CHECK:      %0 = load half,
+// CHECK-NEXT: %1 = tail call{{.*}} half @llvm.amdgcn.mov.dpp8.f16(half %0, i32 1)
+// CHECK-NEXT: store half %1,
 void test_mov_dpp8_half(half *x, global half *p) {
   *p = __builtin_amdgcn_mov_dpp8(*x, 1);
 }
