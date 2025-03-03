@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -21,8 +23,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <llvm/CodeGen/MachineDominators.h>
-#include <llvm/CodeGen/MachineLoopInfo.h>
 
 using namespace llvm;
 
@@ -30,8 +30,8 @@ using namespace llvm;
 
 namespace {
 struct ExpandPostRA {
-  
-  bool run(MachineFunction&);
+
+  bool run(MachineFunction &);
 
 private:
   const TargetRegisterInfo *TRI = nullptr;
@@ -54,12 +54,13 @@ struct ExpandPostRALegacy : public MachineFunctionPass {
   }
 
   /// runOnMachineFunction - pass entry point
-  bool runOnMachineFunction(MachineFunction&) override;
+  bool runOnMachineFunction(MachineFunction &) override;
 };
 } // end anonymous namespace
 
-PreservedAnalyses ExpandPostRAPseudosPass::run(MachineFunction &MF,
-                                               MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+ExpandPostRAPseudosPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
   if (!ExpandPostRA().run(MF))
     return PreservedAnalyses::all();
 

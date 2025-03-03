@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/AliasSetTracker.h"
@@ -91,6 +90,7 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"

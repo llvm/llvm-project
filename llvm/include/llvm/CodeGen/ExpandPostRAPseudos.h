@@ -13,8 +13,7 @@
 
 namespace llvm {
 
-class ExpandPostRAPseudosPass
-    : public PassInfoMixin<ExpandPostRAPseudosPass> {
+class ExpandPostRAPseudosPass : public PassInfoMixin<ExpandPostRAPseudosPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
