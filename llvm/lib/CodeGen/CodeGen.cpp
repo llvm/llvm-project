@@ -67,7 +67,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeLocalStackSlotPassPass(Registry);
   initializeLowerGlobalDtorsLegacyPassPass(Registry);
   initializeLowerIntrinsicsPass(Registry);
-  initializeMIRAddFSDiscriminatorsPass(Registry);
+  initializeMIRAddFSDiscriminatorsLegacyPass(Registry);
   initializeMIRCanonicalizerPass(Registry);
   initializeMIRNamerPass(Registry);
   initializeMIRProfileLoaderPassPass(Registry);

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Discriminator.h"
 
 #include <cassert>
@@ -29,24 +30,19 @@ namespace llvm {
 class MachineFunction;
 
 using namespace sampleprof;
-class MIRAddFSDiscriminators : public MachineFunctionPass {
+class MIRAddFSDiscriminators {
   MachineFunction *MF = nullptr;
   FSDiscriminatorPass Pass;
   unsigned LowBit;
   unsigned HighBit;
 
 public:
-  static char ID;
   /// PassNum is the sequence number this pass is called, start from 1.
   MIRAddFSDiscriminators(FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
-      : MachineFunctionPass(ID), Pass(P) {
+      : Pass(P) {
     LowBit = getFSPassBitBegin(P);
     HighBit = getFSPassBitEnd(P);
     assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
-  }
-
-  StringRef getPassName() const override {
-    return "Add FS discriminators in MIR";
   }
 
   /// getNumFSBBs() - Return the number of machine BBs that have FS samples.
@@ -59,8 +55,33 @@ public:
   /// getMachineFunction - Return the current machine function.
   const MachineFunction *getMachineFunction() const { return MF; }
 
+  bool runOnMachineFunction(MachineFunction &);
+};
+
+class MIRAddFSDiscriminatorsLegacy : public MachineFunctionPass {
+  FSDiscriminatorPass Pass;
+
+public:
+  static char ID;
+  MIRAddFSDiscriminatorsLegacy(
+      FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
+      : MachineFunctionPass(ID), Pass(P) {}
+  StringRef getPassName() const override {
+    return "Add FS discriminators in MIR";
+  }
+
 private:
-  bool runOnMachineFunction(MachineFunction &) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class MIRAddFSDiscriminatorsPass
+    : public PassInfoMixin<MIRAddFSDiscriminatorsPass> {
+  FSDiscriminatorPass Pass;
+
+public:
+  MIRAddFSDiscriminatorsPass(FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
+      : Pass(P) {}
+  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 };
 
 } // namespace llvm
