@@ -97,6 +97,11 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char`` to an
   ``ostream``.
 
+- New :doc:`modernize-replace-with-std-copy
+  <clang-tidy/checks/modernize-replace-with-std-copy>` check.
+
+  Tries to replace calls to ``memmove`` and ``memcpy`` with an equivalent call to ``std::copy_n``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
