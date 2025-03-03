@@ -171,10 +171,12 @@ struct Fragment {
     /// - std::nullopt: do not use a compilation database, just default flags.
     std::optional<Located<std::string>> CompilationDatabase;
 
-    /// Controls whether Clangd should include its own built-in headers (like
-    /// stddef.h), or use only the QueryDriver's built-in headers. Use the
+    /// Controls whether Clangd should use its own built-in system headers (like
+    /// stddef.h), or use the system headers from the query driver. Use the
     /// option value 'Clangd' (default) to indicate Clangd's headers, and use
-    /// 'QueryDriver' to indicate QueryDriver's headers.
+    /// 'QueryDriver' to indicate QueryDriver's headers. `Clangd` is the
+    /// fallback if no query driver is supplied or if the query driver regex
+    /// string fails to match the compiler used in the CDB.
     std::optional<Located<std::string>> BuiltinHeaders;
   };
   CompileFlagsBlock CompileFlags;
