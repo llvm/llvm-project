@@ -26,12 +26,13 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
-#include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -249,7 +250,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
 #if _LIBCPP_STD_VER >= 17
   constexpr auto __default_comp = __desugars_to_v<__less_tag, _Compare, value_type, value_type >;
   constexpr auto __arithmetic_value =
-      is_arithmetic_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
+      (is_integral_v<value_type > || numeric_limits<value_type>::is_iec559) &&
+      is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
   if constexpr (__default_comp && __arithmetic_value) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(std::__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(std::__radix_sort_max_bound<value_type>())) {
