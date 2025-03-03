@@ -511,7 +511,7 @@ bool Prescanner::MustSkipToEndOfLine() const {
   if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_) {
-    return !IsCompilerDirectiveSentinel(at_);
+    return !IsCompilerDirectiveSentinel(at_ + 1);
   } else {
     return false;
   }
