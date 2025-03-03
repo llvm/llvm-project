@@ -651,7 +651,7 @@ static SDValue lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(const SDLoc &DL,
 
       MVT InputVT = MVT::getVectorVT(MVT::getIntegerVT(EltBits), NumElements);
       SDValue Ext =
-          AnyExt ? DAG.getUNDEF(InputVT) : DAG.getConstant(0, DL, InputVT);
+          AnyExt ? DAG.getFreeze(InputV) : DAG.getConstant(0, DL, InputVT);
       InputV = DAG.getBitcast(InputVT, InputV);
       InputV = DAG.getNode(VilVLoHi, DL, InputVT, Ext, InputV);
       Scale /= 2;
