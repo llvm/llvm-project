@@ -212,7 +212,7 @@ static service_rc emissary_pfAddFloat(emissary_ValistExt_t *valist,
 static service_rc emissary_pfBuildValist(emissary_ValistExt_t *valist,
                                          int NumArgs, char *keyptr,
                                          char *dataptr, char *strptr,
-                                         size_t *data_not_used) {
+                                         unsigned long long *data_not_used) {
   emissary_pfRegSaveArea_t *regs;
   size_t regs_size = sizeof(*regs);
   regs = (emissary_pfRegSaveArea_t *)malloc(regs_size);

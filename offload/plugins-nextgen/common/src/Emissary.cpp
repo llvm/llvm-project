@@ -23,6 +23,7 @@ extern "C" emis_return_t Emissary(char *data) {
   emisArgBuf_t ab;
   emisExtractArgBuf(data, &ab);
   emis_return_t result = 0;
+  emis_argptr_t *args[MAXVARGS]; // FIXME use malloc here
 
   switch (ab.emisid) {
   case EMIS_ID_INVALID: {
@@ -39,13 +40,24 @@ extern "C" emis_return_t Emissary(char *data) {
     break;
   }
   case EMIS_ID_MPI: {
-    result = EmissaryMPI(data, &ab);
+    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
+                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
+      return (emis_return_t)0;
+    result = EmissaryMPI(data, &ab, args);
     break;
   }
   case EMIS_ID_HDF5: {
-    // result = EmissaryHDF5(data, &ab);
-    result = 0;
-    fprintf(stderr, "Support for HDF5 Emissary API is in development\n");
+    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
+                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
+      return (emis_return_t)0;
+    result = EmissaryHDF5(data, &ab, args);
+    break;
+  }
+  case EMIS_ID_RESERVE: {
+    if (EmissaryBuildVargs(ab.NumArgs, ab.keyptr, ab.argptr, ab.strptr,
+                           &ab.data_not_used, &args[0]) != _RC_SUCCESS)
+      return (emis_return_t)0;
+    result = EmissaryReserve(data, &ab, args);
     break;
   }
   default:
@@ -114,8 +126,9 @@ extern "C" void *getfnptr(char *val) {
 
 // build argument array
 extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
-                                       char *strptr, size_t *data_not_used,
-                                       uint64_t *a[MAXVARGS]) {
+                                       char *strptr,
+                                       unsigned long long *data_not_used,
+                                       emis_argptr_t *a[MAXVARGS]) {
   size_t num_bytes;
   size_t bytes_consumed;
   size_t strsz;
@@ -145,9 +158,9 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         return _RC_DATA_USED_ERROR;
 
       if (num_bytes == 4)
-        a[argcount] = (uint64_t *)getuint32(dataptr);
+        a[argcount] = (emis_argptr_t *)getuint32(dataptr);
       else
-        a[argcount] = (uint64_t *)getuint64(dataptr);
+        a[argcount] = (emis_argptr_t *)getuint64(dataptr);
 
       break;
 
@@ -163,9 +176,9 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         return _RC_DATA_USED_ERROR;
 
       if (num_bytes == 4)
-        a[argcount] = (uint64_t *)getuint32(dataptr);
+        a[argcount] = (emis_argptr_t *)getuint32(dataptr);
       else
-        a[argcount] = (uint64_t *)getuint64(dataptr);
+        a[argcount] = (emis_argptr_t *)getuint64(dataptr);
 
       break;
 
@@ -176,7 +189,7 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         strsz = (size_t)*(unsigned int *)dataptr;
         if ((*data_not_used) < bytes_consumed)
           return _RC_DATA_USED_ERROR;
-        a[argcount] = (uint64_t *)((char *)strptr);
+        a[argcount] = (emis_argptr_t *)((char *)strptr);
 
       } else {
         num_bytes = 8;
@@ -189,7 +202,7 @@ extern "C" uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
         if ((*data_not_used) < bytes_consumed)
           return _RC_DATA_USED_ERROR;
 
-        a[argcount] = (uint64_t *)getuint64(dataptr);
+        a[argcount] = (emis_argptr_t *)getuint64(dataptr);
       }
       break;
 

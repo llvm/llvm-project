@@ -20,6 +20,7 @@ typedef enum {
   EMIS_ID_PRINT,
   EMIS_ID_MPI,
   EMIS_ID_HDF5,
+  EMIS_ID_RESERVE,
 } offload_emis_id_t;
 
 typedef enum {
@@ -28,12 +29,6 @@ typedef enum {
   _fprintf_idx,
   _ockl_asan_report_idx,
 } offload_emis_print_t;
-
-typedef enum {
-  _MPI_INVALID,
-  _MPI_Send_idx,
-  _MPI_Recv_idx,
-} offload_emis_mpi_t;
 
 /// The vargs function used by emissary API device stubs
 unsigned long long _emissary_exec(unsigned long long, ...);
@@ -59,28 +54,23 @@ typedef enum {
   _FortranAStopStatementText_idx,
 } offload_emis_fortrt_idx;
 
-//  mpi.h (needed for MPI types) will not compile while building DeviceRTL,
-//  So emissary stubs for MPI functions can NOT be in libomptarget.bc.
-//  These are skipped whild building DeviceRTL because compilation of DeviceRTL
-//  does not have include mpi.h. The user will build these stubs on their
-//  device pass when they include EmissaryIds.h.
+/// This structure is created by emisExtractArgBuf to make it easier
+/// to get values from the data buffer passed by rpc.
+typedef struct {
+  unsigned int DataLen;
+  unsigned int NumArgs;
+  unsigned int emisid;
+  unsigned int emisfnid;
+  unsigned long long data_not_used;
+  char *keyptr;
+  char *argptr;
+  char *strptr;
+} emisArgBuf_t;
 
-#if defined(__NVPTX__) || defined(__AMDGCN__)
-#if defined(__has_include)
-#if __has_include("mpi.h")
-#include "mpi.h"
-extern "C" int MPI_Send(const void *buf, int count, MPI_Datatype datatype,
-                        int dest, int tag, MPI_Comm comm) {
-  return (int)_emissary_exec(_PACK_EMIS_IDS(EMIS_ID_MPI, _MPI_Send_idx), buf,
-                             count, datatype, dest, tag, comm);
-}
-extern "C" int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source,
-                        int tag, MPI_Comm comm, MPI_Status *st) {
-  return (int)_emissary_exec(_PACK_EMIS_IDS(EMIS_ID_MPI, _MPI_Recv_idx), buf,
-                             count, datatype, source, tag, comm, st);
-}
-#endif
-#endif
-#endif
+typedef unsigned long long emis_return_t;
+typedef unsigned long long emis_argptr_t;
+typedef emis_return_t emisfn_t(void *, ...);
+
+#define MAXVARGS 32
 
 #endif // OFFLOAD_EMISSARY_IDS_H

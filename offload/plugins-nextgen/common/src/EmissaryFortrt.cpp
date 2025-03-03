@@ -232,7 +232,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
   if (ab->NumArgs <= 0)
     return _RC_ERROR_INVALID_REQUEST;
 
-  uint64_t *a[MAXVARGS];
+  emis_argptr_t *a[MAXVARGS];
   if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
                          &ab->data_not_used, a) != _RC_SUCCESS)
     return _RC_ERROR_INVALID_REQUEST;
@@ -254,7 +254,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
       fprintf(stderr, "MALLOC FAILED for c_ptr size:%ld \n", slen);
     std::strncpy(c_ptr, (char *)a[5], slen - 1);
     c_ptr[slen - 1] = (char)0;
-    a[5] = (uint64_t *)c_ptr;
+    a[5] = (emis_argptr_t *)c_ptr;
     break;
   }
   case _FortranAioOutputAscii_idx: {
@@ -266,7 +266,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
       fprintf(stderr, "MALLOC FAILED for c_ptr size:%ld \n", slen);
     std::strncpy(c_ptr, (char *)a[5], slen - 1);
     c_ptr[slen - 1] = (char)0;
-    a[5] = (uint64_t *)c_ptr;
+    a[5] = (emis_argptr_t *)c_ptr;
 
     break;
   }
@@ -378,7 +378,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
         for (auto q : *_deferred_fns_ptr) {
           if ((thread_num == q->thread_num) && (team_num == q->team_num)) {
             for (uint32_t i = 0; i < q->NumArgs; i++)
-              a[i] = (uint64_t *)q->arg_array[i];
+              a[i] = (emis_argptr_t *)q->arg_array[i];
             q->return_value = EmissaryCallFnptr<emis_return_t, emisfn_t>(
                 q->NumArgs, q->fnptr, a);
           }

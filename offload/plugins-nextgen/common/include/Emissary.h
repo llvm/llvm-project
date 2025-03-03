@@ -14,25 +14,7 @@
 #ifndef OFFLOAD_EMISSARY_H
 #define OFFLOAD_EMISSARY_H
 
-/// This structure is created by emisExtractArgBuf to make it easier
-/// to get values from the data buffer passed by rpc.
-typedef struct {
-  unsigned int DataLen;
-  unsigned int NumArgs;
-  unsigned int emisid;
-  unsigned int emisfnid;
-  size_t data_not_used;
-  char *keyptr;
-  char *argptr;
-  char *strptr;
-} emisArgBuf_t;
-
-typedef unsigned long long emis_return_t;
-typedef emis_return_t emisfn_t(void *, ...);
-
-// MAXVARGS is the maximum number of args in an emissary function
-// To increase this number, update EmissaryCallFnptr below
-#define MAXVARGS 32
+#include "../../../DeviceRTL/include/EmissaryIds.h"
 
 extern "C" {
 
@@ -46,10 +28,16 @@ emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab);
 emis_return_t EmissaryPrint(char *data, emisArgBuf_t *ab);
 
 /// Called by Emissary for all MPI emissary API functions
-emis_return_t EmissaryMPI(char *data, emisArgBuf_t *ab);
+__attribute((weak)) emis_return_t EmissaryMPI(char *data, emisArgBuf_t *ab,
+                                              emis_argptr_t *arg[MAXVARGS]);
 
 /// Called by Emissary for all HDF5 Emissary API functions
-emis_return_t EmissaryHDF5(char *data, emisArgBuf_t *ab);
+__attribute((weak)) emis_return_t EmissaryHDF5(char *data, emisArgBuf_t *ab,
+                                               emis_argptr_t *arg[MAXVARGS]);
+
+/// Support externally supplied emissary API
+__attribute((weak)) emis_return_t EmissaryReserve(char *data, emisArgBuf_t *ab,
+                                                  emis_argptr_t *arg[MAXVARGS]);
 
 /// Called by Emissary to build the emisArgBuf_t structure from the emissary
 /// data buffer sent to the CPU by rpc. This buffer is created by clang CodeGen
@@ -66,15 +54,15 @@ void *getfnptr(char *val);
 
 /// Builds the array of pointers passed to V_ functions
 uint32_t EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr,
-                            char *strptr, size_t *data_not_used,
-                            uint64_t *a[MAXVARGS]);
+                            char *strptr, unsigned long long *data_not_used,
+                            emis_argptr_t *a[MAXVARGS]);
 
 } // end extern "C"
 
 /// Call the associated V_ function
 template <typename T, typename FT>
 extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr,
-                           uint64_t *a[MAXVARGS]);
+                           emis_argptr_t *a[MAXVARGS]);
 
 // Error return codes (deprecated)
 typedef enum service_rc {
@@ -140,7 +128,7 @@ enum TypeID {
 
 template <typename T, typename FT>
 extern T EmissaryCallFnptr(uint32_t NumArgs, void *fnptr,
-                           uint64_t *a[MAXVARGS]) {
+                           emis_argptr_t *a[MAXVARGS]) {
   T rv;
   FT *vfnptr = (FT *)fnptr;
   switch (NumArgs) {
