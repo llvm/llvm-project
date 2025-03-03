@@ -731,7 +731,8 @@ void CheckHelper::CheckObjectEntity(
           symbol.name(), commonBlock->name());
     } else if (isLocalVariable && !IsAllocatableOrPointer(symbol) &&
         !IsSaved(symbol)) {
-      messages_.Say("Local coarray must have the SAVE attribute"_err_en_US);
+      messages_.Say(
+          "Local coarray must have the SAVE or ALLOCATABLE attribute"_err_en_US);
     }
     for (int j{0}; j < corank; ++j) {
       if (auto lcbv{evaluate::ToInt64(evaluate::Fold(
@@ -980,7 +981,7 @@ void CheckHelper::CheckObjectEntity(
               symbol.name(), badPotential.BuildResultDesignatorName());
         } else if (isUnsavedLocal) { // F'2023 C826
           SayWithDeclaration(*badPotential,
-              "Local variable '%s' without the SAVE attribute may not have a coarray potential subobject component '%s'"_err_en_US,
+              "Local variable '%s' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%s'"_err_en_US,
               symbol.name(), badPotential.BuildResultDesignatorName());
         } else {
           DIE("caught unexpected bad coarray potential component");
