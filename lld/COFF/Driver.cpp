@@ -2568,7 +2568,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /includeglob
   for (StringRef pat : args::getStrings(args, OPT_incl_glob))
-    ctx.symtab.addUndefinedGlob(pat);
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
   // Create wrapped symbols for -wrap option.
   ctx.forEachSymtab([&](SymbolTable &symtab) {
