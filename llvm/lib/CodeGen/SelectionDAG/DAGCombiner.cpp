@@ -12514,11 +12514,9 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
-  if (Op1->getOpcode() != ISD::MUL)
-    return SDValue();
-
   APInt ConstantOne;
-  if (!ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
+  if (Op1->getOpcode() != ISD::MUL ||
+      !ISD::isConstantSplatVector(Op2.getNode(), ConstantOne) ||
       !ConstantOne.isOne())
     return SDValue();
 
@@ -12529,29 +12527,28 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (!ISD::isExtOpcode(LHSOpcode) || !ISD::isExtOpcode(RHSOpcode))
     return SDValue();
 
+  // For a 2-stage extend the signedness of both of the extends must be the
+  // same. This is so the node can be folded into only a signed or unsigned
+  // node.
   SDValue LHSExtOp = LHS->getOperand(0);
   SDValue RHSExtOp = RHS->getOperand(0);
   EVT LHSExtOpVT = LHSExtOp.getValueType();
-  if (LHSExtOpVT != RHSExtOp.getValueType())
+  if (LHSExtOpVT != RHSExtOp.getValueType() || LHSOpcode != RHSOpcode)
     return SDValue();
 
   // FIXME: Add a check to only perform the DAG combine if there is lowering
   // provided by the target
 
-  bool LHSIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
-  bool RHSIsSigned = RHSOpcode == ISD::SIGN_EXTEND;
-  if (LHSIsSigned != RHSIsSigned)
-    return SDValue();
+  bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
 
   bool NodeIsSigned = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
-  if (LHSIsSigned != NodeIsSigned &&
-      (Op1.getValueType().getVectorElementType() != AccElemVT ||
-       Op2.getValueType().getVectorElementType() != AccElemVT))
+  if (ExtIsSigned != NodeIsSigned &&
+      Op1.getValueType().getVectorElementType() != AccElemVT)
     return SDValue();
 
   unsigned NewOpcode =
-      LHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+      ExtIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
   return DAG.getNode(NewOpcode, DL, N->getValueType(0), Acc, LHSExtOp,
                      RHSExtOp);
 }
