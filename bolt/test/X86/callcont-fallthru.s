@@ -8,6 +8,7 @@
 # RUN: link_fdata %s %t %t.pat2 PREAGGT2
 
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
+# RUN: llvm-objcopy --remove-section=.eh_frame %t.strip %t.noeh
 
 ## Check pre-aggregated traces attach call continuation fallthrough count
 # RUN: llvm-bolt %t.noeh --pa -p %t.pat -o %t.out \
