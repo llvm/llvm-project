@@ -16,6 +16,7 @@ unittest("DirextXTests") {
   sources = [
     "CBufferDataLayoutTests.cpp",
     "PointerTypeAnalysisTests.cpp",
+    "RegisterCostTests.cpp",
     "UniqueResourceFromUseTests.cpp",
   ]
 }

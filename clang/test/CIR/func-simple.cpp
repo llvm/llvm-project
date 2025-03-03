@@ -2,12 +2,12 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
 
 void empty() { }
-// CHECK: cir.func @empty() -> !cir.void {
+// CHECK: cir.func @empty() {
 // CHECK:   cir.return
 // CHECK: }
 
 void voidret() { return; }
-// CHECK: cir.func @voidret() -> !cir.void {
+// CHECK: cir.func @voidret() {
 // CHECK:   cir.return
 // CHECK: }
 

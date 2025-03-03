@@ -108,7 +108,8 @@ protected:
 
   /// Perform cleanups on registers that failed to allocate. This hacks on the
   /// liveness in order to avoid spurious verifier errors in later passes.
-  void cleanupFailedVRegs();
+  void cleanupFailedVReg(Register FailedVReg, MCRegister PhysReg,
+                         SmallVectorImpl<Register> &SplitRegs);
 
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;

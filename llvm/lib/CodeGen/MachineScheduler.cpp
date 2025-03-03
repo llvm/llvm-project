@@ -90,7 +90,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-cl::opt<MISched::Direction> PostRADirection(
+static cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -102,9 +102,9 @@ cl::opt<MISched::Direction> PostRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional post reg-alloc list scheduling")));
 
-cl::opt<bool>
-DumpCriticalPathLength("misched-dcpl", cl::Hidden,
-                       cl::desc("Print critical path length to stdout"));
+static cl::opt<bool>
+    DumpCriticalPathLength("misched-dcpl", cl::Hidden,
+                           cl::desc("Print critical path length to stdout"));
 
 cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
@@ -779,8 +779,11 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // it. Perhaps it still needs to be bundled.
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
-      // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      // Skip empty scheduling regions but include single-MI regions; we want
+      // those to be scheduled so that backends which move MIs across regions
+      // during scheduling can reason about and schedule those regions
+      // correctly.
+      if (I == RegionEnd) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();

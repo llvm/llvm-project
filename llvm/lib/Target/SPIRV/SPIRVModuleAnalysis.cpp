@@ -319,7 +319,6 @@ void SPIRVModuleAnalysis::visitDecl(
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-  DenseSet<Register> Deps;
 
   // Process each operand of the instruction to resolve dependencies
   for (const MachineOperand &MO : MI.operands()) {

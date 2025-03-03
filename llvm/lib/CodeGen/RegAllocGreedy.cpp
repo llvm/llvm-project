@@ -443,7 +443,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
 
   // The virtual register number is a tie breaker for same-sized ranges.
   // Give lower vreg numbers higher priority to assign them first.
-  CurQueue.push(std::make_pair(Ret, ~Reg));
+  CurQueue.push(std::make_pair(Ret, ~Reg.id()));
 }
 
 unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
@@ -2927,7 +2927,6 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before post optimization", &errs());
   postOptimization();
-  cleanupFailedVRegs();
   reportStats();
 
   releaseMemory();
