@@ -814,7 +814,7 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   return VNI->def;
 }
 
-static bool hasTiedUseOf(MachineInstr &MI, unsigned Reg) {
+static bool hasTiedUseOf(MachineInstr &MI, Register Reg) {
   return any_of(MI.defs(), [Reg](const MachineOperand &MO) {
     return MO.isReg() && MO.isTied() && MO.getReg() == Reg;
   });
@@ -1405,7 +1405,8 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     assert(LI.hasSubRanges());
 
     LiveIntervalCalc SubLIC;
-    Register Reg = EP.MO.getReg(), Sub = EP.MO.getSubReg();
+    Register Reg = EP.MO.getReg();
+    unsigned Sub = EP.MO.getSubReg();
     LaneBitmask LM = Sub != 0 ? TRI.getSubRegIndexLaneMask(Sub)
                               : MRI.getMaxLaneMaskForVReg(Reg);
     for (LiveInterval::SubRange &S : LI.subranges()) {

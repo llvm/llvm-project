@@ -721,7 +721,7 @@ func.func @reduce_sum_constant() -> tensor<2x3x1x5xi32> {
     // CHECK:         return %[[VAL_0]] : tensor<1x3xi32>
 
     %const = "tosa.const"() <{value = dense<[[1,2,3], [4,5,6]]> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
-    %0 = tosa.reduce_prod %const {axis = 0 : i32} : (tensor<2x3xi32>) -> tensor<1x3xi32>
+    %0 = tosa.reduce_product %const {axis = 0 : i32} : (tensor<2x3xi32>) -> tensor<1x3xi32>
     return %0 : tensor<1x3xi32>
   }
 
@@ -734,7 +734,7 @@ func.func @reduce_sum_constant() -> tensor<2x3x1x5xi32> {
   // CHECK:         }
 
     %const = "tosa.const"() <{value = dense<[[1,2,3], [4,5,6]]> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
-    %0 = tosa.reduce_prod %const {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x1xi32>
+    %0 = tosa.reduce_product %const {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x1xi32>
     return %0 : tensor<2x1xi32>
   }
 
@@ -746,7 +746,7 @@ func.func @reduce_prod_constant() -> tensor<3x1xi32> {
   // CHECK:           return %[[VAL_0]] : tensor<3x1xi32>
   // CHECK:         }
   %const = "tosa.const"() <{value = dense<[[1, 2, 3], [4, 5, 6], [7, 8, 9]]> : tensor<3x3xi32>}> : () -> tensor<3x3xi32>
-  %0 = tosa.reduce_prod %const {axis = 1 : i32} : (tensor<3x3xi32>) -> tensor<3x1xi32>
+  %0 = tosa.reduce_product %const {axis = 1 : i32} : (tensor<3x3xi32>) -> tensor<3x1xi32>
   return %0 : tensor<3x1xi32>
 }
 
@@ -758,7 +758,7 @@ func.func @reduce_prod_constant() -> tensor<2x1x4xi32> {
   // CHECK:           return %[[VAL_0]] : tensor<2x1x4xi32>
   // CHECK:         }
   %const = "tosa.const"() <{value = dense<[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], [[13, 14, 15, 16], [17, 18, 19, 20], [21, 22, 23, 24]]]> : tensor<2x3x4xi32>}> : () -> tensor<2x3x4xi32>
-  %0 = tosa.reduce_prod %const {axis = 1 : i32} : (tensor<2x3x4xi32>) -> tensor<2x1x4xi32>
+  %0 = tosa.reduce_product %const {axis = 1 : i32} : (tensor<2x3x4xi32>) -> tensor<2x1x4xi32>
   return %0 : tensor<2x1x4xi32>
 }
 
@@ -770,7 +770,7 @@ func.func @reduce_prod_constant() -> tensor<1x3x3xi32> {
   // CHECK:           return %[[VAL_0]] : tensor<1x3x3xi32>
   // CHECK:         }
   %const = "tosa.const"() <{value = dense<[[[1, 2, 3], [4, 5, 6], [7, 8, 9]], [[10, 11, 12], [13, 14, 15], [16, 17, 18]], [[19, 20, 21], [22, 23, 24], [25, 26, 27]]]> : tensor<3x3x3xi32>}> : () -> tensor<3x3x3xi32>
-  %0 = tosa.reduce_prod %const {axis = 0 : i32} : (tensor<3x3x3xi32>) -> tensor<1x3x3xi32>
+  %0 = tosa.reduce_product %const {axis = 0 : i32} : (tensor<3x3x3xi32>) -> tensor<1x3x3xi32>
   return %0 : tensor<1x3x3xi32>
 }
 
@@ -782,7 +782,7 @@ func.func @reduce_prod_constant() -> tensor<2x2x2x1xi32> {
   // CHECK:           return %[[VAL_0]] : tensor<2x2x2x1xi32>
   // CHECK:         }
   %const = "tosa.const"() <{value = dense<[[[[1, 2], [3, 4]], [[5, 6], [7, 8]]], [[[9, 10], [11, 12]], [[13, 14], [15, 16]]]]> : tensor<2x2x2x2xi32>}> : () -> tensor<2x2x2x2xi32>
-  %0 = tosa.reduce_prod %const {axis = 3 : i32} : (tensor<2x2x2x2xi32>) -> tensor<2x2x2x1xi32>
+  %0 = tosa.reduce_product %const {axis = 3 : i32} : (tensor<2x2x2x2xi32>) -> tensor<2x2x2x1xi32>
   return %0 : tensor<2x2x2x1xi32>
 }
 
@@ -794,7 +794,7 @@ func.func @reduce_prod_constant() -> tensor<1x1x1xi32> {
   // CHECK:           return %[[VAL_0]] : tensor<1x1x1xi32>
   // CHECK:         }
   %const = "tosa.const"() <{value = dense<[[[42]]]> : tensor<1x1x1xi32>}> : () -> tensor<1x1x1xi32>
-  %0 = tosa.reduce_prod %const {axis = 0 : i32} : (tensor<1x1x1xi32>) -> tensor<1x1x1xi32>
+  %0 = tosa.reduce_product %const {axis = 0 : i32} : (tensor<1x1x1xi32>) -> tensor<1x1x1xi32>
   return %0 : tensor<1x1x1xi32>
 }
 
