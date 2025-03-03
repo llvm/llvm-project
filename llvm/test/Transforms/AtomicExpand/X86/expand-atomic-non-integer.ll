@@ -151,3 +151,68 @@ define void @pointer_cmpxchg_expand6(ptr addrspace(1) %ptr,
   ret void
 }
 
+define <2 x ptr> @atomic_vec2_ptr_align(ptr %x) nounwind {
+; CHECK-LABEL: define <2 x ptr> @atomic_vec2_ptr_align(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[X]], i32 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i128 [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i64> [[TMP6]] to <2 x ptr>
+; CHECK-NEXT:    ret <2 x ptr> [[TMP7]]
+;
+  %ret = load atomic <2 x ptr>, ptr %x acquire, align 16
+  ret <2 x ptr> %ret
+}
+
+define <4 x ptr addrspace(270)> @atomic_vec4_ptr_align(ptr %x) nounwind {
+; CHECK-LABEL: define <4 x ptr addrspace(270)> @atomic_vec4_ptr_align(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[X]], i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <4 x i32> [[TMP2]] to <4 x ptr addrspace(270)>
+; CHECK-NEXT:    ret <4 x ptr addrspace(270)> [[TMP3]]
+;
+  %ret = load atomic <4 x ptr addrspace(270)>, ptr %x acquire, align 16
+  ret <4 x ptr addrspace(270)> %ret
+}
+
+define <2 x i16> @atomic_vec2_i16(ptr %x) nounwind {
+; CHECK-LABEL: define <2 x i16> @atomic_vec2_i16(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = load atomic <2 x i16>, ptr [[X]] acquire, align 8
+; CHECK-NEXT:    ret <2 x i16> [[RET]]
+;
+  %ret = load atomic <2 x i16>, ptr %x acquire, align 8
+  ret <2 x i16> %ret
+}
+
+define <2 x half> @atomic_vec2_half(ptr %x) nounwind {
+; CHECK-LABEL: define <2 x half> @atomic_vec2_half(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = load atomic <2 x half>, ptr [[X]] acquire, align 8
+; CHECK-NEXT:    ret <2 x half> [[RET]]
+;
+  %ret = load atomic <2 x half>, ptr %x acquire, align 8
+  ret <2 x half> %ret
+}
+
+define <4 x i32> @atomic_vec4_i32(ptr %x) nounwind {
+; CHECK-LABEL: define <4 x i32> @atomic_vec4_i32(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[X]], i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %ret = load atomic <4 x i32>, ptr %x acquire, align 16
+  ret <4 x i32> %ret
+}
+
+define <4 x float> @atomic_vec4_float(ptr %x) nounwind {
+; CHECK-LABEL: define <4 x float> @atomic_vec4_float(
+; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[X]], i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
+;
+  %ret = load atomic <4 x float>, ptr %x acquire, align 16
+  ret <4 x float> %ret
+}
