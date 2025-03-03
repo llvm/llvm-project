@@ -201,6 +201,7 @@ enum : unsigned {
   WASM_DYLINK_NEEDED = 0x2,
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
+  WASM_DYLINK_RUNTIME_PATH = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -294,6 +295,7 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library dependencies
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct WasmProducerInfo {

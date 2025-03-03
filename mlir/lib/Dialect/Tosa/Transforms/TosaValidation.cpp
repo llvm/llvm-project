@@ -56,15 +56,6 @@ static LogicalResult checkConstantOperandPad(Operation *op) {
   return success();
 }
 
-static LogicalResult checkConstantOperandTranspose(Operation *op) {
-  if (auto transposeOp = dyn_cast<tosa::TransposeOp>(op)) {
-    DenseElementsAttr perms;
-    if (!matchPattern(transposeOp.getPerms(), m_Constant(&perms)))
-      return op->emitOpError("perms of transpose is not constant");
-  }
-  return success();
-}
-
 struct TosaLevel {
   int32_t MAX_RANK = 0;
   int32_t MAX_KERNEL = 0;
@@ -118,7 +109,6 @@ public:
 private:
   void populateConstantOperandChecks() {
     constCheckers.emplace_back(checkConstantOperandPad);
-    constCheckers.emplace_back(checkConstantOperandTranspose);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v,
@@ -230,7 +220,7 @@ private:
     CHECK_RANKS_FOR(ReduceAny);
     CHECK_RANKS_FOR(ReduceMax);
     CHECK_RANKS_FOR(ReduceMin);
-    CHECK_RANKS_FOR(ReduceProd);
+    CHECK_RANKS_FOR(ReduceProduct);
     CHECK_RANKS_FOR(ReduceSum);
     // all data layout operators:
     CHECK_RANKS_FOR(Concat);
@@ -425,7 +415,7 @@ private:
         } else {
           llvm::errs() << "unknown TOSA extension name passed in: " << ext
                        << ", supported extension are int16, int4, bf16, "
-                       << "fp8e4m3, fp8e5m2, fft, and variable\n";
+                       << "fp8e4m3, fp8e5m2, fft, variable and controlflow\n";
           return signalPassFailure();
         }
       }

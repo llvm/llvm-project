@@ -51,7 +51,6 @@ math/fma.cl
 ../../generic/lib/math/clc_hypot.cl
 ../../generic/lib/math/hypot.cl
 ../../generic/lib/math/ilogb.cl
-../../generic/lib/math/clc_ldexp.cl
 ../../generic/lib/math/ldexp.cl
 ../../generic/lib/math/lgamma.cl
 ../../generic/lib/math/lgamma_r.cl

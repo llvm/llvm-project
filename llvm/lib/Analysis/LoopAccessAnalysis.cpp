@@ -1362,8 +1362,10 @@ void AccessAnalysis::processMemAccesses() {
 
     bool SetHasWrite = false;
 
-    // Map of pointers to last access encountered.
-    typedef DenseMap<const Value*, MemAccessInfo> UnderlyingObjToAccessMap;
+    // Map of (pointer to underlying objects, accessed address space) to last
+    // access encountered.
+    typedef DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>
+        UnderlyingObjToAccessMap;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
@@ -1443,8 +1445,10 @@ void AccessAnalysis::processMemAccesses() {
                     UnderlyingObj->getType()->getPointerAddressSpace()))
               continue;
 
-            auto [It, Inserted] =
-                ObjToLastAccess.try_emplace(UnderlyingObj, Access);
+            auto [It, Inserted] = ObjToLastAccess.try_emplace(
+                {UnderlyingObj,
+                 cast<PointerType>(Ptr->getType())->getAddressSpace()},
+                Access);
             if (!Inserted) {
               DepCands.unionSets(Access, It->second);
               It->second = Access;
@@ -1737,7 +1741,8 @@ bool MemoryDepChecker::Dependence::isForward() const {
 }
 
 bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
-                                                    uint64_t TypeByteSize) {
+                                                    uint64_t TypeByteSize,
+                                                    unsigned CommonStride) {
   // If loads occur at a distance that is not a multiple of a feasible vector
   // factor store-load forwarding does not take place.
   // Positive dependences might cause troubles because vectorizing them might
@@ -1774,12 +1779,17 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     return true;
   }
 
-  if (MaxVFWithoutSLForwardIssuesPowerOf2 <
+  if (CommonStride &&
+      MaxVFWithoutSLForwardIssuesPowerOf2 <
           MaxStoreLoadForwardSafeVF.value_or(
               std::numeric_limits<uint64_t>::max()) &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
-          VectorizerParams::MaxVectorWidth * TypeByteSize)
-    MinDepDistBytes = MaxVFWithoutSLForwardIssuesPowerOf2;
+          VectorizerParams::MaxVectorWidth * TypeByteSize) {
+    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
+    uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+    MaxStoreLoadForwardSafeVF =
+        std::min(MaxStoreLoadForwardSafeVF.value_or(MaxVFInBits), MaxVFInBits);
+  }
   return false;
 }
 
@@ -2227,21 +2237,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
-  uint64_t MinDepDistBytesOld = MinDepDistBytes;
-  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
-      couldPreventStoreLoadForward(MinDistance, TypeByteSize)) {
-    // Sanity check that we didn't update MinDepDistBytes when calling
-    // couldPreventStoreLoadForward
-    assert(MinDepDistBytes == MinDepDistBytesOld &&
-           "An update to MinDepDistBytes requires an update to "
-           "MaxSafeVectorWidthInBits");
-    (void)MinDepDistBytesOld;
-    return Dependence::BackwardVectorizableButPreventsForwarding;
-  }
-
-  // An update to MinDepDistBytes requires an update to
-  // MaxStoreLoadForwardSafeVF/MaxSafeVectorWidthInBits since there is a
-  // backwards dependency.
   uint64_t MaxVF = MinDepDistBytes / *CommonStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
@@ -2254,11 +2249,12 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
 
-  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist)
-    MaxStoreLoadForwardSafeVF =
-        std::min(MaxStoreLoadForwardSafeVF.value_or(MaxVFInBits), MaxVFInBits);
-  else
-    MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
+  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist) {
+    if (couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
+      return Dependence::BackwardVectorizableButPreventsForwarding;
+  }
+  MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
+
   return Dependence::BackwardVectorizable;
 }
 

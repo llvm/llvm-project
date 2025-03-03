@@ -21,12 +21,15 @@ class ConversionTarget;
 namespace amdgpu {
 
 #define GEN_PASS_DECL_AMDGPUEMULATEATOMICSPASS
+#define GEN_PASS_DECL_AMDGPURESOLVESTRIDEDMETADATAPASS
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
 
 void populateAmdgpuEmulateAtomicsPatterns(ConversionTarget &target,
                                           RewritePatternSet &patterns,
                                           Chipset chipset);
+
+void populateAmdgpuResolveStridedMetadataPatterns(RewritePatternSet &patterns);
 } // namespace amdgpu
 } // namespace mlir
 

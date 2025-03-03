@@ -310,8 +310,8 @@ private:
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
-  /// Maximum number of elements (power-of-2 and non-power-of-2), which do not
-  /// prevent store-load forwarding and safe to operate simultaneously.
+  /// Maximum power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
   std::optional<uint64_t> MaxStoreLoadForwardSafeVF;
 
   /// If we see a non-constant dependence distance we can still try to
@@ -367,7 +367,8 @@ private:
   ///
   /// \return false if we shouldn't vectorize at all or avoid larger
   /// vectorization factors by limiting MinDepDistBytes.
-  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
+  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize,
+                                    unsigned CommonStride = 0);
 
   /// Updates the current safety status with \p S. We can go from Safe to
   /// either PossiblySafeWithRtChecks or Unsafe and from
