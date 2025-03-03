@@ -456,6 +456,26 @@ static bool isSplitEdge(const MachineBasicBlock *MBB) {
   return true;
 }
 
+static const TargetRegisterClass *
+getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
+                            const TargetRegisterClass *DstRC,
+                            const TargetRegisterClass *SrcRC, unsigned DstSub,
+                            const MachineFunction &MF) {
+
+  const TargetRegisterClass *LargerSrcRC =
+      TRI.getLargestLegalSuperClass(SrcRC, MF);
+  const TargetRegisterClass *NewSuperRC =
+      TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
+
+  if (NewSuperRC) {
+    const TargetRegisterClass *Rematch =
+        TRI.getMatchingSuperRegClass(NewSuperRC, SrcRC, DstSub);
+    return Rematch;
+  }
+
+  return nullptr;
+}
+
 bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   SrcReg = DstReg = Register();
   SrcIdx = DstIdx = 0;
@@ -515,35 +535,7 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
-
-      //const TargetRegisterClass *LargerDstRC = TRI.getLargestLegalSuperClass(DstRC, *MF);
-
-      const TargetRegisterClass *LargerSrcRC = TRI.getLargestLegalSuperClass(SrcRC, *MF);
-      NewRC = TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
-
-      if (NewRC) {
-        // FIXME: Really need getLargestLegalSuperClassWithSubReg
-        if (!TRI.getMatchingSuperRegClass(NewRC, SrcRC, DstSub))
-          NewRC = nullptr;
-
-        //NewRC = TRI.getSubClassWithSubReg(NewRC, DstSub);
-      }
-
-
-
-      if (!NewRC && false) {
-        const TargetRegisterClass *LargerDstRC = TRI.getLargestLegalSuperClass(DstRC, *MF);
-        const TargetRegisterClass *LargerSrcRC = TRI.getLargestLegalSuperClass(SrcRC, *MF);
-        const TargetRegisterClass *LargerDstMatchRC =
-          TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC,
-                                       DstSub);
-
-
-
-        //if (LargerDstMatchRC && const_cast<MachineRegisterInfo&>(MRI).constrainRegClass(Src, LargerSrcRC))
-        NewRC = LargerDstMatchRC;
-      }
-
+      NewRC = getCommonSubClassWithSubReg(TRI, DstRC, SrcRC, DstSub, *MF);
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
