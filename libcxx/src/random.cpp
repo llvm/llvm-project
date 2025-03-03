@@ -37,6 +37,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 #if defined(_LIBCPP_USING_GETENTROPY)
 
@@ -178,4 +179,5 @@ double random_device::entropy() const noexcept {
 #endif
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

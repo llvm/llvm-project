@@ -153,6 +153,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
   mutex __mut_;
   condition_variable __gate1_;
@@ -181,6 +182,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
   //     typedef implementation-defined native_handle_type; // See 30.2.3
   //     native_handle_type native_handle(); // See 30.2.3
 };
+_LIBCPP_END_ABI_SENSITIVE
 
 #      if _LIBCPP_STD_VER >= 17
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_mutex")) shared_mutex {
@@ -221,6 +223,7 @@ public:
 };
 #      endif
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 class _LIBCPP_EXPORTED_FROM_ABI
 _LIBCPP_THREAD_SAFETY_ANNOTATION(__capability__("shared_timed_mutex")) shared_timed_mutex {
   __shared_mutex_base __base_;
@@ -308,6 +311,7 @@ bool shared_timed_mutex::try_lock_shared_until(const chrono::time_point<_Clock, 
   __base_.__state_ |= __num_readers;
   return true;
 }
+_LIBCPP_END_ABI_SENSITIVE
 
 template <class _Mutex>
 class shared_lock {

@@ -39,6 +39,7 @@ namespace __adl_only {
 void make_error_code() = delete;
 } // namespace __adl_only
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 class _LIBCPP_EXPORTED_FROM_ABI error_code {
   int __val_;
   const error_category* __cat_;
@@ -83,6 +84,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __val_ != 0; }
 };
+_LIBCPP_END_ABI_SENSITIVE
 
 inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(errc __e) _NOEXCEPT {
   return error_code(static_cast<int>(__e), generic_category());

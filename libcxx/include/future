@@ -420,6 +420,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 // enum class future_errc
 _LIBCPP_DECLARE_STRONG_ENUM(future_errc){
@@ -2067,6 +2068,7 @@ inline shared_future<_Rp&> future<_Rp&>::share() _NOEXCEPT {
 
 inline shared_future<void> future<void>::share() _NOEXCEPT { return shared_future<void>(std::move(*this)); }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

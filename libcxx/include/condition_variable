@@ -346,7 +346,9 @@ bool condition_variable_any::wait_for(
 
 #    endif // _LIBCPP_STD_VER >= 20
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 _LIBCPP_EXPORTED_FROM_ABI void notify_all_at_thread_exit(condition_variable&, unique_lock<mutex>);
+_LIBCPP_END_ABI_SENSITIVE
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -99,7 +99,9 @@ public:
 
 // The LLVM C library provides this with conflicting `noexcept` attributes.
 #if !defined(_LIBCPP_MSVCRT_LIKE) && !defined(__LLVM_LIBC__)
+_LIBCPP_BEGIN_ABI_SENSITIVE
 extern "C" double lgamma_r(double, int*);
+_LIBCPP_END_ABI_SENSITIVE
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {

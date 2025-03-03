@@ -75,6 +75,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 using detail::capture_errno;
 using detail::ErrorHandler;
@@ -1083,4 +1084,5 @@ path __weakly_canonical(const path& p, error_code* ec) {
   return result.lexically_normal();
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_FILESYSTEM

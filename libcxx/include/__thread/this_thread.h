@@ -32,7 +32,9 @@ namespace this_thread {
 
 #if _LIBCPP_HAS_THREADS
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 _LIBCPP_EXPORTED_FROM_ABI void sleep_for(const chrono::nanoseconds& __ns);
+_LIBCPP_END_ABI_SENSITIVE
 
 template <class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI void sleep_for(const chrono::duration<_Rep, _Period>& __d) {

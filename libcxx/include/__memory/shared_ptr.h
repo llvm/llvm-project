@@ -72,6 +72,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr : public std::exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_weak_ptr() _NOEXCEPT                               = default;
@@ -80,6 +81,7 @@ public:
   ~bad_weak_ptr() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };
+_LIBCPP_END_ABI_SENSITIVE
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_weak_ptr() {
 #if _LIBCPP_HAS_EXCEPTIONS
@@ -1476,6 +1478,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
 #if _LIBCPP_HAS_THREADS
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 class _LIBCPP_EXPORTED_FROM_ABI __sp_mut {
   void* __lx_;
 
@@ -1492,6 +1495,7 @@ private:
 };
 
 _LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
+_LIBCPP_END_ABI_SENSITIVE
 
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const shared_ptr<_Tp>*) {

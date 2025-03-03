@@ -148,6 +148,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 class _LIBCPP_DEPRECATED _LIBCPP_EXPORTED_FROM_ABI strstreambuf : public streambuf {
 public:
@@ -345,6 +346,7 @@ public:
 private:
   strstreambuf __sb_; // exposition only
 };
+_LIBCPP_END_ABI_SENSITIVE
 
 _LIBCPP_END_NAMESPACE_STD
 
