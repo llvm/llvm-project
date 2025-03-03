@@ -31,11 +31,11 @@
 ; CHECK:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
 ; CHECK:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
 ; CHECK:   f                                - 'F' (Single-Precision Floating-Point).
-; CHECK:   fast-vrgather                    - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK:   h                                - 'H' (Hypervisor).
 ; CHECK:   i                                - 'I' (Base Integer Instruction Set).
 ; CHECK:   ld-add-fusion                    - Enable LD+ADD macrofusion.
+; CHECK:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
 ; CHECK:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK:   mips-p8700                       - MIPS p8700 processor.
