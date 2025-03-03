@@ -3998,26 +3998,33 @@ void DistinguishabilityHelper::Check(const Scope &scope) {
       const auto &[ultimate, procInfo]{*iter1};
       const auto &[kind, proc]{procInfo};
       for (auto iter2{iter1}; ++iter2 != info.end();) {
-        if (&*ultimate == &*iter2->first) {
-          continue; // ok, actually the same procedure
+        const auto &[ultimate2, procInfo2]{*iter2};
+        if (&*ultimate == &*ultimate2) {
+          continue; // ok, actually the same procedure/binding
         } else if (const auto *binding1{
                        ultimate->detailsIf<ProcBindingDetails>()}) {
           if (const auto *binding2{
-                  iter2->first->detailsIf<ProcBindingDetails>()}) {
+                  ultimate2->detailsIf<ProcBindingDetails>()}) {
             if (&binding1->symbol().GetUltimate() ==
                 &binding2->symbol().GetUltimate()) {
-              continue; // ok, bindings resolve identically
+              continue; // ok, (NOPASS) bindings resolve identically
+            } else if (ultimate->name() == ultimate2->name()) {
+              continue; // override, possibly of DEFERRED
             }
           }
+        } else if (ultimate->has<ProcBindingDetails>() &&
+            ultimate2->has<ProcBindingDetails>() &&
+            ultimate->name() == ultimate2->name()) {
+          continue; // override, possibly of DEFERRED
         }
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
         std::optional<bool> distinct{distinguishable(
-            context_.languageFeatures(), proc, iter2->second.procedure)};
+            context_.languageFeatures(), proc, procInfo2.procedure)};
         if (!distinct.value_or(false)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
-              *ultimate, *iter2->first, distinct.has_value());
+              *ultimate, *ultimate2, distinct.has_value());
         }
       }
     }
