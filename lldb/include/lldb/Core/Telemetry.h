@@ -45,7 +45,7 @@ namespace telemetry {
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
-  static const llvm::telemetry::KindType TargetInfo = 0b11001000;  
+  static const llvm::telemetry::KindType TargetInfo = 0b11001000;
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -82,14 +82,15 @@ struct ExitDescription {
 
 struct TargetInfo : public LLDBBaseTelemetryInfo {
   lldb::ModuleSP exec_mod;
-  Target *target_ptr;
 
   // The same as the executable-module's UUID.
   std::string target_uuid;
-  std::string executable_path;
-  size_t executable_size;
   std::string arch_name;
 
+  // If true, this entry was emitted at the beginning of an event (eg., before the executable laod). Otherwise, it was emitted at the end of an event (eg., after the module and any dependency were loaded.)
+  bool is_start_entry;
+
+  // Describes the exit of the executable module.
   std::optional<ExitDescription> exit_desc;
   TargetInfo() = default;
 
@@ -98,10 +99,10 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
   static bool classof(const TelemetryInfo *T) {
    // Subclasses of this is also acceptable
     return (T->getKind() & LLDBEntryKind::TargetInfo) ==
-           LLDBEntryKind::TargetInfo;    
-  }  
+           LLDBEntryKind::TargetInfo;
+  }
 };
-  
+
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
   std::string lldb_version;
 
@@ -143,10 +144,8 @@ public:
   virtual void AtMainExecutableLoadStart(TargetInfo * entry);
   /// Invoked at the end of the load.
   virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
-  
-  static TelemetryManager *GetInstance();
 
-  static TelemetryManager *GetInstanceIfEnabled();
+  static TelemetryManager *GetInstance();
 
 protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
@@ -166,39 +165,54 @@ private:
 template <typename Info> struct ScopedDispatcher {
   // The debugger pointer is optional because we may not have a debugger yet.
   // In that case, caller must set the debugger later.
-  ScopedDispatcher(llvm::unique_function<void(Info *info)> callback,
-                   Debugger *debugger = nullptr)
-      : m_callback(std::move(callback)) {
+  ScopedDispatcher(Debugger *debugger = nullptr) {
     // Start the timer.
     m_start_time = std::chrono::steady_clock::now();
-    m_info.debugger = debugger;
+    debugger = debugger;
+  }
+  ScopedDispatcher(llvm::unique_function<void(Info *info)> final_callback,
+                   Debugger *debugger = nullptr)
+      : m_final_callback(std::move(final_callback)) {
+    // Start the timer.
+    m_start_time = std::chrono::steady_clock::now();
+    debugger = debugger;
   }
 
-  void SetDebugger(Debugger *debugger) { m_info.debugger = debugger; }
+  void SetDebugger(Debugger *debugger) { debugger = debugger; }
+
+  void DispatchOnExit(llvm::unique_function<void(Info *info)> final_callback) {
+    // We probably should not be overriding previously set cb.
+    assert(!m_final_callback);
+    m_final_callback = std::move(final_callback);
+  }
+
+  void DispatchNow(llvm::unique_function<void(Info *info)> populate_fields_cb) {
+    TelemetryManager *manager = TelemetryManager::GetInstance();
+    if (!manager->GetConfig()->EnableTelemetry)
+      return;
+    Info info;
+    // Populate the common fields we know aboutl
+    info.start_time = m_start_time;
+    info.end_time = std::chrono::steady_clock::now();
+    info.debugger = debugger;
+    // The callback will set the rest.
+    populate_fields_cb(&info);
+    // And then we dispatch.
+    if (llvm::Error er = manager->dispatch(&info)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                     "Failed to dispatch entry of type: {0}", info.getKind());
+    }
+  }
 
   ~ScopedDispatcher() {
-    // If Telemetry is disabled (either at buildtime or runtime),
-    // then don't do anything.
-    TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
-    if (!manager)
-      return;
-
-    m_info.start_time = m_start_time;
-    // Populate common fields that we can only set now.
-    m_info.end_time = std::chrono::steady_clock::now();
-    // The callback will set the remaining fields.
-    m_callback(&m_info);
-    // And then we dispatch.
-    if (llvm::Error er = manager->dispatch(&m_info)) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                     "Failed to dispatch entry of type: {0}", m_info.getKind());
-    }
+    if (m_final_callback)
+      DispatchNow(std::move(m_final_callback));
   }
 
 private:
   SteadyTimePoint m_start_time;
-  llvm::unique_function<void(Info *info)> m_callback;
-  Info m_info;
+  llvm::unique_function<void(Info *info)> m_final_callback;
+  Debugger *debugger;
 };
 
 } // namespace telemetry

@@ -80,9 +80,8 @@ void TargetInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
   serializer.write("target_uuid", target_uuid);
-  serializer.write("executable_path", executable_path);
-  serializer.write("executable_size", executable_size);
   serializer.write("arch_name", arch_name);
+  serializer.write("is_start_entry", is_start_entry);
   if (exit_desc.has_value()) {
     serializer.write("exit_code", exit_desc->exit_code);
     serializer.write("exit_desc", exit_desc->description);
@@ -109,61 +108,48 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
     lldb_entry->debugger_id = debugger->GetID();
   return llvm::Error::success();
 }
-  
-void TelemetryManager::AtMainExecutableLoadStart(TargetInfo *entry) {
-  if (entry->exec_mod != nullptr) {
-    entry->target_uuid = entry->exec_mod->GetUUID().GetAsString();
-    entry->executalbe_path = entry->exec_mod->GetFileSpec().GetPathAsConstString().GetCString();
-    if (auto err = llvm::sys::fs::file_size(
-            entry->exec_mod->GetFileSpec().GetPath(), entry->binary_size)) {
-      // If there was error obtaining it, just reset the size to 0.
-      // Maybe log the error too?
-      entry->binary_size = 0;
-    }
-    entry->arch_name = entry->exec_mod->GetArchitecture().GetArchitectureName();
-  }
-
-  if (llvm::Error er = dispatch(entry)) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                   "Failed to dispatch entry at main executable load start: {0}");
-  }
-}
-
-void TelemetryManager::AtMainExecutableLoadEnd(TargetInfo *entry) {
-    if (entry->exec_mod != nullptr) {
-      entry->target_uuid = entry->exec_mod->GetUUID().GetAsString();
-      // We don't need the rest of the data since they are already in the start entry.
-
-        if (llvm::Error er = dispatch(entry)) {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                         "Failed to dispatch entry at main executable load start: {0}");
-        }
-    }
-}
-
 
 const Config *TelemetryManager::GetConfig() { return m_config.get(); }
 
+class NoOpTelemetryManager : public TelemetryManager {
+public:
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  explicit NoOpTelemetryManager()
+      : TelemetryManager(std::make_unique<LLDBConfig>(
+            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
+
+  virtual llvm::StringRef GetInstanceName() const override {
+    return "NoOpTelemetryManager";
+  }
+
+  llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  static NoOpTelemetryManager *GetInstance() {
+    static std::unique_ptr<NoOpTelemetryManager> g_ins =
+        std::make_unique<NoOpTelemetryManager>();
+    return g_ins.get();
+  }
+};
+
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
-  if (!Config::BuildTimeEnableTelemetry)
-    return nullptr;
+  // If Telemetry is disabled or if there is no default instance, then use the
+  // NoOp manager. We use a dummy instance to avoid having to do nullchecks in
+  // various places.
+  if (!Config::BuildTimeEnableTelemetry || !g_instance)
+    return NoOpTelemetryManager::GetInstance();
   return g_instance.get();
 }
 
-TelemetryManager *TelemetryManager::GetInstanceIfEnabled() {
-  // Telemetry may be enabled at build time but disabled at runtime.
-  if (TelemetryManager *ins = TelemetryManager::GetInstance()) {
-    if (ins->GetConfig()->EnableTelemetry)
-      return ins;
-  }
-
-  return nullptr;
-}
-
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
-  if (Config::BuildTimeEnableTelemetry)
-    g_instance = std::move(manager);
+  g_instance = std::move(manager);
 }
 
 } // namespace telemetry
