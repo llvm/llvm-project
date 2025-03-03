@@ -695,6 +695,21 @@ class CFGBlock {
     void dump() const {
       dumpToStream(llvm::errs());
     }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      ID.AddPointer(Parent);
+      ID.AddInteger(Index);
+    }
+
+    int64_t getID() const {
+      if (Parent == nullptr || Parent->getParent() == nullptr) {
+        return 0;
+      }
+      return Parent->getParent()
+          ->getAllocator()
+          .template identifyKnownAlignedObject<CFGElement>(
+              &*(Parent->begin() + Index));
+    }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {

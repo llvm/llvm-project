@@ -25,7 +25,7 @@ void copy_on_heap(Node* n1) {
   Node* n2 = new Node(*n1);
 
   clang_analyzer_dump(n1); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<Node * n1>}}}
-  clang_analyzer_dump(n2); // expected-warning-re {{&HeapSymRegion{conj_${{[0-9]+}}{Node *, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}}}}}
+  clang_analyzer_dump(n2); // expected-warning-re {{&HeapSymRegion{conj_${{[0-9]+}}{Node *, LC{{[0-9]+}}, CFGElemRef{{[0-9]+}}, #{{[0-9]+}}}}}}
 
   clang_analyzer_dump(n1->ptr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<int * Element{SymRegion{reg_${{[0-9]+}}<Node * n1>},0 S64b,struct Node}.ptr>}}}
   clang_analyzer_dump(n2->ptr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<int * Element{SymRegion{reg_${{[0-9]+}}<Node * n1>},0 S64b,struct Node}.ptr>}}}

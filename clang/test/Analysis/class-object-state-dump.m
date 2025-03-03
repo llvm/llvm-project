@@ -28,8 +28,8 @@ void foo(id A, id B);
 
   clang_analyzer_printState();
   // CHECK:      "class_object_types": [
-  // CHECK-NEXT:   { "symbol": "conj_$[[#]]{Class, LC[[#]], S[[#]], #[[#]]}", "dyn_type": "Child", "sub_classable": true },
-  // CHECK-NEXT:   { "symbol": "conj_$[[#]]{Class, LC[[#]], S[[#]], #[[#]]}", "dyn_type": "Child", "sub_classable": true }
+  // CHECK-NEXT:   { "symbol": "conj_$[[#]]{Class, LC[[#]], CFGElemRef[[#]], #[[#]]}", "dyn_type": "Child", "sub_classable": true },
+  // CHECK-NEXT:   { "symbol": "conj_$[[#]]{Class, LC[[#]], CFGElemRef[[#]], #[[#]]}", "dyn_type": "Child", "sub_classable": true }
   // CHECK-NEXT: ]
 
   // Let's make sure that the information is not GC'd away.

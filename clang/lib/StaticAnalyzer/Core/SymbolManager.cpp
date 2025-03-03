@@ -81,12 +81,8 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
-  if (S)
-    os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
-  else
-    os << ", no stmt";
-  os << ", #" << Count << '}';
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID()
+     << ", CFGElemRef" << ElemRef.getID() << ", #" << Count << '}';
 }
 
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
