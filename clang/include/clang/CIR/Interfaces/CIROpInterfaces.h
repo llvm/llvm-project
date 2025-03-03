@@ -1,4 +1,4 @@
-//===- CIROpInterfaces.h - CIR Op Interfaces --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_CIR_OP_H_
-#define MLIR_INTERFACES_CIR_OP_H_
+#ifndef CLANG_CIR_INTERFACES_CIR_OP_H
+#define CLANG_CIR_INTERFACES_CIR_OP_H
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Operation.h"
@@ -19,11 +19,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
-namespace cir {} // namespace cir
-
 /// Include the generated interface declarations.
 #include "clang/CIR/Interfaces/CIROpInterfaces.h.inc"
 
-namespace cir {} // namespace cir
-
-#endif // MLIR_INTERFACES_CIR_OP_H_
+#endif // CLANG_CIR_INTERFACES_CIR_OP_H

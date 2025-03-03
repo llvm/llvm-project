@@ -59,7 +59,7 @@ unsigned _BitInt(48) ub48;
 // CHECK: cir.global external @ub48 : !cir.int<u, 48>
 
 bool boolfalse = false;
-// CHECK: cir.global @boolfalse = #false
+// CHECK: cir.global external @boolfalse = #false
 
 _Float16 f16;
 // CHECK: cir.global external @f16 : !cir.f16

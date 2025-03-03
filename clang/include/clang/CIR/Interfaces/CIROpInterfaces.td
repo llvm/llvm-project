@@ -6,52 +6,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_OP_INTERFACES
-#define MLIR_CIR_OP_INTERFACES
+#ifndef CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
+#define CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
 
 include "mlir/IR/OpBase.td"
 
 let cppNamespace = "::cir" in {
-  def CIRGlobalValueInterface
-      : OpInterface<"CIRGlobalValueInterface"> {
+  def CIRGlobalValueInterface : OpInterface<"CIRGlobalValueInterface"> {
 
-    let methods = [
-      InterfaceMethod<"",
-      "bool", "hasAvailableExternallyLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{ return false; }]
-      >,
-      InterfaceMethod<"",
-      "bool", "hasLocalLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{
+    let methods =
+        [InterfaceMethod<"", "bool", "hasAvailableExternallyLinkage", (ins),
+                         [{}],
+                         /*defaultImplementation=*/[{ return false; }]>,
+         InterfaceMethod<"", "bool", "hasLocalLinkage", (ins), [{}],
+                         /*defaultImplementation=*/[{
         return cir::isLocalLinkage($_op.getLinkage());
-      }]
-      >,
-      InterfaceMethod<"",
-      "bool", "hasExternalWeakLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{
+      }]>,
+         InterfaceMethod<"", "bool", "hasExternalWeakLinkage", (ins), [{}],
+                         /*defaultImplementation=*/[{
         return cir::isExternalWeakLinkage($_op.getLinkage());
-      }]
-      >,
-      InterfaceMethod<"",
-      "bool", "isExternalLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{
+      }]>,
+         InterfaceMethod<"", "bool", "isExternalLinkage", (ins), [{}],
+                         /*defaultImplementation=*/[{
         return cir::isExternalLinkage($_op.getLinkage());
-      }]
-      >,
-      InterfaceMethod<"",
-      "bool", "isDeclarationForLinker", (ins), [{}],
-      /*defaultImplementation=*/[{
+      }]>,
+         InterfaceMethod<"", "bool", "isDeclarationForLinker", (ins), [{}],
+                         /*defaultImplementation=*/[{
         if ($_op.hasAvailableExternallyLinkage())
           return true;
         return $_op.isDeclaration();
-      }]
-      >,
-      InterfaceMethod<"",
-      "void", "setDSOLocal", (ins "bool":$val), [{}],
-      /*defaultImplementation=*/[{
+      }]>,
+         InterfaceMethod<"", "void", "setDSOLocal", (ins "bool":$val), [{}],
+                         /*defaultImplementation=*/[{
         $_op.setDsolocal(val);
-      }]
-      >,
+      }]>,
     ];
     let extraClassDeclaration = [{
     bool canBenefitFromLocalAlias();
@@ -60,4 +48,4 @@ let cppNamespace = "::cir" in {
 
 } // namespace cir
 
-#endif // MLIR_CIR_OP_INTERFACES
+#endif // CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
