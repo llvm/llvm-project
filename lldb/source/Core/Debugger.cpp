@@ -1001,6 +1001,7 @@ void Debugger::Clear() {
     telemetry::ScopedDispatcher<telemetry::DebuggerInfo> helper(
         [this](lldb_private::telemetry::DebuggerInfo *info) {
           assert(this == info->debugger);
+          (void)this;
           info->is_exit_entry = true;
         },
         this);
