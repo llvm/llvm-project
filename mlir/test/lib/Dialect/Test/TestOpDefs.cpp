@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Verifier.h"
@@ -1264,6 +1265,10 @@ void TestBytecodeFallbackOp::setOriginalOperationName(StringRef name,
                                                       OperationState &state) {
   state.getOrAddProperties<Properties>().setOpname(
       StringAttr::get(state.getContext(), name));
+}
+
+StringRef TestBytecodeFallbackOp::getOriginalOperationName() {
+  return getProperties().getOpname().getValue();
 }
 
 LogicalResult

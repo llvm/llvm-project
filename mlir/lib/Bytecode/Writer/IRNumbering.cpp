@@ -419,7 +419,17 @@ void IRNumberingState::number(Region &region) {
 void IRNumberingState::number(Operation &op) {
   // Number the components of an operation that won't be numbered elsewhere
   // (e.g. we don't number operands, regions, or successors here).
-  number(op.getName());
+
+  OperationName opName = op.getName();
+  // For fallback ops, create a new operation name referencing the original op
+  // instead.
+  if (auto fallback = dyn_cast<FallbackBytecodeOpInterface>(op))
+    opName = OperationName((fallback->getDialect()->getNamespace() + "." +
+                            fallback.getOriginalOperationName())
+                               .str(),
+                           op.getContext());
+  number(opName);
+
   for (OpResult result : op.getResults()) {
     valueIDs.try_emplace(result, nextValueID++);
     number(result.getType());
