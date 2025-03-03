@@ -468,9 +468,11 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
       TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
 
   if (NewSuperRC) {
-    const TargetRegisterClass *Rematch =
-        TRI.getMatchingSuperRegClass(NewSuperRC, SrcRC, DstSub);
-    return Rematch;
+
+    return TRI.getSubClassWithSubReg(NewSuperRC, DstSub);
+    //const TargetRegisterClass *Rematch =
+    //TRI.getMatchingSuperRegClass(NewSuperRC, SrcRC, DstSub);
+    //return Rematch;
   }
 
   return nullptr;
