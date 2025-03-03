@@ -422,8 +422,9 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 }
 
 /// Returns "best known" trip count, which is either a valid positive trip count
-/// or std::nullopt, for the specified loop \p L as defined by the following
-/// procedure:
+/// or std::nullopt when an estimate cannot be made (including when the trip
+/// count would overflow), for the specified loop \p L as defined by the
+/// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.

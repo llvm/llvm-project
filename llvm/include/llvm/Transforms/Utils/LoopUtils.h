@@ -319,7 +319,7 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.
 /// Returns a valid positive trip count, or std::nullopt when a meaningful
-/// estimate cannot be made.
+/// estimate cannot be made (including when the trip count would overflow).
 std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
