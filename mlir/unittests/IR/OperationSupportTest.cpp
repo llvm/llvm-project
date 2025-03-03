@@ -245,7 +245,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   flags.printNameLocAsPrefix(true);
   llvm::raw_string_ostream os(str);
   op->print(os, flags);
-  ASSERT_STREQ(str.c_str(), "%my_named_loc = \"t.op\"() : () -> (i16)");
+  ASSERT_STREQ(str.c_str(), "%my_named_loc = \"t.op\"() : () -> i16\n");
 
   op->destroy();
 }
