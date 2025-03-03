@@ -294,7 +294,5 @@ accepted policy is:
     transformation a folder can.
 
 *   A canonicalization should always be implemented as a Folder if it fits
-    the "local" definition of a folder.
-
-*   If a canonicalization does not fit as a folder, it should be implemented
+    the "local" definition of a folder, otherwise it should be implemented
     as a `RewritePattern`.
