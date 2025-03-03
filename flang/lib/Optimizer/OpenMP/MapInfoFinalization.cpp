@@ -361,9 +361,8 @@ class MapInfoFinalizationPass
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
             /*varPtrPtr=*/mlir::Value{}, newMembers, newMembersAttr,
             /*bounds=*/mlir::SmallVector<mlir::Value>{},
-            builder.getIntegerAttr(
-                builder.getIntegerType(64, false),
-                getDescriptorMapType(MapType, target)),
+            builder.getIntegerAttr(builder.getIntegerType(64, false),
+                                   getDescriptorMapType(MapType, target)),
             /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
             op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
