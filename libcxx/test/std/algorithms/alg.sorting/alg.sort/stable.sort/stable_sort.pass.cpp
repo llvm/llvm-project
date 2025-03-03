@@ -20,6 +20,7 @@
 #include <iterator>
 #include <limits>
 #include <random>
+#include <type_traits>
 #include <vector>
 
 #include "count_new.h"
