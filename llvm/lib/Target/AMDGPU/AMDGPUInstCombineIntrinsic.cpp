@@ -499,7 +499,6 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
     return nullptr;
 
   const bool IsReadLane = (IID == Intrinsic::amdgcn_readlane);
-  const bool IsPermLane = (IID == Intrinsic::amdgcn_permlane64);
 
   // If this is a readlane, check that the second operand is a constant, or is
   // defined before Op so we know it's safe to move this intrinsic higher.
@@ -545,12 +544,8 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
     return DoIt(0, Remangled);
   }
 
-  // Don't hoist through a binary operator for permlane64. It doesn't
-  // achieve anything and we'd need to repeat the call on every operand.
-  //
-  // We can do it for read(first)lane if other operands are already scalar
-  // because then we don't need to repeat the call.
-  if (!IsPermLane && isa<BinaryOperator>(Op)) {
+  // We can also hoist through binary operators if the other operand is uniform.
+  if (isa<BinaryOperator>(Op)) {
     // FIXME: If we had access to UniformityInfo here we could just check
     // if the operand is uniform.
     if (isTriviallyUniform(Op->getOperandUse(0)))
