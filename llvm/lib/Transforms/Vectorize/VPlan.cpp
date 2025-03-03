@@ -223,7 +223,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
       TypeAnalysis(CanonicalIVTy) {}
 
-Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
+Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
     return Def->getLiveInIRValue();
 
@@ -248,7 +248,7 @@ Value *VPTransformState::get(VPValue *Def, const VPLane &Lane) {
   return Extract;
 }
 
-Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
+Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   if (NeedsScalar) {
     assert((VF.isScalar() || Def->isLiveIn() || hasVectorValue(Def) ||
             !vputils::onlyFirstLaneUsed(Def) ||
@@ -392,7 +392,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DIL);
 }
 
-void VPTransformState::packScalarIntoVectorizedValue(VPValue *Def,
+void VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
                                                      const VPLane &Lane) {
   Value *ScalarInst = get(Def, Lane);
   Value *WideValue = get(Def);

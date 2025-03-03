@@ -524,12 +524,6 @@ public:
   /// output streamer, if the target does not emit them immediately.
   virtual void flushPendingInstructions(MCStreamer &Out) {}
 
-  virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
-                                              AsmToken::TokenKind OperatorToken,
-                                              MCContext &Ctx) {
-    return nullptr;
-  }
-
   // For any initialization at the beginning of parsing.
   virtual void onBeginOfFile() {}
 
