@@ -330,7 +330,7 @@ SDKPathParsingTestData sdkPathParsingTestCases[] = {
          {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
           "/Path/To/SDKs/MacOSX11.3.Internal.sdk"},
      .expect_mismatch = false,
-     .expect_internal_sdk = false,
+     .expect_internal_sdk = true,
      .expect_sdk_path_pattern = "iPhoneOS14.1.Internal.sdk"},
 };
 
