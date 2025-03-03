@@ -4405,16 +4405,17 @@ private:
               DecrUnsched(I);
           // Handle a copy instruction dependencies.
           if (TE && TE->isAltOpCopy() && BundleMember->IsCopy) {
-            doForAllOpcodes(BundleMember->Inst, [BundleMember, &ReadyList](ScheduleData *CopyUse) {
-              if (BundleMember != CopyUse &&
-                  CopyUse->hasValidDependencies() &&
+            doForAllOpcodes(BundleMember->Inst, [BundleMember, &ReadyList](
+                                                    ScheduleData *CopyUse) {
+              if (BundleMember != CopyUse && CopyUse->hasValidDependencies() &&
                   CopyUse->incrementUnscheduledDeps(-1) == 0) {
                 ScheduleData *DepBundle = CopyUse->FirstInBundle;
                 assert(!DepBundle->IsScheduled &&
-                   "already scheduled bundle gets ready");
+                       "already scheduled bundle gets ready");
                 if (DepBundle->isReady()) {
                   ReadyList.insert(DepBundle);
-                  LLVM_DEBUG(dbgs() << "SLP:    gets ready (copyable): " << *DepBundle << "\n");
+                  LLVM_DEBUG(dbgs() << "SLP:    gets ready (copyable): "
+                                    << *DepBundle << "\n");
                 }
               }
             });
