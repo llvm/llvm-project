@@ -328,9 +328,10 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
   }];
 
   let arguments = (ins Variadic<IRDL_AttributeType>:$attributeValues,
-                        StrArrayAttr:$attributeValueNames);
+                        StrArrayAttr:$attributeValueNames,
+                        VariadicityArrayAttr:$variadicity);
   let assemblyFormat = [{
-    custom<AttributesOp>($attributeValues, $attributeValueNames) attr-dict
+    custom<AttributesOp>($attributeValues, $attributeValueNames, $variadicity) attr-dict
   }];
 
   let hasVerifier = true;
