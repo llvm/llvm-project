@@ -124,3 +124,33 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   return SectionName == ".text" || SectionName == ".data" ||
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
+
+void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
+  assert(VariantKindToName.empty() && "cannot initialize twice");
+  for (auto Desc : Descs) {
+    [[maybe_unused]] auto It =
+        VariantKindToName.try_emplace(Desc.Kind, Desc.Name);
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToVariantKind.try_emplace(Desc.Name.lower(), Desc.Kind);
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l"), VK_PPC_TLSGD, and VK_PPC_TLSLD.
+    assert(It2.second ||
+           (Desc.Name == "l" || Desc.Name == "tlsgd" || Desc.Name == "tlsld"));
+  }
+}
+
+StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
+  if (!VariantKindToName.empty())
+    return VariantKindToName.find(Kind)->second;
+  return MCSymbolRefExpr::getVariantKindName(
+      MCSymbolRefExpr::VariantKind(Kind));
+}
+
+uint32_t MCAsmInfo::getVariantKindForName(StringRef Name) const {
+  if (NameToVariantKind.empty())
+    return MCSymbolRefExpr::getVariantKindForName(Name);
+  auto It = NameToVariantKind.find(Name.lower());
+  if (It != NameToVariantKind.end())
+    return It->second;
+  return MCSymbolRefExpr::VK_Invalid;
+}
