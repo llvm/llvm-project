@@ -2,8 +2,8 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -passes=amdgpu-uniform-intrinsic-combine -S < %s | FileCheck %s -check-prefix=PASS-CHECK
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -passes=amdgpu-uniform-intrinsic-combine,early-cse,instcombine,simplifycfg -S < %s | FileCheck %s -check-prefix=DCE-CHECK
 
-define protected amdgpu_kernel void @trivial_waterfall(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall(
+define protected amdgpu_kernel void @trivial_waterfall_eq_zero(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero(
 ; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
 ; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
@@ -20,7 +20,7 @@ define protected amdgpu_kernel void @trivial_waterfall(ptr addrspace(1) %out) {
 ; PASS-CHECK:       [[EXIT]]:
 ; PASS-CHECK-NEXT:    ret void
 ;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall(
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero(
 ; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
 ; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -33,7 +33,285 @@ while:
   %done = phi i1 [ 0, %entry ], [ 1, %if ]
   %not_done = xor i1 %done, true
   %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
-  %is_done = icmp eq i64 %ballot, 0
+  %is_done = icmp eq i64 %ballot, 0 ; in this case is_done = !not_done
+  br i1 %is_done, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[NOT_DONE]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[NOT_DONE]], true
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 0, [[BALLOT]]
+; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %not_done = xor i1 %done, true
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
+  %is_done = icmp eq i64 0, %ballot ; in this case is_done = !not_done
+  br i1 %is_done, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_ne_one(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[DONE]], true
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 [[BALLOT]], 1
+; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[IF]], label %[[EXIT:.*]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp ne i64 %ballot, 1 ; in this case is_done = !done
+  br i1 %is_done, label %if, label %exit
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[DONE]], true
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 1, [[BALLOT]]
+; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[IF]], label %[[EXIT:.*]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp ne i64 1, %ballot ; in this case is_done = !done
+  br i1 %is_done, label %if, label %exit
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_eq_one(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 1
+; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp eq i64 %ballot, 1 ; in this case is_done = done
+  br i1 %is_done, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 1, [[BALLOT]]
+; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp eq i64 1, %ballot ; in this case is_done = done
+  br i1 %is_done, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_ne_zero(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 0, [[BALLOT]]
+; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp ne i64 0, %ballot ; in this case is_done = done
+  br i1 %is_done, label %exit, label %if
+
+if:
+  store i32 5, ptr addrspace(1) %out
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ 0, %entry ], [ 1, %if ]
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
+  %is_done = icmp ne i64 %ballot, 0 ; in this case is_done = done
   br i1 %is_done, label %exit, label %if
 
 if:
@@ -116,48 +394,6 @@ work:
 
 tail:
   %new_done = phi i1 [ true, %work ], [ false, %if ]
-  br label %while
-
-exit:
-  ret void
-}
-
-define protected amdgpu_kernel void @trivial_waterfall_swap_op(ptr addrspace(1) %out) {
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_swap_op(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
-; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
-; PASS-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
-; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[NOT_DONE]])
-; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[NOT_DONE]], true
-; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 0, [[BALLOT]]
-; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF]]
-; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    br label %[[WHILE]]
-; PASS-CHECK:       [[EXIT]]:
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_swap_op(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
-; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %done = phi i1 [ 0, %entry ], [ 1, %if ]
-  %not_done = xor i1 %done, true
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
-  %is_done = icmp eq i64 0, %ballot
-  br i1 %is_done, label %exit, label %if
-
-if:
-  store i32 5, ptr addrspace(1) %out
   br label %while
 
 exit:
