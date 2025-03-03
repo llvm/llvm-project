@@ -1478,16 +1478,20 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   if (Opcode == -1)
     return false;
 
-  MachineInstrBuilder ICmp =
-      BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg());
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers))
-    ICmp.addImm(0);
-  ICmp.add(I.getOperand(2));
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1_modifiers))
-    ICmp.addImm(0);
-  ICmp.add(I.getOperand(3));
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel))
-    ICmp.addImm(0); // op_sel
+  MachineInstrBuilder ICmp;
+  // t16 instructions
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers)) {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .addImm(0)
+               .add(I.getOperand(2))
+               .addImm(0)
+               .add(I.getOperand(3))
+               .addImm(0); // op_sel
+  } else {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .add(I.getOperand(2))
+               .add(I.getOperand(3));
+  }
 
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
