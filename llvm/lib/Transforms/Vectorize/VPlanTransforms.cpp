@@ -2105,7 +2105,6 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   if (WidenIVR->getNumOperands() == 5) {
     Inc = WidenIVR->getSplatVFValue();
     Prev = WidenIVR->getLastUnrolledPartOperand();
-    assert(Inc && Prev);
   } else {
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
