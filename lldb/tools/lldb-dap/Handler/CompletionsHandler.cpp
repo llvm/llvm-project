@@ -128,7 +128,8 @@ namespace lldb_dap {
 //   "interface", "module", "property", "unit", "value", "enum", "keyword",
 //   "snippet", "text", "color", "file", "reference", "customcolor" ]
 // }
-void CompletionsRequestHandler::operator()(const llvm::json::Object &request) {
+void CompletionsRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;

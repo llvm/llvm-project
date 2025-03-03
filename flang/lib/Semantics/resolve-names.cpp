@@ -1482,13 +1482,27 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpReductionInitializerProc &x) {
+    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
+    auto &name = std::get<parser::Name>(procDes.u);
+    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
+    if (!symbol) {
+      context().Say(name.source,
+          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          name.source);
+    }
+    return true;
+  }
+
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
     parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
         emptyList);
-    Walk(std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t));
+    auto &init =
+        std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t);
+    Walk(init);
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1741,7 +1755,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
-  BeginDeclTypeSpec();
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
@@ -1749,7 +1762,6 @@ void OmpVisitor::ProcessReductionSpecifier(
           &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
     }
   }
-  EndDeclTypeSpec();
   // Creating a new scope in case the combiner expression (or clauses) use
   // reerved identifiers, like "omp_in". This is a temporary solution until
   // we deal with these in a more thorough way.
@@ -6127,32 +6139,6 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
               "POINTER or ALLOCATABLE"_err_en_US);
         }
       }
-      // TODO: This would be more appropriate in CheckDerivedType()
-      if (auto it{FindCoarrayUltimateComponent(*derived)}) { // C748
-        std::string ultimateName{it.BuildResultDesignatorName()};
-        // Strip off the leading "%"
-        if (ultimateName.length() > 1) {
-          ultimateName.erase(0, 1);
-          if (attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "A component with a POINTER or ALLOCATABLE attribute may "
-                    "not "
-                    "be of a type with a coarray ultimate component (named "
-                    "'%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-          if (!arraySpec().empty() || !coarraySpec().empty()) {
-            evaluate::AttachDeclaration(
-                Say(name.source,
-                    "An array or coarray component may not be of a type with a "
-                    "coarray ultimate component (named '%s')"_err_en_US,
-                    ultimateName),
-                derived->typeSymbol());
-          }
-        }
-      }
     }
   }
   if (OkToAddComponent(name)) {
@@ -7294,17 +7280,20 @@ bool DeclarationVisitor::OkToAddComponent(
       std::optional<parser::MessageFixedText> msg;
       std::optional<common::UsageWarning> warning;
       if (context().HasError(*prev)) { // don't pile on
-      } else if (extends) {
-        msg = "Type cannot be extended as it has a component named"
-              " '%s'"_err_en_US;
       } else if (CheckAccessibleSymbol(currScope(), *prev)) {
         // inaccessible component -- redeclaration is ok
-        if (context().ShouldWarn(
-                common::UsageWarning::RedeclaredInaccessibleComponent)) {
+        if (extends) {
+          // The parent type has a component of same name, but it remains
+          // extensible outside its module since that component is PRIVATE.
+        } else if (context().ShouldWarn(
+                       common::UsageWarning::RedeclaredInaccessibleComponent)) {
           msg =
               "Component '%s' is inaccessibly declared in or as a parent of this derived type"_warn_en_US;
           warning = common::UsageWarning::RedeclaredInaccessibleComponent;
         }
+      } else if (extends) {
+        msg =
+            "Type cannot be extended as it has a component named '%s'"_err_en_US;
       } else if (prev->test(Symbol::Flag::ParentComp)) {
         msg =
             "'%s' is a parent type of this type and so cannot be a component"_err_en_US;
@@ -7771,6 +7760,7 @@ void ConstructVisitor::Post(const parser::TypeGuardStmt::Guard &x) {
       SetTypeFromAssociation(*symbol);
     } else if (const auto *type{GetDeclTypeSpec()}) {
       symbol->SetType(*type);
+      symbol->get<AssocEntityDetails>().set_isTypeGuard();
     }
     SetAttrsFromAssociation(*symbol);
   }
@@ -9887,6 +9877,21 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
           (IsDummy(symbol) || object->IsArray())) {
         // Implicitly set device attribute if none is set in device context.
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
+    }
+    // Main program local objects usually don't have an implied SAVE attribute,
+    // as one might think, but in the exceptional case of a derived type
+    // local object that contains a coarray, we have to mark it as an
+    // implied SAVE so that evaluate::IsSaved() will return true.
+    if (node.scope()->kind() == Scope::Kind::MainProgram) {
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (const DeclTypeSpec * type{object->type()}) {
+          if (const DerivedTypeSpec * derived{type->AsDerived()}) {
+            if (!IsSaved(symbol) && FindCoarrayPotentialComponent(*derived)) {
+              SetImplicitAttr(symbol, Attr::SAVE);
+            }
+          }
+        }
       }
     }
   }

@@ -31,15 +31,6 @@ func.func @unranked_add(%arg0 : tensor<10x10xf32> , %arg1 : tensor<10x10xf32>, %
 
 // -----
 
-// CHECK-LABEL: @rfft2d_with_non_float_type
-func.func @rfft2d_with_non_float_type(%arg0 : tensor<1x1x1xi32>) -> (tensor<1x1x1xi32>, tensor<1x1x1xi32>) {
-  // expected-error@+1 {{failed to legalize operation 'tosa.rfft2d'}}
-  %real, %imag = tosa.rfft2d %arg0 : (tensor<1x1x1xi32>) -> (tensor<1x1x1xi32>, tensor<1x1x1xi32>)
-  return %real, %imag : tensor<1x1x1xi32>, tensor<1x1x1xi32>
-}
-
-// -----
-
 // CHECK-LABEL: @rescale_unsupported_type
 func.func @rescale_unsupported_type(%arg0: tensor<13x21x3x!quant.uniform<u8:f32, 0.015655439347028732:127>>) -> tensor<13x21x3x!quant.uniform<i8:f32, 0.015655439347028732:-1>> {
   // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
@@ -53,4 +44,12 @@ func.func @test_add_2d_different_ranks(%arg0: tensor<3x4xf32>, %arg1: tensor<2x3
   // expected-error@+1 {{'tosa.add' op operands don't have matching ranks}}
   %0 = "tosa.add"(%arg0, %arg1) : (tensor<3x4xf32>, tensor<2x3x4xf32>) -> tensor<2x3x4xf32>
   return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+func.func @cast_unsupported_type(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3x!quant.uniform<i16:f32, 0.078431375324726104:128>> {
+  // expected-error@+1 {{failed to legalize operation 'tosa.cast'}}
+  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3x!quant.uniform<i16:f32, 0.078431375324726104:128>>
+  return %0 : tensor<13x21x3x!quant.uniform<i16:f32, 0.078431375324726104:128>>
 }

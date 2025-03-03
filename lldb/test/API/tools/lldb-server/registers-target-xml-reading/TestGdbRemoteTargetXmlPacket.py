@@ -24,7 +24,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
                 ),
                 {
                     "direction": "send",
-                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "regex": re.compile(r"^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
                     "capture": {1: "target_xml"},
                 },
             ],

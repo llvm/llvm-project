@@ -11,9 +11,11 @@
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -23,22 +25,28 @@
 #include <memory>
 #include <optional>
 #include <string>
+
 #include <unordered_map>
 #include <type_traits>
 #include <utility>
 #include <functional>
-#include <stack>
 
 namespace lldb_private {
 namespace telemetry {
 
+// We expect each (direct) subclass of LLDBTelemetryInfo to
+// have an LLDBEntryKind in the form 0b11xxxxxxxx
+// Specifically:
+//  - Length: 8 bits
+//  - First two bits (MSB) must be 11 - the common prefix
+//  - Last two bits (LSB) are reserved for grand-children of LLDBTelemetryInfo
+// If any of the subclass has descendents, those descendents
+// must have their LLDBEntryKind in the similar form (ie., share common prefix and differ by the last two bits)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
-  static const llvm::telemetry::KindType BaseInfo = 0b11000;
-  static const llvm::telemetry::KindType TargetInfo = 0b11010;
-  // There are other entries in between (added in separate PRs)
-  static const llvm::telemetry::KindType MiscInfo = 0b11110;
+  static const llvm::telemetry::KindType BaseInfo = 0b11000000;
+  static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
+  static const llvm::telemetry::KindType TargetInfo = 0b11001000;  
 };
-
 
 /// Defines a convenient type for timestamp of various events.
 using SteadyTimePoint = std::chrono::time_point<std::chrono::steady_clock,
@@ -50,6 +58,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   std::optional<SteadyTimePoint> end_time;
   // TBD: could add some memory stats here too?
 
+  lldb::user_id_t debugger_id = LLDB_INVALID_UID;
   Debugger *debugger;
 
   // For dyn_cast, isa, etc operations.
@@ -71,7 +80,6 @@ struct ExitDescription {
   std::string description;
 };
 
-
 struct TargetInfo : public LLDBBaseTelemetryInfo {
   lldb::ModuleSP exec_mod;
   Target *target_ptr;
@@ -88,9 +96,27 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
   llvm::telemetry::KindType getKind() const override { return LLDBEntryKind::TargetInfo; }
 
   static bool classof(const TelemetryInfo *T) {
-    if (T == nullptr)
-      return false;
-    return T->getKind() == LLDBEntryKind::TargetInfo;
+   // Subclasses of this is also acceptable
+    return (T->getKind() & LLDBEntryKind::TargetInfo) ==
+           LLDBEntryKind::TargetInfo;    
+  }  
+};
+  
+struct DebuggerInfo : public LLDBBaseTelemetryInfo {
+  std::string lldb_version;
+
+  bool is_exit_entry = false;
+
+  DebuggerInfo() = default;
+
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::DebuggerInfo;
+  }
+
+  static bool classof(const llvm::telemetry::TelemetryInfo *T) {
+    // Subclasses of this is also acceptable
+    return (T->getKind() & LLDBEntryKind::DebuggerInfo) ==
+           LLDBEntryKind::DebuggerInfo;
   }
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
@@ -105,6 +131,8 @@ public:
 
   const llvm::telemetry::Config *GetConfig();
 
+  virtual llvm::StringRef GetInstanceName() const = 0;
+
   /// The following methods are for reporting the load of an executable.
   /// One is invoked at the beginning of the process and the other at
   /// the end.
@@ -115,10 +143,10 @@ public:
   virtual void AtMainExecutableLoadStart(TargetInfo * entry);
   /// Invoked at the end of the load.
   virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
-
-  virtual llvm::StringRef GetInstanceName() const = 0;
-
+  
   static TelemetryManager *GetInstance();
+
+  static TelemetryManager *GetInstanceIfEnabled();
 
 protected:
   TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
@@ -128,9 +156,50 @@ protected:
 private:
   std::unique_ptr<llvm::telemetry::Config> m_config;
 
+  // Each instance of a TelemetryManager is assigned a unique ID.
+  const std::string m_id;
+
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
+/// Helper RAII class for collecting telemetry.
+template <typename Info> struct ScopedDispatcher {
+  // The debugger pointer is optional because we may not have a debugger yet.
+  // In that case, caller must set the debugger later.
+  ScopedDispatcher(llvm::unique_function<void(Info *info)> callback,
+                   Debugger *debugger = nullptr)
+      : m_callback(std::move(callback)) {
+    // Start the timer.
+    m_start_time = std::chrono::steady_clock::now();
+    m_info.debugger = debugger;
+  }
+
+  void SetDebugger(Debugger *debugger) { m_info.debugger = debugger; }
+
+  ~ScopedDispatcher() {
+    // If Telemetry is disabled (either at buildtime or runtime),
+    // then don't do anything.
+    TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
+    if (!manager)
+      return;
+
+    m_info.start_time = m_start_time;
+    // Populate common fields that we can only set now.
+    m_info.end_time = std::chrono::steady_clock::now();
+    // The callback will set the remaining fields.
+    m_callback(&m_info);
+    // And then we dispatch.
+    if (llvm::Error er = manager->dispatch(&m_info)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                     "Failed to dispatch entry of type: {0}", m_info.getKind());
+    }
+  }
+
+private:
+  SteadyTimePoint m_start_time;
+  llvm::unique_function<void(Info *info)> m_callback;
+  Info m_info;
+};
 
 } // namespace telemetry
 } // namespace lldb_private

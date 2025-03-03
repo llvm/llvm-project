@@ -63,7 +63,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   uint32_t LdsSize = 0;
   uint32_t EXCPEnable = 0;
 
-  const MCExpr *ComputePGMRSrc3GFX90A = nullptr;
+  const MCExpr *ComputePGMRSrc3 = nullptr;
 
   const MCExpr *NumVGPR = nullptr;
   const MCExpr *NumArchVGPR = nullptr;

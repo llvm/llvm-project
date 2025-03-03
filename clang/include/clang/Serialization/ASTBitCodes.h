@@ -1522,13 +1522,16 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_SPECIALIZATIONS,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_PARTIAL_SPECIALIZATIONS,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  // An OpenACCDeclareDecl record.
+  DECL_OPENACC_DECLARE,
+
+  DECL_LAST = DECL_OPENACC_DECLARE
 };
 
 /// Record codes for each kind of statement or expression.
