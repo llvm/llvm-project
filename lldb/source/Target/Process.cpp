@@ -1066,7 +1066,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
   Debugger *debugger = &(GetTarget().GetDebugger());
-  telemetry::ScopedDispatch<telemetry::TargetInfo> helper(debugger);
+  telemetry::ScopedDispatcher<telemetry::TargetInfo> helper(debugger);
   // Save the Module UUID since the Module might be gone by end of scope.
   std::string target_uuid =
       GetTarget().GetExecutableModule()->GetUUID().GetAsString();

@@ -106,6 +106,7 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
     return (T->getKind() & LLDBEntryKind::TargetInfo) ==
            LLDBEntryKind::TargetInfo;
   }
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
@@ -138,17 +139,6 @@ public:
   const llvm::telemetry::Config *GetConfig();
 
   virtual llvm::StringRef GetInstanceName() const = 0;
-
-  /// The following methods are for reporting the load of an executable.
-  /// One is invoked at the beginning of the process and the other at
-  /// the end.
-  /// This is done in two passes to avoid losing date in case of any error/crash
-  /// during the action.
-  ///
-  /// Invoked at the begining of the load of the main-executable.
-  virtual void AtMainExecutableLoadStart(TargetInfo *entry);
-  /// Invoked at the end of the load.
-  virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
 
   static TelemetryManager *GetInstance();
 

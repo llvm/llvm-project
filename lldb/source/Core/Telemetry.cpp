@@ -68,14 +68,6 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
-void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
-  serializer.write("entry_kind", getKind());
-  serializer.write("session_id", SessionId);
-  serializer.write("start_time", ToNanosec(start_time));
-  if (end_time.has_value())
-    serializer.write("end_time", ToNanosec(end_time.value()));
-}
-
 void TargetInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
@@ -88,14 +80,6 @@ void TargetInfo::serialize(Serializer &serializer) const {
   }
 }
 
-void MiscTelemetryInfo::serialize(Serializer &serializer) const {
-  LLDBBaseTelemetryInfo::serialize(serializer);
-  serializer.write("target_uuid", target_uuid);
-  serializer.beginObject("meta_data");
-  for (const auto &kv : meta_data)
-    serializer.write(kv.first, kv.second);
-  serializer.endObject();
-}
 
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
@@ -119,8 +103,8 @@ public:
   }
 
   explicit NoOpTelemetryManager()
-      : TelemetryManager(std::make_unique<LLDBConfig>(
-            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
+      : TelemetryManager(std::make_unique<::llvm::telemetry::Config>(
+            /*EnableTelemetry*/ false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
