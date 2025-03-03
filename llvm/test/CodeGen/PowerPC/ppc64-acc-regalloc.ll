@@ -29,34 +29,34 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-NEXT:  .LBB0_1: # %bb9
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    addi r6, r6, 2
-; CHECK-NEXT:    lxv vs1, -64(r5)
 ; CHECK-NEXT:    lxv vs0, 16(0)
+; CHECK-NEXT:    lxv vs1, -64(r5)
 ; CHECK-NEXT:    xxlxor vs7, vs7, vs7
 ; CHECK-NEXT:    xxlor vs3, v0, v0
 ; CHECK-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-NEXT:    xxlxor vs12, vs12, vs12
-; CHECK-NEXT:    lxv vs4, -16(r5)
+; CHECK-NEXT:    mulld r6, r6, r3
 ; CHECK-NEXT:    xxlor vs10, v2, v2
+; CHECK-NEXT:    xxlor vs4, v2, v2
 ; CHECK-NEXT:    xxlor vs8, vs10, vs10
 ; CHECK-NEXT:    xxlor vs10, v1, v1
-; CHECK-NEXT:    mulld r6, r6, r3
 ; CHECK-NEXT:    xvmaddadp vs7, vs0, v5
 ; CHECK-NEXT:    xvmuldp vs6, vs0, v2
+; CHECK-NEXT:    lxv vs0, -16(r5)
 ; CHECK-NEXT:    xvmaddadp vs3, vs1, v2
 ; CHECK-NEXT:    xvmaddadp vs2, vs1, vs2
-; CHECK-NEXT:    xvmaddadp vs12, vs4, vs12
-; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    lxvdsx v6, r6, r4
 ; CHECK-NEXT:    li r6, 0
 ; CHECK-NEXT:    xvmaddadp vs7, v2, v2
 ; CHECK-NEXT:    xvmaddadp vs6, v2, v2
-; CHECK-NEXT:    xxlor vs14, vs12, vs12
-; CHECK-NEXT:    xxlor vs12, v2, v2
+; CHECK-NEXT:    xvmaddadp vs12, vs0, vs12
 ; CHECK-NEXT:    xvmuldp v3, vs1, v6
 ; CHECK-NEXT:    xvmuldp vs11, v4, v6
-; CHECK-NEXT:    xvmuldp vs13, vs4, v6
+; CHECK-NEXT:    xvmuldp vs13, vs0, v6
 ; CHECK-NEXT:    xvmuldp vs5, v6, v2
-; CHECK-NEXT:    xxlor vs4, v2, v2
+; CHECK-NEXT:    xxlor vs0, v2, v2
+; CHECK-NEXT:    xxlor vs14, vs12, vs12
+; CHECK-NEXT:    xxlor vs12, v2, v2
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs9, vs11, vs11
 ; CHECK-NEXT:    xxlor vs15, vs13, vs13
@@ -121,34 +121,34 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; TRACKLIVE-NEXT:  .LBB0_1: # %bb9
 ; TRACKLIVE-NEXT:    #
 ; TRACKLIVE-NEXT:    addi r6, r6, 2
-; TRACKLIVE-NEXT:    lxv vs1, -64(r5)
 ; TRACKLIVE-NEXT:    lxv vs0, 16(0)
+; TRACKLIVE-NEXT:    lxv vs1, -64(r5)
 ; TRACKLIVE-NEXT:    xxlxor vs7, vs7, vs7
 ; TRACKLIVE-NEXT:    xxlor vs3, v0, v0
 ; TRACKLIVE-NEXT:    xxlxor vs2, vs2, vs2
 ; TRACKLIVE-NEXT:    xxlxor vs12, vs12, vs12
-; TRACKLIVE-NEXT:    lxv vs4, -16(r5)
+; TRACKLIVE-NEXT:    mulld r6, r6, r3
 ; TRACKLIVE-NEXT:    xxlor vs10, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs4, v2, v2
 ; TRACKLIVE-NEXT:    xxlor vs8, vs10, vs10
 ; TRACKLIVE-NEXT:    xxlor vs10, v1, v1
-; TRACKLIVE-NEXT:    mulld r6, r6, r3
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, vs0, v5
 ; TRACKLIVE-NEXT:    xvmuldp vs6, vs0, v2
+; TRACKLIVE-NEXT:    lxv vs0, -16(r5)
 ; TRACKLIVE-NEXT:    xvmaddadp vs3, vs1, v2
 ; TRACKLIVE-NEXT:    xvmaddadp vs2, vs1, vs2
-; TRACKLIVE-NEXT:    xvmaddadp vs12, vs4, vs12
-; TRACKLIVE-NEXT:    xxlor vs0, v2, v2
 ; TRACKLIVE-NEXT:    lxvdsx v6, r6, r4
 ; TRACKLIVE-NEXT:    li r6, 0
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, v2, v2
 ; TRACKLIVE-NEXT:    xvmaddadp vs6, v2, v2
-; TRACKLIVE-NEXT:    xxlor vs14, vs12, vs12
-; TRACKLIVE-NEXT:    xxlor vs12, v2, v2
+; TRACKLIVE-NEXT:    xvmaddadp vs12, vs0, vs12
 ; TRACKLIVE-NEXT:    xvmuldp v3, vs1, v6
 ; TRACKLIVE-NEXT:    xvmuldp vs11, v4, v6
-; TRACKLIVE-NEXT:    xvmuldp vs13, vs4, v6
+; TRACKLIVE-NEXT:    xvmuldp vs13, vs0, v6
 ; TRACKLIVE-NEXT:    xvmuldp vs5, v6, v2
-; TRACKLIVE-NEXT:    xxlor vs4, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs0, v2, v2
+; TRACKLIVE-NEXT:    xxlor vs14, vs12, vs12
+; TRACKLIVE-NEXT:    xxlor vs12, v2, v2
 ; TRACKLIVE-NEXT:    xxlor vs1, v3, v3
 ; TRACKLIVE-NEXT:    xxlor vs9, vs11, vs11
 ; TRACKLIVE-NEXT:    xxlor vs15, vs13, vs13
