@@ -399,8 +399,7 @@ SFI0 Part
 
 The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
 This denotes which optional features the shader requires. The flag values are
-defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def 
-<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
+defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
 
 
 Root Signature (RTS0) Part
