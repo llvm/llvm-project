@@ -494,6 +494,48 @@ define <4 x float> @src_v2tov4_float_nnan_ninf_nsz(<2 x i1> %a, <2 x i1> %b, <2 
   ret <4 x float> %res
 }
 
+; Negative - different FPM
+define <4 x float> @src_v2tov4_float_nonfpm_with_fpm1(<2 x i1> %a, <2 x i1> %b, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: define <4 x float> @src_v2tov4_float_nonfpm_with_fpm1(
+; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x float> [[X]], <2 x float> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select nnan nsz <2 x i1> [[B]], <2 x float> [[Y]], <2 x float> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[SELECT_XZ]], <2 x float> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %select.xz = select <2 x i1> %a, <2 x float> %x, <2 x float> %z
+  %select.yx = select nnan nsz <2 x i1> %b, <2 x float> %y, <2 x float> %x
+  %res = shufflevector <2 x float> %select.xz, <2 x float> %select.yx, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %res
+}
+
+define <4 x float> @src_v2tov4_float_nonfpm_with_fpm2(<2 x i1> %a, <2 x i1> %b, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: define <4 x float> @src_v2tov4_float_nonfpm_with_fpm2(
+; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select nnan nsz <2 x i1> [[A]], <2 x float> [[X]], <2 x float> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x float> [[Y]], <2 x float> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[SELECT_XZ]], <2 x float> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %select.xz = select nnan nsz <2 x i1> %a, <2 x float> %x, <2 x float> %z
+  %select.yx = select <2 x i1> %b, <2 x float> %y, <2 x float> %x
+  %res = shufflevector <2 x float> %select.xz, <2 x float> %select.yx, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %res
+}
+
+define <4 x float> @src_v2tov4_float_diff_fpm(<2 x i1> %a, <2 x i1> %b, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: define <4 x float> @src_v2tov4_float_diff_fpm(
+; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select ninf nsz <2 x i1> [[A]], <2 x float> [[X]], <2 x float> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select nnan nsz <2 x i1> [[B]], <2 x float> [[Y]], <2 x float> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[SELECT_XZ]], <2 x float> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[RES]]
+;
+  %select.xz = select ninf nsz <2 x i1> %a, <2 x float> %x, <2 x float> %z
+  %select.yx = select nnan nsz <2 x i1> %b, <2 x float> %y, <2 x float> %x
+  %res = shufflevector <2 x float> %select.xz, <2 x float> %select.yx, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %res
+}
 
 ; Negative - Vector order
 define <4 x i32> @src_v2tov4_i32_backward(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
