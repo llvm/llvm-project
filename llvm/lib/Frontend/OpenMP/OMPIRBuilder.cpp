@@ -2092,7 +2092,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
         if (!stackSave)
           stackSave = Builder.CreateStackSave();
         DepAlloca = Builder.CreateAlloca(DependInfo, depSize, "dep.addr");
-        ((AllocaInst *)DepAlloca)->setAlignment(Align(16));
         depSize = Builder.CreateTrunc(depSize, Builder.getInt32Ty());
       } else {
         DepAlloca = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");

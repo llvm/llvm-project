@@ -1554,7 +1554,7 @@ llvm.func @_QPomp_atomic_update_complex() {
 //CHECK: %[[VAL_8:.*]] = fadd contract float %[[VAL_6]], 1.000000e+00
 //CHECK: %[[VAL_9:.*]] = insertvalue { float, float } undef, float %[[VAL_7]], 0
 //CHECK: %[[VAL_10:.*]] = insertvalue { float, float } %[[VAL_9]], float %[[VAL_8]], 1
-//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4 
+//CHECK: store { float, float } %[[VAL_10]], ptr %[[X_NEW_VAL]], align 4
 //CHECK: %[[VAL_11:.*]] = call i1 @__atomic_compare_exchange(i64 8, ptr %[[ORIG_VAL]], ptr %[[ATOMIC_TEMP_LOAD]], ptr %[[X_NEW_VAL]], i32 2, i32 2)
 //CHECK: %[[VAL_12:.*]] = load { float, float }, ptr %[[ATOMIC_TEMP_LOAD]], align 4
 //CHECK: br i1 %[[VAL_11]], label %.atomic.exit, label %.atomic.cont
@@ -2745,7 +2745,7 @@ llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr) {
 // CHECK:   %[[size:.+]] = add i64 %[[obj_addr]], 2
 
 // CHECK:   %[[stack_ptr:.+]] = call ptr @llvm.stacksave.p0()
-// CHECK:   %[[dep_addr:.+]] = alloca %struct.kmp_dep_info, i64 %[[size]], align 16
+// CHECK:   %[[dep_addr:.+]] = alloca %struct.kmp_dep_info, i64 %[[size]], align 8
 // CHECK:   %[[dep_size:.+]] = trunc i64 %[[size]] to i32
 
 // CHECK:   %[[gep_03:.+]] = getelementptr %struct.kmp_dep_info, ptr %[[dep_addr]], i64 0
@@ -3069,8 +3069,8 @@ llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) 
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
-module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
-                                          assume_threads_oversubscription = true, assume_no_thread_state = true, 
+module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true,
+                                          assume_threads_oversubscription = true, assume_no_thread_state = true,
                                           assume_no_nested_parallelism = true>} {}
 // -----
 
@@ -3115,8 +3115,8 @@ module attributes {omp.version = #omp.version<version = 51>} {}
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
-                                          assume_threads_oversubscription = false, assume_no_thread_state = false, 
+module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false,
+                                          assume_threads_oversubscription = false, assume_no_thread_state = false,
                                           assume_no_nested_parallelism = false>} {}
 
 // -----
