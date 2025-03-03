@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Defines the interface to CIR operations.
+//
+//===----------------------------------------------------------------------===//
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 
 using namespace cir;
