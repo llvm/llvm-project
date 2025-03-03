@@ -113,9 +113,10 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto OnClassWithEndsWithFunction = ClassTypeWithMethod(
       "ends_with_fun", "ends_with", "endsWith", "endswith", "EndsWith");
 
-  // Case 1: X.find(Y) [!=]= 0 -> starts_with.
+  // Case 1: X.find(Y, [0]) [!=]= 0 -> starts_with.
   const auto FindExpr = cxxMemberCallExpr(
-      anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
+      anyOf(argumentCountIs(1),
+            allOf(argumentCountIs(2), hasArgument(1, ZeroLiteral))),
       callee(
           cxxMethodDecl(hasName("find"), ofClass(OnClassWithStartsWithFunction))
               .bind("find_fun")),
@@ -123,7 +124,7 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
 
   // Case 2: X.rfind(Y, 0) [!=]= 0 -> starts_with.
   const auto RFindExpr = cxxMemberCallExpr(
-      hasArgument(1, ZeroLiteral),
+      argumentCountIs(2), hasArgument(1, ZeroLiteral),
       callee(cxxMethodDecl(hasName("rfind"),
                            ofClass(OnClassWithStartsWithFunction))
                  .bind("find_fun")),

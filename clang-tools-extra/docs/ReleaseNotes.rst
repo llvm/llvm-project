@@ -137,6 +137,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
   on ternary operators calling ``std::move``.
 
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by fixing false
+  positives on methods ``find`` and ``rfind`` called with three arguments.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
