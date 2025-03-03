@@ -626,6 +626,7 @@ namespace {
     SDValue CombineZExtLogicopShiftLoad(SDNode *N);
     SDValue combineRepeatedFPDivisors(SDNode *N);
     SDValue combineFMulOrFDivWithIntPow2(SDNode *N);
+    SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf);
     SDValue mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToLoad(SDNode *N, unsigned InsIndex);
@@ -8511,39 +8512,33 @@ SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
   // so for now just use the PosOpcode case if its legal.
   // TODO: When can we use the NegOpcode case?
   if (PosOpcode == ISD::FSHL && isPowerOf2_32(EltBits)) {
-    auto IsBinOpImm = [](SDValue Op, unsigned BinOpc, unsigned Imm) {
-      if (Op.getOpcode() != BinOpc)
-        return false;
-      ConstantSDNode *Cst = isConstOrConstSplat(Op.getOperand(1));
-      return Cst && (Cst->getAPIntValue() == Imm);
-    };
-
+    SDValue X;
     // fold (or (shl x0, y), (srl (srl x1, 1), (xor y, 31)))
     //   -> (fshl x0, x1, y)
-    if (IsBinOpImm(N1, ISD::SRL, 1) &&
-        IsBinOpImm(InnerNeg, ISD::XOR, EltBits - 1) &&
-        InnerPos == InnerNeg.getOperand(0) &&
+    if (sd_match(N1, m_Srl(m_Value(X), m_One())) &&
+        sd_match(InnerNeg,
+                 m_Xor(m_Specific(InnerPos), m_SpecificInt(EltBits - 1))) &&
         TLI.isOperationLegalOrCustom(ISD::FSHL, VT)) {
-      return DAG.getNode(ISD::FSHL, DL, VT, N0, N1.getOperand(0), Pos);
+      return DAG.getNode(ISD::FSHL, DL, VT, N0, X, Pos);
     }
 
     // fold (or (shl (shl x0, 1), (xor y, 31)), (srl x1, y))
     //   -> (fshr x0, x1, y)
-    if (IsBinOpImm(N0, ISD::SHL, 1) &&
-        IsBinOpImm(InnerPos, ISD::XOR, EltBits - 1) &&
-        InnerNeg == InnerPos.getOperand(0) &&
+    if (sd_match(N0, m_Shl(m_Value(X), m_One())) &&
+        sd_match(InnerPos,
+                 m_Xor(m_Specific(InnerNeg), m_SpecificInt(EltBits - 1))) &&
         TLI.isOperationLegalOrCustom(ISD::FSHR, VT)) {
-      return DAG.getNode(ISD::FSHR, DL, VT, N0.getOperand(0), N1, Neg);
+      return DAG.getNode(ISD::FSHR, DL, VT, X, N1, Neg);
     }
 
     // fold (or (shl (add x0, x0), (xor y, 31)), (srl x1, y))
     //   -> (fshr x0, x1, y)
     // TODO: Should add(x,x) -> shl(x,1) be a general DAG canonicalization?
-    if (N0.getOpcode() == ISD::ADD && N0.getOperand(0) == N0.getOperand(1) &&
-        IsBinOpImm(InnerPos, ISD::XOR, EltBits - 1) &&
-        InnerNeg == InnerPos.getOperand(0) &&
+    if (sd_match(N0, m_Add(m_Value(X), m_Deferred(X))) &&
+        sd_match(InnerPos,
+                 m_Xor(m_Specific(InnerNeg), m_SpecificInt(EltBits - 1))) &&
         TLI.isOperationLegalOrCustom(ISD::FSHR, VT)) {
-      return DAG.getNode(ISD::FSHR, DL, VT, N0.getOperand(0), N1, Neg);
+      return DAG.getNode(ISD::FSHR, DL, VT, X, N1, Neg);
     }
   }
 
@@ -12535,9 +12530,10 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
   for (unsigned i = 0; i != Elts; ++i) {
     SDValue N1Elt = N1.getOperand(i);
     SDValue N2Elt = N2.getOperand(i);
-    if (N1Elt.isUndef() || N2Elt.isUndef())
+    if (N1Elt.isUndef())
       continue;
-    if (N1Elt.getValueType() != N2Elt.getValueType()) {
+    // N2 should not contain undef values since it will be reused in the fold.
+    if (N2Elt.isUndef() || N1Elt.getValueType() != N2Elt.getValueType()) {
       AllAddOne = false;
       AllSubOne = false;
       break;
@@ -26107,8 +26103,7 @@ static int getShuffleMaskIndexOfOneElementFromOp0IntoOp1(ArrayRef<int> Mask) {
 /// If a shuffle inserts exactly one element from a source vector operand into
 /// another vector operand and we can access the specified element as a scalar,
 /// then we can eliminate the shuffle.
-static SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf,
-                                      SelectionDAG &DAG) {
+SDValue DAGCombiner::replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf) {
   // First, check if we are taking one element of a vector and shuffling that
   // element into another vector.
   ArrayRef<int> Mask = Shuf->getMask();
@@ -26131,7 +26126,7 @@ static SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf,
   // Now see if we can access that element as a scalar via a real insert element
   // instruction.
   // TODO: We can try harder to locate the element as a scalar. Examples: it
-  // could be an operand of SCALAR_TO_VECTOR, BUILD_VECTOR, or a constant.
+  // could be an operand of BUILD_VECTOR, or a constant.
   assert(Mask[ShufOp0Index] >= 0 && Mask[ShufOp0Index] < (int)Mask.size() &&
          "Shuffle mask value must be from operand 0");
 
@@ -26149,6 +26144,16 @@ static SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf,
     // shuffle's mask index value, not the insert's index value.
     //
     // shuffle (insertelt v1, x, C), v2, mask --> insertelt v2, x, C'
+    SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
+    return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
+                       Op1, Elt, NewInsIndex);
+  }
+
+  if (!hasOperation(ISD::INSERT_VECTOR_ELT, Op0.getValueType()))
+    return SDValue();
+
+  if (sd_match(Op0, m_UnaryOp(ISD::SCALAR_TO_VECTOR, m_Value(Elt))) &&
+      Mask[ShufOp0Index] == 0) {
     SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
     return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
                        Op1, Elt, NewInsIndex);
@@ -26225,7 +26230,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
 
-  if (SDValue InsElt = replaceShuffleOfInsert(SVN, DAG))
+  if (SDValue InsElt = replaceShuffleOfInsert(SVN))
     return InsElt;
 
   // A shuffle of a single vector that is a splatted value can always be folded.

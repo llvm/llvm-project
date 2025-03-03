@@ -111,6 +111,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
@@ -130,6 +131,7 @@
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
@@ -1412,6 +1414,20 @@ parseBoundsCheckingOptions(StringRef Params) {
     }
   }
   return Options;
+}
+
+Expected<RAGreedyPass::Options>
+parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
+  if (Params.empty() || Params == "all")
+    return RAGreedyPass::Options();
+
+  std::optional<RegAllocFilterFunc> Filter = PB.parseRegAllocFilter(Params);
+  if (Filter)
+    return RAGreedyPass::Options{*Filter, Params};
+
+  return make_error<StringError>(
+      formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 } // namespace

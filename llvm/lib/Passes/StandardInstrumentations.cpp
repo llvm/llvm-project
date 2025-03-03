@@ -2022,12 +2022,9 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
          Sink != E; ++Sink) {
       std::string Key = (Label + " " + Sink->getKey().str()).str() + " " +
                         BD.getData().getSuccessorLabel(Sink->getKey()).str();
-      unsigned C = EdgesMap.count(Key);
-      if (C == 0)
-        EdgesMap.insert({Key, AfterColour});
-      else {
-        EdgesMap[Key] = CommonColour;
-      }
+      auto [It, Inserted] = EdgesMap.try_emplace(Key, AfterColour);
+      if (!Inserted)
+        It->second = CommonColour;
     }
   }
 

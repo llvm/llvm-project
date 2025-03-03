@@ -111,6 +111,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
   extension.
+* Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
+  is a frame-pointer convention compatible version of Zcmp.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -168,6 +170,7 @@ Changes to LLDB
 ### Changes to lldb-dap
 
 * Breakpoints can now be set for specific columns within a line.
+* Function return value is now displayed on step-out.
 
 Changes to BOLT
 ---------------------------------

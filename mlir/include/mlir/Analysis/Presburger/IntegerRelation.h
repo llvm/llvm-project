@@ -738,11 +738,11 @@ public:
   /// Same as findSymbolicIntegerLexMin but produces lexmax instead of lexmin
   SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
-  /// Searches for a constraint with a non-zero coefficient at `colIdx` in
-  /// equality (isEq=true) or inequality (isEq=false) constraints.
-  /// Returns true and sets row found in search in `rowIdx`, false otherwise.
-  bool findConstraintWithNonZeroAt(unsigned colIdx, bool isEq,
-                                   unsigned *rowIdx) const;
+  /// Finds a constraint with a non-zero coefficient at `colIdx` in equality
+  /// (isEq=true) or inequality (isEq=false) constraints. Returns the position
+  /// of the row if it was found or none otherwise.
+  std::optional<unsigned> findConstraintWithNonZeroAt(unsigned colIdx,
+                                                      bool isEq) const;
 
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
@@ -917,7 +917,7 @@ public:
   /// Constructs a relation with the specified number of dimensions and symbols
   /// and adds the given inequalities.
   explicit IntegerPolyhedron(const PresburgerSpace &space,
-                             IntMatrix inequalities)
+                             const IntMatrix &inequalities)
       : IntegerPolyhedron(space) {
     for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
       addInequality(inequalities.getRow(i));
@@ -927,7 +927,7 @@ public:
   /// and adds the given inequalities, after normalizing row-wise to integer
   /// values.
   explicit IntegerPolyhedron(const PresburgerSpace &space,
-                             FracMatrix inequalities)
+                             const FracMatrix &inequalities)
       : IntegerPolyhedron(space) {
     IntMatrix ineqsNormalized = inequalities.normalizeRows();
     for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)

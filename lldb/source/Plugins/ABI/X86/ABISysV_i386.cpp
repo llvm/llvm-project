@@ -623,10 +623,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectImpl(
 // The saved pc is at CFA-4 (i.e. esp+0)
 // The saved esp is CFA+0
 
-bool ABISysV_i386::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_i386::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
 
@@ -634,10 +631,12 @@ bool ABISysV_i386::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 4);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, false);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("i386 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("i386 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
 // This defines CFA as ebp+8
@@ -645,10 +644,7 @@ bool ABISysV_i386::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
 // The saved ebp is at CFA-8 (i.e. ebp+0)
 // The saved esp is CFA+0
 
-bool ABISysV_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_i386::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = dwarf_ebp;
   uint32_t sp_reg_num = dwarf_esp;
   uint32_t pc_reg_num = dwarf_eip;
@@ -664,12 +660,13 @@ bool ABISysV_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("i386 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("i386 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // According to "Register Usage" in reference document (specified on top of
