@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_DAP_WATCHPOINT_H
-#define LLDB_TOOLS_LLDB_DAP_WATCHPOINT_H
+#ifndef LLDB_HOST_MEMORYMONITOR_H
+#define LLDB_HOST_MEMORYMONITOR_H
 
 #include <functional>
 #include <memory>
 
-namespace lldb_dap {
+namespace lldb_private {
 
 class MemoryMonitor {
 public:
@@ -36,6 +36,6 @@ protected:
   Callback m_callback;
 };
 
-} // namespace lldb_dap
+} // namespace lldb_private
 
 #endif

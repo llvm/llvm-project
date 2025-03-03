@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MemoryMonitor.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <thread>
-
-#if defined(__APPLE__)
-#include <dispatch/dispatch.h>
-#endif
 
 #if defined(__linux__)
 #include <fcntl.h>
@@ -23,42 +19,7 @@
 #include <unistd.h>
 #endif
 
-using namespace lldb_dap;
-
-#if defined(__APPLE__)
-class MemoryMonitorDarwin : public MemoryMonitor {
-  using MemoryMonitor::MemoryMonitor;
-  void Start() override {
-    m_memory_pressure_source = dispatch_source_create(
-        DISPATCH_SOURCE_TYPE_MEMORYPRESSURE,
-        0, // system-wide monitoring
-        DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL,
-        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
-
-    if (!m_memory_pressure_source)
-      return;
-
-    dispatch_source_set_event_handler(m_memory_pressure_source, ^{
-      dispatch_source_memorypressure_flags_t pressureLevel =
-          dispatch_source_get_data(m_memory_pressure_source);
-      if (pressureLevel &
-          (DISPATCH_MEMORYPRESSURE_WARN | DISPATCH_MEMORYPRESSURE_CRITICAL)) {
-        m_callback();
-      }
-    });
-  }
-
-  void Stop() override {
-    if (m_memory_pressure_source) {
-      dispatch_source_cancel(m_memory_pressure_source);
-      dispatch_release(m_memory_pressure_source);
-    }
-  }
-
-private:
-  dispatch_source_t m_memory_pressure_source;
-};
-#endif
+using namespace lldb_private;
 
 #if defined(__linux__)
 static void MonitorThread(std::atomic<bool> &done,
@@ -109,14 +70,11 @@ private:
 };
 #endif
 
+#if !defined(__APPLE__)
 std::unique_ptr<MemoryMonitor> MemoryMonitor::Create(Callback callback) {
-#if defined(__APPLE__)
-  return std::make_unique<MemoryMonitorDarwin>(callback);
-#endif
-
 #if defined(__linux__)
   return std::make_unique<MemoryMonitorLinux>(callback);
 #endif
-
   return nullptr;
 }
+#endif

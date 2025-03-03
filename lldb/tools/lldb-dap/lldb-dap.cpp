@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
-#include "MemoryMonitor.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
@@ -17,6 +16,7 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -508,8 +508,9 @@ int main(int argc, char *argv[]) {
 
   // Create a memory monitor. This can return nullptr if the host platform is
   // not supported.
-  std::unique_ptr<MemoryMonitor> memory_monitor = MemoryMonitor::Create(
-      []() { lldb::SBDebugger::MemoryPressureDetected(); });
+  std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
+      lldb_private::MemoryMonitor::Create(
+          []() { lldb::SBDebugger::MemoryPressureDetected(); });
 
   if (memory_monitor)
     memory_monitor->Start();
