@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -31,9 +33,6 @@
 #include "llvm/Transforms/Utils/SYCLSplitModule.h"
 #include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
-
-#include <string>
-#include <vector>
 
 using namespace llvm;
 
@@ -90,7 +89,7 @@ static cl::opt<IRSplitMode> SYCLSplitMode(
 static cl::opt<bool> OutputAssembly{
     "S", cl::desc("Write output as LLVM assembly"), cl::cat(SplitCategory)};
 
-void writeStringToFile(std::string_view Content, StringRef Path) {
+void writeStringToFile(StringRef Content, StringRef Path) {
   std::error_code EC;
   raw_fd_ostream OS(Path, EC);
   if (EC) {
@@ -103,13 +102,19 @@ void writeStringToFile(std::string_view Content, StringRef Path) {
 
 void writeSplitModulesAsTable(ArrayRef<ModuleAndSYCLMetadata> Modules,
                               StringRef Path) {
-  std::vector<std::string> Columns = {"Code", "Symbols"};
+  SmallVector<SmallString<64>> Columns;
+  Columns.emplace_back("Code");
+  Columns.emplace_back("Symbols");
+
   SYCLStringTable Table;
   Table.emplace_back(std::move(Columns));
   for (const auto &[I, SM] : enumerate(Modules)) {
-    std::string SymbolsFile = (Twine(Path) + "_" + Twine(I) + ".sym").str();
+    SmallString<128> SymbolsFile;
+    (Twine(Path) + "_" + Twine(I) + ".sym").toVector(SymbolsFile);
     writeStringToFile(SM.Symbols, SymbolsFile);
-    std::vector<std::string> Row = {SM.ModuleFilePath, SymbolsFile};
+    SmallVector<SmallString<64>> Row;
+    Row.emplace_back(SM.ModuleFilePath);
+    Row.emplace_back(SymbolsFile);
     Table.emplace_back(std::move(Row));
   }
 
@@ -194,6 +199,7 @@ int main(int argc, char **argv) {
     if (E) {
       errs() << E << "\n";
       Err.print(argv[0], errs());
+      return 1;
     }
 
     return 0;

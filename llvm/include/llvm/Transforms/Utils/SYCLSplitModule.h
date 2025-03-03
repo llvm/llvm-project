@@ -10,8 +10,8 @@
 // of the split is new modules containing corresponding callgraph.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SYCL_SPLIT_MODULE_H
-#define LLVM_SYCL_SPLIT_MODULE_H
+#ifndef LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
+#define LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -68,4 +68,4 @@ SYCLSplitModule(std::unique_ptr<Module> M, ModuleSplitterSettings Settings);
 
 } // namespace llvm
 
-#endif // LLVM_SYCL_SPLIT_MODULE_H
+#endif // LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H

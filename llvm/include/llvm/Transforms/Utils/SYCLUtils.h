@@ -10,14 +10,14 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
 #define LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
 
-#include <string>
-#include <vector>
+#include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/SmallVector.h>
 
 namespace llvm {
 
 class raw_ostream;
 
-using SYCLStringTable = std::vector<std::vector<std::string>>;
+using SYCLStringTable = SmallVector<SmallVector<SmallString<64>>>;
 
 void writeSYCLStringTable(const SYCLStringTable &Table, raw_ostream &OS);
 
