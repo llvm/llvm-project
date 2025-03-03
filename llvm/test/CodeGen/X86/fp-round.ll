@@ -50,9 +50,6 @@ define half @round_f16(half %h) {
 ;
 ; AVX512F-LABEL: round_f16:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512F-NEXT:    movzwl %ax, %eax
-; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm1 | (xmm0 & mem)
