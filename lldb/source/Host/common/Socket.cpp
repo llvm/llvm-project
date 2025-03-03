@@ -40,16 +40,6 @@
 #include "lldb/Host/linux/AbstractSocket.h"
 #endif
 
-#ifdef __ANDROID__
-#include <arpa/inet.h>
-#include <asm-generic/errno-base.h>
-#include <cerrno>
-#include <fcntl.h>
-#include <linux/tcp.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#endif // __ANDROID__
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -103,15 +93,14 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
         "WSADuplicateSocket() failed, error: %d", last_error);
   }
 
-  size_t num_bytes;
-  Status error =
-      m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
-                                     std::chrono::seconds(10), num_bytes);
-  if (error.Fail())
-    return error;
-  if (num_bytes != sizeof(protocol_info))
+  llvm::Expected<size_t> num_bytes = m_socket_pipe.Write(
+      &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
+  if (!num_bytes)
+    return Status::FromError(num_bytes.takeError());
+  if (*num_bytes != sizeof(protocol_info))
     return Status::FromErrorStringWithFormatv(
-        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
+        "Write(WSAPROTOCOL_INFO) failed: wrote {0}/{1} bytes", *num_bytes,
+        sizeof(protocol_info));
 #endif
   return Status();
 }
@@ -123,16 +112,14 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
   WSAPROTOCOL_INFO protocol_info;
   {
     Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
-    size_t num_bytes;
-    Status error =
-        socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
-                                    std::chrono::seconds(10), num_bytes);
-    if (error.Fail())
-      return error;
-    if (num_bytes != sizeof(protocol_info)) {
+    llvm::Expected<size_t> num_bytes = socket_pipe.Read(
+        &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
+    if (!num_bytes)
+      return Status::FromError(num_bytes.takeError());
+    if (*num_bytes != sizeof(protocol_info)) {
       return Status::FromErrorStringWithFormatv(
-          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
-          num_bytes);
+          "Read(WSAPROTOCOL_INFO) failed: read {0}/{1} bytes", *num_bytes,
+          sizeof(protocol_info));
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
@@ -472,23 +459,7 @@ Status Socket::Accept(const Timeout<std::micro> &timeout, Socket *&socket) {
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,
                                   socklen_t *addrlen, Status &error) {
   error.Clear();
-#if defined(ANDROID_USE_ACCEPT_WORKAROUND)
-  // Hack:
-  // This enables static linking lldb-server to an API 21 libc, but still
-  // having it run on older devices. It is necessary because API 21 libc's
-  // implementation of accept() uses the accept4 syscall(), which is not
-  // available in older kernels. Using an older libc would fix this issue, but
-  // introduce other ones, as the old libraries were quite buggy.
-  int fd = syscall(__NR_accept, sockfd, addr, addrlen);
-  if (fd >= 0) {
-    int flags = ::fcntl(fd, F_GETFD);
-    if (flags != -1 && ::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != -1)
-      return fd;
-    SetLastError(error);
-    close(fd);
-  }
-  return fd;
-#elif defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
+#if defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
   int flags = SOCK_CLOEXEC;
   NativeSocket fd = llvm::sys::RetryAfterSignal(
       static_cast<NativeSocket>(-1), ::accept4, sockfd, addr, addrlen, flags);

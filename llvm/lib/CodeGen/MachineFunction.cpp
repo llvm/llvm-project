@@ -189,10 +189,7 @@ void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);
   Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  if (STI->getRegisterInfo())
-    RegInfo = new (Allocator) MachineRegisterInfo(this);
-  else
-    RegInfo = nullptr;
+  RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
@@ -459,11 +456,11 @@ MachineInstr &MachineFunction::cloneMachineInstrBundle(
       break;
     ++I;
   }
-  // Copy over call site info to the cloned instruction if needed. If Orig is in
-  // a bundle, copyCallSiteInfo takes care of finding the call instruction in
-  // the bundle.
-  if (Orig.shouldUpdateCallSiteInfo())
-    copyCallSiteInfo(&Orig, FirstClone);
+  // Copy over call info to the cloned instruction if needed. If Orig is in
+  // a bundle, copyAdditionalCallInfo takes care of finding the call instruction
+  // in the bundle.
+  if (Orig.shouldUpdateAdditionalCallInfo())
+    copyAdditionalCallInfo(&Orig, FirstClone);
   return *FirstClone;
 }
 
@@ -476,8 +473,13 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,
   // back trace will tell where to insert a call to updateCallSiteInfo().
-  assert((!MI->isCandidateForCallSiteEntry() || !CallSitesInfo.contains(MI)) &&
+  assert((!MI->isCandidateForAdditionalCallInfo() ||
+          !CallSitesInfo.contains(MI)) &&
          "Call site info was not updated!");
+  // Verify that the "called globals" info is in a valid state.
+  assert((!MI->isCandidateForAdditionalCallInfo() ||
+          !CalledGlobalsInfo.contains(MI)) &&
+         "Called globals info was not updated!");
   // Strip it for parts. The operand array and the MI object itself are
   // independently recyclable.
   if (MI->Operands)
@@ -828,7 +830,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.LandingPadLabel = LandingPadLabel;
 
-  const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
+  BasicBlock::const_iterator FirstI =
+      LandingPad->getBasicBlock()->getFirstNonPHIIt();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
@@ -911,7 +914,7 @@ try_next:;
 
 MachineFunction::CallSiteInfoMap::iterator
 MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->isCandidateForCallSiteEntry() &&
+  assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
   if (!Target.Options.EmitCallSiteInfo)
@@ -926,59 +929,74 @@ static const MachineInstr *getCallInstr(const MachineInstr *MI) {
 
   for (const auto &BMI : make_range(getBundleStart(MI->getIterator()),
                                     getBundleEnd(MI->getIterator())))
-    if (BMI.isCandidateForCallSiteEntry())
+    if (BMI.isCandidateForAdditionalCallInfo())
       return &BMI;
 
   llvm_unreachable("Unexpected bundle without a call site candidate");
 }
 
-void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::eraseAdditionalCallInfo(const MachineInstr *MI) {
+  assert(MI->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
   const MachineInstr *CallMI = getCallInstr(MI);
+
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(CallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
-  CallSitesInfo.erase(CSIt);
+  if (CSIt != CallSitesInfo.end())
+    CallSitesInfo.erase(CSIt);
+
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(CallMI);
+  if (CGIt != CalledGlobalsInfo.end())
+    CalledGlobalsInfo.erase(CGIt);
 }
 
-void MachineFunction::copyCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(Old->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
+                                             const MachineInstr *New) {
+  assert(Old->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
-  if (!New->isCandidateForCallSiteEntry())
-    return eraseCallSiteInfo(Old);
+  if (!New->isCandidateForAdditionalCallInfo())
+    return eraseAdditionalCallInfo(Old);
 
   const MachineInstr *OldCallMI = getCallInstr(Old);
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
+  if (CSIt != CallSitesInfo.end()) {
+    CallSiteInfo CSInfo = CSIt->second;
+    CallSitesInfo[New] = std::move(CSInfo);
+  }
 
-  CallSiteInfo CSInfo = CSIt->second;
-  CallSitesInfo[New] = CSInfo;
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
+  if (CGIt != CalledGlobalsInfo.end()) {
+    CalledGlobalInfo CGInfo = CGIt->second;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
+  }
 }
 
-void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(Old->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
+                                             const MachineInstr *New) {
+  assert(Old->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
-  if (!New->isCandidateForCallSiteEntry())
-    return eraseCallSiteInfo(Old);
+  if (!New->isCandidateForAdditionalCallInfo())
+    return eraseAdditionalCallInfo(Old);
 
   const MachineInstr *OldCallMI = getCallInstr(Old);
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
+  if (CSIt != CallSitesInfo.end()) {
+    CallSiteInfo CSInfo = std::move(CSIt->second);
+    CallSitesInfo.erase(CSIt);
+    CallSitesInfo[New] = std::move(CSInfo);
+  }
 
-  CallSiteInfo CSInfo = std::move(CSIt->second);
-  CallSitesInfo.erase(CSIt);
-  CallSitesInfo[New] = CSInfo;
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
+  if (CGIt != CalledGlobalsInfo.end()) {
+    CalledGlobalInfo CGInfo = std::move(CGIt->second);
+    CalledGlobalsInfo.erase(CGIt);
+    CalledGlobalsInfo[New] = std::move(CGInfo);
+  }
 }
 
 void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {
@@ -1033,7 +1051,7 @@ auto MachineFunction::salvageCopySSA(
   // Check whether this copy-like instruction has already been salvaged into
   // an operand pair.
   Register Dest;
-  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+  if (auto CopyDstSrc = TII.isCopyLikeInstr(MI)) {
     Dest = CopyDstSrc->Destination->getReg();
   } else {
     assert(MI.isSubregToReg());
@@ -1117,7 +1135,7 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     CurInst = Inst.getIterator();
 
     // Any non-copy instruction is the defining instruction we're seeking.
-    if (!Inst.isCopyLike() && !TII.isCopyInstr(Inst))
+    if (!Inst.isCopyLike() && !TII.isCopyLikeInstr(Inst))
       break;
     State = GetRegAndSubreg(Inst);
   };
@@ -1291,6 +1309,10 @@ const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 //  MachineJumpTableInfo implementation
 //===----------------------------------------------------------------------===//
 
+MachineJumpTableEntry::MachineJumpTableEntry(
+    const std::vector<MachineBasicBlock *> &MBBs)
+    : MBBs(MBBs), Hotness(MachineFunctionDataHotness::Unknown) {}
+
 /// Return the size of each entry in the jump table.
 unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   // The size of a jump table entry is 4 bytes unless the entry is just the
@@ -1338,6 +1360,17 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
   assert(!DestBBs.empty() && "Cannot create an empty jump table!");
   JumpTables.push_back(MachineJumpTableEntry(DestBBs));
   return JumpTables.size()-1;
+}
+
+bool MachineJumpTableInfo::updateJumpTableEntryHotness(
+    size_t JTI, MachineFunctionDataHotness Hotness) {
+  assert(JTI < JumpTables.size() && "Invalid JTI!");
+  // Record the largest hotness value.
+  if (Hotness <= JumpTables[JTI].Hotness)
+    return false;
+
+  JumpTables[JTI].Hotness = Hotness;
+  return true;
 }
 
 /// If Old is the target of any jump tables, update the jump tables to branch

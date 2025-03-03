@@ -511,7 +511,7 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
   }
 
   Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, 0);
 
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
@@ -771,23 +771,15 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
 
 // Helper to compare the InlinedCallStack computed from an instruction's debug
 // info to a list of Frames from profile data (either the allocation data or a
-// callsite). For callsites, the StartIndex to use in the Frame array may be
-// non-zero.
+// callsite).
 static bool
 stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
                                    ArrayRef<uint64_t> InlinedCallStack) {
-  auto StackFrame = ProfileCallStack.begin();
-  auto InlCallStackIter = InlinedCallStack.begin();
-  for (; StackFrame != ProfileCallStack.end() &&
-         InlCallStackIter != InlinedCallStack.end();
-       ++StackFrame, ++InlCallStackIter) {
-    uint64_t StackId = computeStackId(*StackFrame);
-    if (StackId != *InlCallStackIter)
-      return false;
-  }
-  // Return true if we found and matched all stack ids from the call
-  // instruction.
-  return InlCallStackIter == InlinedCallStack.end();
+  return ProfileCallStack.size() >= InlinedCallStack.size() &&
+         llvm::equal(ProfileCallStack.take_front(InlinedCallStack.size()),
+                     InlinedCallStack, [](const Frame &F, uint64_t StackId) {
+                       return computeStackId(F) == StackId;
+                     });
 }
 
 static bool isAllocationWithHotColdVariant(const Function *Callee,
@@ -929,11 +921,11 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
     longestCommonSequence<LineLocation, GlobalValue::GUID>(
         ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
         [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
-    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+    [[maybe_unused]] bool Inserted =
+        UndriftMaps.try_emplace(CallerGUID, std::move(Matchings)).second;
 
     // The insertion must succeed because we visit each GUID exactly once.
     assert(Inserted);
-    (void)Inserted;
   }
 
   return UndriftMaps;
@@ -970,6 +962,7 @@ static void
 readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             const TargetLibraryInfo &TLI,
             std::map<uint64_t, AllocMatchInfo> &FullStackIdToAllocMatchInfo,
+            std::set<std::vector<uint64_t>> &MatchedCallSites,
             DenseMap<uint64_t, LocToLocMap> &UndriftMaps) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
@@ -1096,9 +1089,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // can happen because we don't currently have discriminators to
       // distinguish the case when a single line/col maps to both an allocation
       // and another callsite).
-      std::map<uint64_t, std::set<const AllocationInfo *>>::iterator
-          AllocInfoIter;
-      decltype(LocHashToCallSites)::iterator CallSitesIter;
+      auto AllocInfoIter = LocHashToAllocInfo.end();
+      auto CallSitesIter = LocHashToCallSites.end();
       for (const DILocation *DIL = I.getDebugLoc(); DIL != nullptr;
            DIL = DIL->getInlinedAt()) {
         // Use C++ linkage name if possible. Need to compile with
@@ -1211,6 +1203,13 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.
+
+          // Accumulate call site matching information upon request.
+          if (ClPrintMemProfMatchInfo) {
+            std::vector<uint64_t> CallStack;
+            append_range(CallStack, InlinedCallStack);
+            MatchedCallSites.insert(std::move(CallStack));
+          }
           break;
         }
       }
@@ -1267,13 +1266,17 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   // it to an allocation in the IR.
   std::map<uint64_t, AllocMatchInfo> FullStackIdToAllocMatchInfo;
 
+  // Set of the matched call sites, each expressed as a sequence of an inline
+  // call stack.
+  std::set<std::vector<uint64_t>> MatchedCallSites;
+
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
-                UndriftMaps);
+                MatchedCallSites, UndriftMaps);
   }
 
   if (ClPrintMemProfMatchInfo) {
@@ -1282,6 +1285,13 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
              << " context with id " << Id << " has total profiled size "
              << Info.TotalSize << (Info.Matched ? " is" : " not")
              << " matched\n";
+
+    for (const auto &CallStack : MatchedCallSites) {
+      errs() << "MemProf callsite match for inline call stack";
+      for (uint64_t StackId : CallStack)
+        errs() << " " << StackId;
+      errs() << "\n";
+    }
   }
 
   return PreservedAnalyses::none();

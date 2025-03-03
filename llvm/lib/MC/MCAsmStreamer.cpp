@@ -191,7 +191,6 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -209,6 +208,8 @@ public:
   void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void emitCOFFSecNumber(MCSymbol const *Symbol) override;
+  void emitCOFFSecOffset(MCSymbol const *Symbol) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
@@ -257,15 +258,6 @@ public:
   void emitULEB128Value(const MCExpr *Value) override;
 
   void emitSLEB128Value(const MCExpr *Value) override;
-
-  void emitDTPRel32Value(const MCExpr *Value) override;
-  void emitDTPRel64Value(const MCExpr *Value) override;
-  void emitTPRel32Value(const MCExpr *Value) override;
-  void emitTPRel64Value(const MCExpr *Value) override;
-
-  void emitGPRel64Value(const MCExpr *Value) override;
-
-  void emitGPRel32Value(const MCExpr *Value) override;
 
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
@@ -396,6 +388,8 @@ public:
                          SMLoc Loc) override;
   void emitWinCFIPushFrame(bool Code, SMLoc Loc) override;
   void emitWinCFIEndProlog(SMLoc Loc) override;
+  void emitWinCFIBeginEpilogue(SMLoc Loc) override;
+  void emitWinCFIEndEpilogue(SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -693,18 +687,6 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
 }
 
-void MCAsmStreamer::emitThumbFunc(MCSymbol *Func) {
-  // This needs to emit to a temporary string to get properly quoted
-  // MCSymbols when they have spaces in them.
-  OS << "\t.thumb_func";
-  // Only Mach-O hasSubsectionsViaSymbols()
-  if (MAI->hasSubsectionsViaSymbols()) {
-    OS << '\t';
-    Func->print(OS, MAI);
-  }
-  EmitEOL();
-}
-
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   // Do not emit a .set on inlined target assignments.
   bool EmitSet = true;
@@ -890,6 +872,18 @@ void MCAsmStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
     OS << '+' << Offset;
   else if (Offset < 0)
     OS << '-' << -Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
+  OS << "\t.secnum\t";
+  Symbol->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
+  OS << "\t.secoffset\t";
+  Symbol->print(OS, MAI);
   EmitEOL();
 }
 
@@ -1425,48 +1419,6 @@ void MCAsmStreamer::emitSLEB128Value(const MCExpr *Value) {
     return;
   }
   OS << "\t.sleb128 ";
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  assert(MAI->getDTPRel64Directive() != nullptr);
-  OS << MAI->getDTPRel64Directive();
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  assert(MAI->getDTPRel32Directive() != nullptr);
-  OS << MAI->getDTPRel32Directive();
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
-  assert(MAI->getTPRel64Directive() != nullptr);
-  OS << MAI->getTPRel64Directive();
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
-  assert(MAI->getTPRel32Directive() != nullptr);
-  OS << MAI->getTPRel32Directive();
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
-  assert(MAI->getGPRel64Directive() != nullptr);
-  OS << MAI->getGPRel64Directive();
-  Value->print(OS, MAI);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
-  assert(MAI->getGPRel32Directive() != nullptr);
-  OS << MAI->getGPRel32Directive();
   Value->print(OS, MAI);
   EmitEOL();
 }
@@ -2331,6 +2283,20 @@ void MCAsmStreamer::emitWinCFIEndProlog(SMLoc Loc) {
   MCStreamer::emitWinCFIEndProlog(Loc);
 
   OS << "\t.seh_endprologue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIBeginEpilogue(SMLoc Loc) {
+  MCStreamer::emitWinCFIBeginEpilogue(Loc);
+
+  OS << "\t.seh_startepilogue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
+  MCStreamer::emitWinCFIEndEpilogue(Loc);
+
+  OS << "\t.seh_endepilogue";
   EmitEOL();
 }
 

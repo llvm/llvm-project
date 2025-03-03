@@ -23,7 +23,7 @@
 // EMPTY-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
 // EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
-// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} depth 0 index 0
 // EMPTY-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
 // EMPTY-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
 // EMPTY-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'
@@ -45,7 +45,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ImplicitConceptSpecializationDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'
 // CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-0' dependent depth 0 index 0
-// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
+// CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} depth 0 index 0
 // CHECK-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
 // CHECK-NEXT: TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'element_type' dependent depth 0 index 0
 // CHECK-NEXT: TemplateTypeParm 0x{{[0-9A-Fa-f]+}} 'element_type'

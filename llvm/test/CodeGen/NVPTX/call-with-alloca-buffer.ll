@@ -16,7 +16,7 @@
 ;  }
 
 ; CHECK: .visible .entry kernel_func
-define void @kernel_func(ptr %a) {
+define ptx_kernel void @kernel_func(ptr %a) {
 entry:
   %buf = alloca [16 x i8], align 4
 
@@ -56,7 +56,3 @@ entry:
 }
 
 declare void @callee(ptr, ptr)
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @kernel_func, !"kernel", i32 1}

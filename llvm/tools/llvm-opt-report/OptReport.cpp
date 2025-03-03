@@ -29,6 +29,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -100,7 +101,7 @@ struct OptReportLocationInfo {
   OptReportLocationItemInfo Unrolled;
   OptReportLocationItemInfo Vectorized;
 
-  int VectorizationFactor = 1;
+  ElementCount VectorizationFactor = ElementCount::getFixed(1);
   int InterleaveCount = 1;
   int UnrollCount = 1;
 
@@ -109,8 +110,9 @@ struct OptReportLocationInfo {
     Unrolled |= RHS.Unrolled;
     Vectorized |= RHS.Vectorized;
 
-    VectorizationFactor =
-      std::max(VectorizationFactor, RHS.VectorizationFactor);
+    if (ElementCount::isKnownLT(VectorizationFactor, RHS.VectorizationFactor))
+      VectorizationFactor = RHS.VectorizationFactor;
+
     InterleaveCount = std::max(InterleaveCount, RHS.InterleaveCount);
     UnrollCount = std::max(UnrollCount, RHS.UnrollCount);
 
@@ -130,9 +132,11 @@ struct OptReportLocationInfo {
       return true;
     else if (RHS.Vectorized < Vectorized || Succinct)
       return false;
-    else if (VectorizationFactor < RHS.VectorizationFactor)
+    else if (ElementCount::isKnownLT(VectorizationFactor,
+                                     RHS.VectorizationFactor))
       return true;
-    else if (VectorizationFactor > RHS.VectorizationFactor)
+    else if (ElementCount::isKnownGT(VectorizationFactor,
+                                     RHS.VectorizationFactor))
       return false;
     else if (InterleaveCount < RHS.InterleaveCount)
       return true;
@@ -197,17 +201,26 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
 
     bool Transformed = Remark.RemarkType == remarks::Type::Passed;
 
-    int VectorizationFactor = 1;
+    ElementCount VectorizationFactor = ElementCount::getFixed(1);
     int InterleaveCount = 1;
     int UnrollCount = 1;
 
     for (const remarks::Argument &Arg : Remark.Args) {
-      if (Arg.Key == "VectorizationFactor")
-        Arg.Val.getAsInteger(10, VectorizationFactor);
-      else if (Arg.Key == "InterleaveCount")
+      if (Arg.Key == "VectorizationFactor") {
+        int MinValue = 1;
+        bool IsScalable = false;
+        if (Arg.Val.starts_with("vscale x ")) {
+          Arg.Val.drop_front(9).getAsInteger(10, MinValue);
+          IsScalable = true;
+        } else {
+          Arg.Val.getAsInteger(10, MinValue);
+        }
+        VectorizationFactor = ElementCount::get(MinValue, IsScalable);
+      } else if (Arg.Key == "InterleaveCount") {
         Arg.Val.getAsInteger(10, InterleaveCount);
-      else if (Arg.Key == "UnrollCount")
+      } else if (Arg.Key == "UnrollCount") {
         Arg.Val.getAsInteger(10, UnrollCount);
+      }
     }
 
     const std::optional<remarks::RemarkLocation> &Loc = Remark.Loc;
@@ -292,7 +305,11 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
     bool NothingUnrolled = !MaxLI.Unrolled.Transformed;
     bool NothingVectorized = !MaxLI.Vectorized.Transformed;
 
-    unsigned VFDigits = llvm::utostr(MaxLI.VectorizationFactor).size();
+    unsigned VFDigits =
+        llvm::utostr(MaxLI.VectorizationFactor.getKnownMinValue()).size();
+    if (MaxLI.VectorizationFactor.isScalable())
+      VFDigits += 2; // For "Nx..."
+
     unsigned ICDigits = llvm::utostr(MaxLI.InterleaveCount).size();
     unsigned UCDigits = llvm::utostr(MaxLI.UnrollCount).size();
 
@@ -382,7 +399,10 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
           raw_string_ostream RS(R);
 
           if (!Succinct) {
-            RS << LLI.VectorizationFactor << "," << LLI.InterleaveCount;
+            if (LLI.VectorizationFactor.isScalable())
+              RS << "Nx";
+            RS << LLI.VectorizationFactor.getKnownMinValue() << ","
+               << LLI.InterleaveCount;
             RS << std::string(VFDigits + ICDigits + 1 - R.size(), ' ');
           }
 

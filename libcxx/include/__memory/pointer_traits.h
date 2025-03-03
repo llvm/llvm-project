@@ -176,10 +176,10 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _From, class _To>
-using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>;
+using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::template rebind<_To>;
 #else
 template <class _From, class _To>
-using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>::other;
+using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::template rebind<_To>::other;
 #endif
 
 // to_address
@@ -276,7 +276,7 @@ struct __pointer_of<_Tp> {
 };
 
 template <typename _Tp>
-using __pointer_of_t = typename __pointer_of<_Tp>::type;
+using __pointer_of_t _LIBCPP_NODEBUG = typename __pointer_of<_Tp>::type;
 
 template <class _Tp, class _Up>
 struct __pointer_of_or {
@@ -290,7 +290,7 @@ struct __pointer_of_or<_Tp, _Up> {
 };
 
 template <typename _Tp, typename _Up>
-using __pointer_of_or_t = typename __pointer_of_or<_Tp, _Up>::type;
+using __pointer_of_or_t _LIBCPP_NODEBUG = typename __pointer_of_or<_Tp, _Up>::type;
 
 template <class _Smart>
 concept __resettable_smart_pointer = requires(_Smart __s) { __s.reset(); };

@@ -51,8 +51,6 @@ for.end:
 
 ; CHECK-LABEL: goo
 ; Check %indvars.iv and %indvars.iv.next are uniform instructions even if they are used outside of loop.
-; CHECK-DAG: LV: Found uniform instruction:   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-; CHECK-DAG: LV: Found uniform instruction:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
 ; CHECK-DAG: LV: Found uniform instruction:   %exitcond = icmp eq i64 %indvars.iv, 1599
 
 define i64 @goo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) #0 {

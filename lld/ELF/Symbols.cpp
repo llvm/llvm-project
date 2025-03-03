@@ -254,10 +254,9 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
 }
 
 void Symbol::extract(Ctx &ctx) const {
-  if (file->lazy) {
-    file->lazy = false;
-    parseFile(ctx, file);
-  }
+  assert(file->lazy);
+  file->lazy = false;
+  parseFile(ctx, file);
 }
 
 uint8_t Symbol::computeBinding(Ctx &ctx) const {
@@ -267,20 +266,6 @@ uint8_t Symbol::computeBinding(Ctx &ctx) const {
   if (binding == STB_GNU_UNIQUE && !ctx.arg.gnuUnique)
     return STB_GLOBAL;
   return binding;
-}
-
-bool Symbol::includeInDynsym(Ctx &ctx) const {
-  if (computeBinding(ctx) == STB_LOCAL)
-    return false;
-  if (!isDefined() && !isCommon())
-    // This should unconditionally return true, unfortunately glibc -static-pie
-    // expects undefined weak symbols not to exist in .dynsym, e.g.
-    // __pthread_mutex_lock reference in _dl_add_to_namespace_list,
-    // __pthread_initialize_minimal reference in csu/libc-start.c.
-    return !(isUndefWeak() && ctx.arg.noDynamicLinker);
-
-  return exportDynamic ||
-         (ctx.arg.exportDynamic && (isUsedInRegularObj || !ltoCanOmit));
 }
 
 // Print out a log message for --trace-symbol.
@@ -375,13 +360,22 @@ void elf::parseVersionAndComputeIsPreemptible(Ctx &ctx) {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
   // Let them parse and update their names to exclude version suffix.
-  bool hasDynSymTab = ctx.arg.hasDynSymTab;
+  // In addition, compute isExported and isPreemptible.
+  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (sym->hasVersionSuffix)
       sym->parseSymbolVersion(ctx);
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (hasDynSymTab)
-      sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
+    if (sym->computeBinding(ctx) == STB_LOCAL) {
+      sym->isExported = false;
+      continue;
+    }
+    if (!sym->isDefined() && !sym->isCommon()) {
+      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
+    } else if (ctx.arg.exportDynamic &&
+               (sym->isUsedInRegularObj || !sym->ltoCanOmit)) {
+      sym->isExported = true;
+      sym->isPreemptible = maybePreemptible && computeIsPreemptible(ctx, *sym);
+    }
   }
 }
 
@@ -659,7 +653,7 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 }
 
 void Symbol::resolve(Ctx &ctx, const SharedSymbol &other) {
-  exportDynamic = true;
+  isExported = true;
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;

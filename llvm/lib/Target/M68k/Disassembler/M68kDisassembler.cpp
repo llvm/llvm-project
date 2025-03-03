@@ -117,6 +117,12 @@ static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
   llvm_unreachable("unimplemented");
 }
 
+static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, APInt &Insn,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  llvm_unreachable("unimplemented");
+}
+
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(M68k::swapWord<uint32_t>(Imm)));

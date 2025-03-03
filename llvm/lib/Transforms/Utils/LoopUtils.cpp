@@ -957,6 +957,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   }
 }
 
+// This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -984,6 +985,25 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unexpected ID");
   }
+}
+
+// This is the inverse to getArithmeticReductionInstruction
+Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
+  switch (Opc) {
+  default:
+    break;
+  case Instruction::Add:
+    return Intrinsic::vector_reduce_add;
+  case Instruction::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case Instruction::And:
+    return Intrinsic::vector_reduce_and;
+  case Instruction::Or:
+    return Intrinsic::vector_reduce_or;
+  case Instruction::Xor:
+    return Intrinsic::vector_reduce_xor;
+  }
+  return Intrinsic::not_intrinsic;
 }
 
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {

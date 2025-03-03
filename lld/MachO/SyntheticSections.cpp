@@ -1541,7 +1541,14 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  strings.push_back(str); // TODO: consider deduplicating strings
+  if (config->dedupSymbolStrings) {
+    llvm::CachedHashStringRef hashedStr(str);
+    auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
+    if (!inserted)
+      return it->second;
+  }
+
+  strings.push_back(str);
   size += str.size() + 1; // account for null terminator
   return strx;
 }
@@ -1958,7 +1965,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
-      const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
+      const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?
@@ -2079,12 +2086,12 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
-    assert(buf - bufStart == long(isec->outSecOff) &&
+    assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
     buf += writtenSize;
   }
-  assert(buf - bufStart == sectionSize &&
+  assert(buf - bufStart == std::ptrdiff_t(sectionSize) &&
          "Written size does not match expected section size");
 }
 

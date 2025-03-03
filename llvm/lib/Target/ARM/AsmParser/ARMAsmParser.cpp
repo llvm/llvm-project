@@ -288,6 +288,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   SmallVector<MCInst, 4> PendingConditionalInsts;
 
+  void onEndOfFile() override {
+    flushPendingInstructions(getParser().getStreamer());
+  }
+
   void flushPendingInstructions(MCStreamer &Out) override {
     if (!inImplicitITBlock()) {
       assert(PendingConditionalInsts.size() == 0);
@@ -744,9 +748,6 @@ public:
                         SMLoc IDLoc, OperandVector &Operands);
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
-
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
@@ -6663,9 +6664,9 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic, StringRef ExtraToken,
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
       Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
-      Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
-      Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
+      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" && Mnemonic != "vmovnt" &&
+      Mnemonic != "vqdmullt" && Mnemonic != "vpnot" && Mnemonic != "vcvtt" &&
+      Mnemonic != "vcvt") {
     unsigned VCC =
         ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size() - 1));
     if (VCC != ~0U) {
@@ -8650,6 +8651,37 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     if (ARM::isCDECoproc(Coproc, *STI))
       return Error(Operands[2]->getStartLoc(),
                    "coprocessor must be configured as GCP");
+    break;
+  }
+
+  case ARM::VTOSHH:
+  case ARM::VTOUHH:
+  case ARM::VTOSLH:
+  case ARM::VTOULH:
+  case ARM::VTOSHS:
+  case ARM::VTOUHS:
+  case ARM::VTOSLS:
+  case ARM::VTOULS:
+  case ARM::VTOSHD:
+  case ARM::VTOUHD:
+  case ARM::VTOSLD:
+  case ARM::VTOULD:
+  case ARM::VSHTOH:
+  case ARM::VUHTOH:
+  case ARM::VSLTOH:
+  case ARM::VULTOH:
+  case ARM::VSHTOS:
+  case ARM::VUHTOS:
+  case ARM::VSLTOS:
+  case ARM::VULTOS:
+  case ARM::VSHTOD:
+  case ARM::VUHTOD:
+  case ARM::VSLTOD:
+  case ARM::VULTOD: {
+    if (Operands[MnemonicOpsEndInd]->getReg() !=
+        Operands[MnemonicOpsEndInd + 1]->getReg())
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "source and destination registers must be the same");
     break;
   }
   }
@@ -11642,37 +11674,6 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
-MCSymbolRefExpr::VariantKind
-ARMAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
-      .Case("got", MCSymbolRefExpr::VK_GOT)
-      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
-      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
-      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
-      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
-      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
-      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
-      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
-      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
-      .Case("plt", MCSymbolRefExpr::VK_PLT)
-      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
-      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
-      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
-      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
-      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
-      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
-      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
-      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
-      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
-      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
-      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
-      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
-      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
-      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
-      .Default(MCSymbolRefExpr::VK_Invalid);
-}
-
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
@@ -11681,7 +11682,7 @@ void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
   if (NextSymbolIsThumb) {
-    getParser().getStreamer().emitThumbFunc(Symbol);
+    getTargetStreamer().emitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
   }
 }
@@ -11701,7 +11702,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
         Parser.getTok().is(AsmToken::String)) {
       MCSymbol *Func = getParser().getContext().getOrCreateSymbol(
           Parser.getTok().getIdentifier());
-      getParser().getStreamer().emitThumbFunc(Func);
+      getTargetStreamer().emitThumbFunc(Func);
       Parser.Lex();
       if (parseEOL())
         return true;

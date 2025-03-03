@@ -88,6 +88,14 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    PrintInstAddrs("print-inst-addrs", cl::Hidden,
+                   cl::desc("Print addresses of instructions when dumping"));
+
+static cl::opt<bool> PrintInstDebugLocs(
+    "print-inst-debug-locs", cl::Hidden,
+    cl::desc("Pretty print debug locations of instructions when dumping"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -368,6 +376,23 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
     break;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CallingConv::RISCV_VLSCall_##ABI_VLEN:                                  \
+    Out << "riscv_vls_cc(" #ABI_VLEN ")";                                      \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
 }
 
@@ -2004,7 +2029,7 @@ void MDFieldPrinter::printNameTableKind(StringRef Name,
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
-  if (!Value)
+  if (ShouldSkipZero && !Value)
     return;
 
   Out << FS << Name << ": ";
@@ -2224,6 +2249,26 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Out << ")";
 }
 
+static void writeDISubrangeType(raw_ostream &Out, const DISubrangeType *N,
+                                AsmWriterContext &WriterCtx) {
+  Out << "!DISubrangeType(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printString("name", N->getName());
+  Printer.printMetadata("scope", N->getRawScope());
+  Printer.printMetadata("file", N->getRawFile());
+  Printer.printInt("line", N->getLine());
+  Printer.printInt("size", N->getSizeInBits());
+  Printer.printInt("align", N->getAlignInBits());
+  Printer.printDIFlags("flags", N->getFlags());
+  Printer.printMetadata("baseType", N->getRawBaseType(),
+                        /* ShouldSkipNull */ false);
+  Printer.printMetadata("lowerBound", N->getRawLowerBound());
+  Printer.printMetadata("upperBound", N->getRawUpperBound());
+  Printer.printMetadata("stride", N->getRawStride());
+  Printer.printMetadata("bias", N->getRawBias());
+  Out << ")";
+}
+
 static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
                                  AsmWriterContext &WriterCtx) {
   Out << "!DICompositeType(";
@@ -2257,6 +2302,11 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("annotations", N->getRawAnnotations());
   if (auto *Specification = N->getRawSpecification())
     Printer.printMetadata("specification", Specification);
+
+  if (auto EnumKind = N->getEnumKind())
+    Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
+                           /*ShouldSkipZero=*/false);
+
   Out << ")";
 }
 
@@ -4231,6 +4281,18 @@ void AssemblyWriter::printInfoComment(const Value &V) {
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
   }
+
+  if (PrintInstDebugLocs) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      if (I->getDebugLoc()) {
+        Out << " ; ";
+        I->getDebugLoc().print(Out);
+      }
+    }
+  }
+
+  if (PrintInstAddrs)
+    Out << " ; " << &V;
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,

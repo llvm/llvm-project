@@ -693,9 +693,6 @@ public:
   /// Return the dialect this operation is registered to.
   Dialect &getDialect() const { return *getImpl()->getDialect(); }
 
-  /// Use the specified object to parse this ops custom assembly format.
-  ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
-
   /// Represent the operation name as an opaque pointer. (Used to support
   /// PointerLikeTypeTraits).
   static RegisteredOperationName getFromOpaquePointer(const void *pointer) {
@@ -822,7 +819,9 @@ public:
   }
 
   /// Add an attribute with the specified name.
-  void append(StringRef name, Attribute attr);
+  void append(StringRef name, Attribute attr) {
+    append(NamedAttribute(name, attr));
+  }
 
   /// Add an attribute with the specified name.
   void append(StringAttr name, Attribute attr) {
@@ -998,13 +997,25 @@ public:
     if (!properties) {
       T *p = new T{};
       properties = p;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
       propertiesDeleter = [](OpaqueProperties prop) {
         delete prop.as<const T *>();
       };
-      propertiesSetter = [](OpaqueProperties new_prop,
+      propertiesSetter = [](OpaqueProperties newProp,
                             const OpaqueProperties prop) {
-        *new_prop.as<T *>() = *prop.as<const T *>();
+        *newProp.as<T *>() = *prop.as<const T *>();
       };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
       propertiesId = TypeID::get<T>();
     }
     assert(propertiesId == TypeID::get<T>() && "Inconsistent properties");
@@ -1169,16 +1180,20 @@ public:
   OpPrintingFlags &skipRegions(bool skip = true);
 
   /// Do not verify the operation when using custom operation printers.
-  OpPrintingFlags &assumeVerified();
+  OpPrintingFlags &assumeVerified(bool enable = true);
 
   /// Use local scope when printing the operation. This allows for using the
   /// printer in a more localized and thread-safe setting, but may not
   /// necessarily be identical to what the IR will look like when dumping
   /// the full module.
-  OpPrintingFlags &useLocalScope();
+  OpPrintingFlags &useLocalScope(bool enable = true);
 
   /// Print users of values as comments.
-  OpPrintingFlags &printValueUsers();
+  OpPrintingFlags &printValueUsers(bool enable = true);
+
+  /// Print unique SSA ID numbers for values, block arguments and naming
+  /// conflicts across all regions
+  OpPrintingFlags &printUniqueSSAIDs(bool enable = true);
 
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;

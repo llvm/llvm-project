@@ -1201,9 +1201,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         !S.getLangOpts().ZVector)
       S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_long_long_decl_spec);
 
-    // No vector __int128 prior to Power8.
+    // No vector __int128 prior to Power8 (or ZVector).
     if ((TypeSpecType == TST_int128) &&
-        !S.Context.getTargetInfo().hasFeature("power8-vector"))
+        !S.Context.getTargetInfo().hasFeature("power8-vector") &&
+        !S.getLangOpts().ZVector)
       S.Diag(TSTLoc, diag::err_invalid_vector_int128_decl_spec);
 
     // Complex vector types are not supported.
@@ -1225,9 +1226,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
           << (TypeAltiVecPixel ? "__pixel" :
                                  getSpecifierName((TST)TypeSpecType, Policy));
       }
-      // vector bool __int128 requires Power10.
+      // vector bool __int128 requires Power10 (or ZVector).
       if ((TypeSpecType == TST_int128) &&
-          (!S.Context.getTargetInfo().hasFeature("power10-vector")))
+          (!S.Context.getTargetInfo().hasFeature("power10-vector") &&
+           !S.getLangOpts().ZVector))
         S.Diag(TSTLoc, diag::err_invalid_vector_bool_int128_decl_spec);
 
       // Only 'short' and 'long long' are valid with vector bool. (PIM 2.1)

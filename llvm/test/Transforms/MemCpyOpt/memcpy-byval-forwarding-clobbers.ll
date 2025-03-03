@@ -11,19 +11,15 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-; %a.2's lifetime ends before the call to @check. Cannot replace
-; %a.1 with %a.2 in the call to @check.
+; %a.2's lifetime ends before the call to @check. We must remove the call to
+; @llvm.lifetime.end in order to replace %a.1 with %a.2 in the call to @check.
 define i1 @alloca_forwarding_lifetime_end_clobber() {
 ; CHECK-LABEL: @alloca_forwarding_lifetime_end_clobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A_2]])
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    ret i1 [[CALL]]
 ;
 entry:
@@ -94,13 +90,10 @@ entry:
 define i1 @alloca_forwarding_unrelated_call_noclobber() {
 ; CHECK-LABEL: @alloca_forwarding_unrelated_call_noclobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[A_3:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A_2]])
 ; CHECK-NEXT:    call void @init(ptr sret(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    store i8 0, ptr [[A_2]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A_1]], ptr [[A_2]], i64 8, i1 false)
 ; CHECK-NEXT:    call void @clobber(ptr [[A_3]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @check(ptr byval(i64) align 8 [[A_2]])
 ; CHECK-NEXT:    ret i1 [[CALL]]

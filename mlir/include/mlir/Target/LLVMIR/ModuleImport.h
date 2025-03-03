@@ -67,9 +67,16 @@ public:
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
 
+  /// Converts all aliases of the LLVM module to MLIR variables.
+  LogicalResult convertAliases();
+
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
   LogicalResult convertDataLayout();
+
+  /// Converts target triple of the LLVM module to an MLIR target triple
+  /// specification.
+  void convertTargetTriple();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -284,6 +291,9 @@ private:
   LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
   /// Imports the magic globals "global_ctors" and "global_dtors".
   LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+  /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertAlias(llvm::GlobalAlias *alias);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -316,20 +326,37 @@ private:
   LogicalResult convertBranchArgs(llvm::Instruction *branch,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
-  /// Appends the converted result type and operands of `callInst` to the
-  /// `types` and `operands` arrays. For indirect calls, the method additionally
-  /// inserts the called function at the beginning of the `operands` array.
-  LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
-                                           SmallVectorImpl<Type> &types,
-                                           SmallVectorImpl<Value> &operands);
-  /// Converts the parameter attributes attached to `func` and adds them to the
-  /// `funcOp`.
+  /// Convert `callInst` operands. For indirect calls, the method additionally
+  /// inserts the called function at the beginning of the returned `operands`
+  /// array.  If `allowInlineAsm` is set to false (the default), it will return
+  /// failure if the called operand is an inline asm which isn't convertible to
+  /// MLIR as a value.
+  FailureOr<SmallVector<Value>>
+  convertCallOperands(llvm::CallBase *callInst, bool allowInlineAsm = false);
+  /// Converts the callee's function type. For direct calls, it converts the
+  /// actual function type, which may differ from the called operand type in
+  /// variadic functions. For indirect calls, it converts the function type
+  /// associated with the call instruction. Returns failure when the call and
+  /// the callee are not compatible or when nested type conversions failed.
+  FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
+  /// Returns the callee name, or an empty symbol if the call is not direct.
+  FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
+  /// Converts the parameter and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
                                   OpBuilder &builder);
   /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
+  /// Converts the parameter and result attributes attached to `call` and adds
+  /// them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
+                                  OpBuilder &builder);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
+  /// Converts the attributes attached to `inst` and adds them to the `op`.
+  LogicalResult convertInvokeAttributes(llvm::InvokeInst *inst, InvokeOp op);
   /// Returns the builtin type equivalent to the given LLVM dialect type or
   /// nullptr if there is no equivalent. The returned type can be used to create
   /// an attribute for a GlobalOp or a ConstantOp.
@@ -380,6 +407,10 @@ private:
   /// always requires a symbol name.
   FlatSymbolRefAttr
   getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;

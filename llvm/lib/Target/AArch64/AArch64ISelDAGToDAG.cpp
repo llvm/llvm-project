@@ -507,6 +507,8 @@ private:
 
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
+
+  bool SelectCmpBranchUImm6Operand(SDNode *P, SDValue N, SDValue &Imm);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -665,6 +667,10 @@ static AArch64_AM::ShiftExtendType getShiftTypeForNode(SDValue N) {
   }
 }
 
+static bool isMemOpOrPrefetch(SDNode *N) {
+  return isa<MemSDNode>(*N) || N->getOpcode() == AArch64ISD::PREFETCH;
+}
+
 /// Determine whether it is worth it to fold SHL into the addressing
 /// mode.
 static bool isWorthFoldingSHL(SDValue V) {
@@ -682,9 +688,9 @@ static bool isWorthFoldingSHL(SDValue V) {
   // computation, since the computation will be kept.
   const SDNode *Node = V.getNode();
   for (SDNode *UI : Node->users())
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       for (SDNode *UII : UI->users())
-        if (!isa<MemSDNode>(*UII))
+        if (!isMemOpOrPrefetch(UII))
           return false;
   return true;
 }
@@ -1248,7 +1254,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->users()) {
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
@@ -1332,7 +1338,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->users()) {
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
@@ -7484,4 +7490,53 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   Base = N;
   Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
   return true;
+}
+
+bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
+                                                      SDValue &Imm) {
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(P->getConstantOperandVal(1));
+  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+    // Check conservatively if the immediate fits the valid range [0, 64).
+    // Immediate variants for GE and HS definitely need to be decremented
+    // when lowering the pseudos later, so an immediate of 1 would become 0.
+    // For the inverse conditions LT and LO we don't know for sure if they
+    // will need a decrement but should the decision be made to reverse the
+    // branch condition, we again end up with the need to decrement.
+    // The same argument holds for LE, LS, GT and HI and possibly
+    // incremented immediates. This can lead to slightly less optimal
+    // codegen, e.g. we never codegen the legal case
+    //    cblt w0, #63, A
+    // because we could end up with the illegal case
+    //    cbge w0, #64, B
+    // should the decision to reverse the branch direction be made. For the
+    // lower bound cases this is no problem since we can express comparisons
+    // against 0 with either tbz/tnbz or using wzr/xzr.
+    uint64_t LowerBound = 0, UpperBound = 64;
+    switch (CC) {
+    case AArch64CC::GE:
+    case AArch64CC::HS:
+    case AArch64CC::LT:
+    case AArch64CC::LO:
+      LowerBound = 1;
+      break;
+    case AArch64CC::LE:
+    case AArch64CC::LS:
+    case AArch64CC::GT:
+    case AArch64CC::HI:
+      UpperBound = 63;
+      break;
+    default:
+      break;
+    }
+
+    if (CN->getAPIntValue().uge(LowerBound) &&
+        CN->getAPIntValue().ult(UpperBound)) {
+      SDLoc DL(N);
+      Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL, N.getValueType());
+      return true;
+    }
+  }
+
+  return false;
 }

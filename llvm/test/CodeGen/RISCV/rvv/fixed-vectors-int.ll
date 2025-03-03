@@ -1142,9 +1142,7 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vdivu.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -1292,10 +1290,8 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a1, 22
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, -7
 ; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
-; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vdiv.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -3166,18 +3162,18 @@ define void @mulhu_v32i8(ptr %x) {
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    li a2, -128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmerge.vxm v10, v12, a2, v0
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmerge.vxm v12, v10, a2, v0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI181_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI181_0)
 ; CHECK-NEXT:    vle8.v v14, (a0)
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
-; CHECK-NEXT:    vle8.v v12, (a1)
+; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vle8.v v10, (a1)
 ; CHECK-NEXT:    lui a1, 8208
 ; CHECK-NEXT:    addi a1, a1, 513
 ; CHECK-NEXT:    vsrl.vv v8, v14, v8
-; CHECK-NEXT:    vmulhu.vv v12, v8, v12
+; CHECK-NEXT:    vmulhu.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, 66785
@@ -3185,8 +3181,8 @@ define void @mulhu_v32i8(ptr %x) {
 ; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    lui a1, 529160
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vsub.vv v14, v14, v12
-; CHECK-NEXT:    vmulhu.vv v10, v14, v10
+; CHECK-NEXT:    vsub.vv v14, v14, v10
+; CHECK-NEXT:    vmulhu.vv v12, v14, v12
 ; CHECK-NEXT:    vmv.v.i v14, 4
 ; CHECK-NEXT:    addi a1, a1, 304
 ; CHECK-NEXT:    vmerge.vim v14, v14, 1, v0
@@ -3195,7 +3191,7 @@ define void @mulhu_v32i8(ptr %x) {
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vim v14, v14, 3, v0
-; CHECK-NEXT:    vadd.vv v10, v10, v12
+; CHECK-NEXT:    vadd.vv v10, v12, v10
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v8, v14, 2, v0
 ; CHECK-NEXT:    vsrl.vv v8, v10, v8

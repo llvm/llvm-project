@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -79,13 +80,11 @@ public:
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
-                              int Operand,
-                              const SmallVectorImpl<int> &GridConstantArgs);
+                              int Operand);
 
-  static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
-                              int Operand) {
-    addNVVMMetadata(GV, Name, Operand, SmallVector<int, 1>(0));
-  }
+  static void
+  addGridConstantNVVMMetadata(llvm::GlobalValue *GV,
+                              const SmallVectorImpl<int> &GridConstantArgs);
 
 private:
   static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
@@ -193,14 +192,18 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
         return ABIArgInfo::getDirect(
             CGInfo.getCUDADeviceBuiltinTextureDeviceType());
     }
-    return getNaturalAlignIndirect(Ty, /* byval */ true);
+    return getNaturalAlignIndirect(
+        Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+        /* byval */ true);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
     if ((EIT->getNumBits() > 128) ||
         (!getContext().getTargetInfo().hasInt128Type() &&
          EIT->getNumBits() > 64))
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      return getNaturalAlignIndirect(
+          Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
+          /* byval */ true);
   }
 
   return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
@@ -259,7 +262,7 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     if (FD->hasAttr<OpenCLKernelAttr>()) {
       // OpenCL __kernel functions get kernel metadata
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
     }
@@ -277,7 +280,8 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
           // For some reason arg indices are 1-based in NVVM
           GCI.push_back(IV.index() + 1);
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
-      addNVVMMetadata(F, "kernel", 1, GCI);
+      F->setCallingConv(llvm::CallingConv::PTX_Kernel);
+      addGridConstantNVVMMetadata(F, GCI);
     }
     if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
       M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -285,13 +289,12 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
 
   // Attach kernel metadata directly if compiling for NVPTX.
   if (FD->hasAttr<NVPTXKernelAttr>()) {
-    addNVVMMetadata(F, "kernel", 1);
+    F->setCallingConv(llvm::CallingConv::PTX_Kernel);
   }
 }
 
-void NVPTXTargetCodeGenInfo::addNVVMMetadata(
-    llvm::GlobalValue *GV, StringRef Name, int Operand,
-    const SmallVectorImpl<int> &GridConstantArgs) {
+void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
+                                             StringRef Name, int Operand) {
   llvm::Module *M = GV->getParent();
   llvm::LLVMContext &Ctx = M->getContext();
 
@@ -302,6 +305,21 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(
       llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, Name),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Operand))};
+
+  // Append metadata to nvvm.annotations
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+}
+
+void NVPTXTargetCodeGenInfo::addGridConstantNVVMMetadata(
+    llvm::GlobalValue *GV, const SmallVectorImpl<int> &GridConstantArgs) {
+
+  llvm::Module *M = GV->getParent();
+  llvm::LLVMContext &Ctx = M->getContext();
+
+  // Get "nvvm.annotations" metadata node
+  llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  SmallVector<llvm::Metadata *, 5> MDVals = {llvm::ConstantAsMetadata::get(GV)};
   if (!GridConstantArgs.empty()) {
     SmallVector<llvm::Metadata *, 10> GCM;
     for (int I : GridConstantArgs)
@@ -310,6 +328,7 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(
     MDVals.append({llvm::MDString::get(Ctx, "grid_constant"),
                    llvm::MDNode::get(Ctx, GCM)});
   }
+
   // Append metadata to nvvm.annotations
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
 }
@@ -338,17 +357,13 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
                                                int32_t *MaxThreadsVal,
                                                int32_t *MinBlocksVal,
                                                int32_t *MaxClusterRankVal) {
-  // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
   llvm::APSInt MaxThreads(32);
   MaxThreads = Attr->getMaxThreads()->EvaluateKnownConstInt(getContext());
   if (MaxThreads > 0) {
     if (MaxThreadsVal)
       *MaxThreadsVal = MaxThreads.getExtValue();
-    if (F) {
-      // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
-      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
-                                              MaxThreads.getExtValue());
-    }
+    if (F)
+      F->addFnAttr("nvvm.maxntid", llvm::utostr(MaxThreads.getExtValue()));
   }
 
   // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
@@ -360,11 +375,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MinBlocks > 0) {
       if (MinBlocksVal)
         *MinBlocksVal = MinBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
-                                                MinBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.minctasm", llvm::utostr(MinBlocks.getExtValue()));
     }
   }
   if (Attr->getMaxBlocks()) {
@@ -373,11 +385,9 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MaxBlocks > 0) {
       if (MaxClusterRankVal)
         *MaxClusterRankVal = MaxBlocks.getExtValue();
-      if (F) {
-        // Create !{<func-ref>, metadata !"maxclusterrank", i32 <val>} node
-        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxclusterrank",
-                                                MaxBlocks.getExtValue());
-      }
+      if (F)
+        F->addFnAttr("nvvm.maxclusterrank",
+                     llvm::utostr(MaxBlocks.getExtValue()));
     }
   }
 }

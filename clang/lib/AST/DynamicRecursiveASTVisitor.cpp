@@ -89,9 +89,9 @@ using namespace clang;
 //
 //   End result: RAV::TraverseCallExpr() is executed,
 namespace {
-struct Impl : RecursiveASTVisitor<Impl> {
-  DynamicRecursiveASTVisitor &Visitor;
-  Impl(DynamicRecursiveASTVisitor &Visitor) : Visitor(Visitor) {}
+template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
+  DynamicRecursiveASTVisitorBase<Const> &Visitor;
+  Impl(DynamicRecursiveASTVisitorBase<Const> &Visitor) : Visitor(Visitor) {}
 
   bool shouldVisitTemplateInstantiations() const {
     return Visitor.ShouldVisitTemplateInstantiations;
@@ -189,8 +189,10 @@ struct Impl : RecursiveASTVisitor<Impl> {
 
   // TraverseStmt() always passes in a queue, so we have no choice but to
   // accept it as a parameter here.
-  bool dataTraverseNode(Stmt *S, DataRecursionQueue * = nullptr) {
-    // But since don't support postorder traversal, we don't need it, so
+  bool dataTraverseNode(
+      Stmt *S,
+      typename RecursiveASTVisitor<Impl>::DataRecursionQueue * = nullptr) {
+    // But since we don't support postorder traversal, we don't need it, so
     // simply discard it here. This way, derived classes don't need to worry
     // about including it as a parameter that they never use.
     return Visitor.dataTraverseNode(S);
@@ -266,187 +268,106 @@ struct Impl : RecursiveASTVisitor<Impl> {
 };
 } // namespace
 
-void DynamicRecursiveASTVisitor::anchor() {}
+template <bool Const> void DynamicRecursiveASTVisitorBase<Const>::anchor() {}
 
-bool DynamicRecursiveASTVisitor::TraverseAST(ASTContext &AST) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseAST(AST);
-}
+// Helper macros to forward a call to the base implementation since that
+// ends up getting very verbose otherwise.
 
-bool DynamicRecursiveASTVisitor::TraverseAttr(Attr *At) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseAttr(At);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseConstructorInitializer(
-    CXXCtorInitializer *Init) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConstructorInitializer(
-      Init);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseDecl(Decl *D) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseDecl(D);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseLambdaCapture(LambdaExpr *LE,
-                                                       const LambdaCapture *C,
-                                                       Expr *Init) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseLambdaCapture(LE, C,
-                                                                      Init);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseStmt(Stmt *S) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseStmt(S);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTemplateArgument(
-    const TemplateArgument &Arg) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateArgument(Arg);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTemplateArguments(
-    ArrayRef<TemplateArgument> Args) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateArguments(Args);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTemplateArgumentLoc(
-    const TemplateArgumentLoc &ArgLoc) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateArgumentLoc(
-      ArgLoc);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTemplateName(TemplateName Template) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTemplateName(Template);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseType(QualType T) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseType(T);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTypeLoc(TypeLoc TL) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTypeLoc(TL);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseTypeConstraint(
-    const TypeConstraint *C) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseTypeConstraint(C);
-}
-bool DynamicRecursiveASTVisitor::TraverseObjCProtocolLoc(
-    ObjCProtocolLoc ProtocolLoc) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseObjCProtocolLoc(
-      ProtocolLoc);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseConceptRequirement(
-    concepts::Requirement *R) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptRequirement(R);
-}
-bool DynamicRecursiveASTVisitor::TraverseConceptTypeRequirement(
-    concepts::TypeRequirement *R) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptTypeRequirement(
-      R);
-}
-bool DynamicRecursiveASTVisitor::TraverseConceptExprRequirement(
-    concepts::ExprRequirement *R) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptExprRequirement(
-      R);
-}
-bool DynamicRecursiveASTVisitor::TraverseConceptNestedRequirement(
-    concepts::NestedRequirement *R) {
-  return Impl(*this)
-      .RecursiveASTVisitor<Impl>::TraverseConceptNestedRequirement(R);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseConceptReference(
-    ConceptReference *CR) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseConceptReference(CR);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseCXXBaseSpecifier(
-    const CXXBaseSpecifier &Base) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseCXXBaseSpecifier(Base);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseDeclarationNameInfo(
-    DeclarationNameInfo NameInfo) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseDeclarationNameInfo(
-      NameInfo);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifier(
-    NestedNameSpecifier *NNS) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseNestedNameSpecifier(
-      NNS);
-}
-
-bool DynamicRecursiveASTVisitor::TraverseNestedNameSpecifierLoc(
-    NestedNameSpecifierLoc NNS) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::TraverseNestedNameSpecifierLoc(
-      NNS);
-}
-
-bool DynamicRecursiveASTVisitor::dataTraverseNode(Stmt *S) {
-  return Impl(*this).RecursiveASTVisitor<Impl>::dataTraverseNode(S, nullptr);
-}
-
-#define DEF_TRAVERSE_TMPL_INST(kind)                                           \
-  bool DynamicRecursiveASTVisitor::TraverseTemplateInstantiations(             \
-      kind##TemplateDecl *D) {                                                 \
-    return Impl(*this)                                                         \
-        .RecursiveASTVisitor<Impl>::TraverseTemplateInstantiations(D);         \
+// This calls the RecursiveASTVisitor implementation of the same function,
+// stripping any 'const' that the DRAV implementation may have added since
+// the RAV implementation largely doesn't use 'const'.
+#define FORWARD_TO_BASE(Function, Type, RefOrPointer)                          \
+  template <bool Const>                                                        \
+  bool DynamicRecursiveASTVisitorBase<Const>::Function(                        \
+      MaybeConst<Type> RefOrPointer Param) {                                   \
+    return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::Function(      \
+        const_cast<Type RefOrPointer>(Param));                                 \
   }
-DEF_TRAVERSE_TMPL_INST(Class)
-DEF_TRAVERSE_TMPL_INST(Var)
-DEF_TRAVERSE_TMPL_INST(Function)
-#undef DEF_TRAVERSE_TMPL_INST
+
+// Same as 'FORWARD_TO_BASE', but doesn't change the parameter type in any way.
+#define FORWARD_TO_BASE_EXACT(Function, Type)                                  \
+  template <bool Const>                                                        \
+  bool DynamicRecursiveASTVisitorBase<Const>::Function(Type Param) {           \
+    return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::Function(      \
+        Param);                                                                \
+  }
+
+FORWARD_TO_BASE(TraverseAST, ASTContext, &)
+FORWARD_TO_BASE(TraverseAttr, Attr, *)
+FORWARD_TO_BASE(TraverseConstructorInitializer, CXXCtorInitializer, *)
+FORWARD_TO_BASE(TraverseDecl, Decl, *)
+FORWARD_TO_BASE(TraverseStmt, Stmt, *)
+FORWARD_TO_BASE(TraverseNestedNameSpecifier, NestedNameSpecifier, *)
+FORWARD_TO_BASE(TraverseTemplateInstantiations, ClassTemplateDecl, *)
+FORWARD_TO_BASE(TraverseTemplateInstantiations, VarTemplateDecl, *)
+FORWARD_TO_BASE(TraverseTemplateInstantiations, FunctionTemplateDecl, *)
+FORWARD_TO_BASE(TraverseConceptRequirement, concepts::Requirement, *)
+FORWARD_TO_BASE(TraverseConceptTypeRequirement, concepts::TypeRequirement, *)
+FORWARD_TO_BASE(TraverseConceptExprRequirement, concepts::ExprRequirement, *)
+FORWARD_TO_BASE(TraverseConceptReference, ConceptReference, *)
+FORWARD_TO_BASE(TraverseConceptNestedRequirement,
+                concepts::NestedRequirement, *)
+
+FORWARD_TO_BASE_EXACT(TraverseCXXBaseSpecifier, const CXXBaseSpecifier &)
+FORWARD_TO_BASE_EXACT(TraverseDeclarationNameInfo, DeclarationNameInfo)
+FORWARD_TO_BASE_EXACT(TraverseTemplateArgument, const TemplateArgument &)
+FORWARD_TO_BASE_EXACT(TraverseTemplateArguments, ArrayRef<TemplateArgument>)
+FORWARD_TO_BASE_EXACT(TraverseTemplateArgumentLoc, const TemplateArgumentLoc &)
+FORWARD_TO_BASE_EXACT(TraverseTemplateName, TemplateName)
+FORWARD_TO_BASE_EXACT(TraverseType, QualType)
+FORWARD_TO_BASE_EXACT(TraverseTypeLoc, TypeLoc)
+FORWARD_TO_BASE_EXACT(TraverseTypeConstraint, const TypeConstraint *)
+FORWARD_TO_BASE_EXACT(TraverseObjCProtocolLoc, ObjCProtocolLoc)
+FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifierLoc, NestedNameSpecifierLoc)
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::TraverseLambdaCapture(
+    MaybeConst<LambdaExpr> *LE, const LambdaCapture *C,
+    MaybeConst<Expr> *Init) {
+  return Impl<Const>(*this)
+      .RecursiveASTVisitor<Impl<Const>>::TraverseLambdaCapture(
+          const_cast<LambdaExpr *>(LE), C, const_cast<Expr *>(Init));
+}
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(
+    MaybeConst<Stmt> *S) {
+  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::dataTraverseNode(
+      const_cast<Stmt *>(S), nullptr);
+}
 
 // Declare Traverse*() for and friends all concrete Decl classes.
 #define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
-  bool DynamicRecursiveASTVisitor::Traverse##CLASS##Decl(CLASS##Decl *D) {     \
-    return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS##Decl(D);    \
-  }                                                                            \
-  bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS##Decl(CLASS##Decl *D) {   \
-    return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS##Decl(D);  \
-  }
+  FORWARD_TO_BASE(Traverse##CLASS##Decl, CLASS##Decl, *)                       \
+  FORWARD_TO_BASE(WalkUpFrom##CLASS##Decl, CLASS##Decl, *)
 #include "clang/AST/DeclNodes.inc"
 
 // Declare Traverse*() and friends for all concrete Stmt classes.
 #define ABSTRACT_STMT(STMT)
-#define STMT(CLASS, PARENT)                                                    \
-  bool DynamicRecursiveASTVisitor::Traverse##CLASS(CLASS *S) {                 \
-    return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS(S);          \
-  }
+#define STMT(CLASS, PARENT) FORWARD_TO_BASE(Traverse##CLASS, CLASS, *)
 #include "clang/AST/StmtNodes.inc"
 
-#define STMT(CLASS, PARENT)                                                    \
-  bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS(CLASS *S) {               \
-    return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS(S);        \
-  }
+#define STMT(CLASS, PARENT) FORWARD_TO_BASE(WalkUpFrom##CLASS, CLASS, *)
 #include "clang/AST/StmtNodes.inc"
 
-// Declare Traverse*() and friends for all concrete Typeclasses.
+// Declare Traverse*() and friends for all concrete Type classes.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
-  bool DynamicRecursiveASTVisitor::Traverse##CLASS##Type(CLASS##Type *T) {     \
-    return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS##Type(T);    \
-  }                                                                            \
-  bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS##Type(CLASS##Type *T) {   \
-    return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS##Type(T);  \
-  }
+  FORWARD_TO_BASE(Traverse##CLASS##Type, CLASS##Type, *)                       \
+  FORWARD_TO_BASE(WalkUpFrom##CLASS##Type, CLASS##Type, *)
 #include "clang/AST/TypeNodes.inc"
 
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  bool DynamicRecursiveASTVisitor::Traverse##CLASS##TypeLoc(                   \
-      CLASS##TypeLoc TL) {                                                     \
-    return Impl(*this).RecursiveASTVisitor<Impl>::Traverse##CLASS##TypeLoc(    \
-        TL);                                                                   \
-  }
+  FORWARD_TO_BASE_EXACT(Traverse##CLASS##TypeLoc, CLASS##TypeLoc)
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \
-  bool DynamicRecursiveASTVisitor::WalkUpFrom##CLASS##TypeLoc(                 \
-      CLASS##TypeLoc TL) {                                                     \
-    return Impl(*this).RecursiveASTVisitor<Impl>::WalkUpFrom##CLASS##TypeLoc(  \
-        TL);                                                                   \
-  }
+  FORWARD_TO_BASE_EXACT(WalkUpFrom##CLASS##TypeLoc, CLASS##TypeLoc)
 #include "clang/AST/TypeLocNodes.def"
+
+namespace clang {
+template class DynamicRecursiveASTVisitorBase<false>;
+template class DynamicRecursiveASTVisitorBase<true>;
+} // namespace clang

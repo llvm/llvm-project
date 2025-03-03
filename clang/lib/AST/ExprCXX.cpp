@@ -1722,7 +1722,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
   if (Index && FullySubstituted && !SubstitutedExprs.empty())
     Type = SubstitutedExprs[*Index]->getType();
   else
-    Type = Context.DependentTy;
+    Type = PackIdExpr->getType();
 
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
@@ -1779,31 +1779,31 @@ TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
   return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
 }
 
-FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
+FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
                                            SourceLocation NameLoc,
                                            unsigned NumParams,
-                                           VarDecl *const *Params)
+                                           ValueDecl *const *Params)
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<VarDecl *>());
+                            getTrailingObjects<ValueDecl *>());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
-                             VarDecl *ParamPack, SourceLocation NameLoc,
-                             ArrayRef<VarDecl *> Params) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(Params.size())))
+                             ValueDecl *ParamPack, SourceLocation NameLoc,
+                             ArrayRef<ValueDecl *> Params) {
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(Params.size())))
       FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(NumParams)))
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(NumParams)))
       FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 

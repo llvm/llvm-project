@@ -120,6 +120,30 @@ public:
     int Value;
   };
 
+  /// Replaces uses of a struct with uses of an equivalent named struct.
+  ///
+  /// DXIL operations that return structs give them well known names, so we need
+  /// to update uses when we switch from an LLVM intrinsic to an op.
+  Error replaceNamedStructUses(CallInst *Intrin, CallInst *DXILOp) {
+    auto *IntrinTy = cast<StructType>(Intrin->getType());
+    auto *DXILOpTy = cast<StructType>(DXILOp->getType());
+    if (!IntrinTy->isLayoutIdentical(DXILOpTy))
+      return make_error<StringError>(
+          "Type mismatch between intrinsic and DXIL op",
+          inconvertibleErrorCode());
+
+    for (Use &U : make_early_inc_range(Intrin->uses()))
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
+        EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
+      else
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
+    return Error::success();
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -154,32 +178,13 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
-      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
-      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+      if (isa<StructType>(CI->getType())) {
+        if (Error E = replaceNamedStructUses(CI, *OpCall))
+          return E;
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        CI->replaceAllUsesWith(*OpCall);
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = ReplaceUses(CI, *OpCall))
-        return E;
-
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -359,26 +364,6 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
-        EVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
-            inconvertibleErrorCode());
-      }
-    }
-
-    Intrin->eraseFromParent();
-
-    return Error::success();
-  }
-
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
   /// Since we expect to be post-scalarization, make an effort to avoid vectors.
   Error replaceResRetUses(CallInst *Intrin, CallInst *Op, bool HasCheckBit) {
@@ -415,8 +400,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -534,6 +527,74 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerCBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getCBufRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::CBufferLoadLegacy, {Handle, Index}, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceNamedStructUses(CI, *OpCall))
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -566,7 +627,10 @@ public:
     return false;
   }
 
-  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+  [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -577,51 +641,75 @@ public:
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+      Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
 
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
+      Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+
+      // TODO: check that we only have vector or scalar...
+      if (!IsRaw && NumElements != 4)
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
+      else if (NumElements > 4)
+        return make_error<StringError>(
+            "rawBufferStore data must have at most 4 elements",
+            inconvertibleErrorCode());
 
-      // Since we're post-scalarizer, we likely have a vector that's constructed
-      // solely for the argument of the store. If so, just use the scalar values
-      // from before they're inserted into the temporary.
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI) {
-        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-        if (!IndexOp)
-          break;
-        size_t IndexVal = IndexOp->getZExtValue();
-        assert(IndexVal < 4 && "Too many elements for buffer store");
-        DataElements[IndexVal] = IEI->getOperand(1);
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      if (DataTy == ScalarTy)
+        DataElements[0] = Data;
+      else {
+        // Since we're post-scalarizer, if we see a vector here it's likely
+        // constructed solely for the argument of the store. Just use the scalar
+        // values from before they're inserted into the temporary.
+        auto *IEI = dyn_cast<InsertElementInst>(Data);
+        while (IEI) {
+          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+          if (!IndexOp)
+            break;
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Too many elements for buffer store");
+          DataElements[IndexVal] = IEI->getOperand(1);
+          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        }
       }
 
       // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we need to actually extract elements from the
-      // vector.
-      for (int I = 0, E = 4; I != E; ++I)
+      // scalarizer artifact, then we may need to actually extract elements from
+      // the vector.
+      for (int I = 0, E = NumElements; I < E; ++I)
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+      // For any elements beyond the length of the vector, fill up with undef.
+      for (int I = NumElements, E = 4; I < E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] = UndefValue::get(ScalarTy);
 
-      std::array<Value *, 8> Args{
+      dxil::OpCode Op = OpCode::BufferStore;
+      SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
+      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+        Op = OpCode::RawBufferStore;
+        // RawBufferStore requires the alignment
+        Args.push_back(
+            ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value()));
+      }
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+          OpBuilder.tryCreateOp(Op, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
       // Clean up any leftover `insertelement`s
-      IEI = dyn_cast<InsertElementInst>(Data);
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
       while (IEI && IEI->use_empty()) {
         InsertElementInst *Tmp = IEI;
         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
@@ -708,8 +796,20 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
+      // NOTE: Skip dx_resource_casthandle here. They are
+      // resolved after this loop in cleanupHandleCasts.
+      case Intrinsic::dx_resource_casthandle:
+      // NOTE: llvm.dbg.value is supported as is in DXIL.
+      case Intrinsic::dbg_value:
+      case Intrinsic::not_intrinsic:
         continue;
+      default: {
+        DiagnosticInfoUnsupported Diag(
+            F, "Unsupported intrinsic for DXIL lowering");
+        M.getContext().diagnose(Diag);
+        HasErrors |= true;
+        break;
+      }
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -723,26 +823,24 @@ public:
         HasErrors |= lowerGetPointer(F);
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
-        break;
-      case Intrinsic::dx_resource_loadchecked_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
-        HasErrors |= lowerTypedBufferStore(F);
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
+        break;
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
+        break;
+      case Intrinsic::dx_resource_store_rawbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
+        break;
+      case Intrinsic::dx_resource_load_cbufferrow_2:
+      case Intrinsic::dx_resource_load_cbufferrow_4:
+      case Intrinsic::dx_resource_load_cbufferrow_8:
+        HasErrors |= lowerCBufferLoad(F);
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
-        break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::dx_splitdouble:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::SplitDouble,
-            OpBuilder.getSplitDoubleType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceSplitDoubleCallUsages(CI, Op);
-            });
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);

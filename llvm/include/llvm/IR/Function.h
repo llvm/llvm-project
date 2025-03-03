@@ -284,6 +284,18 @@ public:
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
   }
 
+  /// Does it have a kernel calling convention?
+  bool hasKernelCallingConv() const {
+    switch (getCallingConv()) {
+    default:
+      return false;
+    case CallingConv::PTX_Kernel:
+    case CallingConv::AMDGPU_KERNEL:
+    case CallingConv::SPIR_KERNEL:
+      return true;
+    }
+  }
+
   enum ProfileCountType { PCT_Real, PCT_Synthetic };
 
   /// Class to represent profile counts.
@@ -333,12 +345,6 @@ public:
   /// Returns the set of GUIDs that needs to be imported to the function for
   /// sample PGO, to enable the same inlines as the profiled optimized binary.
   DenseSet<GlobalValue::GUID> getImportGUIDs() const;
-
-  /// Set the section prefix for this function.
-  void setSectionPrefix(StringRef Prefix);
-
-  /// Get the section prefix for this function.
-  std::optional<StringRef> getSectionPrefix() const;
 
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.

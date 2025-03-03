@@ -392,6 +392,10 @@ void StmtProfiler::VisitCapturedStmt(const CapturedStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
   VisitStmt(S);
 }
@@ -601,6 +605,9 @@ void OMPClauseProfiler::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 
 void OMPClauseProfiler::VisitOMPNoOpenMPRoutinesClause(
     const OMPNoOpenMPRoutinesClause *) {}
+
+void OMPClauseProfiler::VisitOMPNoOpenMPConstructsClause(
+    const OMPNoOpenMPConstructsClause *) {}
 
 void OMPClauseProfiler::VisitOMPNoParallelismClause(
     const OMPNoParallelismClause *) {}
@@ -997,6 +1004,10 @@ void StmtProfiler::VisitOMPLoopTransformationDirective(
 }
 
 void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
@@ -2266,13 +2277,13 @@ void StmtProfiler::VisitPackExpansionExpr(const PackExpansionExpr *S) {
 
 void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
   VisitExpr(S);
-  VisitDecl(S->getPack());
   if (S->isPartiallySubstituted()) {
     auto Args = S->getPartialArguments();
     ID.AddInteger(Args.size());
     for (const auto &TA : Args)
       VisitTemplateArgument(TA);
   } else {
+    VisitDecl(S->getPack());
     ID.AddInteger(0);
   }
 }
@@ -2554,9 +2565,23 @@ void OpenACCClauseProfiler::VisitCreateClause(
   VisitClauseWithVarList(Clause);
 }
 
+void OpenACCClauseProfiler::VisitHostClause(const OpenACCHostClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitDeviceClause(
+    const OpenACCDeviceClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
-  if (Clause.hasConditionExpr())
-    Profiler.VisitStmt(Clause.getConditionExpr());
+  if (Clause.isConditionExprClause()) {
+    if (Clause.hasConditionExpr())
+      Profiler.VisitStmt(Clause.getConditionExpr());
+  } else {
+    for (auto *E : Clause.getVarList())
+      Profiler.VisitStmt(E);
+  }
 }
 
 void OpenACCClauseProfiler::VisitFinalizeClause(
@@ -2647,6 +2672,11 @@ void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
 
 void OpenACCClauseProfiler::VisitDeviceNumClause(
     const OpenACCDeviceNumClause &Clause) {
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &Clause) {
   Profiler.VisitStmt(Clause.getIntExpr());
 }
 
@@ -2767,6 +2797,24 @@ void StmtProfiler::VisitOpenACCShutdownConstruct(
   VisitStmt(S);
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitStmt(S);
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitStmt(S);
+  OpenACCClauseProfiler P{*this};
+  P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
 }
 
 void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {

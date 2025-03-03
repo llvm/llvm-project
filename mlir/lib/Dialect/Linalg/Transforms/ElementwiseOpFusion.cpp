@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -1547,10 +1548,9 @@ static Value getCollapsedOpOperand(Location loc, LinalgOp op,
 
 /// Modify the `linalg.index` operations in the original generic op, to its
 /// value in the collapsed operation.
-void generateCollapsedIndexingRegion(Location loc, Block *block,
-                                     const CollapsingInfo &collapsingInfo,
-                                     ValueRange loopRange,
-                                     RewriterBase &rewriter) {
+static void generateCollapsedIndexingRegion(
+    Location loc, Block *block, const CollapsingInfo &collapsingInfo,
+    ArrayRef<OpFoldResult> loopRange, RewriterBase &rewriter) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPointToStart(block);
 
@@ -1571,10 +1571,12 @@ void generateCollapsedIndexingRegion(Location loc, Block *block,
     Value newIndexVal =
         rewriter.create<linalg::IndexOp>(loc, foldedDims.index());
     for (auto dim : llvm::reverse(foldedDimsRef.drop_front())) {
+      Value loopDim =
+          getValueOrCreateConstantIndexOp(rewriter, loc, loopRange[dim]);
       indexReplacementVals[dim] =
-          rewriter.create<arith::RemUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.createOrFold<arith::RemSIOp>(loc, newIndexVal, loopDim);
       newIndexVal =
-          rewriter.create<arith::DivUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.createOrFold<arith::DivSIOp>(loc, newIndexVal, loopDim);
     }
     indexReplacementVals[foldedDims.value().front()] = newIndexVal;
   }
@@ -1721,14 +1723,13 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
   LinalgOp collapsedOp = createCollapsedOp(op, collapsingInfo, rewriter);
 
   Location loc = op->getLoc();
+  SmallVector<OpFoldResult> loopBound =
+      llvm::map_to_vector(loopRanges, [](Range range) { return range.size; });
+
   if (collapsedOp.hasIndexSemantics()) {
     // Collect the loop range of the generic op.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(collapsedOp);
-    SmallVector<Value> loopBound =
-        llvm::map_to_vector(loopRanges, [&](Range range) {
-          return getValueOrCreateConstantIndexOp(rewriter, loc, range.size);
-        });
     generateCollapsedIndexingRegion(loc, &collapsedOp->getRegion(0).front(),
                                     collapsingInfo, loopBound, rewriter);
   }
@@ -1746,15 +1747,22 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
           op.getIndexingMapMatchingResult(originalResult.value());
       SmallVector<ReassociationIndices> reassociation =
           getOperandReassociation(indexingMap, collapsingInfo);
+      assert(
+          indexingMap.isProjectedPermutation() &&
+          "Expected indexing map to be a projected permutation for collapsing");
+      SmallVector<OpFoldResult> resultShape =
+          applyPermutationMap(indexingMap, ArrayRef(loopBound));
       Value result;
       if (isa<MemRefType>(collapsedOpResult.getType())) {
         MemRefType expandShapeResultType = MemRefType::get(
             originalResultType.getShape(), originalResultType.getElementType());
         result = rewriter.create<memref::ExpandShapeOp>(
-            loc, expandShapeResultType, collapsedOpResult, reassociation);
+            loc, expandShapeResultType, collapsedOpResult, reassociation,
+            resultShape);
       } else {
         result = rewriter.create<tensor::ExpandShapeOp>(
-            loc, originalResultType, collapsedOpResult, reassociation);
+            loc, originalResultType, collapsedOpResult, reassociation,
+            resultShape);
       }
       results.push_back(result);
     } else {

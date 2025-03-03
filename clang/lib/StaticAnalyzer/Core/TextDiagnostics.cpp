@@ -91,7 +91,6 @@ public:
                                     ? " [" + PD->getCheckerName() + "]"
                                     : "")
                                    .str();
-
       reportPiece(WarnID, PD->getLocation().asLocation(),
                   (PD->getShortDescription() + WarningMsg).str(),
                   PD->path.back()->getRanges(), PD->path.back()->getFixits());

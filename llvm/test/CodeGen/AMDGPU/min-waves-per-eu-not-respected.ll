@@ -12,5 +12,5 @@ define amdgpu_kernel void @impossible_occupancy() #1 {
   ret void
 }
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,1024" "amdgpu-waves-per-eu"="9" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-waves-per-eu"="9" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="11" }

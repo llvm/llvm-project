@@ -13,42 +13,39 @@
 #include <array>
 #include <type_traits>
 
-
-struct Empty { };
+struct Empty {};
 
 struct TrivialCopy {
-    int i;
-    double j;
+  int i;
+  double j;
 };
 
 struct NonTrivialCopy {
-    NonTrivialCopy(NonTrivialCopy const&) { }
-    NonTrivialCopy& operator=(NonTrivialCopy const&) { return *this; }
+  NonTrivialCopy(NonTrivialCopy const&) {}
+  NonTrivialCopy& operator=(NonTrivialCopy const&) { return *this; }
 };
 
 template <typename T>
-void check_trivially_copyable()
-{
-    static_assert(std::is_trivially_copyable<std::array<T, 0> >::value, "");
-    static_assert(std::is_trivially_copyable<std::array<T, 1> >::value, "");
-    static_assert(std::is_trivially_copyable<std::array<T, 2> >::value, "");
-    static_assert(std::is_trivially_copyable<std::array<T, 3> >::value, "");
+void check_trivially_copyable() {
+  static_assert(std::is_trivially_copyable<std::array<T, 0> >::value, "");
+  static_assert(std::is_trivially_copyable<std::array<T, 1> >::value, "");
+  static_assert(std::is_trivially_copyable<std::array<T, 2> >::value, "");
+  static_assert(std::is_trivially_copyable<std::array<T, 3> >::value, "");
 }
 
-int main(int, char**)
-{
-    check_trivially_copyable<int>();
-    check_trivially_copyable<long>();
-    check_trivially_copyable<double>();
-    check_trivially_copyable<long double>();
-    check_trivially_copyable<Empty>();
-    check_trivially_copyable<TrivialCopy>();
+int main(int, char**) {
+  check_trivially_copyable<int>();
+  check_trivially_copyable<long>();
+  check_trivially_copyable<double>();
+  check_trivially_copyable<long double>();
+  check_trivially_copyable<Empty>();
+  check_trivially_copyable<TrivialCopy>();
 
-    // Check that std::array<T, 0> is still trivially copyable when T is not
-    static_assert( std::is_trivially_copyable<std::array<NonTrivialCopy, 0> >::value, "");
-    static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 1> >::value, "");
-    static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 2> >::value, "");
-    static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 3> >::value, "");
+  // Check that std::array<T, 0> is still trivially copyable when T is not
+  static_assert(std::is_trivially_copyable<std::array<NonTrivialCopy, 0> >::value, "");
+  static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 1> >::value, "");
+  static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 2> >::value, "");
+  static_assert(!std::is_trivially_copyable<std::array<NonTrivialCopy, 3> >::value, "");
 
-    return 0;
+  return 0;
 }

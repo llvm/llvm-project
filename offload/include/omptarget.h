@@ -42,7 +42,7 @@ enum __tgt_target_return_t : int {
   OMP_TGT_SUCCESS = 0,
   /// offload may not execute on the requested target device
   /// this scenario can be caused by the device not available or unsupported
-  /// as described in the Execution Model in the specifcation
+  /// as described in the Execution Model in the specification
   /// this status may not be used for target device execution failure
   /// which should be handled internally in libomptarget
   OMP_TGT_FAIL = ~0

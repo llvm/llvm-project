@@ -452,6 +452,38 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
 #endif // TARGET_OS_OSX
 }
 
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+#if !TARGET_OS_OSX
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else  // !TARGET_OS_OSX
+  if (url.empty())
+    return llvm::createStringError("Cannot open empty URL.");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+  CFCString url_cfstr(url.data(), kCFStringEncodingUTF8);
+  CFCReleaser<CFURLRef> cfurl = ::CFURLCreateWithString(
+      /*allocator=*/NULL,
+      /*URLString*/ url_cfstr.get(),
+      /*baseURL=*/NULL);
+
+  if (!cfurl.get())
+    return llvm::createStringError(
+        llvm::formatv("could not create CFURL from URL \"{0}\"", url));
+
+  OSStatus error = ::LSOpenCFURLRef(
+      /*inURL=*/cfurl.get(),
+      /*outLaunchedURL=*/NULL);
+
+  if (error != noErr)
+    return llvm::createStringError(
+        llvm::formatv("LSOpenCFURLRef failed: error {0:x}", error));
+
+  return llvm::Error::success();
+#endif // TARGET_OS_OSX
+}
+
 bool Host::IsInteractiveGraphicSession() {
 #if !TARGET_OS_OSX
   return false;

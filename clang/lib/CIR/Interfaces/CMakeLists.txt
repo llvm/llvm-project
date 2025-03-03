@@ -5,6 +5,7 @@ add_clang_library(MLIRCIRInterfaces
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
+  MLIRCIRAttrsEnumsGen
   MLIRCIRFPTypeInterfaceIncGen
 
   LINK_LIBS

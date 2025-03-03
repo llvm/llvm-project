@@ -17,10 +17,12 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
 #include <queue>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace llvm {
@@ -236,6 +238,10 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
 
+inline bool hasInitializer(const GlobalVariable *GV) {
+  return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
+}
+
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
   return T && T->getTypeID() == Type::TypedPointerTyID;
@@ -377,13 +383,37 @@ inline const Type *unifyPtrType(const Type *Ty) {
   return toTypedPointer(const_cast<Type *>(Ty));
 }
 
+inline bool isVector1(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  return FVTy && FVTy->getNumElements() == 1;
+}
+
+// Modify an LLVM type to conform with future transformations in IRTranslator.
+// At the moment use cases comprise only a <1 x Type> vector. To extend when/if
+// needed.
+inline Type *normalizeType(Type *Ty) {
+  auto *FVTy = dyn_cast<FixedVectorType>(Ty);
+  if (!FVTy || FVTy->getNumElements() != 1)
+    return Ty;
+  // If it's a <1 x Type> vector type, replace it by the element type, because
+  // it's not a legal vector type in LLT and IRTranslator will represent it as
+  // the scalar eventually.
+  return normalizeType(FVTy->getElementType());
+}
+
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
+  return PoisonValue::get(normalizeType(Ty));
+}
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force = false);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force = false);
 void setRegClassType(Register Reg, const MachineInstr *SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
@@ -394,8 +424,9 @@ Register createVirtualRegister(const MachineInstr *SpvType,
 Register createVirtualRegister(const MachineInstr *SpvType,
                                SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR);
 
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty);
@@ -412,6 +443,11 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   auto It = Mapping.find(S);
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
+
+void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                                 unsigned MinWC, unsigned ContinuedOpcode,
+                                 ArrayRef<Register> Args,
+                                 Register ReturnRegister, Register TypeID);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

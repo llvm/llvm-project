@@ -297,6 +297,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -349,6 +350,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::Worker ||
@@ -407,6 +409,10 @@ public:
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
 
@@ -486,6 +492,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -498,6 +505,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -547,6 +555,10 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
@@ -586,6 +598,10 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
@@ -679,23 +695,52 @@ public:
   /// should check legality of the statement as it appertains to this Construct.
   StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
                                  OpenACCDirectiveKind K,
+                                 OpenACCAtomicKind AtKind,
                                  ArrayRef<const OpenACCClause *> Clauses,
                                  StmtResult AssocStmt);
 
+  StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
+                                 OpenACCDirectiveKind K,
+                                 ArrayRef<const OpenACCClause *> Clauses,
+                                 StmtResult AssocStmt) {
+    return ActOnAssociatedStmt(DirectiveLoc, K, OpenACCAtomicKind::None,
+                               Clauses, AssocStmt);
+  }
+  /// Called to check the form of the `atomic` construct which has some fairly
+  /// sizable restrictions.
+  StmtResult CheckAtomicAssociatedStmt(SourceLocation AtomicDirLoc,
+                                       OpenACCAtomicKind AtKind,
+                                       StmtResult AssocStmt);
+
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
+  /// DirLoc: Location of the actual directive keyword.
   /// LParenLoc: Location of the left paren, if it exists (not on all
   /// constructs).
   /// MiscLoc: First misc location, if necessary (not all constructs).
   /// Exprs: List of expressions on the construct itself, if necessary (not all
   /// constructs).
+  /// AK: The atomic kind of the directive, if necessary (atomic only)
   /// RParenLoc: Location of the right paren, if it exists (not on all
   /// constructs).
+  /// EndLoc: The last source location of the driective.
+  /// Clauses: The list of clauses for the directive, if present.
+  /// AssocStmt: The associated statement for this construct, if necessary.
+  StmtResult ActOnEndStmtDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
+      OpenACCAtomicKind AK, SourceLocation RParenLoc, SourceLocation EndLoc,
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
+
   StmtResult ActOnEndStmtDirective(
       OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
       SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
       SourceLocation RParenLoc, SourceLocation EndLoc,
-      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
+      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt) {
+    return ActOnEndStmtDirective(K, StartLoc, DirLoc, LParenLoc, MiscLoc, Exprs,
+                                 OpenACCAtomicKind::None, RParenLoc, EndLoc,
+                                 Clauses, AssocStmt);
+  }
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.

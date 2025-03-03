@@ -305,7 +305,9 @@ endfunction()
 # EXCLUDE_FROM_LIBMLIR
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
-#   with large dependencies.
+#   with large dependencies.  When using it, please link libraries included
+#   in libMLIR via mlir_target_link_libraries(), to ensure that the library
+#   does not pull in static dependencies when MLIR_LINK_MLIR_DYLIB=ON is used.
 # OBJECT
 #   The library's object library is referenced using "obj.${name}". For this to
 #   work reliably, this flag ensures that the OBJECT library exists.

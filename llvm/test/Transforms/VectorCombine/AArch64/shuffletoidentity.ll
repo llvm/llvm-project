@@ -937,9 +937,8 @@ define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 
 define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @fadd_mismatched_types(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 poison>
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = fadd fast <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[EXTSHUF:%.*]] = fadd fast <4 x float> [[TMP1:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[EXTSHUF]]
 ;
   %shuf.x = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 2>

@@ -152,7 +152,7 @@ bool SearchFilter::FunctionPasses(Function &function) {
   // This is a slightly cheesy job, but since we don't have finer grained 
   // filters yet, just checking that the start address passes is probably
   // good enough for the base class behavior.
-  Address addr = function.GetAddressRange().GetBaseAddress();
+  Address addr = function.GetAddress();
   return AddressPasses(addr);
 }
 

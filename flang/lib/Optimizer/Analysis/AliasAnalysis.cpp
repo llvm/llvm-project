@@ -31,19 +31,79 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-/// Temporary function to skip through all the no op operations
-/// TODO: Generalize support of fir.load
-static mlir::Value getOriginalDef(mlir::Value v) {
+static fir::AliasAnalysis::Source::Attributes
+getAttrsFromVariable(fir::FortranVariableOpInterface var) {
+  fir::AliasAnalysis::Source::Attributes attrs;
+  if (var.isTarget())
+    attrs.set(fir::AliasAnalysis::Attribute::Target);
+  if (var.isPointer())
+    attrs.set(fir::AliasAnalysis::Attribute::Pointer);
+  if (var.isIntentIn())
+    attrs.set(fir::AliasAnalysis::Attribute::IntentIn);
+
+  return attrs;
+}
+
+static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
+  auto globalOpName =
+      mlir::OperationName(fir::GlobalOp::getOperationName(), op->getContext());
+  return fir::valueHasFirAttribute(
+      v, fir::GlobalOp::getTargetAttrName(globalOpName));
+}
+
+static mlir::Value
+getOriginalDef(mlir::Value v,
+               fir::AliasAnalysis::Source::Attributes &attributes,
+               bool &isCapturedInInternalProcedure, bool &approximateSource) {
   mlir::Operation *defOp;
   bool breakFromLoop = false;
   while (!breakFromLoop && (defOp = v.getDefiningOp())) {
+    mlir::Type ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
         .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>(
-            [&](auto op) { v = op.getMemref(); })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
+          v = op.getMemref();
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
+          isCapturedInInternalProcedure |=
+              varIf.isCapturedInInternalProcedure();
+        })
+        .Case<fir::CoordinateOp>([&](auto op) {
+          if (fir::AliasAnalysis::isPointerReference(ty))
+            attributes.set(fir::AliasAnalysis::Attribute::Pointer);
+          v = op->getOperand(0);
+          approximateSource = true;
+        })
+        .Case<hlfir::DesignateOp>([&](hlfir::DesignateOp op) {
+          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
+          attributes |= getAttrsFromVariable(varIf);
+          v = op.getMemref();
+          approximateSource = true;
+        })
         .Default([&](auto op) { breakFromLoop = true; });
   }
   return v;
+}
+
+static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
+  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
+          v.getParentRegion()->getParentOp()))
+    return evalInMem.getMemory() == v;
+  return false;
+}
+
+template <typename OMPTypeOp, typename DeclTypeOp>
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
+  if (!op.getPrivateSyms().has_value())
+    return false;
+  for (auto [opSym, blockArg] :
+       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
+    if (blockArg == declOp.getMemref()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 namespace fir {
@@ -88,13 +148,6 @@ bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
     return fir::isDummyArgument(v);
   }
-  return false;
-}
-
-static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
-  if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
-          v.getParentRegion()->getParentOp()))
-    return evalInMem.getMemory() == v;
   return false;
 }
 
@@ -491,46 +544,6 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
   return result;
 }
 
-AliasAnalysis::Source::Attributes
-getAttrsFromVariable(fir::FortranVariableOpInterface var) {
-  AliasAnalysis::Source::Attributes attrs;
-  if (var.isTarget())
-    attrs.set(AliasAnalysis::Attribute::Target);
-  if (var.isPointer())
-    attrs.set(AliasAnalysis::Attribute::Pointer);
-  if (var.isIntentIn())
-    attrs.set(AliasAnalysis::Attribute::IntentIn);
-
-  return attrs;
-}
-
-template <typename OMPTypeOp, typename DeclTypeOp>
-static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
-                           OMPTypeOp &op, DeclTypeOp &declOp) {
-  Value privateArg;
-  if (!op.getPrivateSyms().has_value())
-    return privateArg;
-  for (auto [opSym, blockArg] :
-       llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
-    if (blockArg == declOp.getMemref()) {
-      omp::PrivateClauseOp privateOp =
-          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-              op, cast<SymbolRefAttr>(opSym));
-      privateOp.walk([&](omp::YieldOp yieldOp) {
-        // TODO Extend alias analysis if omp.yield points to
-        // block argument value
-        if (!yieldOp.getResults()[0].getDefiningOp())
-          return;
-        llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
-            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
-                [&](auto declOp) { privateArg = declOp.getMemref(); });
-      });
-      return privateArg;
-    }
-  }
-  return privateArg;
-}
-
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
@@ -586,16 +599,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             breakFromLoop = true;
         })
         .Case<fir::LoadOp>([&](auto op) {
-          // If the load is from a leaf source, return the leaf. Do not track
-          // through indirections otherwise.
-          // TODO: Add support to fir.alloca and fir.allocmem
-          auto def = getOriginalDef(op.getMemref());
-          if (isDummyArgument(def) ||
-              def.template getDefiningOp<fir::AddrOfOp>()) {
-            v = def;
-            defOp = v.getDefiningOp();
-            return;
-          }
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
@@ -608,8 +611,48 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
             return;
           }
-          // No further tracking for addresses loaded from memory for now.
-          type = SourceKind::Indirect;
+
+          // If we are loading a box reference, but following the data,
+          // we gather the attributes of the box to populate the source
+          // and stop tracking.
+          if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty);
+              boxTy && followingData) {
+
+            if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
+              attributes.set(Attribute::Pointer);
+
+            auto def = getOriginalDef(op.getMemref(), attributes,
+                                      isCapturedInInternalProcedure,
+                                      approximateSource);
+            if (auto addrOfOp = def.template getDefiningOp<fir::AddrOfOp>()) {
+              global = addrOfOp.getSymbol();
+
+              if (hasGlobalOpTargetAttr(def, addrOfOp))
+                attributes.set(Attribute::Target);
+
+              type = SourceKind::Global;
+            }
+            // TODO: Add support to fir.allocmem
+            else if (auto allocOp =
+                         def.template getDefiningOp<fir::AllocaOp>()) {
+              v = def;
+              defOp = v.getDefiningOp();
+              type = SourceKind::Allocate;
+            } else if (isDummyArgument(def)) {
+              defOp = nullptr;
+              v = def;
+            } else {
+              type = SourceKind::Indirect;
+            }
+            // TODO: This assignment is redundant but somehow works around an
+            // apparent MSVC bug reporting "undeclared identifier" at the next
+            // "breakFromLoop = true;".  See
+            // <https://github.com/llvm/llvm-project/pull/127845#issuecomment-2669829610>.
+            breakFromLoop = true;
+          } else {
+            // No further tracking for addresses loaded from memory for now.
+            type = SourceKind::Indirect;
+          }
           breakFromLoop = true;
         })
         .Case<fir::AddrOfOp>([&](auto op) {
@@ -617,10 +660,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           ty = v.getType();
           type = SourceKind::Global;
 
-          auto globalOpName = mlir::OperationName(
-              fir::GlobalOp::getOperationName(), defOp->getContext());
-          if (fir::valueHasFirAttribute(
-                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
+          if (hasGlobalOpTargetAttr(v, op))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxData into account when setting the pointer
@@ -631,6 +671,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          bool isPrivateItem = false;
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
@@ -644,19 +685,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                       omp::MapInfoOp mapInfo =
                           llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
                       ompValArg = mapInfo.getVarPtr();
-                      break;
+                      return;
                     }
                   }
                   // If given operation does not reflect mapping item,
                   // check private clause
-                  if (!ompValArg)
-                    ompValArg = getPrivateArg(argIface, targetOp, op);
+                  isPrivateItem = isPrivateArg(argIface, targetOp, op);
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
                                omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
                     [&](auto privateOp) {
-                      ompValArg = getPrivateArg(argIface, privateOp, op);
+                      isPrivateItem = isPrivateArg(argIface, privateOp, op);
                     });
             if (ompValArg) {
               v = ompValArg;
@@ -705,6 +745,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             }
           } else {
             instantiationPoint = op;
+          }
+          if (isPrivateItem) {
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+            return;
           }
           // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand

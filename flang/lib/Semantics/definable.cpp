@@ -204,7 +204,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     }
     return std::nullopt; // pointer assignment - skip following checks
   }
-  if (IsOrContainsEventOrLockComponent(ultimate)) {
+  if (!flags.test(DefinabilityFlag::AllowEventLockOrNotifyType) &&
+      IsOrContainsEventOrLockComponent(ultimate)) {
     return BlameSymbol(at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);

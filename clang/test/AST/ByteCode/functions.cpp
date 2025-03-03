@@ -208,11 +208,11 @@ namespace Comparison {
 
   constexpr bool u13 = pf < pg; // both-warning {{ordered comparison of function pointers}} \
                                 // both-error {{must be initialized by a constant expression}} \
-                                // both-note {{comparison between '&f' and '&g' has unspecified value}}
+                                // both-note {{comparison between pointers to unrelated objects '&f' and '&g' has unspecified value}}
 
   constexpr bool u14 = pf < (void(*)())nullptr; // both-warning {{ordered comparison of function pointers}} \
                                                 // both-error {{must be initialized by a constant expression}} \
-                                                // both-note {{comparison between '&f' and 'nullptr' has unspecified value}}
+                                                // both-note {{comparison between pointers to unrelated objects '&f' and 'nullptr' has unspecified value}}
 
 
 

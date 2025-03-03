@@ -127,11 +127,21 @@ public:
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
 
-  /// Inverse of getMaxLocalMemWithWaveCount. Return the maximum wavecount if
-  /// the given LDS memory size is the only constraint.
-  unsigned getOccupancyWithLocalMemSize(uint32_t Bytes, const Function &) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F and each
+  /// workgroup running the function requires \p LDSBytes bytes of LDS space.
+  /// This notably depends on the range of allowed flat group sizes for the
+  /// function and hardware characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const;
 
-  unsigned getOccupancyWithLocalMemSize(const MachineFunction &MF) const;
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p MF. This notably
+  /// depends on the range of allowed flat group sizes for the function, the
+  /// amount of per-workgroup LDS space required by the function, and hardware
+  /// characteristics.
+  std::pair<unsigned, unsigned>
+  getOccupancyWithWorkGroupSizes(const MachineFunction &MF) const;
 
   bool isAmdHsaOS() const {
     return TargetTriple.getOS() == Triple::AMDHSA;

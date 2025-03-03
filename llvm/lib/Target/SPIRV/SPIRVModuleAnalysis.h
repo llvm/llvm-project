@@ -124,7 +124,7 @@ public:
                           const Capability::Capability IfPresent);
 };
 
-using InstrList = SmallVector<MachineInstr *>;
+using InstrList = SmallVector<const MachineInstr *>;
 // Maps a local register to the corresponding global alias.
 using LocalToGlobalRegTable = std::map<Register, Register>;
 using RegisterAliasMapTy =
@@ -142,12 +142,12 @@ struct ModuleAnalysisInfo {
   // Maps ExtInstSet to corresponding ID register.
   DenseMap<unsigned, Register> ExtInstSetMap;
   // Contains the list of all global OpVariables in the module.
-  SmallVector<MachineInstr *, 4> GlobalVarList;
+  SmallVector<const MachineInstr *, 4> GlobalVarList;
   // Maps functions to corresponding function ID registers.
   DenseMap<const Function *, Register> FuncMap;
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
-  DenseSet<MachineInstr *> InstrsToDelete;
+  DenseSet<const MachineInstr *> InstrsToDelete;
   // The table contains global aliases of local registers for each machine
   // function. The aliases are used to substitute local registers during
   // code emission.
@@ -167,7 +167,7 @@ struct ModuleAnalysisInfo {
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
-  void setSkipEmission(MachineInstr *MI) { InstrsToDelete.insert(MI); }
+  void setSkipEmission(const MachineInstr *MI) { InstrsToDelete.insert(MI); }
   bool getSkipEmission(const MachineInstr *MI) {
     return InstrsToDelete.contains(MI);
   }
@@ -176,15 +176,18 @@ struct ModuleAnalysisInfo {
     RegisterAliasTable[MF][Reg] = AliasReg;
   }
   Register getRegisterAlias(const MachineFunction *MF, Register Reg) {
-    auto RI = RegisterAliasTable[MF].find(Reg);
-    if (RI == RegisterAliasTable[MF].end()) {
+    auto &RegTable = RegisterAliasTable[MF];
+    auto RI = RegTable.find(Reg);
+    if (RI == RegTable.end()) {
       return Register(0);
     }
-    return RegisterAliasTable[MF][Reg];
+    return RI->second;
   }
   bool hasRegisterAlias(const MachineFunction *MF, Register Reg) {
-    return RegisterAliasTable.find(MF) != RegisterAliasTable.end() &&
-           RegisterAliasTable[MF].find(Reg) != RegisterAliasTable[MF].end();
+    auto RI = RegisterAliasTable.find(MF);
+    if (RI == RegisterAliasTable.end())
+      return false;
+    return RI->second.find(Reg) != RI->second.end();
   }
   unsigned getNextID() { return MaxID++; }
   bool hasMBBRegister(const MachineBasicBlock &MBB) {
@@ -194,15 +197,17 @@ struct ModuleAnalysisInfo {
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    auto It = BBNumToRegMap.find(Key);
-    if (It != BBNumToRegMap.end())
-      return It->second;
-    Register NewReg = Register::index2VirtReg(getNextID());
-    BBNumToRegMap[Key] = NewReg;
-    return NewReg;
+    auto [It, Inserted] = BBNumToRegMap.try_emplace(Key);
+    if (Inserted)
+      It->second = Register::index2VirtReg(getNextID());
+    return It->second;
   }
 };
 } // namespace SPIRV
+
+using InstrSignature = SmallVector<size_t>;
+using InstrTraces = std::set<InstrSignature>;
+using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
 
 struct SPIRVModuleAnalysis : public ModulePass {
   static char ID;
@@ -216,17 +221,27 @@ public:
 
 private:
   void setBaseInfo(const Module &M);
-  void collectGlobalEntities(
-      const std::vector<SPIRV::DTSortableEntry *> &DepsGraph,
-      SPIRV::ModuleSectionType MSType,
-      std::function<bool(const SPIRV::DTSortableEntry *)> Pred,
-      bool UsePreOrder);
-  void processDefInstrs(const Module &M);
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
-  void collectFuncPtrs();
-  void collectFuncPtrs(MachineInstr *MI);
+
+  // analyze dependencies to collect module scope definitions
+  void collectDeclarations(const Module &M);
+  void visitDecl(const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
+                 std::map<const Value *, unsigned> &GlobalToGReg,
+                 const MachineFunction *MF, const MachineInstr &MI);
+  Register handleVariable(const MachineFunction *MF, const MachineInstr &MI,
+                          std::map<const Value *, unsigned> &GlobalToGReg);
+  Register handleTypeDeclOrConstant(const MachineInstr &MI,
+                                    InstrGRegsMap &SignatureToGReg);
+  Register
+  handleFunctionOrParameter(const MachineFunction *MF, const MachineInstr &MI,
+                            std::map<const Value *, unsigned> &GlobalToGReg,
+                            bool &IsFunDef);
+  void visitFunPtrUse(Register OpReg, InstrGRegsMap &SignatureToGReg,
+                      std::map<const Value *, unsigned> &GlobalToGReg,
+                      const MachineFunction *MF, const MachineInstr &MI);
+  bool isDeclSection(const MachineRegisterInfo &MRI, const MachineInstr &MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;

@@ -61,6 +61,11 @@ struct alignas(void *) GlobalInlineDescriptor {
 };
 static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
+enum class Lifetime : uint8_t {
+  Started,
+  Ended,
+};
+
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -100,12 +105,14 @@ struct InlineDescriptor {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsArrayElement : 1;
 
+  Lifetime LifeState;
+
   const Descriptor *Desc;
 
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), Desc(D) {}
+        IsArrayElement(false), LifeState(Lifetime::Started), Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -117,6 +124,7 @@ struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
+  const Type *SourceType = nullptr;
   /// Size of an element, in host bytes.
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
@@ -179,8 +187,9 @@ public:
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
-             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
+             MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
   Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
@@ -267,6 +276,7 @@ public:
 
   void dump() const;
   void dump(llvm::raw_ostream &OS) const;
+  void dumpFull(unsigned Offset = 0, unsigned Indent = 0) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

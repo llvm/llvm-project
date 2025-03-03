@@ -19,12 +19,11 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::queue<MoveOnly> C;
-        static_assert(std::is_nothrow_destructible<C>::value, "");
-    }
+int main(int, char**) {
+  {
+    typedef std::queue<MoveOnly> C;
+    static_assert(std::is_nothrow_destructible<C>::value, "");
+  }
 
   return 0;
 }

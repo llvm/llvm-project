@@ -432,6 +432,23 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   }
 }
 
+bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
+                                   bool AllowUndefOrPoison) const {
+  assert(getArgOperand(ArgNo)->getType()->isPointerTy() &&
+         "Argument must be a pointer");
+  if (paramHasAttr(ArgNo, Attribute::NonNull) &&
+      (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
+    return true;
+
+  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+      !NullPointerIsDefined(
+          getCaller(),
+          getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
@@ -675,6 +692,39 @@ void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
                    MemoryEffects::inaccessibleOrArgMemOnly());
 }
 
+CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
+  if (OpNo < arg_size()) {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (isByValArgument(OpNo))
+      return CaptureInfo::none();
+
+    CaptureInfo CI = getParamAttributes(OpNo).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(OpNo).getCaptureInfo();
+    return CI;
+  }
+
+  // deopt operand bundles are captures(none)
+  auto &BOI = getBundleOpInfoForOperand(OpNo);
+  auto OBU = operandBundleFromBundleOpInfo(BOI);
+  return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
+}
+
+bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+  for (unsigned I = 0, E = arg_size(); I < E; ++I) {
+    if (!getArgOperand(I)->getType()->isPointerTy())
+      continue;
+
+    CaptureInfo CI = getParamAttributes(I).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
+    if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
+      return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//
@@ -832,7 +882,7 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 }
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
-  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHIIt());
 }
 
 void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
@@ -1214,7 +1264,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        Align Align, const Twine &Name,
                        InsertPosition InsertBefore)
-    : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
+    : UnaryInstruction(PointerType::get(Ty->getContext(), AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
   setAlignment(Align);
@@ -2666,8 +2716,7 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
 
 // Exchange the two operands to this instruction. This instruction is safe to
 // use on any binary instruction and does not modify the semantics of the
-// instruction. If the instruction is order-dependent (SetLT f.e.), the opcode
-// is changed.
+// instruction.
 bool BinaryOperator::swapOperands() {
   if (!isCommutative())
     return true; // Can't commute operands
@@ -3886,33 +3935,49 @@ bool CmpInst::isFalseWhenEqual(Predicate predicate) {
   }
 }
 
-bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+static bool isImpliedTrueByMatchingCmp(CmpPredicate Pred1, CmpPredicate Pred2) {
   // If the predicates match, then we know the first condition implies the
   // second is true.
-  if (Pred1 == Pred2)
+  if (CmpPredicate::getMatching(Pred1, Pred2))
     return true;
+
+  if (Pred1.hasSameSign() && CmpInst::isSigned(Pred2))
+    Pred1 = ICmpInst::getFlippedSignednessPredicate(Pred1);
+  else if (Pred2.hasSameSign() && CmpInst::isSigned(Pred1))
+    Pred2 = ICmpInst::getFlippedSignednessPredicate(Pred2);
 
   switch (Pred1) {
   default:
     break;
-  case ICMP_EQ:
+  case CmpInst::ICMP_EQ:
     // A == B implies A >=u B, A <=u B, A >=s B, and A <=s B are true.
-    return Pred2 == ICMP_UGE || Pred2 == ICMP_ULE || Pred2 == ICMP_SGE ||
-           Pred2 == ICMP_SLE;
-  case ICMP_UGT: // A >u B implies A != B and A >=u B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_UGE;
-  case ICMP_ULT: // A <u B implies A != B and A <=u B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_ULE;
-  case ICMP_SGT: // A >s B implies A != B and A >=s B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_SGE;
-  case ICMP_SLT: // A <s B implies A != B and A <=s B are true.
-    return Pred2 == ICMP_NE || Pred2 == ICMP_SLE;
+    return Pred2 == CmpInst::ICMP_UGE || Pred2 == CmpInst::ICMP_ULE ||
+           Pred2 == CmpInst::ICMP_SGE || Pred2 == CmpInst::ICMP_SLE;
+  case CmpInst::ICMP_UGT: // A >u B implies A != B and A >=u B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_UGE;
+  case CmpInst::ICMP_ULT: // A <u B implies A != B and A <=u B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_ULE;
+  case CmpInst::ICMP_SGT: // A >s B implies A != B and A >=s B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_SGE;
+  case CmpInst::ICMP_SLT: // A <s B implies A != B and A <=s B are true.
+    return Pred2 == CmpInst::ICMP_NE || Pred2 == CmpInst::ICMP_SLE;
   }
   return false;
 }
 
-bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-  return isImpliedTrueByMatchingCmp(Pred1, getInversePredicate(Pred2));
+static bool isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
+                                        CmpPredicate Pred2) {
+  return isImpliedTrueByMatchingCmp(Pred1,
+                                    ICmpInst::getInverseCmpPredicate(Pred2));
+}
+
+std::optional<bool> ICmpInst::isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                     CmpPredicate Pred2) {
+  if (isImpliedTrueByMatchingCmp(Pred1, Pred2))
+    return true;
+  if (isImpliedFalseByMatchingCmp(Pred1, Pred2))
+    return false;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3923,6 +3988,8 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
                                                       CmpPredicate B) {
   if (A.Pred == B.Pred)
     return A.HasSameSign == B.HasSameSign ? A : CmpPredicate(A.Pred);
+  if (CmpInst::isFPPredicate(A) || CmpInst::isFPPredicate(B))
+    return {};
   if (A.HasSameSign &&
       A.Pred == ICmpInst::getFlippedSignednessPredicate(B.Pred))
     return B.Pred;
@@ -3930,6 +3997,10 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
       B.Pred == ICmpInst::getFlippedSignednessPredicate(A.Pred))
     return A.Pred;
   return {};
+}
+
+CmpInst::Predicate CmpPredicate::getPreferredSignedPredicate() const {
+  return HasSameSign ? ICmpInst::getSignedPredicate(Pred) : Pred;
 }
 
 CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
