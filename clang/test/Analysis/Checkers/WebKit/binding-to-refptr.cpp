@@ -1,4 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s -std=c++2c
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncheckedLocalVarsChecker -verify %s -std=c++2c
+
 // expected-no-diagnostics
 
 #include "mock-types.h"
