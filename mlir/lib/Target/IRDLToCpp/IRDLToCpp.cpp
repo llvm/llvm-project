@@ -133,8 +133,9 @@ static void fillDict(irdl::detail::dictionary &dict,
   dict["NAMESPACE_PATH"] = strings.namespacePath;
 }
 
-static LogicalResult generateTypedefList(irdl::DialectOp &dialect,
-  llvm::SmallVector<std::string>& typeNames) {
+static LogicalResult
+generateTypedefList(irdl::DialectOp &dialect,
+                    llvm::SmallVector<std::string> &typeNames) {
   auto typeOps = dialect.getOps<irdl::TypeOp>();
   auto range = llvm::map_range(
       typeOps, [](auto &&type) { return getStrings(type).typeCppName; });
@@ -143,7 +144,7 @@ static LogicalResult generateTypedefList(irdl::DialectOp &dialect,
 }
 
 static LogicalResult generateOpList(irdl::DialectOp &dialect,
-  llvm::SmallVector<std::string>& opNames) {
+                                    llvm::SmallVector<std::string> &opNames) {
   auto operationOps = dialect.getOps<irdl::OperationOp>();
   auto range = llvm::map_range(
       operationOps, [](auto &&op) { return getStrings(op).opCppName; });
@@ -176,16 +177,15 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   const auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  auto getters = std::string{}; 
+  auto getters = std::string{};
 
   for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
-    const auto& op = opStrings.opOperandNames[i];
-    getters +=  llvm::formatv(
-      "::mlir::Value get{0}() { return getODSOperands({1}).front(); }\n  "
-      , capitalize(op), i
-    );
+    const auto &op = opStrings.opOperandNames[i];
+    getters += llvm::formatv(
+        "::mlir::Value get{0}() { return getODSOperands({1}).front(); }\n  ",
+        capitalize(op), i);
   }
-  
+
   dict["OP_GETTER_DECLS"] = getters;
   std::string tmp;
   llvm::raw_string_ostream stream{tmp};
