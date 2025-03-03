@@ -1206,8 +1206,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
     std::set<Symbol *> singleCopyprivateSyms;
     std::set<Symbol *> endSingleCopyprivateSyms;
-    bool singleNowait{false};
-    bool endSingleNowait{false};
+    bool foundNowait{false};
     parser::CharBlock NowaitSource;
 
     auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool endDir) {
@@ -1240,23 +1239,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
             }
           }
         } else if (clause.Id() == llvm::omp::Clause::OMPC_nowait) {
-          if (singleNowait) {
-            if (endDir) {
-              context_.Warn(common::UsageWarning::OpenMPUsage, clause.source,
-                  "NOWAIT clause is already used on the SINGLE directive"_warn_en_US);
-            } else {
-              context_.Say(clause.source,
-                  "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
-            }
-          } else if (endSingleNowait) {
+          if (foundNowait) {
             context_.Say(clause.source,
-                "At most one NOWAIT clause can appear on the END SINGLE directive"_err_en_US);
+                "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
           } else {
-            if (endDir) {
-              endSingleNowait = true;
-            } else {
-              singleNowait = true;
-            }
+            foundNowait = !endDir;
           }
           if (!NowaitSource.ToString().size()) {
             NowaitSource = clause.source;

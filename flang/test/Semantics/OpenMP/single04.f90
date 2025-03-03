@@ -53,7 +53,7 @@ program single
     !$omp single copyprivate(x) nowait
         print *, x
     !WARNING: The COPYPRIVATE clause with 'x' is already used on the SINGLE directive
-    !WARNING: NOWAIT clause is already used on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
     !$omp end single copyprivate(x) nowait
 
     !$omp single copyprivate(x)
@@ -67,7 +67,7 @@ program single
         print *, x
     !WARNING: The COPYPRIVATE clause with 'x' is already used on the SINGLE directive
     !ERROR: 'z' appears in more than one COPYPRIVATE clause on the END SINGLE directive
-    !WARNING: NOWAIT clause is already used on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
     !$omp end single copyprivate(x, z) copyprivate(z) nowait
 
     !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
@@ -76,6 +76,6 @@ program single
     !WARNING: The COPYPRIVATE clause with 'x' is already used on the SINGLE directive
     !WARNING: The COPYPRIVATE clause with 'y' is already used on the SINGLE directive
     !WARNING: The COPYPRIVATE clause with 'z' is already used on the SINGLE directive
-    !WARNING: NOWAIT clause is already used on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
     !$omp end single copyprivate(x, y, z) nowait
 end program
