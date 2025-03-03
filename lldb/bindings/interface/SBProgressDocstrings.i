@@ -22,7 +22,20 @@ is provided. This detail will also continue to be broadcasted on any subsequent 
 specify a new detail. Some implementations differ on throttling updates and this behavior differs primarily
 if the progress is deterministic or non-deterministic. For DAP, non-deterministic update messages have a higher
 throttling rate than deterministic ones.
-") lldb::SBProgress;
+
+Below are examples in Python for deterministic and non-deterministic progresses.
+
+    deterministic_progress = lldb.SBProgress('Deterministic Progress', 'Detail', 3, lldb.SBDebugger)
+    for i in range(3):
+        deterministic_progress.Increment(1, f'Update {i}')
+
+    non_deterministic_progress = lldb.SBProgress('Non deterministic progress, 'Detail', lldb.SBDebugger)
+    for i in range(10):
+        non_deterministic_progress.Increment(1)
+
+    # Explicitly send a progressEnd from Python.
+    non_deterministic_progress.Finalize()
+") lldb::SBProgress;    
 
 %feature("docstring",
 "Finalize the SBProgress, which will cause a progress end event to be emitted. This 
