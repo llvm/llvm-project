@@ -1847,7 +1847,6 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
                     this](CodeGenFunction &CGF, PrePostActionTy &) {
     // Build call __kmpc_fork_call(loc, n, microtask, var1, .., varn);
-    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
     llvm::Value *Args[] = {
         RTLoc,
         CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
