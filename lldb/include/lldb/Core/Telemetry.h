@@ -11,9 +11,11 @@
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -25,21 +27,31 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 
 namespace lldb_private {
 namespace telemetry {
 
-struct LLDBConfig : public ::llvm::telemetry::Config {
-  const bool m_collect_original_command;
 
-  explicit LLDBConfig(bool enable_telemetry, bool collect_original_command)
-      : ::llvm::telemetry::Config(enable_telemetry), m_collect_original_command(collect_original_command) {}
+struct LLDBConfig : public ::llvm::telemetry::Config {
+  // If true, we will collect full details about a debug command (eg., args and original command).
+  // Note: This may contain PII, hence can only be enabled by the vendor while creating the Manager.
+  const bool m_detailed_command_telemetry;
+
+  explicit LLDBConfig(bool enable_telemetry, bool detailed_command_telemetry)
+      : ::llvm::telemetry::Config(enable_telemetry), m_detailed_command_telemetry(detailed_command_telemetry) {}
 };
 
+// We expect each (direct) subclass of LLDBTelemetryInfo to
+// have an LLDBEntryKind in the form 0b11xxxxxxxx
+// Specifically:
+//  - Length: 8 bits
+//  - First two bits (MSB) must be 11 - the common prefix
+// If any of the subclass has descendents, those descendents
+// must have their LLDBEntryKind in the similar form (ie., share common prefix)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
-  static const llvm::telemetry::KindType CommandInfo = 0b11010000;
+   tatic const llvm::telemetry::KindType CommandInfo = 0b11010000;
+  static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -68,7 +80,6 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
-
 struct CommandInfo : public LLDBBaseTelemetryInfo {
 
   // If the command is/can be associated with a target entry this field contains
@@ -84,11 +95,12 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   // Eg., "breakpoint set"
   std::string command_name;
 
-  // !!NOTE!! These two fields are not collected (upstream) due to PII risks.
-  // (Downstream impl may add them if needed).
-  // std::string original_command;
-  // std::string args;
+  // !!NOTE!! These two fields are not collected by default due to PII risks.
+  // Vendor may allow them by setting the LLDBConfig::m_detailed_command_telemetry.
+  std::string original_command;
+  std::string args;
 
+  // Return status of a command and any error description in case of error.
   lldb::ReturnStatus ret_status;
   std::string error_data;
 
@@ -102,6 +114,26 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   }
 
   void serialize(Serializer &serializer) const override;
+ };
+  
+struct DebuggerInfo : public LLDBBaseTelemetryInfo {
+  std::string lldb_version;
+
+  bool is_exit_entry = false;
+
+  DebuggerInfo() = default;
+
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::DebuggerInfo;
+  }
+
+  static bool classof(const llvm::telemetry::TelemetryInfo *T) {
+    // Subclasses of this is also acceptable
+    return (T->getKind() & LLDBEntryKind::DebuggerInfo) ==
+           LLDBEntryKind::DebuggerInfo;
+  }
+
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
 /// The base Telemetry manager instance in LLDB.
@@ -111,20 +143,23 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
+  /// Returns the next unique ID to assign to a command entry.
   int MakeNextCommandId();
 
-  LLDBConfig* GetConfig() { return m_config.get(); }
+  const LLDBConfig* GetConfig() { return m_config.get(); }
 
   virtual llvm::StringRef GetInstanceName() const = 0;
-  static TelemetryManager *getInstance();
+
+  static TelemetryManager *GetInstance();
 
 protected:
   TelemetryManager(std::unique_ptr<LLDBConfig> config);
 
-  static void setInstance(std::unique_ptr<TelemetryManager> manger);
+  static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
   std::unique_ptr<LLDBConfig> m_config;
+  // Each instance of a TelemetryManager is assigned a unique ID.  
   const std::string m_id;
   // We assign each command (in the same session) a unique id so that their
   // "start" and "end" entries can be matched up.
@@ -157,7 +192,7 @@ template <typename Info> struct ScopedDispatcher {
     m_final_callback(std::move(final_callback));
   }
 
-  void DispatchIfEnable(llvm::unique_function<void(Info *info)> populate_fields_cb) {
+  void DispatchNowIfEnable(llvm::unique_function<void(Info *info)> populate_fields_cb) {
     TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
     if (!manager)
       return;
@@ -177,14 +212,15 @@ template <typename Info> struct ScopedDispatcher {
   }
 
   ~ScopedDispatcher() {
-    // TODO: check if there's a cb to call?
-    DispatchIfEnable(std::move(m_final_callback));
+    if (m_final_callback)
+     DispatchIfEnable(std::move(m_final_callback));
   }
 
 private:
   SteadyTimePoint m_start_time;
   llvm::unique_function<void(Info *info)> m_final_callback;
   Debugger * debugger;
+
 };
 
 } // namespace telemetry

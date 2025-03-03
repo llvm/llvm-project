@@ -1435,8 +1435,9 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut,
-                                       ContextInst](Use &U) {
+    bool Changed = false;
+    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, ContextInst,
+                                       &Changed](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1448,12 +1449,14 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      return !II || II->getIntrinsicID() != Intrinsic::assume;
+      bool ShouldReplace = !II || II->getIntrinsicID() != Intrinsic::assume;
+      Changed |= ShouldReplace;
+      return ShouldReplace;
     });
     NumCondsRemoved++;
     if (Cmp->use_empty())
       ToRemove.push_back(Cmp);
-    return true;
+    return Changed;
   };
 
   if (auto ImpliedCondition =

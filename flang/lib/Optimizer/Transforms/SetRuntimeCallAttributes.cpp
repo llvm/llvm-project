@@ -182,10 +182,16 @@ struct RuntimeFunction {
 // the KEY and a function name.
 template <typename KEY>
 struct RuntimeFactory {
-  static constexpr RuntimeFunction create(const std::string_view &name) {
-    return RuntimeFunction{name, MemoryAttrDesc<KEY>::get,
-                           NosyncAttrDesc<KEY>::get,
-                           NocallbackAttrDesc<KEY>::get};
+  static constexpr RuntimeFunction create(const char name[]) {
+    // GCC 7 does not recognize this as a constant expression:
+    //   ((const char *)RuntimeFunction<>::name) == nullptr
+    // This comparison comes from the basic_string_view(const char *)
+    // constructor. We have to use the other constructor
+    // that takes explicit length parameter.
+    return RuntimeFunction{
+        std::string_view{name, std::char_traits<char>::length(name)},
+        MemoryAttrDesc<KEY>::get, NosyncAttrDesc<KEY>::get,
+        NocallbackAttrDesc<KEY>::get};
   }
 };
 } // end anonymous namespace
@@ -202,9 +208,7 @@ static constexpr RuntimeFunction runtimeFuncsTable[] = {
 
 static constexpr Fortran::common::StaticMultimapView<RuntimeFunction>
     runtimeFuncs(runtimeFuncsTable);
-// FIXME: re-enable after figuring out this failure:
-// https://lab.llvm.org/buildbot/#/builders/140/builds/17587
-// static_assert(runtimeFuncs.Verify() && "map must be sorted");
+static_assert(runtimeFuncs.Verify() && "map must be sorted");
 
 // Set attributes for the given Fortran runtime call.
 // The symbolTable is used to cache the name lookups in the module.

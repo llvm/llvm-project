@@ -37,8 +37,8 @@ define amdgpu_kernel void @flat_load_maybe_divergent(ptr addrspace(4) %k, ptr %f
 ; GCN-LABEL: {{^}}wide_carry_divergence_error:
 ; GCN: v_sub_u32_e32
 ; GCN: v_subb_u32_e32
-; GCN: v_subbrev_u32_e32
-; GCN: v_subbrev_u32_e32
+; GCN: v_subb_u32_e32
+; GCN: v_subb_u32_e32
 define <2 x i128> @wide_carry_divergence_error(i128 %arg) {
   %i = call i128 @llvm.ctlz.i128(i128 %arg, i1 false)
   %i1 = sub i128 0, %i
