@@ -602,11 +602,10 @@ MachineSchedulerPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveIntervalsAnalysis>();
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
