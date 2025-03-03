@@ -152,6 +152,10 @@ static LogicalResult generateOpList(irdl::DialectOp &dialect,
   return success();
 }
 
+static Block &getDialectBlock(irdl::DialectOp dialect) {
+  return *dialect.getRegion().getBlocks().begin();
+}
+
 } // namespace
 
 static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
@@ -227,7 +231,7 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   dialectDeclTemplate.render(output, dict);
   typeHeaderDeclTemplate.render(output, dict);
 
-  auto &dialectBlock = *dialect.getRegion().getBlocks().begin();
+  auto &dialectBlock = getDialectBlock(dialect);
   auto typeOps = dialectBlock.getOps<irdl::TypeOp>();
   auto operationOps = dialectBlock.getOps<irdl::OperationOp>();
 
@@ -354,7 +358,7 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   typeDefTemplate.render(output, dict);
 
   // get op list
-  auto &dialectBlock = *dialect.getRegion().getBlocks().begin();
+  auto &dialectBlock = getDialectBlock(dialect);
   auto operations = dialectBlock.getOps<irdl::OperationOp>();
   llvm::SmallVector<std::string> opNames;
   if (failed(generateOpList(dialect, opNames)))
@@ -435,6 +439,18 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
   return success();
 }
 
+static LogicalResult verify(irdl::DialectOp dialect) {
+  auto &dialectBlock = getDialectBlock(dialect);
+  for (auto op : dialectBlock.getOps<irdl::OperationOp>()) {
+    for (auto operand : op->getOperands()) {
+      if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp()))
+        return op.emitError(
+            "IRDL C++ translation only supports irdl.any constraint for types");
+    }
+  }
+  return success();
+}
+
 LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                               raw_ostream &output) {
   static const auto typeDefTempl = detail::Template(
@@ -452,6 +468,9 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                     [](char c) { return llvm::isAlnum(c) || c == '_'; }))
     return dialect->emitError(
         "dialect name must only contain letters, numbers or underscores");
+
+  if (failed(verify(dialect)))
+    return failure();
 
   // TODO: allow more complex path.
   llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
