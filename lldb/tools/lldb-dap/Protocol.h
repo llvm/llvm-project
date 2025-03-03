@@ -137,10 +137,15 @@ bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 //   ]
 // }
 struct Response {
+  enum class Message {
+    cancelled,
+    notStopped,
+  };
+
   int64_t request_seq;
   std::string command;
   bool success;
-  std::optional<std::string> message;
+  std::optional<Message> message;
   std::optional<llvm::json::Value> rawBody;
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);

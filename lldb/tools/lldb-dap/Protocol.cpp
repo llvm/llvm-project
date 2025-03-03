@@ -101,13 +101,41 @@ json::Value toJSON(const Response &R) {
                       {"request_seq", R.request_seq},
                       {"success", R.success}};
 
-  if (R.message)
-    Result.insert({"message", R.message});
+  if (R.message) {
+    assert(!R.success && "message can only be used if success is false");
+    switch (*R.message) {
+    case Response::Message::cancelled:
+      Result.insert({"message", "cancelled"});
+      break;
+    case Response::Message::notStopped:
+      Result.insert({"message", "notStopped"});
+      break;
+    }
+  }
 
   if (R.rawBody)
     Result.insert({"body", R.rawBody});
 
   return std::move(Result);
+}
+
+bool fromJSON(json::Value const &Params, Response::Message &M, json::Path P) {
+  auto rawMessage = Params.getAsString();
+  if (!rawMessage) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<Response::Message> message =
+      StringSwitch<std::optional<Response::Message>>(*rawMessage)
+          .Case("cancelled", Response::Message::cancelled)
+          .Case("notStopped", Response::Message::notStopped)
+          .Default(std::nullopt);
+  if (!message) {
+    P.report("unexpected value, expected 'cancelled' or 'notStopped'");
+    return false;
+  }
+  M = *message;
+  return true;
 }
 
 bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
