@@ -151,11 +151,10 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
   unsigned PairOpc;
-  // TODO: Handle the rest from RISCVInstrInfo::isPairableLdStInstOpc.
   Align RequiredAlignment;
   switch (First->getOpcode()) {
   default:
-    return false;
+    llvm_unreachable("Unsupported load/store instruction for pairing");
   case RISCV::SW:
     PairOpc = RISCV::MIPS_SWP;
     RequiredAlignment = Align(8);
@@ -178,13 +177,11 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
   const MachineMemOperand *MMO = *First->memoperands_begin();
   Align MMOAlign = MMO->getAlign();
 
-  // Only pair if alignment is exactly RequiredAlignment bytes.
-  if (MMOAlign != RequiredAlignment)
+  if (MMOAlign < RequiredAlignment)
     return false;
 
   int64_t Offset = First->getOperand(2).getImm();
-  if (!isUInt<7>(Offset) ||
-      !isAligned(Align(MMO->getSize().getValue()), Offset))
+  if (!isUInt<7>(Offset))
     return false;
 
   MachineInstrBuilder MIB = BuildMI(
@@ -360,11 +357,20 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
   // Kill flags may become invalid when moving stores for pairing.
   if (I->getOperand(0).isUse()) {
     if (!MergeForward) {
-      // Clear kill flags on store if moving upwards.
-      I->getOperand(0).setIsKill(false);
-      Paired->getOperand(0).setIsKill(false);
+      // Check if the Paired store's source register has a kill flag and clear
+      // it only if there are intermediate uses between I and Paired.
+      MachineOperand &PairedRegOp = Paired->getOperand(0);
+      if (PairedRegOp.isKill()) {
+        for (auto It = std::next(I); It != Paired; ++It) {
+          if (It->readsRegister(PairedRegOp.getReg(), TRI)) {
+            PairedRegOp.setIsKill(false);
+            break;
+          }
+        }
+      }
     } else {
-      // Clear kill flags of the first stores register.
+      // Clear kill flags of the first store's register in the forward
+      // direction.
       Register Reg = I->getOperand(0).getReg();
       for (MachineInstr &MI : make_range(std::next(I), std::next(Paired)))
         MI.clearRegisterKills(Reg, TRI);

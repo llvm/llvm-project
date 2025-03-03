@@ -153,8 +153,7 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32I_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32I_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32I_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32I_PAIR-NEXT:    lw s3, 0(a0)
-; RV32I_PAIR-NEXT:    lw s2, 4(a0)
+; RV32I_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
 ; RV32I_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32I_PAIR-NEXT:    #APP
 ; RV32I_PAIR-NEXT:    #NO_APP
@@ -182,8 +181,7 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32D_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32D_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32D_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32D_PAIR-NEXT:    lw s3, 0(a0)
-; RV32D_PAIR-NEXT:    lw s2, 4(a0)
+; RV32D_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
 ; RV32D_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32D_PAIR-NEXT:    #APP
 ; RV32D_PAIR-NEXT:    #NO_APP

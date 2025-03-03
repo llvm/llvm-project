@@ -2750,21 +2750,17 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .setMIFlags(MemI.getFlags());
 }
 
+// TODO: At the moment, MIPS introduced paring of instructions operating with
+// word or double word. This should be extended with more instructions when more
+// vendors support load/store pairing.
 bool RISCVInstrInfo::isPairableLdStInstOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return false;
-  case RISCV::SH:
-  case RISCV::LH:
-  case RISCV::LHU:
   case RISCV::SW:
-  case RISCV::FSW:
-  case RISCV::LW:
-  case RISCV::FLW:
   case RISCV::SD:
-  case RISCV::FSD:
   case RISCV::LD:
-  case RISCV::FLD:
+  case RISCV::LW:
     return true;
   }
 }
