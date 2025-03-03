@@ -854,9 +854,6 @@ class InstructionsState {
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
 
-  /// True if alterative operation is copy instruction.
-  bool IsAltOpCopy = false;
-
 public:
   Instruction *getMainOp() const {
     assert(valid() && "InstructionsState is invalid.");
@@ -873,12 +870,8 @@ public:
 
   unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
 
-  bool isAltOpCopy() const { return IsAltOpCopy; }
-
   /// Some of the instructions in the list have alternate opcodes.
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
-
-  void setAltOpCopy(bool Val) { IsAltOpCopy = Val; }
 
   bool isOpcodeOrAlt(Instruction *I) const {
     unsigned CheckedOpcode = I->getOpcode();
@@ -920,17 +913,16 @@ static bool isValidForAlternation(unsigned Opcode) {
   return true;
 }
 
-// Check for inner dependencies, we could not support such depenedies if it
-// comes from a main operaion, only from alternative or for now we ignore
-// alternative operations depenedies to any alternative.
-static bool checkCopyableInnerDep(ArrayRef<Value *> VL,
-                                  const InstructionsState &S);
-
-// Determine that the vector could be vectorized with copyable elements.
 static bool isCopyableOp(ArrayRef<Value *> VL, Value *Main, Value *Alt);
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
+
+static InstructionsState getCopyableOpcode(ArrayRef<Value *> VL,
+                                           const TargetLibraryInfo &TLI);
+
+static InstructionsState getCombinedOpcode(ArrayRef<Value *> VL,
+                                           const TargetLibraryInfo &TLI);
 
 /// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
 /// compatible instructions or constants, or just some other regular values.
@@ -981,51 +973,19 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
 
   Instruction *MainOp = cast<Instruction>(*It);
-  Instruction *AltOp = MainOp;
-  unsigned Opcode = MainOp->getOpcode();
-  unsigned AltOpcode = Opcode;
-  for (Value *V : iterator_range(It + 1, VL.end())) {
-    Instruction *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      continue;
-    unsigned VOpcode = Inst->getOpcode();
-    if (Inst && AltOpcode == Opcode && !isa<PHINode>(Inst) &&
-        VOpcode != Opcode && isValidForAlternation(VOpcode)) {
-      AltOpcode = VOpcode;
-      AltOp = Inst;
-      break;
-    }
-  }
   unsigned InstCnt = std::count_if(It, VL.end(), IsaPred<Instruction>);
   if ((VL.size() > 2 && !isa<PHINode>(MainOp) && InstCnt < VL.size() / 2) ||
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
-  bool IsBinOp = isa<BinaryOperator>(MainOp);
-  bool IsCopyable = false;
-  if (MainOp && AltOp && MainOp != AltOp) {
-    if (!IsBinOp && isa<BinaryOperator>(AltOp) && !isa<PHINode>(MainOp)) {
-      std::swap(MainOp, AltOp);
-      std::swap(AltOpcode, Opcode);
-      IsBinOp = true;
-    }
-    IsCopyable = VectorizeCopyable && isCopyableOp(VL, MainOp, AltOp);
-    if (IsCopyable && isa<CmpInst>(AltOp)) {
-      Type *Ty0 = MainOp->getOperand(0)->getType();
-      Type *Ty1 = AltOp->getOperand(0)->getType();
-      if (Ty0 != Ty1)
-        return InstructionsState::invalid();
-    } else if (!IsCopyable) {
-      MainOp = cast<Instruction>(*It);
-      AltOp = MainOp;
-      Opcode = MainOp->getOpcode();
-      AltOpcode = Opcode;
-      IsBinOp = isa<BinaryOperator>(MainOp);
-    }
-  }
+
   bool IsCastOp = isa<CastInst>(MainOp);
+  bool IsBinOp = isa<BinaryOperator>(MainOp);
   bool IsCmpOp = isa<CmpInst>(MainOp);
   CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
                                         : CmpInst::BAD_ICMP_PREDICATE;
+  Instruction *AltOp = MainOp;
+  unsigned Opcode = MainOp->getOpcode();
+  unsigned AltOpcode = Opcode;
 
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
@@ -1081,12 +1041,12 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         AltOp = I;
         continue;
       }
-    } else if ((IsCastOp || IsCopyable) && isa<CastInst>(I)) {
+    } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
       Type *Ty0 = Op0->getType();
       Value *Op1 = I->getOperand(0);
       Type *Ty1 = Op1->getType();
-      if (Ty0 == Ty1 || IsCopyable) {
+      if (Ty0 == Ty1) {
         if (InstOpcode == Opcode || InstOpcode == AltOpcode)
           continue;
         if (Opcode == AltOpcode) {
@@ -1098,15 +1058,13 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           continue;
         }
       }
-    } else if (auto *Inst = dyn_cast<CmpInst>(I);
-               Inst && (IsCmpOp || IsCopyable)) {
+    } else if (auto *Inst = dyn_cast<CmpInst>(I); Inst && IsCmpOp) {
       auto *BaseInst = cast<CmpInst>(MainOp);
       Type *Ty0 = BaseInst->getOperand(0)->getType();
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
-        assert((IsCopyable || InstOpcode == Opcode) &&
-               "Expected same CmpInst opcode.");
-        assert((IsCopyable || InstOpcode == AltOpcode) &&
+        assert(InstOpcode == Opcode && "Expected same CmpInst opcode.");
+        assert(InstOpcode == AltOpcode &&
                "Alternate instructions are only supported by BinaryOperator "
                "and CastInst.");
         // Check for compatible operands. If the corresponding operands are not
@@ -1137,32 +1095,23 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
             AltPred == CurrentPred || AltPred == SwappedCurrentPred)
           continue;
       }
-    } else if (InstOpcode == Opcode ||
-               (IsCopyable && InstOpcode == AltOpcode)) {
-      assert((IsCopyable || InstOpcode == AltOpcode) &&
+    } else if (InstOpcode == Opcode) {
+      assert(InstOpcode == AltOpcode &&
              "Alternate instructions are only supported by BinaryOperator and "
              "CastInst.");
-      Instruction *Op = MainOp;
-      if (IsCopyable) {
-        if (InstOpcode != Opcode && InstOpcode != AltOpcode) {
-          Op = I;
-        } else if (Opcode != AltOpcode && InstOpcode == AltOpcode) {
-          Op = AltOp;
-        }
-      }
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
-            Gep->getOperand(0)->getType() != Op->getOperand(0)->getType())
+            Gep->getOperand(0)->getType() != MainOp->getOperand(0)->getType())
           return InstructionsState::invalid();
       } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
         if (!isVectorLikeInstWithConstOps(EI))
           return InstructionsState::invalid();
       } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-        auto *BaseLI = cast<LoadInst>(Op);
+        auto *BaseLI = cast<LoadInst>(MainOp);
         if (!LI->isSimple() || !BaseLI->isSimple())
           return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
-        auto *CallBase = cast<CallInst>(Op);
+        auto *CallBase = cast<CallInst>(MainOp);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
           return InstructionsState::invalid();
         if (Call->hasOperandBundles() &&
@@ -1177,14 +1126,13 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
-          if (Mappings.size() &&
-              (Mappings.size() != BaseMappings.size() ||
-               Mappings.front().ISA != BaseMappings.front().ISA ||
-               Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
-               Mappings.front().VectorName != BaseMappings.front().VectorName ||
-               Mappings.front().Shape.VF != BaseMappings.front().Shape.VF ||
-               Mappings.front().Shape.Parameters !=
-                   BaseMappings.front().Shape.Parameters))
+          if (Mappings.size() != BaseMappings.size() ||
+              Mappings.front().ISA != BaseMappings.front().ISA ||
+              Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
+              Mappings.front().VectorName != BaseMappings.front().VectorName ||
+              Mappings.front().Shape.VF != BaseMappings.front().Shape.VF ||
+              Mappings.front().Shape.Parameters !=
+                  BaseMappings.front().Shape.Parameters)
             return InstructionsState::invalid();
         }
       }
@@ -1194,6 +1142,69 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
 
   return InstructionsState(MainOp, AltOp);
+}
+
+/// \returns analysis of the Instructions in \p VL described in
+/// InstructionsState in propose to vectorize with copyable instructions.
+static InstructionsState getCopyableOpcode(ArrayRef<Value *> VL,
+                                           const TargetLibraryInfo &TLI) {
+  if (!all_of(VL, IsaPred<Instruction>))
+    return InstructionsState::invalid();
+  Instruction *MainOp = dyn_cast<Instruction>(VL[0]);
+  Instruction *AltOp = nullptr;
+  unsigned Opcode = MainOp->getOpcode();
+  unsigned AltOpcode = Opcode;
+  if (MainOp && VectorizeCopyable && all_of(VL, IsaPred<Instruction>)) {
+    for (Value *V : VL) {
+      Instruction *I = cast<Instruction>(V);
+      if (I->isIntDivRem() || I->isFPDivRem())
+        return InstructionsState::invalid();
+      if (isa<PHINode>(I)) {
+        AltOp = nullptr;
+        break;
+      }
+      unsigned VOpcode = I->getOpcode();
+      if (VOpcode != Opcode) {
+        if (AltOpcode == Opcode) {
+          AltOpcode = VOpcode;
+          AltOp = I;
+        }
+        if (VOpcode != AltOpcode) {
+          AltOp = nullptr;
+          break;
+        }
+      }
+    }
+    if (AltOp) {
+      bool IsBinOp = isa<BinaryOperator>(MainOp);
+      bool IsAltBinOp = isa<BinaryOperator>(AltOp);
+      if (!IsBinOp && IsAltBinOp) {
+        std::swap(MainOp, AltOp);
+        std::swap(IsBinOp, IsAltBinOp);
+        std::swap(Opcode, AltOpcode);
+      }
+      if ((IsBinOp || IsAltBinOp) && !(IsBinOp && IsAltBinOp) &&
+          isCopyableOp(VL, MainOp, AltOp)) {
+        SmallVector<Value *, 8> MainOps, AltOps;
+        for (Value *V : VL) {
+          Instruction *I = cast<Instruction>(V);
+          if (I->getOpcode() == Opcode)
+            MainOps.push_back(I);
+          else
+            AltOps.push_back(I);
+        }
+        if (getSameOpcode(MainOps, TLI) && getSameOpcode(AltOps, TLI))
+          return InstructionsState(MainOp, AltOp);
+      }
+    }
+  }
+  return InstructionsState::invalid();
+}
+
+static InstructionsState getCombinedOpcode(ArrayRef<Value *> VL,
+                                           const TargetLibraryInfo &TLI) {
+  InstructionsState S = getSameOpcode(VL, TLI);
+  return (S) ? S : getCopyableOpcode(VL, TLI);
 }
 
 /// \returns true if all of the values in \p VL have the same type or false
@@ -1233,37 +1244,7 @@ static bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
   }
 }
 
-static bool checkCopyableInnerDep(ArrayRef<Value *> VL,
-                                  const InstructionsState &S) {
-  SmallSet<Value *, 4> Ops;
-  SmallSet<Value *, 4> AltOps;
-  unsigned Opcode = S.getOpcode();
-  for (Value *V : VL) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-    if (I->getOpcode() == Opcode)
-      Ops.insert(V);
-    else
-      AltOps.insert(V);
-  }
-  for (Value *V : VL) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-    for (Use &U : I->operands())
-      if (auto *Op = dyn_cast<Instruction>(U.get()); Op && Ops.contains(Op))
-        return false;
-    if (I->getOpcode() != Opcode) {
-      for (Use &U : I->operands())
-        if (auto *Op = dyn_cast<Instruction>(U.get());
-            Op && AltOps.contains(Op))
-          return false;
-    }
-  }
-  return true;
-}
-
+// Determine that the vector could be vectorized with copyable elements.
 static bool isCopyableOp(ArrayRef<Value *> VL, Value *Main, Value *Alt) {
   if (any_of(VL, IsaPred<PoisonValue>) || Main == Alt ||
       !isa<BinaryOperator>(Main) || !isa<Instruction>(Alt) ||
@@ -1281,6 +1262,7 @@ static bool isCopyableOp(ArrayRef<Value *> VL, Value *Main, Value *Alt) {
     return true;
   return false;
 }
+
 /// \returns the AA location that is being access by the instruction.
 static MemoryLocation getLocation(Instruction *I) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
@@ -3526,6 +3508,9 @@ private:
     /// Interleaving factor for interleaved loads Vectorize nodes.
     unsigned InterleaveFactor = 0;
 
+    /// True if alterative operation is a copy instruction.
+    bool IsAltOpCopy = false;
+
   public:
     /// Returns interleave factor for interleave nodes.
     unsigned getInterleaveFactor() const { return InterleaveFactor; }
@@ -3581,7 +3566,7 @@ private:
     }
 
     /// Some of the instructions in the list have alternate opcodes.
-    bool isAltShuffle() const { return S.isAltShuffle() && !S.isAltOpCopy(); }
+    bool isAltShuffle() const { return S.isAltShuffle() && !IsAltOpCopy; }
 
     bool isOpcodeOrAlt(Instruction *I) const { return S.isOpcodeOrAlt(I); }
 
@@ -3609,7 +3594,9 @@ private:
 
     unsigned getAltOpcode() const { return S.getAltOpcode(); }
 
-    bool isAltOpCopy() const { return S.isAltOpCopy(); }
+    bool isAltOpCopy() const { return IsAltOpCopy; }
+
+    void setAltOpCopy(bool Val) { IsAltOpCopy = Val; }
 
     bool hasState() const { return S.valid(); }
 
@@ -3710,7 +3697,7 @@ private:
       if (S) {
         dbgs() << "MainOp: " << *S.getMainOp() << "\n";
         dbgs() << "AltOp: " << *S.getAltOp() << "\n";
-        dbgs() << "isAltOpCopy: " << S.isAltOpCopy() << "\n";
+        dbgs() << "IsAltOpCopy: " << IsAltOpCopy << "\n";
       } else {
         dbgs() << "MainOp: NULL\n";
         dbgs() << "AltOp: NULL\n";
@@ -3764,29 +3751,27 @@ private:
 #endif
 
   /// Create a new VectorizableTree entry.
-  TreeEntry *newTreeEntry(ArrayRef<Value *> VL,
-                          std::optional<ScheduleData *> Bundle,
-                          const InstructionsState &S,
-                          const EdgeInfo &UserTreeIdx,
-                          ArrayRef<int> ReuseShuffleIndices = {},
-                          ArrayRef<unsigned> ReorderIndices = {},
-                          unsigned InterleaveFactor = 0) {
+  TreeEntry *
+  newTreeEntry(ArrayRef<Value *> VL, std::optional<ScheduleData *> Bundle,
+               const InstructionsState &S, const EdgeInfo &UserTreeIdx,
+               ArrayRef<int> ReuseShuffleIndices = {},
+               ArrayRef<unsigned> ReorderIndices = {},
+               unsigned InterleaveFactor = 0, bool IsAltOpCopy = false) {
     TreeEntry::EntryState EntryState =
         Bundle ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
-    TreeEntry *E = newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
-                                ReuseShuffleIndices, ReorderIndices);
+    TreeEntry *E =
+        newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
+                     ReuseShuffleIndices, ReorderIndices, IsAltOpCopy);
     if (E && InterleaveFactor > 0)
       E->setInterleave(InterleaveFactor);
     return E;
   }
 
-  TreeEntry *newTreeEntry(ArrayRef<Value *> VL,
-                          TreeEntry::EntryState EntryState,
-                          std::optional<ScheduleData *> Bundle,
-                          const InstructionsState &S,
-                          const EdgeInfo &UserTreeIdx,
-                          ArrayRef<int> ReuseShuffleIndices = {},
-                          ArrayRef<unsigned> ReorderIndices = {}) {
+  TreeEntry *newTreeEntry(
+      ArrayRef<Value *> VL, TreeEntry::EntryState EntryState,
+      std::optional<ScheduleData *> Bundle, const InstructionsState &S,
+      const EdgeInfo &UserTreeIdx, ArrayRef<int> ReuseShuffleIndices = {},
+      ArrayRef<unsigned> ReorderIndices = {}, bool IsAltOpCopy = false) {
     assert(((!Bundle && EntryState == TreeEntry::NeedToGather) ||
             (Bundle && EntryState != TreeEntry::NeedToGather)) &&
            "Need to vectorize gather entry?");
@@ -3804,7 +3789,7 @@ private:
     // for non-power-of-two vectors.
     assert(
         (hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()), VL.size()) ||
-         S.isAltOpCopy() || ReuseShuffleIndices.empty()) &&
+         ReuseShuffleIndices.empty()) &&
         "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
@@ -3829,6 +3814,8 @@ private:
     if (!Last->isGather()) {
       SmallPtrSet<Value *, 4> Processed;
       unsigned Opcode = S.getOpcode();
+      if (IsAltOpCopy)
+        Last->setAltOpCopy(true);
       for (unsigned i = 0; i < VL.size(); ++i) {
         Value *V = VL[i];
         if (isa<PoisonValue>(V))
@@ -3841,7 +3828,7 @@ private:
              doesNotNeedToBeScheduled(V)) &&
             "Scalar already in tree!");
         bool IsAltInst = (I) ? I->getOpcode() != Opcode : false;
-        if (S.isAltOpCopy() && IsAltInst) {
+        if (IsAltOpCopy && IsAltInst) {
           CopyableAltOp[V] = Last;
           continue;
         }
@@ -4418,17 +4405,16 @@ private:
               DecrUnsched(I);
           // Handle a copy instruction dependencies.
           if (TE && TE->isAltOpCopy() && BundleMember->IsCopy) {
-            doForAllOpcodes(BundleMember->Inst, [BundleMember, &ReadyList](
-                                                    ScheduleData *CopyUse) {
-              if (BundleMember != CopyUse && CopyUse->hasValidDependencies() &&
+            doForAllOpcodes(BundleMember->Inst, [BundleMember, &ReadyList](ScheduleData *CopyUse) {
+              if (BundleMember != CopyUse &&
+                  CopyUse->hasValidDependencies() &&
                   CopyUse->incrementUnscheduledDeps(-1) == 0) {
                 ScheduleData *DepBundle = CopyUse->FirstInBundle;
                 assert(!DepBundle->IsScheduled &&
-                       "already scheduled bundle gets ready");
+                   "already scheduled bundle gets ready");
                 if (DepBundle->isReady()) {
                   ReadyList.insert(DepBundle);
-                  LLVM_DEBUG(dbgs() << "SLP:    gets ready (copyable): "
-                                    << *DepBundle << "\n");
+                  LLVM_DEBUG(dbgs() << "SLP:    gets ready (copyable): " << *DepBundle << "\n");
                 }
               }
             });
@@ -4519,7 +4505,8 @@ private:
     /// Build a bundle from the ScheduleData nodes corresponding to the
     /// scalar instruction for each lane.
     ScheduleData *buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
-                              const InstructionsState &S, bool &ReSchedule);
+                              const InstructionsState &S, bool &ReSchedule,
+                              bool IsAltOpCopy);
 
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
@@ -4529,7 +4516,8 @@ private:
     std::optional<ScheduleData *> tryScheduleBundle(ArrayRef<Value *> VL,
                                                     BoUpSLP *SLP,
                                                     const InstructionsState &S,
-                                                    bool AnyCopies);
+                                                    bool AnyCopies,
+                                                    bool IsAltOpCopy);
 
     /// Un-bundles a group of instructions.
     void cancelScheduling(ArrayRef<Value *> VL, ScheduleData *Bundle);
@@ -7937,8 +7925,6 @@ bool BoUpSLP::canRepresentAsCopyable(const InstructionsState &S,
   SmallVector<unsigned> MainAltOps;
   unsigned Operand;
 
-  if (!checkCopyableInnerDep(VL, S))
-    return false;
   if (isCopyableOp(VL, S.getMainOp(), S.getAltOp()))
     return true;
   if ((isa<BinaryOperator>(S.getMainOp()) && Opcode0 == Opcode1) ||
@@ -8507,11 +8493,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   }
   case Instruction::ShuffleVector: {
-    if (VectorizeCopyable && isCopyableOp(VL, S.getMainOp(), S.getAltOp()) &&
-        checkCopyableInnerDep(VL, S)) {
-      S.setAltOpCopy(true);
-      return TreeEntry::Vectorize;
-    }
     if (!S.isAltShuffle()) {
       // REVEC can support non alternate shuffle.
       if (SLPReVec && getShufflevectorNumGroups(VL))
@@ -8528,9 +8509,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
              "the whole alt sequence is not profitable.\n");
       return TreeEntry::NeedToGather;
     }
-    if (VectorizeCopyable && canRepresentAsCopyable(S, VL))
-      S.setAltOpCopy(true);
-
     return TreeEntry::Vectorize;
   }
   default:
@@ -8708,6 +8686,19 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   };
 
   InstructionsState S = getSameOpcode(VL, *TLI);
+  bool IsAltOpCopy = false;
+  if (!S && VectorizeCopyable) {
+    S = getCopyableOpcode(VL, *TLI);
+    if (S) {
+      if (isCopyableOp(VL, S.getMainOp(), S.getAltOp()) ||
+          canRepresentAsCopyable(S, VL)) {
+        IsAltOpCopy = true;
+      } else {
+        S = InstructionsState::invalid();
+      }
+    }
+  } else if (VectorizeCopyable && canRepresentAsCopyable(S, VL))
+    IsAltOpCopy = true;
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
@@ -8954,7 +8945,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   SmallVector<Value *> PointerOps;
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps);
-  if (S.isAltOpCopy()) {
+  if (IsAltOpCopy) {
+    State = TreeEntry::Vectorize;
     for (Value *V : VL) {
       Instruction *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -8967,7 +8959,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
   if (State == TreeEntry::NeedToGather ||
-      (S.isAltOpCopy() && !has_single_bit(UniqueValues.size()))) {
+      (IsAltOpCopy && !has_single_bit(UniqueValues.size()))) {
     newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
                  ReuseShuffleIndices);
     return;
@@ -8985,15 +8977,15 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
   std::optional<ScheduleData *> Bundle;
-  Bundle = BS.tryScheduleBundle(UniqueValues, this, S, AnyCopies);
+  Bundle = BS.tryScheduleBundle(UniqueValues, this, S, AnyCopies, IsAltOpCopy);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
 #endif
-  if (!Bundle || (S.isAltOpCopy() && !Bundle.value())) {
+  if (!Bundle || (IsAltOpCopy && !Bundle.value())) {
     LLVM_DEBUG(dbgs() << "SLP: We are not able to schedule this bundle!\n");
     assert((!BS.getScheduleData(VL0) ||
-            !BS.getScheduleData(VL0)->isPartOfBundle() || S.isAltOpCopy() ||
+            !BS.getScheduleData(VL0)->isPartOfBundle() ||
             (BS.getScheduleData(VL0)->TE &&
              BS.getScheduleData(VL0)->TE->isAltOpCopy())) &&
            "tryScheduleBundle should cancelScheduling on failure");
@@ -9386,7 +9378,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::ShuffleVector: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, {}, 0, IsAltOpCopy);
       if (S.isAltShuffle()) {
         LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (isAltShuffle).\n";
                    TE->dump());
@@ -9396,7 +9388,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             dbgs() << "SLP: added a new TreeEntry (ShuffleVectorInst).\n";
             TE->dump());
       }
-      if (S.isAltOpCopy() && !isCopyableOp(VL, S.getMainOp(), S.getAltOp())) {
+      if (IsAltOpCopy && !isCopyableOp(VL, S.getMainOp(), S.getAltOp())) {
         ValueList Left, Right;
         unsigned Opcode0 = S.getOpcode();
         unsigned Opcode1 = S.getAltOpcode();
@@ -9440,7 +9432,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         buildTree_rec(newVL, Depth + 1, {TE, 0});
         buildTree_rec(Right, Depth + 1, {TE, 1});
         return;
-      } else if (S.isAltOpCopy()) {
+      } else if (IsAltOpCopy) {
         ValueList Left, Right;
         unsigned Opcode0 = S.getOpcode();
         VLOperands Ops(VL, S, *this);
@@ -11622,12 +11614,12 @@ public:
 const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
                                                    unsigned Idx) const {
   ArrayRef<Value *> VL = E->getOperand(Idx);
-  InstructionsState S = getSameOpcode(VL, *TLI);
+  InstructionsState S = getCombinedOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
   if (!S && VL.front()->getType()->isPointerTy()) {
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
     if (It != VL.end())
-      S = getSameOpcode(*It, *TLI);
+      S = getCombinedOpcode(*It, *TLI);
   }
   if (const TreeEntry *VE = getMatchedVectorizedOperand(E, Idx, VL, S))
     return VE;
@@ -13166,8 +13158,6 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         std::optional<unsigned> InsertIdx = getElementIndex(VU);
         if (InsertIdx) {
           const TreeEntry *ScalarTE = &EU.E;
-          if (!ScalarTE)
-            continue;
           auto *It = find_if(
               ShuffledInserts,
               [this, VU](const ShuffledInsertData<const TreeEntry *> &Data) {
@@ -15285,12 +15275,12 @@ BoUpSLP::getMatchedVectorizedOperand(const TreeEntry *E, unsigned NodeIdx,
 
 Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   ValueList &VL = E->getOperand(NodeIdx);
-  InstructionsState S = getSameOpcode(VL, *TLI);
+  InstructionsState S = getCombinedOpcode(VL, *TLI);
   // Special processing for GEPs bundle, which may include non-gep values.
   if (!S && VL.front()->getType()->isPointerTy()) {
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
     if (It != VL.end())
-      S = getSameOpcode(*It, *TLI);
+      S = getCombinedOpcode(*It, *TLI);
   }
   const unsigned VF = VL.size();
   if (TreeEntry *VE = getMatchedVectorizedOperand(E, NodeIdx, VL, S)) {
@@ -17629,13 +17619,15 @@ void BoUpSLP::optimizeGatherSequence() {
 BoUpSLP::ScheduleData *
 BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                       const InstructionsState &S,
-                                      bool &ReSchedule) {
+                                      bool &ReSchedule, bool IsAltOpCopy) {
   ScheduleData *Bundle = nullptr;
   ScheduleData *PrevInBundle = nullptr;
   unsigned Opcode = S.getOpcode();
   ValueList Keys;
 
   for (Value *V : VL) {
+    if (doesNotNeedToBeScheduled(V) && IsAltOpCopy)
+      return nullptr;
     auto *SD = getScheduleData(V);
     bool FoundKey = false;
     if (SD && !SD->isPartOfBundle()) {
@@ -17694,7 +17686,7 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
     // Group the instructions to a bundle.
     BundleMember->FirstInBundle = Bundle;
-    if (S.isAltOpCopy() && IsAltInst)
+    if (IsAltOpCopy && IsAltInst)
       BundleMember->IsCopy = true;
     PrevInBundle = BundleMember;
     if (SLP->CopyableAltOp.contains(I)) {
@@ -17714,7 +17706,7 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 std::optional<BoUpSLP::ScheduleData *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S,
-                                            bool AnyCopies) {
+                                            bool AnyCopies, bool IsAltOpCopy) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -17723,7 +17715,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
-  bool IsAltOpCopy = S.isAltOpCopy();
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
 
   auto TryScheduleBundleImpl = [this, OldScheduleEnd, IsAltOpCopy, AnyCopies,
@@ -17801,7 +17792,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     ReSchedule = true;
   }
 
-  auto *Bundle = buildBundle(VL, SLP, S, ReSchedule);
+  auto *Bundle = buildBundle(VL, SLP, S, ReSchedule, IsAltOpCopy);
   if (!Bundle)
     return std::nullopt;
   TryScheduleBundleImpl(ReSchedule, Bundle);
@@ -18051,9 +18042,20 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         if (auto *I = dyn_cast<Instruction>(U)) {
           doForAllOpcodes(I, [&](ScheduleData *UseSD) {
             ScheduleData *DestBundle = UseSD->FirstInBundle;
-            if ((UseSD->IsCopy || BundleMember->IsCopy) &&
+            if (BundleMember->IsCopy && !UseSD->IsCopy &&
                 DestBundle == BundleMember->FirstInBundle)
               return;
+            // For copy operations check for inner dependencies, we could not
+            // support such depenedies if it comes from a main operaion, only
+            // from alternative or for now we ignore alternative operations
+            // depenedies to any alternative.
+            if (BundleMember->TE && BundleMember->TE->isAltOpCopy() &&
+                (!BundleMember->IsCopy ||
+                 (BundleMember->IsCopy && UseSD->IsCopy)) &&
+                DestBundle == BundleMember->FirstInBundle) {
+              BundleMember->Dependencies++;
+              BundleMember->incrementUnscheduledDeps(1);
+            }
             BundleMember->Dependencies++;
             if (!DestBundle->IsScheduled)
               BundleMember->incrementUnscheduledDeps(1);
@@ -18243,15 +18245,13 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     }
   };
   std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
-  SmallDenseMap<Value *, ScheduleData *> CopyElementsMap;
 
   // Ensure that all dependency data is updated (for nodes in the sub-graph)
   // and fill the ready-list with initial instructions.
   int Idx = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, &CopyElementsMap,
-                            BS](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
       [[maybe_unused]] ArrayRef<TreeEntry *> SDTEs = getTreeEntries(SD->Inst);
       assert((isVectorLikeInstWithConstOps(SD->Inst) || SD->IsCopy ||
               SD->isPartOfBundle() ==
@@ -18259,16 +18259,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
                    !doesNotNeedToSchedule(SDTEs.front()->Scalars))) &&
              "scheduler and vectorizer bundle mismatch");
       SD->FirstInBundle->SchedulingPriority = Idx++;
-      for (TreeEntry *SDTE : SDTEs)
-        if (SDTE && SDTE->isAltOpCopy()) {
-          ScheduleData *Bundle = SD->FirstInBundle;
-          for (ScheduleData *BundleMember = Bundle; BundleMember;
-               BundleMember = BundleMember->NextInBundle) {
-            if (BundleMember->IsCopy)
-              CopyElementsMap[BundleMember->Inst] = Bundle;
-          }
-        }
-
       if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
     });
