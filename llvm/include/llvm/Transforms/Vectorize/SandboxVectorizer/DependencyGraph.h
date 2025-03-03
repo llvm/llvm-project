@@ -45,15 +45,6 @@ class DGNode;
 class MemDGNode;
 class DependencyGraph;
 
-/// While OpIt points to a Value that is not an Instruction keep incrementing
-/// it. \Returns the first iterator that points to an Instruction, or end.
-[[nodiscard]] static User::op_iterator skipNonInstr(User::op_iterator OpIt,
-                                                    User::op_iterator OpItE) {
-  while (OpIt != OpItE && !isa<Instruction>((*OpIt).get()))
-    ++OpIt;
-  return OpIt;
-}
-
 /// Iterate over both def-use and mem dependencies.
 class PredIterator {
   User::op_iterator OpIt;
@@ -71,6 +62,12 @@ class PredIterator {
       : OpIt(OpIt), OpItE(OpItE), N(N), DAG(&DAG) {}
   friend class DGNode;    // For constructor
   friend class MemDGNode; // For constructor
+
+  /// Skip iterators that don't point instructions or are outside \p DAG,
+  /// starting from \p OpIt and ending before \p OpItE.n
+  static User::op_iterator skipBadIt(User::op_iterator OpIt,
+                                     User::op_iterator OpItE,
+                                     const DependencyGraph &DAG);
 
 public:
   using difference_type = std::ptrdiff_t;
@@ -104,7 +101,7 @@ protected:
   /// The scheduler bundle that this node belongs to.
   SchedBundle *SB = nullptr;
 
-  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void setSchedBundle(SchedBundle &SB);
   void clearSchedBundle() { this->SB = nullptr; }
   friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
@@ -120,9 +117,15 @@ public:
   virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
+  // TODO: Make this private?
   void decrUnscheduledSuccs() {
     assert(UnscheduledSuccs > 0 && "Counting error!");
     --UnscheduledSuccs;
+  }
+  void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
+  void resetScheduleState() {
+    UnscheduledSuccs = 0;
+    Scheduled = false;
   }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
@@ -135,8 +138,9 @@ public:
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
   using iterator = PredIterator;
   virtual iterator preds_begin(DependencyGraph &DAG) {
-    return PredIterator(skipNonInstr(I->op_begin(), I->op_end()), I->op_end(),
-                        this, DAG);
+    return PredIterator(
+        PredIterator::skipBadIt(I->op_begin(), I->op_end(), DAG), I->op_end(),
+        this, DAG);
   }
   virtual iterator preds_end(DependencyGraph &DAG) {
     return PredIterator(I->op_end(), I->op_end(), this, DAG);
@@ -215,15 +219,19 @@ class MemDGNode final : public DGNode {
   MemDGNode *NextMemN = nullptr;
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
+  /// Memory successors.
+  DenseSet<MemDGNode *> MemSuccs;
   friend class PredIterator; // For MemPreds.
   /// Creates both edges: this<->N.
   void setNextNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
     NextMemN = N;
     if (NextMemN != nullptr)
       NextMemN->PrevMemN = this;
   }
   /// Creates both edges: N<->this.
   void setPrevNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
     PrevMemN = N;
     if (PrevMemN != nullptr)
       PrevMemN->NextMemN = this;
@@ -247,8 +255,8 @@ public:
   }
   iterator preds_begin(DependencyGraph &DAG) override {
     auto OpEndIt = I->op_end();
-    return PredIterator(skipNonInstr(I->op_begin(), OpEndIt), OpEndIt,
-                        MemPreds.begin(), this, DAG);
+    return PredIterator(PredIterator::skipBadIt(I->op_begin(), OpEndIt, DAG),
+                        OpEndIt, MemPreds.begin(), this, DAG);
   }
   iterator preds_end(DependencyGraph &DAG) override {
     return PredIterator(I->op_end(), I->op_end(), MemPreds.end(), this, DAG);
@@ -263,8 +271,19 @@ public:
   void addMemPred(MemDGNode *PredN) {
     [[maybe_unused]] auto Inserted = MemPreds.insert(PredN).second;
     assert(Inserted && "PredN already exists!");
+    assert(PredN != this && "Trying to add a dependency to self!");
+    PredN->MemSuccs.insert(this);
     if (!Scheduled) {
       ++PredN->UnscheduledSuccs;
+    }
+  }
+  /// Removes the memory dependency PredN->this. This also updates the
+  /// UnscheduledSuccs counter of PredN if this node has not been scheduled.
+  void removeMemPred(MemDGNode *PredN) {
+    MemPreds.erase(PredN);
+    PredN->MemSuccs.erase(this);
+    if (!Scheduled) {
+      PredN->decrUnscheduledSuccs();
     }
   }
   /// \Returns true if there is a memory dependency N->this.
@@ -276,6 +295,10 @@ public:
   /// \Returns all memory dependency predecessors. Used by tests.
   iterator_range<DenseSet<MemDGNode *>::const_iterator> memPreds() const {
     return make_range(MemPreds.begin(), MemPreds.end());
+  }
+  /// \Returns all memory dependency successors.
+  iterator_range<DenseSet<MemDGNode *>::const_iterator> memSuccs() const {
+    return make_range(MemSuccs.begin(), MemSuccs.end());
   }
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
@@ -311,6 +334,7 @@ private:
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
   std::optional<Context::CallbackID> MoveInstrCB;
+  std::optional<Context::CallbackID> SetUseCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -348,13 +372,15 @@ private:
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
   /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
-  /// before \p N, including or excluding \p N based on \p IncludingN, or
-  /// nullptr if not found.
-  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// before \p N, skipping \p SkipN, including or excluding \p N based on
+  /// \p IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN,
+                                MemDGNode *SkipN = nullptr) const;
   /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
-  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
-  /// if not found.
-  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+  /// after \p N, skipping \p SkipN, including or excluding \p N based on \p
+  /// IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN,
+                               MemDGNode *SkipN = nullptr) const;
 
   /// Called by the callbacks when a new instruction \p I has been created.
   void notifyCreateInstr(Instruction *I);
@@ -364,6 +390,8 @@ private:
   /// Called by the callbacks when instruction \p I is about to be moved to
   /// \p To.
   void notifyMoveInstr(Instruction *I, const BBIterator &To);
+  /// Called by the callbacks when \p U's source is about to be set to \p NewSrc
+  void notifySetUse(const Use &U, Value *NewSrc);
 
 public:
   /// This constructor also registers callbacks.
@@ -377,6 +405,8 @@ public:
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
         });
+    SetUseCB = Ctx.registerSetUseCallback(
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
@@ -385,6 +415,8 @@ public:
       Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
     if (MoveInstrCB)
       Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
+    if (SetUseCB)
+      Ctx->unregisterSetUseCallback(*SetUseCB);
   }
 
   DGNode *getNode(Instruction *I) const {
@@ -417,6 +449,13 @@ public:
     DAGInterval = {};
   }
 #ifndef NDEBUG
+  /// \Returns true if the DAG's state is clear. Used in assertions.
+  bool empty() const {
+    bool IsEmpty = InstrToNodeMap.empty();
+    assert(IsEmpty == DAGInterval.empty() &&
+           "Interval and InstrToNodeMap out of sync!");
+    return IsEmpty;
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG

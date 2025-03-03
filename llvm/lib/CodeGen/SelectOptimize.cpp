@@ -483,9 +483,9 @@ static Value *getTrueOrFalseValue(
     BasicBlock *B) {
   Value *V = isTrue ? SI.getTrueValue() : SI.getFalseValue();
   if (V) {
-    auto *IV = dyn_cast<Instruction>(V);
-    if (IV && OptSelects.count(IV))
-      return isTrue ? OptSelects[IV].first : OptSelects[IV].second;
+    if (auto *IV = dyn_cast<Instruction>(V))
+      if (auto It = OptSelects.find(IV); It != OptSelects.end())
+        return isTrue ? It->second.first : It->second.second;
     return V;
   }
 
@@ -508,11 +508,10 @@ static Value *getTrueOrFalseValue(
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
-    if (OptSelects.count(IV))
-      CBO->setOperand(OtherIdx,
-                      isTrue ? OptSelects[IV].first : OptSelects[IV].second);
+    if (auto It = OptSelects.find(IV); It != OptSelects.end())
+      CBO->setOperand(OtherIdx, isTrue ? It->second.first : It->second.second);
   }
-  CBO->insertBefore(B->getTerminator());
+  CBO->insertBefore(B->getTerminator()->getIterator());
   return CBO;
 }
 
@@ -637,7 +636,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     }
     auto InsertionPoint = EndBlock->getFirstInsertionPt();
     for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(&*InsertionPoint);
+      DI->moveBeforePreserving(InsertionPoint);
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -675,7 +674,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
-        TrueInst->moveBefore(TrueBranch);
+        TrueInst->moveBefore(TrueBranch->getIterator());
     }
     if (!FalseSlicesInterleaved.empty() || HasSelectLike(ASI, false)) {
       FalseBlock =
@@ -684,7 +683,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
-        FalseInst->moveBefore(FalseBranch);
+        FalseInst->moveBefore(FalseBranch->getIterator());
     }
     // If there was nothing to sink, then arbitrarily choose the 'false' side
     // for a new input value to the PHI.
@@ -979,8 +978,9 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
     // cost of the most expensive instruction of the group.
     Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
     for (SelectLike &SI : ASI.Selects) {
-      SelectCost = std::max(SelectCost, InstCostMap[SI.getI()].PredCost);
-      BranchCost = std::max(BranchCost, InstCostMap[SI.getI()].NonPredCost);
+      const auto &ICM = InstCostMap[SI.getI()];
+      SelectCost = std::max(SelectCost, ICM.PredCost);
+      BranchCost = std::max(BranchCost, ICM.NonPredCost);
     }
     if (BranchCost < SelectCost) {
       OptimizationRemark OR(DEBUG_TYPE, "SelectOpti",
@@ -1217,7 +1217,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
-                                   L->getHeader()->getFirstNonPHI());
+                                   &*L->getHeader()->getFirstNonPHIIt());
 
   if (LoopCost[0].NonPredCost > LoopCost[0].PredCost ||
       LoopCost[1].NonPredCost >= LoopCost[1].PredCost) {
@@ -1305,9 +1305,9 @@ bool SelectOptimizeImpl::computeLoopCosts(
           auto UI = dyn_cast<Instruction>(U.get());
           if (!UI)
             continue;
-          if (InstCostMap.count(UI)) {
-            IPredCost = std::max(IPredCost, InstCostMap[UI].PredCost);
-            INonPredCost = std::max(INonPredCost, InstCostMap[UI].NonPredCost);
+          if (auto It = InstCostMap.find(UI); It != InstCostMap.end()) {
+            IPredCost = std::max(IPredCost, It->second.PredCost);
+            INonPredCost = std::max(INonPredCost, It->second.NonPredCost);
           }
         }
         auto ILatency = computeInstCost(&I);
@@ -1328,8 +1328,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
         // BranchCost = PredictedPathCost + MispredictCost
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
-        if (SImap.contains(&I)) {
-          auto SI = SImap.at(&I);
+        if (auto It = SImap.find(&I); It != SImap.end()) {
+          auto SI = It->second;
           const auto *SG = SGmap.at(&I);
           Scaled64 TrueOpCost = SI.getOpCostOnBranch(true, InstCostMap, TTI);
           Scaled64 FalseOpCost = SI.getOpCostOnBranch(false, InstCostMap, TTI);
@@ -1338,8 +1338,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
 
           Scaled64 CondCost = Scaled64::getZero();
           if (auto *CI = dyn_cast<Instruction>(SG->Condition))
-            if (InstCostMap.count(CI))
-              CondCost = InstCostMap[CI].NonPredCost;
+            if (auto It = InstCostMap.find(CI); It != InstCostMap.end())
+              CondCost = It->second.NonPredCost;
           Scaled64 MispredictCost = getMispredictionCost(SI, CondCost);
 
           INonPredCost = PredictedPathCost + MispredictCost;

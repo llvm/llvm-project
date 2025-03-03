@@ -287,10 +287,6 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());
 
   llvm::StringToOffsetTable Table;
-  // Make sure the empty string is the zero-th one in the table. This both makes
-  // it easy to check for empty strings (zero offset == empty) and makes
-  // initialization cheaper for empty strings.
-  Table.GetOrAddStringOffset("");
   // We can add all the prefixes via the union.
   for (const auto &Prefix : PrefixesUnion)
     Table.GetOrAddStringOffset(Prefix);
@@ -303,15 +299,15 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// String table\n\n";
   OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
-  Table.EmitStringLiteralDef(OS, "static constexpr char OptionStrTable[]",
-                             /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "OptionStrTable", /*Indent=*/"");
   OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
 
   // Dump prefixes.
   OS << "/////////\n";
   OS << "// Prefixes\n\n";
   OS << "#ifdef OPTTABLE_PREFIXES_TABLE_CODE\n";
-  OS << "static constexpr unsigned OptionPrefixesTable[] = {\n";
+  OS << "static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
+        "{\n";
   {
     // Ensure the first prefix set is always empty.
     assert(!Prefixes.empty() &&
@@ -339,7 +335,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// Prefix Union\n\n";
   OS << "#ifdef OPTTABLE_PREFIXES_UNION_CODE\n";
-  OS << "static constexpr unsigned OptionPrefixesUnion[] = {\n";
+  OS << "static constexpr llvm::StringTable::Offset OptionPrefixesUnion[] = "
+        "{\n";
   {
     llvm::ListSeparator Sep(", ");
     for (auto Prefix : PrefixesUnion)

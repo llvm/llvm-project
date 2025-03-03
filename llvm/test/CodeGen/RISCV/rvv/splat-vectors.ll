@@ -165,8 +165,8 @@ define <vscale x 4 x i8> @splat_idx_nxv8i8_nxv4i8_constant_0(<vscale x 8 x i8> %
 ; CHECK-LABEL: splat_idx_nxv8i8_nxv4i8_constant_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 8 x i8> %v, i64 0
   %ins = insertelement <vscale x 4 x i8> poison, i8 %x, i32 0
@@ -177,11 +177,9 @@ define <vscale x 4 x i8> @splat_idx_nxv8i8_nxv4i8_constant_0(<vscale x 8 x i8> %
 define <vscale x 4 x i8> @splat_idx_nxv8i8_nxv4i8_constant_3(<vscale x 8 x i8> %v) {
 ; CHECK-LABEL: splat_idx_nxv8i8_nxv4i8_constant_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 3
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vrgather.vi v9, v8, 3
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 8 x i8> %v, i64 3
   %ins = insertelement <vscale x 4 x i8> poison, i8 %x, i32 0
@@ -210,8 +208,8 @@ define <8 x float> @splat_idx_nxv4f32_v8f32_constant_0(<vscale x 4 x float> %v) 
 ; CHECK-LABEL: splat_idx_nxv4f32_v8f32_constant_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfmv.v.f v8, fa5
+; CHECK-NEXT:    vrgather.vi v10, v8, 0
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x float> %v, i64 0
   %ins = insertelement <8 x float> poison, float %x, i32 0
@@ -222,11 +220,9 @@ define <8 x float> @splat_idx_nxv4f32_v8f32_constant_0(<vscale x 4 x float> %v) 
 define <8 x float> @splat_idx_nxv4f32_v8f32_constant_7(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: splat_idx_nxv4f32_v8f32_constant_7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 7
-; CHECK-NEXT:    vfmv.f.s fa5, v8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.v.f v8, fa5
+; CHECK-NEXT:    vrgather.vi v10, v8, 7
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %x = extractelement <vscale x 4 x float> %v, i64 7
   %ins = insertelement <8 x float> poison, float %x, i32 0

@@ -145,9 +145,9 @@ module m
   subroutine s12(x,y)
     class(t), intent(in) :: x
     class(*), intent(in) :: y
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad1 = storage_size(x)
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad2 = storage_size(y)
   end subroutine
   subroutine s13

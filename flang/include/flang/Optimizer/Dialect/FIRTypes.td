@@ -579,7 +579,7 @@ def IsBaseBoxTypePred
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
+def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerOrIndexLike.predicate,
     AnySignedInteger.predicate, AnyUnsignedInteger.predicate,
     fir_IntegerType.predicate, fir_UnsignedType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,

@@ -25,10 +25,14 @@ int main() {
 // RAW-PROF-NEXT: Total functions: 3
 // RAW-PROF-NEXT: Maximum function count: 1
 // RAW-PROF-NEXT: Maximum internal block count: 0
+// RAW-PROF-NEXT: Total number of blocks: 3
+// RAW-PROF-NEXT: Total count: 3
 // RAW-PROF-NEXT: Profile version: {{[0-9]+}}
 
 // INDEXED-PROF: Instrumentation level: Front-end
 // INDEXED-PROF-NEXT: Total functions: 3
 // INDEXED-PROF-NEXT: Maximum function count: 3
 // INDEXED-PROF-NEXT: Maximum internal block count: 0
+// INDEXED-PROF-NEXT: Total number of blocks: 3
+// INDEXED-PROF-NEXT: Total count: 9
 // INDEXED-PROF-NEXT: Profile version: {{[0-9]+}}

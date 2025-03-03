@@ -306,8 +306,10 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
   for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() == Scope::Kind::DerivedType) {
-      continue; // component or binding: ok
+    if (s->owner().kind() != Scope::Kind::Module) {
+      // Not a USE'able name from a module's top scope;
+      // component, binding, dummy argument, &c.
+      continue;
     }
     const Scope *sMod{FindModuleContaining(s->owner())};
     if (!sMod || sMod == &scope) {
@@ -834,18 +836,6 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-    if (use->symbol().attrs().test(Attr::PRIVATE)) {
-      // Avoid the use in sorting of names created to access private
-      // specific procedures as a result of generic resolution;
-      // they're not in the cooked source.
-      return use->symbol().name();
-    }
-  }
-  return symbol.name();
-}
-
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
@@ -880,13 +870,8 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
       sorted.push_back(symbol);
     }
   }
-  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
-  // location of a symbol's name is the first "real" use.
-  auto sorter{[](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
-  }};
-  std::sort(sorted.begin(), sorted.end(), sorter);
-  std::sort(generics.begin(), generics.end(), sorter);
+  std::sort(sorted.begin(), sorted.end(), SymbolSourcePositionCompare{});
+  std::sort(generics.begin(), generics.end(), SymbolSourcePositionCompare{});
   sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -1366,6 +1351,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
       name.ToString(), isIntrinsic.value_or(false))};
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
+    if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
+      auto it{hermeticScope->find(name)};
+      if (it != hermeticScope->end()) {
+        return it->second->scope();
+      }
+    }
     auto it{context_.globalScope().find(name)};
     if (it != context_.globalScope().end()) {
       Scope *scope{it->second->scope()};
@@ -1544,9 +1535,26 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // Process declarations from the module file
   auto wasModuleFileName{context_.foldingContext().moduleFileName()};
   context_.foldingContext().set_moduleFileName(name);
+  // Are there multiple modules in the module file due to it having been
+  // created under -fhermetic-module-files?  If so, process them first in
+  // their own nested scope that will be visible only to USE statements
+  // within the module file.
+  if (parseTree.v.size() > 1) {
+    parser::Program hermeticModules{std::move(parseTree.v)};
+    parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
+    hermeticModules.v.pop_front();
+    Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
+    context_.set_currentHermeticModuleFileScope(&hermeticScope);
+    ResolveNames(context_, hermeticModules, hermeticScope);
+    for (auto &[_, ref] : hermeticScope) {
+      CHECK(ref->has<ModuleDetails>());
+      ref->set(Symbol::Flag::ModFile);
+    }
+  }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
+  context_.set_currentHermeticModuleFileScope(nullptr);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
@@ -1780,8 +1788,8 @@ bool SubprogramSymbolCollector::NeedImport(
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
     // "found" can be null in the case of a use-associated derived type's
-    // parent type
-    CHECK(symbol.has<DerivedTypeDetails>());
+    // parent type, and also in the case of an object (like a dummy argument)
+    // used to define a length or bound of a nested interface.
     return false;
   }
 }

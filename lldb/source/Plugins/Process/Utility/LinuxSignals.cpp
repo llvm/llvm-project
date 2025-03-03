@@ -20,6 +20,9 @@
 #ifndef SEGV_MTESERR
 #define SEGV_MTESERR 9
 #endif
+#ifndef SEGV_CPERR
+#define SEGV_CPERR 10
+#endif
 
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   static_assert(signal_name == signal_value,                                   \
@@ -82,6 +85,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");
   // Some platforms will occasionally send nonstandard spurious SI_KERNEL
   // codes. One way to get this is via unaligned SIMD loads. Treat it as invalid address.
   ADD_SIGCODE(SIGSEGV, 11, SI_KERNEL, 0x80, "invalid address", SignalCodePrintOption::Address);

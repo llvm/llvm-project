@@ -19,6 +19,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TypeName.h"
 
@@ -100,6 +101,8 @@ namespace mlir {
 ///     uses the name of the type, it may not be used for types defined in
 ///     anonymous namespaces (which is asserted when it can be detected). String
 ///     names do not provide any guarantees on uniqueness in these contexts.
+///   - This behavior may be forced even in the presence of explicit declarations
+///     by specifying `MLIR_USE_FALLBACK_TYPE_IDS`.
 ///
 class TypeID {
   /// This class represents the storage of a type info object.
@@ -161,8 +164,29 @@ namespace detail {
 class FallbackTypeIDResolver {
 protected:
   /// Register an implicit type ID for the given type name.
-  static TypeID registerImplicitTypeID(StringRef name);
+  LLVM_ALWAYS_EXPORT static TypeID registerImplicitTypeID(StringRef name);
 };
+
+template <typename T>
+struct is_fully_resolved_t {
+  /// Trait to check if `U` is fully resolved. We use this to verify that `T` is
+  /// fully resolved when trying to resolve a TypeID. We don't technically need
+  /// to have the full definition of `T` for the fallback, but it does help
+  /// prevent situations where a forward declared type uses this fallback even
+  /// though there is a strong definition for the TypeID in the location where
+  /// `T` is defined.
+  template <typename U>
+  using is_fully_resolved_trait = decltype(sizeof(U));
+  template <typename U>
+  using is_fully_resolved = llvm::is_detected<is_fully_resolved_trait, U>;
+  static constexpr bool value = is_fully_resolved<T>::value;
+};
+
+template <typename T>
+constexpr bool is_fully_resolved() {
+  /// Helper function for is_fully_resolved_t.
+  return is_fully_resolved_t<T>::value;
+}
 
 /// This class provides a resolver for getting the ID for a given class T. This
 /// allows for the derived type to specialize its resolution behavior. The
@@ -178,19 +202,8 @@ protected:
 template <typename T, typename Enable = void>
 class TypeIDResolver : public FallbackTypeIDResolver {
 public:
-  /// Trait to check if `U` is fully resolved. We use this to verify that `T` is
-  /// fully resolved when trying to resolve a TypeID. We don't technically need
-  /// to have the full definition of `T` for the fallback, but it does help
-  /// prevent situations where a forward declared type uses this fallback even
-  /// though there is a strong definition for the TypeID in the location where
-  /// `T` is defined.
-  template <typename U>
-  using is_fully_resolved_trait = decltype(sizeof(U));
-  template <typename U>
-  using is_fully_resolved = llvm::is_detected<is_fully_resolved_trait, U>;
-
   static TypeID resolveTypeID() {
-    static_assert(is_fully_resolved<T>::value,
+    static_assert(is_fully_resolved<T>(),
                   "TypeID::get<> requires the complete definition of `T`");
     static TypeID id = registerImplicitTypeID(llvm::getTypeName<T>());
     return id;
@@ -246,7 +259,7 @@ TypeID TypeID::get() {
 // circumstances a hard-to-catch runtime bug when a TypeID is hidden in two
 // different shared libraries and instances of the same class only gets the same
 // TypeID inside a given DSO.
-#define MLIR_DECLARE_EXPLICIT_TYPE_ID(CLASS_NAME)                              \
+#define MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(CLASS_NAME)                  \
   namespace mlir {                                                             \
   namespace detail {                                                           \
   template <>                                                                  \
@@ -260,12 +273,56 @@ TypeID TypeID::get() {
   } /* namespace detail */                                                     \
   } /* namespace mlir */
 
-#define MLIR_DEFINE_EXPLICIT_TYPE_ID(CLASS_NAME)                               \
+#define MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(CLASS_NAME)                   \
   namespace mlir {                                                             \
   namespace detail {                                                           \
   SelfOwningTypeID TypeIDResolver<CLASS_NAME>::id = {};                        \
   } /* namespace detail */                                                     \
   } /* namespace mlir */
+
+
+/// Declare/define an explicit specialization for TypeID using the string
+/// comparison fallback. This is useful for complex shared library setups
+/// where it may be difficult to agree on a source of truth for specific
+/// type ID resolution. As long as there is a single resolution for
+/// registerImplicitTypeID, all type IDs can be reference a shared
+/// registration. This way types which are logically shared across multiple
+/// DSOs can have the same type ID, even if their definitions are duplicated.
+#define MLIR_DECLARE_EXPLICIT_FALLBACK_TYPE_ID(CLASS_NAME)                     \
+  namespace mlir {                                                             \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  class TypeIDResolver<CLASS_NAME> : public FallbackTypeIDResolver {           \
+  public:                                                                      \
+    static TypeID resolveTypeID() {                                            \
+      static_assert(is_fully_resolved<CLASS_NAME>(),                           \
+                    "TypeID::get<> requires the complete definition of `T`");  \
+      static TypeID id =                                                       \
+          registerImplicitTypeID(llvm::getTypeName<CLASS_NAME>());             \
+      return id;                                                               \
+    }                                                                          \
+  };                                                                           \
+  } /* namespace detail */                                                     \
+  } /* namespace mlir */
+
+#define MLIR_DEFINE_EXPLICIT_FALLBACK_TYPE_ID(CLASS_NAME)
+
+
+#ifndef MLIR_USE_FALLBACK_TYPE_IDS
+#define MLIR_USE_FALLBACK_TYPE_IDS false
+#endif
+
+#if MLIR_USE_FALLBACK_TYPE_IDS
+#define MLIR_DECLARE_EXPLICIT_TYPE_ID(CLASS_NAME)                              \
+  MLIR_DECLARE_EXPLICIT_FALLBACK_TYPE_ID(CLASS_NAME)
+#define MLIR_DEFINE_EXPLICIT_TYPE_ID(CLASS_NAME)                               \
+  MLIR_DEFINE_EXPLICIT_FALLBACK_TYPE_ID(CLASS_NAME)
+#else
+#define MLIR_DECLARE_EXPLICIT_TYPE_ID(CLASS_NAME)                              \
+  MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(CLASS_NAME)
+#define MLIR_DEFINE_EXPLICIT_TYPE_ID(CLASS_NAME)                               \
+  MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(CLASS_NAME)
+#endif /* MLIR_USE_FALLBACK_TYPE_IDS */
 
 // Declare/define an explicit, **internal**, specialization of TypeID for the
 // given class. This is useful for providing an explicit specialization of
@@ -331,7 +388,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 /// Explicitly register a set of "builtin" types.
-MLIR_DECLARE_EXPLICIT_TYPE_ID(void)
+/// `void` must be self-owning, it can't be fully resolved.
+MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(void)
 
 namespace llvm {
 template <>

@@ -12,7 +12,7 @@
 //
 // The reason why we need to do this:
 // 1. When tracking register pressure, we don't track physical registers.
-// 2. We have a RegisterClass for mask reigster (which is `VMV0`), but we don't
+// 2. We have a RegisterClass for mask register (which is `VMV0`), but we don't
 //    use it in most RVV pseudos (only used in inline asm constraint and add/sub
 //    with carry instructions). Instead, we use physical register V0 directly
 //    and insert a `$v0 = COPY ...` before the use. And, there is a fundamental
@@ -123,7 +123,7 @@ public:
           // For LMUL=8 cases, there will be more possibilities to spill.
           // FIXME: We should use RegPressureTracker to do fine-grained
           // controls.
-          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVII::LMUL_8)
+          RISCVII::getLMul(MI->getDesc().TSFlags) != RISCVVType::LMUL_8)
         DAG->addEdge(&SU, SDep(NearestUseV0SU, SDep::Artificial));
     }
   }

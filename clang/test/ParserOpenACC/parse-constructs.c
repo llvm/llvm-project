@@ -109,36 +109,29 @@ void func() {
   for(int i = 0; i < 6;++i){}
 
   int i = 0, j = 0, k = 0;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
 #pragma acc atomic
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage
-  i = j;
-  // expected-error@+2{{invalid OpenACC clause 'garbage'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
+  // expected-error@+1{{invalid OpenACC clause 'garbage'}}
 #pragma acc atomic garbage clause list
-  i = j;
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  i = i + 1;
 #pragma acc atomic read
   i = j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic write clause list
   i = i + j;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic update clause list
   i++;
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'atomic' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc atomic capture clause list
   i = j++;
 
 
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
+  // expected-error@+1{{no valid clauses specified in OpenACC 'declare' directive}}
 #pragma acc declare clause list
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}

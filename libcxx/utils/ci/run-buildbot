@@ -127,6 +127,8 @@ function clean() {
 
 function generate-cmake-base() {
     step "Generating CMake"
+
+    # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
@@ -136,6 +138,7 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
+          -DCMAKE_INSTALL_MESSAGE=NEVER \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
@@ -548,59 +551,15 @@ apple-configuration)
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
-apple-system-hardened)
+apple-system|apple-system-hardened)
     clean
 
     arch="$(uname -m)"
     version="$(sw_vers --productVersion)"
     params="target_triple=${arch}-apple-macosx${version}"
-    params+=";hardening_mode=fast"
-
-    # In the Apple system configuration, we build libc++ and libunwind separately.
-    step "Installing libc++ and libc++abi in Apple-system configuration"
-    ${CMAKE} \
-        -S "${MONOREPO_ROOT}/runtimes" \
-        -B "${BUILD_DIR}/cxx" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/cxx" \
-        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
-        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
-        -DLIBCXX_CXX_ABI=libcxxabi \
-        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
-        -DLIBCXX_TEST_CONFIG="apple-libc++-system.cfg.in" \
-        -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-system.cfg.in" \
-        -DLIBCXX_TEST_PARAMS="${params}" \
-        -DLIBCXXABI_TEST_PARAMS="${params}"
-
-    step "Installing libunwind in Apple-system configuration"
-    ${CMAKE} \
-        -S "${MONOREPO_ROOT}/runtimes" \
-        -B "${BUILD_DIR}/unwind" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/unwind" \
-        -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
-        -DLLVM_ENABLE_RUNTIMES="libunwind" \
-        -DLIBUNWIND_TEST_CONFIG="apple-libunwind-system.cfg.in" \
-        -DLIBUNWIND_TEST_PARAMS="${params}" \
-        -DCMAKE_INSTALL_NAME_DIR="/usr/lib/system"
-
-    step "Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxx
-
-    step "Running the libc++abi tests"
-    ${NINJA} -vC "${BUILD_DIR}/cxx" check-cxxabi
-
-    step "Running the libunwind tests"
-    ${NINJA} -vC "${BUILD_DIR}/unwind" check-unwind
-;;
-apple-system)
-    clean
-
-    arch="$(uname -m)"
-    version="$(sw_vers --productVersion)"
-    params="target_triple=${arch}-apple-macosx${version}"
+    if [[ "${BUILDER}" == *-hardened ]]; then
+        params+=";hardening_mode=fast"
+    fi
 
     # In the Apple system configuration, we build libc++ and libunwind separately.
     step "Installing libc++ and libc++abi in Apple-system configuration"

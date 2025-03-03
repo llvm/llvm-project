@@ -270,13 +270,16 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
 
-// Return the priority for a given set of FMV features.
+// For a given set of feature names, which can be either target-features, or
+// fmv-features metadata, expand their dependencies and then return a bitmask
+// corresponding to the entries of AArch64::FeatPriorities.
 uint64_t getFMVPriority(ArrayRef<StringRef> Features);
 
-// For given feature names, return a bitmask corresponding to the entries of
-// AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks themselves,
-// they are sequential (0, 1, 2, 3, ...). The resulting bitmask is used at
-// runtime to test whether a certain FMV feature is available on the host.
+// For a given set of FMV feature names, expand their dependencies and then
+// return a bitmask corresponding to the entries of AArch64::CPUFeatures.
+// The values in CPUFeatures are not bitmasks themselves, they are sequential
+// (0, 1, 2, 3, ...). The resulting bitmask is used at runtime to test whether
+// a certain FMV feature is available on the host.
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> Features);
 
 void PrintSupportedExtensions();

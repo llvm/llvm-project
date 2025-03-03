@@ -146,7 +146,7 @@ private:
   Operation *op = nullptr;
 };
 
-inline raw_ostream &operator<<(raw_ostream &os, ProgramPoint point) {
+inline raw_ostream &operator<<(raw_ostream &os, const ProgramPoint &point) {
   point.print(os);
   return os;
 }
@@ -401,6 +401,8 @@ public:
 
   /// Propagate an update to an analysis state if it changed by pushing
   /// dependent work items to the back of the queue.
+  /// This should only be used when DataFlowSolver is running.
+  /// Otherwise, the solver won't process the work items.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
   /// Get the configuration of the solver.
@@ -409,6 +411,9 @@ public:
 private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
+
+  /// The solver is working on the worklist.
+  bool isRunning = false;
 
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -657,7 +662,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const AnalysisState &state) {
   return os;
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
+inline raw_ostream &operator<<(raw_ostream &os, const LatticeAnchor &anchor) {
   anchor.print(os);
   return os;
 }

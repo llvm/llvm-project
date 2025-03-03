@@ -365,11 +365,11 @@ private:
       for (auto &PN : BB->phis())
         DeadInstructions.push_back(&PN);
 
-      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHI()))
+      if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHIIt()))
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        SE.forgetBlockAndLoopDispositions(I);
+        SE.forgetValue(I);
         I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }

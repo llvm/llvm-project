@@ -773,7 +773,9 @@ class CGObjCGNUstep : public CGObjCGNU {
 
       // The lookup function is guaranteed not to capture the receiver pointer.
       if (auto *LookupFn2 = dyn_cast<llvm::Function>(LookupFn.getCallee()))
-        LookupFn2->addParamAttr(0, llvm::Attribute::NoCapture);
+        LookupFn2->addParamAttr(
+            0, llvm::Attribute::getWithCaptureInfo(CGF.getLLVMContext(),
+                                                   llvm::CaptureInfo::none()));
 
       llvm::Value *args[] = {
           EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),
@@ -817,7 +819,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       const ObjCRuntime &R = CGM.getLangOpts().ObjCRuntime;
 
       SlotStructTy = llvm::StructType::get(PtrTy, PtrTy, PtrTy, IntTy, IMPTy);
-      SlotTy = llvm::PointerType::getUnqual(SlotStructTy);
+      SlotTy = PtrTy;
       // Slot_t objc_msg_lookup_sender(id *receiver, SEL selector, id sender);
       SlotLookupFn.init(&CGM, "objc_msg_lookup_sender", SlotTy, PtrToIdTy,
                         SelectorTy, IdTy);
@@ -1824,9 +1826,11 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       Context.getASTObjCInterfaceLayout(SuperClassDecl).getSize().getQuantity();
     // Instance size is negative for classes that have not yet had their ivar
     // layout calculated.
-    classFields.addInt(LongTy,
-      0 - (Context.getASTObjCImplementationLayout(OID).getSize().getQuantity() -
-      superInstanceSize));
+    classFields.addInt(
+        LongTy, 0 - (Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                         .getSize()
+                         .getQuantity() -
+                     superInstanceSize));
 
     if (classDecl->all_declared_ivar_begin() == nullptr)
       classFields.addNullPointer(PtrTy);
@@ -2280,10 +2284,12 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   BoolTy = CGM.getTypes().ConvertType(CGM.getContext().BoolTy);
 
   Int8Ty = llvm::Type::getInt8Ty(VMContext);
+
+  PtrTy = llvm::PointerType::getUnqual(cgm.getLLVMContext());
+  PtrToIntTy = PtrTy;
   // C string type.  Used in lots of places.
-  PtrToInt8Ty = llvm::PointerType::getUnqual(Int8Ty);
-  ProtocolPtrTy = llvm::PointerType::getUnqual(
-      Types.ConvertType(CGM.getContext().getObjCProtoType()));
+  PtrToInt8Ty = PtrTy;
+  ProtocolPtrTy = PtrTy;
 
   Zeros[0] = llvm::ConstantInt::get(LongTy, 0);
   Zeros[1] = Zeros[0];
@@ -2297,9 +2303,6 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     SelectorTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(selTy));
     SelectorElemTy = CGM.getTypes().ConvertTypeForMem(selTy->getPointeeType());
   }
-
-  PtrToIntTy = llvm::PointerType::getUnqual(IntTy);
-  PtrTy = PtrToInt8Ty;
 
   Int32Ty = llvm::Type::getInt32Ty(VMContext);
   Int64Ty = llvm::Type::getInt64Ty(VMContext);
@@ -2319,7 +2322,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
     IdTy = PtrToInt8Ty;
     IdElemTy = Int8Ty;
   }
-  PtrToIdTy = llvm::PointerType::getUnqual(IdTy);
+  PtrToIdTy = PtrTy;
   ProtocolTy = llvm::StructType::get(IdTy,
       PtrToInt8Ty, // name
       PtrToInt8Ty, // protocols
@@ -2347,7 +2350,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       PtrToInt8Ty, PtrToInt8Ty });
 
   ObjCSuperTy = llvm::StructType::get(IdTy, IdTy);
-  PtrToObjCSuperTy = llvm::PointerType::getUnqual(ObjCSuperTy);
+  PtrToObjCSuperTy = PtrTy;
 
   llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
 
@@ -2379,9 +2382,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
                            PtrDiffTy, BoolTy, BoolTy);
 
   // IMP type
-  llvm::Type *IMPArgs[] = { IdTy, SelectorTy };
-  IMPTy = llvm::PointerType::getUnqual(llvm::FunctionType::get(IdTy, IMPArgs,
-              true));
+  IMPTy = PtrTy;
 
   const LangOptions &Opts = CGM.getLangOpts();
   if ((Opts.getGC() != LangOptions::NonGC) || Opts.ObjCAutoRefCount)
@@ -2675,8 +2676,6 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
         Class->getSuperClass()->getNameAsString(), /*isWeak*/false);
     if (IsClassMessage)  {
       // Load the isa pointer of the superclass is this is a class method.
-      ReceiverClass = Builder.CreateBitCast(ReceiverClass,
-                                            llvm::PointerType::getUnqual(IdTy));
       ReceiverClass =
         Builder.CreateAlignedLoad(IdTy, ReceiverClass, CGF.getPointerAlign());
     }
@@ -2717,8 +2716,6 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
     }
     // Cast the pointer to a simplified version of the class structure
     llvm::Type *CastTy = llvm::StructType::get(IdTy, IdTy);
-    ReceiverClass = Builder.CreateBitCast(ReceiverClass,
-                                          llvm::PointerType::getUnqual(CastTy));
     // Get the superclass pointer
     ReceiverClass = Builder.CreateStructGEP(CastTy, ReceiverClass, 1);
     // Load the superclass pointer
@@ -3265,10 +3262,7 @@ CGObjCGNU::GenerateProtocolList(ArrayRef<std::string> Protocols) {
 
 llvm::Value *CGObjCGNU::GenerateProtocolRef(CodeGenFunction &CGF,
                                             const ObjCProtocolDecl *PD) {
-  auto protocol = GenerateProtocolRef(PD);
-  llvm::Type *T =
-      CGM.getTypes().ConvertType(CGM.getContext().getObjCProtoType());
-  return CGF.Builder.CreateBitCast(protocol, llvm::PointerType::getUnqual(T));
+  return GenerateProtocolRef(PD);
 }
 
 llvm::Constant *CGObjCGNU::GenerateProtocolRef(const ObjCProtocolDecl *PD) {
@@ -3637,8 +3631,9 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   }
 
   // Get the size of instances.
-  int instanceSize =
-    Context.getASTObjCImplementationLayout(OID).getSize().getQuantity();
+  int instanceSize = Context.getASTObjCInterfaceLayout(OID->getClassInterface())
+                         .getSize()
+                         .getQuantity();
 
   // Collect information about instance variables.
   SmallVector<llvm::Constant*, 16> IvarNames;

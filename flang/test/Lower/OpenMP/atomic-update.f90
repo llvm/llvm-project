@@ -185,4 +185,19 @@ program OmpAtomicUpdate
   !$omp atomic update
     w = max(w,x,y,z)
 
+!CHECK:  %[[IMP_DO:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+!CHECK:  ^bb0(%{{.*}}: index):
+!          [...]
+!CHECK:    %[[ADD_I1:.*]] = arith.addi {{.*}} : i32
+!CHECK:    hlfir.yield_element %[[ADD_I1]] : i32
+!CHECK:  }
+!        [...]
+!CHECK:  %[[SUM:.*]] = hlfir.sum %[[IMP_DO]]
+!CHECK:  omp.atomic.update %[[VAL_X_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK:  ^bb0(%[[ARG0:.*]]: i32):
+!CHECK:    %[[ADD_I2:.*]] = arith.addi %[[ARG0]], %[[SUM]] : i32
+!CHECK:    omp.yield(%[[ADD_I2]] : i32)
+!CHECK:  }
+  !$omp atomic update
+    x = x + sum([ (y+2, y=1, z) ])
 end program OmpAtomicUpdate

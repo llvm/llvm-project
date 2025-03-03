@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -std=c89 -emit-llvm -o -
 // PR2797
 
-unsigned int
+void
 func_48 (signed char p_49)
 {
   signed char l_340;

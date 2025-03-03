@@ -57,6 +57,7 @@ declare i32 @__CxxFrameHandler3(...)
 ; Make sure there is a nop after a call if the call precedes the epilogue.
 ; CHECK: callq g
 ; CHECK-NEXT: nop
+; CHECK-NEXT: .seh_startepilogue
 
 ; Don't emit a reference to the LSDA.
 ; CHECK: .seh_handlerdata
@@ -87,6 +88,7 @@ declare i32 @__CxxFrameHandler3(...)
 ; Make sure there is at least one instruction after a call before the epilogue.
 ; CHECK: callq g
 ; CHECK-NEXT: leaq    .LBB0_{{[0-9]+}}(%rip), %rax
+; CHECK-NEXT: .seh_startepilogue
 
 ; Emit a reference to the LSDA.
 ; CHECK: .seh_handlerdata

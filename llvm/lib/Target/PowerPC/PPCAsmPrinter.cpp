@@ -19,12 +19,12 @@
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "MCTargetDesc/PPCTargetStreamer.h"
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
-#include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -984,7 +984,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Get the offset from the GOT Base Register to the GOT
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
-      unsigned PICR = TmpInst.getOperand(0).getReg();
+      MCRegister PICR = TmpInst.getOperand(0).getReg();
       MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
           M->getPICLevel() == PICLevel::SmallPIC ? "_GLOBAL_OFFSET_TABLE_"
                                                  : ".LTOC");
@@ -1474,7 +1474,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR32: {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
-    EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSGD);
+    EmitTlsCall(MI, MCSymbolRefExpr::VK_TLSGD);
     return;
   }
   case PPC::GETtlsTpointer32AIX: {
@@ -1526,7 +1526,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsldADDR32: {
     // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
-    EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSLD);
+    EmitTlsCall(MI, MCSymbolRefExpr::VK_TLSLD);
     return;
   }
   case PPC::ADDISdtprelHA:

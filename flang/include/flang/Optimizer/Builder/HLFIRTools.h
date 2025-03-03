@@ -125,7 +125,7 @@ public:
   bool isSimplyContiguous() const {
     // If this can be described without a fir.box in FIR, this must
     // be contiguous.
-    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()) || isScalar())
       return true;
     // Otherwise, if this entity has a visible declaration in FIR,
     // or is the dereference of an allocatable or contiguous pointer
@@ -150,10 +150,7 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
-  bool isOptional() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isOptional() : false;
-  }
+  bool mayBeOptional() const;
 
   bool isParameter() const {
     auto varIface = getIfVariableInterface();
@@ -210,7 +207,8 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity, bool contiguousHint = false);
+                         Entity entity, bool contiguousHint = false,
+                         bool keepScalarOptionalBoxed = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
@@ -516,9 +514,22 @@ Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Return a vector of extents for the given entity.
 /// The function creates new operations, but tries to clean-up
 /// after itself.
-llvm::SmallVector<mlir::Value>
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
 genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
+/// Generate an hlfir.designate that produces an 1D section
+/// of \p array using \p oneBasedIndices and \p dim:
+///   i = oneBasedIndices
+///   result => array(i(1), ..., i(dim-1), :, i(dim+1), ..., i(n))
+///
+/// The caller provides the pre-computed \p lbounds, \p extents
+/// and \p typeParams of the array.
+Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity array, int64_t dim,
+                    mlir::ArrayRef<mlir::Value> lbounds,
+                    mlir::ArrayRef<mlir::Value> extents,
+                    mlir::ValueRange oneBasedIndices,
+                    mlir::ArrayRef<mlir::Value> typeParams);
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

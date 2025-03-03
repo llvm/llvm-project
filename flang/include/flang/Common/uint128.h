@@ -19,8 +19,8 @@
 #define AVOID_NATIVE_UINT128_T 0
 #endif
 
+#include "api-attrs.h"
 #include "leading-zero-bit-count.h"
-#include "flang/Common/api-attrs.h"
 #include <cstdint>
 #include <type_traits>
 

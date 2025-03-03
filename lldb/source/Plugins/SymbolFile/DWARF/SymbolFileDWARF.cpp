@@ -993,21 +993,26 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  const char *sysroot =
+  std::string sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
-  // Register the sysroot path remapping with the module belonging to
-  // the CU as well as the one belonging to the symbol file. The two
-  // would be different if this is an OSO object and module is the
-  // corresponding debug map, in which case both should be updated.
-  ModuleSP module_sp = comp_unit.GetModule();
-  if (module_sp)
-    module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  ModuleSP local_module_sp = m_objfile_sp->GetModule();
-  if (local_module_sp && local_module_sp != module_sp)
-    local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
+  // expensive.
+  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
+    // Register the sysroot path remapping with the module belonging to
+    // the CU as well as the one belonging to the symbol file. The two
+    // would be different if this is an OSO object and module is the
+    // corresponding debug map, in which case both should be updated.
+    ModuleSP module_sp = comp_unit.GetModule();
+    if (module_sp)
+      module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  return {sdk};
+    ModuleSP local_module_sp = m_objfile_sp->GetModule();
+    if (local_module_sp && local_module_sp != module_sp)
+      local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  }
+
+  return {sdk, FileSpec{std::move(sysroot)}};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
@@ -1232,7 +1237,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // FIXME: Rather than parsing the whole line table and then copying it over
   // into LLDB, we should explore using a callback to populate the line table
   // while we parse to reduce memory usage.
-  std::vector<std::unique_ptr<LineSequence>> sequences;
+  std::vector<LineTable::Sequence> sequences;
   // The Sequences view contains only valid line sequences. Don't iterate over
   // the Rows directly.
   for (const llvm::DWARFDebugLine::Sequence &seq : line_table->Sequences) {
@@ -1242,12 +1247,11 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
     // m_first_code_address declaration for more details on this.
     if (seq.LowPC < m_first_code_address)
       continue;
-    std::unique_ptr<LineSequence> sequence =
-        LineTable::CreateLineSequenceContainer();
+    LineTable::Sequence sequence;
     for (unsigned idx = seq.FirstRowIndex; idx < seq.LastRowIndex; ++idx) {
       const llvm::DWARFDebugLine::Row &row = line_table->Rows[idx];
       LineTable::AppendLineEntryToSequence(
-          sequence.get(), row.Address.Address, row.Line, row.Column, row.File,
+          sequence, row.Address.Address, row.Line, row.Column, row.File,
           row.IsStmt, row.BasicBlock, row.PrologueEnd, row.EpilogueBegin,
           row.EndSequence);
     }
@@ -2455,18 +2459,12 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   }
   assert(die && die.Tag() == DW_TAG_subprogram);
   if (GetFunction(die, sc)) {
-    Address addr;
     // Parse all blocks if needed
     if (inlined_die) {
       Block &function_block = sc.function->GetBlock(true);
       sc.block = function_block.FindBlockByID(inlined_die.GetID());
       if (sc.block == nullptr)
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
-      if (sc.block == nullptr || !sc.block->GetStartAddress(addr))
-        addr.Clear();
-    } else {
-      sc.block = nullptr;
-      addr = sc.function->GetAddressRange().GetBaseAddress();
     }
 
     sc_list.Append(sc);
@@ -3174,8 +3172,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
                 /*check_hi_lo_pc=*/true)) {
       if (ranges->empty())
         return 0;
-      // TODO: Use the first range instead.
-      dw_addr_t function_file_addr = llvm::min_element(*ranges)->LowPC;
+      dw_addr_t function_file_addr = ranges->begin()->LowPC;
       if (function_file_addr != LLDB_INVALID_ADDRESS)
         ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
                              function_die.GetFirstChild(), function_file_addr);
@@ -3214,9 +3211,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               function_die.GetDIE()->GetAttributeAddressRanges(
                   function_die.GetCU(), /*check_hi_lo_pc=*/true)) {
-        // TODO: Use the first range element instead.
         if (!ranges->empty())
-          func_lo_pc = llvm::min_element(*ranges)->LowPC;
+          func_lo_pc = ranges->begin()->LowPC;
       } else {
         LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
                        "DIE({1:x}): {0}", function_die.GetID());
@@ -3414,7 +3410,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       mangled = form_value.AsCString();
       break;
     case DW_AT_type:
-      type_die_form = form_value;
+      // DW_AT_type on declaration may be less accurate than
+      // that of definition, so don't overwrite it.
+      if (!type_die_form.IsValid())
+        type_die_form = form_value;
       break;
     case DW_AT_external:
       is_external = form_value.Boolean();

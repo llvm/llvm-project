@@ -60,9 +60,9 @@ public:
 
     list& operator=(const list& x);
     list& operator=(list&& x)
-        noexcept(
-             allocator_type::propagate_on_container_move_assignment::value &&
-             is_nothrow_move_assignable<allocator_type>::value);
+        noexcept((__node_alloc_traits::propagate_on_container_move_assignment::value &&
+                  is_nothrow_move_assignable<__node_allocator>::value) ||
+                 allocator_traits<allocator_type>::is_always_equal::value);
     list& operator=(initializer_list<value_type>);
     template <class Iter>
         void assign(Iter first, Iter last);
@@ -728,9 +728,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI list(list&& __c) _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
   _LIBCPP_HIDE_FROM_ABI list(list&& __c, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_HIDE_FROM_ABI list& operator=(list&& __c)
-      _NOEXCEPT_(__node_alloc_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<__node_allocator>::value);
+  _LIBCPP_HIDE_FROM_ABI list& operator=(list&& __c) noexcept(
+      (__node_alloc_traits::propagate_on_container_move_assignment::value &&
+       is_nothrow_move_assignable<__node_allocator>::value) ||
+      allocator_traits<allocator_type>::is_always_equal::value);
 
   _LIBCPP_HIDE_FROM_ABI list& operator=(initializer_list<value_type> __il) {
     assign(__il.begin(), __il.end());
@@ -1067,8 +1068,9 @@ inline list<_Tp, _Alloc>::list(list&& __c, const __type_identity_t<allocator_typ
 
 template <class _Tp, class _Alloc>
 inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
-    __node_alloc_traits::propagate_on_container_move_assignment::value &&
-    is_nothrow_move_assignable<__node_allocator>::value) {
+    (__node_alloc_traits::propagate_on_container_move_assignment::value &&
+     is_nothrow_move_assignable<__node_allocator>::value) ||
+    allocator_traits<allocator_type>::is_always_equal::value) {
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1701,7 +1703,7 @@ erase_if(list<_Tp, _Allocator>& __c, _Predicate __pred) {
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI typename list<_Tp, _Allocator>::size_type
 erase(list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
+  return std::erase_if(__c, [&](const auto& __elem) -> bool { return __elem == __v; });
 }
 
 template <>

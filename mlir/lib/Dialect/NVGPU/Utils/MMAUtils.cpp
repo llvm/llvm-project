@@ -296,7 +296,7 @@ bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferReadOp op) {
   // Check that the last dimension of the read is contiguous. Note that it is
   // possible to expand support for this by scalarizing all the loads during
   // conversion.
-  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  auto [strides, offset] = sourceType.getStridesAndOffset();
   return strides.back() == 1;
 }
 
@@ -320,6 +320,6 @@ bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferWriteOp op) {
   // Check that the last dimension of the target memref is contiguous. Note that
   // it is possible to expand support for this by scalarizing all the stores
   // during conversion.
-  auto [strides, offset] = mlir::getStridesAndOffset(sourceType);
+  auto [strides, offset] = sourceType.getStridesAndOffset();
   return strides.back() == 1;
 }

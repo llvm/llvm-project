@@ -307,12 +307,11 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   else
     BBDupThreshold = DefaultBBDupThreshold;
 
-  // JumpThreading must not processes blocks unreachable from entry. It's a
-  // waste of compute time and can potentially lead to hangs.
-  SmallPtrSet<BasicBlock *, 16> Unreachable;
   assert(DTU && "DTU isn't passed into JumpThreading before using it.");
   assert(DTU->hasDomTree() && "JumpThreading relies on DomTree to proceed.");
   DominatorTree &DT = DTU->getDomTree();
+
+  Unreachable.clear();
   for (auto &BB : *F)
     if (!DT.isReachableFromEntry(&BB))
       Unreachable.insert(&BB);
@@ -329,11 +328,6 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
         continue;
       while (processBlock(&BB)) // Thread all of the branches we can over BB.
         Changed = ChangedSinceLastAnalysisUpdate = true;
-
-      // Jump threading may have introduced redundant debug values into BB
-      // which should be removed.
-      if (Changed)
-        RemoveRedundantDbgInstrs(&BB);
 
       // Stop processing BB if it's the entry or is now deleted. The following
       // routines attempt to eliminate BB and locating a suitable replacement
@@ -366,7 +360,6 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
             // detect and transform nested loops later.
             !LoopHeaders.count(&BB) && !LoopHeaders.count(Succ) &&
             TryToSimplifyUncondBranchFromEmptyBlock(&BB, DTU.get())) {
-          RemoveRedundantDbgInstrs(Succ);
           // BB is valid for cleanup here because we passed in DTU. F remains
           // BB's parent until a DTU->getDomTree() event.
           LVI->eraseBlock(&BB);
@@ -376,6 +369,13 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     }
     EverChanged |= Changed;
   } while (Changed);
+
+  // Jump threading may have introduced redundant debug values into F which
+  // should be removed.
+  if (EverChanged)
+    for (auto &BB : *F) {
+      RemoveRedundantDbgInstrs(&BB);
+    }
 
   LoopHeaders.clear();
   return EverChanged;
@@ -1892,6 +1892,11 @@ bool JumpThreadingPass::maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
   const Instruction *TI = SinglePred->getTerminator();
   if (TI->isSpecialTerminator() || TI->getNumSuccessors() != 1 ||
       SinglePred == BB || hasAddressTakenAndUsed(BB))
+    return false;
+
+  // MergeBasicBlockIntoOnlyPred may delete SinglePred, we need to avoid
+  // deleting a BB pointer from Unreachable.
+  if (Unreachable.count(SinglePred))
     return false;
 
   // If SinglePred was a loop header, BB becomes one.

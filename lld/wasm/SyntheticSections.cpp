@@ -16,6 +16,7 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 
@@ -131,6 +132,14 @@ void DylinkSection::writeBody() {
       writeUleb128(sub.os, sym->flags, "sym flags");
     }
 
+    sub.writeTo(os);
+  }
+
+  if (!ctx.arg.rpath.empty()) {
+    SubSection sub(WASM_DYLINK_RUNTIME_PATH);
+    writeUleb128(sub.os, ctx.arg.rpath.size(), "num rpath entries");
+    for (const auto ref : ctx.arg.rpath)
+      writeStr(sub.os, ref, "rpath entry");
     sub.writeTo(os);
   }
 }
@@ -594,7 +603,7 @@ void ElemSection::writeBody() {
   }
   writeInitExpr(os, initExpr);
 
-  if (flags & WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+  if (flags & WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
     // We only write active function table initializers, for which the elem kind
     // is specified to be written as 0x00 and interpreted to mean "funcref".
     const uint8_t elemKind = 0;

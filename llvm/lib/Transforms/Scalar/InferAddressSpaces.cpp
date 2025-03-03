@@ -619,7 +619,7 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
     unsigned NewAS = I->second;
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAS);
     auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
-    NewI->insertBefore(Inst);
+    NewI->insertBefore(Inst->getIterator());
     NewI->setDebugLoc(Inst->getDebugLoc());
     return NewI;
   }
@@ -681,7 +681,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // explicit.
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(I->getType(), AS);
     auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
-    NewI->insertAfter(I);
+    NewI->insertAfter(I->getIterator());
     NewI->setDebugLoc(I->getDebugLoc());
     return NewI;
   }
@@ -833,7 +833,7 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
         I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
     if (Instruction *NewI = dyn_cast_or_null<Instruction>(NewV)) {
       if (NewI->getParent() == nullptr) {
-        NewI->insertBefore(I);
+        NewI->insertBefore(I->getIterator());
         NewI->takeName(I);
         NewI->setDebugLoc(I->getDebugLoc());
       }

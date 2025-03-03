@@ -306,6 +306,36 @@ inline static CondCode getInvertedCondCode(CondCode Code) {
   return static_cast<CondCode>(static_cast<unsigned>(Code) ^ 0x1);
 }
 
+/// getSwappedCondition - assume the flags are set by MI(a,b), return
+/// the condition code if we modify the instructions such that flags are
+/// set by MI(b,a).
+inline static CondCode getSwappedCondition(CondCode CC) {
+  switch (CC) {
+  default:
+    return AL;
+  case EQ:
+    return EQ;
+  case NE:
+    return NE;
+  case HS:
+    return LS;
+  case LO:
+    return HI;
+  case HI:
+    return LO;
+  case LS:
+    return HS;
+  case GE:
+    return LE;
+  case LT:
+    return GT;
+  case GT:
+    return LT;
+  case LE:
+    return GE;
+  }
+}
+
 /// Given a condition code, return NZCV flags that would satisfy that condition.
 /// The flag bits are in the format expected by the ccmp instructions.
 /// Note that many different flag settings can satisfy a given condition code,
@@ -329,6 +359,26 @@ inline static unsigned getNZCVToSatisfyCondCode(CondCode Code) {
   case LT: return N; // N != V
   case GT: return 0; // Z == 0 && N == V
   case LE: return Z; // Z == 1 || N != V
+  }
+}
+
+/// True, if a given condition code can be used in a fused compare-and-branch
+/// instructions, false otherwise.
+inline static bool isValidCBCond(AArch64CC::CondCode Code) {
+  switch (Code) {
+  default:
+    return false;
+  case AArch64CC::EQ:
+  case AArch64CC::NE:
+  case AArch64CC::HS:
+  case AArch64CC::LO:
+  case AArch64CC::HI:
+  case AArch64CC::LS:
+  case AArch64CC::GE:
+  case AArch64CC::LT:
+  case AArch64CC::GT:
+  case AArch64CC::LE:
+    return true;
   }
 }
 

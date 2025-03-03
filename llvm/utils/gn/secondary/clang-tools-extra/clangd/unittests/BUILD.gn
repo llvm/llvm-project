@@ -80,7 +80,6 @@ unittest("ClangdTests") {
     "GlobalCompilationDatabaseTests.cpp",
     "HeaderSourceSwitchTests.cpp",
     "HeadersTests.cpp",
-    "HeuristicResolverTests.cpp",
     "HoverTests.cpp",
     "IncludeCleanerTests.cpp",
     "IndexActionTests.cpp",

@@ -67,7 +67,7 @@ void test_argpass_simple(PST *p) {
     void argpass_simple_callee(PST);
     argpass_simple_callee(*p);
 }
-// CHECK-AAPCS:      define dso_local void @test_argpass_simple(ptr nocapture noundef readonly %p)
+// CHECK-AAPCS:      define dso_local void @test_argpass_simple(ptr noundef readonly captures(none) %p)
 // CHECK-AAPCS-NEXT: entry:
 // CHECK-AAPCS-NEXT: %0 = load <2 x i8>, ptr %p, align 16
 // CHECK-AAPCS-NEXT: %cast.scalable = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %0, i64 0)
@@ -292,7 +292,7 @@ PST test_return(PST *p) {
     return *p;
 }
 // CHECK-AAPCS:  define dso_local <{ <vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1> }> @test_return(ptr
-// CHECK-DARWIN: define void @test_return(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.PST) align 16 initializes((0, 96)) %agg.result, ptr nocapture noundef readonly %p)
+// CHECK-DARWIN: define void @test_return(ptr dead_on_unwind noalias writable writeonly sret(%struct.PST) align 16 captures(none) initializes((0, 96)) %agg.result, ptr noundef readonly captures(none) %p)
 
 // Corner case of 1-element aggregate
 //   p->x -> q0
@@ -300,7 +300,7 @@ SmallPST test_return_small_pst(SmallPST *p) {
     return *p;
 }
 // CHECK-AAPCS:  define dso_local <vscale x 4 x float> @test_return_small_pst(ptr
-// CHECK-DARWIN: define i128 @test_return_small_pst(ptr nocapture noundef readonly %p)
+// CHECK-DARWIN: define i128 @test_return_small_pst(ptr noundef readonly captures(none) %p)
 
 
 // Big PST, returned indirectly
@@ -308,8 +308,8 @@ SmallPST test_return_small_pst(SmallPST *p) {
 BigPST test_return_big_pst(BigPST *p) {
     return *p;
 }
-// CHECK-AAPCS:  define dso_local void @test_return_big_pst(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.BigPST) align 16 initializes((0, 176)) %agg.result, ptr nocapture noundef readonly %p)
-// CHECK-DARWIN: define void @test_return_big_pst(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.BigPST) align 16 initializes((0, 176)) %agg.result, ptr nocapture noundef readonly %p)
+// CHECK-AAPCS:  define dso_local void @test_return_big_pst(ptr dead_on_unwind noalias writable writeonly sret(%struct.BigPST) align 16 captures(none) initializes((0, 176)) %agg.result, ptr noundef readonly captures(none) %p)
+// CHECK-DARWIN: define void @test_return_big_pst(ptr dead_on_unwind noalias writable writeonly sret(%struct.BigPST) align 16 captures(none) initializes((0, 176)) %agg.result, ptr noundef readonly captures(none) %p)
 
 // Variadic arguments are unnamed, PST passed indirectly.
 // (Passing SVE types to a variadic function currently unsupported by

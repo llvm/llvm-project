@@ -131,7 +131,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   }
 
   // Not a constant, maybe it's a strided constant with a splat added or
-  // multipled.
+  // multiplied.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
               BO->getOpcode() != Instruction::Or &&
@@ -210,10 +210,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     unsigned IncrementingBlock = Phi->getIncomingValue(0) == Inc ? 0 : 1;
     assert(Phi->getIncomingValue(IncrementingBlock) == Inc &&
            "Expected one operand of phi to be Inc");
-
-    // Only proceed if the step is loop invariant.
-    if (!L->isLoopInvariant(Step))
-      return false;
 
     // Step should be a splat.
     Step = getSplatValue(Step);
@@ -298,6 +294,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       BasePtr->getIncomingBlock(StartBlock)->getTerminator());
   Builder.SetCurrentDebugLocation(DebugLoc());
 
+  // TODO: Share this switch with matchStridedStart?
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
@@ -310,16 +307,30 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   }
   case Instruction::Mul: {
     Start = Builder.CreateMul(Start, SplatOp, "start");
-    Step = Builder.CreateMul(Step, SplatOp, "step");
     Stride = Builder.CreateMul(Stride, SplatOp, "stride");
     break;
   }
   case Instruction::Shl: {
     Start = Builder.CreateShl(Start, SplatOp, "start");
-    Step = Builder.CreateShl(Step, SplatOp, "step");
     Stride = Builder.CreateShl(Stride, SplatOp, "stride");
     break;
   }
+  }
+
+  // If the Step was defined inside the loop, adjust it before its definition
+  // instead of in the preheader.
+  if (auto *StepI = dyn_cast<Instruction>(Step); StepI && L->contains(StepI))
+    Builder.SetInsertPoint(*StepI->getInsertionPointAfterDef());
+
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Mul:
+    Step = Builder.CreateMul(Step, SplatOp, "step");
+    break;
+  case Instruction::Shl:
+    Step = Builder.CreateShl(Step, SplatOp, "step");
+    break;
   }
 
   Inc->setOperand(StepIndex, Step);

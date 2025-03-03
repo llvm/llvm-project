@@ -402,7 +402,6 @@ namespace UnionInBase {
   static_assert(return_uninit().a.x == 2);
 }
 
-/// FIXME: Our diagnostic here is a little off.
 namespace One {
   struct A { long x; };
 
@@ -421,4 +420,88 @@ namespace One {
                       // both-note {{constinit}}
 }
 
+namespace CopyAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+
+
+  constexpr int f2() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.b; // both-note {{read of member 'b' of union with active member 'a'}}
+  }
+  static_assert(f2() == 12); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+}
+
+namespace MoveAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A b{13};
+
+    b = A{12} ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+}
+
+namespace IFD {
+  template <class T>
+  struct Optional {
+    struct {
+      union {
+        char null_state;
+        T val;
+      };
+    };
+    constexpr Optional() : null_state(){}
+  };
+
+  constexpr bool test()
+  {
+    Optional<int> opt{};
+    Optional<int> opt2{};
+    opt = opt2;
+    return true;
+  }
+  static_assert(test());
+}
+
+namespace AnonymousUnion {
+  struct A {
+    int x;
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int bb;
+  };
+
+  constexpr B return_init_all() {
+    B b = {.bb = 1};
+    b.a.x = 2;
+    return b;
+  }
+  static_assert(return_init_all().a.p == 7); // both-error {{}} \
+                                             // both-note {{read of member 'p' of union with no active member}}
+}
 #endif
