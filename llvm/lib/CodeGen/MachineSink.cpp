@@ -758,7 +758,9 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *CI = &MFAM.getResult<MachineCycleAnalysis>(MF);
-  auto *PSI = MFAM.getCachedResult<ProfileSummaryAnalysis>(MF);
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
   auto *MBFI = UseBlockFreqInfo
                    ? &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF)
                    : nullptr;
@@ -766,10 +768,10 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto *AA = &MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager()
                   .getResult<AAManager>(MF.getFunction());
-  auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  auto *SI = &MFAM.getResult<SlotIndexesAnalysis>(MF);
-  auto *LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
+  auto *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+  auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
                       MBFI, MBPI, AA);
   bool Changed = Impl.run(MF);
@@ -807,10 +809,15 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *MBPI =
       &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
-  auto *LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
-  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  // Get analyses for split critical edge.
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  auto *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  auto *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  auto *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+  auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+  auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
 
   MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
                       MBFI, MBPI, AA);
