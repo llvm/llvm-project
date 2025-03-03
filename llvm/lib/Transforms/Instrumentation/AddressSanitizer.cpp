@@ -797,6 +797,7 @@ struct AddressSanitizer {
                                  bool IsWrite, size_t AccessSizeIndex,
                                  Value *SizeArgument, uint32_t Exp,
                                  RuntimeCallInserter &RTCI);
+  bool maybeIgnoreMemIntrinsic(MemIntrinsic *MI, const Triple &TargetTriple);
   void instrumentMemIntrinsic(MemIntrinsic *MI, RuntimeCallInserter &RTCI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
@@ -1340,10 +1341,21 @@ Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
     return IRB.CreateAdd(Shadow, ShadowBase);
 }
 
+bool AddressSanitizer::maybeIgnoreMemIntrinsic(MemIntrinsic *MI,
+                                               const Triple &TargetTriple) {
+  // Ignore FS and GS registers to prevent miscompilation
+  if (MI->getDestAddressSpace() >= 256 &&
+      TargetTriple.getArch() == Triple::x86_64)
+    return true;
+  return false;
+}
+
 // Instrument memset/memmove/memcpy
 void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI,
                                               RuntimeCallInserter &RTCI) {
   InstrumentationIRBuilder IRB(MI);
+  if (maybeIgnoreMemIntrinsic(MI, TargetTriple))
+    return;
   if (isa<MemTransferInst>(MI)) {
     RTCI.createRuntimeCall(
         IRB, isa<MemMoveInst>(MI) ? AsanMemmove : AsanMemcpy,
