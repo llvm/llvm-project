@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <set>
+#include <string>
+
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
@@ -350,13 +353,105 @@ void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
-  if (EC) {
-    Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
-    return;
-  }
 
-  outputDependencyFile(OS);
+  // merge host dependency file (*.d.host)
+  // to kernel dependency file (*.d.host) for tops target
+  llvm::StringRef SubStr = ".host";
+  SmallString<128> OutputFileS(OutputFile);
+  size_t Pos = OutputFileS.find(SubStr);
+  // for tops target, trim .host in dep file
+  if (Pos != llvm::StringRef::npos) {
+    auto ndf = OutputFileS.substr(0, Pos);
+    // dependencies is a set to auto merge duplicate dependencies
+    std::set<std::string> dependencies;
+
+    std::string line;
+    std::string tmpline;
+    std::string KernelStartLine;
+    std::string HostStartLine;
+    std::string Endline;
+
+    // Read kernel dep file
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> KernelDepFile =
+        llvm::MemoryBuffer::getFile(ndf.str());
+    if (KernelDepFile) {
+      llvm::StringRef KernelDepContent = KernelDepFile.get()->getBuffer();
+      for (const auto &tmpline : llvm::split(KernelDepContent, '\n')) {
+        // Remove empty lines and comment lines
+        if (!tmpline.empty() && tmpline[0] != '#') {
+          line = tmpline.str();
+          if (KernelStartLine.empty()) {
+            KernelStartLine = line;
+          } else {
+            dependencies.insert(line);
+          }
+        }
+      }
+      // Process Endline
+      Endline = line;
+      dependencies.erase(Endline); // Remove Endline from dependencies
+    }
+
+    // Read host dep file
+    std::string HostDep;
+    llvm::raw_string_ostream OSS(HostDep);
+    outputDependencyFile(OSS);
+    if (!HostDep.empty()) {
+      for (const auto &tmpline : llvm::split(HostDep, '\n')) {
+        // Remove empty lines and comment lines
+        if (!tmpline.empty() && tmpline[0] != '#') {
+          line = tmpline.str();
+          if (HostStartLine.empty()) {
+            HostStartLine = line;
+            // if KernelStartLine is not empty
+            if (!KernelStartLine.empty() && HostStartLine != KernelStartLine) {
+              Diags.Report(diag::err_fe_error_opening)
+                  << OutputFile << "host dep file is not match kernel dep file";
+              return;
+            }
+          } else {
+            dependencies.insert(line);
+          }
+        }
+      }
+      // Process Endline
+      dependencies.erase(line);
+      if (!Endline.empty()) {
+        if (line != Endline) {
+          dependencies.insert(line + " \\");
+        }
+      } else {
+        Endline = line;
+      }
+    }
+
+    // Write merged dep file
+    llvm::raw_fd_ostream DepFile(ndf.str(), EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      Diags.Report(diag::err_fe_error_opening) << ndf.str() << EC.message();
+      return;
+    }
+    // Write HostStartLine, KernelStartLine maybe is empty.
+    if (!HostStartLine.empty()) {
+      DepFile << HostStartLine << "\n";
+    }
+    for (const auto &dep : dependencies) {
+      DepFile << dep << "\n";
+    }
+    // Write Endline
+    if (!Endline.empty()) {
+      DepFile << Endline << "\n";
+    }
+  } else {
+
+    llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
+    if (EC) {
+      Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
+      return;
+    }
+
+    outputDependencyFile(OS);
+  }
 }
 
 void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
