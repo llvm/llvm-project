@@ -133,9 +133,8 @@ void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
         NameToVariantKind.try_emplace(Desc.Name.lower(), Desc.Kind);
-    // Workaround for VK_PPC_L/VK_PPC_LO ("l"), VK_PPC_TLSGD, and VK_PPC_TLSLD.
-    assert(It2.second ||
-           (Desc.Name == "l" || Desc.Name == "tlsgd" || Desc.Name == "tlsld"));
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
+    assert(It2.second || Desc.Name == "l");
   }
 }
 
