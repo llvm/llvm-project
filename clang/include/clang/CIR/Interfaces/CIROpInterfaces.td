@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Defines the interface to CIR operations.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
 #define CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
