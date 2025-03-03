@@ -1,4 +1,5 @@
 // XFAIL: windows
+// Fails on windows due to issue #129023
 // RUN: %libomp-cxx20-compile-and-run | FileCheck %s --match-full-lines
 
 #ifndef HEADER
