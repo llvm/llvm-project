@@ -28194,7 +28194,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   if ((Fold || Swap) &&
       TLI.getBooleanContents(CmpOpVT) ==
           TargetLowering::ZeroOrOneBooleanContent &&
-      (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, CmpOpVT))) {
+      (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, CmpOpVT)) &&
+      TLI.convertSelectOfConstantsToMath(VT)) {
 
     if (Swap) {
       CC = ISD::getSetCCInverse(CC, CmpOpVT);

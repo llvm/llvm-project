@@ -259,11 +259,21 @@ public:
     DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (llvm::failed(failureOrMaybeZps))
-      return failure();
+    // Get and verify zero points.
+    int64_t inputZpVal;
+    int64_t weightZpVal;
 
-    auto maybeZps = failureOrMaybeZps.value();
+    if (op.getInputZeroPoint(inputZpVal).failed() ||
+        op.getWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "bail out if zero points cannot statically be determined");
+
+    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
+        op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "zero point must be zero for non-int8 integer types");
+
+    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -289,7 +299,7 @@ public:
 
     // Apply padding as necessary.
     TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (maybeZps) {
+    if (hasZp) {
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
@@ -297,11 +307,11 @@ public:
           APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
 
-      if (maybeZps->inputZp < intMin || maybeZps->inputZp > intMax)
+      if (inputZpVal < intMin || inputZpVal > intMax)
         return rewriter.notifyMatchFailure(
             op, "tosa.conv op quantization has zp outside of input range");
 
-      zeroAttr = rewriter.getIntegerAttr(inputETy, maybeZps->inputZp);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
     }
 
     llvm::SmallVector<int64_t> pad;
@@ -314,8 +324,8 @@ public:
       // For 2D convolutions, we need to check if the target convolution op
       // wants a HWCF kernel layout.
       bool wantHwcf =
-          maybeZps ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
-                   : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
+          hasZp ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
+                : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
       if (wantHwcf) {
         // Transpose the kernel to match dimension ordering of the linalg
         // convolution operation.
@@ -329,13 +339,11 @@ public:
         SmallVector<int64_t> newWeightShape;
         for (auto dim : weightPerm)
           newWeightShape.push_back(weightShape[dim]);
-        auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
-        Value weightPermValue =
-            rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
+        auto weightPermAttr = rewriter.getDenseI32ArrayAttr(weightPerm);
         Type newWeightTy =
             RankedTensorType::get(newWeightShape, weightTy.getElementType());
         weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
-                                                    weightPermValue);
+                                                    weightPermAttr);
       }
     }
 
@@ -353,13 +361,11 @@ public:
       SmallVector<int64_t> newWeightShape;
       for (auto dim : weightPerm)
         newWeightShape.push_back(weightShape[dim]);
-      auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
-      Value weightPermValue =
-          rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
+      auto weightPermAttr = rewriter.getDenseI32ArrayAttr(weightPerm);
       Type newWeightTy =
           RankedTensorType::get(newWeightShape, weightTy.getElementType());
       weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
-                                                  weightPermValue);
+                                                  weightPermAttr);
     }
 
     // Extract the attributes for convolution.
@@ -376,9 +382,9 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
 
-    if (maybeZps) {
-      auto iZp = rewriter.getI32IntegerAttr(maybeZps->inputZp);
-      auto kZp = rewriter.getI32IntegerAttr(maybeZps->weightZp);
+    if (hasZp) {
+      auto iZp = rewriter.getI32IntegerAttr(inputZpVal);
+      auto kZp = rewriter.getI32IntegerAttr(weightZpVal);
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
@@ -441,18 +447,27 @@ public:
         /*inputSizeDims=*/{1, 2},
         /*kernelSizeDims=*/{0, 1}, rewriter);
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (llvm::failed(failureOrMaybeZps))
-      return failure();
+    // Get and verify zero points.
+    int64_t inputZpVal;
+    int64_t weightZpVal;
 
-    auto maybeZps = failureOrMaybeZps.value();
+    if (op.getInputZeroPoint(inputZpVal).failed() ||
+        op.getWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "bail out if zero points cannot statically be determined");
 
+    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
+        op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "zero point must be zero for non-int8 integer types");
+
+    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
 
     // Apply padding as necessary.
     TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (maybeZps) {
+    if (hasZp) {
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
@@ -460,12 +475,12 @@ public:
           APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
 
-      if (maybeZps->inputZp < intMin || maybeZps->inputZp > intMax)
+      if (inputZpVal < intMin || inputZpVal > intMax)
         return rewriter.notifyMatchFailure(
             op, "tosa.depthwise_conv op quantization has zp outside of input "
                 "range");
 
-      zeroAttr = rewriter.getIntegerAttr(inputETy, maybeZps->inputZp);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
     }
 
     llvm::SmallVector<int64_t> pad;
@@ -505,7 +520,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
-    if (!maybeZps) {
+    if (!hasZp) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
@@ -532,8 +547,8 @@ public:
               .getResult(0);
       rewriter.replaceOp(op, result);
     } else {
-      IntegerAttr iZp = rewriter.getI32IntegerAttr(maybeZps->inputZp);
-      IntegerAttr wZp = rewriter.getI32IntegerAttr(maybeZps->weightZp);
+      IntegerAttr iZp = rewriter.getI32IntegerAttr(inputZpVal);
+      IntegerAttr wZp = rewriter.getI32IntegerAttr(weightZpVal);
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, wZp);
       Value conv =
@@ -724,11 +739,44 @@ public:
       rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxUnsignedOp>(
           op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
           filledEmptyTensor, strideAttr, dilationAttr);
-    } else {
-      rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
-          op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
-          filledEmptyTensor, strideAttr, dilationAttr);
+      return llvm::success();
     }
+
+    auto resultOp = rewriter.create<linalg::PoolingNhwcMaxOp>(
+        op->getLoc(), ArrayRef<Type>{resultTy},
+        ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
+        dilationAttr);
+
+    rewriter.replaceOp(op, resultOp);
+    // "PROPAGATE" mode matches the behaviour of the LinAlg named op, so no
+    // compare and select materialization is required.
+    //
+    // In the case of "IGNORE" we need to insert a compare and select. Since
+    // we've already produced a named op we will just take its body and modify
+    // it to include the appropriate checks. If the current value is NaN the
+    // old value of pool will be taken otherwise we use the result.
+    if (const auto nanMode = op.getNanMode(); nanMode == "IGNORE") {
+      auto genericOp = rewriter.create<linalg::GenericOp>(
+          op->getLoc(), resultOp.getType(0), resultOp.getInputs(),
+          resultOp.getOutputs(), resultOp.getIndexingMapsArray(),
+          resultOp.getIteratorTypesArray(),
+          [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
+            IRMapping map;
+            auto oldBlock = resultOp.getRegion().begin();
+            auto oldArgs = oldBlock->getArguments();
+            auto &oldMaxOp = *resultOp.getBlock()->begin();
+            map.map(oldArgs, blockArgs);
+            auto *newOp = opBuilder.clone(oldMaxOp, map);
+            Value isNaN = opBuilder.create<arith::CmpFOp>(
+                op->getLoc(), arith::CmpFPredicate::UNO, blockArgs.front(),
+                blockArgs.front());
+            auto selectOp = opBuilder.create<arith::SelectOp>(
+                op->getLoc(), isNaN, blockArgs.back(), newOp->getResult(0));
+            opBuilder.create<linalg::YieldOp>(loc, selectOp.getResult());
+          });
+      rewriter.replaceOp(resultOp, genericOp);
+    }
+
     return success();
   }
 };
@@ -970,9 +1018,7 @@ public:
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const final {
-    SmallVector<int32_t> constantPerms;
-    if (failed(op.getConstantPerms(constantPerms)))
-      return failure();
+    const llvm::ArrayRef<int32_t> constantPerms = op.getPerms();
 
     Location loc = op.getLoc();
     // The verifier should have made sure we have a valid TOSA permutation

@@ -4642,6 +4642,9 @@ TEST_F(FormatTest, FormatsExternC) {
                "  int i = 42;\n"
                "  return i;\n"
                "}");
+  verifyFormat(
+      "extern \"C\" char const *const\n"
+      "    OpenCL_source_OpenCLRunTime_test_attribute_opencl_unroll_hint;");
 
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -12613,6 +12616,9 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa __attribute__((unused))\n"
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
+  verifyFormat(
+      "RenderWidgetHostViewCocoa *\n"
+      "    __attribute__((objc_precise_lifetime)) keepSelfAlive = self;");
   FormatStyle AfterType = getLLVMStyle();
   AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"
@@ -18072,9 +18078,11 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
-  verifyFormat("xor = foo;");
 
-  FormatStyle Spaces = getLLVMStyle();
+  auto Spaces = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("xor = foo;", Spaces);
+
+  Spaces.Language = FormatStyle::LK_Cpp;
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);

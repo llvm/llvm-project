@@ -74,6 +74,23 @@ Function Attributes
     This attribute indicates the maximum number of registers to be used for the
     kernel function.
 
+``"nvvm.maxntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the maximum number of threads in the thread block
+    (CTA). The maximum number of threads is the product of the maximum extent in
+    each dimension. Exceeding the maximum number of threads results in a runtime
+    error or kernel launch failure.
+
+``"nvvm.reqntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the exact number of threads in the thread block
+    (CTA). The number of threads is the product of the value in each dimension.
+    Specifying a different CTA dimension at launch will result in a runtime 
+    error or kernel launch failure.
+
+``"nvvm.cluster_dim"="<x>[,<y>[,<z>]]"``
+    This attribute declares the number of thread blocks (CTAs) in the cluster.
+    The total number of CTAs is the product of the number of CTAs in each 
+    dimension. Specifying a different cluster dimension at launch will result in
+    a runtime error or kernel launch failure. Only supported for Hopper+.
 
 .. _address_spaces:
 

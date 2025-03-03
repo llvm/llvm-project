@@ -1251,6 +1251,22 @@ void OmpStructureChecker::CheckMasterNesting(
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPAssumeConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assume);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPAssumeConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAssumes &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_assumes);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAssumes &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
   if (GetDirectiveNest(TargetBlockOnlyTeams)) {
     ExitDirectiveNest(TargetBlockOnlyTeams);

@@ -130,7 +130,6 @@ math/half_tan.cl
 math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
-math/clc_ldexp.cl
 math/ldexp.cl
 math/lgamma.cl
 math/lgamma_r.cl

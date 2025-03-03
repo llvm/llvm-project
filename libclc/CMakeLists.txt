@@ -28,6 +28,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
+  clc/lib/amdgcn/SOURCES;
   clc/lib/clspv/SOURCES;
   clc/lib/spirv/SOURCES;
 )
@@ -376,8 +377,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -399,6 +398,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     list( APPEND build_flags
       -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
+      # FIXME: Fix libclc to not require disabling this noisy warning
+      -Wno-bitwise-conditional-parentheses
     )
 
     add_libclc_builtin_set(

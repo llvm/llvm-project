@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Calls C-Reduce to create a minimal reproducer for clang crashes.
-Unknown arguments are treated at creduce options.
+"""Calls reduction tools to create minimal reproducers for clang crashes.
+
+Unknown arguments are treated at cvise/creduce options.
 
 Output files:
   *.reduced.sh -- crash reproducer with minimal arguments
   *.reduced.cpp -- the reduced file
-  *.test.sh -- interestingness test for C-Reduce
+  *.test.sh -- interestingness test for C-Vise
 """
 
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -311,7 +312,7 @@ fi
         return args, index + 1
 
     def simplify_clang_args(self):
-        """Simplify clang arguments before running C-Reduce to reduce the time the
+        """Simplify clang arguments before running C-Vise to reduce the time the
         interestingness test takes to run.
         """
         print("\nSimplifying the clang command...")
@@ -370,7 +371,7 @@ fi
         verbose_print("Simplified command:", quote_cmd(self.get_crash_cmd()))
 
     def reduce_clang_args(self):
-        """Minimize the clang arguments after running C-Reduce, to get the smallest
+        """Minimize the clang arguments after running C-Vise, to get the smallest
         command that reproduces the crash on the reduced file.
         """
         print("\nReducing the clang crash command...")
@@ -413,14 +414,14 @@ fi
         full_creduce_cmd = (
             [creduce_cmd] + self.creduce_flags + [self.testfile, self.file_to_reduce]
         )
-        print("\nRunning C-Reduce...")
+        print("\nRunning C reduction tool...")
         verbose_print(quote_cmd(full_creduce_cmd))
         try:
             p = subprocess.Popen(full_creduce_cmd)
             p.communicate()
         except KeyboardInterrupt:
             # Hack to kill C-Reduce because it jumps into its own pgid
-            print("\n\nctrl-c detected, killed creduce")
+            print("\n\nctrl-c detected, killed reduction tool")
             p.kill()
 
 
@@ -453,14 +454,15 @@ def main():
         "--creduce",
         dest="creduce",
         type=str,
-        help="The path to the `creduce` executable. "
-        "Required if `creduce` is not in PATH environment.",
+        help="The path to the `creduce` or `cvise` executable. "
+        "Required if neither `creduce` nor `cvise` are on PATH.",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     args, creduce_flags = parser.parse_known_args()
     verbose = args.verbose
     llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
     creduce_cmd = check_cmd("creduce", None, args.creduce)
+    creduce_cmd = check_cmd("cvise", None, args.creduce)
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
 
     crash_script = check_file(args.crash_script[0])

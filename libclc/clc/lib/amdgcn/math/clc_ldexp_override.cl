@@ -20,27 +20,18 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
 #include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_ldexp.h>
 
 #ifdef __HAS_LDEXPF__
-#define BUILTINF __builtin_amdgcn_ldexpf
-#else
-#include "math/clc_ldexp.h"
-#define BUILTINF __clc_ldexp
-#endif
-
 // This defines all the ldexp(floatN, intN) variants.
-_CLC_DEFINE_BINARY_BUILTIN(float, ldexp, BUILTINF, float, int);
+_CLC_DEFINE_BINARY_BUILTIN(float, __clc_ldexp, __builtin_amdgcn_ldexpf, float, int);
+#endif
 
 #ifdef cl_khr_fp64
-  #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-    // This defines all the ldexp(doubleN, intN) variants.
-  _CLC_DEFINE_BINARY_BUILTIN(double, ldexp, __builtin_amdgcn_ldexp, double, int);
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+// This defines all the ldexp(doubleN, intN) variants.
+_CLC_DEFINE_BINARY_BUILTIN(double, __clc_ldexp, __builtin_amdgcn_ldexp, double,
+                           int);
 #endif
-
-// This defines all the ldexp(GENTYPE, int);
-#define __CLC_BODY <../../../generic/lib/math/ldexp.inc>
-#include <clc/math/gentype.inc>
-
-#undef BUILTINF

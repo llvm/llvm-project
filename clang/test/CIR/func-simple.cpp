@@ -2,12 +2,12 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o -  | FileCheck %s
 
 void empty() { }
-// CHECK: cir.func @empty() -> !cir.void {
+// CHECK: cir.func @empty() {
 // CHECK:   cir.return
 // CHECK: }
 
 void voidret() { return; }
-// CHECK: cir.func @voidret() -> !cir.void {
+// CHECK: cir.func @voidret() {
 // CHECK:   cir.return
 // CHECK: }
 
@@ -50,4 +50,10 @@ unsigned long long ullfunc() { return 42ull; }
 // CHECK: cir.func @ullfunc() -> !cir.int<u, 64>
 // CHECK:   %0 = cir.const #cir.int<42> : !cir.int<u, 64>
 // CHECK:   cir.return %0 : !cir.int<u, 64>
+// CHECK: }
+
+bool boolfunc() { return true; }
+// CHECK: cir.func @boolfunc() -> !cir.bool {
+// CHECK:   %0 = cir.const #true
+// CHECK:   cir.return %0 : !cir.bool
 // CHECK: }

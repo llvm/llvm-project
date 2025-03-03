@@ -224,7 +224,7 @@ declare <2 x i64> @llvm.fshr.v4i64(<2 x i64>, <2 x i64>, <2 x i64>)
 
 define <4 x i30> @fshr_v4i30_3rd_arg_var(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c) {
 ; CHECK-LABEL: 'fshr_v4i30_3rd_arg_var'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %fshr = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %fshr = tail call <4 x i30> @llvm.fshr.v4i30(<4 x i30> %a, <4 x i30> %b, <4 x i30> %c)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i30> %fshr
 ;
 entry:

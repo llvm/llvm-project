@@ -9668,6 +9668,7 @@ multiclass sve_int_perm_bin_perm_128_zz<bits<2> opc, bit P, string asm, SDPatter
 let WantsRoot = true in {
   def am_sve_indexed_s4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-8, 7>">;
   def am_sve_indexed_s6 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-32, 31>">;
+  def am_sve_indexed_s9 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<-256, 255>">;
 }
 
 def am_sve_regreg_lsl0 : ComplexPattern<iPTR, 2, "SelectSVERegRegAddrMode<0>", []>;
