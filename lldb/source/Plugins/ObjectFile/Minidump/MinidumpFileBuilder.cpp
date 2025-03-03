@@ -972,8 +972,8 @@ Status MinidumpFileBuilder::DumpDirectories() const {
 Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read) {
   Log *log = GetLog(LLDBLog::Object);
-  lldb::addr_t addr = range.range.start();
-  lldb::addr_t size = range.range.size();
+  const lldb::addr_t addr = range.range.start();
+  const lldb::addr_t size = range.range.size();
   // First we set the byte tally to 0, so if we do exit gracefully
   // the caller doesn't think the random garbage on the stack is a
   // success.
@@ -1024,7 +1024,13 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     if (error.Fail())
       return error;
 
-    // This check is so we don't overflow when the error code above sets the
+    // If the bytes read in this chunk would cause us to overflow, set the
+    // remaining bytes to 0 so we exit. This is a safety check so we don't
+    // get stuck building a bigger file forever.
+    if (bytes_read_for_chunk > bytes_remaining)
+      bytes_remaining = 0;
+
+    // This check is so we don't overflow when the error above sets the
     // bytes to read to 0 (the graceful exit condition).
     if (bytes_remaining > 0)
       bytes_remaining -= bytes_read_for_chunk;
