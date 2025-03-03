@@ -517,6 +517,19 @@ Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
 genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 
+/// Generate an hlfir.designate that produces an 1D section
+/// of \p array using \p oneBasedIndices and \p dim:
+///   i = oneBasedIndices
+///   result => array(i(1), ..., i(dim-1), :, i(dim+1), ..., i(n))
+///
+/// The caller provides the pre-computed \p lbounds, \p extents
+/// and \p typeParams of the array.
+Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity array, int64_t dim,
+                    mlir::ArrayRef<mlir::Value> lbounds,
+                    mlir::ArrayRef<mlir::Value> extents,
+                    mlir::ValueRange oneBasedIndices,
+                    mlir::ArrayRef<mlir::Value> typeParams);
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

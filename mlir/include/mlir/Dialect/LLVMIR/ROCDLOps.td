@@ -348,11 +348,11 @@ def ROCDL_mfma_f32_16x16x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4bf16.1k">
 def ROCDL_mfma_f32_4x4x4bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4bf16.1k">;
 def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k">;
 def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k">;
-// Note: in gfx940, unlike in gfx90a, the f64 xdlops use the "blgp" argument as a
-// NEG bitfield. See IntrinsicsAMDGPU.td for more info.
+// Note: in gfx94x, unlike in gfx90a, the f64 xdlops use the "blgp" argument as
+// a NEG bitfield. See IntrinsicsAMDGPU.td for more info.
 def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64">;
 def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64">;
-// New in gfx940.
+// New in gfx94x.
 def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8">;
 def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8">;
 def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32">;
@@ -375,7 +375,7 @@ def ROCDL_mfma_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.f16">;
 def ROCDL_mfma_scale_f32_16x16x128_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.16x16x128.f8f6f4", [0,1]>;
 def ROCDL_mfma_scale_f32_32x32x64_f8f6f4 : ROCDL_Mfma_OO_IntrOp<"mfma.scale.f32.32x32x64.f8f6f4", [0,1]>;
 
-// 2:4 Sparsity ops (GFX940)
+// 2:4 Sparsity ops (GFX94x)
 def ROCDL_smfmac_f32_16x16x32_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.f16">;
 def ROCDL_smfmac_f32_32x32x16_f16 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x16.f16">;
 def ROCDL_smfmac_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x32.bf16">;
@@ -410,8 +410,11 @@ def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16",
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
 // Available from gfx12
-def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
-def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_fp8", [1]>;
+def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
@@ -451,12 +454,12 @@ def ROCDL_GlobalLoadLDSOp :
 def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
-  ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,
+  ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
                  I32:$numRecords,
                  I32:$flags)> {
-  let results = (outs ROCDLBufferRsrc:$res);
+  let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
 }
 
@@ -470,7 +473,25 @@ def ROCDL_RawPtrBufferLoadOp :
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
-      return {getRes()};
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferLoadLdsOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                  I32:$size,
+                  I32:$voffset,
+                  I32:$soffset,
+                  I32:$offset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc(), getLdsPtr()};
     }
   }];
 }
@@ -692,7 +713,7 @@ def ROCDL_CvtScaleF32PkFp8F32:
     attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
   }];
 }
-    
+
 def ROCDL_CvtScaleF32PkBf8F32:
     ROCDL_IntrOp<"cvt.scalef32.pk.bf8.f32", [], [], [Pure], 1>,
     Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32: $scale, I1:$wordSel)> {
@@ -753,7 +774,7 @@ def ROCDL_CvtScaleF32Bf8Op :
     Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
   let summary = "Scale and convert bf8 to f32";
   let description = [{
-    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value 
+    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value
     from the `byteSel`th bit of `src` to fp32.
   }];
   let assemblyFormat = [{

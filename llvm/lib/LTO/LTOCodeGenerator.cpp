@@ -109,21 +109,20 @@ cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-cl::opt<std::string> LTOStatsFile(
-    "lto-stats-file",
-    cl::desc("Save statistics to the specified file"),
-    cl::Hidden);
+static cl::opt<std::string>
+    LTOStatsFile("lto-stats-file",
+                 cl::desc("Save statistics to the specified file"), cl::Hidden);
 
-cl::opt<std::string> AIXSystemAssemblerPath(
+static cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-cl::opt<bool>
+static cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 } // namespace llvm

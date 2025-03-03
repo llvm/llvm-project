@@ -3680,13 +3680,6 @@ public:
                                            FullySubstituted);
   }
 
-  ExprResult RebuildResolvedUnexpandedPackExpr(SourceLocation BeginLoc,
-                                               QualType T,
-                                               ArrayRef<Expr *> Exprs) {
-    return ResolvedUnexpandedPackExpr::Create(SemaRef.Context, BeginLoc, T,
-                                              Exprs);
-  }
-
   /// Build a new expression representing a call to a source location
   ///  builtin.
   ///
@@ -9547,6 +9540,17 @@ TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPStripeDirective(OMPStripeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -11629,7 +11633,8 @@ class OpenACCClauseTransform final
       if (!Res.isUsable())
         continue;
 
-      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
+                                              ParsedClause.getClauseKind(),
                                               Res.get());
 
       if (Res.isUsable())
@@ -11694,7 +11699,8 @@ void OpenACCClauseTransform<Derived>::VisitSelfClause(
       if (!Res.isUsable())
         continue;
 
-      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
+                                              ParsedClause.getClauseKind(),
                                               Res.get());
 
       if (Res.isUsable())
@@ -11838,6 +11844,18 @@ void OpenACCClauseTransform<Derived>::VisitCopyClause(
       Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
       ParsedClause.getVarList(), ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitLinkClause(
+    const OpenACCLinkClause &C) {
+  llvm_unreachable("link clause not valid unless a decl transform");
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  llvm_unreachable("device_resident clause not valid unless a decl transform");
 }
 
 template <typename Derived>
@@ -12712,7 +12730,7 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   ValueDecl *ND
     = cast_or_null<ValueDecl>(getDerived().TransformDecl(E->getLocation(),
                                                          E->getDecl()));
-  if (!ND)
+  if (!ND || ND->isInvalidDecl())
     return ExprError();
 
   NamedDecl *Found = ND;
@@ -13661,7 +13679,7 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
       Desig.AddDesignator(
           Designator::CreateArrayDesignator(Index.get(), D.getLBracketLoc()));
 
-      ExprChanged = ExprChanged || Init.get() != E->getArrayIndex(D);
+      ExprChanged = ExprChanged || Index.get() != E->getArrayIndex(D);
       ArrayExprs.push_back(Index.get());
       continue;
     }
@@ -16170,24 +16188,6 @@ ExprResult
 TreeTransform<Derived>::TransformFunctionParmPackExpr(FunctionParmPackExpr *E) {
   // Default behavior is to do nothing with this transformation.
   return E;
-}
-
-template <typename Derived>
-ExprResult TreeTransform<Derived>::TransformResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  bool ArgumentChanged = false;
-  SmallVector<Expr *, 12> NewExprs;
-  if (TransformExprs(E->getExprs().begin(), E->getNumExprs(),
-                     /*IsCall=*/false, NewExprs, &ArgumentChanged))
-    return ExprError();
-
-  if (!AlwaysRebuild() && !ArgumentChanged)
-    return E;
-
-  // NOTE: The type is just a superficial PackExpansionType
-  //       that needs no substitution.
-  return RebuildResolvedUnexpandedPackExpr(E->getBeginLoc(), E->getType(),
-                                           NewExprs);
 }
 
 template<typename Derived>

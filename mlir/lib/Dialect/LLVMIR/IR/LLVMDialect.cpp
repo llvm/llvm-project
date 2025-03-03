@@ -634,7 +634,7 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
       llvm::zip(caseValues, caseDestinations),
       [&](auto i) {
         p << "  ";
-        p << std::get<0>(i).getLimitedValue();
+        p << std::get<0>(i);
         p << ": ";
         p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
       },
@@ -1932,6 +1932,18 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     getContainerMutable().set(extractValueOp.getContainer());
     return getResult();
   }
+
+  {
+    DenseElementsAttr constval;
+    matchPattern(getContainer(), m_Constant(&constval));
+    if (constval && constval.getElementType() == getType()) {
+      if (isa<SplatElementsAttr>(constval))
+        return constval.getSplatValue<Attribute>();
+      if (getPosition().size() == 1)
+        return constval.getValues<Attribute>()[getPosition()[0]];
+    }
+  }
+
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {

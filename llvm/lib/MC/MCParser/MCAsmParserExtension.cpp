@@ -44,8 +44,7 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   Lex();
 
   int64_t Count;
-  if (getParser().parseIntToken(
-          Count, "expected integer count in '.cg_profile' directive"))
+  if (getParser().parseIntToken(Count))
     return true;
 
   if (getLexer().isNot(AsmToken::EndOfStatement))

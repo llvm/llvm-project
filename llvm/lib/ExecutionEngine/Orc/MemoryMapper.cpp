@@ -98,9 +98,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // This is the maximum range whose permission have been possibly modified
-    Allocations[MinAddr].Size = MaxAddr - MinAddr;
-    Allocations[MinAddr].DeinitializationActions =
-        std::move(*DeinitializeActions);
+    auto &Alloc = Allocations[MinAddr];
+    Alloc.Size = MaxAddr - MinAddr;
+    Alloc.DeinitializationActions = std::move(*DeinitializeActions);
     Reservations[AI.MappingBase.toPtr<void *>()].Allocations.push_back(MinAddr);
   }
 

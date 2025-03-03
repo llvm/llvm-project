@@ -82,7 +82,7 @@ public:
   /// Adds a physical register and all its sub-registers to the set.
   void addReg(MCPhysReg Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }
@@ -91,7 +91,7 @@ public:
   /// super-registers from the set.
   void removeReg(MCPhysReg Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
-    assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
+    assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
     for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R)
       LiveRegs.erase((*R).id());
   }

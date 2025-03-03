@@ -60,6 +60,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
                             options::OPT_fsave_main_program,
+                            options::OPT_fd_lines_as_code,
+                            options::OPT_fd_lines_as_comments,
                             options::OPT_fno_save_main_program});
 }
 
@@ -148,6 +150,16 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  // Enable vectorization per default according to the optimization level
+  // selected. For optimization levels that want vectorization we use the alias
+  // option to simplify the hasFlag logic.
+  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier vectorizeAliasOption =
+      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
+  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
+                   options::OPT_fno_vectorize, enableVec))
+    CmdArgs.push_back("-vectorize-loops");
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
@@ -261,11 +273,18 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &Triple = getToolChain().getTriple();
+
+  StringRef ABIName = riscv::getRISCVABI(Args, Triple);
+  if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+  else
+    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
+
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();
-    const Driver &D = getToolChain().getDriver();
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
@@ -557,7 +576,8 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
-    if (Args.hasArg(options::OPT_nogpulib))
+    if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                      true))
       CmdArgs.push_back("-nogpulib");
   }
 

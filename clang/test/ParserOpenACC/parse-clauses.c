@@ -520,23 +520,25 @@ void VarListClauses() {
 #pragma acc exit data delete(s.array[s.value : 5], s.value),async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
+  // expected-error@+3{{expected ','}}
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare device_resident(s.array[s.value] s.array[s.value :5] ), copy(s)
 
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
+  int CopyRef1, CopyRef2, CopyRef3;
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare device_resident(s.array[s.value : 5], s.value), copy(CopyRef1)
 
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
+  // expected-error@+3{{expected ','}}
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare link(s.array[s.value] s.array[s.value :5] ), copy(CopyRef2)
+
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare link(s.array[s.value : 5], s.value), copy(CopyRef3)
 
   // expected-error@+1{{expected ','}}
 #pragma acc update host(s.array[s.value] s.array[s.value :5] )

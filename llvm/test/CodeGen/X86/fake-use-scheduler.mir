@@ -9,6 +9,12 @@
 #
 # CHECK: ********** MI Scheduling **********
 # CHECK-NEXT: foo:%bb.0 entry
+# CHECK-NEXT:   From: $rax = COPY %5:gr64
+# CHECK-NEXT:     To: RET 0, killed $rax
+# CHECK-NEXT:  RegionInstrs: 1
+#
+# CHECK: ********** MI Scheduling **********
+# CHECK-NEXT: foo:%bb.0 entry
 # CHECK-NEXT:   From: %0:gr64 = COPY $rdi
 # CHECK-NEXT:     To: FAKE_USE %5:gr64
 # CHECK-NEXT:  RegionInstrs: 7

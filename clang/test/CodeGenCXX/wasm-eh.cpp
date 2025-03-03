@@ -6,6 +6,9 @@
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 
+// Test code generation for Wasm EH using WebAssembly EH proposal.
+// (https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md)
+
 void may_throw();
 void dont_throw() noexcept;
 
@@ -380,6 +383,15 @@ void test8() {
 // CHECK:   cleanupret from %[[CLEANUPPAD1]] unwind to caller
 
 // CHECK:   unreachable
+
+void noexcept_throw() noexcept {
+  throw 3;
+}
+
+// CATCH-LABEL: define void @_Z14noexcept_throwv()
+// CHECK: %{{.*}} = cleanuppad within none []
+// CHECK-NEXT:  call void @_ZSt9terminatev()
+
 
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON

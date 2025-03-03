@@ -281,6 +281,8 @@ public:
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
 
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *E);
@@ -345,6 +347,7 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);

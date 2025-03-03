@@ -131,7 +131,7 @@ void func() {
 
 
   // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'declare' not yet implemented, pragma ignored}}
+  // expected-error@+1{{no valid clauses specified in OpenACC 'declare' directive}}
 #pragma acc declare clause list
   for(;;){}
   // expected-error@+1{{invalid OpenACC clause 'clause'}}

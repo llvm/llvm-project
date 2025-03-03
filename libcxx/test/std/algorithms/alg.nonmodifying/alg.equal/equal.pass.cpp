@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <vector>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -123,6 +124,30 @@ private:
 
 #endif
 
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 void test_vector_bool() {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test equal() with aligned bytes
+    std::vector<bool> out = in;
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+#if TEST_STD_VER >= 14
+    assert(std::equal(in.begin(), in.end(), out.begin(), out.end()));
+#endif
+  }
+
+  { // Test equal() with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy(in.begin(), in.end(), out.begin() + 4);
+    assert(std::equal(in.begin(), in.end(), out.begin() + 4));
+#if TEST_STD_VER >= 14
+    assert(std::equal(in.begin(), in.end(), out.begin() + 4, out.end() - 4));
+#endif
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestIter2<int, types::cpp17_input_iterator_list<int*> >());
   types::for_each(
@@ -137,6 +162,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
       types::cpp17_input_iterator_list<trivially_equality_comparable*>{},
       TestIter2<trivially_equality_comparable, types::cpp17_input_iterator_list<trivially_equality_comparable*>>{});
 #endif
+
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
 
   return true;
 }

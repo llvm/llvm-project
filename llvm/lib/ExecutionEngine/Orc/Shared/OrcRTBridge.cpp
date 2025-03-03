@@ -65,14 +65,6 @@ const char *RunAsIntFunctionWrapperName =
 
 } // end namespace rt
 namespace rt_alt {
-const char *UnwindInfoManagerInstanceName =
-    "orc_rt_alt_UnwindInfoManager_Instance";
-const char *UnwindInfoManagerFindSectionsHelperName =
-    "orc_rt_alt_UnwindInfoManager_findSectionsHelper";
-const char *UnwindInfoManagerEnableWrapperName =
-    "orc_rt_alt_UnwindInfoManager_enable";
-const char *UnwindInfoManagerDisableWrapperName =
-    "orc_rt_alt_UnwindInfoManager_disable";
 const char *UnwindInfoManagerRegisterActionName =
     "orc_rt_alt_UnwindInfoManager_register";
 const char *UnwindInfoManagerDeregisterActionName =

@@ -290,13 +290,12 @@ public:
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
-  WalkResult
-  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+  WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
     static_assert(std::is_base_of<StackFrame, T>::value,
                   "expected T derived from StackFrame");
     if (!callback)
       return WalkResult::skip();
-    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
       if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
         WalkResult result = callback(*ptr);
         if (result.wasInterrupted())

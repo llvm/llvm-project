@@ -176,6 +176,8 @@ namespace clang {
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
+    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
       // Empty type parameter list.
@@ -2016,8 +2018,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // For an expanded parameter pack, record the number of expansion types here
   // so that it's easier for deserialization to allocate the right amount of
   // memory.
-  Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
-  Record.push_back(!!TypeConstraint);
+  Record.push_back(D->hasPlaceholderTypeConstraint());
   if (D->isExpandedParameterPack())
     Record.push_back(D->getNumExpansionTypes());
 
@@ -2025,8 +2026,9 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
-  if (TypeConstraint)
-    Record.AddStmt(TypeConstraint);
+
+  if (D->hasPlaceholderTypeConstraint())
+    Record.AddStmt(D->getPlaceholderTypeConstraint());
 
   if (D->isExpandedParameterPack()) {
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
@@ -2256,6 +2258,16 @@ void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
   Code = serialization::DECL_OMP_CAPTUREDEXPR;
+}
+
+void ASTDeclWriter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_DECLARE;
 }
 
 //===----------------------------------------------------------------------===//

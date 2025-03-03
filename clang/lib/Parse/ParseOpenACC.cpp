@@ -981,7 +981,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyIn: {
       bool IsReadOnly = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::ReadOnly, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
                                      IsReadOnly,
                                      /*IsZero=*/false);
       break;
@@ -994,7 +994,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyOut: {
       bool IsZero = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::Zero, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
                                      /*IsReadOnly=*/false, IsZero);
       break;
     }
@@ -1002,7 +1002,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // If we're missing a clause-kind (or it is invalid), see if we can parse
       // the var-list anyway.
       OpenACCReductionOperator Op = ParseReductionOperator(*this);
-      ParsedClause.setReductionDetails(Op, ParseOpenACCVarList(ClauseKind));
+      ParsedClause.setReductionDetails(
+          Op, ParseOpenACCVarList(DirKind, ClauseKind));
       break;
     }
     case OpenACCClauseKind::Self:
@@ -1013,21 +1014,13 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       [[fallthrough]];
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::Host:
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
-                                     /*IsReadOnly=*/false, /*IsZero=*/false);
-      break;
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Link:
-      ParseOpenACCVarList(ClauseKind);
-      break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::UseDevice:
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
-                                     /*IsReadOnly=*/false, /*IsZero=*/false);
-      break;
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
@@ -1035,7 +1028,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Collapse: {
@@ -1362,7 +1355,8 @@ ExprResult Parser::ParseOpenACCBindClauseArgument() {
 /// - an array element
 /// - a member of a composite variable
 /// - a common block name between slashes (fortran only)
-Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCClauseKind CK) {
+Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCDirectiveKind DK,
+                                                      OpenACCClauseKind CK) {
   OpenACCArraySectionRAII ArraySections(*this);
 
   ExprResult Res = ParseAssignmentExpression();
@@ -1373,15 +1367,16 @@ Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCClauseKind CK) {
   if (!Res.isUsable())
     return {Res, OpenACCParseCanContinue::Can};
 
-  Res = getActions().OpenACC().ActOnVar(CK, Res.get());
+  Res = getActions().OpenACC().ActOnVar(DK, CK, Res.get());
 
   return {Res, OpenACCParseCanContinue::Can};
 }
 
-llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCClauseKind CK) {
+llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCDirectiveKind DK,
+                                                      OpenACCClauseKind CK) {
   llvm::SmallVector<Expr *> Vars;
 
-  auto [Res, CanContinue] = ParseOpenACCVar(CK);
+  auto [Res, CanContinue] = ParseOpenACCVar(DK, CK);
   if (Res.isUsable()) {
     Vars.push_back(Res.get());
   } else if (CanContinue == OpenACCParseCanContinue::Cannot) {
@@ -1392,7 +1387,7 @@ llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCClauseKind CK) {
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
 
-    auto [Res, CanContinue] = ParseOpenACCVar(CK);
+    auto [Res, CanContinue] = ParseOpenACCVar(DK, CK);
 
     if (Res.isUsable()) {
       Vars.push_back(Res.get());
@@ -1426,7 +1421,7 @@ void Parser::ParseOpenACCCacheVarList() {
 
   // ParseOpenACCVarList should leave us before a r-paren, so no need to skip
   // anything here.
-  ParseOpenACCVarList(OpenACCClauseKind::Invalid);
+  ParseOpenACCVarList(OpenACCDirectiveKind::Cache, OpenACCClauseKind::Invalid);
 }
 
 Parser::OpenACCDirectiveParseInfo
@@ -1523,8 +1518,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
                                                      DirInfo.StartLoc))
     return nullptr;
 
-  // TODO OpenACC: Do whatever decl parsing is required here.
-  return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective());
+  return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective(
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.EndLoc,
+      DirInfo.Clauses));
 }
 
 // Parse OpenACC Directive on a Statement.

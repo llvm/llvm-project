@@ -485,4 +485,23 @@ namespace IFD {
   }
   static_assert(test());
 }
+
+namespace AnonymousUnion {
+  struct A {
+    int x;
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int bb;
+  };
+
+  constexpr B return_init_all() {
+    B b = {.bb = 1};
+    b.a.x = 2;
+    return b;
+  }
+  static_assert(return_init_all().a.p == 7); // both-error {{}} \
+                                             // both-note {{read of member 'p' of union with no active member}}
+}
 #endif

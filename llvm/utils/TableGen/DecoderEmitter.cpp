@@ -60,7 +60,7 @@ enum SuppressLevel {
   SUPPRESSION_LEVEL2
 };
 
-cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
+static cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
     "suppress-per-hwmode-duplicates",
     cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
     cl::values(
@@ -681,7 +681,7 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
   for (FixupList::const_reverse_iterator I = Fixups.rbegin(), E = Fixups.rend();
        I != E; ++I) {
     // Calculate the distance from the byte following the fixup entry byte
-    // to the destination. The Target is calculated from after the 16-bit
+    // to the destination. The Target is calculated from after the 24-bit
     // NumToSkip entry itself, so subtract two  from the displacement here
     // to account for that.
     uint32_t FixupIdx = *I;

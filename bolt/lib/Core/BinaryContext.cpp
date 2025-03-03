@@ -2400,6 +2400,32 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
+BinaryFunction *BinaryContext::createInstructionPatch(
+    uint64_t Address, InstructionListType &Instructions, const Twine &Name) {
+  ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
+  assert(Section && "cannot get section for patching");
+  assert(Section->hasSectionRef() && Section->isText() &&
+         "can only patch input file code sections");
+
+  const uint64_t FileOffset =
+      Section->getInputFileOffset() + Address - Section->getAddress();
+
+  std::string PatchName = Name.str();
+  if (PatchName.empty()) {
+    // Assign unique name to the patch.
+    static uint64_t N = 0;
+    PatchName = "__BP_" + std::to_string(N++);
+  }
+
+  BinaryFunction *PBF = createInjectedBinaryFunction(PatchName);
+  PBF->setOutputAddress(Address);
+  PBF->setFileOffset(FileOffset);
+  PBF->setOriginSection(&Section.get());
+  PBF->addBasicBlock()->addInstructions(Instructions);
+
+  return PBF;
+}
+
 std::pair<size_t, size_t>
 BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   // Adjust branch instruction to match the current layout.

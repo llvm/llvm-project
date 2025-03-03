@@ -89,9 +89,9 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:   vp<[[VPTR4:%.+]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR3]]>, ir<%add>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR4]]>, ir<%add>.1
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>

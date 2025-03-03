@@ -8114,12 +8114,6 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getExternCContextDecl();
     break;
 
-  case PREDEF_DECL_MAKE_INTEGER_SEQ_ID:
-    if (Context.MakeIntegerSeqDecl)
-      return Context.MakeIntegerSeqDecl;
-    NewLoaded = Context.getMakeIntegerSeqDecl();
-    break;
-
   case PREDEF_DECL_CF_CONSTANT_STRING_ID:
     if (Context.CFConstantStringTypeDecl)
       return Context.CFConstantStringTypeDecl;
@@ -8132,17 +8126,13 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getCFConstantStringTagDecl();
     break;
 
-  case PREDEF_DECL_TYPE_PACK_ELEMENT_ID:
-    if (Context.TypePackElementDecl)
-      return Context.TypePackElementDecl;
-    NewLoaded = Context.getTypePackElementDecl();
+#define BuiltinTemplate(BTName)                                                \
+  case PREDEF_DECL##BTName##_ID:                                               \
+    if (Context.Decl##BTName)                                                  \
+      return Context.Decl##BTName;                                             \
+    NewLoaded = Context.get##BTName##Decl();                                   \
     break;
-
-  case PREDEF_DECL_COMMON_TYPE_ID:
-    if (Context.BuiltinCommonTypeDecl)
-      return Context.BuiltinCommonTypeDecl;
-    NewLoaded = Context.getBuiltinCommonTypeDecl();
-    break;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   case NUM_PREDEF_DECL_IDS:
     llvm_unreachable("Invalid decl ID");
@@ -10188,12 +10178,12 @@ void ASTReader::visitTopLevelModuleMaps(
 }
 
 void ASTReader::finishPendingActions() {
-  while (!PendingIdentifierInfos.empty() ||
-         !PendingDeducedFunctionTypes.empty() ||
-         !PendingDeducedVarTypes.empty() || !PendingDeclChains.empty() ||
-         !PendingMacroIDs.empty() || !PendingDeclContextInfos.empty() ||
-         !PendingUpdateRecords.empty() ||
-         !PendingObjCExtensionIvarRedeclarations.empty()) {
+  while (
+      !PendingIdentifierInfos.empty() || !PendingDeducedFunctionTypes.empty() ||
+      !PendingDeducedVarTypes.empty() || !PendingIncompleteDeclChains.empty() ||
+      !PendingDeclChains.empty() || !PendingMacroIDs.empty() ||
+      !PendingDeclContextInfos.empty() || !PendingUpdateRecords.empty() ||
+      !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -10240,6 +10230,13 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
+
+    // For each decl chain that we wanted to complete while deserializing, mark
+    // it as "still needs to be completed".
+    for (unsigned I = 0; I != PendingIncompleteDeclChains.size(); ++I) {
+      markIncompleteDeclChain(PendingIncompleteDeclChains[I]);
+    }
+    PendingIncompleteDeclChains.clear();
 
     // Load pending declaration chains.
     for (unsigned I = 0; I != PendingDeclChains.size(); ++I)
@@ -10478,12 +10475,6 @@ void ASTReader::finishPendingActions() {
   for (auto *ND : PendingMergedDefinitionsToDeduplicate)
     getContext().deduplicateMergedDefinitonsFor(ND);
   PendingMergedDefinitionsToDeduplicate.clear();
-
-  // For each decl chain that we wanted to complete while deserializing, mark
-  // it as "still needs to be completed".
-  for (Decl *D : PendingIncompleteDeclChains)
-    markIncompleteDeclChain(D);
-  PendingIncompleteDeclChains.clear();
 }
 
 void ASTReader::diagnoseOdrViolations() {
@@ -12524,7 +12515,7 @@ SmallVector<Expr *> ASTRecordReader::readOpenACCVarList() {
   unsigned NumVars = readInt();
   llvm::SmallVector<Expr *> VarList;
   for (unsigned I = 0; I < NumVars; ++I)
-    VarList.push_back(readSubExpr());
+    VarList.push_back(readExpr());
   return VarList;
 }
 
@@ -12790,10 +12781,20 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCVectorClause::Create(getContext(), BeginLoc, LParenLoc,
                                        VectorExpr, EndLoc);
   }
+  case OpenACCClauseKind::Link: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCLinkClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
+  }
+  case OpenACCClauseKind::DeviceResident: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDeviceResidentClause::Create(getContext(), BeginLoc,
+                                               LParenLoc, VarList, EndLoc);
+  }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

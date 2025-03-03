@@ -327,6 +327,8 @@ private:
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIDerivedType(const DIDerivedType *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDISubrangeType(const DISubrangeType *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDICompositeType(const DICompositeType *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDISubroutineType(const DISubroutineType *N,
@@ -977,8 +979,15 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
       } else if (Attr.isIntAttribute()) {
         Record.push_back(1);
-        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        Record.push_back(Attr.getValueAsInt());
+        Attribute::AttrKind Kind = Attr.getKindAsEnum();
+        Record.push_back(getAttrKindEncoding(Kind));
+        if (Kind == Attribute::Memory) {
+          // Version field for upgrading old memory effects.
+          const uint64_t Version = 1;
+          Record.push_back((Version << 56) | Attr.getValueAsInt());
+        } else {
+          Record.push_back(Attr.getValueAsInt());
+        }
       } else if (Attr.isStringAttribute()) {
         StringRef Kind = Attr.getKindAsString();
         StringRef Val = Attr.getValueAsString();
@@ -1927,6 +1936,27 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
     Record.push_back(0);
 
   Stream.EmitRecord(bitc::METADATA_DERIVED_TYPE, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDISubrangeType(const DISubrangeType *N,
+                                              SmallVectorImpl<uint64_t> &Record,
+                                              unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(N->getSizeInBits());
+  Record.push_back(N->getAlignInBits());
+  Record.push_back(N->getFlags());
+  Record.push_back(VE.getMetadataOrNullID(N->getBaseType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawLowerBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawUpperBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawStride()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBias()));
+
+  Stream.EmitRecord(bitc::METADATA_SUBRANGE_TYPE, Record, Abbrev);
   Record.clear();
 }
 

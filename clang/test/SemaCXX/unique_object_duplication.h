@@ -99,6 +99,9 @@ inline void has_thread_local() {
   thread_local int disallowedThreadLocal = 0; // hidden-warning {{'disallowedThreadLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 }
 
+// Functions themselves are always immutable, so referencing them is okay
+inline auto& allowedFunctionReference = has_static_locals_external;
+
 } // namespace StaticLocalTest
 
 /******************************************************************************
@@ -155,3 +158,24 @@ namespace GlobalTest {
 
   inline float Test::disallowedStaticMember2 = 2.3; // hidden-warning {{'disallowedStaticMember2' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 } // namespace GlobalTest
+
+/******************************************************************************
+ * Case three: Inside templates
+ ******************************************************************************/
+
+namespace TemplateTest {
+
+// We never warn inside templates because it's frequently infeasible to actually
+// fix the warning.
+
+template <typename T>
+int allowedTemplate1 = 0;
+
+template int allowedTemplate1<int>;
+
+template <typename T>
+inline int allowedTemplate2 = 0;
+
+template int allowedTemplate2<int>;
+
+} // namespace TemplateTest

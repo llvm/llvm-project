@@ -1176,6 +1176,10 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   for (AddrLabelExpr *ALE : Fn->AddrLabels)
     Diag(ALE->getBeginLoc(), diag::err_coro_invalid_addr_of_label);
 
+  // Coroutines always return a handle, so they can't be [[noreturn]].
+  if (FD->isNoReturn())
+    Diag(FD->getLocation(), diag::warn_noreturn_coroutine) << FD;
+
   CoroutineStmtBuilder Builder(*this, *FD, *Fn, Body);
   if (Builder.isInvalid() || !Builder.buildStatements())
     return FD->setInvalidDecl();

@@ -2548,9 +2548,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     }
   }
 
-  if (DKind == OMPD_tile && !SeenClauses[unsigned(OMPC_sizes)]) {
+  if ((DKind == OMPD_tile || DKind == OMPD_stripe) &&
+      !SeenClauses[unsigned(OMPC_sizes)]) {
     Diag(Loc, diag::err_omp_required_clause)
-        << getOpenMPDirectiveName(OMPD_tile) << "sizes";
+        << getOpenMPDirectiveName(DKind) << "sizes";
   }
 
   StmtResult AssociatedStmt;
@@ -2881,6 +2882,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           StmtCtx,
           /*ReadDirectiveWithinMetadirective=*/true);
       break;
+    }
+    // If no match is found and no otherwise clause is present, skip
+    // OMP5.2 Chapter 7.4: If no otherwise clause is specified the effect is as
+    // if one was specified without an associated directive variant.
+    if (BestIdx == -1 && Idx == 1) {
+      assert(Tok.is(tok::annot_pragma_openmp_end) &&
+             "Expecting the end of the pragma here");
+      ConsumeAnnotationToken();
+      return StmtEmpty();
     }
     break;
   }

@@ -218,7 +218,7 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
-  unsigned Reg = Intervals[0]->reg();
+  Register Reg = Intervals[0]->reg();
   for (MachineRegisterInfo::reg_nodbg_iterator I = MRI->reg_nodbg_begin(Reg),
        E = MRI->reg_nodbg_end(); I != E; ) {
     MachineOperand &MO = *I++;

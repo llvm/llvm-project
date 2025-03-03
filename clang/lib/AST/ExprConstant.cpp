@@ -11172,6 +11172,11 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   QualType EltTy = VT->getElementType();
   SmallVector<APValue, 4> Elements;
 
+  // MFloat8 type doesn't have constants and thus constant folding
+  // is impossible.
+  if (EltTy->isMFloat8Type())
+    return false;
+
   // The number of initializers can be less than the number of
   // vector elements. For OpenCL, this can be due to nested vector
   // initialization. For GCC compatibility, missing trailing elements
@@ -15025,6 +15030,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -15903,6 +15909,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -17251,7 +17258,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
-  case Expr::ResolvedUnexpandedPackExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {

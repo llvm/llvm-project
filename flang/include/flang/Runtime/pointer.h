@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_POINTER_H_
 #define FORTRAN_RUNTIME_POINTER_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {

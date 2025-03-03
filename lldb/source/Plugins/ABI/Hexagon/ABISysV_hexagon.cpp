@@ -1195,11 +1195,7 @@ ValueObjectSP ABISysV_hexagon::GetReturnValueObjectImpl(
 
 // called when we are on the first instruction of a new function for hexagon
 // the return address is in RA (R31)
-bool ABISysV_hexagon::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindGeneric);
-  unwind_plan.SetReturnAddressRegister(LLDB_REGNUM_GENERIC_RA);
-
+UnwindPlanSP ABISysV_hexagon::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value
@@ -1209,17 +1205,16 @@ bool ABISysV_hexagon::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   // The previous PC is in the LR
   row->SetRegisterLocationToRegister(LLDB_REGNUM_GENERIC_PC,
                                      LLDB_REGNUM_GENERIC_RA, true);
-  unwind_plan.AppendRow(row);
 
-  unwind_plan.SetSourceName("hexagon at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(row);
+  plan_sp->SetReturnAddressRegister(LLDB_REGNUM_GENERIC_RA);
+  plan_sp->SetSourceName("hexagon at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_hexagon::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindGeneric);
-
+UnwindPlanSP ABISysV_hexagon::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
   uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
@@ -1233,12 +1228,13 @@ bool ABISysV_hexagon::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -4, true);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("hexagon default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("hexagon default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 /*

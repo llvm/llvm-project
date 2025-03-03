@@ -882,7 +882,8 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
 
     void tooManyUses() override { Captured = true; }
 
-    bool captured(const Use *U) override {
+    Action captured(const Use *U, UseCaptureInfo CI) override {
+      // TODO(captures): Use UseCaptureInfo.
       auto *ICmp = dyn_cast<ICmpInst>(U->getUser());
       // We need to check that U is based *only* on the alloca, and doesn't
       // have other contributions from a select/phi operand.
@@ -892,11 +893,11 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
         ICmps[ICmp] |= 1u << U->getOperandNo();
-        return false;
+        return Continue;
       }
 
       Captured = true;
-      return true;
+      return Stop;
     }
   };
 
@@ -5636,6 +5637,11 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
       return false;
     return std::nullopt;
   };
+  // Remove samesign here since it is illegal to keep it when we speculatively
+  // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
+  // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
+  // -46, -32)`. `X` is allowed to be non-negative here.
+  Pred = static_cast<CmpInst::Predicate>(Pred);
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())

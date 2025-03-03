@@ -143,12 +143,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe,
+              VPScalarPHIRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-          return VerifyEVLUse(*W,
-                              Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-        })
         .Case<VPScalarCastRecipe>(
             [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {

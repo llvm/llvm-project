@@ -94,6 +94,7 @@ BT::BitMask HexagonEvaluator::mask(Register Reg, unsigned Sub) const {
   bool IsSubLo = (Sub == HRI.getHexagonSubRegIndex(RC, Hexagon::ps_sub_lo));
   switch (ID) {
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::DoubleRegs_with_isub_hi_in_IntRegsLow8RegClassID:
     case Hexagon::HvxWRRegClassID:
     case Hexagon::HvxVQRRegClassID:
       return IsSubLo ? BT::BitMask(0, RW-1)
@@ -139,6 +140,7 @@ const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(
 
   switch (RC.getID()) {
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::DoubleRegs_with_isub_hi_in_IntRegsLow8RegClassID:
       return Hexagon::IntRegsRegClass;
     case Hexagon::HvxWRRegClassID:
       return Hexagon::HvxVRRegClass;

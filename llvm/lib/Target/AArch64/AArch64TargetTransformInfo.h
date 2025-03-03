@@ -48,6 +48,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
+  static const FeatureBitset InlineInverseFeatures;
+
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
 
@@ -422,6 +424,15 @@ public:
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                              std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *ValTy,
+                                           FastMathFlags FMF,
+                                           TTI::TargetCostKind CostKind);
+
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,

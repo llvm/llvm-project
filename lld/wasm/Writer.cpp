@@ -1081,7 +1081,12 @@ void Writer::combineOutputSegments() {
     return;
   OutputSegment *combined = make<OutputSegment>(".data");
   combined->startVA = segments[0]->startVA;
+  std::vector<OutputSegment *> newSegments = {combined};
   for (OutputSegment *s : segments) {
+    if (!s->requiredInBinary()) {
+      newSegments.push_back(s);
+      continue;
+    }
     bool first = true;
     for (InputChunk *inSeg : s->inputSegments) {
       if (first)
@@ -1100,7 +1105,7 @@ void Writer::combineOutputSegments() {
     }
   }
 
-  segments = {combined};
+  segments = newSegments;
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {

@@ -208,3 +208,13 @@
 // RUN:     -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHK-SYNTAX-ONLY-ARGS %s
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu"{{.*}}"-fsyntax-only"
 // CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-unknown-linux"{{.*}}"-fsyntax-only"
+
+//
+// Ensure `-foffload-lto` is forwarded properly.
+//
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-FULL %s
+// CHK-DEVICE-LTO-FULL: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=full"
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -foffload-lto=thin %s 2>&1 | FileCheck -check-prefix=CHK-DEVICE-LTO-THIN %s
+// CHK-DEVICE-LTO-THIN: clang-linker-wrapper{{.*}} "--device-compiler=powerpc64le-ibm-linux-gnu=-flto=thin"

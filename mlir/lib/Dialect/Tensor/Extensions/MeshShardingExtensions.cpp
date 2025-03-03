@@ -22,10 +22,11 @@ using namespace mlir::mesh;
 
 namespace {
 
-// Sharding of tensor.empty
-struct EmptyOpShardingInterface
-    : public ShardingInterface::ExternalModel<EmptyOpShardingInterface,
-                                              tensor::EmptyOp> {
+// Sharding of tensor.empty/tensor.splat
+template <typename OpTy>
+struct CreatorOpShardingInterface
+    : public ShardingInterface::ExternalModel<CreatorOpShardingInterface<OpTy>,
+                                              OpTy> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto ndims = mlir::cast<ShapedType>(op->getResult(0).getType()).getRank();
     return SmallVector<utils::IteratorType>(ndims,
@@ -38,7 +39,9 @@ struct EmptyOpShardingInterface
     auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
-    return {AffineMap::getMultiDimIdentityMap(type.getRank(), ctx)};
+    return SmallVector<AffineMap>(
+        op->getNumOperands() + op->getNumResults(),
+        {AffineMap::getMultiDimIdentityMap(type.getRank(), ctx)});
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
@@ -82,8 +85,7 @@ struct EmptyOpShardingInterface
           newOperands.emplace_back(spmdizedOperands[++currOldOprndNum]);
         }
       }
-      newOp =
-          builder.create<tensor::EmptyOp>(op->getLoc(), shardType, newOperands);
+      newOp = builder.create<OpTy>(op->getLoc(), shardType, newOperands);
       spmdizationMap.map(op->getResult(0), newOp->getResult(0));
     } else {
       // `clone` will populate the mapping of old to new results.
@@ -100,6 +102,9 @@ void mlir::tensor::registerShardingInterfaceExternalModels(
     DialectRegistry &registry) {
 
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
-    EmptyOp::template attachInterface<EmptyOpShardingInterface>(*ctx);
+    EmptyOp::template attachInterface<CreatorOpShardingInterface<EmptyOp>>(
+        *ctx);
+    SplatOp::template attachInterface<CreatorOpShardingInterface<SplatOp>>(
+        *ctx);
   });
 }

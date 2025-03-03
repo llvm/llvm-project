@@ -3830,7 +3830,8 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
       .addConstantPoolIndex(CPI, 0, OpFlag);
     MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                       TII.get(Opc), ResultReg);
-    addRegReg(MIB, AddrReg, false, PICBase, false);
+    addRegReg(MIB, AddrReg, false, X86::NoSubRegister, PICBase, false,
+              X86::NoSubRegister);
     MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getConstantPool(*FuncInfo.MF),
         MachineMemOperand::MOLoad, DL.getPointerSize(), Alignment);

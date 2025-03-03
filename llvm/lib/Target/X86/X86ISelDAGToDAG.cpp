@@ -6717,6 +6717,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  case X86ISD::POP_FROM_X87_REG: {
+    SDValue Chain = Node->getOperand(0);
+    Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+    SDValue Glue;
+    if (Node->getNumValues() == 3)
+      Glue = Node->getOperand(2);
+    SDValue Copy =
+        CurDAG->getCopyFromReg(Chain, dl, Reg, Node->getValueType(0), Glue);
+    ReplaceNode(Node, Copy.getNode());
+    return;
+  }
   }
 
   SelectCode(Node);

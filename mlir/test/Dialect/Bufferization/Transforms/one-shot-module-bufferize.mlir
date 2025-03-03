@@ -796,3 +796,17 @@ func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
   return %1 : tensor<5xf32>
 }
 
+
+// -----
+
+// CHECK-LABEL: @outer_func({{.+}}: memref<
+func.func @outer_func(%t: tensor<5xf32>) -> tensor<5xf32> {
+  return %t : tensor<5xf32>
+}
+
+module @inner_module {
+  // CHECK: @inner_func({{.+}}: tensor<5xf32> {bufferization.writable = false})
+  func.func @inner_func(%t: tensor<5xf32> {bufferization.writable = false}) -> tensor<5xf32> {
+    return %t : tensor<5xf32>
+  }
+}

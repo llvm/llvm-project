@@ -738,9 +738,12 @@ void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 // no valid assigned class, set register LLT type and class according to the
 // SPIR-V type.
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force) {
-  setRegClassType(Reg, GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
-                  MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force) {
+  setRegClassType(Reg,
+                  GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR),
+                  GR, MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
 }
 
 // Create a virtual register and assign SPIR-V type to the register. Set
@@ -764,10 +767,12 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a SPIR-V type, virtual register and assign SPIR-V type to the
 // register. Set register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder) {
-  return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
-                               MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
+  return createVirtualRegister(
+      GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR), GR,
+      MIRBuilder);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.
@@ -793,6 +798,38 @@ bool isSpvIntrinsic(const Value *Arg) {
       if (F->getName().starts_with("llvm.spv."))
         return true;
   return false;
+}
+
+// Function to create continued instructions for SPV_INTEL_long_composites
+// extension
+void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                                 unsigned MinWC, unsigned ContinuedOpcode,
+                                 ArrayRef<Register> Args,
+                                 Register ReturnRegister, Register TypeID) {
+  constexpr unsigned MaxWordCount = UINT16_MAX;
+  const size_t NumElements = Args.size();
+  size_t MaxNumElements = MaxWordCount - MinWC;
+  size_t SPIRVStructNumElements = NumElements;
+
+  if (NumElements > MaxNumElements) {
+    // Do adjustments for continued instructions which always had only one
+    // minumum word count.
+    SPIRVStructNumElements = MaxNumElements;
+    MaxNumElements = MaxWordCount - 1;
+  }
+
+  auto MIB =
+      MIRBuilder.buildInstr(Opcode).addDef(ReturnRegister).addUse(TypeID);
+
+  for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+    MIB.addUse(Args[I]);
+
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += MaxNumElements) {
+    auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
+    for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+      MIB.addUse(Args[J]);
+  }
 }
 
 } // namespace llvm

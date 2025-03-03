@@ -295,7 +295,7 @@ void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
       bool BackwardEdgeCreated = false;
       for (Instruction *ISrc : SrcIList) {
         for (Instruction *IDst : DstIList) {
-          auto D = DI.depends(ISrc, IDst, true);
+          auto D = DI.depends(ISrc, IDst);
           if (!D)
             continue;
 

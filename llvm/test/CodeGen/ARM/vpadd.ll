@@ -368,7 +368,7 @@ define void @addCombineToVPADDL_u8(ptr %cbcr, ptr %X) nounwind ssp {
 define void @addCombineToVPADDL_u8_early_zext(ptr %cbcr, ptr %X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_u8_early_zext:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
+; CHECK-NEXT:    vld1.8 {d16}, [r0:64]
 ; CHECK-NEXT:    vmovl.u8 q8, d16
 ; CHECK-NEXT:    vpadd.i16 d16, d16, d17
 ; CHECK-NEXT:    vstr d16, [r1]

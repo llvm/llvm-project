@@ -737,15 +737,25 @@ define i64 @v_bswap_i48(i64 %src) {
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_bswap_i48:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v0, 0, v1, 0x10203
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_alignbit_b32 v0, v2, v0, 16
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-REAL16-LABEL: v_bswap_i48:
+; GFX11-REAL16:       ; %bb.0:
+; GFX11-REAL16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-REAL16-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v1, 0, v1, 0x10203
+; GFX11-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-REAL16-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
+; GFX11-REAL16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-REAL16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: v_bswap_i48:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, 0, v0, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, 0, v1, 0x10203
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-FAKE16-NEXT:    v_alignbit_b32 v0, v2, v0, 16
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc i64 %src to i48
   %bswap = call i48 @llvm.bswap.i48(i48 %trunc)
   %zext = zext i48 %bswap to i64

@@ -23,9 +23,11 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
+#include <clc/math/clc_sqrt.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
@@ -48,7 +50,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_hypot(float x, float y) {
   float fi_exp = as_float((-xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fx = as_float(ux) * fi_exp;
   float fy = as_float(uy) * fi_exp;
-  retval = sqrt(__clc_mad(fx, fx, fy * fy)) * fx_exp;
+  retval = __clc_sqrt(__clc_mad(fx, fx, fy * fy)) * fx_exp;
 
   retval = ux > PINFBITPATT_SP32 | uy == 0 ? as_float(ux) : retval;
   retval = ux == PINFBITPATT_SP32 | uy == PINFBITPATT_SP32
@@ -80,7 +82,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_hypot(double x, double y) {
   double ay = y * preadjust;
 
   // The post adjust may overflow, but this can't be avoided in any case
-  double r = sqrt(fma(ax, ax, ay * ay)) * postadjust;
+  double r = __clc_sqrt(__clc_fma(ax, ax, ay * ay)) * postadjust;
 
   // If the difference in exponents between x and y is large
   double s = x + y;

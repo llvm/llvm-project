@@ -682,17 +682,17 @@ void RuntimeDyldELF::resolveLoongArch64Branch(unsigned SectionID,
   uint64_t Offset = RelI->getOffset();
   unsigned RelType = RelI->getType();
   // Look for an existing stub.
-  StubMap::const_iterator i = Stubs.find(Value);
-  if (i != Stubs.end()) {
+  auto [It, Inserted] = Stubs.try_emplace(Value);
+  if (!Inserted) {
     resolveRelocation(Section, Offset,
-                      (uint64_t)Section.getAddressWithOffset(i->second),
+                      (uint64_t)Section.getAddressWithOffset(It->second),
                       RelType, 0);
     LLVM_DEBUG(dbgs() << " Stub function found\n");
     return;
   }
   // Create a new stub function.
   LLVM_DEBUG(dbgs() << " Create a new stub function\n");
-  Stubs[Value] = Section.getStubOffset();
+  It->second = Section.getStubOffset();
   uint8_t *StubTargetAddr =
       createStubFunction(Section.getAddressWithOffset(Section.getStubOffset()));
   RelocationEntry LU12I_W(SectionID, StubTargetAddr - Section.getAddress(),

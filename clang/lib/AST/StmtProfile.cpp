@@ -1007,6 +1007,10 @@ void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
@@ -2283,10 +2287,6 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
     ID.AddInteger(0);
   }
 }
-void StmtProfiler::VisitResolvedUnexpandedPackExpr(
-    const ResolvedUnexpandedPackExpr *S) {
-  VisitExpr(S);
-}
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
   VisitExpr(E);
@@ -2550,6 +2550,16 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
 void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
   VisitClauseWithVarList(Clause);
 }
+
+void OpenACCClauseProfiler::VisitLinkClause(const OpenACCLinkClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
 void OpenACCClauseProfiler::VisitCopyInClause(
     const OpenACCCopyInClause &Clause) {
   VisitClauseWithVarList(Clause);

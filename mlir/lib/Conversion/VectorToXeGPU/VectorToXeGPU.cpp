@@ -329,7 +329,3 @@ void mlir::populateVectorToXeGPUConversionPatterns(
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
                StoreLowering>(patterns.getContext());
 }
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
-}

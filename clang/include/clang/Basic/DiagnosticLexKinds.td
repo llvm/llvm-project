@@ -392,7 +392,10 @@ def pp_macro_not_used : Warning<"macro is not used">, DefaultIgnore,
   InGroup<DiagGroup<"unused-macros">>;
 def warn_pp_undef_identifier : Warning<
   "%0 is not defined, evaluates to 0">,
-  InGroup<DiagGroup<"undef">>, DefaultIgnore;
+  InGroup<UndefinedIdentifier>, DefaultIgnore;
+def warn_pp_undef_true_identifier : Warning<
+  "'true' is not defined, evaluates to 0">,
+  InGroup<UndefinedTrueIdentifier>;
 def warn_pp_undef_prefix : Warning<
   "%0 is not defined, evaluates to 0">,
   InGroup<DiagGroup<"undef-prefix">>, DefaultIgnore;
@@ -917,6 +920,8 @@ def warn_mmap_redundant_export_as : Warning<
   InGroup<PrivateModule>;
 def err_mmap_submodule_export_as : Error<
   "only top-level modules can be re-exported as public">;
+def err_mmap_qualified_export_as : Error<
+  "a module can only be re-exported as another top-level module">;
 
 def warn_quoted_include_in_framework_header : Warning<
   "double-quoted include \"%0\" in framework header, "

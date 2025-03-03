@@ -2203,6 +2203,7 @@ public:
   void
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
+  void VisitOMPStripeDirective(const OMPStripeDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
@@ -2904,6 +2905,13 @@ void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitLinkClause(const OpenACCLinkClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  VisitVarList(C);
+}
 void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
   VisitVarList(C);
 }
@@ -3331,6 +3339,10 @@ void EnqueueVisitor::VisitOMPLoopTransformationDirective(
 }
 
 void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPStripeDirective(const OMPStripeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -6286,6 +6298,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPSimdDirective");
   case CXCursor_OMPTileDirective:
     return cxstring::createRef("OMPTileDirective");
+  case CXCursor_OMPStripeDirective:
+    return cxstring::createRef("OMPStripeDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
   case CXCursor_OMPReverseDirective:
@@ -7242,6 +7256,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::OpenACCDeclare:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

@@ -22,7 +22,7 @@ config.host_cxx = "@CMAKE_CXX_COMPILER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_zstd = @LLVM_ENABLE_ZSTD@
-config.clang_objc_rewriter = "@CLANG_ENABLE_OBJC_REWRITER@" == "ON"
+config.clang_objc_rewriter = @CLANG_ENABLE_OBJC_REWRITER@
 config.clang_default_pie_on_linux = @CLANG_DEFAULT_PIE_ON_LINUX@
 config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
 config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@

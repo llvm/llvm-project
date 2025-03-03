@@ -41,8 +41,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -171,11 +169,6 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::Update() {
   m_finish = finish.get();
 
   return ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::

@@ -30,6 +30,10 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator, Pure])> {
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[]>,
+  ];
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";

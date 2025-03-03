@@ -161,7 +161,7 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
 Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register::virtReg2Index(Unit);
+      OS << '%' << Register(Unit).virtRegIndex();
     } else {
       OS << printRegUnit(Unit, TRI);
     }
