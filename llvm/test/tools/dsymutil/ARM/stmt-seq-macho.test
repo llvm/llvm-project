@@ -1,0 +1,74 @@
+RUN: dsymutil --flat -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/stmt_seq/stmt_seq_macho.exe -o %t.stmt_seq_macho.dSYM
+RUN: llvm-dwarfdump --debug-info --debug-line -v %t.stmt_seq_macho.dSYM | sort | FileCheck %s -check-prefix=CHECK_DSYM
+
+# CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET1:(0x[0-9a-f]+)]])
+# CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET2:(0x[0-9a-f]+)]])
+# CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET3:(0x[0-9a-f]+)]])
+# CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET4:(0x[0-9a-f]+)]])
+
+# CHECK_DSYM: [[OFFSET1]]: 00 DW_LNE_set_address
+# CHECK_DSYM: [[OFFSET2]]: 00 DW_LNE_set_address
+# CHECK_DSYM: [[OFFSET3]]: 00 DW_LNE_set_address
+# CHECK_DSYM: [[OFFSET4]]: 00 DW_LNE_set_address
+
+
+########  Generate stmt_seq_macho.exe & stmt_seq_macho.o via script:  ##########
+# ------------------------------------------------------------------------------
+#!/bin/bash
+TOOLCHAIN=/path/to/llvm/bin
+
+# ------------------------------------------------------------------------------
+# Create the stmt_seq_macho.cpp source file
+# ------------------------------------------------------------------------------
+cat > stmt_seq_macho.cpp << 'EOF'
+#define ATTRIB extern "C" __attribute__((noinline))
+
+ATTRIB int function3_copy1(int a) {
+    int b = a + 3;
+    return b + 1;
+}
+ 
+ATTRIB int function2_copy1(int a) {
+    return a - 22;
+}
+ 
+ATTRIB int function3_copy2(int a) {
+    int b = a + 3;
+    return b + 1;
+}
+
+ATTRIB int function2_copy2(int a) {
+    int result = a - 22;
+    return result;
+}
+ 
+int main() {
+    int sum = 0;
+    sum += function2_copy2(3);
+    sum += function3_copy2(41);
+    sum += function2_copy1(11);
+    return sum;
+}
+EOF
+
+"$TOOLCHAIN/clang" \
+  --target=arm64-apple-macos11 \
+  -c \
+  -g \
+  -gdwarf-4 \
+  -fno-unwind-tables \
+  -mllvm -emit-func-debug-line-table-offsets \
+  -fno-exceptions \
+  -mno-outline \
+  -Oz \
+  stmt_seq_macho.cpp \
+  -o stmt_seq_macho.o
+
+"$TOOLCHAIN/ld64.lld" \
+  -arch arm64 \
+  -platform_version macos 11.0.0 11.0.0 \
+  -o stmt_seq_macho.exe \
+  stmt_seq_macho.o \
+  -dead_strip \
+  --icf=all \
+  --keep-icf-stabs
