@@ -720,23 +720,6 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                : isReturn(Func.disassembleInstructionAtOffset(Offset));
   };
 
-  // Returns whether \p Offset in \p Func may be a call continuation excluding
-  // entry points and landing pads.
-  auto checkCallCont = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    // No call continuation at a function start.
-    if (!Offset)
-      return false;
-
-    // FIXME: support BAT case where the function might be in empty state
-    // (split fragments declared non-simple).
-    if (!Func.hasCFG())
-      return false;
-
-    // The offset should not be an entry point or a landing pad.
-    const BinaryBasicBlock *ContBB = Func.getBasicBlockAtOffset(Offset);
-    return ContBB && !ContBB->isEntryPoint() && !ContBB->isLandingPad();
-  };
-
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
@@ -749,35 +732,26 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
 
     Addr -= Func->getAddress();
 
-    bool IsRetOrCallCont =
-        IsFrom ? checkReturn(*Func, Addr) : checkCallCont(*Func, Addr);
+    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     BinaryFunction *ParentFunc = getBATParentFunction(*Func);
     if (!ParentFunc)
-      return std::pair{Func, IsRetOrCallCont};
+      return std::pair{Func, IsRet};
 
     if (IsFrom)
       NumColdSamples += Count;
 
-    return std::pair{ParentFunc, IsRetOrCallCont};
+    return std::pair{ParentFunc, IsRet};
   };
 
-  uint64_t ToOrig = To;
   auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, IsCallCont] = handleAddress(To, /*IsFrom*/ false);
+  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
 
-  // Record call to continuation trace.
-  if (NeedsConvertRetProfileToCallCont && FromFunc != ToFunc &&
-      (IsReturn || IsCallCont)) {
-    LBREntry First{ToOrig - 1, ToOrig - 1, false};
-    LBREntry Second{ToOrig, ToOrig, false};
-    return doTrace(First, Second, Count);
-  }
   // Ignore returns.
   if (IsReturn)
     return true;
@@ -871,17 +845,23 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
 
   BinaryContext &BC = BF.getBinaryContext();
 
-  if (!BF.isSimple())
-    return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
-
   // Offsets of the trace within this function.
   const uint64_t From = FirstLBR.To - BF.getAddress();
   const uint64_t To = SecondLBR.From - BF.getAddress();
 
   if (From > To)
     return std::nullopt;
+
+  // Accept fall-throughs inside pseudo functions (PLT/thunks). Such functions
+  // are marked as ignored and so lack CFG, which means fallthroughs in them are
+  // reported as mismatching traces which they are not.
+  if (BF.isPseudo())
+    return Branches;
+
+  if (BF.empty())
+    return std::nullopt;
+
+  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -1229,13 +1209,10 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   // return profile into call to continuation fall-through.
   auto Type = AggregatedLBREntry::BRANCH;
   if (TypeOrErr.get() == "B") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
-    NeedsConvertRetProfileToCallCont = true;
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
   } else if (TypeOrErr.get() == "T") {
     // Trace is expanded into B and [Ff]
