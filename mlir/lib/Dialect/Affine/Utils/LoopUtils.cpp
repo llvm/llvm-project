@@ -2332,16 +2332,20 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
       memref = storeOp.getMemRef();
       memrefType = storeOp.getMemRefType();
     }
-    // Neither load nor a store op.
+    // Not an affine.load/store op.
     if (!memref)
       return;
 
-    auto memorySpaceAttr =
-        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
     if ((filterMemRef.has_value() && filterMemRef != memref) ||
-        (memorySpaceAttr &&
+        (isa_and_nonnull<IntegerAttr>(memrefType.getMemorySpace()) &&
          memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
       return;
+
+    if (!memref.getParentRegion()->isAncestor(block->getParent())) {
+      LLVM_DEBUG(llvm::dbgs() << "memref definition is inside of the depth at "
+                                 "which copy-in/copy-out would happen\n");
+      return;
+    }
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());

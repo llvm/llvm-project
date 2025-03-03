@@ -1,0 +1,6 @@
+# REQUIRES x86_64-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=fast -print-pipeline-passes %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=greedy -print-pipeline-passes %s 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY
+
+# CHECK: regallocfast
+# CHECK-GREEDY: greedy<all>
