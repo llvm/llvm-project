@@ -1121,6 +1121,7 @@ Experimental extensions
     svukte               0.3
     xqcia                0.2
     xqciac               0.3
+    xqcibm               0.4
     xqcicli              0.2
     xqcicm               0.2
     xqcics               0.2
