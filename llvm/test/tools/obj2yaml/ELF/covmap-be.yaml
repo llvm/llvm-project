@@ -1,8 +1,15 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: obj2yaml %t.o > %t.plain.yaml
 # RUN: obj2yaml --covmap-raw %t.o > %t.raw.yaml
+# RUN: obj2yaml --covmap --covmap-raw %t.o > %t.mixed.yaml
+# RUN: obj2yaml --covmap --covmap-dloc %t.o > %t.dloc.yaml
+# RUN: obj2yaml --covmap %t.o > %t.covmap.yaml
+# RUN: sed -E '/^(#.*)?$/d' %s | diff %t.covmap.yaml -
 # RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
 # RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.mixed.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.dloc.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.covmap.yaml -o - | cmp %t.o -
 
 # FIXME: This is synthetically created. s/ELFDATA2LSB/ELF2DATAMSB/ s/EM_X86_64/EM_PPC64/
 --- !ELF

@@ -24,6 +24,7 @@
 #define LLVM_OBJECTYAML_COVMAP_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/Endian.h"
@@ -34,13 +35,66 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace llvm {
+class InstrProfSymtab;
 class raw_ostream;
 } // namespace llvm
 
 namespace llvm::coverage::yaml {
+
+/// This works like vector container but can be replaced with
+/// MutableArrayRef. See also SequenceTraits<VectorOrRef>.
+template <typename T, typename Vec = std::vector<T>> class VectorOrRef {
+  using Ref = MutableArrayRef<T>;
+
+  /// Holds vector type initially.
+  std::variant<Vec, Ref> Array;
+
+public:
+  // FIXME: Iterator impl is minimal easy.
+  using iterator = T *;
+
+  iterator begin() {
+    if (auto *V = std::get_if<Vec>(&Array))
+      return &V->front();
+    return &std::get<Ref>(Array).front();
+  }
+
+  iterator end() {
+    if (auto *V = std::get_if<Vec>(&Array))
+      return &V->back() + 1;
+    return &std::get<Ref>(Array).back() + 1;
+  }
+
+  size_t size() const {
+    if (const auto *V = std::get_if<Vec>(&Array))
+      return V->size();
+    return std::get<Ref>(Array).size();
+  }
+
+  T &operator[](int Idx) {
+    if (auto *V = std::get_if<Vec>(&Array))
+      return (*V)[Idx];
+    return std::get<Ref>(Array)[Idx];
+  }
+
+  void resize(size_t Size) { std::get<Vec>(Array).resize(Size); }
+
+  VectorOrRef() = default;
+
+  /// Initialize with MutableArrayRef.
+  VectorOrRef(Ref &&Tmp) : Array(std::move(Tmp)) {}
+};
+
+/// Options for Decoder.
+struct DecoderParam {
+  bool Detailed; ///< Generate and show processed records.
+  bool Raw;      ///< Show raw data oriented records.
+  bool dLoc;     ///< Show raw dLoc (differential Loc).
+};
 
 struct DecoderContext;
 
@@ -143,6 +197,9 @@ struct FileRecsTy {
   void mapping(llvm::yaml::IO &IO);
 };
 
+/// Key is FilenamesRef.
+using CovMapByRefTy = llvm::DenseMap<uint64_t, struct CovMapTy *>;
+
 /// An element of CovFun array.
 struct CovFunTy {
   std::optional<llvm::yaml::Hex64> NameRef;     ///< Hash value of the symbol.
@@ -157,7 +214,8 @@ struct CovFunTy {
 
   /// Depends on CovMap and SymTab(IPSK_names)
   Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
-                            endianness Endianness);
+                            endianness Endianness, CovMapByRefTy &CovMapByRef,
+                            InstrProfSymtab *SymTab, const DecoderParam &Param);
 
   void encode(raw_ostream &OS, endianness Endianness) const;
 };
@@ -180,7 +238,7 @@ struct CovMapTy {
   /// This may be ArrayRef in Decoder since Filenames has been
   /// filled. On the other hand in Encoder, this should be a vector
   /// since YAML parser doesn't endorse references.
-  std::optional<std::vector<std::string>> Files;
+  std::optional<VectorOrRef<std::string>> Files;
 
   void mapping(llvm::yaml::IO &IO);
 
@@ -188,7 +246,7 @@ struct CovMapTy {
   StringRef getWD() const { return (WD ? *WD : StringRef()); }
 
   Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
-                            endianness Endianness);
+                            endianness Endianness, const DecoderParam &Param);
 
   /// Generate Accumulated list with WD.
   /// Returns a single element {WD} if AccFiles is not given.
@@ -209,6 +267,21 @@ struct CovMapTy {
 };
 
 } // namespace llvm::coverage::yaml
+
+namespace llvm::yaml {
+template <typename T>
+struct SequenceTraits<llvm::coverage::yaml::VectorOrRef<T>> {
+  static size_t size(IO &io, llvm::coverage::yaml::VectorOrRef<T> &seq) {
+    return seq.size();
+  }
+  static T &element(IO &, llvm::coverage::yaml::VectorOrRef<T> &seq,
+                    size_t index) {
+    if (index >= seq.size())
+      seq.resize(index + 1);
+    return seq[index];
+  }
+};
+} // namespace llvm::yaml
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::coverage::yaml::CovMapTy)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::coverage::yaml::CovFunTy)
@@ -265,17 +338,21 @@ public:
   virtual ~Decoder() {}
 
   /// Returns DecoderImpl.
-  static std::unique_ptr<Decoder> get(endianness Endianness,
-                                      bool CovMapEnabled);
+  static std::unique_ptr<Decoder>
+  get(endianness Endianness, const coverage::yaml::DecoderParam &Param);
 
   /// Called from the Sections loop in advance of the final dump.
-  /// Decoder predecodes CovMap for Version info.
-  virtual Error acquire(unsigned AddressAlign, StringRef Name,
+  /// Decoder predecodes Names and CovMap, and captures Contents of
+  /// CovFuns.
+  virtual Error acquire(uint64_t Offset, unsigned AddressAlign, StringRef Name,
                         ArrayRef<uint8_t> Content) = 0;
 
-  /// Make contents on ELFYAML object. CovMap is predecoded.
-  virtual Error make(ELFYAML::CovMapSectionBase *Base,
-                     ArrayRef<uint8_t> Content) = 0;
+  /// Called before the final dump after `acquire`.
+  /// Decode contents partially and resolve names.
+  virtual Error fixup() = 0;
+
+  /// Make contents on ELFYAML object with predecoded contents.
+  virtual Error make(ELFYAML::CovMapSectionBase *Base, uint64_t Offset) = 0;
 
   /// Suppress emission of CovMap unless enabled.
   static bool enabled;
