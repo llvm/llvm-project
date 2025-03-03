@@ -1918,12 +1918,13 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   if (!C1VecTy || !C2VecTy || C1VecTy != C2VecTy)
     return false;
 
+  auto *SI0FOp = dyn_cast<FPMathOperator>(I.getOperand(0));
+  auto *SI1FOp = dyn_cast<FPMathOperator>(I.getOperand(1));
   // SelectInsts must have the same FMF.
-  auto *Select0 = cast<Instruction>(I.getOperand(0));
-  if (auto *SI0FOp = dyn_cast<FPMathOperator>(Select0))
-    if (auto *SI1FOp = dyn_cast<FPMathOperator>((I.getOperand(1))))
-      if (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())
-        return false;
+  if (((SI0FOp == nullptr) != (SI1FOp == nullptr)) ||
+      ((SI0FOp != nullptr) &&
+       (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())))
+    return false;
 
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
@@ -1954,11 +1955,13 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   Value *ShuffleCmp = Builder.CreateShuffleVector(C1, C2, Mask);
   Value *ShuffleTrue = Builder.CreateShuffleVector(T1, T2, Mask);
   Value *ShuffleFalse = Builder.CreateShuffleVector(F1, F2, Mask);
-  Value *NewSel = Builder.CreateSelect(ShuffleCmp, ShuffleTrue, ShuffleFalse);
-
+  Value *NewSel;
   // We presuppose that the SelectInsts have the same FMF.
-  if (isa<FPMathOperator>(NewSel))
-    cast<Instruction>(NewSel)->setFastMathFlags(Select0->getFastMathFlags());
+  if (SI0FOp)
+    NewSel = Builder.CreateSelectFMF(ShuffleCmp, ShuffleTrue, ShuffleFalse,
+                                     SI0FOp->getFastMathFlags());
+  else
+    NewSel = Builder.CreateSelect(ShuffleCmp, ShuffleTrue, ShuffleFalse);
 
   Worklist.pushValue(ShuffleCmp);
   Worklist.pushValue(ShuffleTrue);
