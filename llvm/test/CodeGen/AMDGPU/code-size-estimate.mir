@@ -61,7 +61,7 @@ body:             |
 # CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
 # CHECK: .p2align        3
 # CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
-# CHECK: ; codeLenInByte = 20
+# CHECK: ; codeLenInByte = 24
 ---
 name:            align8
 tracksRegLiveness: true
@@ -83,7 +83,7 @@ body:             |
 # CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
 # CHECK: .p2align        4
 # CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
-# CHECK: ; codeLenInByte = 20
+# CHECK: ; codeLenInByte = 32
 ---
 name:            align16
 tracksRegLiveness: true
@@ -105,7 +105,7 @@ body:             |
 # CHECK: s_barrier                               ; encoding: [0x00,0x00,0x8a,0xbf]
 # CHECK: .p2align        5
 # CHECK: s_endpgm                                ; encoding: [0x00,0x00,0x81,0xbf]
-# CHECK: ; codeLenInByte = 36
+# CHECK: ; codeLenInByte = 64
 ---
 name:            align32
 tracksRegLiveness: true
