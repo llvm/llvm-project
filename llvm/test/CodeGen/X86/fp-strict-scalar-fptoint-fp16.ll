@@ -28,9 +28,7 @@ define i1 @fptosi_f16toi1(half %x) #0 {
 ;
 ; AVX-LABEL: fptosi_f16toi1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -64,9 +62,7 @@ define i8 @fptosi_f16toi8(half %x) #0 {
 ;
 ; AVX-LABEL: fptosi_f16toi8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -100,9 +96,7 @@ define i16 @fptosi_f16toi16(half %x) #0 {
 ;
 ; AVX-LABEL: fptosi_f16toi16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -135,9 +129,7 @@ define i32 @fptosi_f16toi32(half %x) #0 {
 ;
 ; AVX-LABEL: fptosi_f16toi32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    retq
@@ -167,9 +159,7 @@ define i64 @fptosi_f16toi64(half %x) #0 {
 ;
 ; AVX-LABEL: fptosi_f16toi64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %rax
 ; AVX-NEXT:    retq
@@ -203,9 +193,7 @@ define i1 @fptoui_f16toi1(half %x) #0 {
 ;
 ; AVX-LABEL: fptoui_f16toi1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -239,9 +227,7 @@ define i8 @fptoui_f16toi8(half %x) #0 {
 ;
 ; AVX-LABEL: fptoui_f16toi8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -275,9 +261,7 @@ define i16 @fptoui_f16toi16(half %x) #0 {
 ;
 ; AVX-LABEL: fptoui_f16toi16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX-NEXT:    movzwl %ax, %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX-NEXT:    vcvttss2si %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -311,9 +295,7 @@ define i32 @fptoui_f16toi32(half %x) #0 {
 ;
 ; F16C-LABEL: fptoui_f16toi32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvttss2si %xmm0, %rax
 ; F16C-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -321,9 +303,7 @@ define i32 @fptoui_f16toi32(half %x) #0 {
 ;
 ; AVX512-LABEL: fptoui_f16toi32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512-NEXT:    movzwl %ax, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2usi %xmm0, %eax
 ; AVX512-NEXT:    retq
@@ -365,9 +345,7 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ;
 ; F16C-LABEL: fptoui_f16toi64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; F16C-NEXT:    vcomiss %xmm1, %xmm0
@@ -386,9 +364,7 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ;
 ; AVX512-LABEL: fptoui_f16toi64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpextrw $0, %xmm0, %eax
-; AVX512-NEXT:    movzwl %ax, %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
 ; AVX512-NEXT:    retq

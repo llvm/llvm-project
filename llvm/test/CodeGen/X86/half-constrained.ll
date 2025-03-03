@@ -24,8 +24,8 @@ define float @half_to_float() strictfp {
 ; X86-F16C:       # %bb.0:
 ; X86-F16C-NEXT:    pushl %eax
 ; X86-F16C-NEXT:    .cfi_def_cfa_offset 8
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-F16C-NEXT:    vmovss %xmm0, (%esp)
 ; X86-F16C-NEXT:    flds (%esp)
@@ -48,8 +48,8 @@ define float @half_to_float() strictfp {
 ; X64-F16C-LABEL: half_to_float:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
   %1 = load half, ptr @a, align 2
@@ -73,8 +73,8 @@ define double @half_to_double() strictfp {
 ; X86-F16C:       # %bb.0:
 ; X86-F16C-NEXT:    subl $12, %esp
 ; X86-F16C-NEXT:    .cfi_def_cfa_offset 16
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X86-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vmovsd %xmm0, (%esp)
@@ -99,8 +99,8 @@ define double @half_to_double() strictfp {
 ; X64-F16C-LABEL: half_to_double:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
@@ -342,11 +342,11 @@ define void @add() strictfp {
 ;
 ; X86-F16C-LABEL: add:
 ; X86-F16C:       # %bb.0:
-; X86-F16C-NEXT:    movzwl a, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm0
+; X86-F16C-NEXT:    vpinsrw $0, a, %xmm0, %xmm0
+; X86-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X86-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X86-F16C-NEXT:    movzwl b, %eax
-; X86-F16C-NEXT:    vmovd %eax, %xmm1
+; X86-F16C-NEXT:    vpinsrw $0, b, %xmm0, %xmm1
+; X86-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; X86-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X86-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X86-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -378,12 +378,12 @@ define void @add() strictfp {
 ; X64-F16C-LABEL: add:
 ; X64-F16C:       # %bb.0:
 ; X64-F16C-NEXT:    movq a@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm0
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; X64-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    movq b@GOTPCREL(%rip), %rax
-; X64-F16C-NEXT:    movzwl (%rax), %eax
-; X64-F16C-NEXT:    vmovd %eax, %xmm1
+; X64-F16C-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm1
+; X64-F16C-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; X64-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
