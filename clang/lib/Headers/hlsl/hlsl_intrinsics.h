@@ -1698,30 +1698,7 @@ half3 max(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half4 max(half4, half4);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half2 max(half2 p0, half p1) {
-  return __builtin_elementwise_max(p0, (half2)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half2 max(half p0, half2 p1) {
-  return __builtin_elementwise_max((half2)p0, p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half3 max(half3 p0, half p1) {
-  return __builtin_elementwise_max(p0, (half3)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half3 max(half p0, half3 p1) {
-  return __builtin_elementwise_max((half3)p0, p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half4 max(half4 p0, half p1) {
-  return __builtin_elementwise_max(p0, (half4)p1);
-}
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-constexpr half4 max(half p0, half4 p1) {
-  return __builtin_elementwise_max((half4)p0, p1);
-}
+GEN_VEC_SCALAR_OVERLOADS(max, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
