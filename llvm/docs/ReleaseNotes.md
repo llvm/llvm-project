@@ -111,6 +111,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
   is a frame-pointer convention compatible version of Zcmp.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
