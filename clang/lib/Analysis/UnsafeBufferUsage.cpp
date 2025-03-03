@@ -295,16 +295,12 @@ static bool ignoreUnsafeLibcCall(const ASTContext &Ctx, const Stmt &Node,
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
 static void findStmtsInUnspecifiedLvalueContext(
     const Stmt *S, const llvm::function_ref<void(const Expr *)> OnResult) {
-  if (const auto *CE = dyn_cast<ImplicitCastExpr>(S)) {
-    if (CE->getCastKind() != CastKind::CK_LValueToRValue)
-      return;
+  if (const auto *CE = dyn_cast<ImplicitCastExpr>(S);
+      CE && CE->getCastKind() == CastKind::CK_LValueToRValue)
     OnResult(CE->getSubExpr());
-  }
-  if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
-    if (BO->getOpcode() != BO_Assign)
-      return;
+  if (const auto *BO = dyn_cast<BinaryOperator>(S);
+      BO && BO->getOpcode() == BO_Assign)
     OnResult(BO->getLHS());
-  }
 }
 
 /// Note: Copied and modified from ASTMatchers.
@@ -452,11 +448,12 @@ static void findStmtsInUnspecifiedPointerContext(
              BO->getOpcode() == BO_LT || BO->getOpcode() == BO_LE ||
              BO->getOpcode() == BO_GT || BO->getOpcode() == BO_GE)) {
     auto *LHS = BO->getLHS();
+    if (hasPointerType(*LHS))
+      InnerMatcher(LHS);
+
     auto *RHS = BO->getRHS();
-    if (!hasPointerType(*LHS) || !hasPointerType(*RHS))
-      return;
-    InnerMatcher(LHS);
-    InnerMatcher(RHS);
+    if (hasPointerType(*RHS))
+      InnerMatcher(RHS);
   }
 
   // Pointer subtractions.
@@ -934,8 +931,7 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
 // least one string argument is unsafe. If the format is not a string literal,
 // this matcher matches when at least one pointer type argument is unsafe.
 static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
-                                     MatchResult &Result,
-                                     const char *const Op) {
+                                     MatchResult &Result, llvm::StringRef Op) {
   // Determine what printf it is by examining formal parameters:
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -999,10 +995,8 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
     if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
-      if (isa<Expr>(Arg)) {
-        Result.addNode(Op, DynTypedNode::create(*Arg));
-        return true;
-      }
+      Result.addNode(Op, DynTypedNode::create(*Arg));
+      return true;
     }
   return false;
 }
@@ -1223,8 +1217,7 @@ public:
     const auto *UO = dyn_cast<UnaryOperator>(S);
     if (!UO || !UO->isIncrementOp())
       return false;
-    const auto *Operand = UO->getSubExpr()->IgnoreParenImpCasts();
-    if (!hasPointerType(*Operand))
+    if (!hasPointerType(*UO->getSubExpr()->IgnoreParenImpCasts()))
       return false;
     Result.addNode(OpTag, DynTypedNode::create(*UO));
     return true;
@@ -1268,8 +1261,7 @@ public:
     const auto *UO = dyn_cast<UnaryOperator>(S);
     if (!UO || !UO->isDecrementOp())
       return false;
-    const auto *Operand = UO->getSubExpr()->IgnoreParenImpCasts();
-    if (!hasPointerType(*Operand))
+    if (!hasPointerType(*UO->getSubExpr()->IgnoreParenImpCasts()))
       return false;
     Result.addNode(OpTag, DynTypedNode::create(*UO));
     return true;
@@ -1315,11 +1307,11 @@ public:
     const auto *const Base = ASE->getBase()->IgnoreParenImpCasts();
     if (!hasPointerType(*Base) && !hasArrayType(*Base))
       return false;
-    bool isSafeIndex =
+    bool IsSafeIndex =
         (isa<IntegerLiteral>(ASE->getIdx()) &&
          cast<IntegerLiteral>(ASE->getIdx())->getValue().isZero()) ||
         isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (isSafeArraySubscript(*ASE, Ctx) || isSafeIndex)
+    if (isSafeArraySubscript(*ASE, Ctx) || IsSafeIndex)
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -1427,9 +1419,9 @@ public:
     if (!CE)
       return false;
     const auto *CDecl = CE->getConstructor();
-    const auto *DCtx = CDecl->getDeclContext();
+    const auto *CRecordDecl = CDecl->getParent();
     auto HasTwoParamSpanCtorDecl =
-        Decl::castFromDeclContext(DCtx)->isInStdNamespace() &&
+        CRecordDecl->isInStdNamespace() &&
         CDecl->getDeclName().getAsString() == "span" && CE->getNumArgs() == 2;
     if (!HasTwoParamSpanCtorDecl || isSafeSpanTwoParamConstruct(*CE, Ctx))
       return false;
@@ -1484,7 +1476,8 @@ public:
     return G->getKind() == Kind::PointerInit;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     const DeclStmt *DS = dyn_cast<DeclStmt>(S);
     if (!DS || !DS->isSingleDecl())
       return false;
@@ -1501,7 +1494,7 @@ public:
     MatchResult R;
     R.addNode(PointerInitLHSTag, DynTypedNode::create(*VD));
     R.addNode(PointerInitRHSTag, DynTypedNode::create(*DRE));
-    Results.emplace_back(R);
+    Results.emplace_back(std::move(R));
     return true;
   }
 
@@ -1543,7 +1536,8 @@ public:
     return G->getKind() == Kind::PtrToPtrAssignment;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
       const auto *BO = dyn_cast<BinaryOperator>(S);
@@ -1564,7 +1558,7 @@ public:
       MatchResult R;
       R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
       R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -1607,7 +1601,8 @@ public:
     return G->getKind() == Kind::CArrayToPtrAssignment;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
       const auto *BO = dyn_cast<BinaryOperator>(S);
@@ -1629,7 +1624,7 @@ public:
       MatchResult R;
       R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
       R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -1694,9 +1689,9 @@ public:
   DeclUseList getClaimedVarUseSites() const override { return {}; }
 };
 
-// A call of a constructor that performs unchecked buffer operations
-// over one of its pointer parameters, or constructs a class object that will
-// perform buffer operations that depend on the correctness of the parameters.
+/// A call of a constructor that performs unchecked buffer operations
+/// over one of its pointer parameters, or constructs a class object that will
+/// perform buffer operations that depend on the correctness of the parameters.
 class UnsafeBufferUsageCtorAttrGadget : public WarningGadget {
   constexpr static const char *const OpTag = "cxx_construct_expr";
   const CXXConstructExpr *Op;
@@ -1715,8 +1710,9 @@ public:
     const auto *CE = dyn_cast<CXXConstructExpr>(S);
     if (!CE || !CE->getConstructor()->hasAttr<UnsafeBufferUsageAttr>())
       return false;
-    MatchResult tmp;
-    if (SpanTwoParamConstructorGadget::matches(CE, Ctx, tmp))
+    // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
+    MatchResult Tmp;
+    if (SpanTwoParamConstructorGadget::matches(CE, Ctx, Tmp))
       return false;
     Result.addNode(OpTag, DynTypedNode::create(*CE));
     return true;
@@ -1749,39 +1745,22 @@ public:
     return G->getKind() == Kind::DataInvocation;
   }
 
-  static bool checkCallExpr(const CXXMemberCallExpr *call) {
-    if (!call)
-      return false;
-    auto *callee = call->getDirectCallee();
-    if (!callee || !isa<CXXMethodDecl>(callee))
-      return false;
-    auto *method = cast<CXXMethodDecl>(callee);
-    if (method->getNameAsString() == "data" &&
-        (method->getParent()->getQualifiedNameAsString() == "std::span" ||
-         method->getParent()->getQualifiedNameAsString() == "std::array" ||
-         method->getParent()->getQualifiedNameAsString() == "std::vector"))
-      return true;
-    return false;
-  }
-
   static bool matches(const Stmt *S, const ASTContext &Ctx,
                       MatchResult &Result) {
     auto *CE = dyn_cast<ExplicitCastExpr>(S);
     if (!CE)
       return false;
-    for (auto *child : CE->children()) {
-      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(child);
-          MCE && checkCallExpr(MCE)) {
+    for (auto *Child : CE->children()) {
+      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Child);
+          MCE && isDataFunction(MCE)) {
         Result.addNode(OpTag, DynTypedNode::create(*CE));
         return true;
       }
-      if (auto *paren = dyn_cast<ParenExpr>(child)) {
-        for (auto *grandchild : paren->children()) {
-          if (auto *MCE = dyn_cast<CXXMemberCallExpr>(grandchild);
-              MCE && checkCallExpr(MCE)) {
-            Result.addNode(OpTag, DynTypedNode::create(*CE));
-            return true;
-          }
+      if (auto *Paren = dyn_cast<ParenExpr>(Child)) {
+        if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Paren->getSubExpr());
+            MCE && isDataFunction(MCE)) {
+          Result.addNode(OpTag, DynTypedNode::create(*CE));
+          return true;
         }
       }
     }
@@ -1796,6 +1775,23 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+private:
+  static bool isDataFunction(const CXXMemberCallExpr *call) {
+    if (!call)
+      return false;
+    auto *callee = call->getDirectCallee();
+    if (!callee || !isa<CXXMethodDecl>(callee))
+      return false;
+    auto *method = cast<CXXMethodDecl>(callee);
+    if (method->getNameAsString() == "data" &&
+        method->getParent()->isInStdNamespace() &&
+        (method->getParent()->getName() == "span" ||
+         method->getParent()->getName() == "array" ||
+         method->getParent()->getName() == "vector"))
+      return true;
+    return false;
+  }
 };
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
@@ -1924,7 +1920,8 @@ public:
     return G->getKind() == Kind::ULCArraySubscript;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedLvalueContext(S, [&Found, &Results](const Expr *E) {
       const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
@@ -1932,12 +1929,12 @@ public:
         return;
       const auto *DRE =
           dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts());
-      if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)) ||
+      if (!DRE || !(hasPointerType(*DRE) || hasArrayType(*DRE)) ||
           !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(ULCArraySubscriptTag, DynTypedNode::create(*ASE));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -1975,7 +1972,8 @@ public:
     return G->getKind() == Kind::UPCStandalonePointer;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedPointerContext(S, [&Found, &Results](const Stmt *S) {
       auto *E = dyn_cast<Expr>(S);
@@ -1987,7 +1985,7 @@ public:
         return;
       MatchResult R;
       R.addNode(DeclRefExprTag, DynTypedNode::create(*DRE));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -2017,27 +2015,25 @@ public:
     return G->getKind() == Kind::PointerDereference;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedLvalueContext(S, [&Found, &Results](const Stmt *S) {
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
-      for (const auto *Child : UO->children()) {
-        const auto *CE = dyn_cast<Expr>(Child);
-        if (!CE)
-          continue;
-        CE = CE->IgnoreParenImpCasts();
-        const auto *DRE = dyn_cast<DeclRefExpr>(CE);
-        if (!DRE || !isSupportedVariable(*DRE))
-          continue;
-        MatchResult R;
-        R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
-        R.addNode(OperatorTag, DynTypedNode::create(*UO));
-        Results.emplace_back(R);
-        Found = true;
+      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
+      if (!CE)
         return;
-      }
+      CE = CE->IgnoreParenImpCasts();
+      const auto *DRE = dyn_cast<DeclRefExpr>(CE);
+      if (!DRE || !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
+      R.addNode(OperatorTag, DynTypedNode::create(*UO));
+      Results.emplace_back(std::move(R));
+      Found = true;
     });
     return Found;
   }
@@ -2071,7 +2067,8 @@ public:
     return G->getKind() == Kind::UPCAddressofArraySubscript;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedPointerContext(S, [&Found, &Results](const Stmt *S) {
       auto *E = dyn_cast<Expr>(S);
@@ -2089,7 +2086,7 @@ public:
         return;
       MatchResult R;
       R.addNode(UPCAddressofArraySubscriptTag, DynTypedNode::create(*UO));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -2193,7 +2190,8 @@ public:
     return G->getKind() == Kind::UPCPreIncrement;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     // Note here we match `++Ptr` for any expression `Ptr` of pointer type.
     // Although currently we can only provide fix-its when `Ptr` is a DRE, we
     // can have the matcher be general, so long as `getClaimedVarUseSites` does
@@ -2211,7 +2209,7 @@ public:
         return;
       MatchResult R;
       R.addNode(UPCPreIncrementTag, DynTypedNode::create(*UO));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -2249,7 +2247,8 @@ public:
     return G->getKind() == Kind::UUCAddAssign;
   }
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
       const auto *E = dyn_cast<Expr>(S);
@@ -2259,13 +2258,12 @@ public:
       if (!BO || BO->getOpcode() != BO_AddAssign)
         return;
       const auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
-      if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE) ||
-          !isa<Expr>(BO->getRHS()))
+      if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE))
         return;
       MatchResult R;
       R.addNode(UUCAddAssignTag, DynTypedNode::create(*BO));
       R.addNode(OffsetTag, DynTypedNode::create(*BO->getRHS()));
-      Results.emplace_back(R);
+      Results.emplace_back(std::move(R));
       Found = true;
     });
     return Found;
@@ -2301,7 +2299,8 @@ public:
         AddOp(Result.getNodeAs<BinaryOperator>(AddOpTag)),
         Offset(Result.getNodeAs<IntegerLiteral>(OffsetTag)) {}
 
-  static bool matches(const Stmt *S, llvm::SmallVector<MatchResult> &Results) {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     bool Found = false;
     auto IsPtr = [](const Expr *E, MatchResult &R) {
       if (!E || !hasPointerType(*E))
@@ -2312,7 +2311,8 @@ public:
       R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
       return true;
     };
-    const auto PlusOverPtrAndInteger = [&IsPtr](const Expr *E, MatchResult &R) {
+    const auto IsPlusOverPtrAndInteger = [&IsPtr](const Expr *E,
+                                                  MatchResult &R) {
       const auto *BO = dyn_cast<BinaryOperator>(E);
       if (!BO || BO->getOpcode() != BO_Add)
         return false;
@@ -2331,7 +2331,7 @@ public:
       }
       return false;
     };
-    const auto InnerMatcher = [&PlusOverPtrAndInteger, &Found,
+    const auto InnerMatcher = [&IsPlusOverPtrAndInteger, &Found,
                                &Results](const Expr *E) {
       const auto *UO = dyn_cast<UnaryOperator>(E);
       if (!UO || UO->getOpcode() != UO_Deref)
@@ -2339,9 +2339,9 @@ public:
 
       const auto *Operand = UO->getSubExpr()->IgnoreParens();
       MatchResult R;
-      if (PlusOverPtrAndInteger(Operand, R)) {
+      if (IsPlusOverPtrAndInteger(Operand, R)) {
         R.addNode(DerefOpTag, DynTypedNode::create(*UO));
-        Results.emplace_back(R);
+        Results.emplace_back(std::move(R));
         Found = true;
       }
     };
@@ -2360,10 +2360,10 @@ public:
   }
 };
 
-class EvaluatedStmtMatcher : public FastMatcher {
+class WarningGadgetMatcher : public FastMatcher {
 
 public:
-  EvaluatedStmtMatcher(WarningGadgetList &WarningGadgets)
+  WarningGadgetMatcher(WarningGadgetList &WarningGadgets)
       : WarningGadgets(WarningGadgets) {}
 
   bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
@@ -2393,35 +2393,12 @@ private:
   WarningGadgetList &WarningGadgets;
 };
 
-class StmtMatcher : public FastMatcher {
+class FixableGadgetMatcher : public FastMatcher {
 
 public:
-  StmtMatcher(FixableGadgetList &FixableGadgets, DeclUseTracker &Tracker)
+  FixableGadgetMatcher(FixableGadgetList &FixableGadgets,
+                       DeclUseTracker &Tracker)
       : FixableGadgets(FixableGadgets), Tracker(Tracker) {}
-
-  // Match all DeclRefExprs so that to find out
-  // whether there are any uncovered by gadgets.
-  bool matchDeclRefExprs(const Stmt *S, MatchResult &Result) {
-    const auto *DRE = dyn_cast<DeclRefExpr>(S);
-    if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)))
-      return false;
-    const Decl *D = DRE->getDecl();
-    if (!D || (!isa<VarDecl>(D) && !isa<BindingDecl>(D)))
-      return false;
-    Result.addNode("any_dre", DynTypedNode::create(*DRE));
-    return true;
-  }
-
-  // Also match DeclStmts because we'll need them when fixing
-  // their underlying VarDecls that otherwise don't have
-  // any backreferences to DeclStmts.
-  bool matchDeclStmt(const Stmt *S, MatchResult &Result) {
-    const auto *DS = dyn_cast<DeclStmt>(S);
-    if (!DS)
-      return false;
-    Result.addNode("any_ds", DynTypedNode::create(*DS));
-    return true;
-  }
 
   bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
                const UnsafeBufferUsageHandler &Handler) override {
@@ -2441,15 +2418,16 @@ public:
     Results = {};                                                              \
   }
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-
-    MatchResult Result;
-    if (matchDeclRefExprs(S, Result)) {
-      const auto *DRE = Result.getNodeAs<DeclRefExpr>("any_dre");
+    // In parallel, match all DeclRefExprs so that to find out
+    // whether there are any uncovered by gadgets.
+    if (auto *DRE = findDeclRefExpr(S); DRE) {
       Tracker.discoverUse(DRE);
       matchFound = true;
     }
-    if (matchDeclStmt(S, Result)) {
-      const auto *DS = Result.getNodeAs<DeclStmt>("any_ds");
+    // Also match DeclStmts because we'll need them when fixing
+    // their underlying VarDecls that otherwise don't have
+    // any backreferences to DeclStmts.
+    if (auto *DS = findDeclStmt(S); DS) {
       Tracker.discoverDecl(DS);
       matchFound = true;
     }
@@ -2457,6 +2435,21 @@ public:
   }
 
 private:
+  const DeclRefExpr *findDeclRefExpr(const Stmt *S) {
+    const auto *DRE = dyn_cast<DeclRefExpr>(S);
+    if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)))
+      return nullptr;
+    const Decl *D = DRE->getDecl();
+    if (!D || (!isa<VarDecl>(D) && !isa<BindingDecl>(D)))
+      return nullptr;
+    return DRE;
+  }
+  const DeclStmt *findDeclStmt(const Stmt *S) {
+    const auto *DS = dyn_cast<DeclStmt>(S);
+    if (!DS)
+      return nullptr;
+    return DS;
+  }
   FixableGadgetList &FixableGadgets;
   DeclUseTracker &Tracker;
 };
@@ -2467,11 +2460,11 @@ static void findGadgets(const Stmt *S, ASTContext &Ctx,
                         bool EmitSuggestions, FixableGadgetList &FixableGadgets,
                         WarningGadgetList &WarningGadgets,
                         DeclUseTracker &Tracker) {
-  EvaluatedStmtMatcher ESMatcher{WarningGadgets};
-  forEachDescendantEvaluatedStmt(S, Ctx, Handler, ESMatcher);
+  WarningGadgetMatcher WMatcher{WarningGadgets};
+  forEachDescendantEvaluatedStmt(S, Ctx, Handler, WMatcher);
   if (EmitSuggestions) {
-    StmtMatcher SMatcher{FixableGadgets, Tracker};
-    forEachDescendantStmt(S, Ctx, Handler, SMatcher);
+    FixableGadgetMatcher FMatcher{FixableGadgets, Tracker};
+    forEachDescendantStmt(S, Ctx, Handler, FMatcher);
   }
 }
 
@@ -3053,7 +3046,7 @@ static inline std::optional<FixItList> createDataFixit(const ASTContext &Ctx,
 // `DRE.data()`
 std::optional<FixItList>
 UPCStandalonePointerGadget::getFixits(const FixitStrategy &S) const {
-  auto *VD = cast<VarDecl>(Node->getDecl());
+  const auto VD = cast<VarDecl>(Node->getDecl());
   switch (S.lookup(VD)) {
   case FixitStrategy::Kind::Array:
   case FixitStrategy::Kind::Span: {
