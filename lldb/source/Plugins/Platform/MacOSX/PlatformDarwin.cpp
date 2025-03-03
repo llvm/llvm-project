@@ -1395,7 +1395,6 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
         llvm::formatv("No symbol file available for module '{0}'",
                       module.GetFileSpec().GetFilename().AsCString("")));
 
-  std::string sysroot;
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
   XcodeSDK merged_sdk;
