@@ -121,7 +121,7 @@ __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
   uint32_t __hi = (uint32_t)(__x >> 32ull);
   uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
   return ((uint64_t)__builtin_amdgcn_readfirstlane(__hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_readfirstlane(__lo));
+         ((uint64_t)__builtin_amdgcn_readfirstlane(__lo) & 0xFFFFFFFF);
 }
 
 // Returns a bitmask of threads in the current lane for which \p x is true.
