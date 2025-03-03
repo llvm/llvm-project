@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <memory_resource>
 
