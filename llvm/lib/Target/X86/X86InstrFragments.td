@@ -210,8 +210,6 @@ def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
-def X86pop_from_x87_reg : SDNode<"X86ISD::POP_FROM_X87_REG", SDTypeProfile<0, 0, []>,
-                          [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
                             [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
