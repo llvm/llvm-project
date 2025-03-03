@@ -568,10 +568,9 @@ void createMemprofHistogramFlagVar(Module &M) {
 void createMemprofDefaultOptionsVar(Module &M) {
   Constant *OptionsConst = ConstantDataArray::getString(
       M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
-  GlobalVariable *OptionsVar =
-      new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
-                         GlobalValue::WeakAnyLinkage, OptionsConst,
-                         "__memprof_default_options_str");
+  GlobalVariable *OptionsVar = new GlobalVariable(
+      M, OptionsConst->getType(), /*isConstant=*/true,
+      GlobalValue::WeakAnyLinkage, OptionsConst, getMemprofOptionsSymbolName());
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     OptionsVar->setLinkage(GlobalValue::ExternalLinkage);

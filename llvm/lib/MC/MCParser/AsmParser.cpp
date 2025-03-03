@@ -1229,7 +1229,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     // Lookup the symbol variant if used.
     if (!Split.second.empty()) {
-      Variant = getTargetParser().getVariantKindForName(Split.second);
+      Variant =
+          MCSymbolRefExpr::VariantKind(MAI.getVariantKindForName(Split.second));
       if (Variant != MCSymbolRefExpr::VK_Invalid) {
         SymbolName = Split.first;
       } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
@@ -1279,7 +1280,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       std::pair<StringRef, StringRef> Split = IDVal.split('@');
       MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
       if (Split.first.size() != IDVal.size()) {
-        Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
+        Variant = MCSymbolRefExpr::VariantKind(
+            MAI.getVariantKindForName(Split.second));
         if (Variant == MCSymbolRefExpr::VK_Invalid)
           return TokError("invalid variant '" + Split.second + "'");
         IDVal = Split.first;
@@ -1344,42 +1346,6 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       return true;
     Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
     return false;
-  // MIPS unary expression operators. The lexer won't generate these tokens if
-  // MCAsmInfo::HasMipsExpressions is false for the target.
-  case AsmToken::PercentCall16:
-  case AsmToken::PercentCall_Hi:
-  case AsmToken::PercentCall_Lo:
-  case AsmToken::PercentDtprel_Hi:
-  case AsmToken::PercentDtprel_Lo:
-  case AsmToken::PercentGot:
-  case AsmToken::PercentGot_Disp:
-  case AsmToken::PercentGot_Hi:
-  case AsmToken::PercentGot_Lo:
-  case AsmToken::PercentGot_Ofst:
-  case AsmToken::PercentGot_Page:
-  case AsmToken::PercentGottprel:
-  case AsmToken::PercentGp_Rel:
-  case AsmToken::PercentHi:
-  case AsmToken::PercentHigher:
-  case AsmToken::PercentHighest:
-  case AsmToken::PercentLo:
-  case AsmToken::PercentNeg:
-  case AsmToken::PercentPcrel_Hi:
-  case AsmToken::PercentPcrel_Lo:
-  case AsmToken::PercentTlsgd:
-  case AsmToken::PercentTlsldm:
-  case AsmToken::PercentTprel_Hi:
-  case AsmToken::PercentTprel_Lo:
-    Lex(); // Eat the operator.
-    if (Lexer.isNot(AsmToken::LParen))
-      return TokError("expected '(' after operator");
-    Lex(); // Eat the operator.
-    if (parseExpression(Res, EndLoc))
-      return true;
-    if (parseRParen())
-      return true;
-    Res = getTargetParser().createTargetUnaryExpr(Res, FirstTokenKind, Ctx);
-    return !Res;
   }
 }
 
@@ -1494,8 +1460,8 @@ static std::string angleBracketString(StringRef AltMacroStr) {
 bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // Parse the expression.
   Res = nullptr;
-  if (getTargetParser().parsePrimaryExpr(Res, EndLoc) ||
-      parseBinOpRHS(1, Res, EndLoc))
+  auto &TS = getTargetParser();
+  if (TS.parsePrimaryExpr(Res, EndLoc) || parseBinOpRHS(1, Res, EndLoc))
     return true;
 
   // As a special case, we support 'a op b @ modifier' by rewriting the
@@ -1505,8 +1471,8 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
-    MCSymbolRefExpr::VariantKind Variant =
-        MCSymbolRefExpr::getVariantKindForName(getTok().getIdentifier());
+    auto Variant = MCSymbolRefExpr::VariantKind(
+        MAI.getVariantKindForName(getTok().getIdentifier()));
     if (Variant == MCSymbolRefExpr::VK_Invalid)
       return TokError("invalid variant '" + getTok().getIdentifier() + "'");
 
