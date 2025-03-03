@@ -1429,20 +1429,6 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       Res = MCSymbolRefExpr::create(Sym, getContext());
       return false;
     }
-    // Parse symbol variant.
-    std::pair<StringRef, StringRef> Split;
-    if (!MAI.useParensForSymbolVariant()) {
-      Split = Identifier.split('@');
-    } else if (Lexer.is(AsmToken::LParen)) {
-      Lex(); // eat '('.
-      StringRef VName;
-      parseIdentifier(VName);
-      // eat ')'.
-      if (parseToken(AsmToken::RParen,
-                     "unexpected token in variant, expected ')'"))
-        return true;
-      Split = std::make_pair(Identifier, VName);
-    }
 
     EndLoc = SMLoc::getFromPointer(Identifier.end());
 
@@ -1451,24 +1437,9 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     if (SymbolName.empty())
       return Error(getLexer().getLoc(), "expected a symbol reference");
 
-    MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-
-    // Look up the symbol variant if used.
-    if (!Split.second.empty()) {
-      Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
-      if (Variant != MCSymbolRefExpr::VK_Invalid) {
-        SymbolName = Split.first;
-      } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
-        Variant = MCSymbolRefExpr::VK_None;
-      } else {
-        return Error(SMLoc::getFromPointer(Split.second.begin()),
-                     "invalid variant '" + Split.second + "'");
-      }
-    }
-
     // Find the field offset if used.
     AsmFieldInfo Info;
-    Split = SymbolName.split('.');
+    auto Split = SymbolName.split('.');
     if (Split.second.empty()) {
     } else {
       SymbolName = Split.first;
@@ -1510,20 +1481,18 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
       auto V = Sym->getVariableValue(/*SetUsed=*/false);
-      bool DoInline = isa<MCConstantExpr>(V) && !Variant;
+      bool DoInline = isa<MCConstantExpr>(V);
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
-        if (Variant)
-          return Error(EndLoc, "unexpected modifier on variable reference");
         Res = Sym->getVariableValue(/*SetUsed=*/false);
         return false;
       }
     }
 
     // Otherwise create a symbol ref.
-    const MCExpr *SymRef =
-        MCSymbolRefExpr::create(Sym, Variant, getContext(), FirstTokenLoc);
+    const MCExpr *SymRef = MCSymbolRefExpr::create(
+        Sym, MCSymbolRefExpr::VK_None, getContext(), FirstTokenLoc);
     if (Info.Offset) {
       Res = MCBinaryExpr::create(
           MCBinaryExpr::Add, SymRef,

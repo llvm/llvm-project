@@ -140,6 +140,8 @@ class HexagonAsmParser : public MCTargetAsmParser {
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
   bool OutOfRange(SMLoc IDLoc, long long Val, long long Max);
   int processInstruction(MCInst &Inst, OperandVector const &Operands,
                          SMLoc IDLoc);
@@ -1328,6 +1330,24 @@ unsigned HexagonAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   LLVM_DEBUG(dbgs() << "\n");
 
   return Match_InvalidOperand;
+}
+
+MCSymbolRefExpr::VariantKind
+HexagonAsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("dtprel", MCSymbolRefExpr::VK_DTPREL)
+      .Case("gdgot", MCSymbolRefExpr::VK_Hexagon_GD_GOT)
+      .Case("gdplt", MCSymbolRefExpr::VK_Hexagon_GD_PLT)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("gotrel", MCSymbolRefExpr::VK_GOTREL)
+      .Case("ie", MCSymbolRefExpr::VK_Hexagon_IE)
+      .Case("iegot", MCSymbolRefExpr::VK_Hexagon_IE_GOT)
+      .Case("ldgot", MCSymbolRefExpr::VK_Hexagon_LD_GOT)
+      .Case("ldplt", MCSymbolRefExpr::VK_Hexagon_LD_PLT)
+      .Case("pcrel", MCSymbolRefExpr::VK_PCREL)
+      .Case("plt", MCSymbolRefExpr::VK_PLT)
+      .Case("tprel", MCSymbolRefExpr::VK_TPREL)
+      .Default(MCSymbolRefExpr::VK_Invalid);
 }
 
 // FIXME: Calls to OutOfRange should propagate failure up to parseStatement.
