@@ -224,19 +224,10 @@ class MapInfoFinalizationPass
   }
 
   /// Adjusts the descriptor's map type. The main alteration that is done
-  /// currently is transforming the map type to `OMP_MAP_TO` where possible,
-  /// plus adding OMP_MAP_ALWAYS flag. Descriptors will always be copied,
-  /// even if the object was listed on the `has_device_addr` clause.
-  /// This is because the descriptor can be rematerialized by the compiler,
-  /// and so the address of the descriptor for a given object at one place in
-  /// the code may differ from that address in another place. The contents
-  /// of the descriptor (the base address in particular) will remain unchanged
-  /// though. Non-descriptor objects listed on the `has_device_addr` clause
-  /// can be passed to the kernel by just passing their address without any
-  /// remapping.
-  /// The adding of the OMP_MAP_TO flag is done because we will always need to
-  /// map the descriptor to device, especially without device address clauses,
-  /// as without the appropriate descriptor
+  /// currently is transforming the map type to `OMP_MAP_TO` where possible.
+  /// This is because we will always need to map the descriptor to device
+  /// (or at the very least it seems to be the case currently with the
+  /// current lowered kernel IR), as without the appropriate descriptor
   /// information on the device there is a risk of the kernel IR
   /// requesting for various data that will not have been copied to
   /// perform things like indexing. This can cause segfaults and
@@ -256,13 +247,15 @@ class MapInfoFinalizationPass
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
+    llvm::omp::OpenMPOffloadMappingFlags Always =
+        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
     llvm::omp::OpenMPOffloadMappingFlags Implicit =
         llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
     return llvm::to_underlying(
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO | Implicit);
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO | Always | Implicit);
   }
 
   /// Check if the mapOp is present in the HasDeviceAddr clause on
@@ -291,6 +284,7 @@ class MapInfoFinalizationPass
     mlir::ArrayAttr newMembersAttr;
     mlir::SmallVector<mlir::Value> newMembers;
     llvm::SmallVector<llvm::SmallVector<int64_t>> memberIndices;
+    bool IsHasDeviceAddr = isHasDeviceAddr(op, target);
 
     if (!mapMemberUsers.empty() || !op.getMembers().empty())
       getMemberIndicesAsVectors(
@@ -333,7 +327,7 @@ class MapInfoFinalizationPass
       mapUser.parent.getMembersMutable().assign(newMemberOps);
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
-    } else if (!isHasDeviceAddr(op, target)) {
+    } else if (!IsHasDeviceAddr) {
       auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
                                      op.getMapType().value_or(0), builder);
       newMembers.push_back(baseAddr);
@@ -349,6 +343,18 @@ class MapInfoFinalizationPass
       }
     }
 
+    // Descriptors for objects listed on the `has_device_addr` will always
+    // be copied. This is because the descriptor can be rematerialized by the
+    // compiler, and so the address of the descriptor for a given object at
+    // one place in the code may differ from that address in another place.
+    // The contents of the descriptor (the base address in particular) will
+    // remain unchanged though.
+    uint64_t MapType = op.getMapType().value_or(0);
+    if (IsHasDeviceAddr) {
+      MapType |= llvm::to_underlying(
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
+    }
+
     mlir::omp::MapInfoOp newDescParentMapOp =
         builder.create<mlir::omp::MapInfoOp>(
             op->getLoc(), op.getResult().getType(), descriptor,
@@ -357,7 +363,7 @@ class MapInfoFinalizationPass
             /*bounds=*/mlir::SmallVector<mlir::Value>{},
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
-                getDescriptorMapType(op.getMapType().value_or(0), target)),
+                getDescriptorMapType(MapType, target)),
             /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
             op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
