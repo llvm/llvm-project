@@ -160,7 +160,12 @@ std::optional<Object> getBaseObject(const Object &object,
                     ea.Designate(evaluate::DataRef{
                         SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
     } else if (auto *symRef = base.UnwrapSymbolRef()) {
-      return Object{const_cast<semantics::Symbol *>(&**symRef), std::nullopt};
+      // This is the base symbol of the array reference, which is the same
+      // as the symbol in the input object,
+      // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
+      // Here we have the Symbol(A), which is what we started with.
+      assert(&**symRef == object.sym());
+      return std::nullopt;
     }
   } else {
     assert(std::holds_alternative<evaluate::CoarrayRef>(ref.u) &&
