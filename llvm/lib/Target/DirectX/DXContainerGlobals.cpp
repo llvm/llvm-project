@@ -175,8 +175,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
-  if (Error Err = RS.write(OS))
-    handleAllErrors(std::move(Err));
+  RS.write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);

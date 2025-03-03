@@ -34,12 +34,12 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootConstNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for Root constants element");
 
-  dxbc::RootParameter NewParam;
-  NewParam.ParameterType = dxbc::RootParameterType::Constants32Bit;
+  mcdxbc::RootParameter NewParam;
+  NewParam.Header.ParameterType = dxbc::RootParameterType::Constants32Bit;
 
   auto *ShaderVisibility =
       mdconst::extract<ConstantInt>(RootConstNode->getOperand(1));
-  NewParam.ShaderVisibility =
+  NewParam.Header.ShaderVisibility =
       (dxbc::ShaderVisibility)ShaderVisibility->getZExtValue();
 
   auto *ShaderRegister =
@@ -122,15 +122,15 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
   for (const auto &P : RSD.Parameters) {
     // Parameter Type cannot be set through metadata.
-    assert(
-        dxbc::RootSignatureValidations::isValidParameterType(P.ParameterType));
+    assert(dxbc::RootSignatureValidations::isValidParameterType(
+        P.Header.ParameterType));
 
     if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
-            P.ShaderVisibility)) {
+            P.Header.ShaderVisibility)) {
       return reportError(
           Ctx,
           "Invalid Root Signature parameter shader visibility in metadata " +
-              Twine((uint32_t)P.ShaderVisibility));
+              Twine((uint32_t)P.Header.ShaderVisibility));
     }
   }
   return false;
@@ -250,12 +250,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "- Parameters: \n";
     Space++;
     for (const auto &P : RS.Parameters) {
-      OS << indent(Space) << "Type: " << (uint32_t)P.ParameterType << " \n";
+      OS << indent(Space) << "Type: " << (uint32_t)P.Header.ParameterType
+         << " \n";
       OS << indent(Space)
-         << "ShaderVisibility: " << (uint32_t)P.ShaderVisibility << " \n";
+         << "ShaderVisibility: " << (uint32_t)P.Header.ShaderVisibility
+         << " \n";
       Space++;
 
-      switch (P.ParameterType) {
+      switch (P.Header.ParameterType) {
 
       case dxbc::RootParameterType::Constants32Bit: {
         OS << indent(Space) << "- Constants: \n";
