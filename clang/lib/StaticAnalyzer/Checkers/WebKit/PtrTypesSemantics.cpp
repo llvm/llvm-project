@@ -225,15 +225,16 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
 
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
-    if (Redecl->getAttr<ObjCBridgeAttr>()) {
+    if (Redecl->getAttr<ObjCBridgeAttr>() ||
+        Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
       return;
     }
   }
 }
 
-bool RetainTypeChecker::isUnretained(const QualType QT) {
-  if (ento::cocoa::isCocoaObjectRef(QT) && !IsARCEnabled)
+bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
+  if (ento::cocoa::isCocoaObjectRef(QT) && (!IsARCEnabled || ignoreARC))
     return true;
   auto CanonicalType = QT.getCanonicalType();
   auto PointeeType = CanonicalType->getPointeeType();
