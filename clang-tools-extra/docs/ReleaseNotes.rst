@@ -138,6 +138,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
   on ternary operators calling ``std::move``.
 
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
+  on ``operator""`` with template parameters.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
