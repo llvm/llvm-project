@@ -5,9 +5,12 @@ namespace detail {
 
 class __OP_CPP_NAME__GenericAdaptorBase {
 public:
+  struct Properties {
+  };
 protected:
   ::mlir::DictionaryAttr odsAttrs;
   ::std::optional<::mlir::OperationName> odsOpName;
+  Properties properties;
   ::mlir::RegionRange odsRegions;
 public:
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions) {
@@ -19,6 +22,9 @@ public:
 
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize);
 
+  const Properties &getProperties() {
+    return properties;
+  }
   ::mlir::DictionaryAttr getAttributes() {
     return odsAttrs;
   }
@@ -57,6 +63,8 @@ public:
   RangeT getOperands() {
     return odsOperands;
   }
+
+  __OP_GETTER_DECLS__
 
 private:
   RangeT odsOperands;
@@ -131,6 +139,8 @@ public:
   }
 
   __OP_BUILD_DECLS__
+
+  __OP_GETTER_DECLS__
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
   
   ::llvm::LogicalResult verifyInvariantsImpl();

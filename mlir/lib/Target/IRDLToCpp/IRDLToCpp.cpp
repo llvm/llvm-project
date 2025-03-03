@@ -176,6 +176,17 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   const auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
+  auto getters = std::string{}; 
+
+  for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
+    const auto& op = opStrings.opOperandNames[i];
+    getters +=  llvm::formatv(
+      "::mlir::Value get{0}() { return getODSOperands({1}).front(); }\n  "
+      , capitalize(op), i
+    );
+  }
+  
+  dict["OP_GETTER_DECLS"] = getters;
   std::string tmp;
   llvm::raw_string_ostream stream{tmp};
   stream << llvm::formatv(
@@ -207,7 +218,6 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   static const auto typeHeaderDeclTemplate = irdl::detail::Template(
 #include "Templates/TypeHeaderDecl.txt"
   );
-
   output << "#ifdef " << declarationMacroFlag << "\n#undef "
          << declarationMacroFlag << "\n";
 
