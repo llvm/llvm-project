@@ -1,6 +1,8 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: obj2yaml %t.o > %t.plain.yaml
+# RUN: obj2yaml --covmap-raw %t.o > %t.raw.yaml
 # RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
 
 # FIXME: This is synthetically created. s/ELFDATA2LSB/ELF2DATAMSB/ s/EM_X86_64/EM_PPC64/
 --- !ELF

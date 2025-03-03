@@ -545,6 +545,12 @@ public:
   /// This method is a wrapper to \c readAndDecodeStrings method.
   Error create(StringRef NameStrings);
 
+  // PrfNames is nested array.
+  using PrfNamesTy = SmallVector<std::string>;
+  using PrfNamesChunksTy = SmallVector<PrfNamesTy, 1>;
+
+  Expected<PrfNamesChunksTy> createAndGetList(ArrayRef<uint8_t> Content);
+
   /// Initialize symtab states with function names and vtable names. \c
   /// FuncNameStrings is a string composed of one or more encoded function name
   /// strings, and \c VTableNameStrings composes of one or more encoded vtable
