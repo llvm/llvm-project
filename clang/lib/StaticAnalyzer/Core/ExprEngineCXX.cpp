@@ -79,7 +79,8 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     assert(V.isUnknownOrUndef());
 
   ExplodedNodeSet Tmp;
-  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V, /*isLoad=*/true);
+  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
+               /*isLoad=*/true);
   for (ExplodedNode *N : Tmp)
     evalBind(Dst, CallExpr, N, ThisVal, V, true);
 
