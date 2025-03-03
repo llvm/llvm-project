@@ -1942,6 +1942,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   if (YamlMFI.HasInitWholeWave)
     MFI->setInitWholeWave();
+  if (YamlMFI.UsesWholeWave)
+    MFI->setUsesWholeWave();
 
   return false;
 }
