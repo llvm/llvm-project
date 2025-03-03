@@ -1005,22 +1005,24 @@ public:
                             const Twine &Name = "");
 
   /// Create call to the minnum intrinsic.
-  Value *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "",
-                      FMFSource FMFSource = {}) {
+  Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource, Name);
+          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
+          Name);
     }
 
     return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
-  Value *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "",
-                      FMFSource FMFSource = {}) {
+  Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource, Name);
+          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
+          Name);
     }
 
     return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
