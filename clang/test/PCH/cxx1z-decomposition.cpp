@@ -22,7 +22,7 @@ constexpr int foo(Q &&q) {
   return a * 10 + b;
 }
 
-auto [noinit]; // expected-error{{decomposition declaration expected initializer before ';'}}
+auto [noinit]; // expected-error{{decomposition declaration '[noinit]' expected initializer before ';'}}
 
 #else
 
