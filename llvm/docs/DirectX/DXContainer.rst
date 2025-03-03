@@ -111,7 +111,7 @@ FXC are marked with \*.
 #. `PSV0`_ - Stores Pipeline State Validation data.
 #. RDAT† - Stores Runtime Data.
 #. RDEF\* - Stores resource definitions.
-#. RTS0 - Stores compiled root signature.
+#. `RTS0`_ - Stores compiled root signature.
 #. `SFI0`_ - Stores shader feature flags.
 #. SHDR\* - Stores compiled DXBC bytecode.
 #. SHEX\* - Stores compiled DXBC bytecode.
@@ -402,9 +402,9 @@ This denotes which optional features the shader requires. The flag values are
 defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
 
 
-Root Signature (RST0) Part
----------
-.. _RST0:
+Root Signature (RTS0) Part
+--------------------------
+.. _RTS0:
 
 The Root Signature defines the interface between the shader and the pipeline, specifying which resources are bound to the shader and how they are accessed. This structure serves as a contract between the application and the GPU, establishing a layout for resource binding that both the shader compiler and the runtime can understand.
 
@@ -457,18 +457,25 @@ Each root parameter in the signature is preceded by a `RootParameterHeader` that
 The header uses a parameter type field rather than encoding the version of the parameter through size, allowing for a more explicit representation of the parameter's nature.
 
 Root Parameters
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
-.. code-block:: c
+The Root Parameters section contains structured definitions for each type of root parameter that can be included in a root signature. Each structure corresponds to a specific parameter type as identified by the ``ParameterType`` field in the ``RootParameterHeader``.
 
-   union RootParameter {
-     RootConstants Constants;
-   };
+Root Constants
+~~~~~~~~~~~~~~
 
-The `RootParameter` union represents the various types of parameters that can be specified in a root signature. Such includes:
+.. code-block:: cpp
 
-- **Constants**: Represents inline root constants that are directly embedded in the root signature and passed to the shader without requiring a constant buffer resource.
+  struct RootConstants {
+    uint32_t ShaderRegister;
+    uint32_t RegisterSpace;
+    uint32_t Num32BitValues;
+  };
 
-Each specific parameter type will have its own structure with fields relevant to that parameter type. For example, `RootConstants` would include information about the register binding, count of 32-bit values, and other properties specific to constant parameters.
+The ``RootConstants`` structure represents inline root constants that are directly embedded in the root signature and passed to the shader without requiring a constant buffer resource:
 
-When processing root parameters, readers should first check the `ParameterType` field in the corresponding header to determine which member of the union to access.
+- **ShaderRegister**: The shader register (b#) where these constants are bound.
+- **RegisterSpace**: The register space used for the binding.
+- **Num32BitValues**: The number of 32-bit values included in this constant buffer.
+
+Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
