@@ -1261,7 +1261,7 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
 // TestBytecodeFallbackOp
 //===----------------------------------------------------------------------===//
 
-void TestBytecodeFallbackOp::setOriginalOperationName(StringRef name,
+void TestBytecodeFallbackOp::setOriginalOperationName(const Twine &name,
                                                       OperationState &state) {
   state.getOrAddProperties<Properties>().setOpname(
       StringAttr::get(state.getContext(), name));

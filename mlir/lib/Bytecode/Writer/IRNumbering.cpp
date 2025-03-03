@@ -420,15 +420,14 @@ void IRNumberingState::number(Operation &op) {
   // Number the components of an operation that won't be numbered elsewhere
   // (e.g. we don't number operands, regions, or successors here).
 
-  OperationName opName = op.getName();
-  // For fallback ops, create a new operation name referencing the original op
+  // For fallback ops, create a new OperationName referencing the original op
   // instead.
-  if (auto fallback = dyn_cast<FallbackBytecodeOpInterface>(op))
-    opName = OperationName((fallback->getDialect()->getNamespace() + "." +
-                            fallback.getOriginalOperationName())
-                               .str(),
-                           op.getContext());
-  number(opName);
+  if (auto fallback = dyn_cast<FallbackBytecodeOpInterface>(op)) {
+    OperationName opName(fallback.getOriginalOperationName(), op.getContext());
+    number(opName, /*isOpaque=*/true);
+  } else {
+    number(op.getName(), /*isOpaque=*/false);
+  }
 
   for (OpResult result : op.getResults()) {
     valueIDs.try_emplace(result, nextValueID++);
@@ -467,7 +466,7 @@ void IRNumberingState::number(Operation &op) {
   number(op.getLoc());
 }
 
-void IRNumberingState::number(OperationName opName) {
+void IRNumberingState::number(OperationName opName, bool isOpaque) {
   OpNameNumbering *&numbering = opNames[opName];
   if (numbering) {
     ++numbering->refCount;
@@ -479,8 +478,8 @@ void IRNumberingState::number(OperationName opName) {
   else
     dialectNumber = &numberDialect(opName.getDialectNamespace());
 
-  numbering =
-      new (opNameAllocator.Allocate()) OpNameNumbering(dialectNumber, opName);
+  numbering = new (opNameAllocator.Allocate())
+      OpNameNumbering(dialectNumber, opName, isOpaque);
   orderedOpNames.push_back(numbering);
 }
 

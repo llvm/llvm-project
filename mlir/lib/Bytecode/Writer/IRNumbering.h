@@ -63,14 +63,17 @@ struct TypeNumbering : public AttrTypeNumbering {
 
 /// This class represents the numbering entry of an operation name.
 struct OpNameNumbering {
-  OpNameNumbering(DialectNumbering *dialect, OperationName name)
-      : dialect(dialect), name(name) {}
+  OpNameNumbering(DialectNumbering *dialect, OperationName name, bool isOpaque)
+      : dialect(dialect), name(name), isOpaqueEntry(isOpaque) {}
 
   /// The dialect of this value.
   DialectNumbering *dialect;
 
   /// The concrete name.
   OperationName name;
+
+  /// This entry represents an opaque operation entry.
+  bool isOpaqueEntry = false;
 
   /// The number assigned to this name.
   unsigned number = 0;
@@ -210,7 +213,7 @@ public:
 
   /// Get the set desired bytecode version to emit.
   int64_t getDesiredBytecodeVersion() const;
-  
+
 private:
   /// This class is used to provide a fake dialect writer for numbering nested
   /// attributes and types.
@@ -225,7 +228,7 @@ private:
   DialectNumbering &numberDialect(Dialect *dialect);
   DialectNumbering &numberDialect(StringRef dialect);
   void number(Operation &op);
-  void number(OperationName opName);
+  void number(OperationName opName, bool isOpaque);
   void number(Region &region);
   void number(Type type);
 

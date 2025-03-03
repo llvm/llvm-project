@@ -53,7 +53,7 @@ def FallbackBytecodeOpInterface : OpInterface<"FallbackBytecodeOpInterface"> {
       Set the original name for this operation from the bytecode.
       }],
       "void", "setOriginalOperationName", (ins
-          "::mlir::StringRef":$opName,
+          "const ::mlir::Twine&":$opName,
           "::mlir::OperationState &":$state)
     >,
     InterfaceMethod<[{

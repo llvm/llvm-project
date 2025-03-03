@@ -21,6 +21,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
@@ -2257,8 +2258,11 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   // state.
   OperationState opState(opLoc, *opName);
   // If this is a fallback op, provide the original name of the operation.
-  if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>())
-    iface->setOriginalOperationName((*bytecodeOp)->name, opState);
+  if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>()) {
+    const Twine originalName =
+        opName->getDialect()->getNamespace() + "." + (*bytecodeOp)->name;
+    iface->setOriginalOperationName(originalName, opState);
+  }
 
   // Parse the attributes of the operation.
   if (opMask & bytecode::OpEncodingMask::kHasAttrs) {
