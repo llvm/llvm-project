@@ -112,14 +112,12 @@ define i32 @myctlz64_as_32_2(i64 %a) {
 define i16 @myctlz_ret16(i16 %a) {
 ; CHECK-LABEL: myctlz_ret16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [myctlz_ret16_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_ret16_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
-; CHECK-NEXT:    sub.s32 %r3, %r2, 16;
+; CHECK-NEXT:    add.s32 %r3, %r2, -16;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
@@ -128,14 +126,12 @@ define i16 @myctlz_ret16(i16 %a) {
 define i16 @myctlz_ret16_2(i16 %a) {
 ; CHECK-LABEL: myctlz_ret16_2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [myctlz_ret16_2_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_ret16_2_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
-; CHECK-NEXT:    sub.s32 %r3, %r2, 16;
+; CHECK-NEXT:    add.s32 %r3, %r2, -16;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 true) readnone
@@ -147,18 +143,15 @@ define i16 @myctlz_ret16_2(i16 %a) {
 define void @myctlz_store16(i16 %a, ptr %b) {
 ; CHECK-LABEL: myctlz_store16(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [myctlz_store16_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_store16_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r2;
-; CHECK-NEXT:    sub.s16 %rs3, %rs2, 16;
+; CHECK-NEXT:    add.s32 %r3, %r2, -16;
 ; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz_store16_param_1];
-; CHECK-NEXT:    st.u16 [%rd1], %rs3;
+; CHECK-NEXT:    st.u16 [%rd1], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
   store i16 %val, ptr %b
@@ -167,18 +160,15 @@ define void @myctlz_store16(i16 %a, ptr %b) {
 define void @myctlz_store16_2(i16 %a, ptr %b) {
 ; CHECK-LABEL: myctlz_store16_2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [myctlz_store16_2_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_store16_2_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
-; CHECK-NEXT:    cvt.u16.u32 %rs2, %r2;
-; CHECK-NEXT:    sub.s16 %rs3, %rs2, 16;
+; CHECK-NEXT:    add.s32 %r3, %r2, -16;
 ; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz_store16_2_param_1];
-; CHECK-NEXT:    st.u16 [%rd1], %rs3;
+; CHECK-NEXT:    st.u16 [%rd1], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
   store i16 %val, ptr %b

@@ -764,16 +764,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom handling for i8 intrinsics
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
-  for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::ABS,  Ty, Legal);
-    setOperationAction(ISD::SMIN, Ty, Legal);
-    setOperationAction(ISD::SMAX, Ty, Legal);
-    setOperationAction(ISD::UMIN, Ty, Legal);
-    setOperationAction(ISD::UMAX, Ty, Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
-    setOperationAction(ISD::CTPOP, Ty, Legal);
-    setOperationAction(ISD::CTLZ, Ty, Legal);
-  }
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, {MVT::i16, MVT::i64}, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -2748,6 +2743,42 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+static SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  SDLoc DL(Op);
+
+  if (V.getValueType() == MVT::i16) {
+    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V);
+    SDValue CT = DAG.getNode(ISD::CTPOP, DL, MVT::i32, Zext);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, CT, SDNodeFlags::NoWrap);
+  }
+  if (V.getValueType() == MVT::i64) {
+    SDValue CT = DAG.getNode(ISD::CTPOP, DL, MVT::i32, V);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT);
+  }
+  llvm_unreachable("Unexpected CTPOP type to legalize");
+}
+
+static SDValue lowerCTLZ(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  SDLoc DL(Op);
+
+  if (V.getValueType() == MVT::i16) {
+    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V);
+    SDValue CT = DAG.getNode(ISD::CTLZ, DL, MVT::i32, Zext);
+    SDValue Sub =
+        DAG.getNode(ISD::ADD, DL, MVT::i32, CT,
+                    DAG.getConstant(APInt(32, -16, true), DL, MVT::i32),
+                    SDNodeFlags::NoSignedWrap);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Sub, SDNodeFlags::NoWrap);
+  }
+  if (V.getValueType() == MVT::i64) {
+    SDValue CT = DAG.getNode(ISD::CTLZ, DL, MVT::i32, V);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT);
+  }
+  llvm_unreachable("Unexpected CTLZ type to legalize");
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2833,6 +2864,10 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
+  case ISD::CTPOP:
+    return lowerCTPOP(Op, DAG);
+  case ISD::CTLZ:
+    return lowerCTLZ(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");

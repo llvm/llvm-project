@@ -150,12 +150,10 @@ define void @test_popc16(i16 %a, ptr %b) {
 define i32 @test_popc16_to_32(i16 %a) {
 ; CHECK-LABEL: test_popc16_to_32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [test_popc16_to_32_param_0];
-; CHECK-NEXT:    cvt.u32.u16 %r1, %rs1;
+; CHECK-NEXT:    ld.param.u16 %r1, [test_popc16_to_32_param_0];
 ; CHECK-NEXT:    popc.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
