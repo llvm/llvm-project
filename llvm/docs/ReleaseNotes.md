@@ -61,6 +61,7 @@ Changes to the LLVM IR
   removed:
 
   * `mul`
+* Floating-point operand bundles have been added.
 
 Changes to LLVM infrastructure
 ------------------------------
