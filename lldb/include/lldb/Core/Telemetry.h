@@ -131,35 +131,6 @@ private:
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
-class Helper {
- public:
-  Helper () : m_start(std::chrono::steady_clock::now()) {}
-  ~Helper() {
-    while(! m_exit_funcs.empty()) {
-      (m_exit_funcs.top())();
-      m_exit_funcs.pop();
-    }
-  }
-
-  bool TelemetryEnabled() {
-    TelemetryManager* instance = TelemetryManager::GetInstance();
-  return instance != nullptr && instance->GetConfig()->EnableTelemetry;
-  }
-
-
-  SteadyTimePoint GetStartTime() {return m_start;}
-  SteadyTimePoint GetCurrentTime()  { return std::chrono::steady_clock::now(); }
-
- template <typename Fp>
- void RunAtScopeExit(Fp&& F){
-   m_exit_funcs.push(std::forward<Fp>(F));
- }
-
- private:
-  const SteadyTimePoint m_start;
-  std::stack<std::function<void()>> m_exit_funcs;
-
-};
 
 } // namespace telemetry
 } // namespace lldb_private
