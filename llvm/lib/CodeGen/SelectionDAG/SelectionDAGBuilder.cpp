@@ -1384,12 +1384,12 @@ static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
                                             DebugLoc DL, unsigned Order,
                                             SmallVectorImpl<Value *> &Values,
                                             DIExpression *Expression) {
-  // For variadic dbg_values we will now insert an undef.
+  // For variadic dbg_values we will now insert poison.
   // FIXME: We can potentially recover these!
   SmallVector<SDDbgOperand, 2> Locs;
   for (const Value *V : Values) {
-    auto *Undef = UndefValue::get(V->getType());
-    Locs.push_back(SDDbgOperand::fromConst(Undef));
+    auto *Poison = PoisonValue::get(V->getType());
+    Locs.push_back(SDDbgOperand::fromConst(Poison));
   }
   SDDbgValue *SDV = DAG.getDbgValueList(Variable, Expression, Locs, {},
                                         /*IsIndirect=*/false, DL, Order,
@@ -1408,9 +1408,9 @@ void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
     return;
   }
   // TODO: Dangling debug info will eventually either be resolved or produce
-  // an Undef DBG_VALUE. However in the resolution case, a gap may appear
+  // a poison DBG_VALUE. However in the resolution case, a gap may appear
   // between the original dbg.value location and its resolved DBG_VALUE,
-  // which we should ideally fill with an extra Undef DBG_VALUE.
+  // which we should ideally fill with an extra poison DBG_VALUE.
   assert(Values.size() == 1);
   DanglingDebugInfoMap[Values[0]].emplace_back(Var, Expr, DL, Order);
 }
@@ -1488,9 +1488,9 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(V, DDI)
                         << "\n");
-      auto Undef = UndefValue::get(V->getType());
+      auto Poison = PoisonValue::get(V->getType());
       auto SDV =
-          DAG.getConstantDbgValue(Variable, Expr, Undef, DL, DbgSDNodeOrder);
+          DAG.getConstantDbgValue(Variable, Expr, Poison, DL, DbgSDNodeOrder);
       DAG.AddDbgValue(SDV, false);
     }
   }
@@ -1553,11 +1553,11 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   }
 
   // This was the final opportunity to salvage this debug information, and it
-  // couldn't be done. Place an undef DBG_VALUE at this location to terminate
+  // couldn't be done. Place a poison DBG_VALUE at this location to terminate
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
-  auto *Undef = UndefValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
+  auto *Poison = PoisonValue::get(OrigV->getType());
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -6191,10 +6191,10 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
             Expr, Offset, RegFragmentSizeInBits);
         Offset += RegAndSize.second;
         // If a valid fragment expression cannot be created, the variable's
-        // correct value cannot be determined and so it is set as Undef.
+        // correct value cannot be determined and so it is set as poison.
         if (!FragmentExpr) {
           SDDbgValue *SDV = DAG.getConstantDbgValue(
-              Variable, Expr, UndefValue::get(V->getType()), DL, SDNodeOrder);
+              Variable, Expr, PoisonValue::get(V->getType()), DL, SDNodeOrder);
           DAG.AddDbgValue(SDV, false);
           continue;
         }
