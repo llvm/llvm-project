@@ -97,7 +97,7 @@ static cl::list<bool> LazyLink("lazy",
 
 enum class SpeculateKind { None, Simple };
 
-cl::opt<SpeculateKind> Speculate(
+static cl::opt<SpeculateKind> Speculate(
     "speculate", cl::desc("Choose speculation scheme"),
     cl::init(SpeculateKind::None),
     cl::values(clEnumValN(SpeculateKind::None, "none", "No speculation"),
@@ -105,13 +105,13 @@ cl::opt<SpeculateKind> Speculate(
                           "Simple speculation")),
     cl::cat(JITLinkCategory));
 
-cl::opt<std::string> SpeculateOrder(
+static cl::opt<std::string> SpeculateOrder(
     "speculate-order",
     cl::desc("A CSV file containing (JITDylib, Function) pairs to"
              "speculatively look up"),
     cl::cat(JITLinkCategory));
 
-cl::opt<std::string> RecordLazyExecs(
+static cl::opt<std::string> RecordLazyExecs(
     "record-lazy-execs",
     cl::desc("Write lazy-function executions to a CSV file as (JITDylib, "
              "function) pairs"),
