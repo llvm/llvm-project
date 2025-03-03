@@ -129,8 +129,6 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
-
-  initializeVariantKinds(variantKindDescs);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }

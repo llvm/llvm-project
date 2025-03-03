@@ -417,6 +417,14 @@ public:
   }
 
   /// @}
+  /// \name Static Utility Functions
+  /// @{
+
+  static StringRef getVariantKindName(VariantKind Kind);
+
+  static VariantKind getVariantKindForName(StringRef Name);
+
+  /// @}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::SymbolRef;
