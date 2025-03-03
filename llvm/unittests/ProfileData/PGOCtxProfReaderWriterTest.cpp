@@ -99,7 +99,7 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     {
       PGOCtxProfileWriter Writer(Out);
       for (auto &[_, R] : roots())
-        Writer.write(*R);
+        Writer.writeContextual(*R);
     }
   }
   {
@@ -121,7 +121,7 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     EXPECT_TRUE(AnalyzerDump.find("<CalleeIndex codeid") != std::string::npos);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     ASSERT_TRUE(!!Expected);
     auto &Ctxes = *Expected;
     EXPECT_EQ(Ctxes.size(), roots().size());
@@ -149,7 +149,7 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     ASSERT_FALSE(EC);
     {
       PGOCtxProfileWriter Writer(Out);
-      Writer.write(*R);
+      Writer.writeContextual(*R);
     }
   }
   {
@@ -157,7 +157,7 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -165,14 +165,14 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
 
 TEST_F(PGOCtxProfRWTest, Empty) {
   PGOCtxProfileReader Reader("");
-  auto Expected = Reader.loadContexts();
+  auto Expected = Reader.loadProfiles();
   EXPECT_FALSE(Expected);
   consumeError(Expected.takeError());
 }
 
 TEST_F(PGOCtxProfRWTest, Invalid) {
   PGOCtxProfileReader Reader("Surely this is not valid");
-  auto Expected = Reader.loadContexts();
+  auto Expected = Reader.loadProfiles();
   EXPECT_FALSE(Expected);
   consumeError(Expected.takeError());
 }
@@ -194,7 +194,7 @@ TEST_F(PGOCtxProfRWTest, ValidButEmpty) {
     ASSERT_NE(*MB, nullptr);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_TRUE(!!Expected);
     EXPECT_TRUE(Expected->empty());
   }
@@ -216,7 +216,7 @@ TEST_F(PGOCtxProfRWTest, WrongVersion) {
     ASSERT_NE(*MB, nullptr);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -230,8 +230,8 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
     ASSERT_FALSE(EC);
     {
       PGOCtxProfileWriter Writer(Out);
-      Writer.write(*createNode(1, 1, 1));
-      Writer.write(*createNode(1, 1, 1));
+      Writer.writeContextual(*createNode(1, 1, 1));
+      Writer.writeContextual(*createNode(1, 1, 1));
     }
   }
   {
@@ -239,7 +239,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -257,7 +257,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
       auto *L2 = createNode(2, 1, 0, L1);
       R->subContexts()[0] = L2;
       PGOCtxProfileWriter Writer(Out);
-      Writer.write(*R);
+      Writer.writeContextual(*R);
     }
   }
   {
@@ -265,7 +265,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }

@@ -88,7 +88,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     return {};
   }
   PGOCtxProfileReader Reader(MB.get()->getBuffer());
-  auto MaybeCtx = Reader.loadContexts();
+  auto MaybeCtx = Reader.loadProfiles();
   if (!MaybeCtx) {
     M.getContext().emitError("contextual profile file is invalid: " +
                              toString(MaybeCtx.takeError()));
@@ -99,16 +99,16 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   for (const auto &F : M)
     if (!F.isDeclaration())
       if (auto GUID = AssignGUIDPass::getGUID(F);
-          MaybeCtx->find(GUID) != MaybeCtx->end())
+          MaybeCtx->Contexts.find(GUID) != MaybeCtx->Contexts.end())
         ProfileRootsInModule.insert(GUID);
 
   // Trim first the roots that aren't in this module.
-  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(MaybeCtx->Contexts))
     if (!ProfileRootsInModule.contains(RootGuid))
-      MaybeCtx->erase(RootGuid);
+      MaybeCtx->Contexts.erase(RootGuid);
   // If none of the roots are in the module, we have no profile (for this
   // module)
-  if (MaybeCtx->empty())
+  if (MaybeCtx->Contexts.empty())
     return {};
 
   // OK, so we have a valid profile and it's applicable to roots in this module.
@@ -146,7 +146,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   }
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
-  Result.Profiles = std::move(*MaybeCtx);
+  Result.Profile = std::move(*MaybeCtx);
   Result.initIndex();
   return Result;
 }
@@ -164,7 +164,7 @@ CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
   CtxProfAnalysis::Result &C = MAM.getResult<CtxProfAnalysis>(M);
-  if (!C) {
+  if (C.contexts().empty()) {
     OS << "No contextual profile was provided.\n";
     return PreservedAnalyses::all();
   }
@@ -245,7 +245,7 @@ void PGOContextualProfile::initIndex() {
   for (auto &[Guid, FI] : FuncInfo)
     InsertionPoints[Guid] = &FI.Index;
   preorderVisit<PGOCtxProfContext::CallTargetMapTy, PGOCtxProfContext>(
-      *Profiles, [&](PGOCtxProfContext &Ctx) {
+      Profile->Contexts, [&](PGOCtxProfContext &Ctx) {
         auto InsertIt = InsertionPoints.find(Ctx.guid());
         if (InsertIt == InsertionPoints.end())
           return;
@@ -270,7 +270,7 @@ void PGOContextualProfile::update(Visitor V, const Function &F) {
 void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
   if (!F)
     return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                         const PGOCtxProfContext>(*Profiles, V);
+                         const PGOCtxProfContext>(Profile->Contexts, V);
   assert(isFunctionKnown(*F));
   GlobalValue::GUID G = getDefinedFunctionGUID(*F);
   for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
@@ -279,11 +279,11 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
 }
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
-  assert(Profiles.has_value());
+  assert(Profile.has_value());
   CtxProfFlatProfile Flat;
   preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
                 const PGOCtxProfContext>(
-      *Profiles, [&](const PGOCtxProfContext &Ctx) {
+      Profile->Contexts, [&](const PGOCtxProfContext &Ctx) {
         auto [It, Ins] = Flat.insert({Ctx.guid(), {}});
         if (Ins) {
           llvm::append_range(It->second, Ctx.counters());
