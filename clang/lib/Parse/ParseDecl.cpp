@@ -2933,7 +2933,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   }
   case InitKind::Uninitialized: {
     if (D.isDecompositionDeclarator())
-      Diag(Tok, diag::err_expected_init) << PP.getSpelling(Tok);
+      Diag(Tok, diag::err_decomp_decl_expected_init) << PP.getSpelling(Tok);
     Actions.ActOnUninitializedDecl(ThisDecl);
     break;
   }
