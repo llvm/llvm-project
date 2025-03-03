@@ -1813,7 +1813,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size(ptr %p) {
 
 define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size2(ptr %p) {
 ; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_equal_store_size2(
-; ALL-NEXT:    [[P1:%.*]] = getelementptr i4, ptr [[P:%.*]], i32 7
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i28, ptr [[P:%.*]], i32 1
 ; ALL-NEXT:    [[L1:%.*]] = load i28, ptr [[P]], align 4
 ; ALL-NEXT:    [[L2:%.*]] = load i4, ptr [[P1]], align 1
 ; ALL-NEXT:    [[E1:%.*]] = zext i28 [[L1]] to i32
@@ -1822,7 +1822,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size2(ptr %p) {
 ; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
 ; ALL-NEXT:    ret i32 [[O1]]
 ;
-  %p1 = getelementptr i4, ptr %p, i32 7
+  %p1 = getelementptr i28, ptr %p, i32 1
   %l1 = load i28, ptr %p
   %l2 = load i4, ptr %p1
   %e1 = zext i28 %l1 to i32
@@ -1834,7 +1834,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size2(ptr %p) {
 
 define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size3(ptr %p) {
 ; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_equal_store_size3(
-; ALL-NEXT:    [[P1:%.*]] = getelementptr i1, ptr [[P:%.*]], i32 23
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i23, ptr [[P:%.*]], i32 1
 ; ALL-NEXT:    [[L1:%.*]] = load i23, ptr [[P]], align 4
 ; ALL-NEXT:    [[L2:%.*]] = load i9, ptr [[P1]], align 2
 ; ALL-NEXT:    [[E1:%.*]] = zext i23 [[L1]] to i32
@@ -1843,7 +1843,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size3(ptr %p) {
 ; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
 ; ALL-NEXT:    ret i32 [[O1]]
 ;
-  %p1 = getelementptr i1, ptr %p, i32 23
+  %p1 = getelementptr i23, ptr %p, i32 1
   %l1 = load i23, ptr %p
   %l2 = load i9, ptr %p1
   %e1 = zext i23 %l1 to i32
@@ -1855,7 +1855,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size3(ptr %p) {
 
 define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size4(ptr %p) {
 ; ALL-LABEL: @loadCombine_2consecutive_mixsize_not_equal_store_size4(
-; ALL-NEXT:    [[P1:%.*]] = getelementptr i1, ptr [[P:%.*]], i32 9
+; ALL-NEXT:    [[P1:%.*]] = getelementptr i9, ptr [[P:%.*]], i32 1
 ; ALL-NEXT:    [[L1:%.*]] = load i9, ptr [[P]], align 2
 ; ALL-NEXT:    [[L2:%.*]] = load i23, ptr [[P1]], align 4
 ; ALL-NEXT:    [[E1:%.*]] = zext i9 [[L1]] to i32
@@ -1864,7 +1864,7 @@ define i32 @loadCombine_2consecutive_mixsize_not_equal_store_size4(ptr %p) {
 ; ALL-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
 ; ALL-NEXT:    ret i32 [[O1]]
 ;
-  %p1 = getelementptr i1, ptr %p, i32 9
+  %p1 = getelementptr i9, ptr %p, i32 1
   %l1 = load i9, ptr %p
   %l2 = load i23, ptr %p1
   %e1 = zext i9 %l1 to i32

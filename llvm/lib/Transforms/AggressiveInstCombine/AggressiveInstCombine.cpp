@@ -681,7 +681,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes that equal to the corresponding store sizes.
+  // Make sure that there are no padding bits.
   if (!DL.typeSizeEqualsStoreSize(LI1->getType()) || !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
