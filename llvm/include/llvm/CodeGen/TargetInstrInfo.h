@@ -1802,12 +1802,17 @@ public:
                     const MachineInstr &DefMI, unsigned DefIdx,
                     const MachineInstr &UseMI, unsigned UseIdx) const;
 
-  /// Compute the instruction latency of a given instruction.
-  /// If the instruction has higher cost when predicated, it's returned via
-  /// PredCost.
+  /// Compute the instruction latency of a given instruction using the itinerary
+  /// model.  If the instruction has higher cost when predicated, it's returned
+  /// via PredCost.
   virtual unsigned getInstrLatency(const InstrItineraryData *ItinData,
                                    const MachineInstr &MI,
                                    unsigned *PredCost = nullptr) const;
+
+  /// Compute the instruction latency using the InstrSchedModel or the default
+  /// def latency when no model is available.
+  virtual unsigned getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                                   const MachineInstr &MI) const;
 
   virtual unsigned getPredicationCost(const MachineInstr &MI) const;
 
