@@ -83,15 +83,6 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
-  for raw instruction access.
-
-* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
-
-* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
-
-* Initial support for gfx950
-
 Changes to the ARM Backend
 --------------------------
 
