@@ -55,6 +55,8 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- ``std::is_pod`` and ``std::is_pod_v`` are deprecated since C++20 according to the standard.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
