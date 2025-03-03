@@ -303,7 +303,6 @@ public:
     VK_PPC_GOT_TLSGD_LO,    // symbol@got@tlsgd@l
     VK_PPC_GOT_TLSGD_HI,    // symbol@got@tlsgd@h
     VK_PPC_GOT_TLSGD_HA,    // symbol@got@tlsgd@ha
-    VK_PPC_TLSGD,           // symbol@tlsgd
     VK_PPC_AIX_TLSGD,       // symbol@gd
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
@@ -319,7 +318,6 @@ public:
     VK_PPC_GOT_TLSLD_PCREL, // symbol@got@tlsld@pcrel
     VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
     VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
-    VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc
     VK_PPC_PCREL_OPT,       // .reloc expr, R_PPC64_PCREL_OPT, expr
