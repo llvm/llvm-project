@@ -26,4 +26,9 @@
 // RUN:    | FileCheck -check-prefix=C-ARM-BAREMETAL-NOGCC %s
 
 // C-ARM-BAREMETAL-NOGCC: "-internal-isystem" "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/include"
-
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/ld"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib/crt0.o"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtbegin.o"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib"
+// C-ARM-BAREMETAL-NOGCC: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtend.o

@@ -154,6 +154,8 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
   SysRoot = computeSysRoot();
+  UseLD =
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ).equals_insensitive("ld");
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();
     SelectedMultilibs.assign({GCCInstallation.getMultilib()});
@@ -329,6 +331,32 @@ BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   // No multilibs selected so return a single default multilib.
   static const llvm::SmallVector<Multilib> Default = {Multilib()};
   return llvm::reverse(Default);
+}
+
+ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
+  if (getTriple().isRISCV() && GCCInstallation.isValid())
+    return ToolChain::CST_Libstdcxx;
+  return ToolChain::CST_Libcxx;
+}
+
+ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
+  if (getTriple().isRISCV() && GCCInstallation.isValid())
+    return ToolChain::RLT_Libgcc;
+  return ToolChain::RLT_CompilerRT;
+}
+
+ToolChain::UnwindLibType
+BareMetal::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+  if (getTriple().isRISCV())
+    return ToolChain::UNW_None;
+
+  return ToolChain::GetUnwindLibType(Args);
+}
+
+const char *BareMetal::getDefaultLinker() const {
+  if (isUsingLD())
+    return "ld";
+  return "ld.lld";
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
@@ -524,12 +552,21 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
   CmdArgs.push_back("-Bstatic");
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (Triple.isRISCV()) {
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+    if (TC.isUsingLD()) {
+      CmdArgs.push_back("-m");
+      CmdArgs.push_back(Arch == llvm::Triple::riscv64 ? "elf64lriscv"
+                                                      : "elf32lriscv");
+    }
+    CmdArgs.push_back("-X");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
@@ -540,35 +577,37 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
-                   options::OPT_r)) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+  bool WantCRTs =
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
+
+  const char *crtbegin, *crtend;
+  if (WantCRTs) {
+    if (!Args.hasArg(options::OPT_r))
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+    if (TC.isUsingLD()) {
+      auto RuntimeLib = TC.GetRuntimeLibType(Args);
+      if (RuntimeLib == ToolChain::RLT_Libgcc) {
+        crtbegin = "crtbegin.o";
+        crtend = "crtend.o";
+      } else {
+        assert(RuntimeLib == ToolChain::RLT_CompilerRT);
+        crtbegin =
+            TC.getCompilerRTArgString(Args, "crtbegin", ToolChain::FT_Object);
+        crtend =
+            TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
+      }
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtbegin)));
+    }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
+                   options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
-
-  if (TC.ShouldLinkCXXStdlib(Args)) {
-    bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
-                               !Args.hasArg(options::OPT_static);
-    if (OnlyLibstdcxxStatic)
-      CmdArgs.push_back("-Bstatic");
-    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
-    if (OnlyLibstdcxxStatic)
-      CmdArgs.push_back("-Bdynamic");
-    CmdArgs.push_back("-lm");
-  }
-
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    AddRunTimeLibs(TC, D, CmdArgs, Args);
-
-    CmdArgs.push_back("-lc");
-  }
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
@@ -583,8 +622,31 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     addLTOOptions(TC, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
-  if (TC.getTriple().isRISCV())
-    CmdArgs.push_back("-X");
+
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (TC.ShouldLinkCXXStdlib(Args)) {
+    bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                               !Args.hasArg(options::OPT_static);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bstatic");
+    TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bdynamic");
+    CmdArgs.push_back("-lm");
+  }
+
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    CmdArgs.push_back("--start-group");
+    AddRunTimeLibs(TC, D, CmdArgs, Args);
+    CmdArgs.push_back("-lc");
+    if (TC.isUsingLD())
+      CmdArgs.push_back("-lgloss");
+    CmdArgs.push_back("--end-group");
+  }
+
+  if (TC.isUsingLD() && WantCRTs)
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtend)));
 
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
