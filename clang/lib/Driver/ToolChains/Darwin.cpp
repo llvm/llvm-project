@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -1744,6 +1745,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       AddLinkSanitizerLibArgs(Args, CmdArgs, "stats");
     }
   }
+
+  if (Sanitize.needsMemProfRt())
+    if (hasExportSymbolDirective(Args))
+      addExportedSymbol(
+          CmdArgs,
+          llvm::memprof::getMemprofOptionsSymbolDarwinLinkageName().data());
 
   const XRayArgs &XRay = getXRayArgs();
   if (XRay.needsXRayRt()) {
