@@ -4179,7 +4179,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
     //   %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
     //   store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
     //   br label %.atomic.retry
-    // 
+    //
     // .atomic.retry:                                    ; preds = %.atomic.retry, %1
     //   %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
     //   %2 = sub i32 1, %AtomicVar.atomic.orig
@@ -4191,7 +4191,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
     //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
     //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
     //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
-    // 
+    //
     // .atomic.done:                                     ; preds = %.atomic.retry
     //   ret void
     // clang-format on
@@ -4375,28 +4375,28 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
 
   {
     // clang-format off
-      //   %AtomicVar.atomic.expected.ptr = alloca float, align 4
-      //   %AtomicVar.atomic.desired.ptr = alloca float, align 4
-      //   %AtomicVar = alloca float, align 4
-      //   store float 0.000000e+00, ptr %AtomicVar, align 4
-      //   %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4
-      //   store float %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
-      //   br label %.atomic.retry
-      // 
-      // .atomic.retry:                                    ; preds = %.atomic.retry, %1
-      //   %AtomicVar.atomic.orig = load float, ptr %AtomicVar.atomic.expected.ptr, align 4
-      //   %2 = fsub float 1.000000e+00, %AtomicVar.atomic.orig
-      //   store float %2, ptr %AtomicVar.atomic.desired.ptr, align 4
-      //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
-      //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
-      //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
-      //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
-      //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
-      //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
-      //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
-      // 
-      // .atomic.done:                                     ; preds = %.atomic.retry
-      //   ret void
+    //   %AtomicVar.atomic.expected.ptr = alloca float, align 4
+    //   %AtomicVar.atomic.desired.ptr = alloca float, align 4
+    //   %AtomicVar = alloca float, align 4
+    //   store float 0.000000e+00, ptr %AtomicVar, align 4
+    //   %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4
+    //   store float %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   br label %.atomic.retry
+    //
+    // .atomic.retry:                                    ; preds = %.atomic.retry, %1
+    //   %AtomicVar.atomic.orig = load float, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %2 = fsub float 1.000000e+00, %AtomicVar.atomic.orig
+    //   store float %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    //
+    // .atomic.done:                                     ; preds = %.atomic.retry
+    //   ret void
     // clang-format on
 
     // Discover control flow graph
@@ -4576,28 +4576,28 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
 
   {
     // clang-format off
-        //   %AtomicVar.atomic.expected.ptr = alloca i32, align 4
-        //   %AtomicVar.atomic.desired.ptr = alloca i32, align 4
-        //   %AtomicVar = alloca i32, align 4
-        //   store i32 0, ptr %AtomicVar, align 4
-        //   %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
-        //   store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
-        //   br label %.atomic.retry
-        // 
-        // .atomic.retry:                                    ; preds = %.atomic.retry, %1
-        //   %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
-        //   %2 = sub i32 1, %AtomicVar.atomic.orig
-        //   store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
-        //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
-        //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
-        //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
-        //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
-        //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
-        //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
-        //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
-        // 
-        // .atomic.done:                                     ; preds = %.atomic.retry
-        //   ret void
+    //   %AtomicVar.atomic.expected.ptr = alloca i32, align 4
+    //   %AtomicVar.atomic.desired.ptr = alloca i32, align 4
+    //   %AtomicVar = alloca i32, align 4
+    //   store i32 0, ptr %AtomicVar, align 4
+    //   %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
+    //   store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   br label %.atomic.retry
+    //
+    // .atomic.retry:                                    ; preds = %.atomic.retry, %1
+    //   %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %2 = sub i32 1, %AtomicVar.atomic.orig
+    //   store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    //
+    // .atomic.done:                                     ; preds = %.atomic.retry
+    //   ret void
     // clang-format on
 
     // Discover control flow graph
