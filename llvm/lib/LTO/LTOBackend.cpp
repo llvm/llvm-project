@@ -224,9 +224,8 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   TargetOptions TargetOpts = Conf.Options;
 
   if (TargetOpts.MCOptions.ABIName.empty()) {
-    Metadata *ABI = M.getModuleFlag("target-abi");
-    if (ABI) {
-      const StringRef &ModABI = cast<MDString>(ABI)->getString();
+    StringRef ModABI = M.getTargetABIFromMD();
+    if (!ABI.empty()) {
       TargetOpts.MCOptions.ABIName = ModABI;
     }
   }
