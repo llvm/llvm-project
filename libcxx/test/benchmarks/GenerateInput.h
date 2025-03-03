@@ -204,4 +204,13 @@ struct Generate<std::string> {
   }
 };
 
+template <class T>
+T random_different_from(std::initializer_list<T> others) {
+  T value;
+  do {
+    value = Generate<T>::random();
+  } while (std::find(others.begin(), others.end(), value) != others.end());
+  return value;
+}
+
 #endif // BENCHMARK_GENERATE_INPUT_H
