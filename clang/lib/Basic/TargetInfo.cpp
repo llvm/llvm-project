@@ -959,6 +959,24 @@ bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
   return false;
 }
 
+void TargetInfo::validateCLayouts() const {
+  llvm::Triple::CLayouts TripleLayouts = Triple.getCLayouts(getABI());
+  if (__builtin_expect(LongDoubleWidth != TripleLayouts.LongDoubleWidth ||
+                           LongDoubleAlign != TripleLayouts.LongDoubleAlign ||
+                           LongDoubleFormat != TripleLayouts.LongDoubleFormat,
+                       0)) {
+    fprintf(stderr, "Clang's 'long double' width is %d, LLVM expected %d\n",
+            LongDoubleWidth, TripleLayouts.LongDoubleWidth);
+    fprintf(stderr, "Clang's long double' alignment is %d, LLVM expected %d\n",
+            LongDoubleAlign, TripleLayouts.LongDoubleAlign);
+    fprintf(
+        stderr, "Clang's long double' format is %d, LLVM expected %d\n",
+        llvm::APFloatBase::SemanticsToEnum(*LongDoubleFormat),
+        llvm::APFloatBase::SemanticsToEnum(*TripleLayouts.LongDoubleFormat));
+    llvm_unreachable("Clang & LLVM layout mismatch");
+  }
+}
+
 void TargetInfo::CheckFixedPointBits() const {
   // Check that the number of fractional and integral bits (and maybe sign) can
   // fit into the bits given for a fixed point type.

@@ -1273,6 +1273,10 @@ public:
     return Triple;
   }
 
+  /// Assert that layouts for C types computed by Clang are the same as layouts
+  /// stored in the LLVM target.
+  void validateCLayouts() const;
+
   /// Returns the target ID if supported.
   virtual std::optional<std::string> getTargetID() const {
     return std::nullopt;
