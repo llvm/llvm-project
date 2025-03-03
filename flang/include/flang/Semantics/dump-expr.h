@@ -67,8 +67,9 @@ private:
   }
   template <typename A> void Show(const std::vector<A> &x) {
     Indent("vector");
-    for (const auto &v : x)
+    for (const auto &v : x) {
       Show(v);
+    }
     Outdent();
   }
   void Show(const evaluate::BOZLiteralConstant &);
@@ -76,9 +77,11 @@ private:
   template <typename T> void Show(const evaluate::Constant<T> &x) {
     if constexpr (T::category == common::TypeCategory::Derived) {
       Indent("derived constant");
-      for (const auto &map : x.values())
-        for (const auto &pair : map)
+      for (const auto &map : x.values()) {
+        for (const auto &pair : map) {
           Show(pair.second.value());
+        }
+      }
       Outdent();
     } else {
       Print("constant");
@@ -130,8 +133,9 @@ private:
   template <typename T>
   void Show(const evaluate::ArrayConstructorValues<T> &x) {
     Indent("array constructor value");
-    for (auto &v : x)
+    for (auto &v : x) {
       Show(v);
+    }
     Outdent();
   }
   template <typename T> void Show(const evaluate::ImpliedDo<T> &x) {

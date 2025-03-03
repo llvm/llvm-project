@@ -69,10 +69,11 @@ void DumpEvaluateExpr::Show(const evaluate::Component &x) {
 
 void DumpEvaluateExpr::Show(const evaluate::NamedEntity &x) {
   Indent("named entity");
-  if (const auto *component{x.UnwrapComponent()})
+  if (const auto *component{x.UnwrapComponent()}) {
     Show(*component);
-  else
+  } else {
     Show(x.GetFirstSymbol());
+  }
   Outdent();
 }
 
@@ -130,8 +131,9 @@ void DumpEvaluateExpr::Show(
 
 void DumpEvaluateExpr::Show(const DerivedTypeSpec &x) {
   Indent("derived type spec");
-  for (auto &v : x.parameters())
+  for (auto &v : x.parameters()) {
     Show(v);
+  }
   Outdent();
 }
 
@@ -143,8 +145,9 @@ void DumpEvaluateExpr::Show(
 void DumpEvaluateExpr::Show(const evaluate::StructureConstructor &x) {
   Indent("structure constructor");
   Show(x.derivedTypeSpec());
-  for (auto &v : x)
+  for (auto &v : x) {
     Show(v);
+  }
   Outdent();
 }
 
@@ -162,21 +165,23 @@ void DumpEvaluateExpr::Show(const evaluate::ComplexPart &x) {
 
 void DumpEvaluateExpr::Show(const evaluate::ActualArgument &x) {
   Indent("actual argument");
-  if (const auto *symbol{x.GetAssumedTypeDummy()})
+  if (const auto *symbol{x.GetAssumedTypeDummy()}) {
     Show(*symbol);
-  else
+  } else {
     Show(x.UnwrapExpr());
+  }
   Outdent();
 }
 
 void DumpEvaluateExpr::Show(const evaluate::ProcedureDesignator &x) {
   Indent("procedure designator");
-  if (const auto *component{x.GetComponent()})
+  if (const auto *component{x.GetComponent()}) {
     Show(*component);
-  else if (const auto *symbol{x.GetSymbol()})
+  } else if (const auto *symbol{x.GetSymbol()}) {
     Show(*symbol);
-  else
+  } else {
     Show(DEREF(x.GetSpecificIntrinsic()));
+  }
   Outdent();
 }
 
@@ -200,8 +205,9 @@ void DumpEvaluateExpr::Indent(llvm::StringRef s) {
 }
 
 void DumpEvaluateExpr::Outdent() {
-  if (level_)
+  if (level_) {
     level_--;
+  }
   Print("}");
 }
 
