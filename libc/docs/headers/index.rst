@@ -14,6 +14,7 @@ Implementation Status
    errno
    fenv
    float
+   glob
    inttypes
    locale
    math/index.rst
