@@ -4629,7 +4629,16 @@ struct OpenMPDeclareMapperConstruct {
 
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
+struct OmpReductionInitializerProc {
+  TUPLE_CLASS_BOILERPLATE(OmpReductionInitializerProc);
+  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
+};
+WRAPPER_CLASS(OmpReductionInitializerExpr, Expr);
+
+struct OmpReductionInitializerClause {
+  UNION_CLASS_BOILERPLATE(OmpReductionInitializerClause);
+  std::variant<OmpReductionInitializerProc, OmpReductionInitializerExpr> u;
+};
 
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
