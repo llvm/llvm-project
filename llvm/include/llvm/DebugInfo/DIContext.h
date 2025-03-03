@@ -267,6 +267,12 @@ public:
   virtual std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) = 0;
 
+  virtual std::optional<DILineInfo> getOptionalLineInfoForAddress(
+      object::SectionedAddress Address,
+      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+  virtual std::optional<DILineInfo>
+  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) = 0;
+
 private:
   const DIContextKind Kind;
 };

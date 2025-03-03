@@ -32,6 +32,17 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
 
 void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
 
+std::optional<DILineInfo>
+PDBContext::getOptionalLineInfoForAddress(object::SectionedAddress Address,
+                                          DILineInfoSpecifier Specifier) {
+  return getLineInfoForAddress(Address, Specifier);
+}
+
+std::optional<DILineInfo> PDBContext::getOptionalLineInfoForDataAddress(
+    object::SectionedAddress Address) {
+  return getLineInfoForDataAddress(Address);
+}
+
 DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
                                              DILineInfoSpecifier Specifier) {
   DILineInfo Result;

@@ -1732,11 +1732,21 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
 
 DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
                                                DILineInfoSpecifier Spec) {
-  DILineInfo Result;
+  std::optional<DILineInfo> Result =
+      getOptionalLineInfoForAddress(Address, Spec);
+  if (Result)
+    return *Result;
+  return DILineInfo();
+}
+
+std::optional<DILineInfo>
+DWARFContext::getOptionalLineInfoForAddress(object::SectionedAddress Address,
+                                            DILineInfoSpecifier Spec) {
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
+  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1753,17 +1763,25 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
 
 DILineInfo
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
-  DILineInfo Result;
+  std::optional<DILineInfo> Result = getOptionalLineInfoForDataAddress(Address);
+  if (Result)
+    return *Result;
+  return DILineInfo();
+}
+
+std::optional<DILineInfo> DWARFContext::getOptionalLineInfoForDataAddress(
+    object::SectionedAddress Address) {
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
   if (DWARFDie Die = CU->getVariableForAddress(Address.Address)) {
+    DILineInfo Result;
     Result.FileName = Die.getDeclFile(FileLineInfoKind::AbsoluteFilePath);
     Result.Line = Die.getDeclLine();
+    return Result;
   }
-
-  return Result;
+  return std::nullopt;
 }
 
 DILineInfoTable DWARFContext::getLineInfoForAddressRange(
