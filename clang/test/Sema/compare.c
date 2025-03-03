@@ -424,6 +424,22 @@ int test13(unsigned a, int b) {
         return a > ~(95 != b); // expected-warning {{comparison of integers of different signs}}
 }
 
-int test14(unsigned a, int b) {
+int test14(unsigned a, unsigned b) {
+        return a > ~b; // no-warning
+}
+
+int test15(unsigned a, int b) {
         return a > -(95 != b); // expected-warning {{comparison of integers of different signs}}
+}
+
+int test16(unsigned a, unsigned b) {
+        return a > -b; // no-warning
+}
+
+int test17(int a, unsigned b) {
+    return a > --b; // expected-warning {{comparison of integers of different signs}}
+}
+
+int test_negation(int a) {
+  return a == -(-2147483648); // expected-warning {{result of comparison of constant 2147483648 with expression of type 'int' is always false}}
 }
