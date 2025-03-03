@@ -15732,6 +15732,51 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
+  const SIRegisterInfo &RI = TII->getRegisterInfo();
+
+  /* check if VGPR32 = COPY VGPR16 or
+   * VGPR16 = COPY VGPR32 is inserted for register operand in ISEL.
+   *
+   * Fix these copy to use 16bit access by adding subreg index
+   * or subreg_to_reg
+   */
+  if (Subtarget->useRealTrue16Insts()) {
+    if (!MI.getDesc().operands().empty()) {
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+      for (unsigned I = MI.getNumOperands() - 1; I > 0; --I) {
+        MachineOperand &Op = MI.getOperand(I);
+        if (!Op.isReg() || !Op.getReg().isVirtual())
+          continue;
+        if (!TRI->isVGPR(MRI, Op.getReg()))
+          continue;
+        auto *CopyMI = MRI.getUniqueVRegDef(Op.getReg());
+        if (!CopyMI || !CopyMI->isCopy())
+          continue;
+        MachineOperand &SrcOp = CopyMI->getOperand(1);
+        if (!SrcOp.isReg() || !SrcOp.getReg().isVirtual())
+          continue;
+        if (!TRI->isVGPR(MRI, SrcOp.getReg()))
+          continue;
+        Register CopySrcReg = CopyMI->getOperand(1).getReg();
+        auto *CopySrcRC = TRI->getRegClassForReg(MRI, CopySrcReg);
+        Register CopyDstReg = CopyMI->getOperand(0).getReg();
+        auto *CopyDstRC = TRI->getRegClassForReg(MRI, CopyDstReg);
+        unsigned CopySrcSize = RI.getRegSizeInBits(*CopySrcRC);
+        unsigned CopyDstSize = RI.getRegSizeInBits(*CopyDstRC);
+        if (CopySrcSize == 32 && CopyDstSize == 16) {
+          // set src with lo16 subreg index
+          CopyMI->getOperand(1).setSubReg(AMDGPU::lo16);
+        } else if (CopySrcSize == 16 && CopyDstSize == 32) {
+          // replace COPY to SUBREG_TO_REG
+          CopyMI->setDesc(TII->get(TargetOpcode::SUBREG_TO_REG));
+          CopyMI->removeOperand(1);
+          CopyMI->addOperand(MachineOperand::CreateImm(0));
+          CopyMI->addOperand(MachineOperand::CreateReg(CopySrcReg, false));
+          CopyMI->addOperand(MachineOperand::CreateImm(AMDGPU::lo16));
+        }
+      }
+    }
+  }
 
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
