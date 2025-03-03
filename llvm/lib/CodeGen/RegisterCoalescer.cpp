@@ -461,6 +461,9 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
                             const TargetRegisterClass *DstRC,
                             const TargetRegisterClass *SrcRC, unsigned DstSub,
                             const MachineFunction &MF) {
+  const TargetRegisterClass *ReferenceRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+
   const TargetRegisterClass *LargerDstRC =
       TRI.getLargestLegalSuperClass(DstRC, MF);
 
@@ -470,6 +473,7 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
       TRI.getMatchingSuperRegClass(LargerDstRC, LargerSrcRC, DstSub);
 
   LLVM_DEBUG(
+    dbgs() << "ReferenceRC: " << (ReferenceRC ? TRI.getRegClassName(ReferenceRC) : "<null>") << '\n';
       dbgs() << "LargerDstRC: " << TRI.getRegClassName(LargerDstRC) << '\n';
       dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';);
 
