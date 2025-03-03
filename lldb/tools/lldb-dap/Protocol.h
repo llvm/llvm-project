@@ -21,7 +21,6 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 
 #include "llvm/Support/JSON.h"
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -85,9 +84,6 @@ bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
 struct Event {
   std::string event;
   std::optional<llvm::json::Value> rawBody;
-
-  /// lldb-dap specific extension on the 'terminated' event specifically.
-  std::optional<llvm::json::Value> statistics;
 };
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
@@ -122,9 +118,9 @@ bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 //               " "is not shown in the UI.\nSome predefined values exist.",
 //           "_enum" : [ "cancelled", "notStopped" ],
 //           "enumDescriptions" : [
-//             "the request was cancelled.", "the request may be retried once
-//             the "
-//                                           "adapter is in a 'stopped' state."
+//             "the request was cancelled.",
+//             "the request may be retried once the adapter is in a 'stopped'
+//             state."
 //           ]
 //         },
 //         "body" : {
@@ -142,13 +138,74 @@ bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 // }
 struct Response {
   int64_t request_seq;
-  bool success;
   std::string command;
+  bool success;
   std::optional<std::string> message;
   std::optional<llvm::json::Value> rawBody;
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
+
+// "Message": {
+//   "type": "object",
+//   "description": "A structured message object. Used to return errors from
+//   requests.", "properties": {
+//     "id": {
+//       "type": "integer",
+//       "description": "Unique (within a debug adapter implementation)
+//       identifier for the message. The purpose of these error IDs is to help
+//       extension authors that have the requirement that every user visible
+//       error message needs a corresponding error number, so that users or
+//       customer support can find information about the specific error more
+//       easily."
+//     },
+//     "format": {
+//       "type": "string",
+//       "description": "A format string for the message. Embedded variables
+//       have the form `{name}`.\nIf variable name starts with an underscore
+//       character, the variable does not contain user data (PII) and can be
+//       safely used for telemetry purposes."
+//     },
+//     "variables": {
+//       "type": "object",
+//       "description": "An object used as a dictionary for looking up the
+//       variables in the format string.", "additionalProperties": {
+//         "type": "string",
+//         "description": "All dictionary values must be strings."
+//       }
+//     },
+//     "sendTelemetry": {
+//       "type": "boolean",
+//       "description": "If true send to telemetry."
+//     },
+//     "showUser": {
+//       "type": "boolean",
+//       "description": "If true show user."
+//     },
+//     "url": {
+//       "type": "string",
+//       "description": "A url where additional information about this message
+//       can be found."
+//     },
+//     "urlLabel": {
+//       "type": "string",
+//       "description": "A label that is presented to the user as the UI for
+//       opening the url."
+//     }
+//   },
+//   "required": [ "id", "format" ]
+// },
+struct ErrorMessage {
+  uint64_t id;
+  std::string format;
+  std::optional<std::map<std::string, std::string>> variables;
+  std::optional<bool> sendTelemetry;
+  std::optional<bool> showUser;
+  std::optional<std::string> url;
+  std::optional<std::string> urlLabel;
+};
+bool fromJSON(const llvm::json::Value &, ErrorMessage &, llvm::json::Path);
+llvm::json::Value toJSON(const ErrorMessage &);
 
 // "ProtocolMessage": {
 //   "type": "object",

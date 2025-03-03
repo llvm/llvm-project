@@ -96,7 +96,7 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
 
 json::Value toJSON(const Response &R) {
   json::Object Result{{"type", "response"},
-                      {"req", 0},
+                      {"seq", 0},
                       {"command", R.command},
                       {"request_seq", R.request_seq},
                       {"success", R.success}};
@@ -145,6 +145,36 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
          mapRaw(Params, "body", R.rawBody, P);
 }
 
+json::Value toJSON(const ErrorMessage &EM) {
+  json::Object Result{{"id", EM.id}, {"format", EM.format}};
+
+  if (EM.variables) {
+    json::Object variables;
+    for (auto &var : *EM.variables)
+      variables[var.first] = var.second;
+    Result.insert({"variables", std::move(variables)});
+  }
+  if (EM.sendTelemetry && *EM.sendTelemetry)
+    Result.insert({"sendTelemetry", *EM.sendTelemetry});
+  if (EM.showUser && *EM.showUser)
+    Result.insert({"showUser", *EM.showUser});
+  if (EM.url)
+    Result.insert({"url", EM.url});
+  if (EM.urlLabel)
+    Result.insert({"urlLabel", EM.urlLabel});
+
+  return std::move(Result);
+}
+
+bool fromJSON(json::Value const &Params, ErrorMessage &EM, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", EM.id) && O.map("format", EM.format) &&
+         O.map("variables", EM.variables) &&
+         O.map("sendTelemetry", EM.sendTelemetry) &&
+         O.map("showUser", EM.showUser) && O.map("url", EM.url) &&
+         O.map("urlLabel", EM.urlLabel);
+}
+
 json::Value toJSON(const Event &E) {
   json::Object Result{
       {"type", "event"},
@@ -154,9 +184,6 @@ json::Value toJSON(const Event &E) {
 
   if (E.rawBody)
     Result.insert({"body", E.rawBody});
-
-  if (E.statistics)
-    Result.insert({"statistics", E.statistics});
 
   return std::move(Result);
 }
@@ -186,8 +213,7 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
     return false;
   }
 
-  return mapRaw(Params, "body", E.rawBody, P) &&
-         mapRaw(Params, "statistics", E.statistics, P);
+  return mapRaw(Params, "body", E.rawBody, P);
 }
 
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
