@@ -90,7 +90,7 @@ public:
   const std::string OutDir;
   AnalyzerOptions &Opts;
   ArrayRef<std::string> Plugins;
-  CodeInjector *Injector;
+  std::unique_ptr<CodeInjector> Injector;
   cross_tu::CrossTranslationUnitContext CTU;
 
   /// Stores the declarations from the local translation unit.
@@ -123,10 +123,10 @@ public:
 
   AnalysisConsumer(CompilerInstance &CI, const std::string &outdir,
                    AnalyzerOptions &opts, ArrayRef<std::string> plugins,
-                   CodeInjector *injector)
+                   std::unique_ptr<CodeInjector> injector)
       : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr),
-        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts),
-        Plugins(plugins), Injector(injector), CTU(CI),
+        PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
+        Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
     DigestAnalyzerOptions();
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
@@ -229,9 +229,9 @@ public:
     checkerMgr = std::make_unique<CheckerManager>(*Ctx, Opts, PP, Plugins,
                                                   CheckerRegistrationFns);
 
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
-                                            CreateStoreMgr, CreateConstraintMgr,
-                                            checkerMgr.get(), Opts, Injector);
+    Mgr = std::make_unique<AnalysisManager>(
+        *Ctx, PP, std::move(PathConsumers), CreateStoreMgr, CreateConstraintMgr,
+        checkerMgr.get(), Opts, std::move(Injector));
   }
 
   /// Store the top level decls in the set to be processed later on.
@@ -342,8 +342,9 @@ public:
     return true;
   }
 
-  void AddDiagnosticConsumer(PathDiagnosticConsumer *Consumer) override {
-    PathConsumers.push_back(Consumer);
+  void AddDiagnosticConsumer(
+      std::unique_ptr<PathDiagnosticConsumer> Consumer) override {
+    PathConsumers.push_back(std::move(Consumer));
   }
 
   void AddCheckerRegistrationFn(std::function<void(CheckerRegistry&)> Fn) override {
@@ -794,5 +795,5 @@ ento::CreateAnalysisConsumer(CompilerInstance &CI) {
   return std::make_unique<AnalysisConsumer>(
       CI, CI.getFrontendOpts().OutputFile, analyzerOpts,
       CI.getFrontendOpts().Plugins,
-      hasModelPath ? new ModelInjector(CI) : nullptr);
+      hasModelPath ? std::make_unique<ModelInjector>(CI) : nullptr);
 }

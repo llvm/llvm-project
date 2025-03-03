@@ -102,12 +102,7 @@ static Status PushToLinuxGuardedControlStack(addr_t return_addr,
   size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
                                                   sizeof(return_addr), error);
   if ((wrote != sizeof(return_addr) || error.Fail())) {
-    // When PrepareTrivialCall fails, the register context is not restored,
-    // unlike when an expression fails to execute. This is arguably a bug,
-    // see https://github.com/llvm/llvm-project/issues/124269.
-    // For now we are handling this here specifically. We can assume this
-    // write will work as the one to decrement the register did.
-    reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0 + 8);
+    // gcspr_el0 will be restored by the ThreadPlan's DoTakedown.
     return Status("Failed to write new Guarded Control Stack entry.");
   }
 
@@ -150,8 +145,6 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (args.size() > 8)
     return false;
 
-  // Do this first, as it's got the most chance of failing (though still very
-  // low).
   if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
     Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
     // If we could not manage the GCS, the expression will certainly fail,
@@ -391,35 +384,27 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   return error;
 }
 
-bool ABISysV_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arm64::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
-  // Our previous Call Frame Address is the stack pointer
+  // Our previous Call Frame Address is the stack pointer, all other registers
+  // are the same.
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetReturnAddressRegister(lr_reg_num);
-
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetReturnAddressRegister(lr_reg_num);
+  plan_sp->SetSourceName("arm64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arm64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = arm64_dwarf::fp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
@@ -433,13 +418,13 @@ bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm64 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arm64 default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says

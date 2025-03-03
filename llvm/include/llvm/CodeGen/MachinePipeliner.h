@@ -468,9 +468,10 @@ public:
         SUnit *SuccSUnit = Succ.getDst();
         if (V != SuccSUnit)
           continue;
-        if (SUnitToDistance[U] + Succ.getLatency() > SUnitToDistance[V]) {
-          SUnitToDistance[V] = SUnitToDistance[U] + Succ.getLatency();
-        }
+        unsigned &DU = SUnitToDistance[U];
+        unsigned &DV = SUnitToDistance[V];
+        if (DU + Succ.getLatency() > DV)
+          DV = DU + Succ.getLatency();
       }
     }
     // Handle a back-edge in loop carried dependencies

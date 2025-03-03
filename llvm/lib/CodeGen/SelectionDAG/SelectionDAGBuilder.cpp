@@ -908,8 +908,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!Register::isVirtualRegister(Regs[Part + i]) ||
-          !RegisterVT.isInteger())
+      if (!Regs[Part + i].isVirtual() || !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -1023,7 +1022,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
     Flag.setMatchingOp(MatchingIdx);
-  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
+  else if (!Regs.empty() && Regs.front().isVirtual()) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -1061,7 +1060,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                            RegisterVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
       assert(Reg < Regs.size() && "Mismatch in # registers expected");
-      unsigned TheReg = Regs[Reg++];
+      Register TheReg = Regs[Reg++];
       Ops.push_back(DAG.getRegister(TheReg, RegisterVT));
     }
   }
@@ -1660,7 +1659,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     // an associated VReg, we can refer to that instead.
     auto VMI = FuncInfo.ValueMap.find(V);
     if (VMI != FuncInfo.ValueMap.end()) {
-      unsigned Reg = VMI->second;
+      Register Reg = VMI->second;
       // If this is a PHI node, it may be split up into several MI PHI nodes
       // (in FunctionLoweringInfo::set).
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
@@ -1855,7 +1854,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ArrayType>(CDS->getType()))
         return DAG.getMergeValues(Ops, getCurSDLoc());
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (C->getType()->isStructTy() || C->getType()->isArrayTy()) {
@@ -1898,14 +1897,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
     if (VT.isRISCVVectorTuple()) {
       assert(C->isNullValue() && "Can only zero this target type!");
-      return NodeMap[V] = DAG.getNode(
-                 ISD::BITCAST, getCurSDLoc(), VT,
-                 DAG.getNode(
-                     ISD::SPLAT_VECTOR, getCurSDLoc(),
-                     EVT::getVectorVT(*DAG.getContext(), MVT::i8,
-                                      VT.getSizeInBits().getKnownMinValue() / 8,
-                                      true),
-                     DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
+      return DAG.getNode(
+          ISD::BITCAST, getCurSDLoc(), VT,
+          DAG.getNode(
+              ISD::SPLAT_VECTOR, getCurSDLoc(),
+              EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               VT.getSizeInBits().getKnownMinValue() / 8, true),
+              DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
     VectorType *VecTy = cast<VectorType>(V->getType());
@@ -1918,7 +1916,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       for (unsigned i = 0; i != NumElements; ++i)
         Ops.push_back(getValue(CV->getOperand(i)));
 
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return DAG.getBuildVector(VT, getCurSDLoc(), Ops);
     }
 
     if (isa<ConstantAggregateZero>(C)) {
@@ -1931,7 +1929,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
+      return DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
@@ -3361,16 +3359,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
@@ -6282,15 +6292,6 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
   }
 }
 
-void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
-                                           const char *FunctionName) {
-  assert(FunctionName && "FunctionName must not be nullptr");
-  SDValue Callee = DAG.getExternalSymbol(
-      FunctionName,
-      DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
-}
-
 /// Given a @llvm.call.preallocated.setup, return the corresponding
 /// preallocated call.
 static const CallBase *FindPreallocatedCall(const Value *PreallocatedSetup) {
@@ -8125,15 +8126,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_vector_partial_reduce_add: {
-
     if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
       visitTargetIntrinsic(I, Intrinsic);
       return;
     }
-
-    setValue(&I, DAG.getPartialReduceAdd(sdl, EVT::getEVT(I.getType()),
-                                         getValue(I.getOperand(0)),
-                                         getValue(I.getOperand(1))));
+    SDValue Acc = getValue(I.getOperand(0));
+    SDValue Input = getValue(I.getOperand(1));
+    setValue(&I,
+             DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, sdl, Acc.getValueType(), Acc,
+                         Input, DAG.getConstant(1, sdl, Input.getValueType())));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -10136,9 +10137,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      for (unsigned Reg : OpInfo.AssignedRegs.Regs) {
-        if (Register::isPhysicalRegister(Reg) &&
-            TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
+      for (Register Reg : OpInfo.AssignedRegs.Regs) {
+        if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
           const char *RegName = TRI.getName(Reg);
           emitInlineAsmError(Call, "write to reserved register '" +
                                        Twine(RegName) + "'");
@@ -11394,13 +11394,13 @@ SDValue TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 }
 
 void SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V,
-                                                     unsigned Reg,
+                                                     Register Reg,
                                                      ISD::NodeType ExtendType) {
   SDValue Op = getNonRegisterValue(V);
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
+  assert(!Reg.isPhysical() && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
@@ -12014,12 +12014,12 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       if (PN.getType()->isEmptyTy())
         continue;
 
-      unsigned Reg;
+      Register Reg;
       const Value *PHIOp = PN.getIncomingValueForBlock(LLVMBB);
 
       if (const auto *C = dyn_cast<Constant>(PHIOp)) {
-        unsigned &RegOut = ConstantsOut[C];
-        if (RegOut == 0) {
+        Register &RegOut = ConstantsOut[C];
+        if (!RegOut) {
           RegOut = FuncInfo.CreateRegs(C);
           // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
@@ -12051,8 +12051,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       for (EVT VT : ValueVTs) {
         const unsigned NumRegisters = TLI.getNumRegisters(*DAG.getContext(), VT);
         for (unsigned i = 0; i != NumRegisters; ++i)
-          FuncInfo.PHINodesToUpdate.push_back(
-              std::make_pair(&*MBBI++, Reg + i));
+          FuncInfo.PHINodesToUpdate.emplace_back(&*MBBI++, Reg + i);
         Reg += NumRegisters;
       }
     }
@@ -12759,7 +12758,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
 
-  unsigned InitialDef = FuncInfo.ValueMap[CBR];
+  Register InitialDef = FuncInfo.ValueMap[CBR];
   SDValue Chain = DAG.getRoot();
 
   // Re-parse the asm constraints string.

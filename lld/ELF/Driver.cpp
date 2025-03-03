@@ -406,6 +406,11 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
 
+  if (ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_ARM &&
+      ctx.arg.zExecuteOnlyReport != "none")
+    ErrAlways(ctx)
+        << "-z execute-only-report only supported on AArch64 and ARM";
+
   if (ctx.arg.emachine != EM_PPC64) {
     if (ctx.arg.tocOptimize)
       ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
@@ -1620,10 +1625,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1632,8 +1639,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
-                       << option.second << " is not recognized";
+        ErrAlways(ctx) << "unknown -z " << reportArg.first
+                       << "= value: " << option.second;
         continue;
       }
       *reportArg.second = option.second;
@@ -2617,8 +2624,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
-        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
-            sym->computeBinding(ctx) != STB_LOCAL)
+        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
           sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
@@ -2965,6 +2971,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.arg.exportDynamic &= ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))

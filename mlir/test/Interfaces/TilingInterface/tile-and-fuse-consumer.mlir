@@ -211,7 +211,7 @@ module {
         linalg.yield %7, %8 : f32, f32
       } -> (tensor<64x64xf32>, tensor<64x64xf32>)
       %5 = tensor.empty() : tensor<2048xf32>
-      %unpack = tensor.unpack %0#0 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %5 : tensor<64x32xf32> -> tensor<2048xf32>
+      %unpack = linalg.unpack %0#0 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %5 : tensor<64x32xf32> -> tensor<2048xf32>
       return %4#1, %unpack : tensor<64x64xf32>, tensor<2048xf32>
     }
 }
@@ -254,7 +254,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:          tensor.parallel_insert_slice %[[ELEM_OUT]]#1 into %[[ELEM_OUT_ARG_1]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
 //      CHECK:       }
 //      CHECK:   }
-//      CHECK:   %[[UNPACK:.*]] = tensor.unpack %[[FINAL_RESULT]]#0 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %{{.*}} : tensor<64x32xf32> -> tensor<2048xf32>
+//      CHECK:   %[[UNPACK:.*]] = linalg.unpack %[[FINAL_RESULT]]#0 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %{{.*}} : tensor<64x32xf32> -> tensor<2048xf32>
 //      CHECK:   return %[[FINAL_RESULT]]#3, %[[UNPACK]] :
 
 // -----
@@ -278,7 +278,7 @@ module {
             }
         }
         %output = tensor.empty() : tensor<2048xf32>
-        %unpack = tensor.unpack %1 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %output : tensor<64x32xf32> -> tensor<2048xf32>
+        %unpack = linalg.unpack %1 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %output : tensor<64x32xf32> -> tensor<2048xf32>
         return %unpack : tensor<2048xf32>
     }
 }
@@ -308,7 +308,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply #[[UNPACK_RESULT_OFFSET_MAP]](%[[IV1]])
 //  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min #[[UNPACK_RESULT_SIZE_MAP]](%[[IV1]])
 //      CHECK:      %[[TILED_UNPACK_DEST:.*]] = tensor.extract_slice %[[UNPACK_OUT_ARG]][%[[UNPACK_RESULT_OFFSET]]] [%[[UNPACK_RESULT_SIZE]]] [1]
-//      CHECK:      %[[TILED_UNPACK_OUT:.*]] = tensor.unpack %[[GENERIC_OUT]]
+//      CHECK:      %[[TILED_UNPACK_OUT:.*]] = linalg.unpack %[[GENERIC_OUT]]
 // CHECK-SAME:                              outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32]
 // CHECK-SAME:                              into %[[TILED_UNPACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {
@@ -339,7 +339,7 @@ module {
             }
         }
         %output = tensor.empty() : tensor<2047xf32>
-        %unpack = tensor.unpack %1 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %output : tensor<64x32xf32> -> tensor<2047xf32>
+        %unpack = linalg.unpack %1 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32] into %output : tensor<64x32xf32> -> tensor<2047xf32>
         return %unpack : tensor<2047xf32>
     }
 }
@@ -369,7 +369,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply #[[UNPACK_RESULT_OFFSET_MAP]](%[[IV1]])
 //  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min #[[UNPACK_RESULT_SIZE_MAP]](%[[IV1]])
 //      CHECK:      %[[TILED_UNPACK_DEST:.*]] = tensor.extract_slice %[[UNPACK_OUT_ARG]][%[[UNPACK_RESULT_OFFSET]]] [%[[UNPACK_RESULT_SIZE]]] [1]
-//      CHECK:      %[[TILED_UNPACK_OUT:.*]] = tensor.unpack %[[GENERIC_OUT]]
+//      CHECK:      %[[TILED_UNPACK_OUT:.*]] = linalg.unpack %[[GENERIC_OUT]]
 // CHECK-SAME:                              outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32]
 // CHECK-SAME:                              into %[[TILED_UNPACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {
@@ -400,7 +400,7 @@ module {
             }
         }
         %output = tensor.empty() : tensor<4x32x16xf32>
-        %pack = tensor.pack %1 inner_dims_pos = [0] inner_tiles = [16] into %output : tensor<64x32xf32> -> tensor<4x32x16xf32>
+        %pack = linalg.pack %1 inner_dims_pos = [0] inner_tiles = [16] into %output : tensor<64x32xf32> -> tensor<4x32x16xf32>
         return %pack : tensor<4x32x16xf32>
     }
 }
@@ -428,7 +428,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:              outs(%[[GENERIC_OUT_SLICE]] :
 //      CHECK:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV1]])
 //      CHECK:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][%[[PACK_RESULT_OFFSET]], %[[IV2]], 0] [2, 32, 16] [1, 1, 1]
-//      CHECK:      %[[TILED_PACK_OUT:.*]] = tensor.pack %[[GENERIC_OUT]]
+//      CHECK:      %[[TILED_PACK_OUT:.*]] = linalg.pack %[[GENERIC_OUT]]
 // CHECK-SAME:                              inner_dims_pos = [0] inner_tiles = [16]
 // CHECK-SAME:                              into %[[TILED_PACK_DEST]]
 //      CHECK:      scf.forall.in_parallel {

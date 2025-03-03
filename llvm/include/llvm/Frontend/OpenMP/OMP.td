@@ -34,6 +34,7 @@ def OpenMP : DirectiveLanguage {
 
 def OMPC_Absent : Clause<"absent"> {
   let clangClass = "OMPAbsentClause";
+  let flangClass = "OmpAbsentClause";
 }
 def OMPC_Acquire : Clause<"acquire"> {
   let clangClass = "OMPAcquireClause";
@@ -107,6 +108,7 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
+  let flangClass = "OmpContainsClause";
 }
 def OMPC_Capture : Clause<"capture"> {
   let clangClass = "OMPCaptureClause";
@@ -225,6 +227,7 @@ def OMPC_Hint : Clause<"hint"> {
 }
 def OMPC_Holds : Clause<"holds"> {
   let clangClass = "OMPHoldsClause";
+  let flangClass = "OmpHoldsClause";
 }
 def OMPC_If : Clause<"if"> {
   let clangClass = "OMPIfClause";
@@ -562,6 +565,14 @@ def OMP_Allocators : Directive<"allocators"> {
 def OMP_Assumes : Directive<"assumes"> {
   let association = AS_None;
   let category = CA_Informational;
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
+    VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
+    VersionedClause<OMPC_NoOpenMPRoutines, 51>,
+    VersionedClause<OMPC_NoParallelism, 51>,
+  ];
 }
 def OMP_EndAssumes : Directive<"end assumes"> {
   let association = AS_Delimited;
@@ -608,6 +619,14 @@ def OMP_Barrier : Directive<"barrier"> {
 def OMP_BeginAssumes : Directive<"begin assumes"> {
   let association = AS_Delimited;
   let category = CA_Informational;
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Absent, 51>,
+    VersionedClause<OMPC_Contains, 51>,
+    VersionedClause<OMPC_Holds, 51>,
+    VersionedClause<OMPC_NoOpenMP, 51>,
+    VersionedClause<OMPC_NoOpenMPRoutines, 51>,
+    VersionedClause<OMPC_NoParallelism, 51>,
+  ];
 }
 def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
   let allowedClauses = [
@@ -1191,6 +1210,13 @@ def OMP_ThreadPrivate : Directive<"threadprivate"> {
 def OMP_Tile : Directive<"tile"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 51>,
+  ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Stripe : Directive<"stripe"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 60>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;

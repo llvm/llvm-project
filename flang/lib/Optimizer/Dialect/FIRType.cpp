@@ -426,6 +426,11 @@ mlir::Type unwrapAllRefAndSeqType(mlir::Type ty) {
   }
 }
 
+mlir::Type getFortranElementType(mlir::Type ty) {
+  return fir::unwrapSequenceType(
+      fir::unwrapPassByRefType(fir::unwrapRefType(ty)));
+}
+
 mlir::Type unwrapSeqOrBoxedSeqType(mlir::Type ty) {
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
     return seqTy.getEleTy();
@@ -1365,23 +1370,12 @@ void FIROpsDialect::registerTypes() {
            TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
-  fir::ReferenceType::attachInterface<
-      OpenACCPointerLikeModel<fir::ReferenceType>>(*getContext());
-
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
       *getContext());
-  fir::PointerType::attachInterface<OpenACCPointerLikeModel<fir::PointerType>>(
-      *getContext());
-
   fir::HeapType::attachInterface<OpenMPPointerLikeModel<fir::HeapType>>(
       *getContext());
-  fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
-      *getContext());
-
   fir::LLVMPointerType::attachInterface<
       OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
-  fir::LLVMPointerType::attachInterface<
-      OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
 
 std::optional<std::pair<uint64_t, unsigned short>>

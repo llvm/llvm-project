@@ -28,7 +28,7 @@ define dso_local void @TestFPExtF16_F128() nounwind strictfp {
 ; X64-AVX512-LABEL: TestFPExtF16_F128:
 ; X64-AVX512:       # %bb.0: # %entry
 ; X64-AVX512-NEXT:    pushq %rax
-; X64-AVX512-NEXT:    vmovsh vf16(%rip), %xmm0
+; X64-AVX512-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX512-NEXT:    callq __extendhftf2@PLT
 ; X64-AVX512-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX512-NEXT:    popq %rax
@@ -40,7 +40,7 @@ define dso_local void @TestFPExtF16_F128() nounwind strictfp {
 ; X86-NEXT:    subl $40, %esp
 ; X86-NEXT:    movzwl vf16, %eax
 ; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    calll __extendhfsf2
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax

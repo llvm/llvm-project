@@ -1007,6 +1007,10 @@ void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
@@ -2282,10 +2286,6 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
     VisitDecl(S->getPack());
     ID.AddInteger(0);
   }
-}
-void StmtProfiler::VisitResolvedUnexpandedPackExpr(
-    const ResolvedUnexpandedPackExpr *S) {
-  VisitExpr(S);
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {

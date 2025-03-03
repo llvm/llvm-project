@@ -1387,10 +1387,15 @@ void ASTStmtReader::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
 void ASTStmtReader::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
+  bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
+  assert(HasFPFeatures == E->hasStoredFPFeatures());
   E->BuiltinLoc = readSourceLocation();
   E->RParenLoc = readSourceLocation();
   E->TInfo = readTypeSourceInfo();
   E->SrcExpr = Record.readSubExpr();
+  if (HasFPFeatures)
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
 void ASTStmtReader::VisitBlockExpr(BlockExpr *E) {
@@ -2208,16 +2213,6 @@ void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
     Exprs[I] = Record.readExpr();
 }
 
-void ASTStmtReader::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  VisitExpr(E);
-  E->NumExprs = Record.readInt();
-  E->BeginLoc = readSourceLocation();
-  auto **Exprs = E->getTrailingObjects<Expr *>();
-  for (unsigned I = 0; I < E->NumExprs; ++I)
-    Exprs[I] = Record.readExpr();
-}
-
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
@@ -2249,11 +2244,11 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmPackExpr(
 void ASTStmtReader::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
   VisitExpr(E);
   E->NumParameters = Record.readInt();
-  E->ParamPack = readDeclAs<ParmVarDecl>();
+  E->ParamPack = readDeclAs<ValueDecl>();
   E->NameLoc = readSourceLocation();
-  auto **Parms = E->getTrailingObjects<VarDecl *>();
+  auto **Parms = E->getTrailingObjects<ValueDecl *>();
   for (unsigned i = 0, n = E->NumParameters; i != n; ++i)
-    Parms[i] = readDeclAs<VarDecl>();
+    Parms[i] = readDeclAs<ValueDecl>();
 }
 
 void ASTStmtReader::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
@@ -2451,6 +2446,10 @@ void ASTStmtReader::VisitOMPLoopTransformationDirective(
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPStripeDirective(OMPStripeDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -3391,9 +3390,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ShuffleVectorExpr(Empty);
       break;
 
-    case EXPR_CONVERT_VECTOR:
-      S = new (Context) ConvertVectorExpr(Empty);
+    case EXPR_CONVERT_VECTOR: {
+      BitsUnpacker ConvertVectorExprBits(Record[ASTStmtReader::NumStmtFields]);
+      ConvertVectorExprBits.advance(ASTStmtReader::NumExprBits);
+      bool HasFPFeatures = ConvertVectorExprBits.getNextBit();
+      S = ConvertVectorExpr::CreateEmpty(Context, HasFPFeatures);
       break;
+    }
 
     case EXPR_BLOCK:
       S = new (Context) BlockExpr(Empty);
@@ -3571,6 +3574,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTileDirective::CreateEmpty(Context, NumClauses, NumLoops);
+      break;
+    }
+
+    case STMP_OMP_STRIPE_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPStripeDirective::CreateEmpty(Context, NumClauses, NumLoops);
       break;
     }
 
@@ -4308,12 +4318,6 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = PackIndexingExpr::CreateDeserialized(
           Context,
           /*TransformedExprs=*/Record[ASTStmtReader::NumExprFields]);
-      break;
-
-    case EXPR_RESOLVED_UNEXPANDED_PACK:
-      S = ResolvedUnexpandedPackExpr::CreateDeserialized(
-          Context,
-          /*NumExprs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_SUBST_NON_TYPE_TEMPLATE_PARM:

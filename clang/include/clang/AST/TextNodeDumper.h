@@ -249,6 +249,7 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
@@ -424,6 +425,7 @@ public:
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
+  void VisitConvertVectorExpr(const ConvertVectorExpr *S);
 };
 
 } // namespace clang

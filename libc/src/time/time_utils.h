@@ -328,7 +328,9 @@ public:
     return BASE_YEAR + IS_NEXT_YEAR;
   }
 
-  LIBC_INLINE time_t get_epoch() const { return mktime_internal(timeptr); }
+  LIBC_INLINE time_t get_epoch() const {
+    return static_cast<time_t>(mktime_internal(timeptr));
+  }
 
   // returns the timezone offset in microwave time:
   // return (hours * 100) + minutes;

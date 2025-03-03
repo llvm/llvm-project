@@ -48,6 +48,7 @@ constexpr int HOURS_PER_DAY = 24;
 constexpr int DAYS_PER_WEEK = 7;
 constexpr int WEEKS_PER_YEAR = 52;
 constexpr int MONTHS_PER_YEAR = 12;
+constexpr int MAX_DAYS_PER_MONTH = 31;
 constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
 constexpr int DAYS_PER_LEAP_YEAR = 366;
 

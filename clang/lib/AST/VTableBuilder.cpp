@@ -2115,8 +2115,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     // Dump the next address point.
     uint64_t NextIndex = Index + 1;
-    if (AddressPointsByIndex.count(NextIndex)) {
-      if (AddressPointsByIndex.count(NextIndex) == 1) {
+    if (unsigned Count = AddressPointsByIndex.count(NextIndex)) {
+      if (Count == 1) {
         const BaseSubobject &Base =
           AddressPointsByIndex.find(NextIndex)->second;
 

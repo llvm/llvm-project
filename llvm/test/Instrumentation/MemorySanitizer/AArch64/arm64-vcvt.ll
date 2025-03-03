@@ -21,15 +21,10 @@ define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtas.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtas.v2i32.v2f32(<2 x float> %A)
@@ -41,15 +36,10 @@ define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtas.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtas.v4i32.v4f32(<4 x float> %A)
@@ -61,15 +51,10 @@ define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtas.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtas.v2i64.v2f64(<2 x double> %A)
@@ -81,15 +66,10 @@ define <1 x i64> @fcvtas_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double> %A)
@@ -106,15 +86,10 @@ define <2 x i32> @fcvtau_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtau.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtau.v2i32.v2f32(<2 x float> %A)
@@ -126,15 +101,10 @@ define <4 x i32> @fcvtau_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtau.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtau.v4i32.v4f32(<4 x float> %A)
@@ -146,15 +116,10 @@ define <2 x i64> @fcvtau_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtau.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtau.v2i64.v2f64(<2 x double> %A)
@@ -166,15 +131,10 @@ define <1 x i64> @fcvtau_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double> %A)
@@ -191,15 +151,10 @@ define <2 x i32> @fcvtms_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtms.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtms.v2i32.v2f32(<2 x float> %A)
@@ -211,15 +166,10 @@ define <4 x i32> @fcvtms_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtms.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtms.v4i32.v4f32(<4 x float> %A)
@@ -231,15 +181,10 @@ define <2 x i64> @fcvtms_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtms.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtms.v2i64.v2f64(<2 x double> %A)
@@ -251,15 +196,10 @@ define <1 x i64> @fcvtms_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double> %A)
@@ -276,15 +216,10 @@ define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtmu.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtmu.v2i32.v2f32(<2 x float> %A)
@@ -296,15 +231,10 @@ define <4 x i32> @fcvtmu_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtmu.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtmu.v4i32.v4f32(<4 x float> %A)
@@ -316,15 +246,10 @@ define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtmu.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtmu.v2i64.v2f64(<2 x double> %A)
@@ -336,15 +261,10 @@ define <1 x i64> @fcvtmu_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double> %A)
@@ -361,15 +281,10 @@ define <2 x i32> @fcvtps_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtps.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtps.v2i32.v2f32(<2 x float> %A)
@@ -381,15 +296,10 @@ define <4 x i32> @fcvtps_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtps.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtps.v4i32.v4f32(<4 x float> %A)
@@ -401,15 +311,10 @@ define <2 x i64> @fcvtps_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtps.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtps.v2i64.v2f64(<2 x double> %A)
@@ -421,15 +326,10 @@ define <1 x i64> @fcvtps_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double> %A)
@@ -446,15 +346,10 @@ define <2 x i32> @fcvtpu_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtpu.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtpu.v2i32.v2f32(<2 x float> %A)
@@ -466,15 +361,10 @@ define <4 x i32> @fcvtpu_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float> %A)
@@ -486,15 +376,10 @@ define <2 x i64> @fcvtpu_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtpu.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtpu.v2i64.v2f64(<2 x double> %A)
@@ -506,15 +391,10 @@ define <1 x i64> @fcvtpu_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double> %A)
@@ -531,15 +411,10 @@ define <2 x i32> @fcvtns_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtns.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtns.v2i32.v2f32(<2 x float> %A)
@@ -551,15 +426,10 @@ define <4 x i32> @fcvtns_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtns.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtns.v4i32.v4f32(<4 x float> %A)
@@ -571,15 +441,10 @@ define <2 x i64> @fcvtns_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtns.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtns.v2i64.v2f64(<2 x double> %A)
@@ -591,15 +456,10 @@ define <1 x i64> @fcvtns_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double> %A)
@@ -616,15 +476,10 @@ define <2 x i32> @fcvtnu_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtnu.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtnu.v2i32.v2f32(<2 x float> %A)
@@ -636,15 +491,10 @@ define <4 x i32> @fcvtnu_4s(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtnu.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtnu.v4i32.v4f32(<4 x float> %A)
@@ -656,15 +506,10 @@ define <2 x i64> @fcvtnu_2d(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtnu.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtnu.v2i64.v2f64(<2 x double> %A)
@@ -676,15 +521,10 @@ define <1 x i64> @fcvtnu_1d(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double> %A)
@@ -753,15 +593,10 @@ define <2 x i32> @fcvtzs_2s_intrinsic(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float> %A)
@@ -773,15 +608,10 @@ define <4 x i32> @fcvtzs_4s_intrinsic(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float> %A)
@@ -793,15 +623,10 @@ define <2 x i64> @fcvtzs_2d_intrinsic(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double> %A)
@@ -813,15 +638,10 @@ define <1 x i64> @fcvtzs_1d_intrinsic(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %A)
@@ -890,15 +710,10 @@ define <2 x i32> @fcvtzu_2s_intrinsic(<2 x float> %A) nounwind #0 {
 ; CHECK-SAME: <2 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float> %A)
@@ -910,15 +725,10 @@ define <4 x i32> @fcvtzu_4s_intrinsic(<4 x float> %A) nounwind #0 {
 ; CHECK-SAME: <4 x float> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float> [[A]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[TMPVAR3]]
 ;
   %tmpvar3 = call <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float> %A)
@@ -930,15 +740,10 @@ define <2 x i64> @fcvtzu_2d_intrinsic(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double> %A)
@@ -950,15 +755,10 @@ define <1 x i64> @fcvtzu_1d_intrinsic(<1 x double> %A) nounwind #0 {
 ; CHECK-SAME: <1 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <1 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <1 x i1> [[TMP2]] to <1 x i64>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> [[A]])
-; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMPVAR3]]
 ;
   %tmpvar3 = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %A)
@@ -1276,15 +1076,10 @@ define <2 x float> @fcvtxn_2s(<2 x double> %A) nounwind #0 {
 ; CHECK-SAME: <2 x double> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[TMPVAR3]]
 ;
   %tmpvar3 = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> %A)
@@ -1297,15 +1092,10 @@ define <4 x float> @fcvtxn_4s(<2 x float> %ret, <2 x double> %A) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i1> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> [[A]])
-; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x float> [[RET]], <2 x float> [[TMPVAR3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1324,9 +1114,9 @@ define <2 x i32> @fcvtzsc_2s(<2 x float> %A) nounwind #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = call <2 x i32> @llvm.aarch64.neon.vcvtfp2fxs.v2i32.v2f32(<2 x float> [[A]], i32 1)

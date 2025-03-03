@@ -195,9 +195,12 @@ static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cutoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-rate",
+    ClRandomKeepRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to keep instrumentation of a function."));
+                              "to keep instrumentation of a function. "
+                              "Note: instrumentation can be skipped randomly "
+                              "OR because of the hot percentile cutoff, if "
+                              "both are supplied."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -301,7 +304,7 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+    this->Rng = ClRandomKeepRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
                                                      : nullptr;
 
     initializeModule();
@@ -1599,9 +1602,9 @@ bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
   };
 
   auto SkipRandom = [&]() {
-    if (!ClRandomSkipRate.getNumOccurrences())
+    if (!ClRandomKeepRate.getNumOccurrences())
       return false;
-    std::bernoulli_distribution D(ClRandomSkipRate);
+    std::bernoulli_distribution D(ClRandomKeepRate);
     return !D(*Rng);
   };
 

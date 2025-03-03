@@ -1655,27 +1655,27 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  bool IsArray = NumElems.ugt(1);
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
-    if (NumElems.ule(1)) {
-      const Descriptor *Desc =
-          S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
-                               /*IsConst=*/false, /*IsTemporary=*/false,
-                               /*IsMutable=*/false);
-      Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+    if (IsArray) {
+      Block *B = Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
+                                    S.Ctx.getEvalID(),
                                     DynamicAllocator::Form::Operator);
       assert(B);
-
-      S.Stk.push<Pointer>(B);
+      S.Stk.push<Pointer>(Pointer(B).atIndex(0));
       return true;
     }
-    assert(NumElems.ugt(1));
 
-    Block *B =
-        Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
-                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
+    const Descriptor *Desc =
+        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
+                             /*IsConst=*/false, /*IsTemporary=*/false,
+                             /*IsMutable=*/false);
+    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                  DynamicAllocator::Form::Operator);
     assert(B);
+
     S.Stk.push<Pointer>(B);
     return true;
   }
@@ -1683,21 +1683,22 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   assert(!ElemT);
   // Structs etc.
   const Descriptor *Desc = S.P.createDescriptor(
-      Call, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+      NewCall, ElemType.getTypePtr(),
+      IsArray ? std::nullopt : Descriptor::InlineDescMD,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
       /*Init=*/nullptr);
 
-  if (NumElems.ule(1)) {
-    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
-                                  DynamicAllocator::Form::Operator);
+  if (IsArray) {
+    Block *B =
+        Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
+                           DynamicAllocator::Form::Operator);
     assert(B);
-    S.Stk.push<Pointer>(B);
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
     return true;
   }
 
-  Block *B =
-      Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
-                         DynamicAllocator::Form::Operator);
+  Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
+                                DynamicAllocator::Form::Operator);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;

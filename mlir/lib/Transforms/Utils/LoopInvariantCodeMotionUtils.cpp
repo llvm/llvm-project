@@ -60,17 +60,12 @@ size_t mlir::moveLoopInvariantCode(
     ArrayRef<Region *> regions,
     function_ref<bool(Value, Region *)> isDefinedOutsideRegion,
     function_ref<bool(Operation *, Region *)> shouldMoveOutOfRegion,
-    function_ref<void(Operation *)> moveOutOfRegionWithoutGuard,
-    function_ref<void(Operation *)> moveOutOfRegionWithGuard) {
+    function_ref<void(Operation *, Region *)> moveOutOfRegion) {
   size_t numMoved = 0;
 
   for (Region *region : regions) {
     LLVM_DEBUG(llvm::dbgs() << "Original loop:\n"
                             << *region->getParentOp() << "\n");
-
-    bool anyOpHoistedWithGuard = false;
-    bool loopSideEffectFreeOrHasOnlyReadSideEffect =
-        isMemoryEffectFreeOrOnlyRead(region->getParentOp());
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
@@ -89,26 +84,12 @@ size_t mlir::moveLoopInvariantCode(
         continue;
 
       LLVM_DEBUG(llvm::dbgs() << "Checking op: " << *op << "\n");
-
       if (!shouldMoveOutOfRegion(op, region) ||
           !canBeHoisted(op, definedOutside))
         continue;
-      // Can only hoist pure ops (side-effect free) when there is an op with
-      // write and/or unknown side effects in the loop.
-      if (!loopSideEffectFreeOrHasOnlyReadSideEffect && !isMemoryEffectFree(op))
-        continue;
 
-      bool moveWithoutGuard = !anyOpHoistedWithGuard && isMemoryEffectFree(op);
-      if (moveWithoutGuard) {
-        LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op
-                                << " without guard\n");
-        moveOutOfRegionWithoutGuard(op);
-      } else {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Moving loop-invariant op: " << *op << " with guard\n");
-        moveOutOfRegionWithGuard(op);
-        anyOpHoistedWithGuard = true;
-      }
+      LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op << "\n");
+      moveOutOfRegion(op, region);
       ++numMoved;
 
       // Since the op has been moved, we need to check its users within the
@@ -125,14 +106,13 @@ size_t mlir::moveLoopInvariantCode(
 size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
   return moveLoopInvariantCode(
       loopLike.getLoopRegions(),
-      [&](Value value, Region *region) {
-        return !region->isAncestor(value.getParentRegion());
+      [&](Value value, Region *) {
+        return loopLike.isDefinedOutsideOfLoop(value);
       },
       [&](Operation *op, Region *) {
-        return isSpeculatable(op) && isMemoryEffectFreeOrOnlyRead(op);
+        return isMemoryEffectFree(op) && isSpeculatable(op);
       },
-      [&](Operation *op) { loopLike.moveOutOfLoop(op); },
-      [&](Operation *op) { loopLike.moveOutOfLoopWithGuard(op); });
+      [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }
 
 namespace {

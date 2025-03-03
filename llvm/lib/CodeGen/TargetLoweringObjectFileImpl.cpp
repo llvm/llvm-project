@@ -547,7 +547,7 @@ static unsigned getELFSectionType(StringRef Name, SectionKind K) {
   return ELF::SHT_PROGBITS;
 }
 
-static unsigned getELFSectionFlags(SectionKind K) {
+static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
   unsigned Flags = 0;
 
   if (!K.isMetadata() && !K.isExclude())
@@ -559,8 +559,12 @@ static unsigned getELFSectionFlags(SectionKind K) {
   if (K.isText())
     Flags |= ELF::SHF_EXECINSTR;
 
-  if (K.isExecuteOnly())
-    Flags |= ELF::SHF_ARM_PURECODE;
+  if (K.isExecuteOnly()) {
+    if (T.isAArch64())
+      Flags |= ELF::SHF_AARCH64_PURECODE;
+    else if (T.isARM() || T.isThumb())
+      Flags |= ELF::SHF_ARM_PURECODE;
+  }
 
   if (K.isWriteable())
     Flags |= ELF::SHF_WRITE;
@@ -758,7 +762,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   if (!SupportsUnique) {
     Flags &= ~ELF::SHF_MERGE;
     EntrySize = 0;
-    return MCContext::GenericSectionID;
+    return MCSection::NonUniqueID;
   }
 
   const bool SymbolMergeable = Flags & ELF::SHF_MERGE;
@@ -770,7 +774,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
     if (TM.getSeparateNamedSections())
       return NextUniqueID++;
     else
-      return MCContext::GenericSectionID;
+      return MCSection::NonUniqueID;
   }
 
   // Symbols must be placed into sections with compatible entry sizes. Generate
@@ -778,8 +782,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // sections.
   const auto PreviousID =
       Ctx.getELFUniqueIDForEntsize(SectionName, Flags, EntrySize);
-  if (PreviousID && (!TM.getSeparateNamedSections() ||
-                     *PreviousID == MCContext::GenericSectionID))
+  if (PreviousID &&
+      (!TM.getSeparateNamedSections() || *PreviousID == MCSection::NonUniqueID))
     return *PreviousID;
 
   // If the user has specified the same section name as would be created
@@ -791,7 +795,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   if (SymbolMergeable &&
       Ctx.isELFImplicitMergeableSectionNamePrefix(SectionName) &&
       SectionName.starts_with(ImplicitSectionNameStem))
-    return MCContext::GenericSectionID;
+    return MCSection::NonUniqueID;
 
   // We have seen this section name before, but with different flags or entity
   // size. Create a new unique ID.
@@ -845,7 +849,7 @@ static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
 
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
   auto [Group, IsComdat, ExtraFlags] = getGlobalObjectInfo(GO, TM);
   Flags |= ExtraFlags;
 
@@ -903,7 +907,7 @@ static MCSectionELF *selectELFSectionForGlobal(
   unsigned EntrySize = getEntrySizeForKind(Kind);
 
   bool UniqueSectionName = false;
-  unsigned UniqueID = MCContext::GenericSectionID;
+  unsigned UniqueID = MCSection::NonUniqueID;
   if (EmitUniqueSection) {
     if (TM.getUniqueSectionNames()) {
       UniqueSectionName = true;
@@ -952,7 +956,7 @@ static MCSection *selectELFSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
 
   // If we have -ffunction-section or -fdata-section then we should emit the
   // global value to a uniqued section specifically for it.
@@ -972,7 +976,7 @@ MCSection *TargetLoweringObjectFileELF::SelectSectionForGlobal(
 MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     const Function &F, const TargetMachine &TM) const {
   SectionKind Kind = SectionKind::getText();
-  unsigned Flags = getELFSectionFlags(Kind);
+  unsigned Flags = getELFSectionFlags(Kind, TM.getTargetTriple());
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
   if (F.hasSection())
@@ -1073,7 +1077,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
     const TargetMachine &TM) const {
   assert(MBB.isBeginSection() && "Basic block does not start a section!");
-  unsigned UniqueID = MCContext::GenericSectionID;
+  unsigned UniqueID = MCSection::NonUniqueID;
 
   // For cold sections use the .text.split. prefix along with the parent
   // function name. All cold blocks for the same function go to the same
@@ -1774,7 +1778,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
     else
       ComdatGV = GO;
 
-    unsigned UniqueID = MCContext::GenericSectionID;
+    unsigned UniqueID = MCSection::NonUniqueID;
     if (EmitUniquedSection)
       UniqueID = NextUniqueID++;
 
@@ -2220,8 +2224,8 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   }
 
   unsigned Flags = getWasmSectionFlags(Kind, Used.count(GO));
-  MCSectionWasm *Section = getContext().getWasmSection(
-      Name, Kind, Flags, Group, MCContext::GenericSectionID);
+  MCSectionWasm *Section = getContext().getWasmSection(Name, Kind, Flags, Group,
+                                                       MCSection::NonUniqueID);
 
   return Section;
 }
@@ -2249,7 +2253,7 @@ selectWasmSectionForGlobal(MCContext &Ctx, const GlobalObject *GO,
     Name.push_back('.');
     TM.getNameWithPrefix(Name, GO, Mang, true);
   }
-  unsigned UniqueID = MCContext::GenericSectionID;
+  unsigned UniqueID = MCSection::NonUniqueID;
   if (EmitUniqueSection && !UniqueSectionNames) {
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
