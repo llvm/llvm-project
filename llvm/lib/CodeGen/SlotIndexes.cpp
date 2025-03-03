@@ -212,7 +212,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   IndexList::iterator ListI = endIdx.listEntry()->getIterator();
   MachineBasicBlock::iterator MBBI = End;
   bool pastStart = false;
-  bool oldIndexesRemoved = false;
+  bool OldIndexesRemoved = false;
   while (ListI != ListB || MBBI != Begin || (includeStart && !pastStart)) {
     assert(ListI->getIndex() >= startIdx.getIndex() &&
            (includeStart || !pastStart) &&
@@ -230,7 +230,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MIIndexNotFound || oldIndexesRemoved) {
+    } else if (MIIndexNotFound || OldIndexesRemoved) {
       if (MBBI != Begin)
         --MBBI;
       else
@@ -240,7 +240,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
       //   -> The only thing left is to go through all the
       //   remaining MBB instructions and update their indexes
       if (ListI == ListB)
-        oldIndexesRemoved = true;
+        OldIndexesRemoved = true;
       else
         --ListI;
       if (SlotMI) {
@@ -249,11 +249,11 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
       }
     }
 
-    MachineInstr *instrToInsert = SlotMIRemoved ? SlotMI : MI;
+    MachineInstr *InstrToInsert = SlotMIRemoved ? SlotMI : MI;
 
     // Insert instruction back into the maps after passing it/removing the index
-    if ((MIIndexNotFound || SlotMIRemoved) && instrToInsert->getParent() != nullptr && !instrToInsert->isDebugOrPseudoInstr())
-      insertMachineInstrInMaps(*instrToInsert);
+    if ((MIIndexNotFound || SlotMIRemoved) && InstrToInsert->getParent() && !InstrToInsert->isDebugOrPseudoInstr())
+      insertMachineInstrInMaps(*InstrToInsert);
   }
 }
 
