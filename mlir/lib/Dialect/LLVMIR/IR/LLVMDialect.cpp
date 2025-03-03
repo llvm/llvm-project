@@ -3573,6 +3573,100 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
+ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  StringAttr intrinAttr;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+  SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
+  SmallVector<SmallVector<Type>> opBundleOperandTypes;
+  ArrayAttr opBundleTags;
+
+  // Parse intrinsic name
+  if (parser.parseCustomAttributeWithFallback(
+          intrinAttr, parser.getBuilder().getType<mlir::NoneType>())) {
+    return mlir::failure();
+  }
+  result.addAttribute(CallIntrinsicOp::getIntrinAttrName(result.name),
+                      intrinAttr);
+
+  if (parser.parseLParen())
+    return mlir::failure();
+
+  // Parse the function arguments.
+  if (parser.parseOperandList(operands))
+    return mlir::failure();
+
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  // Handle bundles.
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
+    return failure();
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(
+        CallIntrinsicOp::getOpBundleTagsAttrName(result.name).getValue(),
+        opBundleTags);
+
+  SmallVector<DictionaryAttr> argAttrs;
+  SmallVector<DictionaryAttr> resultAttrs;
+  // TODO: add argument/result attribute support
+  if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
+                                      operands, argAttrs, resultAttrs))
+    return failure();
+
+  // TODO: In CallOp, the attr dict happens *before* the call type.
+  // CallIntrinsicOp should mimic that, allowing most of this function to be
+  // shared between the two ops.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
+  if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
+                              opBundleOperandTypes,
+                              getOpBundleSizesAttrName(result.name)))
+    return failure();
+
+  int32_t numOpBundleOperands = 0;
+  for (const auto &operands : opBundleOperands)
+    numOpBundleOperands += operands.size();
+
+  result.addAttribute(
+      CallIntrinsicOp::getOperandSegmentSizeAttr(),
+      parser.getBuilder().getDenseI32ArrayAttr(
+          {static_cast<int32_t>(operands.size()), numOpBundleOperands}));
+
+  return mlir::success();
+}
+
+void CallIntrinsicOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printAttributeWithoutType(getIntrinAttr());
+
+  OperandRange args = getArgs();
+  p << "(" << args << ")";
+
+  // Operand bundles.
+  if (!getOpBundleOperands().empty()) {
+    p << ' ';
+    printOpBundles(p, *this, getOpBundleOperands(),
+                   getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
+  }
+  p << " : ";
+
+  // Reconstruct the MLIR function type from operand and result types.
+  ArrayAttr argAttrsAttr, resAttrsAttr; // TODO: add support for arg/ret attrs.
+  call_interface_impl::printFunctionSignature(p, args.getTypes(), argAttrsAttr,
+                                              /*isVariadic=*/false,
+                                              getResultTypes(), resAttrsAttr);
+
+  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+                          {getOperandSegmentSizesAttrName(),
+                           getOpBundleSizesAttrName(), getIntrinAttrName(),
+                           getOpBundleTagsAttrName()});
+}
+
 //===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//

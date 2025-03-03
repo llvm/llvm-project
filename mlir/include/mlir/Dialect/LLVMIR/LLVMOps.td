@@ -2112,13 +2112,7 @@ def LLVM_CallIntrinsicOp
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
   }];
-  let assemblyFormat = [{
-    $intrin `(` $args `)`
-    ( custom<OpBundles>($op_bundle_operands, type($op_bundle_operands),
-                        $op_bundle_tags)^ )?
-    `:` functional-type($args, $results)
-    attr-dict
-  }];
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args)>,
