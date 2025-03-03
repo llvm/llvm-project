@@ -474,8 +474,16 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
       dbgs() << "LargerSrcRC: " << TRI.getRegClassName(LargerSrcRC) << '\n';);
 
   if (NewSuperRC) {
+    const TargetRegisterClass *NewDstSubRC = TRI.getSubClassWithSubReg(NewSuperRC, DstSub);
 
-    return TRI.getSubClassWithSubReg(NewSuperRC, DstSub);
+    //return TRI.getMatchingSuperRegClass(DstRC, NewDstSubRC, DstSub);
+    //if (!NewDstSubRC || !NewDstSubRC->hasSubClassEq(SrcRC))
+    ///return nullptr;
+
+    //return TRI.getCommonSubClass(DstRC, NewDstSubRC);
+
+    return NewDstSubRC;
+
     //const TargetRegisterClass *Rematch =
     //TRI.getMatchingSuperRegClass(NewSuperRC, SrcRC, DstSub);
     //return Rematch;
@@ -558,6 +566,16 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       LLVM_DEBUG(dbgs() << "NewRC "
                         << (NewRC ? TRI.getRegClassName(NewRC) : "<null>")
                         << '\n';);
+
+
+      /*
+      const TargetRegisterClass *SRC =
+        TRI.getSubClassWithSubReg(NewRC, DstSub);
+
+      assert(SRC && "no class with subreg");
+      assert(SRC->hasSubClassEq(SrcRC));
+      */
+
 
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
@@ -2201,6 +2219,16 @@ bool RegisterCoalescer::joinCopy(
     });
   }
 
+  // Coalescing to a virtual register that is of a sub-register class of the
+  // other. Make sure the resulting register is set to the right register class.
+  if (CP.isCrossClass()) {
+    //MRI->setRegClass(CP.getDstReg(), CP.getNewRC());
+    if (!MRI->constrainRegClass(CP.getDstReg(), CP.getNewRC()))
+      return false;
+
+    ++numCrossRCs;
+  }
+
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
@@ -2247,13 +2275,6 @@ bool RegisterCoalescer::joinCopy(
     LLVM_DEBUG(dbgs() << "\tInterference!\n");
     Again = true; // May be possible to coalesce later.
     return false;
-  }
-
-  // Coalescing to a virtual register that is of a sub-register class of the
-  // other. Make sure the resulting register is set to the right register class.
-  if (CP.isCrossClass()) {
-    ++numCrossRCs;
-    MRI->setRegClass(CP.getDstReg(), CP.getNewRC());
   }
 
   // Removing sub-register copies can ease the register class constraints.
