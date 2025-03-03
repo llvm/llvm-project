@@ -1096,32 +1096,35 @@ bool MIRParserImpl::initializeSaveRestorePoints(
     PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
     bool IsSavePoints) {
   MachineBasicBlock *MBB = nullptr;
+  std::vector<MachineBasicBlock *> SaveRestorePoints;
   if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
           YamlSRPoints)) {
     const auto &VectorRepr =
         std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
     if (VectorRepr.empty())
       return false;
-
-    const auto &Entry = VectorRepr.front();
-    const auto &MBBSource = Entry.Point;
-    if (parseMBBReference(PFS, MBB, MBBSource.Value))
-      return true;
+    for (const auto &Entry : VectorRepr) {
+      const auto &MBBSource = Entry.Point;
+      if (parseMBBReference(PFS, MBB, MBBSource.Value))
+        return true;
+      SaveRestorePoints.push_back(MBB);
+    }
   } else {
     yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
     if (StringRepr.Value.empty())
       return false;
     if (parseMBBReference(PFS, MBB, StringRepr))
       return true;
+    SaveRestorePoints.push_back(MBB);
   }
 
   MachineFunction &MF = PFS.MF;
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   if (IsSavePoints)
-    MFI.setSavePoint(MBB);
+    MFI.setSavePoints(SaveRestorePoints);
   else
-    MFI.setRestorePoint(MBB);
+    MFI.setRestorePoints(SaveRestorePoints);
 
   return false;
 }

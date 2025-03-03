@@ -151,7 +151,7 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI);
 static void convertSRPoints(ModuleSlotTracker &MST, yaml::SaveRestorePoints &YamlSRPoints,
-                            MachineBasicBlock *SaveRestorePoint);
+                            std::vector<MachineBasicBlock *> SaveRestorePoints);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -357,10 +357,10 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.HasTailCall = MFI.hasTailCall();
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
-  if (MFI.getSavePoint())
-    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoint());
-  if (MFI.getRestorePoint())
-    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoint());
+  if (!MFI.getSavePoints().empty())
+    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoints());
+  if (!MFI.getRestorePoints().empty())
+    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoints());
 }
 
 static void convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -616,15 +616,18 @@ static void convertMCP(yaml::MachineFunction &MF,
 
 static void convertSRPoints(ModuleSlotTracker &MST,
                             yaml::SaveRestorePoints &YamlSRPoints,
-                            MachineBasicBlock *SRPoint) {
-  SmallString<16> Str;
-  yaml::SaveRestorePointEntry Entry;
-  raw_svector_ostream StrOS(Str);
-  StrOS << printMBBReference(*SRPoint);
-  Entry.Point = StrOS.str().str();
+                            std::vector<MachineBasicBlock *> SRPoints) {
   auto &Points =
       std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
-  Points.push_back(Entry);
+  for (const auto &MBB : SRPoints) {
+    SmallString<16> Str;
+    yaml::SaveRestorePointEntry Entry;
+    raw_svector_ostream StrOS(Str);
+    StrOS << printMBBReference(*MBB);
+    Entry.Point = StrOS.str().str();
+    Str.clear();
+    Points.push_back(Entry);
+  }
 }
 
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
