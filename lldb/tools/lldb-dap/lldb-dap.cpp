@@ -308,7 +308,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
     std::string name = llvm::formatv("client_{0}", clientCount++).str();
-    LLDB_LOG(GetLog(DAPLog::Connection), "client ({0}) connected", name);
+    LLDB_LOG(GetLog(DAPLog::Connection), "{0} connected", name);
 
     lldb::IOObjectSP io(std::move(sock));
 
@@ -338,7 +338,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                     "DAP session error: ");
       }
 
-      LLDB_LOG(GetLog(DAPLog::Connection), "client ({0}) closed", name);
+      LLDB_LOG(GetLog(DAPLog::Connection), "{0} closed", name);
 
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(io.get());
