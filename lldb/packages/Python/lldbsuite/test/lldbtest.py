@@ -765,6 +765,8 @@ class Base(unittest.TestCase):
             # Disable fix-its by default so that incorrect expressions in tests don't
             # pass just because Clang thinks it has a fix-it.
             "settings set target.auto-apply-fixits false",
+            # Disable the statusline in PExpect tests.
+            "settings set show-statusline false",
             # Testsuite runs in parallel and the host can have also other load.
             "settings set plugin.process.gdb-remote.packet-timeout 60",
             'settings set symbols.clang-modules-cache-path "{}"'.format(
