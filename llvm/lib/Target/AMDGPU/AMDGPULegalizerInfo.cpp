@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -736,8 +737,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
     } else {
-      getActionDefinitionsBuilder({G_ADD, G_SUB})
+      getActionDefinitionsBuilder(G_SUB)
           .legalFor({S32, S16, V2S16})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+
+      getActionDefinitionsBuilder(G_ADD)
+          .legalFor(ST.hasLshlAddB64()
+                        ? std::initializer_list<LLT>{S64, S32, S16, V2S16}
+                        : std::initializer_list<LLT>{S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
           .scalarize(0)
           .minScalar(0, S16)
