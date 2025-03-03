@@ -437,9 +437,10 @@ The `RootSignatureHeader` structure contains the top-level information about a r
 - **Version**: Specifies the version of the root signature format. This allows for 
 backward compatibility as the format evolves.
 - **NumParameters**: The number of root parameters contained in this root signature.
-- **ParametersOffset**: Byte offset from the beginning to the array of root parameters header.
+- **ParametersOffset**: Byte offset from the beginning of RST0 section to the array of root 
+parameters header.
 - **NumStaticSamplers**: The number of static samplers defined in the root signature.
-- **StaticSamplerOffset**: Byte offset from the beginning to the array of static samplers.
+- **StaticSamplerOffset**: Byte offset to the array of static samplers.
 - **Flags**: Bit flags that define global behaviors for the root signature, such as whether 
 to deny vertex shader access to certain resources.
 
@@ -465,7 +466,7 @@ the parameter's basic attributes:
 table, constants, CBV, SRV, UAV).
 - **ShaderVisibility**: Specifies which shader stages can access this parameter (e.g., all stages, 
 vertex shader only, pixel shader only).
-- **ParameterOffset**: Byte offset from the beginning to the specific parameter data structure 
+- **ParameterOffset**: Byte offset to the specific parameter data structure 
 for this entry.
 
 The header uses a parameter type field rather than encoding the version of the parameter through 
