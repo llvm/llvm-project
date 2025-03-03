@@ -486,8 +486,7 @@ define <vscale x 2 x double> @splat_nxv2f64_imm() {
 define <vscale x 8 x bfloat> @splat_nxv8bf16_imm() {
 ; CHECK-LABEL: splat_nxv8bf16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h0, #1.87500000
-; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    fmov z0.h, #1.87500000
 ; CHECK-NEXT:    ret
   ret <vscale x 8 x bfloat> splat(bfloat 1.0)
 }
@@ -496,8 +495,7 @@ define <vscale x 8 x bfloat> @splat_nxv8bf16_imm() {
 define <vscale x 4 x bfloat> @splat_nxv4bf16_imm() {
 ; CHECK-LABEL: splat_nxv4bf16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h0, #-1.87500000
-; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    fmov z0.h, #-1.87500000
 ; CHECK-NEXT:    ret
   ret <vscale x 4 x bfloat> splat(bfloat -1.0)
 }
@@ -506,8 +504,7 @@ define <vscale x 4 x bfloat> @splat_nxv4bf16_imm() {
 define <vscale x 2 x bfloat> @splat_nxv2bf16_imm() {
 ; CHECK-LABEL: splat_nxv2bf16_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov h0, #1.87500000
-; CHECK-NEXT:    mov z0.h, h0
+; CHECK-NEXT:    fmov z0.h, #1.87500000
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x bfloat> splat(bfloat 1.0)
 }
