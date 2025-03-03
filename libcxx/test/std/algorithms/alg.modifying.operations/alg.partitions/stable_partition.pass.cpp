@@ -295,8 +295,8 @@ TEST_CONSTEXPR_CXX26 void test() {
     assert(std::is_partitioned(vec.begin(), vec.end(), [](int i) { return i < 5; }));
     getGlobalMemCounter()->reset();
   }
-#  endif
-#endif // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
+#  endif // !defined(TEST_COMPILER_GCC)
+#endif   // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
 }
 
 #if TEST_STD_VER >= 11
