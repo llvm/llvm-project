@@ -33,3 +33,8 @@ Kareem, Ron
 ---
 a3165398db07 AMDGPU: Fix overly conservative immediate operand check
 ---
+Flang team looking:
+a8db1fb9b5da [flang] update fir.coordinate_of to carry the fields (#127231
+9805854699d6 [flang][NFC] clean-up fir.field_index legacy usages in tests (#129219)
+AkashB
+---

@@ -65,7 +65,7 @@ public:
   }
 
   /// Returns the Virtual Register for a VReg
-  unsigned getVReg() const {
+  Register getVReg() const {
     assert(kind == VREG);
     return u.VReg;
   }
@@ -76,8 +76,8 @@ public:
   static SDDbgOperand fromFrameIdx(unsigned FrameIdx) {
     return SDDbgOperand(FrameIdx, FRAMEIX);
   }
-  static SDDbgOperand fromVReg(unsigned VReg) {
-    return SDDbgOperand(VReg, VREG);
+  static SDDbgOperand fromVReg(Register VReg) {
+    return SDDbgOperand(VReg.id(), VREG);
   }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
