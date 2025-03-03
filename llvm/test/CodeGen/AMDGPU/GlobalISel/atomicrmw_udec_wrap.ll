@@ -85,7 +85,7 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -350,7 +350,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -427,7 +427,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(ptr addrspace(1) %ou
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -656,7 +656,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32(ptr addrspace(1) %ptr) #1
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -723,7 +723,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32_offset(ptr addrspace(1) %
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -962,7 +962,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(ptr addrspace
   %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
   %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 %id
   %gep = getelementptr i32, ptr addrspace(1) %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr addrspace(1) %out.gep, align 4
   ret void
 }
@@ -1040,7 +1040,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i32_offset_addr64(ptr addrspa
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr addrspace(1) %ptr, i32 %id
   %gep = getelementptr i32, ptr addrspace(1) %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -1119,7 +1119,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32(ptr %out, ptr %ptr) #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr %out, align 4
   ret void
 }
@@ -1206,7 +1206,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset(ptr %out, ptr %ptr) #1
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr %out, align 4
   ret void
 }
@@ -1442,7 +1442,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %ptr, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -1516,7 +1516,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -1780,7 +1780,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(ptr %out, ptr %
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
   %out.gep = getelementptr i32, ptr %out, i32 %id
   %gep = getelementptr i32, ptr %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %result, ptr %out.gep, align 4
   ret void
 }
@@ -1875,7 +1875,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i32_offset_addr64(ptr %ptr) #1 
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i32, ptr %ptr, i32 %id
   %gep = getelementptr i32, ptr %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr %gep, i32 42 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -1969,7 +1969,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64(ptr %out, ptr %ptr) #1 {
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   store i64 %result, ptr %out, align 4
   ret void
 }
@@ -2071,7 +2071,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset(ptr %out, ptr %ptr) #1
 ; GFX11-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   store i64 %result, ptr %out, align 4
   ret void
 }
@@ -2144,7 +2144,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %ptr, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -2223,7 +2223,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset(ptr %ptr) #1 {
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -2536,7 +2536,7 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i64_offset_addr64(ptr %out, ptr %
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id
   %out.gep = getelementptr i64, ptr %out, i32 %id
   %gep = getelementptr i64, ptr %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   store i64 %result, ptr %out.gep, align 4
   ret void
 }
@@ -2635,7 +2635,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(ptr %ptr) #1 
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr %ptr, i32 %id
   %gep = getelementptr i64, ptr %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr %gep, i64 42 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -2724,7 +2724,7 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0(ptr addrspace(1) %out, ptr 
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i32], ptr addrspace(3) @lds0, i32 0, i32 %idx.0
-  %result = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i32 9 syncscope("agent") seq_cst, align 4
+  %result = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i32 9 syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !1
   store i32 %idx.0, ptr addrspace(1) %add_use, align 4
   store i32 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -2807,7 +2807,7 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i64(ptr addrspace(1) %out, ptr add
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -2953,7 +2953,7 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i64(ptr addrspace(3) %ptr) #1 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(3) %ptr, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -3016,7 +3016,7 @@ define amdgpu_kernel void @lds_atomic_dec_noret_i64_offset(ptr addrspace(3) %ptr
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(3) %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr addrspace(3) %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(3) %gep, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -3092,7 +3092,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64(ptr addrspace(1) %out, ptr 
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -3174,7 +3174,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(ptr addrspace(1) %ou
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -3440,7 +3440,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64(ptr addrspace(1) %ptr) #1
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
-  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -3512,7 +3512,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset(ptr addrspace(1) %
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i32 4
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -3788,7 +3788,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(ptr addrspace
   %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
   %out.gep = getelementptr i64, ptr addrspace(1) %out, i32 %id
   %gep = getelementptr i64, ptr addrspace(1) %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   store i64 %result, ptr addrspace(1) %out.gep, align 4
   ret void
 }
@@ -3871,7 +3871,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(ptr addrspa
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.tid = getelementptr i64, ptr addrspace(1) %ptr, i32 %id
   %gep = getelementptr i64, ptr addrspace(1) %gep.tid, i32 5
-  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8
+  %result = atomicrmw udec_wrap ptr addrspace(1) %gep, i64 42 syncscope("agent") seq_cst, align 8, !amdgpu.no.remote.memory !1
   ret void
 }
 
@@ -3966,7 +3966,7 @@ define amdgpu_kernel void @atomic_dec_shl_base_lds_0_i64(ptr addrspace(1) %out, 
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #2
   %idx.0 = add nsw i32 %tid.x, 2
   %arrayidx0 = getelementptr inbounds [512 x i64], ptr addrspace(3) @lds1, i32 0, i32 %idx.0
-  %result = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i64 9 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0
+  %result = atomicrmw udec_wrap ptr addrspace(3) %arrayidx0, i64 9 syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.remote.memory !1
   store i32 %idx.0, ptr addrspace(1) %add_use, align 4
   store i64 %result, ptr addrspace(1) %out, align 4
   ret void
@@ -3977,6 +3977,7 @@ attributes #1 = { nounwind }
 attributes #2 = { nounwind memory(none) }
 
 !0 = !{i32 5, i32 6}
+!1 = !{}
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
