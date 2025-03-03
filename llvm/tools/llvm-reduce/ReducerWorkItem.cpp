@@ -93,7 +93,8 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  assert(SrcMFI.getSavePoints().size() < 2 && "MFI can't contain multiple save points!");
+  assert(SrcMFI.getSavePoints().size() < 2 &&
+         "MFI can't contain multiple save points!");
   if (!SrcMFI.getSavePoints().empty()) {
     MachineBasicBlock *SavePt = SrcMFI.getSavePoints().front();
     std::vector<MachineBasicBlock *> SavePts;
@@ -101,7 +102,8 @@ static void cloneFrameInfo(
     DstMFI.setSavePoints(SavePts);
   }
 
-  assert(SrcMFI.getRestorePoints().size() < 2 && "MFI can't contain multiple restore points!");
+  assert(SrcMFI.getRestorePoints().size() < 2 &&
+         "MFI can't contain multiple restore points!");
   if (!SrcMFI.getRestorePoints().empty()) {
     MachineBasicBlock *RestorePt = SrcMFI.getRestorePoints().front();
     std::vector<MachineBasicBlock *> RestorePts;
