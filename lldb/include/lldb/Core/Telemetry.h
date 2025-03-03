@@ -26,10 +26,10 @@
 #include <optional>
 #include <string>
 
-#include <unordered_map>
-#include <type_traits>
-#include <utility>
 #include <functional>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 
 namespace lldb_private {
 namespace telemetry {
@@ -41,7 +41,8 @@ namespace telemetry {
 //  - First two bits (MSB) must be 11 - the common prefix
 //  - Last two bits (LSB) are reserved for grand-children of LLDBTelemetryInfo
 // If any of the subclass has descendents, those descendents
-// must have their LLDBEntryKind in the similar form (ie., share common prefix and differ by the last two bits)
+// must have their LLDBEntryKind in the similar form (ie., share common prefix
+// and differ by the last two bits)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
@@ -87,17 +88,21 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
   std::string target_uuid;
   std::string arch_name;
 
-  // If true, this entry was emitted at the beginning of an event (eg., before the executable laod). Otherwise, it was emitted at the end of an event (eg., after the module and any dependency were loaded.)
+  // If true, this entry was emitted at the beginning of an event (eg., before
+  // the executable laod). Otherwise, it was emitted at the end of an event
+  // (eg., after the module and any dependency were loaded.)
   bool is_start_entry;
 
   // Describes the exit of the executable module.
   std::optional<ExitDescription> exit_desc;
   TargetInfo() = default;
 
-  llvm::telemetry::KindType getKind() const override { return LLDBEntryKind::TargetInfo; }
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::TargetInfo;
+  }
 
   static bool classof(const TelemetryInfo *T) {
-   // Subclasses of this is also acceptable
+    // Subclasses of this is also acceptable
     return (T->getKind() & LLDBEntryKind::TargetInfo) ==
            LLDBEntryKind::TargetInfo;
   }
@@ -141,7 +146,7 @@ public:
   /// during the action.
   ///
   /// Invoked at the begining of the load of the main-executable.
-  virtual void AtMainExecutableLoadStart(TargetInfo * entry);
+  virtual void AtMainExecutableLoadStart(TargetInfo *entry);
   /// Invoked at the end of the load.
   virtual void AtMainExecutableLoadEnd(TargetInfo *entry);
 

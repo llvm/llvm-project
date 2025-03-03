@@ -20,11 +20,11 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/FormatterSection.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -1575,7 +1575,6 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
       info->exec_mod = executable_sp;
       info->target_uuid = executable_sp->GetUUID().GetAsString();
-
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());
