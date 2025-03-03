@@ -26,7 +26,7 @@ let FunctionMapper = "AArch64_AM::getArithExtendType" in {
 }
 
 // Check for shifting in extended arithmetic instructions.
-foreach I = {0-3} in {
+foreach I = {0-4} in {
   let FunctionMapper = "AArch64_AM::getArithShiftValue" in
   def CheckExtBy#I                      : CheckImmOperand<3, I>;
 }
@@ -91,10 +91,16 @@ def CheckQForm : CheckFunctionPredicateWithTII<
 >;
 
 // Identify arithmetic instructions with extend.
-def IsArithExtOp           : CheckOpcode<[ADDWrx, ADDXrx, ADDSWrx, ADDSXrx,
-                                          SUBWrx, SUBXrx, SUBSWrx, SUBSXrx,
+def IsArith32ExtOp         : CheckOpcode<[ADDWrx, ADDSWrx,
+                                          SUBWrx, SUBSWrx]>;
+
+def IsArith64ExtOp         : CheckOpcode<[ADDXrx, ADDSXrx,
+                                          SUBXrx, SUBSXrx,
                                           ADDXrx64, ADDSXrx64,
                                           SUBXrx64, SUBSXrx64]>;
+
+def IsArithExtOp           : CheckOpcode<!listconcat(IsArith32ExtOp.ValidOpcodes,
+						     IsArith64ExtOp.ValidOpcodes)>;
 
 // Identify arithmetic immediate instructions.
 def IsArithImmOp           : CheckOpcode<[ADDWri, ADDXri, ADDSWri, ADDSXri,
@@ -275,6 +281,28 @@ def IsCheapLSL        : MCSchedPredicate<
                                 CheckShiftBy2,
                                 CheckShiftBy3,
                                 CheckShiftBy4]>]>>;
+
+// Check for arith LSL shift <= 4
+def IsCheapArithLSL    : MCSchedPredicate<
+                          CheckAll<
+                            [CheckShiftLSL,
+                             CheckAny<
+                               [CheckExtBy0,
+                                CheckExtBy1,
+                                CheckExtBy2,
+                                CheckExtBy3,
+                                CheckExtBy4]>]>>;
+
+// Check if logical instruction has shifted operand
+def hasShiftedOpndFn  : TIIPredicate<"hasShiftedOpnd",
+                                     MCOpcodeSwitchStatement<
+                                       [MCOpcodeSwitchCase<
+                                          IsLogicShiftOp.ValidOpcodes,
+                                          MCReturnStatement<
+					    CheckAll<[CheckAny<[CheckShiftLSL,CheckShiftLSR,CheckShiftASR]>,
+                                                      CheckNot<CheckShiftBy0>]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def hasShiftedOpndPred     : MCSchedPredicate<hasShiftedOpndFn>;
 
 // Idioms.
 

@@ -7,10 +7,10 @@ cmp x0, #4
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
 # CHECK-NEXT: Total Cycles:      54
-# CHECK-NEXT: Total uOps:        200
+# CHECK-NEXT: Total uOps:        300
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    3.70
+# CHECK-NEXT: uOps Per Cycle:    5.56
 # CHECK-NEXT: IPC:               3.70
 # CHECK-NEXT: Block RThroughput: 0.5
 
@@ -24,7 +24,7 @@ cmp x0, #4
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.25                        mov	x0, x1
-# CHECK-NEXT:  1      1     0.33                        cmp	x0, #4
+# CHECK-NEXT:  2      1     0.33                        cmp	x0, #4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V1UnitB
