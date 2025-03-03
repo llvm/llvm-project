@@ -95,7 +95,6 @@ define void @f11(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    br i1 [[C]], label %[[FOO:.*]], label %[[BAR:.*]]
 ; CHECK:       [[FOO]]:
 ; CHECK-NEXT:    br label %[[BAZ:.*]]
@@ -105,7 +104,7 @@ define void @f11(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[BAZ]]
 ; CHECK:       [[BAZ]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i64> [ [[TMP1]], %[[FOO]] ], [ [[TMP0]], %[[BAR]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[FOO]] ], [ [[TMP0]], %[[BAR]] ]
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[Q]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -113,8 +112,6 @@ entry:
   %x0 = load i64, ptr %p
   %p1 =  getelementptr i64, ptr %p, i64 1
   %x1 = load i64, ptr %p1
-  %y0 = add i64 %x0, 1
-  %y1 = add i64 %x1, 1
   br i1 %c, label %foo, label %bar
 foo:
   br label %baz
@@ -124,8 +121,8 @@ bar:
   call void @g()
   br label %baz
 baz:
-  %phi0 = phi i64 [%y0, %foo], [%x0, %bar]
-  %phi1 = phi i64 [%y1, %foo], [%x1, %bar]
+  %phi0 = phi i64 [0, %foo], [%x0, %bar]
+  %phi1 = phi i64 [1, %foo], [%x1, %bar]
   store i64 %phi0, ptr %q
   %q1 =  getelementptr i64, ptr %q, i64 1
   store i64 %phi1, ptr %q1
