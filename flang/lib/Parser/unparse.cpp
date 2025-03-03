@@ -2699,9 +2699,19 @@ public:
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
   }
-  void Unparse(const OmpReductionInitializerClause &x) {
-    Word(" INITIALIZER(OMP_PRIV = ");
+  void Unparse(const OmpReductionInitializerProc &x) {
+    Walk(std::get<ProcedureDesignator>(x.t));
+    Put("(");
+    Walk(std::get<std::list<ActualArgSpec>>(x.t));
+    Put(")");
+  }
+  void Unparse(const OmpReductionInitializerExpr &x) {
+    Word("OMP_PRIV = ");
     Walk(x.v);
+  }
+  void Unparse(const OmpReductionInitializerClause &x) {
+    Word(" INITIALIZER(");
+    Walk(x.u);
     Put(")");
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
