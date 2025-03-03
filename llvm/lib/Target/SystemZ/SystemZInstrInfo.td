@@ -2183,7 +2183,7 @@ let mayLoad = 1, mayStore = 1, Defs = [CC, R0D, R1D, R2D, R3D, R5D],
 
 // Checksum.
 let mayLoad = 1, Defs = [CC] in
-  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR64, GR128>;
+  def CKSM : SideEffectBinaryMemMemRRE<"cksm", 0xB241, GR32, GR128>;
 
 // Compression call.
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in
