@@ -123,3 +123,30 @@ TEST_F(StackIDTest, HeapHeapCFAComparison) {
   EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, process));
   EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, process));
 }
+
+TEST_F(StackIDTest, HeapHeapCFAComparisonDecreasing) {
+  // Create a mock async continuation chain:
+  // 100 -> 90 -> 80 -> 0
+  // This should be read as:
+  // "Async context whose address is 100 has a continuation context whose
+  // address is 90", etc.
+  llvm::DenseMap<addr_t, addr_t> memory_map;
+  memory_map[100] = 90;
+  memory_map[90] = 80;
+  memory_map[80] = 0;
+  auto process = MockProcess(m_target_sp, Listener::MakeListener("dummy"),
+                             std::move(memory_map));
+
+  MockStackID oldest_cfa(/*cfa*/ 80, OnStack::No);
+  MockStackID middle_cfa(/*cfa*/ 90, OnStack::No);
+  MockStackID youngest_cfa(/*cfa*/ 100, OnStack::No);
+
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, oldest_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, youngest_cfa, process));
+
+  EXPECT_TRUE(StackID::IsYounger(youngest_cfa, middle_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(middle_cfa, youngest_cfa, process));
+
+  EXPECT_TRUE(StackID::IsYounger(middle_cfa, oldest_cfa, process));
+  EXPECT_FALSE(StackID::IsYounger(oldest_cfa, middle_cfa, process));
+}

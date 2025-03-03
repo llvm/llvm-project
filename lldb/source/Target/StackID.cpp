@@ -76,11 +76,40 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
 }
 
 // BEGIN SWIFT
+/// Given two async contexts, source and maybe_parent, chase continuation
+/// pointers to check if maybe_parent can be reached from source. The search
+/// stops when it hits the end of the chain (parent_ctx == 0) or a safety limit
+/// in case of an invalid continuation chain.
+static llvm::Expected<bool> IsReachableParent(lldb::addr_t source,
+                                              lldb::addr_t maybe_parent,
+                                              Process &process) {
+  auto max_num_frames = 512;
+  for (lldb::addr_t parent_ctx = source; parent_ctx && max_num_frames;
+       max_num_frames--) {
+    Status error;
+    lldb::addr_t old_parent_ctx = parent_ctx;
+    // The continuation's context is the first field of an async context.
+    parent_ctx = process.ReadPointerFromMemory(old_parent_ctx, error);
+    if (error.Fail())
+      return llvm::createStringError(llvm::formatv(
+          "Failed to read parent async context of: {0:x}. Error: {1}",
+          old_parent_ctx, error.AsCString()));
+    if (parent_ctx == maybe_parent)
+      return true;
+  }
+  if (max_num_frames == 0)
+    return llvm::createStringError(
+        llvm::formatv("Failed to read continuation chain from {0:x} to "
+                      "possible parent {1:x}. Reached limit of frames.",
+                      source, maybe_parent));
+  return false;
+}
+
 enum class HeapCFAComparisonResult { Younger, Older, NoOpinion };
 /// If at least one of the stack IDs (lhs, rhs) is a heap CFA, perform the
 /// swift-specific async frame comparison. Otherwise, returns NoOpinion.
 static HeapCFAComparisonResult
-IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
+CompareHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
   const bool lhs_cfa_on_stack = lhs.IsCFAOnStack(process);
   const bool rhs_cfa_on_stack = rhs.IsCFAOnStack(process);
   if (lhs_cfa_on_stack && rhs_cfa_on_stack)
@@ -103,26 +132,18 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
 
   // Both CFAs are on the heap and they are distinct.
   // LHS is younger if and only if its continuation async context is (directly
-  // or indirectly) RHS. Chase continuation pointers to check this case, until
-  // we hit the end of the chain (parent_ctx == 0) or a safety limit in case of
-  // an invalid continuation chain.
-  auto max_num_frames = 512;
-  for (lldb::addr_t parent_ctx = lhs_cfa; parent_ctx && max_num_frames;
-       max_num_frames--) {
-    Status error;
-    lldb::addr_t old_parent_ctx = parent_ctx;
-    // The continuation's context is the first field of an async context.
-    parent_ctx = process.ReadPointerFromMemory(old_parent_ctx, error);
-    if (error.Fail()) {
-      Log *log = GetLog(LLDBLog::Unwind);
-      LLDB_LOGF(log, "Failed to read parent async context of: 0x%8.8" PRIx64,
-                old_parent_ctx);
-      break;
-    }
-    if (parent_ctx == rhs_cfa)
-      return HeapCFAComparisonResult::Younger;
-  }
-
+  // or indirectly) RHS.
+  llvm::Expected<bool> lhs_younger =
+      IsReachableParent(lhs_cfa, rhs_cfa, process);
+  if (auto E = lhs_younger.takeError())
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), std::move(E), "{0}");
+  else if (*lhs_younger)
+    return HeapCFAComparisonResult::Younger;
+  llvm::Expected<bool> lhs_older = IsReachableParent(rhs_cfa, lhs_cfa, process);
+  if (auto E = lhs_older.takeError())
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), std::move(E), "{0}");
+  else if (*lhs_older)
+    return HeapCFAComparisonResult::Older;
   return HeapCFAComparisonResult::NoOpinion;
 }
 // END SWIFT
@@ -130,7 +151,7 @@ IsYoungerHeapCFAs(const StackID &lhs, const StackID &rhs, Process &process) {
 bool StackID::IsYounger(const StackID &lhs, const StackID &rhs,
                         Process &process) {
   // BEGIN SWIFT
-  switch (IsYoungerHeapCFAs(lhs, rhs, process)) {
+  switch (CompareHeapCFAs(lhs, rhs, process)) {
   case HeapCFAComparisonResult::Younger:
     return true;
   case HeapCFAComparisonResult::Older:
