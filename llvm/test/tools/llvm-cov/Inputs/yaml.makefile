@@ -2,7 +2,7 @@
 #
 # Usage:
 #   cd /path/to/llvm-project/llvm/test/tools/llvm-cov/Inputs
-#   PATH=/path/to/build/bin:$PATH make -f yaml.makefile *.yaml
+#   PATH=/path/to/build/bin:$PATH make -f yaml.makefile
 
 CFLAGS_COVMAP	= -fcoverage-compilation-dir=. \
 		  -mllvm -runtime-counter-relocation=true \
@@ -34,11 +34,11 @@ CFLAGS_MCDC	= -fcoverage-mcdc
 		--only-section=__llvm_covfun \
 		--only-section=__llvm_covmap \
 		--only-section=__llvm_prf_names \
-		--strip-all \
+		--strip-unneeded \
 		$< $@
 
 %.yaml: %.covmap.o
-	obj2yaml --covmap --covmap-dloc $< > $@
+	obj2yaml $< > $@
 
 %.exe: %.o
 	clang++ -fprofile-instr-generate $^ -o $@

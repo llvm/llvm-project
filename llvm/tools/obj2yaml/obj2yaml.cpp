@@ -101,7 +101,7 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions({&Cat, &ELFCat});
+  cl::HideUnrelatedOptions(Cat);
   cl::ParseCommandLineOptions(
       argc, argv, "Dump a YAML description from an object file", nullptr,
       nullptr, /*LongOptionsUseDoubleDash=*/true);
