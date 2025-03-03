@@ -3936,18 +3936,18 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
         break;
 
       if (auto *DstVTy = dyn_cast<FixedVectorType>(Ty)) {
-        unsigned Scale = SrcBits / TyBits;
+        if (auto *SrcVTy = dyn_cast<FixedVectorType>(SrcTy)) {
+          APInt SrcDemandedElts =
+              APInt::getSplat(SrcVTy->getNumElements(), APInt(1, 1));
 
-        APInt SrcDemandedElts =
-            APInt::getSplat(DstVTy->getNumElements() / Scale, APInt(1, 1));
-
-        Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Depth + 1, Q);
-        if (Tmp == SrcBits)
-          return TyBits;
-      } else {
-        Tmp = ComputeNumSignBits(Src, APInt(1, 1), Depth + 1, Q);
-        if (Tmp == SrcBits)
-          return TyBits;
+          Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Depth + 1, Q);
+          if (Tmp == SrcBits)
+            return TyBits;
+        } else {
+          Tmp = ComputeNumSignBits(Src, APInt(1, 1), Depth + 1, Q);
+          if (Tmp == SrcBits)
+            return TyBits;
+        }
       }
       break;
     }
