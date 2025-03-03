@@ -26,9 +26,9 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_scalar.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
@@ -203,7 +203,7 @@ struct __stable_sort_switch {
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
-  static_assert(is_scalar<_Tp>::value);
+  static_assert(is_arithmetic<_Tp>::value);
   if constexpr (sizeof(_Tp) == 1) {
     return 1 << 8;
   }
@@ -213,7 +213,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_max_bound() {
-  static_assert(is_scalar<_Tp>::value);
+  static_assert(is_arithmetic<_Tp>::value);
   if constexpr (sizeof(_Tp) >= 8) {
     return 1 << 15;
   }
@@ -249,11 +249,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
 
 #if _LIBCPP_STD_VER >= 17
   constexpr auto __default_comp = __desugars_to_v<__less_tag, __remove_cvref_t<_Compare>, value_type, value_type >;
-  constexpr auto __scalar_value =
-      is_scalar_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
-  // There are non-comparable scalars (std::nullptr_t, pointers to members), so we need to exclude them.
-  constexpr auto __comparable_value = is_invocable_r_v<bool, _Compare, value_type, value_type>;
-  if constexpr (__default_comp && __scalar_value && __comparable_value) {
+  constexpr auto __arithmetic_value =
+      is_arithmetic_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
+  if constexpr (__default_comp && __arithmetic_value) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(std::__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(std::__radix_sort_max_bound<value_type>())) {
       if (__libcpp_is_constant_evaluated()) {
