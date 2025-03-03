@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Orc-Rt documentation build configuration file.
+# ORC-RT documentation build configuration file.
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -54,8 +54,8 @@ import sphinx
 master_doc = "index"
 
 # General information about the project.
-project = "Orc-Rt"
-copyright = "2017-%d, The Orc-Rt Team" % date.today().year
+project = "ORC-RT"
+copyright = "2025-%d, The ORC-RT Team" % date.today().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -200,7 +200,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-    ("Overview", "Orc-Rt.tex", "orc-rt Documentation", "The orc-rt Team", "manual"),
+    ("Overview", "ORC-RT.tex", "orc-rt Documentation", "The orc-rt Team", "manual"),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
