@@ -628,7 +628,7 @@ inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
   assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
          "Unexpected number of registers");
   if (NumRegs == 13)
-    --NumRegs;
+    return RLISTENCODE::RA_S0_S11;
 
   return RLISTENCODE::RA + (NumRegs - 1);
 }
