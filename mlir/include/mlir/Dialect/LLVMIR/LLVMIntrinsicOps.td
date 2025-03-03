@@ -315,6 +315,16 @@ def LLVM_NoAliasScopeDeclOp
   let assemblyFormat = "$scope attr-dict";
 }
 
+def LLVM_PtrMaskOp
+  : LLVM_OneResultIntrOp<"ptrmask", [], [0, 1],
+                          [Pure, AllTypesMatch<["ptr", "res"]>]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$ptr,
+                   LLVM_ScalarOrVectorOf<AnyInteger>:$mask);
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
+
+  let assemblyFormat = "$ptr `,` $mask attr-dict `:` functional-type(operands, results)";
+}
+
 //
 // Memory marker intrinsics.
 //
