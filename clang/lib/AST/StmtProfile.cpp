@@ -2708,6 +2708,7 @@ void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
   for (auto *E : Clause.getQueueIdExprs())
     Profiler.VisitStmt(E);
 }
+
 /// Nothing to do here, there are no sub-statements.
 void OpenACCClauseProfiler::VisitDeviceTypeClause(
     const OpenACCDeviceTypeClause &Clause) {}
@@ -2794,6 +2795,11 @@ void StmtProfiler::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
 
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCCacheConstruct(const OpenACCCacheConstruct *S) {
+  // VisitStmt covers 'children', so the exprs inside of it are covered.
+  VisitStmt(S);
 }
 
 void StmtProfiler::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {

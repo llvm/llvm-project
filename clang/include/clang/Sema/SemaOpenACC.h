@@ -762,6 +762,8 @@ public:
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                       Expr *VarExpr);
+  /// Helper function called by ActonVar that is used to check a 'cache' var.
+  ExprResult ActOnCacheVar(Expr *VarExpr);
 
   // Called after 'ActOnVar' specifically for a 'link' clause, which has to do
   // some minor additional checks.
