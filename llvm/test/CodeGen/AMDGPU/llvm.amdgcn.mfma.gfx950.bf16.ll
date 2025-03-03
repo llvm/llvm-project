@@ -160,22 +160,22 @@ define <16 x float> @test_mfma_f32_32x32x16_bf16__mac(<8 x bfloat> %arg0, <8 x b
 ; GCN-LABEL: test_mfma_f32_32x32x16_bf16__mac:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
-; GCN-NEXT:    v_accvgpr_write_b32 a1, v9
-; GCN-NEXT:    v_accvgpr_write_b32 a2, v10
-; GCN-NEXT:    v_accvgpr_write_b32 a3, v11
-; GCN-NEXT:    v_accvgpr_write_b32 a4, v12
-; GCN-NEXT:    v_accvgpr_write_b32 a5, v13
-; GCN-NEXT:    v_accvgpr_write_b32 a6, v14
-; GCN-NEXT:    v_accvgpr_write_b32 a7, v15
-; GCN-NEXT:    v_accvgpr_write_b32 a8, v16
-; GCN-NEXT:    v_accvgpr_write_b32 a9, v17
-; GCN-NEXT:    v_accvgpr_write_b32 a10, v18
-; GCN-NEXT:    v_accvgpr_write_b32 a11, v19
-; GCN-NEXT:    v_accvgpr_write_b32 a12, v20
-; GCN-NEXT:    v_accvgpr_write_b32 a13, v21
-; GCN-NEXT:    v_accvgpr_write_b32 a14, v22
 ; GCN-NEXT:    v_accvgpr_write_b32 a15, v23
+; GCN-NEXT:    v_accvgpr_write_b32 a14, v22
+; GCN-NEXT:    v_accvgpr_write_b32 a13, v21
+; GCN-NEXT:    v_accvgpr_write_b32 a12, v20
+; GCN-NEXT:    v_accvgpr_write_b32 a11, v19
+; GCN-NEXT:    v_accvgpr_write_b32 a10, v18
+; GCN-NEXT:    v_accvgpr_write_b32 a9, v17
+; GCN-NEXT:    v_accvgpr_write_b32 a8, v16
+; GCN-NEXT:    v_accvgpr_write_b32 a7, v15
+; GCN-NEXT:    v_accvgpr_write_b32 a6, v14
+; GCN-NEXT:    v_accvgpr_write_b32 a5, v13
+; GCN-NEXT:    v_accvgpr_write_b32 a4, v12
+; GCN-NEXT:    v_accvgpr_write_b32 a3, v11
+; GCN-NEXT:    v_accvgpr_write_b32 a2, v10
+; GCN-NEXT:    v_accvgpr_write_b32 a1, v9
+; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f32_32x32x16_bf16 a[0:15], v[0:3], v[4:7], a[0:15]
 ; GCN-NEXT:    s_nop 7
@@ -205,22 +205,22 @@ define <16 x float> @test_mfma_f32_32x32x16_bf16__mac__flags(<8 x bfloat> %arg0,
 ; GCN-LABEL: test_mfma_f32_32x32x16_bf16__mac__flags:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
-; GCN-NEXT:    v_accvgpr_write_b32 a1, v9
-; GCN-NEXT:    v_accvgpr_write_b32 a2, v10
-; GCN-NEXT:    v_accvgpr_write_b32 a3, v11
-; GCN-NEXT:    v_accvgpr_write_b32 a4, v12
-; GCN-NEXT:    v_accvgpr_write_b32 a5, v13
-; GCN-NEXT:    v_accvgpr_write_b32 a6, v14
-; GCN-NEXT:    v_accvgpr_write_b32 a7, v15
-; GCN-NEXT:    v_accvgpr_write_b32 a8, v16
-; GCN-NEXT:    v_accvgpr_write_b32 a9, v17
-; GCN-NEXT:    v_accvgpr_write_b32 a10, v18
-; GCN-NEXT:    v_accvgpr_write_b32 a11, v19
-; GCN-NEXT:    v_accvgpr_write_b32 a12, v20
-; GCN-NEXT:    v_accvgpr_write_b32 a13, v21
-; GCN-NEXT:    v_accvgpr_write_b32 a14, v22
 ; GCN-NEXT:    v_accvgpr_write_b32 a15, v23
+; GCN-NEXT:    v_accvgpr_write_b32 a14, v22
+; GCN-NEXT:    v_accvgpr_write_b32 a13, v21
+; GCN-NEXT:    v_accvgpr_write_b32 a12, v20
+; GCN-NEXT:    v_accvgpr_write_b32 a11, v19
+; GCN-NEXT:    v_accvgpr_write_b32 a10, v18
+; GCN-NEXT:    v_accvgpr_write_b32 a9, v17
+; GCN-NEXT:    v_accvgpr_write_b32 a8, v16
+; GCN-NEXT:    v_accvgpr_write_b32 a7, v15
+; GCN-NEXT:    v_accvgpr_write_b32 a6, v14
+; GCN-NEXT:    v_accvgpr_write_b32 a5, v13
+; GCN-NEXT:    v_accvgpr_write_b32 a4, v12
+; GCN-NEXT:    v_accvgpr_write_b32 a3, v11
+; GCN-NEXT:    v_accvgpr_write_b32 a2, v10
+; GCN-NEXT:    v_accvgpr_write_b32 a1, v9
+; GCN-NEXT:    v_accvgpr_write_b32 a0, v8
 ; GCN-NEXT:    s_nop 1
 ; GCN-NEXT:    v_mfma_f32_32x32x16_bf16 a[0:15], v[0:3], v[4:7], a[0:15] cbsz:1 abid:1 blgp:1
 ; GCN-NEXT:    s_nop 7
