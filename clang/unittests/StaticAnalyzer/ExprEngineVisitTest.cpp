@@ -29,14 +29,6 @@ void emitErrorReport(CheckerContext &C, const BugType &Bug,
   }
 }
 
-inline std::string getMemRegionName(const SVal &Val) {
-  if (auto MemVal = llvm::dyn_cast<loc::MemRegionVal>(Val))
-    return MemVal->getRegion()->getDescriptiveName(false);
-  if (auto ComVal = llvm::dyn_cast<nonloc::LazyCompoundVal>(Val))
-    return ComVal->getRegion()->getDescriptiveName(false);
-  return "";
-}
-
 #define CREATE_EXPR_ENGINE_CHECKER(CHECKER_NAME, CALLBACK, STMT_TYPE,          \
                                    BUG_NAME)                                   \
   class CHECKER_NAME : public Checker<check::CALLBACK<STMT_TYPE>> {            \
@@ -58,15 +50,22 @@ class MemAccessChecker : public Checker<check::Location, check::Bind> {
 public:
   void checkLocation(const SVal &Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const {
-    emitErrorReport(C, Bug, "checkLocation: Loc = " + getMemRegionName(Loc));
+    emitErrorReport(C, Bug, "checkLocation: Loc = " + dumpToString(Loc) + ", Stmt = " + S->getStmtClassName());
   }
 
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
-    emitErrorReport(C, Bug, "checkBind: Loc = " + getMemRegionName(Loc));
+    emitErrorReport(C, Bug, "checkBind: Loc = " + dumpToString(Loc) + ", Val = " + dumpToString(Val) + ", Stmt = " + S->getStmtClassName());
   }
 
 private:
   const BugType Bug{this, "MemAccess"};
+
+  std::string dumpToString(SVal V) const {
+    std::string StrBuf;
+    llvm::raw_string_ostream StrStream{StrBuf};
+    V.dumpToStream(StrStream);
+    return StrBuf;
+  }
 };
 
 void addExprEngineVisitPreChecker(AnalysisASTConsumer &AnalysisConsumer,
@@ -132,10 +131,15 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
   )",
                                                     Diags));
 
-  std::string RHSMsg = "checkLocation: Loc = MyClassRead";
-  std::string LHSMsg = "checkBind: Loc = MyClassWrite";
-  EXPECT_NE(Diags.find(RHSMsg), std::string::npos);
-  EXPECT_NE(Diags.find(LHSMsg), std::string::npos);
+  std::string LocMsg = "checkLocation: Loc = lazyCompoundVal{0x0,MyClassRead}, Stmt = ImplicitCastExpr";
+  std::string BindMsg = "checkBind: Loc = &MyClassWrite, Val = lazyCompoundVal{0x0,MyClassRead}, Stmt = CXXOperatorCallExpr";
+  std::size_t LocPos = Diags.find(LocMsg);
+  std::size_t BindPos = Diags.find(BindMsg); 
+  EXPECT_NE(LocPos, std::string::npos);
+  EXPECT_NE(BindPos, std::string::npos);
+  // Check order: first checkLocation is called, then checkBind.
+  // In the diagnosis, however, the messages appear in reverse order.
+  EXPECT_TRUE(LocPos > BindPos);
 }
 
 } // namespace
