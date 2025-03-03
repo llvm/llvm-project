@@ -49,7 +49,19 @@ def process(args, path):
     if not seen_gen:
         print("'gen' does not exist", file=sys.stderr)
         return 1
-    with tempfile.TemporaryDirectory(prefix="update_test_body_") as dir:
+
+    # Use the provided directory if specified, otherwise create a temporary one
+    if args.directory:
+        dir = args.directory
+        # Create the directory if it doesn't exist
+        os.makedirs(dir, exist_ok=True)
+        cleanup_dir = False
+    else:
+        temp_dir = tempfile.TemporaryDirectory(prefix="update_test_body_")
+        dir = temp_dir.name
+        cleanup_dir = True
+
+    try:
         try:
             # If the last line starts with ".endif", remove it.
             sub = subprocess.run(
@@ -65,7 +77,7 @@ def process(args, path):
             return 1
         with cd(dir):
             if args.shell:
-                print(f"invoke shell in the temporary directory '{dir}'")
+                print(f"invoke shell in the directory '{dir}'")
                 subprocess.run([os.environ.get("SHELL", "sh")])
                 return 0
 
@@ -88,6 +100,10 @@ def process(args, path):
                 print("stdout is empty; forgot -o - ?", file=sys.stderr)
                 return 1
             content = sub.stdout.decode()
+    finally:
+        # Clean up the temporary directory if we created one
+        if cleanup_dir:
+            temp_dir.cleanup()
 
     with open(path, "w") as f:
         # Print lines up to '.endif'.
@@ -102,6 +118,9 @@ parser = argparse.ArgumentParser(
 parser.add_argument("files", nargs="+")
 parser.add_argument(
     "--shell", action="store_true", help="invoke shell instead of 'gen'"
+)
+parser.add_argument(
+    "--directory", "-d", help="use specified directory instead of a temporary one"
 )
 args = parser.parse_args()
 for path in args.files:
