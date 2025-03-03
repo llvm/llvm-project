@@ -127,7 +127,8 @@ __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
                                              __gpu_num_lanes() - 1)
           << 32ull) |
          ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __id,
-                                             __gpu_num_lanes() - 1));
+                                             __gpu_num_lanes() - 1) &
+          0xFFFFFFFF);
 }
 
 // Returns a bitmask of threads in the current lane for which \p x is true.
