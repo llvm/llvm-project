@@ -246,15 +246,13 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
-  }
-
-  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
-                                     Type *ResultTy) {
-    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+  VPInstructionWithType *createCast(Instruction::CastOps Opcode, VPValue *Op,
+                                    Type *ResultTy, DebugLoc DL = {},
+                                    const Twine &Name = "",
+                                    Instruction *CI = nullptr) {
+    auto *VPI = new VPInstructionWithType(Opcode, {Op}, ResultTy, DL, Name);
+    VPI->setUnderlyingValue(CI);
+    return tryInsertInstruction(VPI);
   }
 
   VPScalarIVStepsRecipe *

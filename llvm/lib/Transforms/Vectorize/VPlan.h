@@ -519,7 +519,6 @@ public:
     case VPRecipeBase::VPReverseVectorPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
-    case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
@@ -598,12 +597,14 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
+  struct NonNegFlagsTy {
+    char NonNeg : 1;
+    NonNegFlagsTy(bool IsNonNeg = false) : NonNeg(IsNonNeg) {}
+  };
+
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
-  };
-  struct NonNegFlagsTy {
-    char NonNeg : 1;
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -698,6 +699,12 @@ public:
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
         DisjointFlags(DisjointFlags) {}
 
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      NonNegFlagsTy NonNegFlags, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::NonNegOp),
+        NonNegFlags(NonNegFlags) {}
+
 protected:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
@@ -710,7 +717,6 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
@@ -953,6 +959,12 @@ public:
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                NonNegFlagsTy NonNegFlags, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, NonNegFlags, DL),
+        Opcode(Opcode), Name(Name.str()) {}
+
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
@@ -1039,6 +1051,11 @@ public:
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
 
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, NonNegFlagsTy Flags, DebugLoc DL,
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+
   static inline bool classof(const VPRecipeBase *R) {
     auto *VPI = dyn_cast<VPInstruction>(R);
     return VPI && Instruction::isCast(VPI->getOpcode());
@@ -1051,8 +1068,9 @@ public:
   VPInstruction *clone() override {
     auto *New =
         new VPInstructionWithType(getOpcode(), {getOperand(0)}, getResultType(),
-                                  getDebugLoc(), getName());
+                                  {}, getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
+    New->transferFlags(*this);
     return New;
   }
 
@@ -1060,9 +1078,7 @@ public:
 
   /// Return the cost of this VPIRInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   Type *getResultType() const { return ResultTy; }
 
@@ -1178,58 +1194,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-};
-
-/// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags {
-  /// Cast instruction opcode.
-  Instruction::CastOps Opcode;
-
-  /// Result type for the cast.
-  Type *ResultTy;
-
-public:
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), Opcode(Opcode),
-        ResultTy(ResultTy) {
-    assert(UI.getOpcode() == Opcode &&
-           "opcode of underlying cast doesn't match");
-  }
-
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
-        ResultTy(ResultTy) {}
-
-  ~VPWidenCastRecipe() override = default;
-
-  VPWidenCastRecipe *clone() override {
-    if (auto *UV = getUnderlyingValue())
-      return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                   *cast<CastInst>(UV));
-
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
-
-  /// Produce widened copies of the cast.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  Instruction::CastOps getOpcode() const { return Opcode; }
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
 };
 
 /// A recipe for widening vector intrinsics.

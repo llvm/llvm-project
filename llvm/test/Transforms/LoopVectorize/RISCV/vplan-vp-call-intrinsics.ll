@@ -353,9 +353,9 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-CAST ir<[[FPEXT:%.+]]> = fpext ir<[[LD1]]> to double
+; IF-EVL-NEXT:     EMIT ir<[[FPEXT:%.+]]> = fpext ir<[[LD1]]> to double
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LRINT:%.+]]> = call llvm.lrint(ir<[[FPEXT]]>)
-; IF-EVL-NEXT:     WIDEN-CAST ir<[[TRUNC:%.+]]> = trunc ir<[[LRINT]]> to i32
+; IF-EVL-NEXT:     EMIT ir<[[TRUNC:%.+]]> = trunc ir<[[LRINT]]> to i32
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[TRUNC]]>, vp<[[EVL]]>
@@ -408,9 +408,9 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-CAST ir<[[FPEXT:%.+]]> = fpext ir<[[LD1]]> to double
+; IF-EVL-NEXT:     EMIT ir<[[FPEXT:%.+]]> = fpext ir<[[LD1]]> to double
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC ir<[[LLRINT:%.+]]> = call llvm.llrint(ir<[[FPEXT]]>)
-; IF-EVL-NEXT:     WIDEN-CAST ir<[[TRUNC:%.+]]> = trunc ir<[[LLRINT]]> to i32
+; IF-EVL-NEXT:     EMIT ir<[[TRUNC:%.+]]> = trunc ir<[[LLRINT]]> to i32
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[TRUNC]]>, vp<[[EVL]]>

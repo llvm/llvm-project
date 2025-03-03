@@ -4434,8 +4434,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
-            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                  VPWidenCastRecipe>(
+            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
             .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
@@ -4496,14 +4495,11 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       if (EphemeralRecipes.contains(&R))
         continue;
       // Continue early if the recipe is considered to not produce a vector
-      // result. Note that this includes VPInstruction where some opcodes may
-      // produce a vector, to preserve existing behavior as VPInstructions model
-      // aspects not directly mapped to existing IR instructions.
+      // result.
       switch (R.getVPDefID()) {
       case VPDef::VPDerivedIVSC:
       case VPDef::VPScalarIVStepsSC:
       case VPDef::VPReplicateSC:
-      case VPDef::VPInstructionSC:
       case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
       case VPDef::VPReverseVectorPointerSC:
@@ -4516,7 +4512,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPActiveLaneMaskPHISC:
       case VPDef::VPWidenCallSC:
       case VPDef::VPWidenCanonicalIVSC:
-      case VPDef::VPWidenCastSC:
       case VPDef::VPWidenGEPSC:
       case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
@@ -4533,6 +4528,15 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenStoreEVLSC:
       case VPDef::VPWidenStoreSC:
         break;
+      case VPDef::VPInstructionSC: {
+        // Note that for VPInstruction some opcodes may produce a vector. To
+        // preserve existing behavior only consider them vector-generating if
+        // they are casts with an underlying value.
+        if (Instruction::isCast(cast<VPInstruction>(&R)->getOpcode()) &&
+            R.getVPSingleValue()->getUnderlyingValue())
+          break;
+        continue;
+      }
       default:
         llvm_unreachable("unhandled recipe");
       }
@@ -8937,8 +8941,15 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
-    return new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(),
-                                 *CI);
+    auto *VPI =
+        isa<PossiblyNonNegInst>(CI)
+            ? new VPInstructionWithType(CI->getOpcode(), {Operands[0]},
+                                        CI->getType(), {CI->hasNonNeg()}, {})
+            : new VPInstructionWithType(CI->getOpcode(), {Operands[0]},
+                                        CI->getType(), {});
+
+    VPI->setUnderlyingValue(CI);
+    return VPI;
   }
 
   return tryToWiden(Instr, Operands);
@@ -9060,9 +9071,9 @@ static VPInstruction *addResumePhiRecipeForInduction(
   // the widest induction) and thus may be wider than the induction here.
   Type *ScalarTypeOfWideIV = TypeInfo.inferScalarType(WideIV);
   if (ScalarTypeOfWideIV != TypeInfo.inferScalarType(EndValue)) {
-    EndValue = VectorPHBuilder.createScalarCast(Instruction::Trunc, EndValue,
-                                                ScalarTypeOfWideIV,
-                                                WideIV->getDebugLoc());
+    EndValue =
+        VectorPHBuilder.createCast(Instruction::Trunc, EndValue,
+                                   ScalarTypeOfWideIV, WideIV->getDebugLoc());
   }
 
   auto *ResumePhiRecipe =
@@ -9860,12 +9871,12 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             RdxDesc.getRecurrenceKind())) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
-      auto *Trunc =
-          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
+      auto *Trunc = new VPInstructionWithType(Instruction::Trunc, NewExitingVPV,
+                                              RdxTy, {});
       auto *Extnd =
           RdxDesc.isSigned()
-              ? new VPWidenCastRecipe(Instruction::SExt, Trunc, PhiTy)
-              : new VPWidenCastRecipe(Instruction::ZExt, Trunc, PhiTy);
+              ? new VPInstructionWithType(Instruction::SExt, Trunc, PhiTy, {})
+              : new VPInstructionWithType(Instruction::ZExt, Trunc, PhiTy, {});
 
       Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
       Extnd->insertAfter(Trunc);

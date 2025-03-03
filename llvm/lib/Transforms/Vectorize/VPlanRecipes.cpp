@@ -79,7 +79,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
-  case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenLoadEVLSC:
@@ -126,7 +125,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
-  case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -164,7 +162,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
-  case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
@@ -310,7 +307,7 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     // The extend could come from outside the plan.
     if (!R)
       return TargetTransformInfo::PR_None;
-    auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
+    auto *WidenCastR = dyn_cast<VPInstructionWithType>(R);
     if (!WidenCastR)
       return TargetTransformInfo::PR_None;
     if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
@@ -809,7 +806,7 @@ void VPInstruction::execute(VPTransformState &State) {
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
   case Instruction::ICmp:
@@ -960,26 +957,86 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-Value *VPInstructionWithType::generate(VPTransformState &State) {
+void VPInstructionWithType::execute(VPTransformState &State) {
+  assert(Instruction::isCast(getOpcode()) && "must be cast");
   State.setDebugLocFrom(getDebugLoc());
-  assert(vputils::onlyFirstLaneUsed(this) &&
-         "Codegen only implemented for first lane.");
-  switch (getOpcode()) {
-  case Instruction::SExt:
-  case Instruction::ZExt:
-  case Instruction::Trunc: {
-    // Note: SExt/ZExt not used yet.
-    Value *Op = State.get(getOperand(0), VPLane(0));
-    return State.Builder.CreateCast(Instruction::CastOps(getOpcode()), Op,
-                                    ResultTy);
-  }
-  default:
-    llvm_unreachable("opcode not implemented yet");
-  }
+  auto &Builder = State.Builder;
+  bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+  Type *DestTy = OnlyFirstLaneUsed ? getResultType()
+                                   : VectorType::get(getResultType(), State.VF);
+  VPValue *Op = getOperand(0);
+  Value *A = OnlyFirstLaneUsed ? State.get(Op, VPLane(0)) : State.get(Op);
+  Value *Cast =
+      Builder.CreateCast(Instruction::CastOps(getOpcode()), A, DestTy);
+  if (OnlyFirstLaneUsed)
+    State.set(this, Cast, VPLane(0));
+  else
+    State.set(this, Cast);
+  State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+    setFlags(CastOp);
 }
 
-void VPInstructionWithType::execute(VPTransformState &State) {
-  State.set(this, generate(State), VPLane(0));
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  assert(Instruction::isCast(getOpcode()) && "must be cast");
+  // TODO: In some cases, casts are created but not considered in
+  // the legacy cost model, including truncates/extends when evaluating a
+  // reduction in a smaller type.
+  if (!getUnderlyingValue())
+    return 0;
+
+  // Computes the CastContextHint from a recipes that may access memory.
+  auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
+    if (VF.isScalar())
+      return TTI::CastContextHint::Normal;
+    if (isa<VPInterleaveRecipe>(R))
+      return TTI::CastContextHint::Interleave;
+    if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
+      return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
+                                             : TTI::CastContextHint::Normal;
+    const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
+    if (WidenMemoryRecipe == nullptr)
+      return TTI::CastContextHint::None;
+    if (!WidenMemoryRecipe->isConsecutive())
+      return TTI::CastContextHint::GatherScatter;
+    if (WidenMemoryRecipe->isReverse())
+      return TTI::CastContextHint::Reversed;
+    if (WidenMemoryRecipe->isMasked())
+      return TTI::CastContextHint::Masked;
+    return TTI::CastContextHint::Normal;
+  };
+
+  VPValue *Operand = getOperand(0);
+  TTI::CastContextHint CCH = TTI::CastContextHint::None;
+  // For Trunc/FPTrunc, get the context from the only user.
+  if ((getOpcode() == Instruction::Trunc ||
+       getOpcode() == Instruction::FPTrunc) &&
+      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
+    if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
+      CCH = ComputeCCH(StoreRecipe);
+  }
+  // For Z/Sext, get the context from the operand.
+  else if (getOpcode() == Instruction::ZExt ||
+           getOpcode() == Instruction::SExt ||
+           getOpcode() == Instruction::FPExt) {
+    if (Operand->isLiveIn())
+      CCH = TTI::CastContextHint::Normal;
+    else if (Operand->getDefiningRecipe())
+      CCH = ComputeCCH(Operand->getDefiningRecipe());
+  }
+
+  auto *SrcTy =
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(Operand), VF));
+  auto *DestTy = cast<VectorType>(toVectorTy(getResultType(), VF));
+  // Arm TTI will use the underlying instruction to determine the cost.
+  return Ctx.TTI.getCastInstrCost(
+      getOpcode(), DestTy, SrcTy, CCH, Ctx.CostKind,
+      dyn_cast_if_present<Instruction>(getUnderlyingValue()));
+}
+
+bool VPInstructionWithType::onlyFirstLaneUsed(const VPValue *Op) const {
+  return vputils::onlyFirstLaneUsed(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -987,15 +1044,17 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
+  O << " = " << Instruction::getOpcodeName(getOpcode());
+  printFlags(O);
   printOperands(O, SlotTracker);
-  O << " to " << *ResultTy;
+  O << " to " << *getResultType();
+
+  if (auto DL = getDebugLoc()) {
+    O << ", !dbg ";
+    DL.print(O);
+  }
 }
 #endif
-
-bool VPInstructionWithType::onlyFirstLaneUsed(const VPValue *Op) const {
-  return vputils::onlyFirstLaneUsed(this);
-}
 
 void VPIRInstruction::execute(VPTransformState &State) {
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
@@ -1653,87 +1712,6 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
-}
-#endif
-
-void VPWidenCastRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFrom(getDebugLoc());
-  auto &Builder = State.Builder;
-  /// Vectorize casts.
-  assert(State.VF.isVector() && "Not vectorizing?");
-  Type *DestTy = VectorType::get(getResultType(), State.VF);
-  VPValue *Op = getOperand(0);
-  Value *A = State.get(Op);
-  Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
-  State.set(this, Cast);
-  State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
-  if (auto *CastOp = dyn_cast<Instruction>(Cast))
-    setFlags(CastOp);
-}
-
-InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
-                                               VPCostContext &Ctx) const {
-  // TODO: In some cases, VPWidenCastRecipes are created but not considered in
-  // the legacy cost model, including truncates/extends when evaluating a
-  // reduction in a smaller type.
-  if (!getUnderlyingValue())
-    return 0;
-  // Computes the CastContextHint from a recipes that may access memory.
-  auto ComputeCCH = [&](const VPRecipeBase *R) -> TTI::CastContextHint {
-    if (VF.isScalar())
-      return TTI::CastContextHint::Normal;
-    if (isa<VPInterleaveRecipe>(R))
-      return TTI::CastContextHint::Interleave;
-    if (const auto *ReplicateRecipe = dyn_cast<VPReplicateRecipe>(R))
-      return ReplicateRecipe->isPredicated() ? TTI::CastContextHint::Masked
-                                             : TTI::CastContextHint::Normal;
-    const auto *WidenMemoryRecipe = dyn_cast<VPWidenMemoryRecipe>(R);
-    if (WidenMemoryRecipe == nullptr)
-      return TTI::CastContextHint::None;
-    if (!WidenMemoryRecipe->isConsecutive())
-      return TTI::CastContextHint::GatherScatter;
-    if (WidenMemoryRecipe->isReverse())
-      return TTI::CastContextHint::Reversed;
-    if (WidenMemoryRecipe->isMasked())
-      return TTI::CastContextHint::Masked;
-    return TTI::CastContextHint::Normal;
-  };
-
-  VPValue *Operand = getOperand(0);
-  TTI::CastContextHint CCH = TTI::CastContextHint::None;
-  // For Trunc/FPTrunc, get the context from the only user.
-  if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
-      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
-    if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
-      CCH = ComputeCCH(StoreRecipe);
-  }
-  // For Z/Sext, get the context from the operand.
-  else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
-           Opcode == Instruction::FPExt) {
-    if (Operand->isLiveIn())
-      CCH = TTI::CastContextHint::Normal;
-    else if (Operand->getDefiningRecipe())
-      CCH = ComputeCCH(Operand->getDefiningRecipe());
-  }
-
-  auto *SrcTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(Operand), VF));
-  auto *DestTy = cast<VectorType>(toVectorTy(getResultType(), VF));
-  // Arm TTI will use the underlying instruction to determine the cost.
-  return Ctx.TTI.getCastInstrCost(
-      Opcode, DestTy, SrcTy, CCH, Ctx.CostKind,
-      dyn_cast_if_present<Instruction>(getUnderlyingValue()));
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-CAST ";
-  printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(Opcode);
-  printFlags(O);
-  printOperands(O, SlotTracker);
-  O << " to " << *getResultType();
 }
 #endif
 

@@ -337,7 +337,6 @@ public:
     VPReverseVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
-    VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
