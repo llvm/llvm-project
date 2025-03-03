@@ -560,12 +560,12 @@ def genOrderFile(args):
     return 0
 
 
-def filter_bolt_optimized(inputs, instrumented_outputs):
+def filter_bolt_optimized(inputs, instrumented_outputs, readelf):
     new_inputs = []
     new_instrumented_ouputs = []
     for input, instrumented_output in zip(inputs, instrumented_outputs):
         output = subprocess.check_output(
-            [opts.readelf, "-WS", input], universal_newlines=True
+            [readelf, "-WS", input], universal_newlines=True
         )
 
         # This binary has already been bolt-optimized, so skip further processing.
@@ -597,7 +597,9 @@ def bolt_optimize(args):
         instrumented_outputs
     ), "inconsistent --input / --instrumented-output arguments"
 
-    inputs, instrumented_outputs = filter_bolt_optimized(inputs, instrumented_outputs)
+    inputs, instrumented_outputs = filter_bolt_optimized(inputs,
+                                                         instrumented_outputs,
+                                                         opts.readelf)
     if not inputs:
         return 0
 
