@@ -293,6 +293,16 @@ public:
 
   Location getLoc() const { return fileLoc; }
 
+  /// Snapshot the location of the BytecodeReader so that parsing can be rewound
+  /// if needed.
+  struct Snapshot {
+    EncodingReader &reader;
+    const uint8_t *dataIt;
+
+    Snapshot(EncodingReader &reader) : reader(reader), dataIt(reader.dataIt) {}
+    void rewind() { reader.dataIt = dataIt; }
+  };
+
 private:
   /// Parse a variable length encoded integer from the byte stream. This method
   /// is a fallback when the number of bytes used to encode the value is greater
@@ -1417,7 +1427,8 @@ private:
   /// `wasRegistered` flag that indicates if the bytecode was produced by a
   /// context where opName was registered.
   FailureOr<BytecodeOperationName *>
-  parseOpName(EncodingReader &reader, std::optional<bool> &wasRegistered);
+  parseOpName(EncodingReader &reader, std::optional<bool> &wasRegistered,
+              bool useDialectFallback);
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Section
@@ -1482,7 +1493,8 @@ private:
                              RegionReadState &readState);
   FailureOr<Operation *> parseOpWithoutRegions(EncodingReader &reader,
                                                RegionReadState &readState,
-                                               bool &isIsolatedFromAbove);
+                                               bool &isIsolatedFromAbove,
+                                               bool useDialectFallback);
 
   LogicalResult parseRegion(RegionReadState &readState);
   LogicalResult parseBlockHeader(EncodingReader &reader,
@@ -1851,14 +1863,18 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
 
 FailureOr<BytecodeOperationName *>
 BytecodeReader::Impl::parseOpName(EncodingReader &reader,
-                                  std::optional<bool> &wasRegistered) {
+                                  std::optional<bool> &wasRegistered,
+                                  bool useDialectFallback) {
   BytecodeOperationName *opName = nullptr;
   if (failed(parseEntry(reader, opNames, opName, "operation name")))
     return failure();
   wasRegistered = opName->wasRegistered;
   // Check to see if this operation name has already been resolved. If we
   // haven't, load the dialect and build the operation name.
-  if (!opName->opName) {
+  // If `useDialectFallback`, it's likely that parsing previously failed. We'll
+  // need to reset any previously resolved OperationName with that of the
+  // fallback op.
+  if (!opName->opName || useDialectFallback) {
     // If the opName is empty, this is because we use to accept names such as
     // `foo` without any `.` separator. We shouldn't tolerate this in textual
     // format anymore but for now we'll be backward compatible. This can only
@@ -1872,21 +1888,19 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
       if (failed(opName->dialect->load(dialectReader, getContext())))
         return failure();
 
-      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
-                             getContext());
+      if (useDialectFallback) {
+        auto fallbackOp =
+            opName->dialect->interface->getFallbackOperationName();
 
-      // If the op is unregistered now, but was not marked as unregistered, try
-      // to parse it as a fallback op if the dialect's bytecode interface
-      // specifies one.
-      // We don't treat this condition as an error because we may still be able
-      // to parse the op as an unregistered op if it doesn't use custom
-      // properties encoding.
-      if (wasRegistered && !opName->opName->isRegistered()) {
-        if (auto fallbackOp =
-                opName->dialect->interface->getFallbackOperationName();
-            succeeded(fallbackOp)) {
-          opName->opName.emplace(*fallbackOp);
-        }
+        // If the dialect doesn't have a fallback operation, we can't parse as
+        // instructed.
+        if (failed(fallbackOp))
+          return failure();
+
+        opName->opName.emplace(*fallbackOp);
+      } else {
+        opName->opName.emplace(
+            (opName->dialect->name + "." + opName->name).str(), getContext());
       }
     }
   }
@@ -2164,10 +2178,27 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
         // Read in the next operation. We don't read its regions directly, we
         // handle those afterwards as necessary.
         bool isIsolatedFromAbove = false;
-        FailureOr<Operation *> op =
-            parseOpWithoutRegions(reader, readState, isIsolatedFromAbove);
-        if (failed(op))
-          return failure();
+        FailureOr<Operation *> op;
+
+        // Parse the bytecode.
+        {
+          EncodingReader::Snapshot snapshot(reader);
+          op = parseOpWithoutRegions(reader, readState, isIsolatedFromAbove,
+                                     /*useDialectFallback=*/false);
+
+          // If reading fails, try parsing the op again as a dialect fallback
+          // op (if supported).
+          if (failed(op)) {
+            snapshot.rewind();
+            op = parseOpWithoutRegions(reader, readState, isIsolatedFromAbove,
+                                       /*useDialectFallback=*/true);
+          }
+
+          // If the dialect doesn't have a fallback op, or parsing as a fallback
+          // op fails, we can no longer continue.
+          if (failed(op))
+            return failure();
+        }
 
         // If the op has regions, add it to the stack for processing and return:
         // we stop the processing of the current region and resume it after the
@@ -2229,14 +2260,13 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
   return success();
 }
 
-FailureOr<Operation *>
-BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
-                                            RegionReadState &readState,
-                                            bool &isIsolatedFromAbove) {
+FailureOr<Operation *> BytecodeReader::Impl::parseOpWithoutRegions(
+    EncodingReader &reader, RegionReadState &readState,
+    bool &isIsolatedFromAbove, bool useDialectFallback) {
   // Parse the name of the operation.
   std::optional<bool> wasRegistered;
   FailureOr<BytecodeOperationName *> bytecodeOp =
-      parseOpName(reader, wasRegistered);
+      parseOpName(reader, wasRegistered, useDialectFallback);
   if (failed(bytecodeOp))
     return failure();
   auto opName = (*bytecodeOp)->opName;
