@@ -852,9 +852,12 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
   if (From > To)
     return std::nullopt;
 
-  // Accept fall-throughs inside pseudo functions (PLT/thunks). Such functions
-  // are marked as ignored and so lack CFG, which means fallthroughs in them are
-  // reported as mismatching traces which they are not.
+  // Accept fall-throughs inside pseudo functions (PLT/thunks).
+  // This check has to be above BF.empty as pseudo functions would pass it:
+  // pseudo => ignored => CFG not built => empty.
+  // If we return nullopt, trace would be reported as mismatching disassembled
+  // function contents which it is not. To avoid this, return an empty
+  // fall-through list instead.
   if (BF.isPseudo())
     return Branches;
 
