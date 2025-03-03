@@ -91,19 +91,15 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   // and another right after. This is to avoid losing telemetry if the command
   // does not execute successfully.
   int command_id;
-
   // Eg., "breakpoint set"
   std::string command_name;
-
   // !!NOTE!! These two fields are not collected by default due to PII risks.
   // Vendor may allow them by setting the LLDBConfig::m_detailed_command_telemetry.
   std::string original_command;
   std::string args;
-
   // Return status of a command and any error description in case of error.
   lldb::ReturnStatus ret_status;
   std::string error_data;
-
 
   CommandInfo() = default;
 
@@ -115,7 +111,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
 
   void serialize(Serializer &serializer) const override;
  };
-  
+
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
   std::string lldb_version;
 
@@ -188,11 +184,11 @@ template <typename Info> struct ScopedDispatcher {
 
   void SetDebugger(Debugger *debugger) { debugger = debugger; }
 
-  void SetFinalCallback(llvm::unique_function<void(Info *info)> final_callback) {
+  void DispatchOnExit(llvm::unique_function<void(Info *info)> final_callback) {
     m_final_callback(std::move(final_callback));
   }
 
-  void DispatchNowIfEnable(llvm::unique_function<void(Info *info)> populate_fields_cb) {
+  void DispatchNow(llvm::unique_function<void(Info *info)> populate_fields_cb) {
     TelemetryManager *manager = TelemetryManager::GetInstanceIfEnabled();
     if (!manager)
       return;

@@ -1887,9 +1887,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        bool force_repeat_command) {
   lldb_private::telemetry::ScopedDispatcher<
       lldb_private::telemetry:CommandInfo> helper(m_debugger);
-  lldb_private::telemetry::TelemetryManager *ins = lldb_private::telemetry::TelemetryManager::GetInstanceOrDummy();
+  lldb_private::telemetry::TelemetryManager *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
   const int command_id = ins->MakeNextCommandId();
-
 
   std::string command_string(command_line);
   std::string original_command_string(command_string);
@@ -1897,7 +1896,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   std::string parsed_command_args;
   CommandObject *cmd_obj = nullptr;
 
-  helper.DispatchIfEnable([&](lldb_private::telemetry:CommandInfo* info){
+  helper.DispatchNow([&](lldb_private::telemetry:CommandInfo* info){
     info.command_id = command_id;
     if (Target* target = GetExecutionContext().GetTargetPtr()) {
       // If we have a target attached to this command, then get the UUID.
@@ -1915,7 +1914,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // TODO: this is logging the time the command-handler finishes.
     // But we may want a finer-grain durations too?
     // (ie., the execute_time recorded below?)
-
     info.command_id = command_id;
     llvm::StringRef command_name =
         cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
