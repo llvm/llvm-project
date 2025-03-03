@@ -483,6 +483,9 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
   if (!NewSuperDstRC)
     return nullptr;
 
+  const TargetRegisterClass *LargerSrcRC =
+      TRI.getLargestLegalSuperClass(SrcRC, MF);
+
   return TRI.getMatchingSuperRegClass(NewSuperDstRC, SrcRC, DstSub);
 
   //const TargetRegisterClass *ReferenceRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
@@ -491,8 +494,6 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
   const TargetRegisterClass *LargerDstRC =
       TRI.getLargestLegalSuperClass(DstRC, MF);
 
-  const TargetRegisterClass *LargerSrcRC =
-      TRI.getLargestLegalSuperClass(SrcRC, MF);
   const TargetRegisterClass *NewSuperRC =
       TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC, DstSub);
 
@@ -609,6 +610,11 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       SrcIdx = DstSub;
 
       const TargetRegisterClass *OldRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+
+      // TODO: Probably should be more aggressive than one use. This is mostly
+      // to avoid regressing some lane broadcast patterns.
+      if (!OldRC && !MRI.hasOneNonDBGUse(Src))
+        return false;
 
       LLVM_DEBUG(
           dbgs() << "SrcRC = " << TRI.getRegClassName(SrcRC) << '\n';
