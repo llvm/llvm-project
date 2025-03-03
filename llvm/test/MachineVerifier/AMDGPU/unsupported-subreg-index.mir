@@ -1,0 +1,15 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: unsupported_subreg_index
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $agpr0_agpr1_agpr2_agpr3
+
+    ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    undef %0.sub3:vreg_96 = COPY $vgpr0
+
+    ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    $vgpr0 = COPY %0.sub3
+
+...
