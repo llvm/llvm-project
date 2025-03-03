@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static cl::OptionCategory Cat("obj2yaml Options");
+cl::OptionCategory Cat("obj2yaml Options");
 
 static cl::opt<std::string>
     InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));

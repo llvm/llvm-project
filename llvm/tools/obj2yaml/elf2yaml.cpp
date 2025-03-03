@@ -11,8 +11,10 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ObjectYAML/CovMap.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -20,6 +22,10 @@
 #include <optional>
 
 using namespace llvm;
+
+static cl::opt<bool> CovMapRaw("covmap-raw",
+                               cl::desc("Dump raw YAML in Coverage Map."),
+                               cl::cat(Cat));
 
 namespace {
 
@@ -97,6 +103,8 @@ class ELFDumper {
   dumpStackSizesSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::BBAddrMapSection *>
   dumpBBAddrMapSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::Section *> dumpCovMap(const Elf_Shdr *Shdr, StringRef Name,
+                                          covmap::Decoder *CovMapDecoder);
   Expected<ELFYAML::RawContentSection *>
   dumpPlaceholderSection(const Elf_Shdr *Shdr);
 
@@ -580,6 +588,30 @@ ELFDumper<ELFT>::dumpSections() {
     return Error::success();
   };
 
+  auto CovMapDecoder = covmap::Decoder::get(ELFT::Endianness, CovMapRaw);
+  if (covmap::Decoder::enabled) {
+    // Look up covmap-related sections in advance.
+    for (const auto &Sec : Sections) {
+      if (Sec.sh_type != ELF::SHT_PROGBITS)
+        continue;
+
+      auto NameOrErr = Obj.getSectionName(Sec);
+      if (!NameOrErr)
+        return NameOrErr.takeError();
+
+      if (!covmap::nameMatches(*NameOrErr))
+        continue;
+
+      auto ContentOrErr = Obj.getSectionContents(Sec);
+      if (!ContentOrErr)
+        return ContentOrErr.takeError();
+
+      if (auto E = CovMapDecoder->acquire(Sec.sh_addralign, *NameOrErr,
+                                          *ContentOrErr))
+        return std::move(E);
+    }
+  }
+
   auto GetDumper = [this](unsigned Type)
       -> std::function<Expected<ELFYAML::Chunk *>(const Elf_Shdr *)> {
     if (Obj.getHeader().e_machine == ELF::EM_ARM && Type == ELF::SHT_ARM_EXIDX)
@@ -659,6 +691,10 @@ ELFDumper<ELFT>::dumpSections() {
 
       if (ELFYAML::StackSizesSection::nameMatches(*NameOrErr)) {
         if (Error E = Add(dumpStackSizesSection(&Sec)))
+          return std::move(E);
+        continue;
+      } else if (covmap::Decoder::enabled && covmap::nameMatches(*NameOrErr)) {
+        if (Error E = Add(dumpCovMap(&Sec, *NameOrErr, CovMapDecoder.get())))
           return std::move(E);
         continue;
       }
@@ -1663,6 +1699,26 @@ ELFDumper<ELFT>::dumpMipsABIFlags(const Elf_Shdr *Shdr) {
 }
 
 template <class ELFT>
+Expected<ELFYAML::Section *>
+ELFDumper<ELFT>::dumpCovMap(const Elf_Shdr *Shdr, StringRef Name,
+                            covmap::Decoder *CovMapDecoder) {
+  auto S = covmap::make_unique(Name);
+  assert(S);
+
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(*Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  if (auto E = CovMapDecoder->make(S.get(), *ContentOrErr))
+    return std::move(E);
+
+  return S.release();
+}
+
+template <class ELFT>
 static Error elf2yaml(raw_ostream &Out, const object::ELFFile<ELFT> &Obj,
                       std::unique_ptr<DWARFContext> DWARFCtx) {
   ELFDumper<ELFT> Dumper(Obj, std::move(DWARFCtx));
@@ -1671,7 +1727,8 @@ static Error elf2yaml(raw_ostream &Out, const object::ELFFile<ELFT> &Obj,
     return YAMLOrErr.takeError();
 
   std::unique_ptr<ELFYAML::Object> YAML(YAMLOrErr.get());
-  yaml::Output Yout(Out);
+  yaml::Output Yout(Out, nullptr, /*WrapColumn*/
+                    (covmap::Decoder::enabled ? 160 : 70));
   Yout << *YAML;
 
   return Error::success();

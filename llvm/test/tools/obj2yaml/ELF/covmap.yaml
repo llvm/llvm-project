@@ -1,6 +1,8 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: obj2yaml %t.o | tee %t.plain.yaml | FileCheck %s --check-prefixes=CHECK,PLAIN
+# RUN: obj2yaml --covmap-raw %t.o | tee %t.raw.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,RAWONLY,RAW,DLOC
 # RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
 
 --- !ELF
 FileHeader:
