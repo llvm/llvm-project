@@ -2359,10 +2359,28 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type *CanonicalIVTy) {
+  VPTypeAnalysis TypeInfo(CanonicalIVTy);
+  SmallVector<VPRecipeBase *> ToDelete;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+      if (auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        // Infer an up-to-date type since
+        // optimizeVectorInductionWidthForTCAndVFUF may have truncated the start
+        // and step values.
+        Type *Ty = TypeInfo.inferScalarType(IVR->getStartValue());
+        if (TruncInst *Trunc = IVR->getTruncInst())
+          Ty = Trunc->getType();
+        if (Ty->isFloatingPointTy())
+          Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
+        VPInstruction *StepVector = new VPInstructionWithType(
+            VPInstruction::StepVector, {}, Ty, R.getDebugLoc());
+
+        Plan.getVectorPreheader()->appendRecipe(StepVector);
+        IVR->setStepVector(StepVector);
+      }
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
         continue;
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
@@ -2373,9 +2391,13 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
           PhiR->getDebugLoc(), Name);
       ScalarR->insertBefore(PhiR);
       PhiR->replaceAllUsesWith(ScalarR);
-      PhiR->eraseFromParent();
+      // Defer erasing recipes till the end so that we don't invalidate the
+      // VPTypeAnalysis cache.
+      ToDelete.push_back(PhiR);
     }
   }
+  for (auto *R : ToDelete)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(

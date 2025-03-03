@@ -457,7 +457,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[EXP_SCEV]]>, vp<[[VF]]> (truncated to i8)
+; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[EXP_SCEV]]>, vp<[[VF]]>, vp<[[VF]]> (truncated to i8)
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add nuw ir<%iv>, ir<1>
