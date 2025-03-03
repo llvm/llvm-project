@@ -470,8 +470,13 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
   const TargetRegisterClass *NewSuperDstRC = nullptr;
   for (auto SuperDstRCID : DstRC->superclasses()) {
     const TargetRegisterClass *SuperDstRC = TRI.getRegClass(SuperDstRCID);
-    if ((NewSuperDstRC = TRI.getSubClassWithSubReg(SuperDstRC, DstSub)))
-      break;
+
+    if ((NewSuperDstRC = TRI.getMatchingSuperRegClass(SuperDstRC, SrcRC, DstSub)))
+      return NewSuperDstRC;
+
+    //if ((NewSuperDstRC = TRI.getSubClassWithSubReg(SuperDstRC, DstSub)))
+    //break;
+
   }
 
   // TODO: For a subregister insert, it may well be worth either reconstraining
@@ -613,7 +618,7 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
 
       // TODO: Probably should be more aggressive than one use. This is mostly
       // to avoid regressing some lane broadcast patterns.
-      if (!OldRC && !MRI.hasOneNonDBGUse(Src))
+      if (false && !OldRC && !MRI.hasOneNonDBGUse(Src))
         return false;
 
       LLVM_DEBUG(
