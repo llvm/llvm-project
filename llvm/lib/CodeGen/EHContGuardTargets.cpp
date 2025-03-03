@@ -1,4 +1,4 @@
-//===-- EHContGuardCatchret.cpp - Catchret target symbols -------*- C++ -*-===//
+//===-- EHContGuardTargets.cpp - EH Cont target symbols ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 ///
 /// \file
 /// This file contains a machine function pass to insert a symbol before each
-/// valid catchret target and store this in the MachineFunction's
-/// CatchRetTargets vector. This will be used to emit the table of valid targets
+/// valid EH Cont target and store this in the MachineFunction's
+/// EHContTargets vector. This will be used to emit the table of valid targets
 /// used by EHCont Guard.
 ///
 //===----------------------------------------------------------------------===//
@@ -26,19 +26,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ehcontguard-catchret"
 
-STATISTIC(EHContGuardCatchretTargets,
-          "Number of EHCont Guard catchret targets");
+STATISTIC(EHContGuardTargetsFound, "Number of EHCont Guard targets");
 
 namespace {
 
 /// MachineFunction pass to insert a symbol before each valid catchret target
 /// and store these in the MachineFunction's CatchRetTargets vector.
-class EHContGuardCatchret : public MachineFunctionPass {
+class EHContGuardTargets : public MachineFunctionPass {
 public:
   static char ID;
 
-  EHContGuardCatchret() : MachineFunctionPass(ID) {
-    initializeEHContGuardCatchretPass(*PassRegistry::getPassRegistry());
+  EHContGuardTargets() : MachineFunctionPass(ID) {
+    initializeEHContGuardTargetsPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override {
@@ -50,31 +49,31 @@ public:
 
 } // end anonymous namespace
 
-char EHContGuardCatchret::ID = 0;
+char EHContGuardTargets::ID = 0;
 
-INITIALIZE_PASS(EHContGuardCatchret, "EHContGuardCatchret",
-                "Insert symbols at valid catchret targets for /guard:ehcont",
-                false, false)
-FunctionPass *llvm::createEHContGuardCatchretPass() {
-  return new EHContGuardCatchret();
+INITIALIZE_PASS(EHContGuardTargets, "EHContGuardTargets",
+                "Insert symbols at valid targets for /guard:ehcont", false,
+                false)
+FunctionPass *llvm::createEHContGuardTargetsPass() {
+  return new EHContGuardTargets();
 }
 
-bool EHContGuardCatchret::runOnMachineFunction(MachineFunction &MF) {
+bool EHContGuardTargets::runOnMachineFunction(MachineFunction &MF) {
 
   // Skip modules for which the ehcontguard flag is not set.
   if (!MF.getFunction().getParent()->getModuleFlag("ehcontguard"))
     return false;
 
-  // Skip functions that do not have catchret
-  if (!MF.hasEHCatchret())
+  // Skip functions that do not have EHCont targets
+  if (!MF.hasEHContTarget())
     return false;
 
   bool Result = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    if (MBB.isEHCatchretTarget()) {
-      MF.addCatchretTarget(MBB.getEHCatchretSymbol());
-      EHContGuardCatchretTargets++;
+    if (MBB.isEHContTarget()) {
+      MF.addEHContTarget(MBB.getEHContSymbol());
+      EHContGuardTargetsFound++;
       Result = true;
     }
   }
