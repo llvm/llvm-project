@@ -7490,15 +7490,10 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   Walk(bounds.upper);
   Walk(bounds.step);
   EndCheckOnIndexUseInOwnBounds(restore);
-  bool pushScope{currScope().kind() != Scope::Kind::ImpliedDos};
-  if (pushScope) {
-    PushScope(Scope::Kind::ImpliedDos, nullptr);
-  }
+  PushScope(Scope::Kind::ImpliedDos, nullptr);
   DeclareStatementEntity(bounds.name, type);
   Walk(objects);
-  if (pushScope) {
-    PopScope();
-  }
+  PopScope();
   return false;
 }
 
@@ -7539,9 +7534,9 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
             }
           },
           [&](const parser::DataImpliedDo &y) {
-            PushScope(Scope::Kind::ImpliedDos, nullptr);
+            // Don't push scope here, since it's done when visiting
+            // DataImpliedDo.
             Walk(y);
-            PopScope();
           },
       },
       x.u);
