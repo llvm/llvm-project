@@ -2108,3 +2108,16 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     process_sp->GetByteOrder(), arch.GetAddressByteSize()};
   return ValueObjectConstResult::Create(&target, type, ConstString("__lldb_siginfo"), data_extractor);
 }
+
+BreakpointSiteSP Thread::DetectThreadStoppedAtUnexecutedBP() {
+  if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
+    addr_t pc = reg_ctx_sp->GetPC();
+    BreakpointSiteSP bp_site_sp =
+        GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+    if (bp_site_sp && bp_site_sp->IsEnabled()) {
+      m_stopped_at_unexecuted_bp = pc;
+      return bp_site_sp;
+    }
+  }
+  return nullptr;
+}
