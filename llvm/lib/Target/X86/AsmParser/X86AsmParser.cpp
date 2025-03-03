@@ -1182,6 +1182,9 @@ private:
 
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
+  MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const override;
+
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops);
 
@@ -4245,6 +4248,40 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     return Match_Unsupported;
 
   return Match_Success;
+}
+
+MCSymbolRefExpr::VariantKind
+X86AsmParser::getVariantKindForName(StringRef Name) const {
+  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
+      .Case("abs8", MCSymbolRefExpr::VK_X86_ABS8)
+      .Case("dtpoff", MCSymbolRefExpr::VK_DTPOFF)
+      .Case("dtprel", MCSymbolRefExpr::VK_DTPREL)
+      .Case("got", MCSymbolRefExpr::VK_GOT)
+      .Case("gotent", MCSymbolRefExpr::VK_GOTENT)
+      .Case("gotntpoff", MCSymbolRefExpr::VK_GOTNTPOFF)
+      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
+      .Case("gotpcrel", MCSymbolRefExpr::VK_GOTPCREL)
+      .Case("gotpcrel_norelax", MCSymbolRefExpr::VK_GOTPCREL_NORELAX)
+      .Case("gotrel", MCSymbolRefExpr::VK_GOTREL)
+      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
+      .Case("indntpoff", MCSymbolRefExpr::VK_INDNTPOFF)
+      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
+      .Case("ntpoff", MCSymbolRefExpr::VK_NTPOFF)
+      .Case("pcrel", MCSymbolRefExpr::VK_PCREL)
+      .Case("plt", MCSymbolRefExpr::VK_PLT)
+      .Case("pltoff", MCSymbolRefExpr::VK_X86_PLTOFF)
+      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
+      .Case("size", MCSymbolRefExpr::VK_SIZE)
+      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
+      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
+      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
+      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
+      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
+      .Case("tlvp", MCSymbolRefExpr::VK_TLVP)
+      .Case("tlvppage", MCSymbolRefExpr::VK_TLVPPAGE)
+      .Case("tlvppageoff", MCSymbolRefExpr::VK_TLVPPAGEOFF)
+      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
+      .Default(MCSymbolRefExpr::VK_Invalid);
 }
 
 bool X86AsmParser::matchAndEmitATTInstruction(
