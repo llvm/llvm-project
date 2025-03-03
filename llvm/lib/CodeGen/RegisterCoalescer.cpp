@@ -515,9 +515,19 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
-      NewRC = TRI.getMatchingSuperRegClass(DstRC,
-                                           TRI.getLargestLegalSuperClass(SrcRC, *MF),
+      NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC,
                                            DstSub);
+
+      if (!NewRC) {
+        const TargetRegisterClass *LargerSrcRC = TRI.getLargestLegalSuperClass(SrcRC, *MF);
+        const TargetRegisterClass *LargerDstMatchRC =
+          TRI.getMatchingSuperRegClass(DstRC, LargerSrcRC,
+                                       DstSub);
+
+        if (LargerDstMatchRC && const_cast<MachineRegisterInfo&>(MRI).constrainRegClass(Src, LargerSrcRC))
+          NewRC = LargerDstMatchRC;
+      }
+
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
