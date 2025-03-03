@@ -80,7 +80,6 @@ void TargetInfo::serialize(Serializer &serializer) const {
   }
 }
 
-
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
 
