@@ -1896,7 +1896,7 @@ amd_comgr_status_t AMDGPUCompiler::translateSpirvToBitcode() {
     SmallString<0> OutBuf;
     SPIRVCommand SPIRV(Input, OutBuf);
 
-    std::optional<CommandCache> &Cache = CommandCache::singleton(LogS);
+    auto Cache = CommandCache::get(LogS);
     amd_comgr_status_t Status;
     if (!Cache) {
       Status = SPIRV.execute(LogS);
