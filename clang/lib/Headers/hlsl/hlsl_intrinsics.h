@@ -37,6 +37,26 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #endif
 
+#define GEN_VEC_SCALAR_OVERLOADS(FUNC_NAME, BASE_TYPE, AVAIL)                  \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##2, AVAIL)                \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##3, AVAIL)                \
+  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##4, AVAIL)
+
+#define GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, VECTOR_TYPE, AVAIL)           \
+  IF_TRUE_##AVAIL(                                                             \
+      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
+  FUNC_NAME(VECTOR_TYPE p0, BASE_TYPE p1) {                                    \
+    return __builtin_elementwise_##FUNC_NAME(p0, (VECTOR_TYPE)p1);             \
+  }                                                                            \
+  IF_TRUE_##AVAIL(                                                             \
+      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
+  FUNC_NAME(BASE_TYPE p0, VECTOR_TYPE p1) {                                    \
+    return __builtin_elementwise_##FUNC_NAME((VECTOR_TYPE)p0, p1);             \
+  }
+
+#define IF_TRUE_0(EXPR)
+#define IF_TRUE_1(EXPR) EXPR
+
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -58,6 +78,15 @@ int16_t3 abs(int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int16_t4 abs(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t abs(uint16_t V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t2 abs(uint16_t2 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t3 abs(uint16_t3 V) { return V; }
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+constexpr uint16_t4 abs(uint16_t4 V) { return V; }
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -82,6 +111,11 @@ int3 abs(int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int4 abs(int4);
 
+constexpr uint abs(uint V) { return V; }
+constexpr uint2 abs(uint2 V) { return V; }
+constexpr uint3 abs(uint3 V) { return V; }
+constexpr uint4 abs(uint4 V) { return V; }
+
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 float abs(float);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
@@ -99,6 +133,11 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t3 abs(int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 int64_t4 abs(int64_t4);
+
+constexpr uint64_t abs(uint64_t V) { return V; }
+constexpr uint64_t2 abs(uint64_t2 V) { return V; }
+constexpr uint64_t3 abs(uint64_t3 V) { return V; }
+constexpr uint64_t4 abs(uint64_t4 V) { return V; }
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double abs(double);
@@ -248,6 +287,50 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_all)
 bool all(double4);
+
+//===----------------------------------------------------------------------===//
+// and builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool and(bool x, bool y)
+/// \brief Logically ands two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool and(bool x, bool y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool2 and(bool2 x, bool2 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool3 and(bool3 x, bool3 y);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_and)
+bool4 and(bool4 x, bool4 y);
+// clang-format on
+
+//===----------------------------------------------------------------------===//
+// or builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool or(bool x, bool y)
+/// \brief Logically ors two boolean vectors elementwise and produces a bool
+/// vector output.
+
+// TODO: Clean up clang-format marker once we've resolved
+//       https://github.com/llvm/llvm-project/issues/127851
+//
+// clang-format off
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool or(bool, bool);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool2 or(bool2, bool2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool3 or(bool3, bool3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_or)
+bool4 or(bool4, bool4);
+// clang-format on
 
 //===----------------------------------------------------------------------===//
 // any builtins
@@ -1637,6 +1720,7 @@ half3 max(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half4 max(half4, half4);
+GEN_VEC_SCALAR_OVERLOADS(max, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
@@ -1651,6 +1735,7 @@ int16_t3 max(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int16_t4 max(int16_t4, int16_t4);
+GEN_VEC_SCALAR_OVERLOADS(max, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1664,6 +1749,7 @@ uint16_t3 max(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint16_t4 max(uint16_t4, uint16_t4);
+GEN_VEC_SCALAR_OVERLOADS(max, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1674,6 +1760,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int3 max(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int4 max(int4, int4);
+GEN_VEC_SCALAR_OVERLOADS(max, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint max(uint, uint);
@@ -1683,6 +1770,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint3 max(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint4 max(uint4, uint4);
+GEN_VEC_SCALAR_OVERLOADS(max, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t max(int64_t, int64_t);
@@ -1692,6 +1780,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t3 max(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t4 max(int64_t4, int64_t4);
+GEN_VEC_SCALAR_OVERLOADS(max, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t max(uint64_t, uint64_t);
@@ -1701,6 +1790,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t3 max(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t4 max(uint64_t4, uint64_t4);
+GEN_VEC_SCALAR_OVERLOADS(max, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float max(float, float);
@@ -1710,6 +1800,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float3 max(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float4 max(float4, float4);
+GEN_VEC_SCALAR_OVERLOADS(max, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double max(double, double);
@@ -1719,6 +1810,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double3 max(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double4 max(double4, double4);
+GEN_VEC_SCALAR_OVERLOADS(max, double, 0)
 
 //===----------------------------------------------------------------------===//
 // min builtins
@@ -1741,6 +1833,7 @@ half3 min(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half4 min(half4, half4);
+GEN_VEC_SCALAR_OVERLOADS(min, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
@@ -1755,6 +1848,7 @@ int16_t3 min(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int16_t4 min(int16_t4, int16_t4);
+GEN_VEC_SCALAR_OVERLOADS(min, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -1768,6 +1862,7 @@ uint16_t3 min(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint16_t4 min(uint16_t4, uint16_t4);
+GEN_VEC_SCALAR_OVERLOADS(min, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -1778,6 +1873,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int3 min(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int4 min(int4, int4);
+GEN_VEC_SCALAR_OVERLOADS(min, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint min(uint, uint);
@@ -1787,6 +1883,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint3 min(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint4 min(uint4, uint4);
+GEN_VEC_SCALAR_OVERLOADS(min, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float min(float, float);
@@ -1796,6 +1893,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float3 min(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float4 min(float4, float4);
+GEN_VEC_SCALAR_OVERLOADS(min, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t min(int64_t, int64_t);
@@ -1805,6 +1903,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t3 min(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t4 min(int64_t4, int64_t4);
+GEN_VEC_SCALAR_OVERLOADS(min, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t min(uint64_t, uint64_t);
@@ -1814,6 +1913,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t3 min(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t4 min(uint64_t4, uint64_t4);
+GEN_VEC_SCALAR_OVERLOADS(min, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double min(double, double);
@@ -1823,6 +1923,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double3 min(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
+GEN_VEC_SCALAR_OVERLOADS(min, double, 0)
 
 //===----------------------------------------------------------------------===//
 // normalize builtins
@@ -2007,6 +2108,49 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double3 rcp(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
 double4 rcp(double4);
+
+//===----------------------------------------------------------------------===//
+// reflect builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T reflect(T I, T N)
+/// \brief Returns a reflection using an incident ray, \a I, and a surface
+/// normal, \a N.
+/// \param I The incident ray.
+/// \param N The surface normal.
+///
+/// The return value is a floating-point vector that represents the reflection
+/// of the incident ray, \a I, off a surface with the normal \a N.
+///
+/// This function calculates the reflection vector using the following formula:
+/// V = I - 2 * N * dot(I N) .
+///
+/// N must already be normalized in order to achieve the desired result.
+///
+/// The operands must all be a scalar or vector whose component type is
+/// floating-point.
+///
+/// Result type and the type of all operands must be the same type.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half reflect(half I, half N) {
+  return __detail::reflect_impl(I, N);
+}
+
+const inline float reflect(float I, float N) {
+  return __detail::reflect_impl(I, N);
+}
+
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, L> reflect(vector<half, L> I, vector<half, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
+
+template <int L>
+const inline vector<float, L> reflect(vector<float, L> I, vector<float, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins
@@ -2467,6 +2611,105 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveMax builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half WaveActiveMax(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half2 WaveActiveMax(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half3 WaveActiveMax(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) half4 WaveActiveMax(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t WaveActiveMax(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t2 WaveActiveMax(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t3 WaveActiveMax(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int16_t4 WaveActiveMax(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t WaveActiveMax(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t2 WaveActiveMax(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t3 WaveActiveMax(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint16_t4 WaveActiveMax(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int WaveActiveMax(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int2 WaveActiveMax(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int3 WaveActiveMax(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int4 WaveActiveMax(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint WaveActiveMax(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint2 WaveActiveMax(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint3 WaveActiveMax(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint4 WaveActiveMax(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t WaveActiveMax(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t2 WaveActiveMax(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t3 WaveActiveMax(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) int64_t4 WaveActiveMax(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t WaveActiveMax(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t2 WaveActiveMax(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t3 WaveActiveMax(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) uint64_t4 WaveActiveMax(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float WaveActiveMax(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float2 WaveActiveMax(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float3 WaveActiveMax(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) float4 WaveActiveMax(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double WaveActiveMax(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double2 WaveActiveMax(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double3 WaveActiveMax(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
+__attribute__((convergent)) double4 WaveActiveMax(double4);
 
 //===----------------------------------------------------------------------===//
 // WaveActiveSum builtins

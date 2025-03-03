@@ -576,7 +576,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
   // Mark live-in registers as live-in.
   SmallVector<Register, 4> Defs;
   for (const auto &LI : MBB->liveins()) {
-    assert(Register::isPhysicalRegister(LI.PhysReg) &&
+    assert(LI.PhysReg.isPhysical() &&
            "Cannot have a live-in virtual register!");
     HandlePhysRegDef(LI.PhysReg, nullptr, Defs);
   }
@@ -852,7 +852,7 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
                                 MachineBasicBlock *SuccBB) {
   const unsigned NumNew = BB->getNumber();
 
-  DenseSet<unsigned> Defs, Kills;
+  DenseSet<Register> Defs, Kills;
 
   MachineBasicBlock::iterator BBI = SuccBB->begin(), BBE = SuccBB->end();
   for (; BBI != BBE && BBI->isPHI(); ++BBI) {

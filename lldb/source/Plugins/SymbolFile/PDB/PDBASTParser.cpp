@@ -975,8 +975,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         }
       }
     }
-    if (params.size())
-      m_ast.SetFunctionParameters(decl, params);
+    if (params.size() && decl)
+      decl->setParams(params);
 
     m_uid_to_decl[sym_id] = decl;
 
@@ -1155,7 +1155,7 @@ bool PDBASTParser::AddEnumValue(CompilerType enum_type,
   Variant v = enum_value.getValue();
   std::string name =
       std::string(MSVCUndecoratedNameParser::DropScope(enum_value.getName()));
-  int64_t raw_value;
+  uint64_t raw_value;
   switch (v.Type) {
   case PDB_VariantType::Int8:
     raw_value = v.Value.Int8;

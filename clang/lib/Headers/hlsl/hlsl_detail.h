@@ -61,7 +61,11 @@ length_impl(T X) {
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_vec_impl(vector<T, N> X) {
+#if (__has_builtin(__builtin_spirv_length))
+  return __builtin_spirv_length(X);
+#else
   return __builtin_elementwise_sqrt(__builtin_hlsl_dot(X, X));
+#endif
 }
 
 template <typename T>
@@ -73,12 +77,24 @@ distance_impl(T X, T Y) {
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if (__has_builtin(__builtin_spirv_distance))
-  return __builtin_spirv_distance(X, Y);
-#else
   return length_vec_impl(X - Y);
+}
+
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+reflect_impl(T I, T N) {
+  return I - 2 * N * I * N;
+}
+
+template <typename T, int L>
+constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
+#if (__has_builtin(__builtin_spirv_reflect))
+  return __builtin_spirv_reflect(I, N);
+#else
+  return I - 2 * N * __builtin_hlsl_dot(I, N);
 #endif
 }
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_

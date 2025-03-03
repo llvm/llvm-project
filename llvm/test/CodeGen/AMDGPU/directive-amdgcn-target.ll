@@ -71,12 +71,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c < %s | FileCheck --check-prefixes=GFX90C %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -mattr=-xnack < %s | FileCheck --check-prefixes=GFX90C-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -mattr=+xnack < %s | FileCheck --check-prefixes=GFX90C-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 < %s | FileCheck --check-prefixes=GFX940 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX940-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX940-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx941 < %s | FileCheck --check-prefixes=GFX941 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx941 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX941-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx941 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX941-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefixes=GFX942 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX942-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX942-XNACK %s
@@ -174,12 +168,6 @@
 ; GFX90C: .amdgcn_target "amdgcn-amd-amdhsa--gfx90c"
 ; GFX90C-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx90c:xnack-"
 ; GFX90C-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx90c:xnack+"
-; GFX940: .amdgcn_target "amdgcn-amd-amdhsa--gfx940"
-; GFX940-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx940:xnack-"
-; GFX940-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx940:xnack+"
-; GFX941: .amdgcn_target "amdgcn-amd-amdhsa--gfx941"
-; GFX941-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx941:xnack-"
-; GFX941-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx941:xnack+"
 ; GFX942: .amdgcn_target "amdgcn-amd-amdhsa--gfx942"
 ; GFX942-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx942:xnack-"
 ; GFX942-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx942:xnack+"

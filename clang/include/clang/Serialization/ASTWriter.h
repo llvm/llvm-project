@@ -492,6 +492,13 @@ private:
   /// file.
   unsigned NumVisibleDeclContexts = 0;
 
+  /// The number of module local visible declcontexts written to the AST
+  /// file.
+  unsigned NumModuleLocalDeclContexts = 0;
+
+  /// The number of TULocal declcontexts written to the AST file.
+  unsigned NumTULocalDeclContexts = 0;
+
   /// A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
   llvm::DenseMap<const Module *, unsigned> SubmoduleIDs;
@@ -587,11 +594,17 @@ private:
   uint64_t WriteSpecializationInfoLookupTable(
       const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
       bool IsPartial);
-  void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
-                               llvm::SmallVectorImpl<char> &LookupTable);
+  void
+  GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
+                          llvm::SmallVectorImpl<char> &LookupTable,
+                          llvm::SmallVectorImpl<char> &ModuleLocalLookupTable,
+                          llvm::SmallVectorImpl<char> &TULocalLookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
-  uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
+  void WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC,
+                                    uint64_t &VisibleBlockOffset,
+                                    uint64_t &ModuleLocalBlockOffset,
+                                    uint64_t &TULocalBlockOffset);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);
@@ -624,7 +637,11 @@ private:
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;
   unsigned DeclContextVisibleLookupAbbrev = 0;
+  unsigned DeclModuleLocalVisibleLookupAbbrev = 0;
+  unsigned DeclTULocalLookupAbbrev = 0;
   unsigned UpdateVisibleAbbrev = 0;
+  unsigned ModuleLocalUpdateVisibleAbbrev = 0;
+  unsigned TULocalUpdateVisibleAbbrev = 0;
   unsigned DeclRecordAbbrev = 0;
   unsigned DeclTypedefAbbrev = 0;
   unsigned DeclVarAbbrev = 0;
@@ -733,9 +750,6 @@ public:
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
-
-  /// Determine the ID of an already-emitted macro.
-  serialization::MacroID getMacroID(MacroInfo *MI);
 
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 

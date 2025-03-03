@@ -930,9 +930,7 @@ public:
       llvm_unreachable("unsupported type");
     };
 
-    fir::KindMapping kindMap =
-        fir::getKindMapping(op->template getParentOfType<mlir::ModuleOp>());
-    fir::FirOpBuilder builder{op, kindMap};
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
 
     mlir::Value init;
     GenBodyFn genBodyFn;

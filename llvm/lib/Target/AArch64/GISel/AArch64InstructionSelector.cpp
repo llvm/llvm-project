@@ -2960,8 +2960,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       assert(OpFlags == AArch64II::MO_GOT);
     } else {
       GV = I.getOperand(1).getGlobal();
-      if (GV->isThreadLocal())
+      if (GV->isThreadLocal()) {
+        // We don't support instructions with emulated TLS variables yet
+        if (TM.useEmulatedTLS())
+          return false;
         return selectTLSGlobalValue(I, MRI);
+      }
       OpFlags = STI.ClassifyGlobalReference(GV, TM);
     }
 
@@ -2999,9 +3003,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     bool IsZExtLoad = I.getOpcode() == TargetOpcode::G_ZEXTLOAD;
     LLT PtrTy = MRI.getType(LdSt.getPointerReg());
 
+    // Can only handle AddressSpace 0, 64-bit pointers.
     if (PtrTy != LLT::pointer(0, 64)) {
-      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
-                        << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 

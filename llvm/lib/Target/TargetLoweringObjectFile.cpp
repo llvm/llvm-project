@@ -348,6 +348,12 @@ TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
+    const Function &F, const TargetMachine &TM,
+    const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
   return getSectionForConstant(F.getDataLayout(),
                                SectionKind::getReadOnly(), /*C=*/nullptr,

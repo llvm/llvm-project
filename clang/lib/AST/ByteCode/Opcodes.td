@@ -312,7 +312,7 @@ def GetPtrThisField : OffsetOpcode;
 // [Pointer] -> [Pointer]
 def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
-def GetPtrBasePop : OffsetOpcode;
+def GetPtrBasePop : OffsetOpcode { let Args = [ArgUint32, ArgBool]; }
 def GetMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
   let Args = [ArgSint32];
@@ -322,9 +322,7 @@ def GetMemberPtrBasePop : Opcode {
 def FinishInitPop : Opcode;
 def FinishInit    : Opcode;
 
-def GetPtrDerivedPop : Opcode {
-  let Args = [ArgUint32];
-}
+def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool]; }
 
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
@@ -393,6 +391,11 @@ class BitFieldOpcode : Opcode {
 def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
+
+def Kill : Opcode {
+  let Types = [];
+  let Args = [];
+}
 
 def CheckDecl : Opcode {
   let Args = [ArgVarDecl];

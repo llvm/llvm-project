@@ -488,15 +488,17 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
   while (!WL2.empty()) {
     const ExplodedNode *N = WL2.pop_back_val();
 
+    auto [Place, Inserted] = Pass2.try_emplace(N);
+
     // Skip this node if we have already processed it.
-    if (Pass2.contains(N))
+    if (!Inserted)
       continue;
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
     ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State,
                                                N->getID(), N->isSink());
-    Pass2[N] = NewN;
+    Place->second = NewN;
 
     // Also record the reverse mapping from the new node to the old node.
     if (InverseMap) (*InverseMap)[NewN] = N;

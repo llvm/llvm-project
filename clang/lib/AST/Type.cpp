@@ -2527,9 +2527,7 @@ bool Type::isSVESizelessBuiltinType() const {
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
     return true;
-#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
-  case BuiltinType::Id:                                                        \
-    return false;
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
     default:
       return false;
@@ -3482,9 +3480,9 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return #ExtType;
 #include "clang/Basic/OpenCLExtensionTypes.def"
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case Id: \
-    return Name;
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  case Id:                                                                     \
+    return #Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \
@@ -3561,6 +3559,21 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_PreserveNone: return "preserve_none";
     // clang-format off
   case CC_RISCVVectorCall: return "riscv_vector_cc";
+#define CC_VLS_CASE(ABI_VLEN) \
+  case CC_RISCVVLSCall_##ABI_VLEN: return "riscv_vls_cc(" #ABI_VLEN ")";
+  CC_VLS_CASE(32)
+  CC_VLS_CASE(64)
+  CC_VLS_CASE(128)
+  CC_VLS_CASE(256)
+  CC_VLS_CASE(512)
+  CC_VLS_CASE(1024)
+  CC_VLS_CASE(2048)
+  CC_VLS_CASE(4096)
+  CC_VLS_CASE(8192)
+  CC_VLS_CASE(16384)
+  CC_VLS_CASE(32768)
+  CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
     // clang-format on
   }
 
@@ -4228,6 +4241,7 @@ bool AttributedType::isCallingConv() const {
   case attr::M68kRTD:
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
+  case attr::RISCVVLSCC:
     return true;
   }
   llvm_unreachable("invalid attr kind");

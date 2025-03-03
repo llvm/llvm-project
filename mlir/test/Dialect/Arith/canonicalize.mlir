@@ -160,6 +160,78 @@ func.func @selNotCond(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : 
   return %res1, %res2 : i32, i32
 }
 
+// CHECK-LABEL: @cmpiI1eq
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eq(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %arg0, %one : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1eqVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %arg0, %one : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1ne
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1ne(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %arg0, %zero : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1neVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %arg0, %zero : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1eqLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqLhs(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %one, %arg0  : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1eqVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %one, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1neLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neLhs(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %zero, %arg0 : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1neVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %zero, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
 // Test case: Folding of comparisons with equal operands.
 // CHECK-LABEL: @cmpi_equal_operands
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true
@@ -640,6 +712,45 @@ func.func @extFPVectorConstant() -> vector<2xf128> {
   %cst = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xf80>
   %0 = arith.extf %cst : vector<2xf80> to vector<2xf128>
   return %0 : vector<2xf128>
+}
+
+// CHECK-LABEL: @truncExtf
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf(%arg0: f32) -> f32 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %trunc = arith.truncf %extf : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncExtf1
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf1(%arg0: bf16) -> bf16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to bf16
+  return %trunc : bf16
+}
+
+// CHECK-LABEL: @truncExtf2
+//       CHECK:  %[[ARG0:.+]]: bf16
+//       CHECK:  %[[EXTF:.*]] = arith.extf %[[ARG0:.+]] : bf16 to f32
+//       CHECK:  %[[TRUNCF:.*]] = arith.truncf %[[EXTF:.*]] : f32 to f16
+//       CHECK:   return  %[[TRUNCF:.*]]
+func.func @truncExtf2(%arg0: bf16) -> f16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to f16
+  return %trunc : f16
+}
+
+// CHECK-LABEL: @truncExtf3
+//       CHECK:  %[[ARG0:.+]]: f32
+//       CHECK:  %[[CST:.*]] = arith.truncf %[[ARG0:.+]] : f32 to f16
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtf3(%arg0: f32) -> f16 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %truncf = arith.truncf %extf : f64 to f16
+  return %truncf : f16
 }
 
 // TODO: We should also add a test for not folding arith.extf on information loss.
@@ -1767,6 +1878,28 @@ func.func @bitcastOfBitcast(%arg : i16) -> i16 {
   %bf = arith.bitcast %f : f16 to bf16
   %res = arith.bitcast %bf : bf16 to i16
   return %res : i16
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonItoFP(
+func.func @bitcastPoisonItoFP() -> f32 {
+  // CHECK: %[[P:.+]] = ub.poison : f32
+  // CHECK: return %[[P]] : f32
+  %p = ub.poison : i32
+  %res = arith.bitcast %p : i32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonFPtoI(
+func.func @bitcastPoisonFPtoI() -> i32 {
+  // CHECK: %[[P:.+]] = ub.poison : i32
+  // CHECK: return %[[P]] : i32
+  %p = ub.poison : f32
+  %res = arith.bitcast %p : f32 to i32
+  return %res : i32
 }
 
 // -----

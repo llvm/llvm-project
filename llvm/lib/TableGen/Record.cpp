@@ -106,7 +106,8 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheArgumentInitPool size = " << TheArgumentInitPool.size() << '\n';
   OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
   OS << "TheIntInitPool size = " << TheIntInitPool.size() << '\n';
-  OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
+  OS << "StringInitStringPool size = " << StringInitStringPool.size() << '\n';
+  OS << "StringInitCodePool size = " << StringInitCodePool.size() << '\n';
   OS << "TheListInitPool size = " << TheListInitPool.size() << '\n';
   OS << "TheUnOpInitPool size = " << TheUnOpInitPool.size() << '\n';
   OS << "TheBinOpInitPool size = " << TheBinOpInitPool.size() << '\n';

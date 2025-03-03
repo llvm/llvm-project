@@ -98,8 +98,8 @@ SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
 
 SBCommandInterpreter::~SBCommandInterpreter() = default;
 
-const SBCommandInterpreter &SBCommandInterpreter::
-operator=(const SBCommandInterpreter &rhs) {
+const SBCommandInterpreter &
+SBCommandInterpreter::operator=(const SBCommandInterpreter &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
@@ -151,7 +151,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
@@ -222,8 +222,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (override_context.get())
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec,
                                          override_context.get()->Lock(true),
-                                         options.ref(),
-                                         result.ref());
+                                         options.ref(), result.ref());
 
   else
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec, options.ref(), result.ref());
@@ -649,7 +648,8 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString() : nullptr);
+  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString()
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
@@ -742,4 +742,16 @@ void SBCommand::SetFlags(uint32_t flags) {
 
   if (IsValid())
     m_opaque_sp->GetFlags().Set(flags);
+}
+
+void SBCommandInterpreter::SetPrintCallback(
+    lldb::SBCommandPrintCallback callback, void *baton) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+
+  if (m_opaque_ptr)
+    m_opaque_ptr->SetPrintCallback(
+        [callback, baton](lldb_private::CommandReturnObject &result) {
+          SBCommandReturnObject sb_result(result);
+          return callback(sb_result, baton);
+        });
 }

@@ -184,14 +184,14 @@ namespace {
 } // end anonymous namespace
 
 static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
-  auto *I = BB.getFirstNonPHI();
-  while (I) {
-    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+  BasicBlock::iterator It = BB.getFirstNonPHIIt();
+  while (It != BB.end()) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(It)) {
       if (IntrinsicCall->isEntry()) {
         return IntrinsicCall;
       }
     }
-    I = I->getNextNode();
+    It = std::next(It);
   }
   return nullptr;
 }
@@ -276,7 +276,7 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
     Value *UnwindDestToken = nullptr;
     if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(CurrentPad)) {
       if (CatchSwitch->hasUnwindDest()) {
-        UnwindDestToken = CatchSwitch->getUnwindDest()->getFirstNonPHI();
+        UnwindDestToken = &*CatchSwitch->getUnwindDest()->getFirstNonPHIIt();
       } else {
         // Catchswitch doesn't have a 'nounwind' variant, and one might be
         // annotated as "unwinds to caller" when really it's nounwind (see
@@ -288,7 +288,8 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
                   HE = CatchSwitch->handler_end();
              HI != HE && !UnwindDestToken; ++HI) {
           BasicBlock *HandlerBlock = *HI;
-          auto *CatchPad = cast<CatchPadInst>(HandlerBlock->getFirstNonPHI());
+          auto *CatchPad =
+              cast<CatchPadInst>(&*HandlerBlock->getFirstNonPHIIt());
           for (User *Child : CatchPad->users()) {
             // Intentionally ignore invokes here -- since the catchswitch is
             // marked "unwind to caller", it would be a verifier error if it
@@ -326,14 +327,14 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
       for (User *U : CleanupPad->users()) {
         if (auto *CleanupRet = dyn_cast<CleanupReturnInst>(U)) {
           if (BasicBlock *RetUnwindDest = CleanupRet->getUnwindDest())
-            UnwindDestToken = RetUnwindDest->getFirstNonPHI();
+            UnwindDestToken = &*RetUnwindDest->getFirstNonPHIIt();
           else
             UnwindDestToken = ConstantTokenNone::get(CleanupPad->getContext());
           break;
         }
         Value *ChildUnwindDestToken;
         if (auto *Invoke = dyn_cast<InvokeInst>(U)) {
-          ChildUnwindDestToken = Invoke->getUnwindDest()->getFirstNonPHI();
+          ChildUnwindDestToken = &*Invoke->getUnwindDest()->getFirstNonPHIIt();
         } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U)) {
           Instruction *ChildPad = cast<Instruction>(U);
           auto Memo = MemoMap.find(ChildPad);
@@ -522,14 +523,13 @@ static Value *getUnwindDestToken(Instruction *EHPad,
     if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UselessPad)) {
       assert(CatchSwitch->getUnwindDest() == nullptr && "Expected useless pad");
       for (BasicBlock *HandlerBlock : CatchSwitch->handlers()) {
-        auto *CatchPad = HandlerBlock->getFirstNonPHI();
+        auto *CatchPad = &*HandlerBlock->getFirstNonPHIIt();
         for (User *U : CatchPad->users()) {
-          assert(
-              (!isa<InvokeInst>(U) ||
-               (getParentPad(
-                    cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
-                CatchPad)) &&
-              "Expected useless pad");
+          assert((!isa<InvokeInst>(U) ||
+                  (getParentPad(&*cast<InvokeInst>(U)
+                                      ->getUnwindDest()
+                                      ->getFirstNonPHIIt()) == CatchPad)) &&
+                 "Expected useless pad");
           if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
             Worklist.push_back(cast<Instruction>(U));
         }
@@ -538,11 +538,12 @@ static Value *getUnwindDestToken(Instruction *EHPad,
       assert(isa<CleanupPadInst>(UselessPad));
       for (User *U : UselessPad->users()) {
         assert(!isa<CleanupReturnInst>(U) && "Expected useless pad");
-        assert((!isa<InvokeInst>(U) ||
-                (getParentPad(
-                     cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHI()) ==
-                 UselessPad)) &&
-               "Expected useless pad");
+        assert(
+            (!isa<InvokeInst>(U) ||
+             (getParentPad(
+                  &*cast<InvokeInst>(U)->getUnwindDest()->getFirstNonPHIIt()) ==
+              UselessPad)) &&
+            "Expected useless pad");
         if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
           Worklist.push_back(cast<Instruction>(U));
       }
@@ -678,7 +679,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   BasicBlock *UnwindDest = II->getUnwindDest();
   Function *Caller = FirstNewBlock->getParent();
 
-  assert(UnwindDest->getFirstNonPHI()->isEHPad() && "unexpected BasicBlock!");
+  assert(UnwindDest->getFirstNonPHIIt()->isEHPad() && "unexpected BasicBlock!");
 
   // If there are PHI nodes in the unwind destination block, we need to keep
   // track of which values came into them from the invoke before removing the
@@ -723,7 +724,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
       }
     }
 
-    Instruction *I = BB->getFirstNonPHI();
+    BasicBlock::iterator I = BB->getFirstNonPHIIt();
     if (!I->isEHPad())
       continue;
 
@@ -772,7 +773,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
     }
 
     if (Replacement) {
-      Replacement->takeName(I);
+      Replacement->takeName(&*I);
       I->replaceAllUsesWith(Replacement);
       I->eraseFromParent();
       UpdatePHINodes(&*BB);
@@ -1312,8 +1313,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false,
-                                        /* StoreCaptures */ false, I, &DT))
+            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
           NoAliases.push_back(NewScopes[A]);
       }
 
@@ -1776,9 +1776,8 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
 // Check whether this Value is used by a lifetime intrinsic.
 static bool isUsedByLifetimeMarker(Value *V) {
   for (User *U : V->users())
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
-      if (II->isLifetimeStartOrEnd())
-        return true;
+    if (isa<LifetimeIntrinsic>(U))
+      return true;
   return false;
 }
 
@@ -2288,7 +2287,7 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
       // this may be the entryblock from the inlined callee, coming into a BB
       // that didn't have instrumentation because of MST decisions. Let's make
       // sure it's placed accordingly. This is a noop elsewhere.
-      BBID->moveBefore(&*BB->getFirstInsertionPt());
+      BBID->moveBefore(BB->getFirstInsertionPt());
     }
     for (auto &I : llvm::make_early_inc_range(*BB)) {
       if (auto *Inc = dyn_cast<InstrProfIncrementInst>(&I)) {
@@ -2581,7 +2580,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
             // Ok, the call site is within a cleanuppad.  Let's check the callee
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
-              if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHI()))
+              if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHIIt()))
                 return InlineResult::failure("catch in cleanup funclet");
             }
           }
@@ -3029,7 +3028,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // rewriting the "parent pad" links.
   if (auto *II = dyn_cast<InvokeInst>(&CB)) {
     BasicBlock *UnwindDest = II->getUnwindDest();
-    Instruction *FirstNonPHI = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator FirstNonPHI = UnwindDest->getFirstNonPHIIt();
     if (isa<LandingPadInst>(FirstNonPHI)) {
       HandleInlinedLandingPad(II, &*FirstNewBlock, InlinedFunctionInfo);
     } else {
@@ -3055,7 +3054,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         if (CleanupRet->unwindsToCaller() && EHPadForCallUnwindsLocally)
           changeToUnreachable(CleanupRet);
 
-      Instruction *I = BB->getFirstNonPHI();
+      BasicBlock::iterator I = BB->getFirstNonPHIIt();
       if (!I->isEHPad())
         continue;
 

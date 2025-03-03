@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -Wno-error=return-type -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 

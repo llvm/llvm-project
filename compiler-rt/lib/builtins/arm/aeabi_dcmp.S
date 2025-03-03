@@ -18,9 +18,9 @@
 // }
 
 #if defined(COMPILER_RT_ARMHF_TARGET)
-#  define CONVERT_DCMP_ARGS_TO_DF2_ARGS                    \
-        vmov      d0, r0, r1                     SEPARATOR \
-        vmov      d1, r2, r3
+#  define CONVERT_DCMP_ARGS_TO_DF2_ARGS \
+     VMOV_TO_DOUBLE(d0, r0, r1)         \
+     VMOV_TO_DOUBLE(d1, r2, r3)
 #else
 #  define CONVERT_DCMP_ARGS_TO_DF2_ARGS
 #endif

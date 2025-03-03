@@ -28,7 +28,6 @@ define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addr
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-NEXT:    s_mov_b32 s4, 2
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -73,7 +72,6 @@ define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1)
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-NEXT:    s_mov_b32 s4, 2
 ; GFX12-NEXT:    s_wait_alu 0xfffe

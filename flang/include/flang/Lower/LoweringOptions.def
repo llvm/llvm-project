@@ -44,5 +44,8 @@ ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
 /// If false, assume that the shapes/types/allocation-status match.
 ENUM_LOWERINGOPT(ReallocateLHS, unsigned, 1, 1)
 
+/// If true, initialize globals without initialization to zero.
+/// On by default.
+ENUM_LOWERINGOPT(InitGlobalZero, unsigned, 1, 1)
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

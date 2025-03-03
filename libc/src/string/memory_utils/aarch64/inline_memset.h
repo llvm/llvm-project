@@ -9,7 +9,7 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMSET_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr

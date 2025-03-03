@@ -771,7 +771,7 @@ static void runIslScheduleOptimizer(
     return;
   }
 
-  // Apply ISL's algorithm only if not overriden by the user. Note that
+  // Apply ISL's algorithm only if not overridden by the user. Note that
   // post-rescheduling optimizations (tiling, pattern-based, prevectorization)
   // rely on the coincidence/permutable annotations on schedule tree bands that
   // are added by the rescheduling analyzer. Therefore, disabling the

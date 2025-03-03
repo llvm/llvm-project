@@ -22,7 +22,9 @@ define void @func_cf_vector_x64(ptr %0, ptr %1) #0 {
 ; X64-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; X64-NEXT:    callq *__guard_dispatch_icall_fptr(%rip)
 ; X64-NEXT:    nop
+; X64-NEXT:    .seh_startepilogue
 ; X64-NEXT:    addq $72, %rsp
+; X64-NEXT:    .seh_endepilogue
 ; X64-NEXT:    retq
 ; X64-NEXT:    .seh_endproc
 entry:

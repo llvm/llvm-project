@@ -9,9 +9,21 @@ types:
 enums: []
 objects: []
 functions:
+  - name: wcslen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
   - name: wctob
     standards:
       - stdc
     return_type: int
     arguments:
       - type: wint_t
+  - name: btowc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: int

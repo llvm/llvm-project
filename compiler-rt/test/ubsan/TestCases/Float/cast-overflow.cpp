@@ -7,9 +7,7 @@
 // RUN: %run %t 4 2>&1 | FileCheck %s --check-prefix=CHECK-4
 // RUN: %run %t 5 2>&1 | FileCheck %s --check-prefix=CHECK-5
 // RUN: %run %t 6 2>&1 | FileCheck %s --check-prefix=CHECK-6
-// FIXME: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
-// FIXME: not %run %t 8 2>&1 | FileCheck %s --check-prefix=CHECK-8
-// RUN: not %run %t 9 2>&1 | FileCheck %s --check-prefix=CHECK-9
+// RUN: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
 
 // Issue #41838
 // XFAIL: sparc-target-arch && target={{.*solaris.*}}
@@ -151,20 +149,13 @@ int main(int argc, char **argv) {
     return 0;
 #endif
   }
-  // FIXME: The backend cannot lower __fp16 operations on x86 yet.
-  //case '7':
-  //  (__fp16)65504; // ok
-  //  // CHECK-7: runtime error: 65505 is outside the range of representable values of type '__fp16'
-  //  return (__fp16)65505;
-
-    // Floating point -> floating point overflow.
-  case '8':
-    // CHECK-8: {{.*}}cast-overflow.cpp:[[@LINE+1]]:19: runtime error: 1e+39 is outside the range of representable values of type 'float'
-    return (float)1e39;
-  case '9':
+  case '7': {
     volatile long double ld = 300.0;
-    // CHECK-9: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
+    // CHECK-7: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
     char c = ld;
-    return c;
+    // `c` is allowed to contain UNDEF, thus we should not use
+    // its value as an exit code.
+    return 0;
+  }
   }
 }

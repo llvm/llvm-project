@@ -238,7 +238,7 @@ define void @only_exit() local_unnamed_addr #0 {
 define void @conditional_exit(i32 %0, ptr nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@conditional_exit
-; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; CHECK:       4:
@@ -417,7 +417,7 @@ declare i32 @__gxx_personality_v0(...)
 define i32 @loop_constant_trip_count(ptr nocapture readonly %0) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; CHECK-SAME: (ptr nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
+; CHECK-SAME: (ptr nofree nonnull readonly captures(none) dereferenceable(4) [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    br label [[TMP3:%.*]]
 ; CHECK:       2:
 ; CHECK-NEXT:    ret i32 [[TMP8:%.*]]
@@ -461,7 +461,7 @@ define i32 @loop_constant_trip_count(ptr nocapture readonly %0) #0 {
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, ptr nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14:[0-9]+]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], ptr nofree readonly captures(none) [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
 ; CHECK:       6:
@@ -512,7 +512,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, ptr nocapture readonly %2, i
 define i32 @loop_trip_dec(i32 %0, ptr nocapture readonly %1) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@loop_trip_dec
-; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
+; CHECK-SAME: (i32 [[TMP0:%.*]], ptr nofree readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; CHECK:       4:
@@ -685,7 +685,7 @@ declare void @llvm.eh.sjlj.longjmp(ptr)
 define void @call_longjmp(ptr nocapture readnone %0) local_unnamed_addr #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_longjmp
-; CHECK-SAME: (ptr nocapture nofree readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 ; CHECK-NEXT:    tail call void @llvm.eh.sjlj.longjmp(ptr noalias nofree readnone [[TMP0]]) #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ;

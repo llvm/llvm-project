@@ -179,18 +179,11 @@ class RegReloadCache {
 public:
   RegReloadCache() = default;
 
-  // Record reload of Reg from FI in block MBB
-  void recordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
+  // Record reload of Reg from FI in block MBB if not present yet.
+  // Return true if the reload is successfully recorded.
+  bool tryRecordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
     RegSlotPair RSP(Reg, FI);
-    auto Res = Reloads[MBB].insert(RSP);
-    (void)Res;
-    assert(Res.second && "reload already exists");
-  }
-
-  // Does basic block MBB contains reload of Reg from FI?
-  bool hasReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
-    RegSlotPair RSP(Reg, FI);
-    return Reloads.count(MBB) && Reloads[MBB].count(RSP);
+    return Reloads[MBB].insert(RSP).second;
   }
 };
 
@@ -242,9 +235,10 @@ public:
       It.second.Index = 0;
 
     ReservedSlots.clear();
-    if (EHPad && GlobalIndices.count(EHPad))
-      for (auto &RSP : GlobalIndices[EHPad])
-        ReservedSlots.insert(RSP.second);
+    if (EHPad)
+      if (auto It = GlobalIndices.find(EHPad); It != GlobalIndices.end())
+        for (auto &RSP : It->second)
+          ReservedSlots.insert(RSP.second);
   }
 
   // Get frame index to spill the register.
@@ -364,7 +358,9 @@ public:
   MachineBasicBlock *getEHPad() const { return EHPad; }
 
   // Return true if register is callee saved.
-  bool isCalleeSaved(Register Reg) { return (Mask[Reg / 32] >> Reg % 32) & 1; }
+  bool isCalleeSaved(Register Reg) {
+    return (Mask[Reg.id() / 32] >> (Reg.id() % 32)) & 1;
+  }
 
   // Iterates over statepoint meta args to find caller saver registers.
   // Also cache the size of found registers.
@@ -457,8 +453,7 @@ public:
       LLVM_DEBUG(dbgs() << "Reloading " << printReg(Reg, &TRI) << " from FI "
                         << RegToSlotIdx[Reg] << " after statepoint\n");
 
-      if (EHPad && !RC.hasReload(Reg, RegToSlotIdx[Reg], EHPad)) {
-        RC.recordReload(Reg, RegToSlotIdx[Reg], EHPad);
+      if (EHPad && RC.tryRecordReload(Reg, RegToSlotIdx[Reg], EHPad)) {
         auto EHPadInsertPoint =
             EHPad->SkipPHIsLabelsAndDebug(EHPad->begin(), Reg);
         insertReloadBefore(Reg, EHPadInsertPoint, EHPad);

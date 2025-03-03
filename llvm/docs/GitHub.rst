@@ -50,7 +50,7 @@ documentation refer to `GitHub's documentation <https://docs.github.com/pull-req
 .. note::
    If you are using a Pull Request for purposes other than review
    (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
+   add the `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
    label to the PR.
 
 GitHub Tools
@@ -438,9 +438,13 @@ Releases
 Backporting Fixes to the Release Branches
 -----------------------------------------
 You can use special comments on issues or pull requests to make backport
-requests for the release branches.  This is done by making a comment containing
-the following command on any issue or pull request that has been added to one
-of the "X.Y.Z Release" milestones.
+requests for the release branches.  To do this, after your pull request has been
+merged:
+
+1. Edit "Milestone" at the right side of the isssue or pull request
+   to say "LLVM X.Y Release"
+
+2. Add a comment to it in the following format:
 
 ::
 

@@ -62,6 +62,12 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   return I;
 }
 
+template <> inline FixedPoint ReadArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+  FixedPoint I = FixedPoint::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
@@ -234,7 +240,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   else if (isRecord())
     OS << " record";
   else if (isPrimitive())
-    OS << " primitive";
+    OS << " primitive " << primTypeToString(getPrimType());
 
   if (isZeroSizeArray())
     OS << " zero-size-array";
@@ -243,6 +249,38 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+}
+
+/// Dump descriptor, including all valid offsets.
+LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
+                                           unsigned Indent) const {
+  unsigned Spaces = Indent * 2;
+  llvm::raw_ostream &OS = llvm::errs();
+  OS.indent(Spaces);
+  dump(OS);
+  OS << '\n';
+  OS.indent(Spaces) << "Metadata: " << getMetadataSize() << " bytes\n";
+  OS.indent(Spaces) << "Size: " << getSize() << " bytes\n";
+  OS.indent(Spaces) << "AllocSize: " << getAllocSize() << " bytes\n";
+  Offset += getMetadataSize();
+  if (isCompositeArray()) {
+    OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
+    unsigned FO = Offset;
+    for (unsigned I = 0; I != getNumElems(); ++I) {
+      FO += sizeof(InlineDescriptor);
+      assert(ElemDesc->getMetadataSize() == 0);
+      OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
+      ElemDesc->dumpFull(FO, Indent + 1);
+
+      FO += ElemDesc->getAllocSize();
+    }
+  } else if (isRecord()) {
+    ElemRecord->dump(OS, Indent + 1, Offset);
+  } else if (isPrimitive()) {
+  } else {
+  }
+
+  OS << '\n';
 }
 
 LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
