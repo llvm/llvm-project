@@ -27848,12 +27848,10 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   if (CanUseLSE128)
     return AtomicExpansionKind::None;
 
-  // Add support for LDFADD and friends
-  bool CanUseAtomicFP =
-      Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
+  // If LSFE available, use atomic FP instructions in preference to expansion
+  if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
                                AI->getOperation() == AtomicRMWInst::FMax ||
-                               AI->getOperation() == AtomicRMWInst::FMin);
-  if (CanUseAtomicFP)
+                               AI->getOperation() == AtomicRMWInst::FMin))
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.

@@ -12485,22 +12485,22 @@ multiclass LDOPregister_patterns_mod<string inst, string op, string mod> {
 
 let Predicates = [HasLSFE] in
 multiclass LDFPOPregister_patterns_ord_dag<string inst, string suffix, string op,
-                                         ValueType vt, dag SrcRHS, dag DstRHS> {
-  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, SrcRHS),
-            (!cast<Instruction>(inst # suffix) DstRHS, FPR64:$Rn)>;
-  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, SrcRHS),
-            (!cast<Instruction>(inst # "A" # suffix) DstRHS, FPR64:$Rn)>;
-  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, SrcRHS),
-            (!cast<Instruction>(inst # "L" # suffix) DstRHS, FPR64:$Rn)>;
-  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, SrcRHS),
-            (!cast<Instruction>(inst # "AL" # suffix) DstRHS, FPR64:$Rn)>;
-  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, SrcRHS),
-            (!cast<Instruction>(inst # "AL" # suffix) DstRHS, FPR64:$Rn)>;
+                                         ValueType vt, dag data> {
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "A" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "L" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
 }
 
 multiclass LDFPOPregister_patterns_ord<string inst, string suffix, string op,
                                      ValueType vt, dag RHS> {
-  defm : LDFPOPregister_patterns_ord_dag<inst, suffix, op, vt, RHS, RHS>;
+  defm : LDFPOPregister_patterns_ord_dag<inst, suffix, op, vt, RHS>;
 }
 
 multiclass LDFPOPregister_patterns<string inst, string op> {
