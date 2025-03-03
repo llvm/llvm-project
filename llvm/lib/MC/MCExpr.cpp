@@ -87,7 +87,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
     if (Kind != MCSymbolRefExpr::VK_None) {
       if (MAI && MAI->useParensForSymbolVariant()) // ARM
-        OS << '(' << MCSymbolRefExpr::getVariantKindName(Kind) << ')';
+        OS << '(' << MAI->getVariantKindName(Kind) << ')';
+      else if (MAI)
+        OS << '@' << MAI->getVariantKindName(Kind);
       else
         OS << '@' << MCSymbolRefExpr::getVariantKindName(Kind);
     }
@@ -246,11 +248,11 @@ const MCSymbolRefExpr *MCSymbolRefExpr::create(StringRef Name, VariantKind Kind,
   return create(Ctx.getOrCreateSymbol(Name), Kind, Ctx);
 }
 
-// TODO: Move target-specific Kinds to lib/Target/.
+// TODO: Move target-specific Kinds to lib/Target/*/MCTargetDesc/*AsmInfo.cpp.
 StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
     // clang-format off
-  case VK_Invalid: return "<<invalid>>";
+  case VK_Invalid: default: return "<<invalid>>";
   case VK_None: return "<<none>>";
 
   case VK_DTPOFF: return "DTPOFF";
@@ -261,18 +263,14 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_GOTREL: return "GOTREL";
   case VK_PCREL: return "PCREL";
   case VK_GOTPCREL: return "GOTPCREL";
-  case VK_GOTPCREL_NORELAX: return "GOTPCREL_NORELAX";
   case VK_GOTTPOFF: return "GOTTPOFF";
-  case VK_GOTTPOFF_FDPIC: return "gottpoff_fdpic";
   case VK_INDNTPOFF: return "INDNTPOFF";
   case VK_NTPOFF: return "NTPOFF";
   case VK_GOTNTPOFF: return "GOTNTPOFF";
   case VK_PLT: return "PLT";
   case VK_TLSGD: return "TLSGD";
-  case VK_TLSGD_FDPIC: return "tlsgd_fdpic";
   case VK_TLSLD: return "TLSLD";
   case VK_TLSLDM: return "TLSLDM";
-  case VK_TLSLDM_FDPIC: return "tlsldm_fdpic";
   case VK_TPOFF: return "TPOFF";
   case VK_TPREL: return "TPREL";
   case VK_TLSCALL: return "tlscall";
@@ -285,148 +283,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_GOTPAGE: return "GOTPAGE";
   case VK_GOTPAGEOFF: return "GOTPAGEOFF";
   case VK_SECREL: return "SECREL32";
-  case VK_SIZE: return "SIZE";
   case VK_WEAKREF: return "WEAKREF";
-  case VK_FUNCDESC: return "FUNCDESC";
-  case VK_GOTFUNCDESC: return "GOTFUNCDESC";
-  case VK_GOTOFFFUNCDESC: return "GOTOFFFUNCDESC";
-  case VK_X86_ABS8: return "ABS8";
-  case VK_X86_PLTOFF: return "PLTOFF";
-  case VK_ARM_NONE: return "none";
-  case VK_ARM_GOT_PREL: return "GOT_PREL";
-  case VK_ARM_TARGET1: return "target1";
-  case VK_ARM_TARGET2: return "target2";
-  case VK_ARM_PREL31: return "prel31";
-  case VK_ARM_SBREL: return "sbrel";
-  case VK_ARM_TLSLDO: return "tlsldo";
-  case VK_ARM_TLSDESCSEQ: return "tlsdescseq";
-  case VK_AVR_NONE: return "none";
-  case VK_AVR_LO8: return "lo8";
-  case VK_AVR_HI8: return "hi8";
-  case VK_AVR_HLO8: return "hlo8";
-  case VK_AVR_DIFF8: return "diff8";
-  case VK_AVR_DIFF16: return "diff16";
-  case VK_AVR_DIFF32: return "diff32";
-  case VK_AVR_PM: return "pm";
-  case VK_PPC_LO: return "l";
-  case VK_PPC_HI: return "h";
-  case VK_PPC_HA: return "ha";
-  case VK_PPC_HIGH: return "high";
-  case VK_PPC_HIGHA: return "higha";
-  case VK_PPC_HIGHER: return "higher";
-  case VK_PPC_HIGHERA: return "highera";
-  case VK_PPC_HIGHEST: return "highest";
-  case VK_PPC_HIGHESTA: return "highesta";
-  case VK_PPC_GOT_LO: return "got@l";
-  case VK_PPC_GOT_HI: return "got@h";
-  case VK_PPC_GOT_HA: return "got@ha";
-  case VK_PPC_TOCBASE: return "tocbase";
-  case VK_PPC_TOC: return "toc";
-  case VK_PPC_TOC_LO: return "toc@l";
-  case VK_PPC_TOC_HI: return "toc@h";
-  case VK_PPC_TOC_HA: return "toc@ha";
-  case VK_PPC_U: return "u";
-  case VK_PPC_L: return "l";
-  case VK_PPC_DTPMOD: return "dtpmod";
-  case VK_PPC_TPREL_LO: return "tprel@l";
-  case VK_PPC_TPREL_HI: return "tprel@h";
-  case VK_PPC_TPREL_HA: return "tprel@ha";
-  case VK_PPC_TPREL_HIGH: return "tprel@high";
-  case VK_PPC_TPREL_HIGHA: return "tprel@higha";
-  case VK_PPC_TPREL_HIGHER: return "tprel@higher";
-  case VK_PPC_TPREL_HIGHERA: return "tprel@highera";
-  case VK_PPC_TPREL_HIGHEST: return "tprel@highest";
-  case VK_PPC_TPREL_HIGHESTA: return "tprel@highesta";
-  case VK_PPC_DTPREL_LO: return "dtprel@l";
-  case VK_PPC_DTPREL_HI: return "dtprel@h";
-  case VK_PPC_DTPREL_HA: return "dtprel@ha";
-  case VK_PPC_DTPREL_HIGH: return "dtprel@high";
-  case VK_PPC_DTPREL_HIGHA: return "dtprel@higha";
-  case VK_PPC_DTPREL_HIGHER: return "dtprel@higher";
-  case VK_PPC_DTPREL_HIGHERA: return "dtprel@highera";
-  case VK_PPC_DTPREL_HIGHEST: return "dtprel@highest";
-  case VK_PPC_DTPREL_HIGHESTA: return "dtprel@highesta";
-  case VK_PPC_GOT_TPREL: return "got@tprel";
-  case VK_PPC_GOT_TPREL_LO: return "got@tprel@l";
-  case VK_PPC_GOT_TPREL_HI: return "got@tprel@h";
-  case VK_PPC_GOT_TPREL_HA: return "got@tprel@ha";
-  case VK_PPC_GOT_DTPREL: return "got@dtprel";
-  case VK_PPC_GOT_DTPREL_LO: return "got@dtprel@l";
-  case VK_PPC_GOT_DTPREL_HI: return "got@dtprel@h";
-  case VK_PPC_GOT_DTPREL_HA: return "got@dtprel@ha";
-  case VK_PPC_TLS: return "tls";
-  case VK_PPC_GOT_TLSGD: return "got@tlsgd";
-  case VK_PPC_GOT_TLSGD_LO: return "got@tlsgd@l";
-  case VK_PPC_GOT_TLSGD_HI: return "got@tlsgd@h";
-  case VK_PPC_GOT_TLSGD_HA: return "got@tlsgd@ha";
-  case VK_PPC_TLSGD: return "tlsgd";
-  case VK_PPC_AIX_TLSGD:
-    return "gd";
-  case VK_PPC_AIX_TLSGDM:
-    return "m";
-  case VK_PPC_AIX_TLSIE:
-    return "ie";
-  case VK_PPC_AIX_TLSLE:
-    return "le";
-  case VK_PPC_AIX_TLSLD:
-    return "ld";
-  case VK_PPC_AIX_TLSML:
-    return "ml";
-  case VK_PPC_GOT_TLSLD: return "got@tlsld";
-  case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
-  case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
-  case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
-  case VK_PPC_GOT_PCREL:
-    return "got@pcrel";
-  case VK_PPC_GOT_TLSGD_PCREL:
-    return "got@tlsgd@pcrel";
-  case VK_PPC_GOT_TLSLD_PCREL:
-    return "got@tlsld@pcrel";
-  case VK_PPC_GOT_TPREL_PCREL:
-    return "got@tprel@pcrel";
-  case VK_PPC_TLS_PCREL:
-    return "tls@pcrel";
-  case VK_PPC_TLSLD: return "tlsld";
-  case VK_PPC_LOCAL: return "local";
-  case VK_PPC_NOTOC: return "notoc";
-  case VK_PPC_PCREL_OPT: return "<<invalid>>";
   case VK_COFF_IMGREL32: return "IMGREL";
-  case VK_Hexagon_LO16: return "LO16";
-  case VK_Hexagon_HI16: return "HI16";
-  case VK_Hexagon_GPREL: return "GPREL";
-  case VK_Hexagon_GD_GOT: return "GDGOT";
-  case VK_Hexagon_LD_GOT: return "LDGOT";
-  case VK_Hexagon_GD_PLT: return "GDPLT";
-  case VK_Hexagon_LD_PLT: return "LDPLT";
-  case VK_Hexagon_IE: return "IE";
-  case VK_Hexagon_IE_GOT: return "IEGOT";
-  case VK_WASM_TYPEINDEX: return "TYPEINDEX";
-  case VK_WASM_MBREL: return "MBREL";
-  case VK_WASM_TLSREL: return "TLSREL";
-  case VK_WASM_TBREL: return "TBREL";
-  case VK_WASM_GOT_TLS: return "GOT@TLS";
-  case VK_WASM_FUNCINDEX: return "FUNCINDEX";
-  case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
-  case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
-  case VK_AMDGPU_REL32_LO: return "rel32@lo";
-  case VK_AMDGPU_REL32_HI: return "rel32@hi";
-  case VK_AMDGPU_REL64: return "rel64";
-  case VK_AMDGPU_ABS32_LO: return "abs32@lo";
-  case VK_AMDGPU_ABS32_HI: return "abs32@hi";
-  case VK_VE_HI32: return "hi";
-  case VK_VE_LO32: return "lo";
-  case VK_VE_PC_HI32: return "pc_hi";
-  case VK_VE_PC_LO32: return "pc_lo";
-  case VK_VE_GOT_HI32: return "got_hi";
-  case VK_VE_GOT_LO32: return "got_lo";
-  case VK_VE_GOTOFF_HI32: return "gotoff_hi";
-  case VK_VE_GOTOFF_LO32: return "gotoff_lo";
-  case VK_VE_PLT_HI32: return "plt_hi";
-  case VK_VE_PLT_LO32: return "plt_lo";
-  case VK_VE_TLS_GD_HI32: return "tls_gd_hi";
-  case VK_VE_TLS_GD_LO32: return "tls_gd_lo";
-  case VK_VE_TPOFF_HI32: return "tpoff_hi";
-  case VK_VE_TPOFF_LO32: return "tpoff_lo";
     // clang-format on
   }
   llvm_unreachable("Invalid variant kind");
