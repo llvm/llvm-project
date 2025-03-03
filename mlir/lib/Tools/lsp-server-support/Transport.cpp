@@ -175,7 +175,7 @@ llvm::Error decodeError(const llvm::json::Object &o) {
 }
 
 void JSONTransport::notify(StringRef method, llvm::json::Value params) {
-  out->sendMessage(llvm::json::Object{
+  sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"method", method},
       {"params", std::move(params)},
@@ -183,7 +183,7 @@ void JSONTransport::notify(StringRef method, llvm::json::Value params) {
 }
 void JSONTransport::call(StringRef method, llvm::json::Value params,
                          llvm::json::Value id) {
-  out->sendMessage(llvm::json::Object{
+  sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"id", std::move(id)},
       {"method", method},
@@ -193,14 +193,14 @@ void JSONTransport::call(StringRef method, llvm::json::Value params,
 void JSONTransport::reply(llvm::json::Value id,
                           llvm::Expected<llvm::json::Value> result) {
   if (result) {
-    return out->sendMessage(llvm::json::Object{
+    return sendMessage(llvm::json::Object{
         {"jsonrpc", "2.0"},
         {"id", std::move(id)},
         {"result", std::move(*result)},
     });
   }
 
-  out->sendMessage(llvm::json::Object{
+  sendMessage(llvm::json::Object{
       {"jsonrpc", "2.0"},
       {"id", std::move(id)},
       {"error", encodeError(result.takeError())},
@@ -210,7 +210,7 @@ void JSONTransport::reply(llvm::json::Value id,
 llvm::Error JSONTransport::run(MessageHandler &handler) {
   std::string json;
   while (!in->isEndOfInput()) {
-    if (in->getError()) {
+    if (in->hasError()) {
       return llvm::errorCodeToError(
           std::error_code(errno, std::system_category()));
     }
@@ -227,7 +227,7 @@ llvm::Error JSONTransport::run(MessageHandler &handler) {
   return llvm::errorCodeToError(std::make_error_code(std::errc::io_error));
 }
 
-void JSONTransportOutputOverStream::sendMessage(const llvm::json::Value &msg) {
+void JSONTransport::sendMessage(llvm::json::Value msg) {
   outputBuffer.clear();
   llvm::raw_svector_ostream os(outputBuffer);
   os << llvm::formatv(prettyOutput ? "{0:2}\n" : "{0}", msg);
@@ -310,7 +310,7 @@ JSONTransportInputOverFile::readStandardMessage(std::string &json) {
   unsigned long long contentLength = 0;
   llvm::SmallString<128> line;
   while (true) {
-    if (feof(in) || ferror(in) || failed(readLine(in, line)))
+    if (feof(in) || hasError() || failed(readLine(in, line)))
       return failure();
 
     // Content-Length is a mandatory header, and the only one we handle.
