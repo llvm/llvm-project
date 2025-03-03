@@ -474,6 +474,10 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
       break;
   }
 
+  // TODO: For a subregister insert, it may well be worth either reconstraining
+  // the source register based on the use constraints, or even introducing a
+  // copy.
+
 
   LLVM_DEBUG(dbgs() << "NewSuperDstRC = " << (NewSuperDstRC ? TRI.getRegClassName(NewSuperDstRC) : "<null>") << '\n');
   if (!NewSuperDstRC)
