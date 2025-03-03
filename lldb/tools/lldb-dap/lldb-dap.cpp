@@ -498,8 +498,8 @@ int main(int argc, char *argv[]) {
 
     if (!lldb_private::Log::EnableLogChannel(
             std::make_shared<DAPLogHandler>(std::move(log)),
-            LLDB_LOG_OPTION_PREPEND_TIMESTAMP, "lldb-dap", {"all"},
-            llvm::errs())) {
+            LLDB_LOG_OPTION_VERBOSE | LLDB_LOG_OPTION_PREPEND_TIMESTAMP,
+            "lldb-dap", {"all"}, llvm::errs())) {
       return EXIT_FAILURE;
     }
   }

@@ -248,7 +248,7 @@ void DAP::SendJSON(const std::string &json_str) {
   output.write_full("\r\n\r\n");
   output.write_full(json_str);
 
-  LLDB_LOG(GetLog(DAPLog::Transport), "{0} <-- {1}", name, json_str);
+  LLDB_LOGV(GetLog(DAPLog::Transport), "{0} <-- {1}", name, json_str);
 }
 
 // Serialize the JSON value into a string and send the JSON packet to
@@ -283,7 +283,7 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(length, json_str))
     return json_str;
 
-  LLDB_LOG(GetLog(DAPLog::Transport), "{0} --> {1}", name, json_str);
+  LLDB_LOGV(GetLog(DAPLog::Transport), "{0} --> {1}", name, json_str);
   return json_str;
 }
 
