@@ -1199,16 +1199,14 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
   if (std::error_code EC = TypeOrErr.getError())
     return EC;
-  auto Type = AggregatedLBREntry::BRANCH;
-  if (TypeOrErr.get() == "B") {
+  auto Type = AggregatedLBREntry::TRACE;
+  if (LLVM_LIKELY(TypeOrErr.get() == "T")) {
+  } else if (TypeOrErr.get() == "B") {
     Type = AggregatedLBREntry::BRANCH;
   } else if (TypeOrErr.get() == "F") {
     Type = AggregatedLBREntry::FT;
   } else if (TypeOrErr.get() == "f") {
     Type = AggregatedLBREntry::FT_EXTERNAL_ORIGIN;
-  } else if (TypeOrErr.get() == "T") {
-    // Trace is expanded into B and [Ff]
-    Type = AggregatedLBREntry::TRACE;
   } else {
     reportError("expected T, B, F or f");
     return make_error_code(llvm::errc::io_error);
