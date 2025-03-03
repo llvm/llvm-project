@@ -7,9 +7,11 @@ body:             |
     liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $agpr0_agpr1_agpr2_agpr3
 
     ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    ; CHECK: Register class VReg_96 does not support subreg index sub3
     undef %0.sub3:vreg_96 = COPY $vgpr0
 
     ; CHECK: *** Bad machine code: Invalid subregister index for virtual register ***
+    ; CHECK: Register class VReg_96 does not support subreg index sub3
     $vgpr0 = COPY %0.sub3
 
 ...
