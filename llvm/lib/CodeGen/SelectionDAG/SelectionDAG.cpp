@@ -12121,7 +12121,7 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
   return TokenFactor;
 }
 
-SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
+SDValue SelectionDAG::makeEquivalentMemoryOrdering(MemSDNode *OldLoad,
                                                    SDValue NewMemOp) {
   assert(isa<MemSDNode>(NewMemOp.getNode()) && "Expected a memop node");
   SDValue OldChain = SDValue(OldLoad, 1);
@@ -12814,17 +12814,21 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
                         getBuildVector(NewOvVT, dl, OvScalars));
 }
 
-bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
-                                                  LoadSDNode *Base,
+bool SelectionDAG::areNonVolatileConsecutiveLoads(MemSDNode *LD,
+                                                  MemSDNode *Base,
                                                   unsigned Bytes,
                                                   int Dist) const {
   if (LD->isVolatile() || Base->isVolatile())
     return false;
-  // TODO: probably too restrictive for atomics, revisit
-  if (!LD->isSimple())
-    return false;
-  if (LD->isIndexed() || Base->isIndexed())
-    return false;
+  if (auto Ld = dyn_cast<LoadSDNode>(LD)) {
+    if (!Ld->isSimple())
+      return false;
+    if (Ld->isIndexed())
+      return false;
+  }
+  if (auto Ld = dyn_cast<LoadSDNode>(Base))
+    if (Ld->isIndexed())
+      return false;
   if (LD->getChain() != Base->getChain())
     return false;
   EVT VT = LD->getMemoryVT();

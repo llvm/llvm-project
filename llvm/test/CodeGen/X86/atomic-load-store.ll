@@ -205,63 +205,19 @@ define <2 x float> @atomic_vec2_float_align(ptr %x) {
 }
 
 define <2 x half> @atomic_vec2_half(ptr %x) {
-; CHECK3-LABEL: atomic_vec2_half:
-; CHECK3:       ## %bb.0:
-; CHECK3-NEXT:    movl (%rdi), %eax
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK3-NEXT:    shrl $16, %eax
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm1
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK3-NEXT:    retq
-;
-; CHECK0-LABEL: atomic_vec2_half:
-; CHECK0:       ## %bb.0:
-; CHECK0-NEXT:    movl (%rdi), %eax
-; CHECK0-NEXT:    movl %eax, %ecx
-; CHECK0-NEXT:    shrl $16, %ecx
-; CHECK0-NEXT:    movw %cx, %dx
-; CHECK0-NEXT:    ## implicit-def: $ecx
-; CHECK0-NEXT:    movw %dx, %cx
-; CHECK0-NEXT:    ## implicit-def: $xmm1
-; CHECK0-NEXT:    pinsrw $0, %ecx, %xmm1
-; CHECK0-NEXT:    movw %ax, %cx
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %cx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm0
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK0-NEXT:    retq
+; CHECK-LABEL: atomic_vec2_half:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
   %ret = load atomic <2 x half>, ptr %x acquire, align 4
   ret <2 x half> %ret
 }
 
 define <2 x bfloat> @atomic_vec2_bfloat(ptr %x) {
-; CHECK3-LABEL: atomic_vec2_bfloat:
-; CHECK3:       ## %bb.0:
-; CHECK3-NEXT:    movl (%rdi), %eax
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK3-NEXT:    shrl $16, %eax
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm1
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK3-NEXT:    retq
-;
-; CHECK0-LABEL: atomic_vec2_bfloat:
-; CHECK0:       ## %bb.0:
-; CHECK0-NEXT:    movl (%rdi), %eax
-; CHECK0-NEXT:    movl %eax, %ecx
-; CHECK0-NEXT:    shrl $16, %ecx
-; CHECK0-NEXT:    ## kill: def $cx killed $cx killed $ecx
-; CHECK0-NEXT:    movw %ax, %dx
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %dx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm0
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %cx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm1
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm1
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK0-NEXT:    retq
+; CHECK-LABEL: atomic_vec2_bfloat:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
   %ret = load atomic <2 x bfloat>, ptr %x acquire, align 4
   ret <2 x bfloat> %ret
 }
@@ -439,110 +395,19 @@ define <4 x i16> @atomic_vec4_i16(ptr %x) nounwind {
 }
 
 define <4 x half> @atomic_vec4_half(ptr %x) nounwind {
-; CHECK3-LABEL: atomic_vec4_half:
-; CHECK3:       ## %bb.0:
-; CHECK3-NEXT:    movq (%rdi), %rax
-; CHECK3-NEXT:    movl %eax, %ecx
-; CHECK3-NEXT:    shrl $16, %ecx
-; CHECK3-NEXT:    pinsrw $0, %ecx, %xmm1
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK3-NEXT:    movq %rax, %rcx
-; CHECK3-NEXT:    shrq $32, %rcx
-; CHECK3-NEXT:    pinsrw $0, %ecx, %xmm2
-; CHECK3-NEXT:    shrq $48, %rax
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm3
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK3-NEXT:    retq
-;
-; CHECK0-LABEL: atomic_vec4_half:
-; CHECK0:       ## %bb.0:
-; CHECK0-NEXT:    movq (%rdi), %rax
-; CHECK0-NEXT:    movl %eax, %ecx
-; CHECK0-NEXT:    shrl $16, %ecx
-; CHECK0-NEXT:    movw %cx, %dx
-; CHECK0-NEXT:    ## implicit-def: $ecx
-; CHECK0-NEXT:    movw %dx, %cx
-; CHECK0-NEXT:    ## implicit-def: $xmm2
-; CHECK0-NEXT:    pinsrw $0, %ecx, %xmm2
-; CHECK0-NEXT:    movw %ax, %dx
-; CHECK0-NEXT:    ## implicit-def: $ecx
-; CHECK0-NEXT:    movw %dx, %cx
-; CHECK0-NEXT:    ## implicit-def: $xmm0
-; CHECK0-NEXT:    pinsrw $0, %ecx, %xmm0
-; CHECK0-NEXT:    movq %rax, %rcx
-; CHECK0-NEXT:    shrq $32, %rcx
-; CHECK0-NEXT:    movw %cx, %dx
-; CHECK0-NEXT:    ## implicit-def: $ecx
-; CHECK0-NEXT:    movw %dx, %cx
-; CHECK0-NEXT:    ## implicit-def: $xmm1
-; CHECK0-NEXT:    pinsrw $0, %ecx, %xmm1
-; CHECK0-NEXT:    shrq $48, %rax
-; CHECK0-NEXT:    movw %ax, %cx
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %cx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm3
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm3
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK0-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK0-NEXT:    retq
+; CHECK-LABEL: atomic_vec4_half:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    retq
   %ret = load atomic <4 x half>, ptr %x acquire, align 8
   ret <4 x half> %ret
 }
 
 define <4 x bfloat> @atomic_vec4_bfloat(ptr %x) nounwind {
-; CHECK3-LABEL: atomic_vec4_bfloat:
-; CHECK3:       ## %bb.0:
-; CHECK3-NEXT:    movq (%rdi), %rax
-; CHECK3-NEXT:    movq %rax, %rcx
-; CHECK3-NEXT:    movq %rax, %rdx
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK3-NEXT:    ## kill: def $eax killed $eax killed $rax
-; CHECK3-NEXT:    shrl $16, %eax
-; CHECK3-NEXT:    shrq $32, %rcx
-; CHECK3-NEXT:    shrq $48, %rdx
-; CHECK3-NEXT:    pinsrw $0, %edx, %xmm1
-; CHECK3-NEXT:    pinsrw $0, %ecx, %xmm2
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; CHECK3-NEXT:    pinsrw $0, %eax, %xmm1
-; CHECK3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK3-NEXT:    retq
-;
-; CHECK0-LABEL: atomic_vec4_bfloat:
-; CHECK0:       ## %bb.0:
-; CHECK0-NEXT:    movq (%rdi), %rax
-; CHECK0-NEXT:    movl %eax, %ecx
-; CHECK0-NEXT:    shrl $16, %ecx
-; CHECK0-NEXT:    ## kill: def $cx killed $cx killed $ecx
-; CHECK0-NEXT:    movw %ax, %dx
-; CHECK0-NEXT:    movq %rax, %rsi
-; CHECK0-NEXT:    shrq $32, %rsi
-; CHECK0-NEXT:    ## kill: def $si killed $si killed $rsi
-; CHECK0-NEXT:    shrq $48, %rax
-; CHECK0-NEXT:    movw %ax, %di
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %di, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm0
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %si, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm1
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm1
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %dx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm0
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm0
-; CHECK0-NEXT:    ## implicit-def: $eax
-; CHECK0-NEXT:    movw %cx, %ax
-; CHECK0-NEXT:    ## implicit-def: $xmm2
-; CHECK0-NEXT:    pinsrw $0, %eax, %xmm2
-; CHECK0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; CHECK0-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK0-NEXT:    retq
+; CHECK-LABEL: atomic_vec4_bfloat:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    retq
   %ret = load atomic <4 x bfloat>, ptr %x acquire, align 8
   ret <4 x bfloat> %ret
 }

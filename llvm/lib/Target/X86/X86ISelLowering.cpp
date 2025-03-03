@@ -7122,15 +7122,19 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 }
 
 // Recurse to find a LoadSDNode source and the accumulated ByteOffest.
-static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
-  if (ISD::isNON_EXTLoad(Elt.getNode())) {
-    auto *BaseLd = cast<LoadSDNode>(Elt);
-    if (!BaseLd->isSimple())
-      return false;
+static bool findEltLoadSrc(SDValue Elt, MemSDNode *&Ld, int64_t &ByteOffset) {
+  if (auto *BaseLd = dyn_cast<AtomicSDNode>(Elt)) {
     Ld = BaseLd;
     ByteOffset = 0;
     return true;
-  }
+  } else if (auto *BaseLd = dyn_cast<LoadSDNode>(Elt))
+    if (ISD::isNON_EXTLoad(Elt.getNode())) {
+      if (!BaseLd->isSimple())
+        return false;
+      Ld = BaseLd;
+      ByteOffset = 0;
+      return true;
+    }
 
   switch (Elt.getOpcode()) {
   case ISD::BITCAST:
@@ -7183,7 +7187,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   APInt ZeroMask = APInt::getZero(NumElems);
   APInt UndefMask = APInt::getZero(NumElems);
 
-  SmallVector<LoadSDNode*, 8> Loads(NumElems, nullptr);
+  SmallVector<MemSDNode *, 8> Loads(NumElems, nullptr);
   SmallVector<int64_t, 8> ByteOffsets(NumElems, 0);
 
   // For each element in the initializer, see if we've found a load, zero or an
@@ -7233,7 +7237,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   EVT EltBaseVT = EltBase.getValueType();
   assert(EltBaseVT.getSizeInBits() == EltBaseVT.getStoreSizeInBits() &&
          "Register/Memory size mismatch");
-  LoadSDNode *LDBase = Loads[FirstLoadedElt];
+  MemSDNode *LDBase = Loads[FirstLoadedElt];
   assert(LDBase && "Did not find base load for merging consecutive loads");
   unsigned BaseSizeInBits = EltBaseVT.getStoreSizeInBits();
   unsigned BaseSizeInBytes = BaseSizeInBits / 8;
@@ -7247,8 +7251,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // Check to see if the element's load is consecutive to the base load
   // or offset from a previous (already checked) load.
-  auto CheckConsecutiveLoad = [&](LoadSDNode *Base, int EltIdx) {
-    LoadSDNode *Ld = Loads[EltIdx];
+  auto CheckConsecutiveLoad = [&](MemSDNode *Base, int EltIdx) {
+    MemSDNode *Ld = Loads[EltIdx];
     int64_t ByteOffset = ByteOffsets[EltIdx];
     if (ByteOffset && (ByteOffset % BaseSizeInBytes) == 0) {
       int64_t BaseIdx = EltIdx - (ByteOffset / BaseSizeInBytes);
@@ -7276,7 +7280,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
-  auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, LoadSDNode *LDBase) {
+  auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, MemSDNode *LDBase) {
     auto MMOFlags = LDBase->getMemOperand()->getFlags();
     assert(LDBase->isSimple() &&
            "Cannot merge volatile or atomic loads.");
@@ -9319,8 +9323,9 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   {
     SmallVector<SDValue, 64> Ops(Op->op_begin(), Op->op_begin() + NumElems);
     if (SDValue LD =
-            EltsFromConsecutiveLoads(VT, Ops, dl, DAG, Subtarget, false))
+            EltsFromConsecutiveLoads(VT, Ops, dl, DAG, Subtarget, false)) {
       return LD;
+    }
   }
 
   // If this is a splat of pairs of 32-bit elements, we can use a narrower
