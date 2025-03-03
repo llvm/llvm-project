@@ -14,6 +14,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "lld"
 
@@ -173,12 +174,10 @@ static bool relocIsLive(const WasmRelocation &rel, ObjFile *file) {
 }
 
 size_t InputChunk::getNumLiveRelocations() const {
-  size_t result = 0;
-  for (const WasmRelocation &rel : relocations) {
-    if (relocIsLive(rel, file))
-      result++;
-  }
-  return result;
+  return std::count_if(relocations.begin(), relocations.end(),
+                       [this](const WasmRelocation &rel) {
+                         return relocIsLive(rel, file);
+                       });
 }
 
 // Copy relocation entries to a given output stream.
