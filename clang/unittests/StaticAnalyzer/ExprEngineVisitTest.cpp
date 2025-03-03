@@ -50,11 +50,16 @@ class MemAccessChecker : public Checker<check::Location, check::Bind> {
 public:
   void checkLocation(const SVal &Loc, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const {
-    emitErrorReport(C, Bug, "checkLocation: Loc = " + dumpToString(Loc) + ", Stmt = " + S->getStmtClassName());
+    emitErrorReport(C, Bug,
+                    "checkLocation: Loc = " + dumpToString(Loc) +
+                        ", Stmt = " + S->getStmtClassName());
   }
 
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
-    emitErrorReport(C, Bug, "checkBind: Loc = " + dumpToString(Loc) + ", Val = " + dumpToString(Val) + ", Stmt = " + S->getStmtClassName());
+    emitErrorReport(C, Bug,
+                    "checkBind: Loc = " + dumpToString(Loc) +
+                        ", Val = " + dumpToString(Val) +
+                        ", Stmt = " + S->getStmtClassName());
   }
 
 private:
@@ -131,10 +136,13 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
   )",
                                                     Diags));
 
-  std::string LocMsg = "checkLocation: Loc = lazyCompoundVal{0x0,MyClassRead}, Stmt = ImplicitCastExpr";
-  std::string BindMsg = "checkBind: Loc = &MyClassWrite, Val = lazyCompoundVal{0x0,MyClassRead}, Stmt = CXXOperatorCallExpr";
+  std::string LocMsg = "checkLocation: Loc = lazyCompoundVal{0x0,MyClassRead}, "
+                       "Stmt = ImplicitCastExpr";
+  std::string BindMsg =
+      "checkBind: Loc = &MyClassWrite, Val = lazyCompoundVal{0x0,MyClassRead}, "
+      "Stmt = CXXOperatorCallExpr";
   std::size_t LocPos = Diags.find(LocMsg);
-  std::size_t BindPos = Diags.find(BindMsg); 
+  std::size_t BindPos = Diags.find(BindMsg);
   EXPECT_NE(LocPos, std::string::npos);
   EXPECT_NE(BindPos, std::string::npos);
   // Check order: first checkLocation is called, then checkBind.
