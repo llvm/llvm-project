@@ -37,6 +37,15 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 
+  bool verifyDiagnosticsFlag;
+  static llvm::cl::opt<bool,
+                       /*ExternalStorage=*/true>
+      verifyDiagnostics(
+          "verify-diagnostics",
+          llvm::cl::desc("Check that emitted diagnostics match "
+                         "expected-* lines on the corresponding line"),
+          llvm::cl::location(verifyDiagnosticsFlag), llvm::cl::init(false));
+
   llvm::InitLLVM y(argc, argv);
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "mlir-irdl-to-cpp");
@@ -63,6 +72,8 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
   registry.insert<irdl::IRDLDialect>();
   MLIRContext ctx(registry);
   ctx.printOpOnDiagnostic(true);
+  if (verifyDiagnostics)
+    ctx.printOpOnDiagnostic(false);
 
   ParserConfig parseConfig(&ctx);
   OwningOpRef<Operation *> op =
@@ -72,7 +83,25 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
   auto moduleOp = llvm::cast<ModuleOp>(*op);
 
-  SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &ctx);
+  if (!verifyDiagnostics) {
+    SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &ctx);
+
+    for (Operation &op : moduleOp.getOps()) {
+      auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op);
+      if (!dialectOp)
+        continue;
+
+      // TODO: accept multiple operations in translation to not generate headers
+      // multiple times.
+      if (failed(irdl::translateIRDLDialectToCpp(dialectOp, output->os()))) {
+        return failure();
+      }
+    }
+    output->keep();
+    return success();
+  }
+
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &ctx);
 
   for (Operation &op : moduleOp.getOps()) {
     auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op);
@@ -81,12 +110,9 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
     // TODO: accept multiple operations in translation to not generate headers
     // multiple times.
-    if (failed(irdl::translateIRDLDialectToCpp(dialectOp, output->os())))
-      return failure();
+    ((void)irdl::translateIRDLDialectToCpp(dialectOp, output->os()));
   }
-
-  output->keep();
-  return success();
+  return sourceMgrHandler.verify();
 }
 
 int main(int argc, char **argv) {

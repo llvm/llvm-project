@@ -442,10 +442,14 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 static LogicalResult verify(irdl::DialectOp dialect) {
   auto &dialectBlock = getDialectBlock(dialect);
   for (auto op : dialectBlock.getOps<irdl::OperationOp>()) {
-    for (auto operand : op->getOperands()) {
-      if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp()))
-        return op.emitError(
-            "IRDL C++ translation only supports irdl.any constraint for types");
+    for (auto operands : op.getOps<irdl::OperandsOp>()) {
+      for (auto operand : operands.getOperands()) {
+        if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
+          return operands.emitError(
+              "IRDL C++ translation only supports irdl.any "
+              "constraint for types");
+        }
+      }
     }
   }
   return success();
@@ -488,9 +492,7 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   }
 
   // TODO: allow control over C++ name.
-  std::string cppShortName =
-      llvm::formatv("{0}{1}", llvm::toUpper(dialectName[0]),
-                    dialectName.slice(1, dialectName.size()));
+  std::string cppShortName = capitalize(dialectName);
   std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
   std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
