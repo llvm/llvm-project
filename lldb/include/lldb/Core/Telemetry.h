@@ -161,7 +161,7 @@ private:
   // "start" and "end" entries can be matched up.
   // These values don't need to be unique across runs (because they are
   // secondary-key), hence a simple counter is sufficent.
-  std::atomic<int> command_id_seed = 0;
+  std::atomic<int> m_command_id_seed = 0;
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 

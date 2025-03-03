@@ -46,6 +46,7 @@
 #include "Commands/CommandObjectWatchpoint.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
@@ -1887,7 +1888,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        bool force_repeat_command) {
   lldb_private::telemetry::ScopedDispatcher<
       lldb_private::telemetry::CommandInfo>
-      helper(m_debugger);
+      helper(&m_debugger);
   lldb_private::telemetry::TelemetryManager *ins =
       lldb_private::telemetry::TelemetryManager::GetInstance();
   const int command_id = ins->MakeNextCommandId();
@@ -1922,9 +1923,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
     info->command_name = command_name.str();
     info->ret_status = result.GetStatus();
-    if (llvm::StringRef error_data = result.GetErrorData();
-      !error_data.empty())
-      info->error_data = error_data.str();
+    if (std::string error_str = result.GetErrorString(); !error_str.empty())
+      info->error_data = std::move(error_str);
 
     if (ins->GetConfig()->m_detailed_command_telemetry)
       info->args = parsed_command_args;
