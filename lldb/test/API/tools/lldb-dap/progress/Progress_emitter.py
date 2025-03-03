@@ -39,7 +39,7 @@ class ProgressTesterCommand:
         parser.add_option(
             "--total",
             dest="total",
-            help="Total to count up, use None to identify as indeterminate",
+            help="Total items in this progress object. When this option is not specified, this will be an indeterminate progress.",
             type="int",
             default=None,
         )
@@ -100,6 +100,9 @@ class ProgressTesterCommand:
             else:
                 progress.Increment(1, f"Step {i}")
             time.sleep(cmd_options.seconds)
+
+        # Not required for deterministic progress, but required for indeterminate progress.
+        progress.Finalize()
 
 
 def __lldb_init_module(debugger, dict):

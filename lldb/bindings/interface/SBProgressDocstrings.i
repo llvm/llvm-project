@@ -11,7 +11,15 @@ The Progress class helps make sure that progress is correctly reported
 and will always send an initial progress update, updates when
 Progress::Increment() is called, and also will make sure that a progress
 completed update is reported even if the user doesn't explicitly cause one
-to be sent.") lldb::SBProgress;
+to be sent.
+
+Progress can either be deterministic, incrementing up to a known total or non-deterministic
+with an unbounded total. Deterministic is better if you know the items of work in advance, but non-deterministic
+exposes a way to update a user during a long running process that work is taking place.
+
+For non-deterministic 
+
+") lldb::SBProgress;
 
 %feature("docstring",
 "Finalize the SBProgress, which will cause a progress end event to be emitted. This 
