@@ -8664,8 +8664,8 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   SDValue MinMax =
       DAG.getSelectCC(DL, LHS, RHS, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
   // If MinMax is NaN, let's quiet it.
-  if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS) &&
-      !DAG.isKnownNeverNaN(RHS)) {
+  if (!Flags.hasNoNaNs() && !DAG.isKnownNeverSNaN(LHS) &&
+      !DAG.isKnownNeverSNaN(RHS)) {
     MinMax = DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax, Flags);
   }
 
