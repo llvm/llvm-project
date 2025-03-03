@@ -81,6 +81,9 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::HostData:
   case OpenACCDirectiveKind::Atomic:
     return true;
+  case OpenACCDirectiveKind::Cache:
+  case OpenACCDirectiveKind::Routine:
+  case OpenACCDirectiveKind::Declare:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
@@ -89,7 +92,6 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::Set:
   case OpenACCDirectiveKind::Update:
     llvm_unreachable("Doesn't have an associated stmt");
-  default:
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Unhandled directive kind?");
   }
@@ -334,6 +336,7 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
   case OpenACCDirectiveKind::Update:
+  case OpenACCDirectiveKind::Cache:
   case OpenACCDirectiveKind::Atomic:
   case OpenACCDirectiveKind::Declare:
     // Nothing to do here, there is no real legalization that needs to happen
@@ -480,8 +483,56 @@ bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
   return false;
 }
 
+ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
+  Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+  if (!isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
+    return ExprError();
+  }
+
+  // It isn't clear what 'simple array element or simple subarray' means, so we
+  // will just allow arbitrary depth.
+  while (isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    if (auto *SubScrpt = dyn_cast<ArraySubscriptExpr>(CurVarExpr))
+      CurVarExpr = SubScrpt->getBase()->IgnoreParenImpCasts();
+    else
+      CurVarExpr =
+          cast<ArraySectionExpr>(CurVarExpr)->getBase()->IgnoreParenImpCasts();
+  }
+
+  // References to a VarDecl are fine.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
+    if (isa<VarDecl, NonTypeTemplateParmDecl>(
+            DRE->getFoundDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl())) {
+      return VarExpr;
+    }
+  }
+
+  // Nothing really we can do here, as these are dependent.  So just return they
+  // are valid.
+  if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
+    return VarExpr;
+
+  // There isn't really anything we can do in the case of a recovery expr, so
+  // skip the diagnostic rather than produce a confusing diagnostic.
+  if (isa<RecoveryExpr>(CurVarExpr))
+    return ExprError();
+
+  Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
+  return ExprError();
+}
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
+  // This has unique enough restrictions that we should split it to a separate
+  // function.
+  if (DK == OpenACCDirectiveKind::Cache)
+    return ActOnCacheVar(VarExpr);
+
   Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
 
   // 'use_device' doesn't allow array subscript or array sections.
@@ -1624,6 +1675,12 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
         getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
+  case OpenACCDirectiveKind::Cache: {
+    assert(Clauses.empty() && "Cache doesn't allow clauses");
+    return OpenACCCacheConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                         LParenLoc, MiscLoc, Exprs, RParenLoc,
+                                         EndLoc);
+  }
   case OpenACCDirectiveKind::Declare: {
     // Declare is a declaration directive, but can be used here as long as we
     // wrap it in a DeclStmt.  So make sure we do that here.
@@ -1649,6 +1706,7 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Cache:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Atomic:
