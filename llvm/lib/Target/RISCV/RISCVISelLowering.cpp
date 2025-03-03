@@ -1564,7 +1564,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::MUL,          ISD::SDIV,         ISD::UDIV,
          ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
          ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::VSELECT});
+         ISD::VSELECT,      ISD::VECREDUCE_ADD});
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -18144,25 +18144,38 @@ static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
 //   (iX ctpop (bitcast (vXi1 A)))
 // ->
 //   (zext (vcpop.m (nxvYi1 (insert_subvec (vXi1 A)))))
+// and
+//   (iN reduce.add (zext (vXi1 A to vXiN))
+// ->
+//   (zext (vcpop.m (nxvYi1 (insert_subvec (vXi1 A)))))
 // FIXME: It's complicated to match all the variations of this after type
 // legalization so we only handle the pre-type legalization pattern, but that
 // requires the fixed vector type to be legal.
-static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget) {
+static SDValue combineToVCPOP(SDNode *N, SelectionDAG &DAG,
+                              const RISCVSubtarget &Subtarget) {
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::CTPOP || Opc == ISD::VECREDUCE_ADD) &&
+         "Unexpected opcode");
   EVT VT = N->getValueType(0);
   if (!VT.isScalarInteger())
     return SDValue();
 
   SDValue Src = N->getOperand(0);
 
-  // Peek through zero_extend. It doesn't change the count.
-  if (Src.getOpcode() == ISD::ZERO_EXTEND)
+  if (Opc == ISD::CTPOP) {
+    // Peek through zero_extend. It doesn't change the count.
+    if (Src.getOpcode() == ISD::ZERO_EXTEND)
+      Src = Src.getOperand(0);
+
+    if (Src.getOpcode() != ISD::BITCAST)
+      return SDValue();
     Src = Src.getOperand(0);
+  } else if (Opc == ISD::VECREDUCE_ADD) {
+    if (Src.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+    Src = Src.getOperand(0);
+  }
 
-  if (Src.getOpcode() != ISD::BITCAST)
-    return SDValue();
-
-  Src = Src.getOperand(0);
   EVT SrcEVT = Src.getValueType();
   if (!SrcEVT.isSimple())
     return SDValue();
@@ -18172,11 +18185,28 @@ static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
   if (!SrcMVT.isVector() || SrcMVT.getVectorElementType() != MVT::i1)
     return SDValue();
 
-  if (!useRVVForFixedLengthVectorVT(SrcMVT, Subtarget))
-    return SDValue();
+  // Check that destination type is large enough to hold result without
+  // overflow.
+  if (Opc == ISD::VECREDUCE_ADD) {
+    unsigned EltSize = SrcMVT.getScalarSizeInBits();
+    unsigned MinSize = SrcMVT.getSizeInBits().getKnownMinValue();
+    unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
+    unsigned MaxVLMAX = SrcMVT.isFixedLengthVector()
+                            ? SrcMVT.getVectorNumElements()
+                            : RISCVTargetLowering::computeVLMAX(
+                                  VectorBitsMax, EltSize, MinSize);
+    if (VT.getFixedSizeInBits() < Log2_32(MaxVLMAX) + 1)
+      return SDValue();
+  }
 
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcMVT, Subtarget);
-  Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  MVT ContainerVT = SrcMVT;
+  if (SrcMVT.isFixedLengthVector()) {
+    if (!useRVVForFixedLengthVectorVT(SrcMVT, Subtarget))
+      return SDValue();
+
+    ContainerVT = getContainerForFixedLengthVector(DAG, SrcMVT, Subtarget);
+    Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
+  }
 
   SDLoc DL(N);
   auto [Mask, VL] = getDefaultVLOps(SrcMVT, ContainerVT, DL, DAG, Subtarget);
@@ -19258,7 +19288,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
   }
   case ISD::CTPOP:
-    if (SDValue V = combineScalarCTPOPToVCPOP(N, DAG, Subtarget))
+  case ISD::VECREDUCE_ADD:
+    if (SDValue V = combineToVCPOP(N, DAG, Subtarget))
       return V;
     break;
   }

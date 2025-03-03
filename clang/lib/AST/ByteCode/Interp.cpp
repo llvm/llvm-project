@@ -992,7 +992,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis()) &&
+      S.Current->getFunction()->isDestructor()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
     return false;

@@ -423,6 +423,7 @@ public:
   void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *S);
   void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *S);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitConvertVectorExpr(const ConvertVectorExpr *S);
