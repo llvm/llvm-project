@@ -751,7 +751,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
         return error(Error, RegSource.SourceRange);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(Reg.id());
     }
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
