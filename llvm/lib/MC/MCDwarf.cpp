@@ -41,6 +41,45 @@
 
 using namespace llvm;
 
+void MCCFIInstruction::createRegOffsetExpression(unsigned Reg,
+                                                 unsigned FrameReg,
+                                                 int64_t Offset,
+                                                 SmallString<64> &CFAExpr) {
+  // Below all the comments about specific CFI instructions and opcodes are
+  // taken directly from DWARF Standard version 5.
+  //
+  // Encode the expression: (Offset + FrameReg) into Expr:
+  SmallString<64> Expr;
+  uint8_t Buffer[16];
+  // Encode  offset:
+  Expr.push_back(dwarf::DW_OP_consts);
+  // The single operand of the DW_OP_consts operation provides a signed
+  // LEB128 integer constant
+  Expr.append(Buffer, Buffer + encodeSLEB128(Offset, Buffer));
+  // Encode  FrameReg:
+  Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+  // The DW_OP_bregx operation provides the sum of two values specified by its
+  // two operands. The first operand is a register number which is specified by
+  // an unsigned LEB128 number. The second operand is a signed LEB128 offset.
+  Expr.append(Buffer, Buffer + encodeULEB128(FrameReg, Buffer));
+  Expr.push_back(0);
+  // The DW_OP_plus operation pops the top two stack entries, adds them
+  // together, and pushes the result.
+  Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+  // Now pass the encoded Expr to DW_CFA_expression:
+  //
+  // The DW_CFA_expression instruction takes two operands: an unsigned
+  // LEB128 value representing a register number, and a DW_FORM_block value
+  // representing a DWARF expression
+  CFAExpr.push_back(dwarf::DW_CFA_expression);
+  CFAExpr.append(Buffer, Buffer + encodeULEB128(Reg, Buffer));
+  // DW_FORM_block value is unsigned LEB128 length followed by the number of
+  // bytes specified by the length
+  CFAExpr.append(Buffer, Buffer + encodeULEB128(Expr.size(), Buffer));
+  CFAExpr.append(Expr.str());
+  return;
+}
+
 MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
   MCSymbol *Start = S.getContext().createTempSymbol("debug_list_header_start");
   MCSymbol *End = S.getContext().createTempSymbol("debug_list_header_end");
@@ -1518,6 +1557,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
     return;
   }
+  case MCCFIInstruction::OpLLVMRegOffset:
+    llvm_unreachable("Should emit llvm_reg_offset as escape");
   }
   llvm_unreachable("Unhandled case in switch");
 }
