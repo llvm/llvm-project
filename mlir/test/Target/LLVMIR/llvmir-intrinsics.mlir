@@ -40,6 +40,15 @@ llvm.func @exp2_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @exp10_test
+llvm.func @exp10_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.exp10.f32
+  "llvm.intr.exp10"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.exp10.v8f32
+  "llvm.intr.exp10"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @log_test
 llvm.func @log_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.log.f32
