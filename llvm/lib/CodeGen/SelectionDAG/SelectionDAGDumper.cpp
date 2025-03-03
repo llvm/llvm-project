@@ -989,7 +989,7 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
       OS << "FRAMEIX=" << Op.getFrameIx();
       break;
     case SDDbgOperand::VREG:
-      OS << "VREG=" << Op.getVReg();
+      OS << "VREG=" << printReg(Op.getVReg());
       break;
     }
     Comma = true;

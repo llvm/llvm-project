@@ -20,6 +20,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
@@ -1820,6 +1821,9 @@ DEF_TRAVERSE_DECL(OMPAllocateDecl, {
   for (auto *C : D->clauselists())
     TRY_TO(TraverseOMPClause(C));
 })
+
+DEF_TRAVERSE_DECL(OpenACCDeclareDecl,
+                  { TRY_TO(VisitOpenACCClauseList(D->clauses())); })
 
 // A helper method for TemplateDecl's children.
 template <typename Derived>

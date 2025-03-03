@@ -33,6 +33,9 @@ class IdentifierInfo;
 class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
+public:
+  using DeclGroupPtrTy = OpaquePtr<DeclGroupRef>;
+
 private:
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
@@ -157,6 +160,13 @@ private:
 
   /// Helper function for checking the 'for' and 'range for' stmts.
   void ForStmtBeginHelper(SourceLocation ForLoc, ForStmtBeginChecker &C);
+
+  // The 'declare' construct requires only a single reference among ALL declare
+  // directives in a context. We store existing references to check. Because the
+  // rules prevent referencing the same variable from multiple declaration
+  // contexts, we can just store the declaration and location of the reference.
+  llvm::DenseMap<const clang::DeclaratorDecl *, SourceLocation>
+      DeclareVarReferences;
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -411,6 +421,8 @@ public:
               ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -427,23 +439,10 @@ public:
     }
 
     bool isReadOnly() const {
-      assert((ClauseKind == OpenACCClauseKind::CopyIn ||
-              ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "Only copyin accepts 'readonly:' tag");
       return std::get<VarListDetails>(Details).IsReadOnly;
     }
 
-    bool isZero() const {
-      assert((ClauseKind == OpenACCClauseKind::CopyOut ||
-              ClauseKind == OpenACCClauseKind::PCopyOut ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
-              ClauseKind == OpenACCClauseKind::Create ||
-              ClauseKind == OpenACCClauseKind::PCreate ||
-              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "Only copyout/create accepts 'zero' tag");
-      return std::get<VarListDetails>(Details).IsZero;
-    }
+    bool isZero() const { return std::get<VarListDetails>(Details).IsZero; }
 
     bool isForce() const {
       assert(ClauseKind == OpenACCClauseKind::Collapse &&
@@ -557,6 +556,8 @@ public:
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -600,6 +601,8 @@ public:
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -744,7 +747,11 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  DeclGroupRef ActOnEndDeclDirective();
+  DeclGroupRef ActOnEndDeclDirective(OpenACCDirectiveKind K,
+                                     SourceLocation StartLoc,
+                                     SourceLocation DirLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OpenACCClause *> Clauses);
 
   /// Called when encountering an 'int-expr' for OpenACC, and manages
   /// conversions and diagnostics to 'int'.
@@ -753,7 +760,16 @@ public:
 
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
-  ExprResult ActOnVar(OpenACCClauseKind CK, Expr *VarExpr);
+  ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                      Expr *VarExpr);
+
+  // Called after 'ActOnVar' specifically for a 'link' clause, which has to do
+  // some minor additional checks.
+  llvm::SmallVector<Expr *> CheckLinkClauseVarList(ArrayRef<Expr *> VarExpr);
+
+  // Checking for the arguments specific to the declare-clause that need to be
+  // checked during both phases of template translation.
+  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause);
 
   /// Called while semantically analyzing the reduction clause, ensuring the var
   /// is the correct kind of reference.

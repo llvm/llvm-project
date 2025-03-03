@@ -1535,3 +1535,52 @@ hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
     shape.getDefiningOp()->erase();
   return extents;
 }
+
+hlfir::Entity hlfir::gen1DSection(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  hlfir::Entity array, int64_t dim,
+                                  mlir::ArrayRef<mlir::Value> lbounds,
+                                  mlir::ArrayRef<mlir::Value> extents,
+                                  mlir::ValueRange oneBasedIndices,
+                                  mlir::ArrayRef<mlir::Value> typeParams) {
+  assert(array.isVariable() && "array must be a variable");
+  assert(dim > 0 && dim <= array.getRank() && "invalid dim number");
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  hlfir::DesignateOp::Subscripts subscripts;
+  unsigned indexId = 0;
+  for (int i = 0; i < array.getRank(); ++i) {
+    if (i == dim - 1) {
+      mlir::Value ubound = genUBound(loc, builder, lbounds[i], extents[i], one);
+      subscripts.emplace_back(
+          hlfir::DesignateOp::Triplet{lbounds[i], ubound, one});
+    } else {
+      mlir::Value index =
+          genUBound(loc, builder, lbounds[i], oneBasedIndices[indexId++], one);
+      subscripts.emplace_back(index);
+    }
+  }
+  mlir::Value sectionShape =
+      builder.create<fir::ShapeOp>(loc, extents[dim - 1]);
+
+  // The result type is one of:
+  //   !fir.box/class<!fir.array<NxT>>
+  //   !fir.box/class<!fir.array<?xT>>
+  //
+  // We could use !fir.ref<!fir.array<NxT>> when the whole dimension's
+  // size is known and it is the leading dimension, but let it be simple
+  // for the time being.
+  auto seqType =
+      mlir::cast<fir::SequenceType>(array.getElementOrSequenceType());
+  int64_t dimExtent = seqType.getShape()[dim - 1];
+  mlir::Type sectionType =
+      fir::SequenceType::get({dimExtent}, seqType.getEleTy());
+  sectionType = fir::wrapInClassOrBoxType(sectionType, array.isPolymorphic());
+
+  auto designate = builder.create<hlfir::DesignateOp>(
+      loc, sectionType, array, /*component=*/"", /*componentShape=*/nullptr,
+      subscripts,
+      /*substring=*/mlir::ValueRange{}, /*complexPartAttr=*/std::nullopt,
+      sectionShape, typeParams);
+  return hlfir::Entity{designate.getResult()};
+}
