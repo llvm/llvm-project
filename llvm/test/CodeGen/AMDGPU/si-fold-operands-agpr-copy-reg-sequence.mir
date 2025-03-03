@@ -206,11 +206,11 @@ body:             |
     ; CHECK-LABEL: name: s_mov_b32_999_splat_sgpr_128_copy_vgpr_copy_agpr
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 999
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_2:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_3:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_ACCVGPR_WRITE_B32_e64_]], %subreg.sub0, [[V_ACCVGPR_WRITE_B32_e64_1]], %subreg.sub1, [[V_ACCVGPR_WRITE_B32_e64_2]], %subreg.sub2, [[V_ACCVGPR_WRITE_B32_e64_3]], %subreg.sub3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sgpr_32 = S_MOV_B32 999
@@ -232,10 +232,10 @@ body:             |
     ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1
     ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_2:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 [[COPY]], implicit $exec
-    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_3:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_ACCVGPR_WRITE_B32_e64_]], %subreg.sub0, [[V_ACCVGPR_WRITE_B32_e64_1]], %subreg.sub1, [[V_ACCVGPR_WRITE_B32_e64_2]], %subreg.sub2, [[V_ACCVGPR_WRITE_B32_e64_3]], %subreg.sub3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:agpr_32 = COPY [[COPY]]
+    ; CHECK-NEXT: [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_128 = REG_SEQUENCE [[V_ACCVGPR_WRITE_B32_e64_]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[V_ACCVGPR_WRITE_B32_e64_1]], %subreg.sub3
     ; CHECK-NEXT: $agpr0_agpr1_agpr2_agpr3 = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3
     %0:sgpr_32 = S_MOV_B32 999
