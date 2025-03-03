@@ -1981,10 +1981,6 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
-  }
-
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
@@ -2051,10 +2047,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPReductionPHISC;
-  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2874,10 +2866,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
-  }
-
   void execute(VPTransformState &State) override {
     llvm_unreachable(
         "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
@@ -2937,10 +2925,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPActiveLaneMaskPHISC;
-  }
-
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
 
@@ -2967,10 +2951,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
-  }
 
   void execute(VPTransformState &State) override {
     llvm_unreachable(
