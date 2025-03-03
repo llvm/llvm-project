@@ -470,13 +470,9 @@ getCommonSubClassWithSubReg(const TargetRegisterInfo &TRI,
   const TargetRegisterClass *NewSuperDstRC = nullptr;
   for (auto SuperDstRCID : DstRC->superclasses()) {
     const TargetRegisterClass *SuperDstRC = TRI.getRegClass(SuperDstRCID);
-
-    if ((NewSuperDstRC = TRI.getMatchingSuperRegClass(SuperDstRC, SrcRC, DstSub)))
-      return NewSuperDstRC;
-
-    //if ((NewSuperDstRC = TRI.getSubClassWithSubReg(SuperDstRC, DstSub)))
-    //break;
-
+    const TargetRegisterClass *WithSubRC = TRI.getSubClassWithSubReg(SuperDstRC, DstSub);
+    if (WithSubRC)
+      return TRI.getMatchingSuperRegClass(WithSubRC, SrcRC, DstSub);
   }
 
   // TODO: For a subregister insert, it may well be worth either reconstraining
