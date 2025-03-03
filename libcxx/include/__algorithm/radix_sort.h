@@ -47,7 +47,6 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_enum.h>
-#include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
@@ -350,9 +349,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Integral __n) {
   return __n;
 }
 
-// An overload for floating-point numbers
+// An overload for IEEE 754 floating-point numbers
 
-// From the IEEE 754 standard, we know that:
+// For the floats conforming to IEEE 754 (IEC 559) standard, we know that:
 // 1. The bit representation of positive floats directly reflects their order:
 //    When comparing floats by magnitude, the number with the larger exponent is greater, and if the exponents are
 //    equal, the one with the larger mantissa is greater.
@@ -369,7 +368,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Integral __n) {
 
 // Thus, in final integral representation, we have reversed the order for negative floats and made all negative floats
 // smaller than all positive numbers (by inverting the sign bit).
-template <class _Floating, enable_if_t< is_floating_point<_Floating>::value, int> = 0>
+template <class _Floating, enable_if_t< numeric_limits<_Floating>::is_iec559, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Floating __f) {
   using __integral_type          = __unsigned_representation_for_t<_Floating>;
   constexpr auto __bit_count     = std::numeric_limits<__integral_type>::digits;
