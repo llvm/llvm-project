@@ -332,7 +332,6 @@ public:
     VPReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
-    VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
     VPReverseVectorPointerSC,

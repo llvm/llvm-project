@@ -4502,7 +4502,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       switch (R.getVPDefID()) {
       case VPDef::VPDerivedIVSC:
       case VPDef::VPScalarIVStepsSC:
-      case VPDef::VPScalarCastSC:
       case VPDef::VPReplicateSC:
       case VPDef::VPInstructionSC:
       case VPDef::VPCanonicalIVPHISC:
@@ -10396,8 +10395,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       assert(all_of(IV->users(),
                     [](const VPUser *U) {
                       return isa<VPScalarIVStepsRecipe>(U) ||
-                             isa<VPScalarCastRecipe>(U) ||
                              isa<VPDerivedIVRecipe>(U) ||
+                             Instruction::isCast(
+                                 cast<VPInstruction>(U)->getOpcode()) ||
+
                              cast<VPInstruction>(U)->getOpcode() ==
                                  Instruction::Add;
                     }) &&
