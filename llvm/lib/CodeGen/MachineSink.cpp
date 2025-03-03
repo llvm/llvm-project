@@ -169,7 +169,7 @@ class MachineSinking : public MachineFunctionPass {
 
   /// Record of DBG_VALUE uses of vregs in a block, so that we can identify
   /// debug instructions to sink.
-  SmallDenseMap<unsigned, TinyPtrVector<SeenDbgUser>> SeenDbgUsers;
+  SmallDenseMap<Register, TinyPtrVector<SeenDbgUser>> SeenDbgUsers;
 
   /// Record of debug variables that have had their locations set in the
   /// current block.
@@ -1515,7 +1515,7 @@ static bool attemptDebugCopyProp(MachineInstr &SinkInst, MachineInstr &DbgMI,
   return true;
 }
 
-using MIRegs = std::pair<MachineInstr *, SmallVector<unsigned, 2>>;
+using MIRegs = std::pair<MachineInstr *, SmallVector<Register, 2>>;
 /// Sink an instruction and its associated debug instructions.
 static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
                         MachineBasicBlock::iterator InsertPos,
@@ -1544,7 +1544,7 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
     SuccToSinkTo.insert(InsertPos, NewDbgMI);
 
     bool PropagatedAllSunkOps = true;
-    for (unsigned Reg : DbgValueToSink.second) {
+    for (Register Reg : DbgValueToSink.second) {
       if (DbgMI->hasDebugOperandForReg(Reg)) {
         if (!attemptDebugCopyProp(MI, *DbgMI, Reg)) {
           PropagatedAllSunkOps = false;
@@ -1880,7 +1880,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
           DbgMI->setDebugValueUndef();
       } else {
         DbgUsersToSink.push_back(
-            {DbgMI, SmallVector<unsigned, 2>(1, MO.getReg())});
+            {DbgMI, SmallVector<Register, 2>(1, MO.getReg())});
       }
     }
   }
@@ -2007,7 +2007,7 @@ private:
   /// entry in this map for each unit it touches. The DBG_VALUE's entry
   /// consists of a pointer to the instruction itself, and a vector of registers
   /// referred to by the instruction that overlap the key register unit.
-  DenseMap<unsigned, SmallVector<MIRegs, 2>> SeenDbgInstrs;
+  DenseMap<MCRegUnit, SmallVector<MIRegs, 2>> SeenDbgInstrs;
 
   /// Sink Copy instructions unused in the same block close to their uses in
   /// successors.
@@ -2022,7 +2022,7 @@ char &llvm::PostRAMachineSinkingID = PostRAMachineSinking::ID;
 INITIALIZE_PASS(PostRAMachineSinking, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)
 
-static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, unsigned Reg,
+static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, Register Reg,
                                   const TargetRegisterInfo *TRI) {
   LiveRegUnits LiveInRegUnits(*TRI);
   LiveInRegUnits.addLiveIns(MBB);
@@ -2032,7 +2032,7 @@ static bool aliasWithRegsInLiveIn(MachineBasicBlock &MBB, unsigned Reg,
 static MachineBasicBlock *
 getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
                       const SmallPtrSetImpl<MachineBasicBlock *> &SinkableBBs,
-                      unsigned Reg, const TargetRegisterInfo *TRI) {
+                      Register Reg, const TargetRegisterInfo *TRI) {
   // Try to find a single sinkable successor in which Reg is live-in.
   MachineBasicBlock *BB = nullptr;
   for (auto *SI : SinkableBBs) {
@@ -2059,7 +2059,7 @@ getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
 static MachineBasicBlock *
 getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
                       const SmallPtrSetImpl<MachineBasicBlock *> &SinkableBBs,
-                      ArrayRef<unsigned> DefedRegsInCopy,
+                      ArrayRef<Register> DefedRegsInCopy,
                       const TargetRegisterInfo *TRI) {
   MachineBasicBlock *SingleBB = nullptr;
   for (auto DefReg : DefedRegsInCopy) {
@@ -2073,8 +2073,8 @@ getSingleLiveInSuccBB(MachineBasicBlock &CurBB,
 }
 
 static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
-                           SmallVectorImpl<unsigned> &UsedOpsInCopy,
-                           LiveRegUnits &UsedRegUnits,
+                           const SmallVectorImpl<unsigned> &UsedOpsInCopy,
+                           const LiveRegUnits &UsedRegUnits,
                            const TargetRegisterInfo *TRI) {
   for (auto U : UsedOpsInCopy) {
     MachineOperand &MO = MI->getOperand(U);
@@ -2093,11 +2093,11 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
 }
 
 static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
-                         SmallVectorImpl<unsigned> &UsedOpsInCopy,
-                         SmallVectorImpl<unsigned> &DefedRegsInCopy) {
+                         const SmallVectorImpl<unsigned> &UsedOpsInCopy,
+                         const SmallVectorImpl<Register> &DefedRegsInCopy) {
   MachineFunction &MF = *SuccBB->getParent();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  for (unsigned DefReg : DefedRegsInCopy)
+  for (Register DefReg : DefedRegsInCopy)
     for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
       SuccBB->removeLiveIn(S);
   for (auto U : UsedOpsInCopy)
@@ -2107,7 +2107,7 @@ static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
 
 static bool hasRegisterDependency(MachineInstr *MI,
                                   SmallVectorImpl<unsigned> &UsedOpsInCopy,
-                                  SmallVectorImpl<unsigned> &DefedRegsInCopy,
+                                  SmallVectorImpl<Register> &DefedRegsInCopy,
                                   LiveRegUnits &ModifiedRegUnits,
                                   LiveRegUnits &UsedRegUnits) {
   bool HasRegDependency = false;
@@ -2167,12 +2167,12 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // Track the operand index for use in Copy.
     SmallVector<unsigned, 2> UsedOpsInCopy;
     // Track the register number defed in Copy.
-    SmallVector<unsigned, 2> DefedRegsInCopy;
+    SmallVector<Register, 2> DefedRegsInCopy;
 
     // We must sink this DBG_VALUE if its operand is sunk. To avoid searching
     // for DBG_VALUEs later, record them when they're encountered.
     if (MI.isDebugValue() && !MI.isDebugRef()) {
-      SmallDenseMap<MCRegister, SmallVector<unsigned, 2>, 4> MIUnits;
+      SmallDenseMap<MCRegUnit, SmallVector<Register, 2>, 4> MIUnits;
       bool IsValid = true;
       for (MachineOperand &MO : MI.debug_operands()) {
         if (MO.isReg() && MO.getReg().isPhysical()) {
@@ -2239,7 +2239,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
         for (const auto &MIRegs : SeenDbgInstrs.lookup(Unit)) {
           auto &Regs = DbgValsToSinkMap[MIRegs.first];
-          for (unsigned Reg : MIRegs.second)
+          for (Register Reg : MIRegs.second)
             Regs.push_back(Reg);
         }
       }
