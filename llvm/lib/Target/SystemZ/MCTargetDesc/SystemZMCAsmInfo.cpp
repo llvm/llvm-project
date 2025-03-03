@@ -53,6 +53,8 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {
