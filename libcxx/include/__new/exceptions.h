@@ -18,6 +18,7 @@
 #endif
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if !defined(_LIBCPP_ABI_VCRUNTIME)
 
 class _LIBCPP_EXPORTED_FROM_ABI bad_alloc : public exception {
@@ -68,6 +69,7 @@ public:
   _LIBCPP_VERBOSE_ABORT("bad_array_new_length was thrown in -fno-exceptions mode");
 #endif
 }
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___NEW_EXCEPTIONS_H

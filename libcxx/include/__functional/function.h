@@ -57,6 +57,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -75,6 +76,7 @@ public:
   const char* what() const _NOEXCEPT override;
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
