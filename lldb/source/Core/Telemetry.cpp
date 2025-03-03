@@ -111,19 +111,21 @@ public:
 
   llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
     // Does nothing.
-     return llvm::Error::success();
+    return llvm::Error::success();
   }
 
   static NoOpTelemetryManager *GetInstance() {
-    static std::unique_ptr<NoOpTelemetryManager> g_ins = std::make_unique<NoOpTelemetryManager>();
+    static std::unique_ptr<NoOpTelemetryManager> g_ins =
+        std::make_unique<NoOpTelemetryManager>();
     return g_ins.get();
   }
 };
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
-  // If Telemetry is disabled or if there is no default instance, then use the NoOp manager.
-  // We use a dummy instance to avoid having to do nullchecks in various places.
+  // If Telemetry is disabled or if there is no default instance, then use the
+  // NoOp manager. We use a dummy instance to avoid having to do nullchecks in
+  // various places.
   if (!Config::BuildTimeEnableTelemetry || !g_instance)
     return NoOpTelemetryManager::GetInstance();
   return g_instance.get();

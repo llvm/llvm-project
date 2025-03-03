@@ -1901,7 +1901,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   helper.DispatchNow([&](lldb_private::telemetry::CommandInfo *info) {
     info->command_id = command_id;
-    if (Target* target = GetExecutionContext().GetTargetPtr()) {
+    if (Target *target = GetExecutionContext().GetTargetPtr()) {
       // If we have a target attached to this command, then get the UUID.
       info->target_uuid =
           target->GetExecutableModule() != nullptr
