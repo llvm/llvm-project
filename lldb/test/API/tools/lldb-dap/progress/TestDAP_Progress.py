@@ -51,7 +51,6 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        print(f"Progress emitter path: {progress_emitter}")
         source = "main.cpp"
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
@@ -74,7 +73,6 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        print(f"Progress emitter path: {progress_emitter}")
         source = "main.cpp"
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
@@ -97,7 +95,6 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        print(f"Progress emitter path: {progress_emitter}")
         source = "main.cpp"
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
@@ -109,7 +106,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_evaluate("`test-progress --seconds 1", context="repl")
 
         self.verify_progress_events(
-            expected_title="Progress tester",
+            expected_title="Progress tester: Initial Indeterminate Detail",
             expected_message="Step 1",
             only_verify_first_update=True,
         )
@@ -119,7 +116,6 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         progress_emitter = os.path.join(os.getcwd(), "Progress_emitter.py")
-        print(f"Progress emitter path: {progress_emitter}")
         source = "main.cpp"
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
@@ -133,7 +129,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.verify_progress_events(
-            expected_title="Progress tester",
+            expected_title="Progress tester: Initial Indeterminate Detail",
             expected_message="Initial Indeterminate Detail",
             only_verify_first_update=True,
         )

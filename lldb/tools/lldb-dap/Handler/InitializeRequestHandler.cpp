@@ -70,7 +70,7 @@ void ProgressEventThreadFunction(DAP &dap) {
             GetStringFromStructuredData(data, "details");
 
         if (completed == 0) {
-          if (total == 1) {
+          if (total == UINT64_MAX) {
             // This progress is non deterministic and won't get updated until it
             // is completed. Send the "message" which will be the combined title
             // and detail. The only other progress event for thus
