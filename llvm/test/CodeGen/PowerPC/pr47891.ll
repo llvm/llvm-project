@@ -12,12 +12,12 @@ define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ld r5, 64(r3)
 ; CHECK-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-NEXT:    addi r6, r6, .LCPI0_1@toc@l
-; CHECK-NEXT:    mtvsrd v3, r5
 ; CHECK-NEXT:    lxvd2x v4, 0, r6
 ; CHECK-NEXT:    addis r6, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi r6, r6, .LCPI0_0@toc@l
 ; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    xxpermdi v3, v2, v3, 2
+; CHECK-NEXT:    mtfprd f0, r5
+; CHECK-NEXT:    xxpermdi v3, v2, vs0, 2
 ; CHECK-NEXT:    vsld v2, v2, v4
 ; CHECK-NEXT:    lxvd2x v4, 0, r6
 ; CHECK-NEXT:    ld r6, 0(r3)

@@ -167,8 +167,8 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
 ; CHECK-NEXT:    adds r6, r3, #4
 ; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    mvn r9, #1
-; CHECK-NEXT:    @ implicit-def: $r8
+; CHECK-NEXT:    mvn r8, #1
+; CHECK-NEXT:    @ implicit-def: $r9
 ; CHECK-NEXT:    @ implicit-def: $r4
 ; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB2_2: @ %while.body
@@ -181,10 +181,10 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    adds r4, r4, r1
 ; CHECK-NEXT:    adc.w r1, r2, r1, asr #31
 ; CHECK-NEXT:    adds.w r2, r4, #-2147483648
-; CHECK-NEXT:    ldrd r2, r4, [r9]
+; CHECK-NEXT:    ldrd r2, r4, [r8]
 ; CHECK-NEXT:    adc r5, r1, #0
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    smull r4, r2, r4, r8
+; CHECK-NEXT:    smull r4, r2, r4, r9
 ; CHECK-NEXT:    asrs r1, r5, #31
 ; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    subs r4, r5, r4
@@ -209,7 +209,7 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    asr.w r11, r5, #31
 ; CHECK-NEXT:    mov r12, r5
 ; CHECK-NEXT:    lsll r12, r11, r4
-; CHECK-NEXT:    mul r2, r2, r8
+; CHECK-NEXT:    mul r2, r2, r9
 ; CHECK-NEXT:    lsrl r12, r11, #2
 ; CHECK-NEXT:    adds r2, #2
 ; CHECK-NEXT:    lsll r12, r11, r2
@@ -219,9 +219,9 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    lsrl r10, r1, #2
 ; CHECK-NEXT:    movs r1, #2
-; CHECK-NEXT:    mov r8, r10
+; CHECK-NEXT:    mov r9, r10
 ; CHECK-NEXT:    str.w r10, [r1]
-; CHECK-NEXT:    ldr r1, [r9], #-4
+; CHECK-NEXT:    ldr r1, [r8], #-4
 ; CHECK-NEXT:    mls r5, r1, r4, r5
 ; CHECK-NEXT:    adds.w r4, r5, #-2147483648
 ; CHECK-NEXT:    asr.w r1, r5, #31
