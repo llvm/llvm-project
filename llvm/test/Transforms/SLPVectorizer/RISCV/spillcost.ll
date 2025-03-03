@@ -7,7 +7,9 @@ declare void @g()
 define void @f0(i1 %c, ptr %p, ptr %q) {
 ; CHECK-LABEL: define void @f0(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[P]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[C]], label %[[FOO:.*]], label %[[BAR:.*]]
 ; CHECK:       [[FOO]]:
 ; CHECK-NEXT:    call void @g()
@@ -20,7 +22,9 @@ define void @f0(i1 %c, ptr %p, ptr %q) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[BAZ]]
 ; CHECK:       [[BAZ]]:
-; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[Q]], align 8
+; CHECK-NEXT:    store i64 [[X0]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
+; CHECK-NEXT:    store i64 [[X1]], ptr [[Q1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %x0 = load i64, ptr %p
@@ -50,10 +54,13 @@ define void @f1(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: define void @f1(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
 ; CHECK-NEXT:    br i1 [[C]], label %[[FOO:.*]], label %[[BAR:.*]]
 ; CHECK:       [[FOO]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[TMP0]], splat (i64 1)
+; CHECK-NEXT:    [[Y0:%.*]] = add i64 [[X0]], 1
+; CHECK-NEXT:    [[Y1:%.*]] = add i64 [[X1]], 1
 ; CHECK-NEXT:    br label %[[BAZ:.*]]
 ; CHECK:       [[BAR]]:
 ; CHECK-NEXT:    call void @g()
@@ -61,8 +68,11 @@ define void @f1(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label %[[BAZ]]
 ; CHECK:       [[BAZ]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i64> [ [[TMP1]], %[[FOO]] ], [ [[TMP0]], %[[BAR]] ]
-; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[PHI0:%.*]] = phi i64 [ [[Y0]], %[[FOO]] ], [ [[X0]], %[[BAR]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ [[Y1]], %[[FOO]] ], [ [[X1]], %[[BAR]] ]
+; CHECK-NEXT:    store i64 [[PHI0]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
+; CHECK-NEXT:    store i64 [[PHI1]], ptr [[Q1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
