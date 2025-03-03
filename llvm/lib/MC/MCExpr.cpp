@@ -37,6 +37,9 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 } // end namespace stats
 } // end anonymous namespace
 
+// VariantKind printing and formatting utilize MAI. operator<< (dump and some
+// target code) specifies MAI as nullptr and should be avoided when MAI is
+// needed.
 void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   switch (getKind()) {
   case MCExpr::Target:
@@ -86,12 +89,12 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
     if (Kind != MCSymbolRefExpr::VK_None) {
-      if (MAI && MAI->useParensForSymbolVariant()) // ARM
+      if (!MAI) // should only be used by dump()
+        OS << "@<variant " << Kind << '>';
+      else if (MAI->useParensForSymbolVariant()) // ARM
         OS << '(' << MAI->getVariantKindName(Kind) << ')';
-      else if (MAI)
-        OS << '@' << MAI->getVariantKindName(Kind);
       else
-        OS << '@' << MCSymbolRefExpr::getVariantKindName(Kind);
+        OS << '@' << MAI->getVariantKindName(Kind);
     }
 
     return;
@@ -246,84 +249,6 @@ const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
 const MCSymbolRefExpr *MCSymbolRefExpr::create(StringRef Name, VariantKind Kind,
                                                MCContext &Ctx) {
   return create(Ctx.getOrCreateSymbol(Name), Kind, Ctx);
-}
-
-// TODO: Move target-specific Kinds to lib/Target/*/MCTargetDesc/*AsmInfo.cpp.
-StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
-  switch (Kind) {
-    // clang-format off
-  case VK_Invalid: default: return "<<invalid>>";
-  case VK_None: return "<<none>>";
-
-  case VK_DTPOFF: return "DTPOFF";
-  case VK_DTPREL: return "DTPREL";
-  case VK_GOT: return "GOT";
-  case VK_GOTENT: return "GOTENT";
-  case VK_GOTOFF: return "GOTOFF";
-  case VK_GOTREL: return "GOTREL";
-  case VK_PCREL: return "PCREL";
-  case VK_GOTPCREL: return "GOTPCREL";
-  case VK_GOTTPOFF: return "GOTTPOFF";
-  case VK_INDNTPOFF: return "INDNTPOFF";
-  case VK_NTPOFF: return "NTPOFF";
-  case VK_GOTNTPOFF: return "GOTNTPOFF";
-  case VK_PLT: return "PLT";
-  case VK_TLSGD: return "TLSGD";
-  case VK_TLSLD: return "TLSLD";
-  case VK_TLSLDM: return "TLSLDM";
-  case VK_TPOFF: return "TPOFF";
-  case VK_TPREL: return "TPREL";
-  case VK_TLSCALL: return "tlscall";
-  case VK_TLSDESC: return "tlsdesc";
-  case VK_TLVP: return "TLVP";
-  case VK_TLVPPAGE: return "TLVPPAGE";
-  case VK_TLVPPAGEOFF: return "TLVPPAGEOFF";
-  case VK_PAGE: return "PAGE";
-  case VK_PAGEOFF: return "PAGEOFF";
-  case VK_GOTPAGE: return "GOTPAGE";
-  case VK_GOTPAGEOFF: return "GOTPAGEOFF";
-  case VK_SECREL: return "SECREL32";
-  case VK_WEAKREF: return "WEAKREF";
-  case VK_COFF_IMGREL32: return "IMGREL";
-    // clang-format on
-  }
-  llvm_unreachable("Invalid variant kind");
-}
-
-// FIXME: All variant kinds are target-specific. Move them to
-// *AsmParser::getVariantKindForName and remove this function.
-MCSymbolRefExpr::VariantKind
-MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
-  return StringSwitch<VariantKind>(Name.lower())
-      .Case("dtprel", VK_DTPREL)
-      .Case("dtpoff", VK_DTPOFF)
-      .Case("got", VK_GOT)
-      .Case("gotent", VK_GOTENT)
-      .Case("gotoff", VK_GOTOFF)
-      .Case("gotrel", VK_GOTREL)
-      .Case("pcrel", VK_PCREL)
-      .Case("gotpcrel", VK_GOTPCREL)
-      .Case("gottpoff", VK_GOTTPOFF)
-      .Case("indntpoff", VK_INDNTPOFF)
-      .Case("ntpoff", VK_NTPOFF)
-      .Case("plt", VK_PLT)
-      .Case("tlscall", VK_TLSCALL)
-      .Case("tlsdesc", VK_TLSDESC)
-      .Case("tlsgd", VK_TLSGD)
-      .Case("tlsld", VK_TLSLD)
-      .Case("tlsldm", VK_TLSLDM)
-      .Case("tpoff", VK_TPOFF)
-      .Case("tprel", VK_TPREL)
-      .Case("tlvp", VK_TLVP)
-      .Case("tlvppage", VK_TLVPPAGE)
-      .Case("tlvppageoff", VK_TLVPPAGEOFF)
-      .Case("page", VK_PAGE)
-      .Case("pageoff", VK_PAGEOFF)
-      .Case("gotpage", VK_GOTPAGE)
-      .Case("gotpageoff", VK_GOTPAGEOFF)
-      .Case("imgrel", VK_COFF_IMGREL32)
-      .Case("secrel32", VK_SECREL)
-      .Default(VK_Invalid);
 }
 
 /* *** */
