@@ -129,7 +129,7 @@ CXString clang_TextComment_getText(CXComment CXC) {
   if (!TC)
     return cxstring::createNull();
 
-  return cxstring::createRef(TC->getText());
+  return cxstring::createDup(TC->getText());
 }
 
 CXString clang_InlineCommandComment_getCommandName(CXComment CXC) {
@@ -138,7 +138,7 @@ CXString clang_InlineCommandComment_getCommandName(CXComment CXC) {
     return cxstring::createNull();
 
   const CommandTraits &Traits = getCommandTraits(CXC);
-  return cxstring::createRef(ICC->getCommandName(Traits));
+  return cxstring::createDup(ICC->getCommandName(Traits));
 }
 
 enum CXCommentInlineCommandRenderKind
@@ -180,7 +180,7 @@ CXString clang_InlineCommandComment_getArgText(CXComment CXC,
   if (!ICC || ArgIdx >= ICC->getNumArgs())
     return cxstring::createNull();
 
-  return cxstring::createRef(ICC->getArgText(ArgIdx));
+  return cxstring::createDup(ICC->getArgText(ArgIdx));
 }
 
 CXString clang_HTMLTagComment_getTagName(CXComment CXC) {
@@ -188,7 +188,7 @@ CXString clang_HTMLTagComment_getTagName(CXComment CXC) {
   if (!HTC)
     return cxstring::createNull();
 
-  return cxstring::createRef(HTC->getTagName());
+  return cxstring::createDup(HTC->getTagName());
 }
 
 unsigned clang_HTMLStartTagComment_isSelfClosing(CXComment CXC) {
@@ -212,7 +212,7 @@ CXString clang_HTMLStartTag_getAttrName(CXComment CXC, unsigned AttrIdx) {
   if (!HST || AttrIdx >= HST->getNumAttrs())
     return cxstring::createNull();
 
-  return cxstring::createRef(HST->getAttr(AttrIdx).Name);
+  return cxstring::createDup(HST->getAttr(AttrIdx).Name);
 }
 
 CXString clang_HTMLStartTag_getAttrValue(CXComment CXC, unsigned AttrIdx) {
@@ -220,7 +220,7 @@ CXString clang_HTMLStartTag_getAttrValue(CXComment CXC, unsigned AttrIdx) {
   if (!HST || AttrIdx >= HST->getNumAttrs())
     return cxstring::createNull();
 
-  return cxstring::createRef(HST->getAttr(AttrIdx).Value);
+  return cxstring::createDup(HST->getAttr(AttrIdx).Value);
 }
 
 CXString clang_BlockCommandComment_getCommandName(CXComment CXC) {
@@ -229,7 +229,7 @@ CXString clang_BlockCommandComment_getCommandName(CXComment CXC) {
     return cxstring::createNull();
 
   const CommandTraits &Traits = getCommandTraits(CXC);
-  return cxstring::createRef(BCC->getCommandName(Traits));
+  return cxstring::createDup(BCC->getCommandName(Traits));
 }
 
 unsigned clang_BlockCommandComment_getNumArgs(CXComment CXC) {
@@ -246,7 +246,7 @@ CXString clang_BlockCommandComment_getArgText(CXComment CXC,
   if (!BCC || ArgIdx >= BCC->getNumArgs())
     return cxstring::createNull();
 
-  return cxstring::createRef(BCC->getArgText(ArgIdx));
+  return cxstring::createDup(BCC->getArgText(ArgIdx));
 }
 
 CXComment clang_BlockCommandComment_getParagraph(CXComment CXC) {
@@ -262,7 +262,7 @@ CXString clang_ParamCommandComment_getParamName(CXComment CXC) {
   if (!PCC || !PCC->hasParamName())
     return cxstring::createNull();
 
-  return cxstring::createRef(PCC->getParamNameAsWritten());
+  return cxstring::createDup(PCC->getParamNameAsWritten());
 }
 
 unsigned clang_ParamCommandComment_isParamIndexValid(CXComment CXC) {
@@ -313,7 +313,7 @@ CXString clang_TParamCommandComment_getParamName(CXComment CXC) {
   if (!TPCC || !TPCC->hasParamName())
     return cxstring::createNull();
 
-  return cxstring::createRef(TPCC->getParamNameAsWritten());
+  return cxstring::createDup(TPCC->getParamNameAsWritten());
 }
 
 unsigned clang_TParamCommandComment_isParamPositionValid(CXComment CXC) {
@@ -346,7 +346,7 @@ CXString clang_VerbatimBlockLineComment_getText(CXComment CXC) {
   if (!VBL)
     return cxstring::createNull();
 
-  return cxstring::createRef(VBL->getText());
+  return cxstring::createDup(VBL->getText());
 }
 
 CXString clang_VerbatimLineComment_getText(CXComment CXC) {
@@ -354,7 +354,7 @@ CXString clang_VerbatimLineComment_getText(CXComment CXC) {
   if (!VLC)
     return cxstring::createNull();
 
-  return cxstring::createRef(VLC->getText());
+  return cxstring::createDup(VLC->getText());
 }
 
 //===----------------------------------------------------------------------===//
