@@ -31,6 +31,190 @@ bb:
   ret double %rfl
 }
 
+; test casts
+
+define i32 @hoist_trunc(i64 %arg) {
+; CHECK-LABEL: define i32 @hoist_trunc(
+; CHECK-SAME: i64 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i64 @llvm.amdgcn.readfirstlane.i64(i64 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[RFL]] to i32
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+bb:
+  %val = trunc i64 %arg to i32
+  %rfl = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %val)
+  ret i32 %rfl
+}
+
+define i64 @hoist_zext(i32 %arg) {
+; CHECK-LABEL: define i64 @hoist_zext(
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[RFL]] to i64
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+bb:
+  %val = zext i32 %arg to i64
+  %rfl = call i64 @llvm.amdgcn.readfirstlane.i64(i64 %val)
+  ret i64 %rfl
+}
+
+define i64 @hoist_sext(i32 %arg) {
+; CHECK-LABEL: define i64 @hoist_sext(
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[RFL]] to i64
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+bb:
+  %val = zext i32 %arg to i64
+  %rfl = call i64 @llvm.amdgcn.readfirstlane.i64(i64 %val)
+  ret i64 %rfl
+}
+
+define i32 @hoist_fptoui(float %arg) {
+; CHECK-LABEL: define i32 @hoist_fptoui(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = fptoui float [[RFL]] to i32
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+bb:
+  %val = fptoui float %arg to i32
+  %rfl = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %val)
+  ret i32 %rfl
+}
+
+define i32 @hoist_fptosi(float %arg) {
+; CHECK-LABEL: define i32 @hoist_fptosi(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call float @llvm.amdgcn.readfirstlane.f32(float [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = fptosi float [[RFL]] to i32
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+bb:
+  %val = fptosi float %arg to i32
+  %rfl = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %val)
+  ret i32 %rfl
+}
+
+define float @hoist_uitofp(i32 %arg) {
+; CHECK-LABEL: define float @hoist_uitofp(
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = uitofp i32 [[RFL]] to float
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+bb:
+  %val = uitofp i32 %arg to float
+  %rfl = call float @llvm.amdgcn.readfirstlane.f32(float %val)
+  ret float %rfl
+}
+
+define float @hoist_sitofp(i32 %arg) {
+; CHECK-LABEL: define float @hoist_sitofp(
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = sitofp i32 [[RFL]] to float
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+bb:
+  %val = sitofp i32 %arg to float
+  %rfl = call float @llvm.amdgcn.readfirstlane.f32(float %val)
+  ret float %rfl
+}
+
+define float @hoist_fptrunc(double %arg) {
+; CHECK-LABEL: define float @hoist_fptrunc(
+; CHECK-SAME: double [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = fptrunc double [[RFL]] to float
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+bb:
+  %val = fptrunc double %arg to float
+  %rfl = call float @llvm.amdgcn.readfirstlane.f32(float %val)
+  ret float %rfl
+}
+
+define float @hoist_fpext(half %arg) {
+; CHECK-LABEL: define float @hoist_fpext(
+; CHECK-SAME: half [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call half @llvm.amdgcn.readfirstlane.f16(half [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = fpext half [[RFL]] to float
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+bb:
+  %val = fpext half %arg to float
+  %rfl = call float @llvm.amdgcn.readfirstlane.f32(float %val)
+  ret float %rfl
+}
+
+define i64 @hoist_ptrtoint(ptr %arg) {
+; CHECK-LABEL: define i64 @hoist_ptrtoint(
+; CHECK-SAME: ptr [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[RFL]] to i64
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+bb:
+  %val = ptrtoint ptr %arg to i64
+  %rfl = call i64 @llvm.amdgcn.readfirstlane.i64(i64 %val)
+  ret i64 %rfl
+}
+
+define ptr @hoist_inttoptr(i64 %arg) {
+; CHECK-LABEL: define ptr @hoist_inttoptr(
+; CHECK-SAME: i64 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i64 @llvm.amdgcn.readfirstlane.i64(i64 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[RFL]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP0]]
+;
+bb:
+  %val = inttoptr i64 %arg to ptr
+  %rfl = call ptr @llvm.amdgcn.readfirstlane.p0(ptr %val)
+  ret ptr %rfl
+}
+
+define float @hoist_bitcast(i32 %arg) {
+; CHECK-LABEL: define float @hoist_bitcast(
+; CHECK-SAME: i32 [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RFL]] to float
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+bb:
+  %val = bitcast i32 %arg to float
+  %rfl = call float @llvm.amdgcn.readfirstlane.f32(float %val)
+  ret float %rfl
+}
+
+define ptr addrspace(1) @hoist_addrspacecast(ptr addrspace(0) %arg) {
+; CHECK-LABEL: define ptr addrspace(1) @hoist_addrspacecast(
+; CHECK-SAME: ptr [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call ptr @llvm.amdgcn.readfirstlane.p0(ptr [[ARG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[RFL]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[TMP0]]
+;
+bb:
+  %val = addrspacecast ptr addrspace(0) %arg to ptr addrspace(1)
+  %rfl = call ptr addrspace(1) @llvm.amdgcn.readfirstlane.p1(ptr addrspace(1) %val)
+  ret ptr addrspace(1) %rfl
+}
+
 ; test binary i32
 
 define i32 @hoist_add_i32(i32 %arg) {

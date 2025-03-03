@@ -16,8 +16,8 @@ define float @hoist_fneg_f32(float %arg, i32 %lane) {
 ;
 bb:
   %val = fneg float %arg
-  %rfl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
-  ret float %rfl
+  %rl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
+  ret float %rl
 }
 
 define double @hoist_fneg_f64(double %arg, i32 %lane) {
@@ -30,8 +30,38 @@ define double @hoist_fneg_f64(double %arg, i32 %lane) {
 ;
 bb:
   %val = fneg double %arg
-  %rfl = call double @llvm.amdgcn.readlane.f64(double %val, i32 %lane)
-  ret double %rfl
+  %rl = call double @llvm.amdgcn.readlane.f64(double %val, i32 %lane)
+  ret double %rl
+}
+
+; test casts
+
+define i32 @hoist_trunc(i64 %arg, i32 %lane) {
+; CHECK-LABEL: define i32 @hoist_trunc(
+; CHECK-SAME: i64 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i64 @llvm.amdgcn.readlane.i64(i64 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[RFL]] to i32
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+bb:
+  %val = trunc i64 %arg to i32
+  %rl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
+  ret i32 %rl
+}
+
+define i64 @hoist_zext(i32 %arg, i32 %lane) {
+; CHECK-LABEL: define i64 @hoist_zext(
+; CHECK-SAME: i32 [[ARG:%.*]], i32 [[LANE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[BB:.*:]]
+; CHECK-NEXT:    [[RFL:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG]], i32 [[LANE]])
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[RFL]] to i64
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+bb:
+  %val = zext i32 %arg to i64
+  %rl = call i64 @llvm.amdgcn.readlane.i64(i64 %val, i32 %lane)
+  ret i64 %rl
 }
 
 ; test binary i32
@@ -46,8 +76,8 @@ define i32 @hoist_add_i32(i32 %arg, i32 %lane) {
 ;
 bb:
   %val = add i32 %arg, 16777215
-  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
-  ret i32 %rfl
+  %rl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
+  ret i32 %rl
 }
 
 define float @hoist_fadd_f32(float %arg, i32 %lane) {
@@ -60,8 +90,8 @@ define float @hoist_fadd_f32(float %arg, i32 %lane) {
 ;
 bb:
   %val = fadd float %arg, 128.0
-  %rfl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
-  ret float %rfl
+  %rl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
+  ret float %rl
 }
 
 ; test binary i64
@@ -76,8 +106,8 @@ define i64 @hoist_and_i64(i64 %arg, i32 %lane) {
 ;
 bb:
   %val = and i64 %arg, 16777215
-  %rfl = call i64 @llvm.amdgcn.readlane.i32(i64 %val, i32 %lane)
-  ret i64 %rfl
+  %rl = call i64 @llvm.amdgcn.readlane.i32(i64 %val, i32 %lane)
+  ret i64 %rl
 }
 
 define double @hoist_fadd_f64(double %arg, i32 %lane) {
@@ -90,8 +120,8 @@ define double @hoist_fadd_f64(double %arg, i32 %lane) {
 ;
 bb:
   %val = fadd double %arg, 128.0
-  %rfl = call double @llvm.amdgcn.readlane.f64(double %val, i32 %lane)
-  ret double %rfl
+  %rl = call double @llvm.amdgcn.readlane.f64(double %val, i32 %lane)
+  ret double %rl
 }
 
 ; test constant on LHS
@@ -106,8 +136,8 @@ define i32 @hoist_sub_i32_lhs(i32 %arg, i32 %lane) {
 ;
 bb:
   %val = sub i32 16777215, %arg
-  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
-  ret i32 %rfl
+  %rl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
+  ret i32 %rl
 }
 
 define float @hoist_fsub_f32_lhs(float %arg, i32 %lane) {
@@ -120,8 +150,8 @@ define float @hoist_fsub_f32_lhs(float %arg, i32 %lane) {
 ;
 bb:
   %val = fsub float 128.0, %arg
-  %rfl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
-  ret float %rfl
+  %rl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
+  ret float %rl
 }
 
 ; Check cases where we can't move the readlane higher
@@ -138,8 +168,8 @@ define float @cannot_move_readlane(float %arg, i32 %base) {
 bb:
   %val = fsub float 128.0, %arg
   %lane = add i32 %base, 2
-  %rfl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
-  ret float %rfl
+  %rl = call float @llvm.amdgcn.readlane.f32(float %val, i32 %lane)
+  ret float %rl
 }
 
 define i32 @readlane_lane_op_in_other_block(i1 %cond, i32 %arg, i32 %base) {
@@ -162,11 +192,11 @@ bb:
 
 then:
   %val = add i32 %arg, 16777215
-  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
+  %rl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane)
   br label %end
 
 end:
-  %res = phi i32 [%rfl, %then], [%lane, %bb]
+  %res = phi i32 [%rl, %then], [%lane, %bb]
   ret i32 %res
 }
 
@@ -192,10 +222,10 @@ bb:
 
 then:
   %val = add i32 %arg, 16777215
-  %rfl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane) [ "convergencectrl"(token %entry)]
+  %rl = call i32 @llvm.amdgcn.readlane.i32(i32 %val, i32 %lane) [ "convergencectrl"(token %entry)]
   br label %end
 
 end:
-  %res = phi i32 [%rfl, %then], [%arg, %bb]
+  %res = phi i32 [%rl, %then], [%arg, %bb]
   ret i32 %res
 }
