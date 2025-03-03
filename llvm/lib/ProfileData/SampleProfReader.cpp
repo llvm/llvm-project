@@ -826,6 +826,9 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
                                        SampleProfileMap &Profiles) {
+  if (FuncsToUse.empty())
+    return sampleprof_error::success;
+
   Data = ProfileSecRange.first;
   End = ProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
