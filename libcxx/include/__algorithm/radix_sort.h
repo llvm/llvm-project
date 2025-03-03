@@ -381,15 +381,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Floating __f) {
   return static_cast<__integral_type>(__u & __sign_bit_mask ? ~__u : __u ^ __sign_bit_mask);
 }
 
+// There may exist user-defined comparison for enum, so we cannot compare enums just like integers.
 template <class _Enum, enable_if_t< is_enum<_Enum>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Enum __e) {
-  return static_cast<std::underlying_type_t<_Enum>>(__e);
-}
-
-template <class _Pointer>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Pointer* __ptr) {
-  return std::__bit_cast<__unsigned_representation_for_t<_Pointer*>>(__ptr);
-}
+_LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Enum __e) = delete;
 
 struct __low_byte_fn {
   template <class _Ip>

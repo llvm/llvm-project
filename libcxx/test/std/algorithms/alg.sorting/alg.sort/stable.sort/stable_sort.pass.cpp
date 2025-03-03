@@ -225,10 +225,31 @@ bool test_floating() {
   return test<T>() && test_floating_special_values<T>();
 }
 
+enum struct Enum : int { a, b, c, d, e, f, g, h };
+TEST_CONSTEXPR_CXX26 bool operator<(Enum x, Enum y) { return static_cast<int>(x) > static_cast<int>(y); }
+
+TEST_CONSTEXPR_CXX26 bool test_enum() {
+  auto v = std::vector<Enum>(128, Enum::a);
+  v.resize(v.size() + 128, Enum::b);
+  v.resize(v.size() + 128, Enum::c);
+  v.resize(v.size() + 128, Enum::d);
+  v.resize(v.size() + 128, Enum::e);
+  v.resize(v.size() + 128, Enum::f);
+  v.resize(v.size() + 128, Enum::g);
+  v.resize(v.size() + 128, Enum::h);
+
+  // Order is reversed by definition
+  std::stable_sort(v.begin(), v.end());
+  assert(std::is_sorted(v.begin(), v.end()));
+
+  return true;
+}
+
 int main(int, char**) {
   test<int>();
   test_floating<float>();
   test_floating<double>();
+  test_enum();
 #if TEST_STD_VER >= 26
   static_assert(test<int>());
   static_assert(test<float>());
