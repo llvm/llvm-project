@@ -496,4 +496,52 @@ signature and passed to the shader without requiring a constant buffer resource:
 #. **RegisterSpace**: The register space used for the binding.
 #. **Num32BitValues**: The number of 32-bit values included in this constant buffer.
 
-Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
+Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead 
+of creating and binding a constant buffer resource.
+
+Root Descriptor
+~~~~~~~~~~~~~~
+
+Root descriptors provide a direct mechanism for binding individual resources to shader stages in the Direct3D 12 
+rendering pipeline. They represent a critical interface for efficient resource management, allowing applications 
+to specify how shader stages access specific GPU resources.
+
+.. code-block:: cpp
+
+   // Version 1.0 Root Descriptor
+   struct RootDescriptor_V1_0 {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;
+   };
+   
+   // Version 1.1 Root Descriptor
+   struct RootDescriptor_V1_1 {
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;
+      // New flags for Version 1.1
+      enum Flags {
+        None                = 0x0,
+        DATA_STATIC         = 0x1,
+        DATA_STATIC_WHILE_SET_AT_EXECUTE = 0x2,
+        DATA_VOLATILE       = 0x4
+      };
+      
+      // Bitfield of flags from the Flags enum
+      uint32_t Flags;
+   };
+
+The Root Descriptor structure has evolved to support two versions, providing enhanced flexibility and 
+performance optimization capabilities.
+
+Version 1.0 Root Descriptor
+'''''''''''''''''''''''''''
+The Version 1.0 RootDescriptor_V1_0 provides basic resource binding:
+
+#. **ShaderRegister**: The shader register where the descriptor is bound.
+#. **RegisterSpace**: The register space used for the binding.
+
+Version 1.1 Root Descriptor
+'''''''''''''''''''''''''''
+The Version 1.1 RootDescriptor_V1_1 extends the base structure with the following additional fields:
+
+#. **Flags**: Provides additional metadata about the descriptor's usage pattern.
