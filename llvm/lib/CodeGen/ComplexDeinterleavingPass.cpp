@@ -61,6 +61,7 @@
 
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -273,6 +274,13 @@ private:
   /// %OutsideUser can be `llvm.vector.reduce.fadd` or `fadd` preceding
   /// `llvm.vector.reduce.fadd` when unroll factor isn't one.
   MapVector<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
+
+  /// In the case of reductions in unrolled loops, the %OutsideUser from
+  /// ReductionInfo is an add instruction that precedes the reduction.
+  /// UnrollInfo pairs values together if they are both operands of the same
+  /// add. This pairing info is then used to add the resulting complex
+  /// operations together before the final reduction.
+  MapVector<Value *, Value *> UnrollInfo;
 
   /// In the process of detecting a reduction, we consider a pair of
   /// %ReductionOP, which we refer to as real and imag (or vice versa), and
@@ -2253,8 +2261,31 @@ void ComplexDeinterleavingGraph::processReductionSingle(
   auto *FinalReduction = ReductionInfo[Real].second;
   Builder.SetInsertPoint(&*FinalReduction->getParent()->getFirstInsertionPt());
 
-  auto *AddReduce = Builder.CreateAddReduce(OperationReplacement);
+  Value *Other;
+  bool EraseFinalReductionHere = false;
+  if (match(FinalReduction, m_c_Add(m_Specific(Real), m_Value(Other)))) {
+    UnrollInfo[Real] = OperationReplacement;
+    if (!UnrollInfo.contains(Other) || !FinalReduction->hasOneUser())
+      return;
+
+    auto *User = *FinalReduction->user_begin();
+    if (!match(User, m_Intrinsic<Intrinsic::vector_reduce_add>()))
+      return;
+
+    FinalReduction = cast<Instruction>(User);
+    Builder.SetInsertPoint(FinalReduction);
+    OperationReplacement =
+        Builder.CreateAdd(OperationReplacement, UnrollInfo[Other]);
+
+    UnrollInfo.erase(Real);
+    UnrollInfo.erase(Other);
+    EraseFinalReductionHere = true;
+  }
+
+  Value *AddReduce = Builder.CreateAddReduce(OperationReplacement);
   FinalReduction->replaceAllUsesWith(AddReduce);
+  if (EraseFinalReductionHere)
+    FinalReduction->eraseFromParent();
 }
 
 void ComplexDeinterleavingGraph::processReductionOperation(
@@ -2299,7 +2330,7 @@ void ComplexDeinterleavingGraph::processReductionOperation(
 }
 
 void ComplexDeinterleavingGraph::replaceNodes() {
-  SmallVector<Instruction *, 16> DeadInstrRoots;
+  SmallSetVector<Instruction *, 16> DeadInstrRoots;
   for (auto *RootInstruction : OrderedRoots) {
     // Check if this potential root went through check process and we can
     // deinterleave it
@@ -2316,20 +2347,25 @@ void ComplexDeinterleavingGraph::replaceNodes() {
       auto *RootImag = cast<Instruction>(RootNode->Imag);
       ReductionInfo[RootReal].first->removeIncomingValue(BackEdge);
       ReductionInfo[RootImag].first->removeIncomingValue(BackEdge);
-      DeadInstrRoots.push_back(RootReal);
-      DeadInstrRoots.push_back(RootImag);
+      DeadInstrRoots.insert(RootReal);
+      DeadInstrRoots.insert(RootImag);
     } else if (RootNode->Operation ==
                ComplexDeinterleavingOperation::ReductionSingle) {
       auto *RootInst = cast<Instruction>(RootNode->Real);
       ReductionInfo[RootInst].first->removeIncomingValue(BackEdge);
-      DeadInstrRoots.push_back(ReductionInfo[RootInst].second);
+      DeadInstrRoots.insert(ReductionInfo[RootInst].second);
     } else {
       assert(R && "Unable to find replacement for RootInstruction");
-      DeadInstrRoots.push_back(RootInstruction);
+      DeadInstrRoots.insert(RootInstruction);
       RootInstruction->replaceAllUsesWith(R);
     }
   }
 
+  assert(UnrollInfo.empty() &&
+         "UnrollInfo should be empty after replacing all nodes");
+
+  for (auto *I : DeadInstrRoots)
+    dbgs() << "Dead Instr Root: " << *I << "\n";
   for (auto *I : DeadInstrRoots)
     RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
 }
