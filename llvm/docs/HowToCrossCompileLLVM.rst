@@ -177,21 +177,27 @@ a general solution.
 Testing the just-built compiler
 -------------------------------
 
-Assuming you have ``qemu-user`` installed you can test the produced target
-binaries either by relying on binfmt_misc (as was necessary for debootstrap)
-or invoking ``qemu-{tgt}-static`` directly. For instance, to first check the
-type of executable and then run ``clang --version`` both ways:
+Confirm the ``clang`` binary was built for the expected target architecture:
 
    .. code-block:: bash
 
     $ file -L ./build/aarch64-linux-gnu/bin/clang
     ./build/aarch64-linux-gnu/bin/clang: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[sha1]=516b8b366a790fcd3563bee4aec0cdfcb90bb1c7, not stripped
 
+If you have ``qemu-user`` installed you can test the produced target binary
+either by invoking ``qemu-{target}-static`` directly:
+
+   .. code-block:: bash
+
     $ qemu-aarch64-static -L $SYSROOT ./build/aarch64-linux-gnu/bin/clang --version
     clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
     Target: aarch64-unknown-linux-gnu
     Thread model: posix
     InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
+
+Or, if binfmt_misc is configured (as was necessary for debootstrap):
+
+   .. code-block:: bash
 
     $ export QEMU_LD_PREFIX=$SYSROOT; ./build/aarch64-linux-gnu/bin/clang --version
     clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
