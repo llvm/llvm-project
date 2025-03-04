@@ -1,0 +1,18 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @aaaa : !cir.int<s, 32>
+  cir.global internal @bbbb : !cir.int<s, 32>
+  cir.global linkonce_odr @cccc : !cir.int<s, 32>
+  cir.global internal @ffff = #cir.int<0> : !cir.int<s, 32>
+  cir.global weak_odr @dddd : !cir.int<s, 32>
+}
+
+// CHECK: module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+// CHECK:   cir.global external @aaaa : !cir.int<s, 32>
+// CHECK:   cir.global internal @bbbb : !cir.int<s, 32>
+// CHECK:   cir.global linkonce_odr @cccc : !cir.int<s, 32>
+// CHECK:   cir.global internal @ffff = #cir.int<0> : !cir.int<s, 32>
+// CHECK:   cir.global weak_odr @dddd : !cir.int<s, 32>
+// CHECK: }
