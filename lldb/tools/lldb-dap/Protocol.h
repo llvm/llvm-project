@@ -204,8 +204,8 @@ struct ErrorMessage {
   uint64_t id;
   std::string format;
   std::optional<std::map<std::string, std::string>> variables;
-  std::optional<bool> sendTelemetry;
-  std::optional<bool> showUser;
+  bool sendTelemetry;
+  bool showUser;
   std::optional<std::string> url;
   std::optional<std::string> urlLabel;
 };

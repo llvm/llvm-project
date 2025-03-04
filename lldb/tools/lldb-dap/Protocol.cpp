@@ -182,10 +182,10 @@ json::Value toJSON(const ErrorMessage &EM) {
       variables[var.first] = var.second;
     Result.insert({"variables", std::move(variables)});
   }
-  if (EM.sendTelemetry && *EM.sendTelemetry)
-    Result.insert({"sendTelemetry", *EM.sendTelemetry});
-  if (EM.showUser && *EM.showUser)
-    Result.insert({"showUser", *EM.showUser});
+  if (EM.sendTelemetry)
+    Result.insert({"sendTelemetry", EM.sendTelemetry});
+  if (EM.showUser)
+    Result.insert({"showUser", EM.showUser});
   if (EM.url)
     Result.insert({"url", EM.url});
   if (EM.urlLabel)
