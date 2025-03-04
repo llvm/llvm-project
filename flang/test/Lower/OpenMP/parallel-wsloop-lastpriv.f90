@@ -21,7 +21,7 @@ subroutine omp_do_lastprivate(a)
   ! CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_lastprivateEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_lastprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-  ! CHECK-NEXT: fir.store %[[ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK:      %[[NEXT_ARG1:.*]] = arith.addi %[[ARG1]], %[[STEP]] : i32
   ! CHECK:      %[[ZERO:.*]] = arith.constant 0 : i32
@@ -65,7 +65,7 @@ subroutine omp_do_lastprivate2(a, n)
   ! CHECK: %[[N_PVT_DECL:.*]]:2 = hlfir.declare %[[N_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-  ! CHECK: fir.store %[[ARG2]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[ARG2]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK: %[[NEXT_ARG2:.*]] = arith.addi %[[ARG2]], %[[STEP]] : i32
   ! CHECK: %[[ZERO:.*]] = arith.constant 0 : i32
@@ -109,8 +109,8 @@ subroutine omp_do_lastprivate_collapse2(a)
   ! CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-  ! CHECK-NEXT: fir.store %[[ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK-NEXT: fir.store %[[ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG2]] to %[[J_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK:      %[[NEXT_ARG1:.*]] = arith.addi %[[ARG1]], %[[STEP1]] : i32
   ! CHECK:      %[[ZERO1:.*]] = arith.constant 0 : i32
@@ -169,9 +169,9 @@ subroutine omp_do_lastprivate_collapse3(a)
   ! CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[K_PVT_DECL:.*]]:2 = hlfir.declare %[[K_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-  ! CHECK-NEXT: fir.store %[[ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK-NEXT: fir.store %[[ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK-NEXT: fir.store %[[ARG3]] to %[[K_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG2]] to %[[J_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG3]] to %[[K_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK:      %[[NEXT_ARG1:.*]] = arith.addi %[[ARG1]], %[[STEP1]] : i32
   ! CHECK:      %[[ZERO1:.*]] = arith.constant 0 : i32
