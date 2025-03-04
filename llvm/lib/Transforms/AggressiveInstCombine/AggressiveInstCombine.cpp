@@ -991,7 +991,7 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
 // poison values, attempt to shrink the load to only the lanes being used.
 static bool shrinkLoadsForBroadcast(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
-  if (!OldLoad)
+  if (!OldLoad || !OldLoad->isSimple())
     return false;
 
   auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
