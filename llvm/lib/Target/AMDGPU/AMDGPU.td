@@ -2100,10 +2100,6 @@ def HasPermlane32Swap :
   Predicate<"Subtarget->hasPermlane32Swap()">,
   AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
 
-def isGFX940Only :
-  Predicate<"Subtarget->hasGFX940Insts() && !Subtarget->hasGFX950Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX940Insts, (not FeatureGFX950Insts))>;
-
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
             "(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
