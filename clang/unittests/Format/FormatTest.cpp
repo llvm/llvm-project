@@ -4642,6 +4642,9 @@ TEST_F(FormatTest, FormatsExternC) {
                "  int i = 42;\n"
                "  return i;\n"
                "}");
+  verifyFormat(
+      "extern \"C\" char const *const\n"
+      "    OpenCL_source_OpenCLRunTime_test_attribute_opencl_unroll_hint;");
 
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -6829,6 +6832,11 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "                  param3) {\n"
                "  f();\n"
                "}");
+
+  verifyFormat("#ifdef __cplusplus\n"
+               "extern \"C\"\n"
+               "#endif\n"
+               "    void f();");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -8292,31 +8300,40 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
                Style);
 
   Style.ColumnLimit = 0;
-  verifyFormat("SomeClass::Constructor() :\n"
-               "    a(a) {}",
-               Style);
-  verifyFormat("SomeClass::Constructor() noexcept :\n"
-               "    a(a) {}",
-               Style);
-  verifyFormat("SomeClass::Constructor() :\n"
-               "    a(a), b(b), c(c) {}",
-               Style);
-  verifyFormat("SomeClass::Constructor() :\n"
-               "    a(a) {\n"
-               "  foo();\n"
-               "  bar();\n"
-               "}",
+  verifyNoChange("SomeClass::Constructor() :\n"
+                 "    a(a) {}",
+                 Style);
+  verifyNoChange("SomeClass::Constructor() noexcept :\n"
+                 "    a(a) {}",
+                 Style);
+  verifyNoChange("SomeClass::Constructor() :\n"
+                 "    a(a), b(b), c(c) {}",
+                 Style);
+  verifyNoChange("SomeClass::Constructor() :\n"
+                 "    a(a) {\n"
+                 "  foo();\n"
+                 "  bar();\n"
+                 "}",
+                 Style);
+  verifyFormat("struct Foo {\n"
+               "  int x;\n"
+               "  Foo() : x(0) {}\n"
+               "};",
+               "struct Foo {\n"
+               "  int x;\n"
+               "  Foo():x(0) {}\n"
+               "};",
                Style);
 
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
-  verifyFormat("SomeClass::Constructor() :\n"
-               "    a(a), b(b), c(c) {\n"
-               "}",
-               Style);
-  verifyFormat("SomeClass::Constructor() :\n"
-               "    a(a) {\n"
-               "}",
-               Style);
+  verifyNoChange("SomeClass::Constructor() :\n"
+                 "    a(a), b(b), c(c) {\n"
+                 "}",
+                 Style);
+  verifyNoChange("SomeClass::Constructor() :\n"
+                 "    a(a) {\n"
+                 "}",
+                 Style);
 
   Style.ColumnLimit = 80;
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
@@ -8527,6 +8544,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator<<(\n"
       "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1);");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaa\n"
@@ -8539,6 +8557,9 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                      "aaaaaaaaaaaaaaaaaaaaaaa<T>::aaaaaaaaaaaaa(\n"
                      "    aaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa);");
+
+  verifyFormat("extern \"C\" //\n"
+               "    void f();");
 
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -12604,6 +12625,9 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa __attribute__((unused))\n"
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
+  verifyFormat(
+      "RenderWidgetHostViewCocoa *\n"
+      "    __attribute__((objc_precise_lifetime)) keepSelfAlive = self;");
   FormatStyle AfterType = getLLVMStyle();
   AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"
@@ -18063,9 +18087,11 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
-  verifyFormat("xor = foo;");
 
-  FormatStyle Spaces = getLLVMStyle();
+  auto Spaces = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("xor = foo;", Spaces);
+
+  Spaces.Language = FormatStyle::LK_Cpp;
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);
@@ -24962,6 +24988,7 @@ TEST_F(FormatTest, StructuredBindings) {
 }
 
 TEST_F(FormatTest, FileAndCode) {
+  EXPECT_EQ(FormatStyle::LK_C, guessLanguage("foo.c", ""));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.cc", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.m", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.mm", ""));
@@ -25125,6 +25152,18 @@ TEST_F(FormatTest, GuessLanguageWithChildLines) {
   EXPECT_EQ(
       FormatStyle::LK_ObjC,
       guessLanguage("foo.h", "#define FOO ({ foo(); ({ NSString *s; }) })"));
+}
+
+TEST_F(FormatTest, GetLanguageByComment) {
+  EXPECT_EQ(FormatStyle::LK_C,
+            guessLanguage("foo.h", "// clang-format Language: C\n"
+                                   "int i;"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "// clang-format Language: Cpp\n"
+                                   "int DoStuff(CGRect rect);"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "// clang-format Language: ObjC\n"
+                                   "int i;"));
 }
 
 TEST_F(FormatTest, TypenameMacros) {
@@ -29026,6 +29065,11 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
                "int a = 1;\n"
                "}}",
                Style);
+}
+
+TEST_F(FormatTest, BreakBeforeClassName) {
+  verifyFormat("class ABSL_ATTRIBUTE_TRIVIAL_ABI ABSL_NULLABILITY_COMPATIBLE\n"
+               "    ArenaSafeUniquePtr {};");
 }
 
 } // namespace

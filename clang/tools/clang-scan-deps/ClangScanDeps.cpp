@@ -298,12 +298,14 @@ public:
     };
     if (llvm::sys::ExecuteAndWait(ClangBinaryPath, PrintResourceDirArgs, {},
                                   Redirects)) {
-      auto ErrorBuf = llvm::MemoryBuffer::getFile(ErrorFile.c_str());
+      auto ErrorBuf =
+          llvm::MemoryBuffer::getFile(ErrorFile.c_str(), /*IsText=*/true);
       llvm::errs() << ErrorBuf.get()->getBuffer();
       return "";
     }
 
-    auto OutputBuf = llvm::MemoryBuffer::getFile(OutputFile.c_str());
+    auto OutputBuf =
+        llvm::MemoryBuffer::getFile(OutputFile.c_str(), /*IsText=*/true);
     if (!OutputBuf)
       return "";
     StringRef Output = OutputBuf.get()->getBuffer().rtrim('\n');
@@ -1032,7 +1034,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;
         if (!TranslationUnitFile.empty()) {
-          auto MaybeTU = llvm::MemoryBuffer::getFile(TranslationUnitFile);
+          auto MaybeTU =
+              llvm::MemoryBuffer::getFile(TranslationUnitFile, /*IsText=*/true);
           if (!MaybeTU) {
             llvm::errs() << "cannot open input translation unit: "
                          << MaybeTU.getError().message() << "\n";

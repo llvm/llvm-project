@@ -252,7 +252,7 @@ private:
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
-  bool promoteAllocas(Function &F);
+  bool promoteAllocas();
 };
 
 } // end anonymous namespace
@@ -5693,7 +5693,7 @@ bool SROA::deleteDeadInstructions(
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
 /// This function returns whether any promotion occurred.
-bool SROA::promoteAllocas(Function &F) {
+bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
@@ -5750,7 +5750,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
       }
     }
 
-    Changed |= promoteAllocas(F);
+    Changed |= promoteAllocas();
 
     Worklist = PostPromotionWorklist;
     PostPromotionWorklist.clear();

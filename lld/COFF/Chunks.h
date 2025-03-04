@@ -910,16 +910,17 @@ private:
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.
 class AbsolutePointerChunk : public NonSectionChunk {
 public:
-  AbsolutePointerChunk(COFFLinkerContext &ctx, uint64_t value)
-      : value(value), ctx(ctx) {
+  AbsolutePointerChunk(SymbolTable &symtab, uint64_t value)
+      : value(value), symtab(symtab) {
     setAlignment(getSize());
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override;
 
 private:
   uint64_t value;
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 };
 
 // Return true if this file has the hotpatch flag set to true in the S_COMPILE3

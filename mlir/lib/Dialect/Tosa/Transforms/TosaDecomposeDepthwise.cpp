@@ -48,6 +48,25 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return failure();
     }
 
+    Type inputETy = inputType.getElementType();
+    Type weightETy = weightType.getElementType();
+    if (!inputETy.isIntOrFloat() || !weightETy.isIntOrFloat())
+      return rewriter.notifyMatchFailure(op, "unsupported type");
+
+    // Get and verify zero points.
+    int64_t iZp;
+    int64_t wZp;
+
+    if (op.getInputZeroPoint(iZp).failed() ||
+        op.getWeightZeroPoint(wZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "bail out if zero points cannot statically be determined");
+
+    if (op.verifyInputZeroPoint(iZp).failed() ||
+        op.verifyWeightZeroPoint(wZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "zero point must be zero for non-int8 integer types");
+
     // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
     ArrayRef<int64_t> inputShape = inputType.getShape();
     llvm::SmallVector<int64_t, 2> revisedInputShape{
@@ -62,8 +81,6 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                          revisedInputShapeValue)
                 .getResult();
 
-    Type inputETy = inputType.getElementType();
-    Type weightETy = weightType.getElementType();
     Type resultETy = resultType.getElementType();
 
     if (inputETy != resultETy) {
@@ -76,12 +93,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
     }
 
-    auto failureOrMaybeZps = extractConvZpPair(op, rewriter);
-    if (failed(failureOrMaybeZps))
-      return failure();
+    if (iZp != 0 || wZp != 0) {
 
-    auto maybeZps = failureOrMaybeZps.value();
-    if (maybeZps) {
       auto applyZp = [&](Value val, int64_t zp) -> Value {
         if (zp == 0)
           return val;
@@ -96,8 +109,8 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                                             zpVal);
       };
 
-      input = applyZp(input, maybeZps->inputZp);
-      weight = applyZp(weight, maybeZps->weightZp);
+      input = applyZp(input, iZp);
+      weight = applyZp(weight, wZp);
     }
 
     ArrayRef<int64_t> padAttr = op.getPad();
@@ -117,7 +130,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
 
       Value padSizeVal = getTosaConstShape(rewriter, op->getLoc(), pad);
 
-      auto padTy = RankedTensorType::get({}, inputETy);
+      auto padTy = RankedTensorType::get({1}, inputETy);
       auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
       Value padVal =
           rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);

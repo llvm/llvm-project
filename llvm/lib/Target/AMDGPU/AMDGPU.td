@@ -1040,12 +1040,6 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
-def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
-  "HasForceStoreSC0SC1",
-  "true",
-  "Has SC0 and SC1 on stores"
->;
-
 def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "HasSALUFloatInsts",
   "true",
@@ -1618,28 +1612,6 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureDot13Insts,
    FeatureAtomicBufferPkAddBF16Inst
    ])>;
-
-def FeatureISAVersion9_4_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
-def FeatureISAVersion9_4_1 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
 
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,

@@ -1310,18 +1310,17 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   cii->m_global_line_table.Clear();
 
   // Add line entries in line_set to line_table.
-  auto line_table = std::make_unique<LineTable>(&comp_unit);
-  std::unique_ptr<LineSequence> sequence(
-      line_table->CreateLineSequenceContainer());
+  std::vector<LineTable::Sequence> sequence(1);
   for (const auto &line_entry : line_set) {
-    line_table->AppendLineEntryToSequence(
-        sequence.get(), line_entry.file_addr, line_entry.line,
+    LineTable::AppendLineEntryToSequence(
+        sequence.back(), line_entry.file_addr, line_entry.line,
         line_entry.column, line_entry.file_idx,
         line_entry.is_start_of_statement, line_entry.is_start_of_basic_block,
         line_entry.is_prologue_end, line_entry.is_epilogue_begin,
         line_entry.is_terminal_entry);
   }
-  line_table->InsertSequence(sequence.get());
+  auto line_table =
+      std::make_unique<LineTable>(&comp_unit, std::move(sequence));
 
   if (line_table->GetSize() == 0)
     return false;

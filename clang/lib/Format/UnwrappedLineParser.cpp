@@ -168,7 +168,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
       Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == LangOpts.CXXOperatorNames);
+  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
 }
 
 void UnwrappedLineParser::reset() {
@@ -510,7 +510,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           break;
         do {
           NextTok = Tokens->getNextToken();
-        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
+        } while (!NextTok->HasUnescapedNewline && NextTok->isNot(tok::eof));
 
         while (NextTok->is(tok::comment))
           NextTok = Tokens->getNextToken();
@@ -1712,12 +1712,6 @@ void UnwrappedLineParser::parseStructuralElement(
            OpeningBrace && OpeningBrace->isOneOf(TT_RequiresExpressionLBrace,
                                                  TT_CompoundRequirementLBrace);
        !eof();) {
-    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
-      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
-          Next && Next->isBinaryOperator()) {
-        FormatTok->Tok.setKind(tok::identifier);
-      }
-    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -5097,8 +5091,10 @@ UnwrappedLineParser::parseMacroCall() {
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
-    Line->Tokens.back().Tok->MustBreakBefore = true;
-    Line->Tokens.back().Tok->MustBreakBeforeFinalized = true;
+    auto &Tok = *Line->Tokens.back().Tok;
+    Tok.MustBreakBefore = true;
+    Tok.MustBreakBeforeFinalized = true;
+    Tok.FirstAfterPPDirectiveLine = true;
     MustBreakBeforeNextToken = false;
   }
 }
