@@ -166,46 +166,13 @@ private:
     return true;
   }
 
-  // Perform the Level tensor size check
+  // Perform the Level tensor size check on the input tensor.
   bool levelCheckSize(Operation *op, const Value &v,
-                      const StringRef operandOrResult) {
-    if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
-      if (!type.hasRank()) {
-        op->emitOpError() << "failed level check: unranked tensor";
-        return false;
-      }
-      auto shape = type.getShape();
-      for (auto dim : shape) {
-        if (mlir::ShapedType::isDynamic(dim)) {
-          op->emitOpError() << "failed level check: " << operandOrResult
-                            << " shape dimension cannot be dynamic";
-          return false;
-        }
-      }
+                      const StringRef operandOrResult);
 
-      int64_t element_bits = type.getElementTypeBitWidth();
-      int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
-      int64_t size = element_bytes * type.getNumElements();
-
-      // According to 1.11. Tensor Definitions of Tosa spec, the value of
-      // tensor_size_t is 1 << MAX_LOG2_SIZE) - 1 where MAX_LOG2_SIZE is
-      // defined in 1.7. Levels.
-      // For each tensor, the number of tensor elements multiplied by the
-      // element size in bytes must be representable as a tensor_size_t.
-      const int64_t max_size = (INT64_C(1) << tosaLevel.MAX_LOG2_SIZE) - 1;
-      if (size > max_size) {
-        op->emitOpError()
-            << "failed level check: " << operandOrResult
-            << " tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)";
-        return false;
-      }
-    }
-    return true;
-  }
-
+  // Level check sizes of all operands and results of the operation.
   template <typename T>
   bool levelCheckSizes(T tosaOp) {
-    // level check sizes of all operands and results
     auto op = tosaOp.getOperation();
     for (auto v : op->getOperands()) {
       if (!levelCheckSize(op, v, "operand"))
@@ -219,9 +186,9 @@ private:
     return true;
   }
 
+  // Level check ranks of all operands, attribute and results of the operation.
   template <typename T>
   bool levelCheckRanks(T tosaOp) {
-    // level check ranks of all operands, attribute and results
     auto op = tosaOp.getOperation();
     for (auto v : op->getOperands()) {
       if (!levelCheckRank(op, v, "operand", tosaLevel.MAX_RANK))
@@ -244,151 +211,8 @@ private:
     return true;
   }
 
-  template <>
-  bool levelCheckRanks(tosa::ArgMaxOp tosaOp) {
-    auto op = tosaOp.getOperation();
-    if (!levelCheckRank(op, tosaOp.getInput(), "operand", tosaLevel.MAX_RANK))
-      return false;
-
-    // rank(output) = rank(input) - 1
-    if (!levelCheckRank(op, tosaOp.getOutput(), "result",
-                        tosaLevel.MAX_RANK - 1))
-      return false;
-
-    return true;
-  }
-
-  template <>
-  bool levelCheckRanks(tosa::IfOp tosaOp) {
-    auto op = tosaOp.getOperation();
-
-    // Only the condition input has rank limitation.
-    if (!levelCheckRank(op, tosaOp.getCond(), "operand", tosaLevel.MAX_RANK))
-      return false;
-
-    return true;
-  }
-
-  bool levelCheckRanksAndSizes(Operation *op) {
-#define CHECK_RANKS_AND_SIZES(tosaOp)                                          \
-  if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    if (!levelCheckRanks(cast<tosa::tosaOp##Op>(op)))                          \
-      return false;                                                            \
-    if (!levelCheckSizes(cast<tosa::tosaOp##Op>(op)))                          \
-      return false;                                                            \
-  }
-
-#define CHECK_SIZES(tosaOp)                                                    \
-  if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    if (!levelCheckSizes(cast<tosa::tosaOp##Op>(op)))                          \
-      return false;                                                            \
-  }
-
-    // For the following operators, check whether the rank and size of each
-    // tensor operand is valid in a given Level.
-
-    // Tensor Operators
-    CHECK_RANKS_AND_SIZES(ArgMax);
-    // Activation Functions
-    CHECK_RANKS_AND_SIZES(Clamp);
-    CHECK_RANKS_AND_SIZES(Erf);
-    CHECK_RANKS_AND_SIZES(Sigmoid);
-    CHECK_RANKS_AND_SIZES(Tanh);
-    // Elementwise Binary Operators
-    CHECK_RANKS_AND_SIZES(Add);
-    CHECK_RANKS_AND_SIZES(ArithmeticRightShift);
-    CHECK_RANKS_AND_SIZES(BitwiseAnd);
-    CHECK_RANKS_AND_SIZES(BitwiseOr);
-    CHECK_RANKS_AND_SIZES(BitwiseXor);
-    CHECK_RANKS_AND_SIZES(IntDiv);
-    CHECK_RANKS_AND_SIZES(LogicalAnd);
-    CHECK_RANKS_AND_SIZES(LogicalLeftShift);
-    CHECK_RANKS_AND_SIZES(LogicalRightShift);
-    CHECK_RANKS_AND_SIZES(LogicalOr);
-    CHECK_RANKS_AND_SIZES(LogicalXor);
-    CHECK_RANKS_AND_SIZES(Maximum);
-    CHECK_RANKS_AND_SIZES(Minimum);
-    CHECK_RANKS_AND_SIZES(Mul);
-    CHECK_RANKS_AND_SIZES(Pow);
-    CHECK_RANKS_AND_SIZES(Sub);
-    CHECK_RANKS_AND_SIZES(Table);
-    // Elementwise Unary Operators
-    CHECK_RANKS_AND_SIZES(Abs);
-    CHECK_RANKS_AND_SIZES(BitwiseNot);
-    CHECK_RANKS_AND_SIZES(Ceil);
-    CHECK_RANKS_AND_SIZES(Clz);
-    CHECK_RANKS_AND_SIZES(Cos);
-    CHECK_RANKS_AND_SIZES(Exp);
-    CHECK_RANKS_AND_SIZES(Floor);
-    CHECK_RANKS_AND_SIZES(Log);
-    CHECK_RANKS_AND_SIZES(LogicalNot);
-    CHECK_RANKS_AND_SIZES(Negate);
-    CHECK_RANKS_AND_SIZES(Reciprocal);
-    CHECK_RANKS_AND_SIZES(Rsqrt);
-    CHECK_RANKS_AND_SIZES(Sin);
-    // Elementwise Ternary Operators
-    CHECK_RANKS_AND_SIZES(Select);
-    // Comparison Operators
-    CHECK_RANKS_AND_SIZES(Equal);
-    CHECK_RANKS_AND_SIZES(Greater);
-    CHECK_RANKS_AND_SIZES(GreaterEqual);
-    // Reduction Operators
-    CHECK_RANKS_AND_SIZES(ReduceAll);
-    CHECK_RANKS_AND_SIZES(ReduceAny);
-    CHECK_RANKS_AND_SIZES(ReduceMax);
-    CHECK_RANKS_AND_SIZES(ReduceMin);
-    CHECK_RANKS_AND_SIZES(ReduceProduct);
-    CHECK_RANKS_AND_SIZES(ReduceSum);
-    // Data Layout Operators
-    CHECK_RANKS_AND_SIZES(Concat);
-    CHECK_RANKS_AND_SIZES(Pad);
-    CHECK_RANKS_AND_SIZES(Reshape);
-    CHECK_RANKS_AND_SIZES(Reverse);
-    CHECK_RANKS_AND_SIZES(Slice);
-    CHECK_RANKS_AND_SIZES(Tile);
-    CHECK_RANKS_AND_SIZES(Transpose);
-    // Type Conversion
-    CHECK_RANKS_AND_SIZES(Cast);
-    CHECK_RANKS_AND_SIZES(Rescale);
-    // Control Flow Operators
-    CHECK_RANKS_AND_SIZES(If);
-    // Variable Operators
-    CHECK_RANKS_AND_SIZES(Variable);
-    CHECK_RANKS_AND_SIZES(VariableWrite);
-    CHECK_RANKS_AND_SIZES(VariableRead);
-    // Data Nodes
-    CHECK_RANKS_AND_SIZES(Const);
-    CHECK_RANKS_AND_SIZES(Identity);
-
-    // For the following operators, check whether the size of each tensor
-    // operand is valid in a given Level.
-
-    // Tensor Operators
-    CHECK_SIZES(AvgPool2d);
-    CHECK_SIZES(Conv2D);
-    CHECK_SIZES(Conv3D);
-    CHECK_SIZES(DepthwiseConv2D);
-    CHECK_SIZES(TransposeConv2D);
-    CHECK_SIZES(FFT2d);
-    CHECK_SIZES(MatMul);
-    CHECK_SIZES(MaxPool2d);
-    CHECK_SIZES(RFFT2d);
-    // Scatter/Gather Operators
-    CHECK_SIZES(Gather);
-    CHECK_SIZES(Scatter);
-    // Image Operators
-    CHECK_SIZES(Resize);
-    // Custom Operators
-    CHECK_SIZES(Custom);
-    // Control Flow Operators
-    CHECK_SIZES(While);
-    // Shape Operators
-    CHECK_SIZES(ConstShape);
-
-#undef CHECK_RANKS_AND_SIZES
-#undef CHECK_SIZES
-    return true;
-  }
+  // Level check ranks and sizes.
+  bool levelCheckRanksAndSizes(Operation *op);
 
   // Pool Op: level check kernel/stride/pad values
   template <typename T>
@@ -607,6 +431,185 @@ private:
   TosaProfileCompliance profileComp;
   tosa::TargetEnv targetEnv;
 };
+
+template <>
+bool TosaValidation::levelCheckRanks(tosa::ArgMaxOp tosaOp) {
+  auto op = tosaOp.getOperation();
+  if (!levelCheckRank(op, tosaOp.getInput(), "operand", tosaLevel.MAX_RANK))
+    return false;
+
+  // rank(output) = rank(input) - 1
+  if (!levelCheckRank(op, tosaOp.getOutput(), "result", tosaLevel.MAX_RANK - 1))
+    return false;
+
+  return true;
+}
+
+template <>
+bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
+  auto op = tosaOp.getOperation();
+
+  // Only the condition input has rank limitation.
+  if (!levelCheckRank(op, tosaOp.getCond(), "operand", tosaLevel.MAX_RANK))
+    return false;
+
+  return true;
+}
+
+bool TosaValidation::levelCheckRanksAndSizes(Operation *op) {
+#define CHECK_RANKS_AND_SIZES(tosaOp)                                          \
+  if (isa<tosa::tosaOp##Op>(op)) {                                             \
+    if (!levelCheckRanks(cast<tosa::tosaOp##Op>(op)))                          \
+      return false;                                                            \
+    if (!levelCheckSizes(cast<tosa::tosaOp##Op>(op)))                          \
+      return false;                                                            \
+  }
+
+#define CHECK_SIZES(tosaOp)                                                    \
+  if (isa<tosa::tosaOp##Op>(op)) {                                             \
+    if (!levelCheckSizes(cast<tosa::tosaOp##Op>(op)))                          \
+      return false;                                                            \
+  }
+
+  // Tensor Operators
+  CHECK_RANKS_AND_SIZES(ArgMax);
+  // Activation Functions
+  CHECK_RANKS_AND_SIZES(Clamp);
+  CHECK_RANKS_AND_SIZES(Erf);
+  CHECK_RANKS_AND_SIZES(Sigmoid);
+  CHECK_RANKS_AND_SIZES(Tanh);
+  // Elementwise Binary Operators
+  CHECK_RANKS_AND_SIZES(Add);
+  CHECK_RANKS_AND_SIZES(ArithmeticRightShift);
+  CHECK_RANKS_AND_SIZES(BitwiseAnd);
+  CHECK_RANKS_AND_SIZES(BitwiseOr);
+  CHECK_RANKS_AND_SIZES(BitwiseXor);
+  CHECK_RANKS_AND_SIZES(IntDiv);
+  CHECK_RANKS_AND_SIZES(LogicalAnd);
+  CHECK_RANKS_AND_SIZES(LogicalLeftShift);
+  CHECK_RANKS_AND_SIZES(LogicalRightShift);
+  CHECK_RANKS_AND_SIZES(LogicalOr);
+  CHECK_RANKS_AND_SIZES(LogicalXor);
+  CHECK_RANKS_AND_SIZES(Maximum);
+  CHECK_RANKS_AND_SIZES(Minimum);
+  CHECK_RANKS_AND_SIZES(Mul);
+  CHECK_RANKS_AND_SIZES(Pow);
+  CHECK_RANKS_AND_SIZES(Sub);
+  CHECK_RANKS_AND_SIZES(Table);
+  // Elementwise Unary Operators
+  CHECK_RANKS_AND_SIZES(Abs);
+  CHECK_RANKS_AND_SIZES(BitwiseNot);
+  CHECK_RANKS_AND_SIZES(Ceil);
+  CHECK_RANKS_AND_SIZES(Clz);
+  CHECK_RANKS_AND_SIZES(Cos);
+  CHECK_RANKS_AND_SIZES(Exp);
+  CHECK_RANKS_AND_SIZES(Floor);
+  CHECK_RANKS_AND_SIZES(Log);
+  CHECK_RANKS_AND_SIZES(LogicalNot);
+  CHECK_RANKS_AND_SIZES(Negate);
+  CHECK_RANKS_AND_SIZES(Reciprocal);
+  CHECK_RANKS_AND_SIZES(Rsqrt);
+  CHECK_RANKS_AND_SIZES(Sin);
+  // Elementwise Ternary Operators
+  CHECK_RANKS_AND_SIZES(Select);
+  // Comparison Operators
+  CHECK_RANKS_AND_SIZES(Equal);
+  CHECK_RANKS_AND_SIZES(Greater);
+  CHECK_RANKS_AND_SIZES(GreaterEqual);
+  // Reduction Operators
+  CHECK_RANKS_AND_SIZES(ReduceAll);
+  CHECK_RANKS_AND_SIZES(ReduceAny);
+  CHECK_RANKS_AND_SIZES(ReduceMax);
+  CHECK_RANKS_AND_SIZES(ReduceMin);
+  CHECK_RANKS_AND_SIZES(ReduceProduct);
+  CHECK_RANKS_AND_SIZES(ReduceSum);
+  // Data Layout Operators
+  CHECK_RANKS_AND_SIZES(Concat);
+  CHECK_RANKS_AND_SIZES(Pad);
+  CHECK_RANKS_AND_SIZES(Reshape);
+  CHECK_RANKS_AND_SIZES(Reverse);
+  CHECK_RANKS_AND_SIZES(Slice);
+  CHECK_RANKS_AND_SIZES(Tile);
+  CHECK_RANKS_AND_SIZES(Transpose);
+  // Type Conversion
+  CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(Rescale);
+  // Control Flow Operators
+  CHECK_RANKS_AND_SIZES(If);
+  // Variable Operators
+  CHECK_RANKS_AND_SIZES(Variable);
+  CHECK_RANKS_AND_SIZES(VariableWrite);
+  CHECK_RANKS_AND_SIZES(VariableRead);
+  // Data Nodes
+  CHECK_RANKS_AND_SIZES(Const);
+  CHECK_RANKS_AND_SIZES(Identity);
+
+  // For the following operators, check whether the size of each tensor
+  // operand is valid in a given Level.
+
+  // Tensor Operators
+  CHECK_SIZES(AvgPool2d);
+  CHECK_SIZES(Conv2D);
+  CHECK_SIZES(Conv3D);
+  CHECK_SIZES(DepthwiseConv2D);
+  CHECK_SIZES(TransposeConv2D);
+  CHECK_SIZES(FFT2d);
+  CHECK_SIZES(MatMul);
+  CHECK_SIZES(MaxPool2d);
+  CHECK_SIZES(RFFT2d);
+  // Scatter/Gather Operators
+  CHECK_SIZES(Gather);
+  CHECK_SIZES(Scatter);
+  // Image Operators
+  CHECK_SIZES(Resize);
+  // Custom Operators
+  CHECK_SIZES(Custom);
+  // Control Flow Operators
+  CHECK_SIZES(While);
+  // Shape Operators
+  CHECK_SIZES(ConstShape);
+
+#undef CHECK_RANKS_AND_SIZES
+#undef CHECK_SIZES
+  return true;
+}
+
+// Perform the Level tensor size check
+bool TosaValidation::levelCheckSize(Operation *op, const Value &v,
+                                    const StringRef operandOrResult) {
+  if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+    if (!type.hasRank()) {
+      op->emitOpError() << "failed level check: unranked tensor";
+      return false;
+    }
+    auto shape = type.getShape();
+    for (auto dim : shape) {
+      if (mlir::ShapedType::isDynamic(dim)) {
+        op->emitOpError() << "failed level check: " << operandOrResult
+                          << " shape dimension cannot be dynamic";
+        return false;
+      }
+    }
+
+    int64_t element_bits = type.getElementTypeBitWidth();
+    int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
+    int64_t size = element_bytes * type.getNumElements();
+
+    // According to 1.11. Tensor Definitions of Tosa spec, the value of
+    // tensor_size_t is 1 << MAX_LOG2_SIZE) - 1 where MAX_LOG2_SIZE is
+    // defined in 1.7. Levels.
+    // For each tensor, the number of tensor elements multiplied by the
+    // element size in bytes must be representable as a tensor_size_t.
+    const int64_t max_size = (INT64_C(1) << tosaLevel.MAX_LOG2_SIZE) - 1;
+    if (size > max_size) {
+      op->emitOpError()
+          << "failed level check: " << operandOrResult
+          << " tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)";
+      return false;
+    }
+  }
+  return true;
+}
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
   if (tosaLevel == TOSA_LEVEL_NONE) {
@@ -866,7 +869,8 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
 
 bool TosaValidation::isValidElementType(Type type) {
   if (isa<FloatType>(type)) {
-    return type.isF32() || type.isF16() || type.isBF16();
+    return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
+               Float8E5M2Type>(type);
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {

@@ -4001,8 +4001,8 @@ static SDValue getConstVector(ArrayRef<APInt> Bits, const APInt &Undefs,
     const APInt &V = Bits[i];
     assert(V.getBitWidth() == VT.getScalarSizeInBits() && "Unexpected sizes");
     if (Split) {
-      Ops.push_back(DAG.getConstant(V.trunc(32), dl, EltVT));
-      Ops.push_back(DAG.getConstant(V.lshr(32).trunc(32), dl, EltVT));
+      Ops.push_back(DAG.getConstant(V.extractBits(32, 0), dl, EltVT));
+      Ops.push_back(DAG.getConstant(V.extractBits(32, 32), dl, EltVT));
     } else if (EltVT == MVT::f32) {
       APFloat FV(APFloat::IEEEsingle(), V);
       Ops.push_back(DAG.getConstantFP(FV, dl, EltVT));
@@ -53633,9 +53633,9 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   int CombineOpcode =
       N->getOpcode() == X86ISD::VFCMULC ? X86ISD::VFMULC : X86ISD::VFCMULC;
   auto combineConjugation = [&](SDValue &r) {
-    if (LHS->getOpcode() == ISD::BITCAST && RHS.hasOneUse()) {
+    if (LHS->getOpcode() == ISD::BITCAST) {
       SDValue XOR = LHS.getOperand(0);
-      if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
+      if (XOR->getOpcode() == ISD::XOR) {
         KnownBits XORRHS = DAG.computeKnownBits(XOR.getOperand(1));
         if (XORRHS.isConstant()) {
           APInt ConjugationInt32 = APInt(32, 0x80000000);
@@ -57798,19 +57798,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
 
-    // concat_vectors(extract_subvector(broadcast(x)),
-    //                extract_subvector(broadcast(x))) -> broadcast(x)
+    // concat_vectors(extract_subvector(splat(x)),
+    //                extract_subvector(splat(x))) -> splat(x)
     // concat_vectors(extract_subvector(subv_broadcast(x)),
     //                extract_subvector(subv_broadcast(x))) -> subv_broadcast(x)
     if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         Op0.getOperand(0).getValueType() == VT) {
       SDValue SrcVec = Op0.getOperand(0);
-      if (SrcVec.getOpcode() == X86ISD::VBROADCAST ||
-          SrcVec.getOpcode() == X86ISD::VBROADCAST_LOAD)
-        return Op0.getOperand(0);
+      if (DAG.isSplatValue(SrcVec, /*AllowUndefs*/ false))
+        return SrcVec;
       if (SrcVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
           Op0.getValueType() == cast<MemSDNode>(SrcVec)->getMemoryVT())
-        return Op0.getOperand(0);
+        return SrcVec;
     }
 
     // concat_vectors(permq(x),permq(x)) -> permq(concat_vectors(x,x))
@@ -58682,6 +58681,21 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
                                       BcastLd, DAG.getVectorIdxConstant(0, dl));
       DCI.CombineTo(SubLd, NewSubVec, BcastLd.getValue(1));
       return BcastLd;
+    }
+  }
+
+  // Attempt to constant fold (if we're not widening).
+  if (!Vec.isUndef() && !ISD::isBuildVectorAllZeros(Vec.getNode())) {
+    unsigned EltSizeInBits = OpVT.getScalarSizeInBits();
+    APInt VecUndefElts, SubUndefElts;
+    SmallVector<APInt, 16> VecEltBits, SubEltBits;
+    if (getTargetConstantBitsFromNode(Vec, EltSizeInBits, VecUndefElts,
+                                      VecEltBits) &&
+        getTargetConstantBitsFromNode(SubVec, EltSizeInBits, SubUndefElts,
+                                      SubEltBits)) {
+      VecUndefElts.insertBits(SubUndefElts, IdxVal);
+      llvm::copy(SubEltBits, VecEltBits.begin() + IdxVal);
+      return getConstVector(VecEltBits, VecUndefElts, OpVT, DAG, dl);
     }
   }
 
