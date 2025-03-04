@@ -499,7 +499,7 @@ signature and passed to the shader without requiring a constant buffer resource:
 Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
 
 Root Descriptor
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Root descriptors provide a direct mechanism for binding individual resources to shader stages in the Direct3D 12 
 rendering pipeline. They represent a critical interface for efficient resource management, allowing applications 
