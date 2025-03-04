@@ -831,7 +831,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return vputils::onlyFirstLaneUsed(this);
 
   switch (getOpcode()) {
@@ -992,10 +992,6 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
   O << " to " << *ResultTy;
 }
 #endif
-
-bool VPInstructionWithType::onlyFirstLaneUsed(const VPValue *Op) const {
-  return vputils::onlyFirstLaneUsed(this);
-}
 
 void VPIRInstruction::execute(VPTransformState &State) {
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&

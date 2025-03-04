@@ -121,7 +121,6 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                             })
                    : false;
       })
-
       .Case<VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));

@@ -1061,6 +1061,7 @@ public:
   /// Return the cost of this VPIRInstruction.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
   }
 
@@ -1071,8 +1072,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during

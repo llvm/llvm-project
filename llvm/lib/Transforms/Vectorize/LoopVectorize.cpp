@@ -10398,7 +10398,6 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                              isa<VPDerivedIVRecipe>(U) ||
                              Instruction::isCast(
                                  cast<VPInstruction>(U)->getOpcode()) ||
-
                              cast<VPInstruction>(U)->getOpcode() ==
                                  Instruction::Add;
                     }) &&
