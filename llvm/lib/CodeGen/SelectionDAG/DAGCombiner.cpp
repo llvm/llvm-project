@@ -21377,7 +21377,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
         for (unsigned Nops = Node->getNumOperands(); Nops;)
           Nodes.push_back(Node->getOperand(--Nops).getNode());
         break;
-      case ISD::CALLSEQ_START:
+      case ISD::CALLSEQ_END:
         FoundCall = true;
         break;
       case ISD::LOAD:
