@@ -845,7 +845,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                           [&](const BinaryFunction *BF) {
                             return areRelatedFragments(&Function, BF);
                           }) &&
-             "cannot re-use jump table of a different function");
+             "cannot reuse jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
       if (opts::Verbosity > 2) {
@@ -865,11 +865,11 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
       if (Frag == &Function)
         IsJumpTableParent = true;
     assert(IsJumpTableParent &&
-           "cannot re-use jump table of a different function");
+           "cannot reuse jump table of a different function");
     return JT->getFirstLabel();
   }
 
-  // Re-use the existing symbol if possible.
+  // Reuse the existing symbol if possible.
   MCSymbol *JTLabel = nullptr;
   if (BinaryData *Object = getBinaryDataAtAddress(Address)) {
     if (!isInternalSymbolName(Object->getSymbol()->getName()))
