@@ -863,7 +863,10 @@ Init make(const parser::OmpClause::Init &inp,
   llvm_unreachable("Empty: init");
 }
 
-// Initializer: missing-in-parser
+Initializer make(const parser::OmpClause::Initializer &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Empty: initializer");
+}
 
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {

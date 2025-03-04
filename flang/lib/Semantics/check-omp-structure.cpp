@@ -1678,6 +1678,18 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareMapperConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(
+      dir.source, llvm::omp::Directive::OMPD_declare_reduction);
+}
+
+void OmpStructureChecker::Leave(
+    const parser::OpenMPDeclareReductionConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
@@ -2990,6 +3002,7 @@ CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
+CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
 CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
