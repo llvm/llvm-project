@@ -1440,6 +1440,17 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
+    {"co_reduce",
+        {{"a", AnyData, Rank::known, Optionality::required,
+             common::Intent::InOut},
+            {"operation", SameType, Rank::reduceOperation},
+            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"co_sum",
         {{"a", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -1597,8 +1608,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
-
-// TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
 static DynamicType GetBuiltinDerivedType(
