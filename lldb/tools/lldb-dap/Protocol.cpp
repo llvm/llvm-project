@@ -23,8 +23,9 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
     P.report("expected object");
     return false;
   }
-  if (const json::Value *E = O->get(Prop))
-    V = std::move(Params);
+  const json::Value *E = O->get(Prop);
+  if (E)
+    V = std::move(*E);
   return true;
 }
 
@@ -103,13 +104,18 @@ json::Value toJSON(const Response &R) {
 
   if (R.message) {
     assert(!R.success && "message can only be used if success is false");
-    switch (*R.message) {
-    case Response::Message::cancelled:
-      Result.insert({"message", "cancelled"});
-      break;
-    case Response::Message::notStopped:
-      Result.insert({"message", "notStopped"});
-      break;
+    if (const auto *messageEnum = std::get_if<Response::Message>(&*R.message)) {
+      switch (*messageEnum) {
+      case Response::Message::cancelled:
+        Result.insert({"message", "cancelled"});
+        break;
+      case Response::Message::notStopped:
+        Result.insert({"message", "notStopped"});
+        break;
+      }
+    } else if (const auto *messageString =
+                   std::get_if<std::string>(&*R.message)) {
+      Result.insert({"message", *messageString});
     }
   }
 
@@ -119,7 +125,8 @@ json::Value toJSON(const Response &R) {
   return std::move(Result);
 }
 
-bool fromJSON(json::Value const &Params, Response::Message &M, json::Path P) {
+bool fromJSON(json::Value const &Params,
+              std::variant<Response::Message, std::string> &M, json::Path P) {
   auto rawMessage = Params.getAsString();
   if (!rawMessage) {
     P.report("expected a string");
@@ -130,11 +137,10 @@ bool fromJSON(json::Value const &Params, Response::Message &M, json::Path P) {
           .Case("cancelled", Response::Message::cancelled)
           .Case("notStopped", Response::Message::notStopped)
           .Default(std::nullopt);
-  if (!message) {
-    P.report("unexpected value, expected 'cancelled' or 'notStopped'");
-    return false;
-  }
-  M = *message;
+  if (message)
+    M = *message;
+  else if (!rawMessage->empty())
+    M = rawMessage->str();
   return true;
 }
 
@@ -223,7 +229,7 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
 
   MessageType type;
   int64_t seq;
-  if (!O.map("type", type) || !O.map("seq", seq) || O.map("event", E.event))
+  if (!O.map("type", type) || !O.map("seq", seq) || !O.map("event", E.event))
     return false;
 
   if (type != MessageType::event) {

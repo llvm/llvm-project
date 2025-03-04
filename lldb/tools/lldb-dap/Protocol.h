@@ -145,7 +145,8 @@ struct Response {
   int64_t request_seq;
   std::string command;
   bool success;
-  std::optional<Message> message;
+  // FIXME: Migrate usage of fallback string to ErrorMessage
+  std::optional<std::variant<Message, std::string>> message;
   std::optional<llvm::json::Value> rawBody;
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
