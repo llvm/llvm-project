@@ -1266,7 +1266,7 @@ HexagonTargetLowering::extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV,
   // vectors.
   if (isHvxPairTy(VecTy)) {
     unsigned SubIdx = Hexagon::vsub_lo;
-    if (Idx * ElemWidth >= 8*HwLen) {
+    if (Idx * ElemWidth >= 8 * HwLen) {
       SubIdx = Hexagon::vsub_hi;
       Idx -= VecTy.getVectorNumElements() / 2;
     }
