@@ -10359,7 +10359,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             // Note the DeclRefExpr that's actually being used.
             Diag(DRE->getDecl()->getLocation(),
                  diag::note_vla_size_expr_shadow_actual);
-            
           }
         }
       }
