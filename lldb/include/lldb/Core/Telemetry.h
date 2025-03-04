@@ -89,7 +89,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   // Necessary because we'd send off an entry right before a command's execution
   // and another right after. This is to avoid losing telemetry if the command
   // does not execute successfully.
-  int command_id;
+  uint64_t command_id;
   // Eg., "breakpoint set"
   std::string command_name;
   // !!NOTE!! These two fields are not collected by default due to PII risks.
