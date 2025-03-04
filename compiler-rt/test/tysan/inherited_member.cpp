@@ -2,22 +2,20 @@
 
 #include <stdio.h>
 
-class Base{
+class Base {
 public:
-    void* first;
-    void* second;
-    void* third;
+  void *first;
+  void *second;
+  void *third;
 };
 
-class Derrived : public Base{
-
-};
+class Derrived : public Base {};
 
 Derrived derr;
 
-int main(){
-    derr.second = nullptr;
-    printf("%p", derr.second);
+int main() {
+  derr.second = nullptr;
+  printf("%p", derr.second);
 
-    return 0;
+  return 0;
 }

@@ -102,10 +102,8 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
   return RootTD;
 }
 
-bool walkAliasTree(
-  tysan_type_descriptor* TDA, tysan_type_descriptor* TDB,
-  uptr OffsetA, uptr OffsetB
-){
+bool walkAliasTree(tysan_type_descriptor *TDA, tysan_type_descriptor *TDB,
+                   uptr OffsetA, uptr OffsetB) {
   do {
     if (TDA == TDB)
       return OffsetA == OffsetB;
@@ -160,17 +158,19 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
   return walkAliasTree(TDA, TDB, OffsetA, OffsetB);
 }
 
-static bool isAliasingLegalWithOffset(tysan_type_descriptor *AccessTD, tysan_type_descriptor *ShadowTD, int OffsetInShadow){
+static bool isAliasingLegalWithOffset(tysan_type_descriptor *AccessTD,
+                                      tysan_type_descriptor *ShadowTD,
+                                      int OffsetInShadow) {
   // This is handled in the other cases
-  if(OffsetInShadow == 0)
+  if (OffsetInShadow == 0)
     return false;
-  
+
   // You can't have an offset into a member
-  if(ShadowTD->Tag == TYSAN_MEMBER_TD)
+  if (ShadowTD->Tag == TYSAN_MEMBER_TD)
     return false;
 
   int OffsetInAccess = 0;
-  if(AccessTD->Tag == TYSAN_MEMBER_TD){
+  if (AccessTD->Tag == TYSAN_MEMBER_TD) {
     OffsetInAccess = AccessTD->Member.Offset;
     AccessTD = AccessTD->Member.Base;
   }

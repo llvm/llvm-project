@@ -2,26 +2,24 @@
 
 #include <stdio.h>
 
-class Inner{
+class Inner {
 public:
-    void* ptr = nullptr;
+  void *ptr = nullptr;
 };
 
-class Base{
+class Base {
 public:
-    void* buffer1;
-    Inner inside;
-    void* buffer2;
+  void *buffer1;
+  Inner inside;
+  void *buffer2;
 };
 
-class Derrived : public Base{
-
-};
+class Derrived : public Base {};
 
 Derrived derr;
 
-int main(){
-    printf("%p", derr.inside.ptr);
+int main() {
+  printf("%p", derr.inside.ptr);
 
-    return 0;
+  return 0;
 }
