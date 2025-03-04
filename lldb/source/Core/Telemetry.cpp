@@ -78,6 +78,9 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
+uint64_t DebuggerInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+
 TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
 
@@ -88,10 +91,6 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   if (Debugger *debugger = lldb_entry->debugger)
     lldb_entry->debugger_id = debugger->GetID();
   return llvm::Error::success();
-}
-
-int TelemetryManager::MakeNextCommandId() {
-  return m_command_id_seed.fetch_add(1);
 }
 
 class NoOpTelemetryManager : public TelemetryManager {

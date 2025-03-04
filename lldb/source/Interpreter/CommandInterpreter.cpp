@@ -1891,7 +1891,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
       helper(&m_debugger);
   telemetry::TelemetryManager *ins =
       telemetry::TelemetryManager::GetInstance();
-  const int command_id = ins->MakeNextCommandId();
+  const int command_id = telemetry::CommandInfo::GetNextId();
 
   std::string command_string(command_line);
   std::string original_command_string(command_string);

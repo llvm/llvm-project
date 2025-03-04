@@ -113,6 +113,15 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   }
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
+
+  static uint64_t GetNextId() {}
+
+private:
+  // We assign each command (in the same session) a unique id so that their
+  // "start" and "end" entries can be matched up.
+  // These values don't need to be unique across runs (because they are
+  // secondary-key), hence a simple counter is sufficent.
+  static std::atomic<uint64_t> g_command_id_seed;
 };
 
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
@@ -160,11 +169,6 @@ private:
   std::unique_ptr<LLDBConfig> m_config;
   // Each instance of a TelemetryManager is assigned a unique ID.
   const std::string m_id;
-  // We assign each command (in the same session) a unique id so that their
-  // "start" and "end" entries can be matched up.
-  // These values don't need to be unique across runs (because they are
-  // secondary-key), hence a simple counter is sufficent.
-  std::atomic<int> m_command_id_seed = 0;
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
@@ -198,7 +202,7 @@ template <typename Info> struct ScopedDispatcher {
     if (!manager->GetConfig()->EnableTelemetry)
       return;
     Info info;
-    // Populate the common fields we know aboutl
+    // Populate the common fields we know about.
     info.start_time = m_start_time;
     info.end_time = std::chrono::steady_clock::now();
     info.debugger = debugger;
