@@ -71,6 +71,7 @@ option(COMGR_BUILD_SHARED_LIBS "Build the shared library"
 set(SOURCES
   src/comgr-cache.cpp
   src/comgr-cache-command.cpp
+  src/comgr-clang-command.cpp
   src/comgr-compiler.cpp
   src/comgr.cpp
   src/comgr-device-libs.cpp

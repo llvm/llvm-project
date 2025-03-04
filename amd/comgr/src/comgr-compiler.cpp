@@ -38,12 +38,12 @@
 
 #include "comgr-compiler.h"
 #include "comgr-cache.h"
+#include "comgr-clang-command.h"
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
-#include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
