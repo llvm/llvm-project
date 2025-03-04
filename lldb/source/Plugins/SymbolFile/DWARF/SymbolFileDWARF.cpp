@@ -993,26 +993,21 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  std::string sysroot =
+  const char *sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
+  // Register the sysroot path remapping with the module belonging to
+  // the CU as well as the one belonging to the symbol file. The two
+  // would be different if this is an OSO object and module is the
+  // corresponding debug map, in which case both should be updated.
+  ModuleSP module_sp = comp_unit.GetModule();
+  if (module_sp)
+    module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
-  // expensive.
-  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
-    // Register the sysroot path remapping with the module belonging to
-    // the CU as well as the one belonging to the symbol file. The two
-    // would be different if this is an OSO object and module is the
-    // corresponding debug map, in which case both should be updated.
-    ModuleSP module_sp = comp_unit.GetModule();
-    if (module_sp)
-      module_sp->RegisterXcodeSDK(sdk, sysroot);
+  ModuleSP local_module_sp = m_objfile_sp->GetModule();
+  if (local_module_sp && local_module_sp != module_sp)
+    local_module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-    ModuleSP local_module_sp = m_objfile_sp->GetModule();
-    if (local_module_sp && local_module_sp != module_sp)
-      local_module_sp->RegisterXcodeSDK(sdk, sysroot);
-  }
-
-  return {sdk, FileSpec{std::move(sysroot)}};
+  return {sdk};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {

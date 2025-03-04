@@ -1425,9 +1425,6 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
 
   auto [sdk, _] = std::move(*sdk_or_err);
 
-  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
-    return sdk.GetSysroot().GetPath();
-
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
     return llvm::createStringError(

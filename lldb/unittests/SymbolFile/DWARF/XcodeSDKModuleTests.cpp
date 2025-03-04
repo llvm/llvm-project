@@ -307,28 +307,13 @@ SDKPathParsingTestData sdkPathParsingTestCases[] = {
      .expect_internal_sdk = true,
      .expect_sdk_path_pattern = "Internal.sdk"},
 
-    /// Two CUs with a public (non-CommandLineTools) SDK each
-    {.input_sdk_paths = {"/Path/To/SDKs/iPhoneOS14.1.sdk",
-                         "/Path/To/SDKs/MacOSX11.3.sdk"},
+    /// Two CUs with an internal SDK each
+    {.input_sdk_paths =
+         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
+          "/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk"},
      .expect_mismatch = false,
      .expect_internal_sdk = false,
      .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
-
-    /// One CU with CommandLineTools and the other a public SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
-          "/Path/To/SDKs/MacOSX11.3.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = false,
-     .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
-
-    /// One CU with CommandLineTools and the other an internal SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
-          "/Path/To/SDKs/MacOSX11.3.Internal.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = true,
-     .expect_sdk_path_pattern = "iPhoneOS14.1.Internal.sdk"},
 };
 
 INSTANTIATE_TEST_SUITE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,
