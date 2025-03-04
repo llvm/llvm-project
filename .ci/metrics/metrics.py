@@ -144,7 +144,6 @@ def buildkite_get_builds_up_to(buildkite_token, last_cursor=None):
 #  - the last processed build.
 #  - the last build if no initial cursor was provided.
 def buildkite_get_metrics(buildkite_token, last_cursor=None):
-
     builds = buildkite_get_builds_up_to(buildkite_token, last_cursor)
     # Don't return any metrics if last_cursor is None.
     # This happens when the program starts.
