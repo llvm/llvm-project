@@ -13313,18 +13313,18 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     }
   }
 
-  InstructionCost SpillCost = InstructionCost::getInvalid();
+  std::optional<InstructionCost> SpillCost;
   if (Cost < -SLPCostThreshold) {
     SpillCost = getSpillCost();
-    Cost += SpillCost;
+    Cost += *SpillCost;
   }
 #ifndef NDEBUG
   SmallString<256> Str;
   {
     raw_svector_ostream OS(Str);
     OS << "SLP: Spill Cost = ";
-    if (SpillCost.isValid())
-      OS << SpillCost;
+    if (SpillCost)
+      OS << *SpillCost;
     else
       OS << "<skipped>";
     OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n"
