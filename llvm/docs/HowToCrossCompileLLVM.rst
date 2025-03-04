@@ -147,31 +147,6 @@ See `LLVM's build documentation
 guidance on CMake variables (e.g. ``LLVM_TARGETS_TO_BUILD`` may be useful if
 your cross-compiled binaries only need to support compiling for one target).
 
-Testing the just-built compiler
--------------------------------
-
-Assuming you have ``qemu-user`` installed you can test the produced target
-binaries either by relying on binfmt_misc (as was necessary for debootstrap)
-or invoking ``qemu-{tgt}-static`` directly. For instance, to first check the
-type of executable and then run ``clang --version`` both ways:
-
-   .. code-block:: bash
-
-    $ file -L ./build/aarch64-linux-gnu/bin/clang
-    ./build/aarch64-linux-gnu/bin/clang: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[sha1]=516b8b366a790fcd3563bee4aec0cdfcb90bb1c7, not stripped
-
-    $ qemu-aarch64-static -L $SYSROOT ./build/aarch64-linux-gnu/bin/clang --version
-    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
-    Target: aarch64-unknown-linux-gnu
-    Thread model: posix
-    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
-
-    $ export QEMU_LD_PREFIX=$SYSROOT; ./build/aarch64-linux-gnu/bin/clang --version
-    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
-    Target: aarch64-unknown-linux-gnu
-    Thread model: posix
-    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
-
 Working around a ninja dependency issue
 ---------------------------------------
 
@@ -198,6 +173,31 @@ a general solution.
    .. code-block:: bash
 
     sudo ln -s usr/include $SYSROOT/include
+
+Testing the just-built compiler
+-------------------------------
+
+Assuming you have ``qemu-user`` installed you can test the produced target
+binaries either by relying on binfmt_misc (as was necessary for debootstrap)
+or invoking ``qemu-{tgt}-static`` directly. For instance, to first check the
+type of executable and then run ``clang --version`` both ways:
+
+   .. code-block:: bash
+
+    $ file -L ./build/aarch64-linux-gnu/bin/clang
+    ./build/aarch64-linux-gnu/bin/clang: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, for GNU/Linux 3.7.0, BuildID[sha1]=516b8b366a790fcd3563bee4aec0cdfcb90bb1c7, not stripped
+
+    $ qemu-aarch64-static -L $SYSROOT ./build/aarch64-linux-gnu/bin/clang --version
+    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
+    Target: aarch64-unknown-linux-gnu
+    Thread model: posix
+    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
+
+    $ export QEMU_LD_PREFIX=$SYSROOT; ./build/aarch64-linux-gnu/bin/clang --version
+    clang version 21.0.0git (https://github.com/llvm/llvm-project cedfdc6e889c5c614a953ed1f44bcb45a405f8da)
+    Target: aarch64-unknown-linux-gnu
+    Thread model: posix
+    InstalledDir: /home/asb/llvm-project/build/aarch64-linux-gnu/bin
 
 Installing and using
 --------------------
