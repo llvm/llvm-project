@@ -450,3 +450,51 @@ SECTIONS {
 
 # TO-DISCARD: error: section '.two_byte_section' cannot spill from/to /DISCARD/
 # TO-DISCARD-WARN: warning: section '.two_byte_section' cannot spill from/to /DISCARD/
+
+#--- same-mem-region.lds
+## Spills to the same memory region do not consume address assignment passes.
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 0
+  b : ORIGIN = 0, LENGTH = 3
+}
+SECTIONS {
+  CLASS(class) { *(.one_byte_section .two_byte_section) }
+  .a00 : { CLASS(class) } >a
+  .a01 : { CLASS(class) } >a
+  .a02 : { CLASS(class) } >a
+  .a03 : { CLASS(class) } >a
+  .a04 : { CLASS(class) } >a
+  .a05 : { CLASS(class) } >a
+  .a06 : { CLASS(class) } >a
+  .a07 : { CLASS(class) } >a
+  .a08 : { CLASS(class) } >a
+  .a09 : { CLASS(class) } >a
+  .a10 : { CLASS(class) } >a
+  .a11 : { CLASS(class) } >a
+  .a12 : { CLASS(class) } >a
+  .a13 : { CLASS(class) } >a
+  .a14 : { CLASS(class) } >a
+  .a15 : { CLASS(class) } >a
+  .a16 : { CLASS(class) } >a
+  .a17 : { CLASS(class) } >a
+  .a18 : { CLASS(class) } >a
+  .a19 : { CLASS(class) } >a
+  .a20 : { CLASS(class) } >a
+  .a21 : { CLASS(class) } >a
+  .a22 : { CLASS(class) } >a
+  .a23 : { CLASS(class) } >a
+  .a24 : { CLASS(class) } >a
+  .a25 : { CLASS(class) } >a
+  .a26 : { CLASS(class) } >a
+  .a27 : { CLASS(class) } >a
+  .a28 : { CLASS(class) } >a
+  .a29 : { CLASS(class) } >a
+  .a30 : { CLASS(class) } >a
+  .b : { CLASS(class) } >b
+}
+
+# RUN: ld.lld -T same-mem-region.lds -o same-mem-region spill.o
+# RUN: llvm-readelf -S same-mem-region | FileCheck %s --check-prefix=SAME-MEM-REGION
+
+# SAME-MEM-REGION:      Name          Type     Address          Off    Size
+# SAME-MEM-REGION:      .b PROGBITS 0000000000000000 001000 000003
