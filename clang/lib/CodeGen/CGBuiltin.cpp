@@ -4418,8 +4418,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     } else {
       FastMathFlags FMF;
       FMF.setNoSignedZeros(true);
-      FMFSource FMFSrc(FMF);
-      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/FMFSrc, "elt.max");
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/FMF, "elt.max");
     }
     return RValue::get(Result);
   }
@@ -4438,8 +4437,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     } else {
       FastMathFlags FMF;
       FMF.setNoSignedZeros(true);
-      FMFSource FMFSrc(FMF);
-      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/FMFSrc, "elt.min");
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/FMF, "elt.min");
     }
     return RValue::get(Result);
   }

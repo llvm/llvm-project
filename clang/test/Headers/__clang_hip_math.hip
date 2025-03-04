@@ -1716,7 +1716,7 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 //
 // AMDGCNSPIRV-LABEL: @test_fmaxf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fmaxf(float x, float y) {
@@ -1740,7 +1740,7 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 //
 // AMDGCNSPIRV-LABEL: @test_fmax(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fmax(double x, double y) {
@@ -1764,7 +1764,7 @@ extern "C" __device__ double test_fmax(double x, double y) {
 //
 // AMDGCNSPIRV-LABEL: @test_fminf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fminf(float x, float y) {
@@ -1788,7 +1788,7 @@ extern "C" __device__ float test_fminf(float x, float y) {
 //
 // AMDGCNSPIRV-LABEL: @test_fmin(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_fmin(double x, double y) {
@@ -6689,7 +6689,7 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 //
 // AMDGCNSPIRV-LABEL: @test_float_min(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_float_min(float x, float y) {
@@ -6713,7 +6713,7 @@ extern "C" __device__ float test_float_min(float x, float y) {
 //
 // AMDGCNSPIRV-LABEL: @test_float_max(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_float_max(float x, float y) {
@@ -6737,7 +6737,7 @@ extern "C" __device__ float test_float_max(float x, float y) {
 //
 // AMDGCNSPIRV-LABEL: @test_double_min(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_double_min(double x, double y) {
@@ -6761,7 +6761,7 @@ extern "C" __device__ double test_double_min(double x, double y) {
 //
 // AMDGCNSPIRV-LABEL: @test_double_max(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef addrspace(4) double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_double_max(double x, double y) {
