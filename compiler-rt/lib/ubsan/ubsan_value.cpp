@@ -120,11 +120,15 @@ FloatMax Value::getFloatValue() const {
   CHECK(getType().isFloatTy());
   if (isInlineFloat()) {
     switch (getType().getFloatBitWidth()) {
-    case 16: {
-      __fp16 Value;
-      internal_memcpy(&Value, &Val, 2);
-      return Value;
-    }
+#if 0
+      // FIXME: OpenCL / NEON 'half' type. LLVM can't lower the conversion
+      //        from '__fp16' to 'long double'.
+      case 16: {
+        __fp16 Value;
+        internal_memcpy(&Value, &Val, 4);
+        return Value;
+      }
+#endif
       case 32: {
         float Value;
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -142,7 +146,7 @@ FloatMax Value::getFloatValue() const {
         internal_memcpy(&Value, &Val, 8);
         return Value;
       }
-      }
+    }
   } else {
     switch (getType().getFloatBitWidth()) {
     case 64: return *reinterpret_cast<double*>(Val);
