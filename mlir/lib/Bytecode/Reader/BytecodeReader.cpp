@@ -1883,9 +1883,11 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
       if (failed(opName->dialect->load(dialectReader, getContext())))
         return failure();
 
+      const BytecodeDialectInterface *dialectIface = opName->dialect->interface;
       if (useDialectFallback) {
-        auto fallbackOp =
-            opName->dialect->interface->getFallbackOperationName();
+        FailureOr<OperationName> fallbackOp =
+            dialectIface ? dialectIface->getFallbackOperationName()
+                         : FailureOr<OperationName>{};
 
         // If the dialect doesn't have a fallback operation, we can't parse as
         // instructed.
