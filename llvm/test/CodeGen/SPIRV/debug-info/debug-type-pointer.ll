@@ -81,6 +81,8 @@
 
 ; CHECK-OPTION-NOT: DebugTypePointer
 
+%struct_wrapper = type { i32 }
+
 @gi0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !0
 @gv0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !5
 
@@ -278,3 +280,4 @@ define spir_func i32 @test1() !dbg !72 {
 !98 = !DILocalVariable(name: "arr1", scope: !72, file: !3, line: 35, type: !67)
 !99 = !DILocation(line: 35, column: 7, scope: !72)
 !100 = !DILocation(line: 36, column: 3, scope: !72)
+!101 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !67, size: 32, dwarfAddressSpace: 4)

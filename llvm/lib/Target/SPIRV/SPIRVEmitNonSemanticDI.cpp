@@ -158,9 +158,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                 // pointed on from other DI types
                 // DerivedType->getBaseType is null when pointer
                 // is representing a void type
-                if (DerivedType->getBaseType())
-                  BasicTypes.insert(
-                      cast<DIBasicType>(DerivedType->getBaseType()));
+                if (auto *BT = dyn_cast_or_null<DIBasicType>(
+                        DerivedType->getBaseType()))
+                  BasicTypes.insert(BT);
               }
             }
           }
