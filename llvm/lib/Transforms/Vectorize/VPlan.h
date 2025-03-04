@@ -2334,12 +2334,10 @@ protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
                     VPValue *CondOp, bool IsOrdered)
-      : VPRecipeWithIRFlags(SC, Operands, *I), RdxDesc(R),
-        IsOrdered(IsOrdered) {
-    if (CondOp) {
-      IsConditional = true;
+      : VPRecipeWithIRFlags(SC, Operands, *I), RdxDesc(R), IsOrdered(IsOrdered),
+        IsConditional(CondOp) {
+    if (CondOp)
       addOperand(CondOp);
-    }
   }
 
   /// For VPExtendedReductionRecipe.
@@ -2348,11 +2346,9 @@ protected:
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, bool IsNonNeg, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, NonNegFlagsTy(IsNonNeg), DL),
-        RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp) {
-      IsConditional = true;
+        RdxDesc(R), IsOrdered(IsOrdered), IsConditional(CondOp) {
+    if (CondOp)
       addOperand(CondOp);
-    }
   }
 
   /// For VPMulAccumulateReductionRecipe.
@@ -2361,11 +2357,9 @@ protected:
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, bool NUW, bool NSW, DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, WrapFlagsTy(NUW, NSW), DL),
-        RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp) {
-      IsConditional = true;
+        RdxDesc(R), IsOrdered(IsOrdered), IsConditional(CondOp) {
+    if (CondOp)
       addOperand(CondOp);
-    }
   }
 
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
