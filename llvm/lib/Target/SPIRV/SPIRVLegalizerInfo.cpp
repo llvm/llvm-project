@@ -354,6 +354,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allFloatScalarsAndVectors);
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .legalForCartesianProduct(allBoolScalarsAndVectors, allFloatScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_FPOWI).legalForCartesianProduct(
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
