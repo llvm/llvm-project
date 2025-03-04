@@ -1455,6 +1455,28 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
   return SpirvTy;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateUnknownType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode,
+    const ArrayRef<MCOperand> Operands) {
+  Register ResVReg = DT.find(Ty, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+
+  MachineInstrBuilder MIB =
+      MIRBuilder.buildInstr(SPIRV::UNKNOWN_type).addDef(ResVReg).addImm(Opcode);
+  for (MCOperand Operand : Operands) {
+    if (Operand.isReg()) {
+      MIB.addUse(Operand.getReg());
+    } else if (Operand.isImm()) {
+      MIB.addImm(Operand.getImm());
+    }
+  }
+
+  DT.add(Ty, &MIRBuilder.getMF(), ResVReg);
+  return MIB;
+}
+
 const MachineInstr *
 SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
                                        MachineIRBuilder &MIRBuilder) {

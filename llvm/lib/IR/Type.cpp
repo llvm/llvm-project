@@ -968,6 +968,26 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   if (Name == "spirv.Image")
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);
+  if (Name == "spirv.Type") {
+    assert(Ty->getNumIntParameters() == 3 &&
+           "Wrong number of parameters for spirv.Type");
+
+    auto Size = Ty->getIntParameter(1);
+    auto Alignment = Ty->getIntParameter(2);
+
+    // LLVM expects variables that can be allocated to have an alignment and
+    // size. Default to using a 32-bit int as the layout type if none are
+    // present.
+    llvm::Type *LayoutType = Type::getInt32Ty(C);
+    if (Size > 0 && Alignment > 0)
+      LayoutType =
+          ArrayType::get(Type::getIntNTy(C, Alignment), Size * 8 / Alignment);
+
+    return TargetTypeInfo(LayoutType, TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
+  }
+  if (Name == "spirv.IntegralConstant" || Name == "spirv.Literal")
+    return TargetTypeInfo(Type::getVoidTy(C));
   if (Name.starts_with("spirv."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
