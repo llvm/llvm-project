@@ -1,11 +1,14 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-DISABLE-PTRAUTH %s
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc  -fptrauth-calls -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ENABLE-PTRAUTH %s
 
+@interface SuperClass
+@end
+
 typedef struct {
   id x;
 } S0;
 
-@interface C {
+@interface C : SuperClass {
   S0 _p1;
 }
 @property(nonatomic) S0 nonatomic;
