@@ -225,6 +225,18 @@ std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
 }
 
 //===----------------------------------------------------------------------===//
+// Tosa utilities.
+//===----------------------------------------------------------------------===//
+
+static Type getStorageElementTypeOrSelf(Type type) {
+  auto elementType = getElementTypeOrSelf(type);
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(elementType))
+    elementType = quantType.getStorageType();
+
+  return elementType;
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
 
@@ -255,6 +267,9 @@ static LogicalResult verifyConvOp(T op) {
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
     inputEType = quantType.getStorageType();
+
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(weightEType))
+    weightEType = quantType.getStorageType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
     biasEType = quantType.getStorageType();
@@ -292,35 +307,27 @@ static LogicalResult verifyConvOp(T op) {
     return failure();
   }
 
-  // We require an explicit input zero point and weight zero point for i8
-  // convolution.
-  if (!op.getInputZp() && !op.getWeightZp())
-    return inputEType.isInteger(8) ? failure() : success();
-
-  ElementsAttr inputZpAttr;
-  ElementsAttr weightZpAttr;
-  if (!matchPattern(op.getInputZp(), m_Constant(&inputZpAttr)) ||
-      !matchPattern(op.getWeightZp(), m_Constant(&weightZpAttr))) {
-    return success();
+  auto inputZpEType = getStorageElementTypeOrSelf(op.getInputZp().getType());
+  if (inputEType != inputZpEType) {
+    return op.emitOpError("expect both input and its zero point are the same "
+                          "element type, got ")
+           << inputEType << " and " << inputZpEType;
   }
 
-  // Get and verify explicit constant zero points.
-  int64_t inputZpVal;
-  int64_t weightZpVal;
+  auto weightZpEType = getStorageElementTypeOrSelf(op.getWeightZp().getType());
+  if (weightEType != weightZpEType) {
+    return op.emitOpError("expect both weight and its zero point are the same "
+                          "element type, got ")
+           << weightEType << " and " << weightZpEType;
+  }
 
-  if (tosa::getZeroPoint(inputZpAttr, inputZpVal).failed() ||
-      tosa::verifyZeroPoint<T>(getElementTypeOrSelf(inputZpAttr), inputZpVal)
-          .failed()) {
-    op.emitOpError("input zero point must be zero for non-int8 integer types");
+  FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+  if (succeeded(maybeIZp) && op.verifyInputZeroPoint(*maybeIZp).failed())
     return failure();
-  }
 
-  if (tosa::getZeroPoint(weightZpAttr, weightZpVal).failed() ||
-      tosa::verifyZeroPoint<T>(getElementTypeOrSelf(weightZpAttr), weightZpVal)
-          .failed()) {
-    op.emitOpError("weight zero point must be zero for non-int8 integer types");
+  FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+  if (succeeded(maybeWZp) && op.verifyWeightZeroPoint(*maybeWZp).failed())
     return failure();
-  }
 
   return success();
 }
@@ -444,18 +451,10 @@ LogicalResult tosa::ArgMaxOp::verify() {
 }
 
 LogicalResult tosa::AvgPool2dOp::verify() {
-  auto inputType = llvm::cast<ShapedType>(getInput().getType());
-
-  auto inputETy = inputType.getElementType();
-  auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
-
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy))
-    inputETy = quantType.getStorageType();
-
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultETy))
-    resultETy = quantType.getStorageType();
+  const Type inputETy = getStorageElementTypeOrSelf(getInput().getType());
+  const Type resultETy = getStorageElementTypeOrSelf(getOutput().getType());
+  const Type inputZpETy = getStorageElementTypeOrSelf(getInputZp().getType());
+  const Type outputZpETy = getStorageElementTypeOrSelf(getOutputZp().getType());
 
   auto accType = getAccType();
   if (llvm::isa<IntegerType>(inputETy) && !accType.isInteger(32))
@@ -469,6 +468,24 @@ LogicalResult tosa::AvgPool2dOp::verify() {
 
   if (inputETy.isF32() && !accType.isF32())
     return emitOpError("accumulator type for f32 tensor is not f32");
+
+  if (inputETy != inputZpETy)
+    return emitOpError("expect both input and its zero point are the same "
+                       "element type, got ")
+           << inputETy << " and " << inputZpETy;
+
+  if (resultETy != outputZpETy)
+    return emitOpError("expect both output and its zero point are the same "
+                       "element type, got ")
+           << resultETy << " and " << outputZpETy;
+
+  FailureOr<int64_t> maybeIZp = getInputZeroPoint();
+  if (succeeded(maybeIZp) && verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
+  if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
 
   if ((inputETy.isF32() && resultETy.isF32()) ||
       (inputETy.isF16() && resultETy.isF16()) ||
@@ -558,15 +575,15 @@ static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape
 /// attributes.
-static void buildTransConvOpWithQuantInfo(
-    OpBuilder &builder, OperationState &result, Type outputType, Value input,
-    Value weight, Value bias, DenseI64ArrayAttr outpad,
-    DenseI64ArrayAttr stride, DenseI64ArrayAttr outputShape, TypeAttr accType) {
+static void
+buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                              Type outputType, Value input, Value weight,
+                              Value bias, DenseI64ArrayAttr outpad,
+                              DenseI64ArrayAttr stride, TypeAttr accType) {
   auto zps = createZPsAsConst(builder, input, weight);
   result.addOperands({input, weight, bias, zps.first, zps.second});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
-  result.addAttribute("out_shape", outputShape);
   result.addAttribute("acc_type", accType);
   Type finalOutputType = outputType;
   auto quantAttr = buildConvOpQuantizationAttr(builder, input, weight);
@@ -618,27 +635,48 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
 }
 
 /// Both the tosa.avg_pool2d and unary ops use the same
-/// UnaruOpQuantizationAttr but avg_pool operator has its own builder as it
+/// UnaryOpQuantizationAttr but avg_pool operator has its own builder as it
 /// has additional parameters not part of the unary ops.
 static void
 buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                               Type outputType, Value input,
                               DenseArrayAttr kernel, DenseArrayAttr stride,
                               DenseArrayAttr pad, TypeAttr accType) {
-  result.addOperands(input);
+  const Location loc{result.location};
+  int64_t inputZp{0};
+  int64_t outputZp{0};
+
+  if (auto quantAttr =
+          buildUnaryOpQuantizationAttr(builder, input, outputType)) {
+    inputZp = quantAttr.getInputZp();
+    outputZp = quantAttr.getOutputZp();
+  }
+  const std::optional<Value> inputZpOp =
+      createZeroPointTensor(builder, loc, input.getType(), inputZp);
+  if (!inputZpOp) {
+    (void)emitError(
+        loc,
+        "Failed to create input zero point tensor for quantized AVG_POOL2D op");
+  }
+  const std::optional<Value> outputZpOp =
+      createZeroPointTensor(builder, loc, outputType, outputZp);
+  if (!outputZpOp) {
+    (void)emitError(loc, "Failed to create output zero point tensor for "
+                         "quantized AVG_POOL2D op");
+  }
+
+  if (inputZpOp && outputZpOp) {
+    result.addOperands({input, inputZpOp.value(), outputZpOp.value()});
+  } else {
+    // failed to create one or more zero points above: just add input as
+    // operands this will trigger error in building the op because of missing
+    // zero points
+    result.addOperands({input});
+  }
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
   result.addAttribute("acc_type", accType);
-  auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
-  if (quantAttr) {
-    result.addAttribute("input_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getInputZp())));
-    result.addAttribute("output_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getOutputZp())));
-  }
   result.types.push_back(outputType);
 }
 
@@ -778,12 +816,63 @@ LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
   int64_t inWidth = inputShape.getDimSize(2);
 
   // Note that we can support this calculation symbolically
-  // in the future e.g. [x, y, z] -> [x, y, z / 2 - 1]
+  // in the future e.g. [x, y, z] -> [x, y, z / 2 + 1]
   if (inWidth != ShapedType::kDynamic)
     outputShape[2] = inWidth / 2 + 1;
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+
+  return success();
+}
+
+static LogicalResult verifyDimIsPowerOfTwo(Operation *op, const int64_t dimSize,
+                                           const llvm::StringRef dimName) {
+  const bool isPowerOfTwo = (dimSize & (dimSize - 1)) == 0 && dimSize > 0;
+  if (!isPowerOfTwo)
+    return op->emitOpError("expected ")
+           << dimName << " to be a power of two, got " << dimSize;
+
+  return success();
+}
+
+LogicalResult tosa::RFFT2dOp::verify() {
+  const auto outputTypes = getResultTypes();
+  if (failed(verifyCompatibleShapes(outputTypes)))
+    return emitOpError("expected output shapes to match, got ") << outputTypes;
+
+  const auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  if (!inputType)
+    return success();
+
+  const int64_t height = inputType.getDimSize(1);
+  if (!ShapedType::isDynamic(height) &&
+      failed(verifyDimIsPowerOfTwo(*this, height, "height")))
+    return failure();
+
+  const int64_t width = inputType.getDimSize(2);
+  if (!ShapedType::isDynamic(width) &&
+      failed(verifyDimIsPowerOfTwo(*this, width, "width")))
+    return failure();
+
+  const auto outputType = llvm::dyn_cast<RankedTensorType>(outputTypes[0]);
+  if (!outputType)
+    return success();
+
+  // Batch and height input/output dimensions should match
+  if (failed(verifyCompatibleShape(inputType.getShape().drop_back(),
+                                   outputType.getShape().drop_back())))
+    return emitOpError("expected batch and height dimensions of input/output "
+                       "to match, got input=")
+           << inputType << " output=" << outputType;
+
+  // Output width dimension expected to be input_width / 2 + 1
+  const int64_t outputWidth = outputType.getDimSize(2);
+  if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
+      (outputWidth - 1) * 2 != width)
+    return emitOpError(
+               "expected output width to be equal to input_width / 2 + 1, got ")
+           << outputWidth;
 
   return success();
 }
@@ -796,6 +885,33 @@ LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
       ShapedTypeComponents(ShapeAdaptor(adaptor.getInputReal().getType())));
   inferredReturnShapes.push_back(
       ShapedTypeComponents(ShapeAdaptor(adaptor.getInputImag().getType())));
+  return success();
+}
+
+LogicalResult tosa::FFT2dOp::verify() {
+  const auto inputRealType =
+      llvm::dyn_cast<RankedTensorType>(getInputReal().getType());
+  const auto inputImagType =
+      llvm::dyn_cast<RankedTensorType>(getInputImag().getType());
+  if (!inputRealType || !inputImagType)
+    return success();
+
+  const auto trySelectStaticDim = [](const int64_t a, const int64_t b) {
+    return ShapedType::isDynamic(a) ? a : b;
+  };
+
+  const int64_t height = trySelectStaticDim(inputRealType.getDimSize(1),
+                                            inputImagType.getDimSize(1));
+  if (!ShapedType::isDynamic(height) &&
+      failed(verifyDimIsPowerOfTwo(*this, height, "height")))
+    return failure();
+
+  const int64_t width = trySelectStaticDim(inputRealType.getDimSize(2),
+                                           inputImagType.getDimSize(2));
+  if (!ShapedType::isDynamic(width) &&
+      failed(verifyDimIsPowerOfTwo(*this, width, "width")))
+    return failure();
+
   return success();
 }
 
@@ -1382,6 +1498,70 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   return mlir::success();
 }
 
+// return failure if val is not a constant
+// set zp to -1 if val is non-zero float or  val is not integer nor float
+// otherwise set zp to val's constant value
+template <typename T>
+static FailureOr<int64_t> getZeroPoint(T op, Value val) {
+  ElementsAttr zpAttr;
+  if (!matchPattern(val, m_Constant(&zpAttr))) {
+    return failure();
+  }
+
+  Type zpElemType = zpAttr.getElementType();
+
+  if (llvm::isa<FloatType>(zpElemType)) {
+    if (zpAttr.getValues<APFloat>()[0].isZero()) {
+      return 0;
+    }
+    // return non-zero value to trigger error check
+    return -1;
+  }
+
+  if (llvm::isa<IntegerType>(zpElemType)) {
+    return zpAttr.getValues<APInt>()[0].getSExtValue();
+  }
+
+  // return non-zero value to trigger error check
+  return -1;
+}
+
+template <typename T>
+static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
+                                     const std::string &operand) {
+  Type zpElemType = getElementTypeOrSelf(val);
+
+  if (!zpElemType.isInteger(8) && zp != 0) {
+    // convert operand to lower case for error message
+    std::string lower = operand;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return op.emitOpError()
+           << lower << " zero point must be zero for non-int8 integer types";
+  }
+
+  return success();
+}
+
+#define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
+  FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
+    return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
+  }                                                                            \
+  LogicalResult tosa::OP::verify##OPERAND_NAME##ZeroPoint(int64_t zp) {        \
+    return verifyZeroPoint(*this, get##OPERAND_NAME##Zp(), zp, #OPERAND_NAME); \
+  }
+
+ZERO_POINT_HELPER(Conv2DOp, Input)
+ZERO_POINT_HELPER(Conv2DOp, Weight)
+ZERO_POINT_HELPER(Conv3DOp, Input)
+ZERO_POINT_HELPER(Conv3DOp, Weight)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Input)
+ZERO_POINT_HELPER(DepthwiseConv2DOp, Weight)
+ZERO_POINT_HELPER(TransposeConv2DOp, Input)
+ZERO_POINT_HELPER(TransposeConv2DOp, Weight)
+ZERO_POINT_HELPER(AvgPool2dOp, Input)
+ZERO_POINT_HELPER(AvgPool2dOp, Output)
+#undef ZERO_POINT_HELPER
+
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TransposeOp::Adaptor adaptor,
@@ -1748,7 +1928,7 @@ REDUCE_SHAPE_INFER(tosa::ReduceAllOp)
 REDUCE_SHAPE_INFER(tosa::ReduceAnyOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMaxOp)
 REDUCE_SHAPE_INFER(tosa::ReduceMinOp)
-REDUCE_SHAPE_INFER(tosa::ReduceProdOp)
+REDUCE_SHAPE_INFER(tosa::ReduceProductOp)
 REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 #undef REDUCE_SHAPE_INFER
 COMPATIBLE_RETURN_TYPES(tosa::ConcatOp)
@@ -1808,7 +1988,7 @@ LogicalResult tosa::ReduceAllOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceAnyOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMaxOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceMinOp::verify() { return verifyReduceOp(*this); }
-LogicalResult tosa::ReduceProdOp::verify() { return verifyReduceOp(*this); }
+LogicalResult tosa::ReduceProductOp::verify() { return verifyReduceOp(*this); }
 LogicalResult tosa::ReduceSumOp::verify() { return verifyReduceOp(*this); }
 
 static LogicalResult NAryInferReturnTypes(
@@ -2243,9 +2423,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TransposeConv2DOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  // outputShape is mutable.
-  llvm::SmallVector<int64_t> outputShape =
-      convertToMlirShape(adaptor.getOutShape());
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
 
   int64_t inputWidth = ShapedType::kDynamic;
   int64_t inputHeight = ShapedType::kDynamic;
@@ -2559,36 +2737,12 @@ void WhileOp::print(OpAsmPrinter &parser) {
   parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
 }
 
-LogicalResult mlir::tosa::getZeroPoint(ElementsAttr zpAttr, int64_t &zp) {
-  Type zpElemType = zpAttr.getElementType();
-  if (auto quantType =
-          llvm::dyn_cast<mlir::quant::UniformQuantizedType>(zpElemType)) {
-    zp = quantType.getZeroPoint();
-    return success();
-  }
-  if (llvm::isa<FloatType>(zpElemType)) {
-    // non-zero zero point is not allowed for float types.
-    if (!zpAttr.getValues<APFloat>()[0].isZero())
-      return failure();
-    zp = 0;
-    return success();
-  }
-  if (llvm::isa<IntegerType>(zpElemType)) {
-    zp = zpAttr.getValues<APInt>()[0].getSExtValue();
-    return success();
-  }
-  // zero point is not allowed for unsupported types.
-  return failure();
-}
-
 // Create a rank-1 const tensor for zero point of the source tensor.
 std::optional<Value> mlir::tosa::createZeroPointTensor(OpBuilder &builder,
                                                        Location loc,
                                                        Type srcElemType,
                                                        int64_t zp) {
-  srcElemType = getElementTypeOrSelf(srcElemType);
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcElemType))
-    srcElemType = quantType.getStorageType();
+  srcElemType = getStorageElementTypeOrSelf(srcElemType);
   auto zpType = mlir::RankedTensorType::get({1}, srcElemType);
   if (llvm::isa<FloatType>(srcElemType)) {
     auto zpAttr = DenseElementsAttr::get(

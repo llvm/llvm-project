@@ -100,7 +100,7 @@ static llvm::Error RunInTerminal(DAP &dap,
   debugger_pid = getpid();
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, dap.debug_adaptor_path, comm_file.m_path, debugger_pid);
+      launch_request, dap.debug_adapter_path, comm_file.m_path, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 

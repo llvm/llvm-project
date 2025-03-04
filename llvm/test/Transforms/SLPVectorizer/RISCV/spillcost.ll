@@ -45,7 +45,7 @@ baz:
   ret void
 }
 
-; Shouldn't be vectorized
+; Should be vectorized - just one spill of TMP0
 define void @f1(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: define void @f1(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
@@ -82,6 +82,47 @@ bar:
 baz:
   %phi0 = phi i64 [%y0, %foo], [%x0, %bar]
   %phi1 = phi i64 [%y1, %foo], [%x1, %bar]
+  store i64 %phi0, ptr %q
+  %q1 =  getelementptr i64, ptr %q, i64 1
+  store i64 %phi1, ptr %q1
+
+  ret void
+}
+
+; Shouldn't be vectorized
+define void @f11(i1 %c, ptr %p, ptr %q, ptr %r) {
+; CHECK-LABEL: define void @f11(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[FOO:.*]], label %[[BAR:.*]]
+; CHECK:       [[FOO]]:
+; CHECK-NEXT:    br label %[[BAZ:.*]]
+; CHECK:       [[BAR]]:
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    br label %[[BAZ]]
+; CHECK:       [[BAZ]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[FOO]] ], [ [[TMP0]], %[[BAR]] ]
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[Q]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i64, ptr %p
+  %p1 =  getelementptr i64, ptr %p, i64 1
+  %x1 = load i64, ptr %p1
+  br i1 %c, label %foo, label %bar
+foo:
+  br label %baz
+bar:
+  call void @g()
+  call void @g()
+  call void @g()
+  br label %baz
+baz:
+  %phi0 = phi i64 [0, %foo], [%x0, %bar]
+  %phi1 = phi i64 [1, %foo], [%x1, %bar]
   store i64 %phi0, ptr %q
   %q1 =  getelementptr i64, ptr %q, i64 1
   store i64 %phi1, ptr %q1

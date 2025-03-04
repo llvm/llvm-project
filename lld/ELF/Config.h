@@ -229,6 +229,7 @@ struct Config {
   StringRef zCetReport = "none";
   StringRef zPauthReport = "none";
   StringRef zGcsReport = "none";
+  StringRef zExecuteOnlyReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;

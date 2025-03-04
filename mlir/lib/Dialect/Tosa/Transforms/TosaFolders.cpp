@@ -408,7 +408,7 @@ void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
       ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+  patterns.add<ReduceConstantOptimization<ReduceProductOp>>(
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
       ctx, aggressiveReduceConstant);

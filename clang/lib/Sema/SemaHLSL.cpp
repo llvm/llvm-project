@@ -1446,18 +1446,20 @@ static bool DiagnoseLocalRegisterBinding(Sema &S, SourceLocation &ArgLoc,
     Ty = Ty->getArrayElementTypeNoTypeQual();
 
   // Basic types
-  if (Ty->isArithmeticType()) {
+  if (Ty->isArithmeticType() || Ty->isVectorType()) {
     bool DeclaredInCOrTBuffer = isa<HLSLBufferDecl>(D->getDeclContext());
     if (SpecifiedSpace && !DeclaredInCOrTBuffer)
       S.Diag(ArgLoc, diag::err_hlsl_space_on_global_constant);
 
-    if (!DeclaredInCOrTBuffer &&
-        (Ty->isIntegralType(S.getASTContext()) || Ty->isFloatingType())) {
-      // Default Globals
+    if (!DeclaredInCOrTBuffer && (Ty->isIntegralType(S.getASTContext()) ||
+                                  Ty->isFloatingType() || Ty->isVectorType())) {
+      // Register annotation on default constant buffer declaration ($Globals)
       if (RegType == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
       else if (RegType != RegisterType::C)
         S.Diag(ArgLoc, diag::err_hlsl_binding_type_mismatch) << RegTypeNum;
+      else
+        return true;
     } else {
       if (RegType == RegisterType::C)
         S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_packoffset);
@@ -2291,7 +2293,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_and: {
+  case Builtin::BI__builtin_hlsl_and:
+  case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
     if (CheckVectorElementCallArgs(&SemaRef, TheCall))

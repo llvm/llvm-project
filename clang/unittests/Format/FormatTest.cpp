@@ -4642,6 +4642,9 @@ TEST_F(FormatTest, FormatsExternC) {
                "  int i = 42;\n"
                "  return i;\n"
                "}");
+  verifyFormat(
+      "extern \"C\" char const *const\n"
+      "    OpenCL_source_OpenCLRunTime_test_attribute_opencl_unroll_hint;");
 
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
@@ -6829,6 +6832,11 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "                  param3) {\n"
                "  f();\n"
                "}");
+
+  verifyFormat("#ifdef __cplusplus\n"
+               "extern \"C\"\n"
+               "#endif\n"
+               "    void f();");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -8536,6 +8544,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator<<(\n"
       "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1);");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaa\n"
@@ -8548,6 +8557,9 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                      "aaaaaaaaaaaaaaaaaaaaaaa<T>::aaaaaaaaaaaaa(\n"
                      "    aaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa);");
+
+  verifyFormat("extern \"C\" //\n"
+               "    void f();");
 
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -18075,9 +18087,11 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
-  verifyFormat("xor = foo;");
 
-  FormatStyle Spaces = getLLVMStyle();
+  auto Spaces = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("xor = foo;", Spaces);
+
+  Spaces.Language = FormatStyle::LK_Cpp;
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);

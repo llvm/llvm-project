@@ -35,6 +35,9 @@ Potentially Breaking Changes
 ============================
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
+- Fix missing diagnostics for uses of declarations when performing typename access,
+  such as when performing member access on a '[[deprecated]]' type alias.
+  (#GH58547)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -109,8 +112,12 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
+
 New Compiler Flags
 ------------------
+
+- New option ``-Wundef-true`` added and enabled by default to warn when `true` is used in the C preprocessor without being defined before C23.
 
 - New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
@@ -121,6 +128,10 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+
+- The ARM AArch32 ``-mtp`` option accepts and defaults to ``auto``, a value of ``auto`` uses the best available method of providing the frame pointer supported by the hardware. This matches
+  the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
+  Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
 
 Removed Compiler Flags
 -------------------------
@@ -136,6 +147,9 @@ related warnings within the method body.
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
   This forces the global to be considered small or large in regards to the
   x86-64 code model, regardless of the code model specified for the compilation.
+- Clang now emits a warning ``-Wreserved-init-priority`` instead of a hard error 
+  when ``__attribute__((init_priority(n)))`` is used with values of n in the 
+  reserved range [0, 100]. The warning will be treated as an error by default.
 
 - There is a new ``format_matches`` attribute to complement the existing
   ``format`` attribute. ``format_matches`` allows the compiler to verify that
@@ -157,7 +171,7 @@ related warnings within the method body.
       print_status("%s (%#08x)\n");
       // order of %s and %x is swapped but there is no diagnostic
     }
-  
+
   Before the introducion of ``format_matches``, this code cannot be verified
   at compile-time. ``format_matches`` plugs that hole:
 
@@ -180,6 +194,13 @@ related warnings within the method body.
   second argument is the index of the format string parameter.
   ``format_matches`` accepts an example valid format string as its third
   argument. For more information, see the Clang attributes documentation.
+
+- Introduced a new statement attribute ``[[clang::atomic]]`` that enables
+  fine-grained control over atomic code generation on a per-statement basis.
+  Supported options include ``[no_]remote_memory``,
+  ``[no_]fine_grained_memory``, and ``[no_]ignore_denormal_mode``. These are
+  particularly relevant for AMDGPU targets, where they map to corresponding IR
+  metadata.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -205,6 +226,8 @@ Improvements to Clang's diagnostics
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
 
+- Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -216,6 +239,10 @@ Bug Fixes in This Version
 
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fixed rejects-valid problem when #embed appears in std::initializer_list or
+  when it can affect template argument deduction (#GH122306).
+- Fix crash on code completion of function calls involving partial order of function templates
+  (#GH125500).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -225,6 +252,11 @@ Bug Fixes to Compiler Builtins
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
+
+- Clang now emits a warning instead of an error when using the one or two
+  argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
+  or ``__attribute__((malloc(deallocator, ptr-index)))``
+  (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -282,6 +314,8 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang now supports MSVC vector deleting destructors (GH19772).
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
@@ -333,6 +367,8 @@ clang-format
 
 libclang
 --------
+- Added ``clang_visitCXXMethods``, which allows visiting the methods
+  of a class.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -370,8 +406,12 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
+- Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
+  allows visiting the methods of a class.
 
 OpenMP Support
 --------------
