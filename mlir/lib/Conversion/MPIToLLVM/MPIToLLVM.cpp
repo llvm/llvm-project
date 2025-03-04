@@ -62,7 +62,7 @@ public:
 
   explicit MPIImplTraits(ModuleOp &moduleOp) : moduleOp(moduleOp) {}
 
-  ~MPIImplTraits() override = default;
+  virtual ~MPIImplTraits() = default;
 
   ModuleOp &getModuleOp() { return moduleOp; }
 
@@ -98,7 +98,7 @@ class MPICHImplTraits : public MPIImplTraits {
 public:
   using MPIImplTraits::MPIImplTraits;
 
-  ~MPICHImplTraits() override = default;
+  virtual ~MPICHImplTraits() = default;
 
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
