@@ -883,7 +883,7 @@ class NestedTupleOf<list<Type> allowedTypes> :
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
@@ -891,6 +891,10 @@ class TypeOrValueSemanticsContainer<Type allowedType, string name>
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
 def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
+
+// Type constraint for index-like types: index, vectors of index, tensors of
+// index.
+def IndexLike : TypeOrValueSemanticsContainer<Index, "index-like">;
 
 // Type constraint for signless-integer-like types: signless integers or
 // value-semantics containers of signless integers.
