@@ -529,8 +529,8 @@ to specify how shader stages access specific GPU resources.
       uint32_t Flags;
    };
 
-The Root Descriptor structure has evolved to support two versions, providing enhanced flexibility and 
-performance optimization capabilities.
+Version 1.1 of Root Descriptors has introduced some flags that can hint the drivers into
+performing further code optimizations. For details about it, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
 Version 1.0 Root Descriptor
 '''''''''''''''''''''''''''
