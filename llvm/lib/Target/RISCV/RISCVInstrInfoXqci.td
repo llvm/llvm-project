@@ -46,7 +46,7 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return (Imm >= 6) && (isUInt<5>(Imm) || (Imm == 32));}]> {
   let ParserMatchClass = UImmAsmOperand<5, "GE6Plus1">;
   let EncoderMethod = "getImmOpValueMinus1";
-  let DecoderMethod = "decodeUImmPlus1Operand<5>";
+  let DecoderMethod = "decodeUImmPlus1OperandGE<5,6>";
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
 }
 
@@ -105,10 +105,9 @@ class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
 }
 
 class QCIRVInstI<bits<4> funct4, string opcodestr>
-    : RVInstI<0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-              (ins GPRNoX0:$rs1), opcodestr, "$rd, $rs1"> {
-  let imm12 = {0b000, funct4, 0b00000};
-}
+    : RVInstIUnary<{0b000, funct4, 0b00000}, 0b011, OPC_CUSTOM_0,
+                   (outs GPRNoX0:$rd), (ins GPRNoX0:$rs1), opcodestr,
+                   "$rd, $rs1">;
 
 class QCIRVInstR<bits<4> funct4, string opcodestr>
     : RVInstR<{0b000, funct4}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
@@ -123,7 +122,7 @@ class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
 class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
                      DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                  (ins InTyRs1:$rs1, uimm5:$shamt, uimm5_plus1:$width),
+                  (ins InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
                   opcodestr, "$rd, $rs1, $width, $shamt"> {
   bits<5> shamt;
   bits<6> width;
@@ -402,8 +401,8 @@ let Predicates = [HasVendorXqcibm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBRI : QCIRVInstRI<0b1, simm11, "qc.insbri">;
   def QC_INSBI : RVInstIBase<0b001, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                             (ins simm5:$imm5, uimm5:$shamt,
-                             uimm5_plus1:$width), "qc.insbi",
+                             (ins simm5:$imm5, uimm5_plus1:$width,
+                             uimm5:$shamt), "qc.insbi",
                              "$rd, $imm5, $width, $shamt"> {
     bits<5> imm5;
     bits<5> shamt;
