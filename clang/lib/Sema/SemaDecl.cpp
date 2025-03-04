@@ -12817,7 +12817,7 @@ namespace {
       }
 
       for (Expr *Init : E->capture_inits())
-        if (DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(Init))
+        if (DeclRefExpr *DRE = dyn_cast_if_present<DeclRefExpr>(Init))
           HandleDeclRefExpr(DRE);
         else if (Init)
           Visit(Init);
