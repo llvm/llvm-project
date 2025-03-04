@@ -253,6 +253,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
+OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
+  std::string_view nameView{name.source.begin(), name.source.size()};
+  std::string nameLower{ToLowerCaseLetters(nameView)};
+  // If the name was actually "unknown" then accept it, otherwise flag
+  // OMPD_unknown (the default return value from getOpenMPDirectiveKind)
+  // as an error.
+  if (nameLower != "unknown") {
+    v = llvm::omp::getOpenMPDirectiveKind(nameLower);
+    assert(v != llvm::omp::Directive::OMPD_unknown && "Unrecognized directive");
+  } else {
+    v = llvm::omp::Directive::OMPD_unknown;
+  }
+  source = name.source;
+}
+
 OmpDependenceType::Value OmpDoacross::GetDepType() const {
   return common::visit( //
       common::visitors{

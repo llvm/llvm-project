@@ -625,7 +625,7 @@ void OmpStructureChecker::CheckHintClause(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
-  PushContextAndClauseSets(x.source, std::get<llvm::omp::Directive>(x.t));
+  PushContextAndClauseSets(x.source, x.DirId());
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {

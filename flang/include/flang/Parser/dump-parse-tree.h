@@ -489,6 +489,7 @@ public:
   NODE(parser, OmpOtherwiseClause)
   NODE(parser, OmpWhenClause)
   NODE(OmpWhenClause, Modifier)
+  NODE(parser, OmpDirectiveName)
   NODE(parser, OmpDirectiveSpecification)
   NODE(parser, OmpTraitPropertyName)
   NODE(parser, OmpTraitScore)
