@@ -5066,8 +5066,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDefs().empty()) {
     for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      if (DefOrUseGUIDs.contains(GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
       }
@@ -5080,8 +5080,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
   if (!Index.cfiFunctionDecls().empty()) {
     for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      if (DefOrUseGUIDs.contains(GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(S)))) {
         NameVals.push_back(StrtabBuilder.add(S));
         NameVals.push_back(S.size());
       }
