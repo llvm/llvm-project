@@ -119,8 +119,8 @@ bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 //           "_enum" : [ "cancelled", "notStopped" ],
 //           "enumDescriptions" : [
 //             "the request was cancelled.",
-//             "the request may be retried once the adapter is in a 'stopped'
-//             state."
+//             "the request may be retried once the adapter is in a 'stopped'"
+//             "state."
 //           ]
 //         },
 //         "body" : {
