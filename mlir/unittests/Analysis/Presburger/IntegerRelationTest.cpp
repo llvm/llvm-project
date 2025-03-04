@@ -608,3 +608,17 @@ TEST(IntegerRelationTest, convertVarKindToLocal) {
   EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
   EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
 }
+
+// Test union of two integer relations if they have local variable(s).
+TEST(IntegerRelationTest, unionBoundingBox) {
+  IntegerRelation relA = parseRelationFromSet(
+      "(x, y, z)[N, M]: (y floordiv 2 - N + x == 0, z floordiv 5 - N - x"
+      ">= 0, x + y + z floordiv 6 == 0)",
+      1);
+  IntegerRelation relB = parseRelationFromSet(
+      "(x, y, z)[N, M]: (y floordiv 2 - N + x == 0, z floordiv 5 - M - x"
+      ">= 0, x + y + z floordiv 7 == 0)",
+      1);
+  assert(relA.getNumLocalVars() > 0);
+  EXPECT_TRUE(relA.unionBoundingBox(relB).succeeded());
+}
