@@ -1,7 +1,6 @@
 #include <clc/clc.h>
+#include <clc/math/clc_native_cos.h>
 
-#define __CLC_NATIVE_INTRINSIC cos
-
-#define __CLC_BODY <native_unary_intrinsic.inc>
 #define __FLOAT_ONLY
-#include <clc/math/gentype.inc>
+#define __CLC_FUNCTION native_cos
+#include <clc/math/unary_builtin.inc>
