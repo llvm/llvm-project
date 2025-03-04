@@ -2680,8 +2680,10 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vaddvq_u64:
     return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.uaddv", resultTy,
                         loc);
-  case NEON::BI__builtin_neon_vcaged_f64:
-    llvm_unreachable(" neon_vcaged_f64 NYI ");
+  case NEON::BI__builtin_neon_vcaged_f64: {
+    return emitNeonCall(builder, {argTy}, ops, "aarch64.neon.facge", resultTy,
+                        loc);
+  }
   case NEON::BI__builtin_neon_vcages_f32:
     llvm_unreachable(" neon_vcages_f32 NYI ");
   case NEON::BI__builtin_neon_vcagtd_f64:
