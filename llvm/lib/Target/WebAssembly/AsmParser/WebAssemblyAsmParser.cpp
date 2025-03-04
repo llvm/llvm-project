@@ -204,7 +204,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 // Perhaps this should go somewhere common.
 static wasm::WasmLimits defaultLimits() {
-  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,

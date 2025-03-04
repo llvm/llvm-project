@@ -94,6 +94,7 @@ struct Config {
   // runtime).
   uint64_t tableBase;
   uint64_t zStackSize;
+  uint64_t pageSize;
   unsigned ltoPartitions;
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
