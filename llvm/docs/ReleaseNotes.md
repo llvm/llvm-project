@@ -62,6 +62,9 @@ Changes to the LLVM IR
 
   * `mul`
 
+* Updated semantics of `llvm.type.checked.load.relative` to match that of
+  `llvm.load.relative`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
