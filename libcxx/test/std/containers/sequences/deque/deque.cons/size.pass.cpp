@@ -82,7 +82,7 @@ void test(unsigned n) {
   test2<T, Allocator>(n);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<DefaultOnly, std::allocator<DefaultOnly> >(0);
   test<DefaultOnly, std::allocator<DefaultOnly> >(1);
   test<DefaultOnly, std::allocator<DefaultOnly> >(10);
@@ -106,6 +106,14 @@ int main(int, char**) {
   test3<DefaultOnly, std::allocator<DefaultOnly>>(1023);
   test3<int, std::allocator<int>>(1);
   test3<int, min_allocator<int>>(3);
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

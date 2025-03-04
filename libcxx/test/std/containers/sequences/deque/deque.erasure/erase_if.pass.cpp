@@ -68,7 +68,7 @@ void test() {
   test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();
@@ -76,6 +76,14 @@ int main(int, char**) {
 
   test<std::deque<long>>();
   test<std::deque<double>>();
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
+#endif
 
   return 0;
 }

@@ -50,7 +50,7 @@ void testN(int start, int N) {
   test(c1);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -73,6 +73,14 @@ int main(int, char**) {
       for (int j = 0; j < N; ++j)
         testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j]);
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

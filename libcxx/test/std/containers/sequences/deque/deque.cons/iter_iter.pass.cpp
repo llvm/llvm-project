@@ -105,6 +105,9 @@ void test_emplacable_concept() {
 int main(int, char**) {
   basic_test();
   test_emplacable_concept();
-
+#if TEST_STD_VER >= 26
+  static_assert(basic_test());
+  static_assert(test_emplacable_concept());
+#endif
   return 0;
 }
