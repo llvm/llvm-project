@@ -872,7 +872,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
   auto BarURI = URI::create(testPath("sub/bar.h")).toString();
 
   Symbol Sym = cls("ns::X");
-  Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
+  Sym.CanonicalDeclaration.NameLocation.FileURI = BarURI.c_str();
   Sym.IncludeHeaders.emplace_back(BarURI, 1, Symbol::Include);
   // Shorten include path based on search directory and insert.
   Annotations Test("int main() { ns::^ }");
@@ -902,8 +902,8 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
   auto BarURI = URI::create(BarHeader).toString();
-  SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
-  SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
+  SymX.CanonicalDeclaration.NameLocation.FileURI = BarURI.c_str();
+  SymY.CanonicalDeclaration.NameLocation.FileURI = BarURI.c_str();
   SymX.IncludeHeaders.emplace_back("<bar>", 1, Symbol::Include);
   SymY.IncludeHeaders.emplace_back("<bar>", 1, Symbol::Include);
   // Shorten include path based on search directory and insert.
@@ -2098,7 +2098,7 @@ TEST(CompletionTest, OverloadBundling) {
 
   // Differences in header-to-insert suppress bundling.
   std::string DeclFile = URI::create(testPath("foo")).toString();
-  NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  NoArgsGFunc.CanonicalDeclaration.NameLocation.FileURI = DeclFile.c_str();
   NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1, Symbol::Include);
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
@@ -2130,8 +2130,8 @@ TEST(CompletionTest, OverloadBundlingSameFileDifferentURI) {
   Symbol SymY = sym("ns::X", index::SymbolKind::Function, "@F@\\0#I#");
   std::string BarHeader = testPath("bar.h");
   auto BarURI = URI::create(BarHeader).toString();
-  SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
-  SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
+  SymX.CanonicalDeclaration.NameLocation.FileURI = BarURI.c_str();
+  SymY.CanonicalDeclaration.NameLocation.FileURI = BarURI.c_str();
   // The include header is different, but really it's the same file.
   SymX.IncludeHeaders.emplace_back("\"bar.h\"", 1, Symbol::Include);
   SymY.IncludeHeaders.emplace_back(BarURI.c_str(), 1, Symbol::Include);
@@ -2956,7 +2956,7 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
 TEST(CompletionTest, InsertTheMostPopularHeader) {
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
-  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.CanonicalDeclaration.NameLocation.FileURI = DeclFile.c_str();
   Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2, Symbol::Include);
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000, Symbol::Include);
 
@@ -2969,7 +2969,7 @@ TEST(CompletionTest, InsertTheMostPopularHeader) {
 TEST(CompletionTest, InsertIncludeOrImport) {
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
-  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.CanonicalDeclaration.NameLocation.FileURI = DeclFile.c_str();
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000,
                                   Symbol::Include | Symbol::Import);
   CodeCompleteOptions Opts;
@@ -3004,7 +3004,7 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
 
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
-  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.CanonicalDeclaration.NameLocation.FileURI = DeclFile.c_str();
   Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2, Symbol::Include);
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000, Symbol::Include);
 

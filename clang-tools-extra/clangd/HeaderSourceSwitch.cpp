@@ -95,9 +95,9 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
   Index->lookup(Request, [&](const Symbol &Sym) {
     if (IsHeader)
-      AwardTarget(Sym.Definition.FileURI);
+      AwardTarget(Sym.Definition.fileURI());
     else
-      AwardTarget(Sym.CanonicalDeclaration.FileURI);
+      AwardTarget(Sym.CanonicalDeclaration.fileURI());
   });
   // FIXME: our index doesn't have any interesting information (this could be
   // that the background-index is not finished), we should use the decl/def
