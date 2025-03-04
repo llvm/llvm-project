@@ -1755,6 +1755,16 @@ public:
     llvm_unreachable(
         "VPWidenIntOrFpInductionRecipe generates its own backedge value");
   }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // The recipe creates its own wide start value, so it only requests the
+    // first lane of the operand.
+    // TODO: Remove once creating the start value is modeled separately.
+    return Op == getStartValue() || Op == getStepValue();
+  }
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
@@ -1831,16 +1841,6 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return getNumOperands() == 5 ? getOperand(4) : this;
   }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // The recipe creates its own wide start value, so it only requests the
-    // first lane of the operand.
-    // TODO: Remove once creating the start value is modeled separately.
-    return Op == getStartValue();
-  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
@@ -1872,13 +1872,6 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getOperand(0);
-  }
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
@@ -1939,11 +1932,16 @@ public:
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
+  /// Name to use for the generated IR instruction for the widened phi.
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+                   const Twine &Name = "")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }

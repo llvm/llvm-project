@@ -12574,12 +12574,13 @@ InstructionCost BoUpSLP::getSpillCost() {
       BasicBlock *BB = Worklist.pop_back_val();
       if (BB == OpParent || !Visited.insert(BB).second)
         continue;
-      if (auto It = ParentOpParentToPreds.find(std::make_pair(BB, OpParent));
+      auto Pair = std::make_pair(BB, OpParent);
+      if (auto It = ParentOpParentToPreds.find(Pair);
           It != ParentOpParentToPreds.end()) {
         Res = It->second;
         return Res;
       }
-      ParentsPairsToAdd.insert(std::make_pair(BB, OpParent));
+      ParentsPairsToAdd.insert(Pair);
       unsigned BlockSize = BB->size();
       if (BlockSize > static_cast<unsigned>(ScheduleRegionSizeBudget))
         return Res;
@@ -12609,10 +12610,9 @@ InstructionCost BoUpSLP::getSpillCost() {
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
       Budget = 0;
-      BasicBlock *Pred = Entry->getOpcode() == Instruction::PHI
-                             ? cast<PHINode>(Entry->getMainOp())
-                                   ->getIncomingBlock(Op->UserTreeIndex.EdgeIdx)
-                             : nullptr;
+      BasicBlock *Pred = nullptr;
+      if (auto *Phi = dyn_cast<PHINode>(Entry->getMainOp()))
+        Pred = Phi->getIncomingBlock(Op->UserTreeIndex.EdgeIdx);
       BasicBlock *OpParent;
       Instruction *OpLastInst;
       if (Op->isGather()) {
