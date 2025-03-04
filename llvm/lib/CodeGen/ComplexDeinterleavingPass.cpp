@@ -2365,7 +2365,5 @@ void ComplexDeinterleavingGraph::replaceNodes() {
          "UnrollInfo should be empty after replacing all nodes");
 
   for (auto *I : DeadInstrRoots)
-    dbgs() << "Dead Instr Root: " << *I << "\n";
-  for (auto *I : DeadInstrRoots)
     RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
 }
