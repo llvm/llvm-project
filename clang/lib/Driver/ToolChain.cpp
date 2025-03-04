@@ -942,12 +942,10 @@ bool ToolChain::needsProfileRT(const ArgList &Args) {
     return false;
 
   return Args.hasArg(options::OPT_fprofile_generate) ||
-         Args.hasArg(options::OPT_fprofile_generate_gpu) ||
          Args.hasArg(options::OPT_fprofile_generate_EQ) ||
          Args.hasArg(options::OPT_fcs_profile_generate) ||
          Args.hasArg(options::OPT_fcs_profile_generate_EQ) ||
          Args.hasArg(options::OPT_fprofile_instr_generate) ||
-         Args.hasArg(options::OPT_fprofile_instr_generate_gpu) ||
          Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
          Args.hasArg(options::OPT_fcreate_profile) ||
          Args.hasArg(options::OPT_forder_file_instrumentation) ||
