@@ -1,5 +1,6 @@
 import("//clang/resource_dir.gni")
 import("//clang/utils/TableGen/clang_tablegen.gni")
+import("//libcxx/config.gni")
 
 # Generate arm_neon.h
 clang_tablegen("arm_neon") {
@@ -350,4 +351,39 @@ copy("Headers") {
     "zos_wrappers/builtins.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
+}
+
+config("module_config") {
+  cflags_cc = [
+    "-fno-implicit-modules",
+    "-fno-implicit-module-maps",
+    "-fmodules",
+    "-fmodule-map-file=" +
+        rebase_path("$clang_resource_dir/include/module.modulemap",
+                    root_build_dir),
+    "-std=c++23",
+  ]
+}
+
+template("builtin_module") {
+  source_set(target_name) {
+    if (libcxx_enable_explicit_modules) {
+      sources = [ "$clang_resource_dir/include/module.modulemap" ]
+    }
+    deps = [ ":Headers($default_toolchain)" ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    } else {
+      not_needed(invoker, "*")
+    }
+
+    public_configs = [ ":module_config" ]
+  }
+}
+
+builtin_module("_Builtin_stddef") {
+}
+
+builtin_module("_Builtin_stdint") {
 }
