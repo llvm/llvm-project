@@ -48,6 +48,7 @@ struct Layout {
   Layout(std::initializer_list<int64_t> list) : layout(list) {}
   void print(llvm::raw_ostream &os) const;
   size_t size() const { return layout.size(); }
+  int64_t operator[](size_t idx) const { return layout[idx]; }
 };
 
 void Layout::print(llvm::raw_ostream &os) const {
@@ -85,6 +86,9 @@ public:
   bool isAssigned() const { return layout.size() > 0 && data.size() > 0; }
 
   SGMap getTransposedLayout(ArrayRef<int64_t> permutation) const;
+
+  const WiLayout &getLayout() const { return layout; }
+  const WiData &getData() const { return data; }
 };
 
 void SGMap::print(raw_ostream &os) const {
@@ -160,6 +164,9 @@ private:
   void visitTransposeOp(vector::TransposeOp transpose,
                         ArrayRef<SGMapLattice *> operands,
                         ArrayRef<const SGMapLattice *> results);
+  void visitVectorBitcastOp(vector::BitCastOp bitcast,
+                            ArrayRef<SGMapLattice *> operands,
+                            ArrayRef<const SGMapLattice *> results);
 
 public:
   SGMapPropagation(DataFlowSolver &solver, SymbolTableCollection &symbolTable)
@@ -195,15 +202,22 @@ SGMapPropagation::visitOperation(Operation *op,
     visitLoadNdOp(load, operands, results);
   else if (auto transpose = dyn_cast<vector::TransposeOp>(op))
     visitTransposeOp(transpose, operands, results);
+  else if (auto bitcast = dyn_cast<vector::BitCastOp>(op))
+    visitVectorBitcastOp(bitcast, operands, results);
   /// All other ops
   else {
     for (const SGMapLattice *r : results) {
       for (SGMapLattice *operand : operands) {
+        /// Propagate the layout of the result to the operand.
         if (r->getValue().isAssigned())
           meet(operand, *r);
       }
-      addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
     }
+  }
+  /// Add a dependency from each reult to program point after the operation.
+  /// NOTE: not sure if this is required, but all other passes do this.
+  for (const SGMapLattice *r : results) {
+    addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
   }
   return success();
 }
@@ -260,6 +274,41 @@ void SGMapPropagation::visitTransposeOp(
       operandLayout.getTransposedLayout(transpose.getPermutation());
   /// Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(newLayout));
+}
+
+void SGMapPropagation::visitVectorBitcastOp(
+    vector::BitCastOp bitcast, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  /// Need the layout of bitcast result to propagate to the operands.
+  auto resultLayout = results[0]->getValue();
+  if (!resultLayout.isAssigned())
+    return;
+  auto inElemTyBitWidth =
+      bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+  auto outElemTyBitWidth =
+      bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+
+  /// WiLayout does not change.
+  WiLayout newWiLayout = resultLayout.getLayout();
+  WiData newWiData;
+  /// It's a widening bitcast
+  if (inElemTyBitWidth < outElemTyBitWidth) {
+    auto ratio = outElemTyBitWidth / inElemTyBitWidth;
+    const auto &currData = resultLayout.getData();
+    newWiData = resultLayout.getData()[0] == 1
+                    ? WiData({1, currData[1] * ratio})
+                    : WiData({currData[0] * ratio, 1});
+  } else {
+    /// It's a narrowing bitcast
+    auto ratio = inElemTyBitWidth / outElemTyBitWidth;
+    const auto &currData = resultLayout.getData();
+    newWiData = resultLayout.getData()[0] == 1
+                    ? WiData({1, currData[1] / ratio})
+                    : WiData({currData[0] / ratio, 1});
+  }
+
+  propagateIfChanged(operands[0],
+                     operands[0]->meet(SGMap(newWiLayout, newWiData)));
 }
 
 namespace {
