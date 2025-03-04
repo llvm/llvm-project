@@ -8391,7 +8391,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (CallConv == CallingConv::PreserveNone) {
     for (const ISD::InputArg &I : Ins) {
       if (I.Flags.isSwiftSelf() || I.Flags.isSwiftError() ||
-          I.Flags.isSwiftAsync()) {
+          I.Flags.isSwiftAsync() || I.Flags.isSwiftCoro()) {
         MachineFunction &MF = DAG.getMachineFunction();
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             MF.getFunction(),
@@ -9743,7 +9743,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CallConv == CallingConv::PreserveNone) {
     for (const ISD::OutputArg &O : Outs) {
       if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
-          O.Flags.isSwiftAsync()) {
+          O.Flags.isSwiftAsync() || O.Flags.isSwiftCoro()) {
         MachineFunction &MF = DAG.getMachineFunction();
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             MF.getFunction(),

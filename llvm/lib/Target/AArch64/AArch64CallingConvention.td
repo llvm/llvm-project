@@ -72,6 +72,9 @@ defvar AArch64_Common = [
   // preserved for normal function calls.
   CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X22]>>>,
 
+  // Pass SwiftCoro in X23.
+  CCIfSwiftCoro<CCIfType<[i64], CCAssignToReg<[X23]>>>,
+
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 
   CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
@@ -241,6 +244,9 @@ def CC_AArch64_Arm64EC_Thunk : CallingConv<[
   // normal functions don't need to save it somewhere.
   CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X21]>>>,
 
+  // Pass SwiftCoro in X22.
+  CCIfSwiftCoro<CCIfType<[i64], CCAssignToReg<[X22]>>>,
+
   // The 'CFGuardTarget' parameter, if any, is passed in RAX (R8).
   CCIfCFGuardTarget<CCAssignToReg<[X8]>>,
 
@@ -373,6 +379,9 @@ def CC_AArch64_DarwinPCS : CallingConv<[
   // Pass SwiftAsync in an otherwise callee saved register so that it will be
   // preserved for normal function calls.
   CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[X22]>>>,
+
+  // Pass SwiftCoro in X23.
+  CCIfSwiftCoro<CCIfType<[i64], CCAssignToReg<[X23]>>>,
 
   CCIfConsecutiveRegs<CCCustom<"CC_AArch64_Custom_Block">>,
 

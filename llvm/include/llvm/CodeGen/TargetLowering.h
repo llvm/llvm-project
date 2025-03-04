@@ -315,6 +315,7 @@ public:
     bool IsSwiftSelf : 1;
     bool IsSwiftAsync : 1;
     bool IsSwiftError : 1;
+    bool IsSwiftCoro : 1;
     bool IsCFGuardTarget : 1;
     MaybeAlign Alignment = std::nullopt;
     Type *IndirectType = nullptr;
@@ -324,7 +325,7 @@ public:
           IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
           IsInAlloca(false), IsPreallocated(false), IsReturned(false),
           IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
-          IsCFGuardTarget(false) {}
+          IsSwiftCoro(false), IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };

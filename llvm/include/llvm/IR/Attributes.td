@@ -358,6 +358,9 @@ def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr]>;
 /// Argument is swift async context.
 def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr]>;
 
+/// Argument is swift coro allocator.
+def SwiftCoro : EnumAttr<"swiftcoro", IntersectPreserve, [ParamAttr]>;
+
 /// Function must be in a unwind table.
 def UWTable : IntAttr<"uwtable", IntersectPreserve, [FnAttr]>;
 

@@ -61,6 +61,11 @@ class CCIfSwiftAsync<CCAction A> : CCIf<"ArgFlags.isSwiftAsync()", A> {
 class CCIfSwiftError<CCAction A> : CCIf<"ArgFlags.isSwiftError()", A> {
 }
 
+/// CCIfSwiftCoro - If the current argument has swiftcoro parameter attribute,
+/// apply Action A.
+class CCIfSwiftCoro<CCAction A> : CCIf<"ArgFlags.isSwiftCoro()", A> {
+}
+
 /// CCIfCFGuardTarget - If the current argument has cfguardtarget parameter
 /// attribute, apply Action A.
 class CCIfCFGuardTarget<CCAction A> : CCIf<"ArgFlags.isCFGuardTarget()", A> {

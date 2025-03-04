@@ -1050,6 +1050,8 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       Flags.setSwiftAsync();
     if (Arg.IsSwiftError)
       Flags.setSwiftError();
+    if (Arg.IsSwiftCoro)
+      Flags.setSwiftCoro();
     if (Arg.IsCFGuardTarget)
       Flags.setCFGuardTarget();
     if (Arg.IsByVal)

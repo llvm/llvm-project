@@ -292,6 +292,12 @@ define void @f50(ptr swiftself %0)
   ret void;
 }
 
+; CHECK: define void @swiftcoro(ptr swiftcoro %0)
+define void @swiftcoro(ptr swiftcoro %0)
+{
+  ret void;
+}
+
 ; CHECK: define i32 @f51(ptr swifterror %0)
 define i32 @f51(ptr swifterror %0)
 {

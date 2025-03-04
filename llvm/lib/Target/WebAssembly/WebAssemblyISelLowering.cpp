@@ -1284,6 +1284,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue &OutVal = OutVals[I];
     HasSwiftSelfArg |= Out.Flags.isSwiftSelf();
     HasSwiftErrorArg |= Out.Flags.isSwiftError();
+    if (Out.Flags.isSwiftCoro())
+      fail(DL, DAG, "WebAssembly hasn't implemented swiftcoro arguments");
     if (Out.Flags.isNest())
       fail(DL, DAG, "WebAssembly hasn't implemented nest arguments");
     if (Out.Flags.isInAlloca())
