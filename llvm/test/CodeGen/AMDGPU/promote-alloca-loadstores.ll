@@ -198,3 +198,33 @@ entry:
   %tmp = load ptr addrspace(3), ptr addrspace(5) %alloca, align 8
   ret ptr addrspace(3) %tmp
 }
+
+; Will not vectorize because we're saving a 64-bit pointer from addrspace 0
+; in to two 32 bits pointers of addrspace 5.
+; CHECK-LABEL: define void @alloca_load_store_ptr_mixed_addrspace_ptrvec
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <2 x ptr addrspace(5)>, align 8, addrspace(5)
+; CHECK-NEXT:    store ptr undef, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    ret void
+;
+define void @alloca_load_store_ptr_mixed_addrspace_ptrvec() {
+entry:
+  %A2 = alloca <2 x ptr addrspace(5)>, align 8, addrspace(5)
+  store  ptr undef, ptr addrspace(5) %A2, align 8
+  ret void
+}
+
+; Will not vectorize because we're saving a 32-bit pointers from addrspace 5
+; in to two 64 bits pointers of addrspace 0, even though the size in memory
+; is same.
+; CHECK-LABEL: define void @alloca_load_store_ptr_mixed_addrspace_ptrvec2
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <2 x ptr>, align 8
+; CHECK-NEXT:    store <4 x ptr addrspace(5)> undef, ptr  [[ALLOCA]], align 8
+; CHECK-NEXT:    ret void
+define void @alloca_load_store_ptr_mixed_addrspace_ptrvec2() {
+entry:
+  %A2 = alloca <2 x ptr>, align 8
+  store <4 x ptr addrspace(5)> undef, ptr %A2, align 8
+  ret void
+}
