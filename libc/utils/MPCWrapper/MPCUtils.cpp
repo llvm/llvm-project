@@ -10,8 +10,8 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/stringstream.h"
-#include "utils/MPFRWrapper/MPCommon.h"
 #include "utils/MPCWrapper/mpc_inc.h"
+#include "utils/MPFRWrapper/MPCommon.h"
 
 #include <stdint.h>
 
