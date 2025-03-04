@@ -1,5 +1,6 @@
 add_mlir_library(MLIRTargetLLVM
   ModuleToObject.cpp
+  Offload.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVM
@@ -16,6 +17,7 @@ add_mlir_library(MLIRTargetLLVM
   Passes
   Support
   Target
+  FrontendOffloading
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
   MLIRTargetLLVMIRExport
