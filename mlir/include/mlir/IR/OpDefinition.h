@@ -1810,14 +1810,13 @@ private:
 
   /// Trait to check if printProperties(OpAsmPrinter, T, ArrayRef<StringRef>)
   /// exist
-  template <typename T, typename... Args>
-  using has_print_properties =
-      decltype(printProperties(std::declval<OpAsmPrinter &>(),
-                               std::declval<T>(),
-                               std::declval<ArrayRef<StringRef>>()));
-  template <typename T>
+  template <typename ConcreteOp, typename Props>
+  using has_print_properties = decltype(ConcreteOp::printProperties(
+      std::declval<OpAsmPrinter &>(), std::declval<Props>(),
+      std::declval<ArrayRef<StringRef>>()));
+  template <typename ConcreteOp, typename Props>
   using detect_has_print_properties =
-      llvm::is_detected<has_print_properties, T>;
+      llvm::is_detected<has_print_properties, ConcreteOp, Props>;
 
   /// Trait to check if parseProperties(OpAsmParser, T) exist
   template <typename T, typename... Args>
@@ -1982,16 +1981,16 @@ public:
 
   /// Print the operation properties with names not included within
   /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
-  /// `printProperties` free-function if it exists, and otherwise by converting
-  /// the properties to an Attribute.
-  template <typename T>
+  /// `T::printProperties` if it exists, and otherwise by converting the
+  /// properties to an Attribute.
+  template <typename T = ConcreteType>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
-                              const T &properties,
+                              const InferredProperties<T> &properties,
                               ArrayRef<StringRef> elidedProps = {}) {
-    if constexpr (detect_has_print_properties<T>::value)
-      return printProperties(p, properties, elidedProps);
-    genericPrintProperties(
-        p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
+    if constexpr (detect_has_print_properties<T, InferredProperties<T>>::value)
+      return T::printProperties(p, properties, elidedProps);
+    genericPrintProperties(p, T::getPropertiesAsAttr(ctx, properties),
+                           elidedProps);
   }
 
   /// Parses 'prop-dict' for the operation. Unless overridden, the method will
