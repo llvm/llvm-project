@@ -1074,9 +1074,15 @@ void VPlan::execute(VPTransformState *State) {
         Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
       continue;
     }
+    if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+      Value *Phi = State->get(VPI, true);
+      Value *Val = State->get(VPI->getOperand(1), true);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+      continue;
+    }
 
     auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+    bool NeedsScalar =
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
