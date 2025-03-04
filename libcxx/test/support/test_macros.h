@@ -272,6 +272,10 @@
 #  define TEST_HAS_FROM_CHARS_FLOATING_POINT
 #endif
 
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  define TEST_USE_FROZEN_CXX03_HEADERS
+#endif
+
 namespace test_macros_detail {
 template <class T, class U>
 struct is_same { enum { value = 0};} ;
