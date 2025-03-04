@@ -600,6 +600,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__tree>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_assignable.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
@@ -1084,6 +1085,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI map(const map& __m) : __tree_(__m.__tree_) { insert(__m.begin(), __m.end()); }
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(const map& __m) {
+    static_assert(is_copy_assignable<key_type>::value, "T must be Cpp17CopyAssignable");
+    static_assert(is_copy_assignable<mapped_type>::value, "T must be Cpp17CopyAssignable");
 #  ifndef _LIBCPP_CXX03_LANG
     __tree_ = __m.__tree_;
 #  else
@@ -1105,6 +1108,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
+    static_assert(__alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<key_type>::value,
+                  "T must be Cpp17MoveAssignable");
+    static_assert(
+        __alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<mapped_type>::value,
+        "T must be Cpp17MoveAssignable");
     __tree_ = std::move(__m.__tree_);
     return *this;
   }
@@ -1771,6 +1779,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(const multimap& __m) {
+    static_assert(is_copy_assignable<key_type>::value, "T must be Cpp17CopyAssignable");
+    static_assert(is_copy_assignable<mapped_type>::value, "T must be Cpp17CopyAssignable");
 #  ifndef _LIBCPP_CXX03_LANG
     __tree_ = __m.__tree_;
 #  else
@@ -1792,6 +1802,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
+    static_assert(__alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<key_type>::value,
+                  "T must be Cpp17MoveAssignable");
+    static_assert(
+        __alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<mapped_type>::value,
+        "T must be Cpp17MoveAssignable");
     __tree_ = std::move(__m.__tree_);
     return *this;
   }

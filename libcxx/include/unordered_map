@@ -612,6 +612,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_integral.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/type_identity.h>
@@ -1192,6 +1193,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI unordered_map& operator=(const unordered_map& __u) {
+    static_assert(is_copy_assignable<key_type>::value, "T must be Cpp17CopyAssignable");
+    static_assert(is_copy_assignable<mapped_type>::value, "T must be Cpp17CopyAssignable");
 #  ifndef _LIBCPP_CXX03_LANG
     __table_ = __u.__table_;
 #  else
@@ -1715,6 +1718,12 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_map&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
+  static_assert(allocator_traits<allocator_type>::propagate_on_container_move_assignment::value ||
+                    is_move_assignable<key_type>::value,
+                "T must be Cpp17MoveAssignable");
+  static_assert(allocator_traits<allocator_type>::propagate_on_container_move_assignment::value ||
+                    is_move_assignable<mapped_type>::value,
+                "T must be Cpp17MoveAssignable");
   __table_ = std::move(__u.__table_);
   return *this;
 }
@@ -2001,6 +2010,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI unordered_multimap& operator=(const unordered_multimap& __u) {
+    static_assert(is_copy_assignable<key_type>::value, "T must be Cpp17CopyAssignable");
+    static_assert(is_copy_assignable<mapped_type>::value, "T must be Cpp17CopyAssignable");
 #  ifndef _LIBCPP_CXX03_LANG
     __table_ = __u.__table_;
 #  else
@@ -2472,6 +2483,10 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::operator=(unordered_multimap&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
+  static_assert(__alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<key_type>::value,
+                "T must be Cpp17MoveAssignable");
+  static_assert(__alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<mapped_type>::value,
+                "T must be Cpp17MoveAssignable");
   __table_ = std::move(__u.__table_);
   return *this;
 }
