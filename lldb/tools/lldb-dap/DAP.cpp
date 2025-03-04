@@ -754,16 +754,19 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 }
 
 bool DAP::HandleObject(const llvm::json::Object &object) {
+  TelemetryDispatcher dispatcher;
+
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
-
+    dispatcher.set("request_name", command);
     auto new_handler_pos = request_handlers.find(command);
     if (new_handler_pos != request_handlers.end()) {
       (*new_handler_pos->second)(object);
       return true; // Success
     }
 
+    dispatcher.set("error", llvm::Twine("unhandled-command:" + command).str());
     if (log)
       *log << "error: unhandled command \"" << command.data() << "\""
            << std::endl;

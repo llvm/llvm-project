@@ -19,6 +19,8 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -31,6 +33,7 @@
 #include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -126,6 +129,8 @@ public:
                              llvm::StringRef prompt);
 
   void Clear();
+
+  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry);
 
   bool GetAsyncExecution();
 
