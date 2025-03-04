@@ -227,10 +227,12 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
                                   cir::GlobalLinkageKind::InternalLinkage);
 
   // Move over the initialzation code of the ctor region.
-  auto &block = op.getCtorRegion().front();
   mlir::Block *entryBB = f.addEntryBlock();
-  entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
-                                  block.begin(), std::prev(block.end()));
+  if (!op.getCtorRegion().empty()) {
+    auto &block = op.getCtorRegion().front();
+    entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
+                                    block.begin(), std::prev(block.end()));
+  }
 
   // Register the destructor call with __cxa_atexit
   auto &dtorRegion = op.getDtorRegion();
@@ -294,9 +296,18 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
 
   // Replace cir.yield with cir.return
   builder.setInsertionPointToEnd(entryBB);
-  auto &yieldOp = block.getOperations().back();
-  assert(isa<YieldOp>(yieldOp));
-  builder.create<ReturnOp>(yieldOp.getLoc());
+  mlir::Operation *yieldOp = nullptr;
+  if (!op.getCtorRegion().empty()) {
+    auto &block = op.getCtorRegion().front();
+    yieldOp = &block.getOperations().back();
+  } else {
+    assert(!dtorRegion.empty());
+    auto &block = dtorRegion.front();
+    yieldOp = &block.getOperations().back();
+  }
+
+  assert(isa<YieldOp>(*yieldOp));
+  builder.create<ReturnOp>(yieldOp->getLoc());
   return f;
 }
 

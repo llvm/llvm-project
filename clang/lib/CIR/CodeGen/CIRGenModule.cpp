@@ -373,9 +373,9 @@ bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *global) {
   if (fd) {
     // Implicit template instantiations may change linkage if they are later
     // explicitly instantiated, so they should not be emitted eagerly.
-    // TODO(cir): do we care?
-    assert(fd->getTemplateSpecializationKind() != TSK_ImplicitInstantiation &&
-           "not implemented");
+    if (fd->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+
     assert(!fd->isTemplated() && "Templates NYI");
   }
   const auto *vd = dyn_cast<VarDecl>(global);
