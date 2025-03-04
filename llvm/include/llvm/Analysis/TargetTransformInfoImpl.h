@@ -1006,6 +1006,8 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
+  bool preferAlternateOpcodeVectorization() const { return true; }
+
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const {
     return false;
