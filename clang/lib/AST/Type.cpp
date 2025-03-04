@@ -5114,31 +5114,8 @@ bool Type::hasSizedVLAType() const {
   return false;
 }
 
-bool Type::isHLSLResourceWrapper() const {
-  const Type *Ty = getUnqualifiedDesugaredType();
-
-  // check if it's a builtin type first
-  if (Ty->isBuiltinType())
-    return Ty->isHLSLBuiltinIntangibleType();
-
-  // unwrap arrays
-  while (isa<ConstantArrayType>(Ty))
-    Ty = Ty->getArrayElementTypeNoTypeQual();
-
-  const RecordType *RT =
-      dyn_cast<RecordType>(Ty->getUnqualifiedDesugaredType());
-  if (!RT)
-    return false;
-
-  CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-  assert(RD != nullptr &&
-         "all HLSL structs and classes should be CXXRecordDecl");
-  assert(RD->isCompleteDefinition() && "expecting complete type");
-  if (RD->field_empty()) {
-    return false;
-  }
-  const FieldDecl *FirstField = *RD->field_begin();
-  return FirstField->getType()->isHLSLAttributedResourceType();
+bool Type::isHLSLResourceClass() const {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(this) != nullptr;
 }
 
 bool Type::isHLSLIntangibleType() const {
