@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
-
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
@@ -64,6 +64,8 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and all contraction
   // operations. Also materializes masks, lowers vector.step, rank-reduces FMA,
   // applies folding and DCE.
+  Operation *op = getOperation();
+  const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
   {
     RewritePatternSet patterns(&getContext());
     populateVectorToVectorCanonicalizationPatterns(patterns);
@@ -83,10 +85,12 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorRankReducingFMAPattern(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
-
   // Convert to the LLVM IR dialect.
-  LowerToLLVMOptions options(&getContext());
-  LLVMTypeConverter converter(&getContext(), options);
+  LowerToLLVMOptions options(&getContext(),
+                             dataLayoutAnalysis.getAtOrAbove(op));
+  if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+    options.overrideIndexBitwidth(indexBitwidth);
+  LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
   RewritePatternSet patterns(&getContext());
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
