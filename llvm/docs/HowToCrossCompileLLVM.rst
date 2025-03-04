@@ -88,6 +88,7 @@ used within the sysroot (i.e. ``$SYSROOT/usr/lib/$TARGET`` should exist).
 Then execute the following snippet to create a toolchain file:
 
    .. code-block:: bash
+
     cat - <<EOF > $TARGET-clang.cmake
     set(CMAKE_SYSTEM_NAME Linux)
     set(CMAKE_SYSROOT "$SYSROOT")
