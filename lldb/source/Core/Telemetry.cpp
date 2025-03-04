@@ -15,6 +15,7 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
@@ -67,6 +68,18 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
+void TargetInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("target_uuid", target_uuid);
+  serializer.write("arch_name", arch_name);
+  serializer.write("is_start_entry", is_start_entry);
+  if (exit_desc.has_value()) {
+    serializer.write("exit_code", exit_desc->exit_code);
+    serializer.write("exit_desc", exit_desc->description);
+  }
+}
+
 TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
 
@@ -81,26 +94,45 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
 
 const Config *TelemetryManager::GetConfig() { return m_config.get(); }
 
+class NoOpTelemetryManager : public TelemetryManager {
+public:
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  explicit NoOpTelemetryManager()
+      : TelemetryManager(std::make_unique<::llvm::telemetry::Config>(
+            /*EnableTelemetry*/ false)) {}
+
+  virtual llvm::StringRef GetInstanceName() const override {
+    return "NoOpTelemetryManager";
+  }
+
+  llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  static NoOpTelemetryManager *GetInstance() {
+    static std::unique_ptr<NoOpTelemetryManager> g_ins =
+        std::make_unique<NoOpTelemetryManager>();
+    return g_ins.get();
+  }
+};
+
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
-  if (!Config::BuildTimeEnableTelemetry)
-    return nullptr;
+  // If Telemetry is disabled or if there is no default instance, then use the
+  // NoOp manager. We use a dummy instance to avoid having to do nullchecks in
+  // various places.
+  if (!Config::BuildTimeEnableTelemetry || !g_instance)
+    return NoOpTelemetryManager::GetInstance();
   return g_instance.get();
 }
 
-TelemetryManager *TelemetryManager::GetInstanceIfEnabled() {
-  // Telemetry may be enabled at build time but disabled at runtime.
-  if (TelemetryManager *ins = TelemetryManager::GetInstance()) {
-    if (ins->GetConfig()->EnableTelemetry)
-      return ins;
-  }
-
-  return nullptr;
-}
-
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
-  if (Config::BuildTimeEnableTelemetry)
-    g_instance = std::move(manager);
+  g_instance = std::move(manager);
 }
 
 } // namespace telemetry
