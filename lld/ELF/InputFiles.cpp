@@ -922,10 +922,11 @@ template <typename ELFT>
 static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
                                  ArrayRef<uint8_t> &desc, ELFFileBase *f,
                                  const uint8_t *base,
-                                 ArrayRef<uint8_t> *data = nullptr) {
+                                 ArrayRef<uint8_t> *data = nullptr,
+                                 StringRef sectionName = ".note.gnu.property") {
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
     auto diag = Err(ctx);
-    diag << f->getName() << ":(" << ".note.gnu.properties" << "+0x"
+    diag << f->getName() << ":(" << sectionName << "+0x"
          << Twine::utohexstr(place - base) << "): ";
     return diag;
   };
@@ -1008,8 +1009,8 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-    const uint8_t *base = f.getObj().base();
-    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data);
+    const uint8_t *base = sec.content().data();
+    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data, sec.name);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
