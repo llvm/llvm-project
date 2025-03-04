@@ -14018,7 +14018,7 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
 }
 
 void Sema::CheckVectorAccess(const Expr *BaseExpr, const Expr *IndexExpr) {
-  const VectorType *VTy = BaseExpr->getType()->getAs<VectorType>();
+  const auto *VTy = BaseExpr->getType()->getAs<VectorType>();
   if (!VTy)
     return;
 
