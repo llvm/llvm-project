@@ -58,6 +58,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanCFG.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
@@ -421,8 +422,10 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
-/// Returns "best known" trip count for the specified loop \p L as defined by
-/// the following procedure:
+/// Returns "best known" trip count, which is either a valid positive trip count
+/// or std::nullopt when an estimate cannot be made (including when the trip
+/// count would overflow), for the specified loop \p L as defined by the
+/// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
@@ -1453,12 +1456,9 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
-    // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
-    // penultimate EVL.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath &&
-                      Legal->getFixedOrderRecurrences().empty();
+                      !EnableVPlanNativePath;
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -2033,7 +2033,6 @@ public:
                   PSE, OuterLoop, /* CanUseConstantMax = */ false))
             BestTripCount = *EstimatedTC;
 
-          BestTripCount = std::max(BestTripCount, 1U);
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
@@ -5038,7 +5037,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       if (TailTripCountUB == TailTripCountLB)
         MaxInterleaveCount = InterleaveCountUB;
     }
-  } else if (BestKnownTC && *BestKnownTC > 0) {
+  } else if (BestKnownTC) {
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
@@ -6672,7 +6671,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
-    if (!isa<Constant>(Op2) && PSE.getSE()->isSCEVable(Op2->getType()) &&
+    if (!isa<Constant>(Op2) && TheLoop->isLoopInvariant(Op2) &&
+        PSE.getSE()->isSCEVable(Op2->getType()) &&
         isa<SCEVConstant>(PSE.getSCEV(Op2))) {
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }

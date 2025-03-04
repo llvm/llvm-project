@@ -4378,7 +4378,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umax,
                                              Op0, Op1, nullptr, "elt.max");
     } else
-      Result = Builder.CreateMaxNum(Op0, Op1, "elt.max");
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4394,7 +4394,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umin,
                                              Op0, Op1, nullptr, "elt.min");
     } else
-      Result = Builder.CreateMinNum(Op0, Op1, "elt.min");
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
   }
 

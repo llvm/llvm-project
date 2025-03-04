@@ -137,27 +137,29 @@ static void EventThreadFunction(DAP &dap) {
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
           auto bp = Breakpoint(
               dap, lldb::SBBreakpoint::GetBreakpointFromEvent(event));
-          // If the breakpoint was originated from the IDE, it will have the
-          // BreakpointBase::GetBreakpointLabel() label attached. Regardless
-          // of wether the locations were added or removed, the breakpoint
-          // ins't going away, so we the reason is always "changed".
+          // If the breakpoint was set through DAP, it will have the
+          // BreakpointBase::GetBreakpointLabel() label. Regardless
+          // of whether  locations were added, removed, or resolved, the
+          // breakpoint isn't going away and the reason is always "changed".
           if ((event_type & lldb::eBreakpointEventTypeLocationsAdded ||
-               event_type & lldb::eBreakpointEventTypeLocationsRemoved) &&
+               event_type & lldb::eBreakpointEventTypeLocationsRemoved ||
+               event_type & lldb::eBreakpointEventTypeLocationsResolved) &&
               bp.MatchesName(BreakpointBase::GetBreakpointLabel())) {
-            auto bp_event = CreateEventObject("breakpoint");
-            llvm::json::Object body;
-            // As VSCode already knows the path of this breakpoint, we don't
-            // need to send it back as part of a "changed" event. This
-            // prevent us from sending to VSCode paths that should be source
-            // mapped. Note that CreateBreakpoint doesn't apply source mapping.
-            // Besides, the current implementation of VSCode ignores the
-            // "source" element of breakpoint events.
+            // As the DAP client already knows the path of this breakpoint, we
+            // don't need to send it back as part of the "changed" event. This
+            // avoids sending paths that should be source mapped. Note that
+            // CreateBreakpoint doesn't apply source mapping and certain
+            // implementation ignore the source part of this event anyway.
             llvm::json::Value source_bp = CreateBreakpoint(&bp);
             source_bp.getAsObject()->erase("source");
 
+            llvm::json::Object body;
             body.try_emplace("breakpoint", source_bp);
             body.try_emplace("reason", "changed");
+
+            llvm::json::Object bp_event = CreateEventObject("breakpoint");
             bp_event.try_emplace("body", std::move(body));
+
             dap.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }

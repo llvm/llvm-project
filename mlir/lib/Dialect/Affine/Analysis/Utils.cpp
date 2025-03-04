@@ -1255,7 +1255,8 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (sliceState != nullptr) {
     // Add dim and symbol slice operands.
     for (auto operand : sliceState->lbOperands[0]) {
-      cst.addInductionVarOrTerminalSymbol(operand);
+      if (failed(cst.addInductionVarOrTerminalSymbol(operand)))
+        return failure();
     }
     // Add upper/lower bounds from 'sliceState' to 'cst'.
     LogicalResult ret =
