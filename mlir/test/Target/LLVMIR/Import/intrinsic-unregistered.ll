@@ -66,3 +66,14 @@ define void @lround_test(float %0, double %1) {
   %3 = call i32 @llvm.lround.i32.f32(float %0)
   ret void
 }
+
+; // -----
+
+declare i32 @llvm.riscv.sha256sig0(i32)
+
+; CHECK-LABEL: test_intrin_arg_attr
+define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
+    ; CHECK: llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+    %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
+    ret i32 %val
+}

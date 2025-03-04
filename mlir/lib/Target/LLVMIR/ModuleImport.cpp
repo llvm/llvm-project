@@ -2213,7 +2213,8 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
 }
 
 void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
-                                              CallOpInterface callOp,
+                                              ArrayAttr &argsAttr,
+                                              ArrayAttr &resAttr,
                                               OpBuilder &builder) {
   llvm::AttributeList llvmAttrs = call->getAttributes();
   SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
@@ -2233,14 +2234,23 @@ void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
     SmallVector<DictionaryAttr> argAttrs;
     for (auto &llvmArgAttrs : llvmArgAttrsSet)
       argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
-    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+    argsAttr = getArrayAttr(argAttrs);
   }
 
   llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
   if (!llvmResAttr.hasAttributes())
     return;
   DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
-  callOp.setResAttrsAttr(getArrayAttr({resAttrs}));
+  resAttr = getArrayAttr({resAttrs});
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  ArrayAttr argsAttr, resAttr;
+  convertParameterAttributes(call, argsAttr, resAttr, builder);
+  callOp.setArgAttrsAttr(argsAttr);
+  callOp.setResAttrsAttr(resAttr);
 }
 
 template <typename Op>
