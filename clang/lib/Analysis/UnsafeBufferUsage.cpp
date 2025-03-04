@@ -426,23 +426,37 @@ getDependentValuesFromCall(const CountAttributedType *CAT,
 //   Other kinds of function calls are not supported, so an expression of the
 //   form `f(...)` is not supported.
 struct CompatibleCountExprVisitor
-    : public ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *> {
+    : public ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *,
+                              bool> {
+  // The third 'bool' type parameter for each visit method indicates whether the
+  // current visiting expression is the result of the formal parameter to actual
+  // argument substitution.  Since the argument expression may contain DREs
+  // referencing to back to those parameters (in cases of recursive calls), the
+  // analysis may hit an infinite loop if not knowing whether the substitution
+  // has happened.  A typical example that could introduce infinite loop without
+  // this knowledge is shown below.
+  // ```
+  //  void f(int * __counted_by(n) p, size_t n) {
+  //    f(p, n);
+  //  }
+  // ```
   using BaseVisitor =
-      ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *>;
+      ConstStmtVisitor<CompatibleCountExprVisitor, bool, const Expr *, bool>;
 
   const Expr *MemberBase;
   const DependentValuesTy *DependentValues;
   ASTContext &Ctx;
 
   // If `Deref` has the form `*&e`, return `e`; otherwise return nullptr.
-  const Expr *trySimplifyDerefAddressof(const UnaryOperator *Deref) {
+  const Expr *trySimplifyDerefAddressof(const UnaryOperator *Deref,
+                                        bool hasBeenSubstituted) {
     const Expr *DerefOperand = Deref->getSubExpr()->IgnoreParenImpCasts();
 
     if (const auto *UO = dyn_cast<UnaryOperator>(DerefOperand))
       if (UO->getOpcode() == UO_AddrOf)
         return UO->getSubExpr();
     if (const auto *DRE = dyn_cast<DeclRefExpr>(DerefOperand)) {
-      if (!DependentValues)
+      if (!DependentValues || hasBeenSubstituted)
         return nullptr;
 
       auto I = DependentValues->find(DRE->getDecl());
@@ -460,18 +474,22 @@ struct CompatibleCountExprVisitor
                                       ASTContext &Ctx)
       : MemberBase(MemberBase), DependentValues(DependentValues), Ctx(Ctx) {}
 
-  bool VisitStmt(const Stmt *S, const Expr *E) { return false; }
-
-  bool VisitImplicitCastExpr(const ImplicitCastExpr *SelfICE,
-                             const Expr *Other) {
-    return Visit(SelfICE->getSubExpr(), Other);
+  bool VisitStmt(const Stmt *S, const Expr *E, bool hasBeenSubstituted) {
+    return false;
   }
 
-  bool VisitParenExpr(const ParenExpr *SelfPE, const Expr *Other) {
-    return Visit(SelfPE->getSubExpr(), Other);
+  bool VisitImplicitCastExpr(const ImplicitCastExpr *SelfICE, const Expr *Other,
+                             bool hasBeenSubstituted) {
+    return Visit(SelfICE->getSubExpr(), Other, hasBeenSubstituted);
   }
 
-  bool VisitIntegerLiteral(const IntegerLiteral *SelfIL, const Expr *Other) {
+  bool VisitParenExpr(const ParenExpr *SelfPE, const Expr *Other,
+                      bool hasBeenSubstituted) {
+    return Visit(SelfPE->getSubExpr(), Other, hasBeenSubstituted);
+  }
+
+  bool VisitIntegerLiteral(const IntegerLiteral *SelfIL, const Expr *Other,
+                           bool hasBeenSubstituted) {
     if (const auto *IntLit =
             dyn_cast<IntegerLiteral>(Other->IgnoreParenImpCasts())) {
       return SelfIL == IntLit ||
@@ -481,7 +499,8 @@ struct CompatibleCountExprVisitor
   }
 
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Self,
-                                     const Expr *Other) {
+                                     const Expr *Other,
+                                     bool hasBeenSubstituted) {
     // If `Self` is a `sizeof` expression, try to evaluate and compare the two
     // expressions as constants:
     if (Self->getKind() == UnaryExprOrTypeTrait::UETT_SizeOf) {
@@ -498,17 +517,19 @@ struct CompatibleCountExprVisitor
     return false;
   }
 
-  bool VisitCXXThisExpr(const CXXThisExpr *SelfThis, const Expr *Other) {
+  bool VisitCXXThisExpr(const CXXThisExpr *SelfThis, const Expr *Other,
+                        bool hasBeenSubstituted) {
     return isa<CXXThisExpr>(Other->IgnoreParenImpCasts());
   }
 
-  bool VisitDeclRefExpr(const DeclRefExpr *SelfDRE, const Expr *Other) {
+  bool VisitDeclRefExpr(const DeclRefExpr *SelfDRE, const Expr *Other,
+                        bool hasBeenSubstituted) {
     const ValueDecl *SelfVD = SelfDRE->getDecl();
 
-    if (DependentValues) {
+    if (DependentValues && !hasBeenSubstituted) {
       const auto It = DependentValues->find(SelfVD);
       if (It != DependentValues->end())
-        return Visit(It->second, Other);
+        return Visit(It->second, Other, true);
     }
 
     const auto *O = Other->IgnoreParenImpCasts();
@@ -523,50 +544,55 @@ struct CompatibleCountExprVisitor
     const auto *OtherME = dyn_cast<MemberExpr>(O);
     if (MemberBase && OtherME) {
       return OtherME->getMemberDecl() == SelfVD &&
-             Visit(OtherME->getBase(), MemberBase);
+             Visit(OtherME->getBase(), MemberBase, hasBeenSubstituted);
     }
 
     return false;
   }
 
-  bool VisitMemberExpr(const MemberExpr *Self, const Expr *Other) {
+  bool VisitMemberExpr(const MemberExpr *Self, const Expr *Other,
+                       bool hasBeenSubstituted) {
     // Even though we don't support member expression in counted-by, actual
     // arguments can be member expressions.
     if (Self == Other)
       return true;
     if (const auto *DRE = dyn_cast<DeclRefExpr>(Other->IgnoreParenImpCasts()))
       return MemberBase && Self->getMemberDecl() == DRE->getDecl() &&
-             Visit(Self->getBase(), MemberBase);
+             Visit(Self->getBase(), MemberBase, hasBeenSubstituted);
     if (const auto *OtherME =
             dyn_cast<MemberExpr>(Other->IgnoreParenImpCasts())) {
       return Self->getMemberDecl() == OtherME->getMemberDecl() &&
-             Visit(Self->getBase(), OtherME->getBase());
+             Visit(Self->getBase(), OtherME->getBase(), hasBeenSubstituted);
     }
     return false;
   }
 
-  bool VisitUnaryOperator(const UnaryOperator *SelfUO, const Expr *Other) {
+  bool VisitUnaryOperator(const UnaryOperator *SelfUO, const Expr *Other,
+                          bool hasBeenSubstituted) {
     if (SelfUO->getOpcode() != UO_Deref)
       return false; // We don't support any other unary operator
 
     if (const auto *OtherUO =
             dyn_cast<UnaryOperator>(Other->IgnoreParenImpCasts())) {
       if (SelfUO->getOpcode() == OtherUO->getOpcode())
-        return Visit(SelfUO->getSubExpr(), OtherUO->getSubExpr());
+        return Visit(SelfUO->getSubExpr(), OtherUO->getSubExpr(),
+                     hasBeenSubstituted);
     }
     // If `Other` is not a dereference expression, try to simplify `SelfUO`:
-    if (const auto *SimplifiedSelf = trySimplifyDerefAddressof(SelfUO)) {
-      return Visit(SimplifiedSelf, Other);
+    if (const auto *SimplifiedSelf =
+            trySimplifyDerefAddressof(SelfUO, hasBeenSubstituted)) {
+      return Visit(SimplifiedSelf, Other, hasBeenSubstituted);
     }
     return false;
   }
 
-  bool VisitBinaryOperator(const BinaryOperator *SelfBO, const Expr *Other) {
+  bool VisitBinaryOperator(const BinaryOperator *SelfBO, const Expr *Other,
+                           bool hasBeenSubstituted) {
     const auto *OtherBO =
         dyn_cast<BinaryOperator>(Other->IgnoreParenImpCasts());
     if (OtherBO && OtherBO->getOpcode() == SelfBO->getOpcode()) {
-      return Visit(SelfBO->getLHS(), OtherBO->getLHS()) &&
-             Visit(SelfBO->getRHS(), OtherBO->getRHS());
+      return Visit(SelfBO->getLHS(), OtherBO->getLHS(), hasBeenSubstituted) &&
+             Visit(SelfBO->getRHS(), OtherBO->getRHS(), hasBeenSubstituted);
     }
 
     return false;
@@ -574,7 +600,7 @@ struct CompatibleCountExprVisitor
 
   // Support any overloaded operator[] so long as it is a const method.
   bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *SelfOpCall,
-                                const Expr *Other) {
+                                const Expr *Other, bool hasBeenSubstituted) {
     if (SelfOpCall->getOperator() != OverloadedOperatorKind::OO_Subscript)
       return false;
 
@@ -585,8 +611,10 @@ struct CompatibleCountExprVisitor
     if (const auto *OtherOpCall =
             dyn_cast<CXXOperatorCallExpr>(Other->IgnoreParenImpCasts()))
       if (SelfOpCall->getOperator() == OtherOpCall->getOperator()) {
-        return Visit(SelfOpCall->getArg(0), OtherOpCall->getArg(0)) &&
-               Visit(SelfOpCall->getArg(1), OtherOpCall->getArg(1));
+        return Visit(SelfOpCall->getArg(0), OtherOpCall->getArg(0),
+                     hasBeenSubstituted) &&
+               Visit(SelfOpCall->getArg(1), OtherOpCall->getArg(1),
+                     hasBeenSubstituted);
       }
     return false;
   }
@@ -595,17 +623,17 @@ struct CompatibleCountExprVisitor
   // considered unsafe, they can be safely used on constant arrays with
   // known-safe literal indexes.
   bool VisitArraySubscriptExpr(const ArraySubscriptExpr *SelfAS,
-                               const Expr *Other) {
+                               const Expr *Other, bool hasBeenSubstituted) {
     if (const auto *OtherAS =
             dyn_cast<ArraySubscriptExpr>(Other->IgnoreParenImpCasts()))
-      return Visit(SelfAS->getLHS(), OtherAS->getLHS()) &&
-             Visit(SelfAS->getRHS(), OtherAS->getRHS());
+      return Visit(SelfAS->getLHS(), OtherAS->getLHS(), hasBeenSubstituted) &&
+             Visit(SelfAS->getRHS(), OtherAS->getRHS(), hasBeenSubstituted);
     return false;
   }
 
   // Support non-static member call:
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *SelfCall,
-                              const Expr *Other) {
+                              const Expr *Other, bool hasBeenSubstituted) {
     const CXXMethodDecl *MD = SelfCall->getMethodDecl();
 
     // The callee member function must be a const function with no parameter:
@@ -614,7 +642,8 @@ struct CompatibleCountExprVisitor
               dyn_cast<CXXMemberCallExpr>(Other->IgnoreParenImpCasts())) {
         return OtherCall->getMethodDecl() == MD &&
                Visit(SelfCall->getImplicitObjectArgument(),
-                     OtherCall->getImplicitObjectArgument());
+                     OtherCall->getImplicitObjectArgument(),
+                     hasBeenSubstituted);
       }
     }
     return false;
@@ -660,7 +689,7 @@ bool isCompatibleWithCountExpr(const Expr *E, const Expr *ExpectedCountExpr,
                                const DependentValuesTy *DependentValues,
                                ASTContext &Ctx) {
   CompatibleCountExprVisitor Visitor(MemberBase, DependentValues, Ctx);
-  return Visitor.Visit(ExpectedCountExpr, E);
+  return Visitor.Visit(ExpectedCountExpr, E, /* hasBeenSubstituted*/ false);
 }
 
 // Returns if a pair of expressions contain method calls to .data()/.c_str() and

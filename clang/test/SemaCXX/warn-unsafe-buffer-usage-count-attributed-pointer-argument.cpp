@@ -598,3 +598,21 @@ namespace output_param_test {
   };
 
 } // namespace output_param_test
+
+
+static void previous_infinite_loop(int * __counted_by(n) p, size_t n) {
+  previous_infinite_loop(p, n);
+}
+
+static void previous_infinite_loop2(int * __counted_by(n + 10) p, size_t n) {
+  previous_infinite_loop2(p, n);
+}
+
+static void previous_infinite_loop3(int * __counted_by(n + n * m) p, size_t n,
+// expected-note@+1 {{consider using 'std::span' and passing '.first(...).data()' to the parameter 'q'}}
+				    int * __counted_by(m * m + o) q,
+// expected-note@+1 {{consider using a safe container and passing '.data()' to the parameter 'r' and '.size()' to its dependent parameter 'o' or 'std::span' and passing '.first(...).data()' to the parameter 'r'}}
+				    int * __counted_by(o) r, size_t m, size_t o) {
+  previous_infinite_loop3(p, n, q, r, m, o);
+  previous_infinite_loop3(p, n, q, r, m, o + 1); // expected-warning 2{{unsafe assignment to function parameter of count-attributed type}}
+}
