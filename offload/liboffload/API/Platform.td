@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 def : Function {
   let name = "olGetPlatform";
-  let desc = "Retrieves all available platforms";
+  let desc = "Retrieves all available platforms.";
   let details = [
     "Multiple calls to this function will return identical platforms handles, in the same order.",
   ];
@@ -35,7 +35,7 @@ def : Function {
 
 def : Function {
   let name = "olGetPlatformCount";
-  let desc = "Retrieves the number of available platforms";
+  let desc = "Retrieves the number of available platforms.";
   let params = [
     Param<"uint32_t*",
       "NumPlatforms", "returns the total number of platforms available.",
@@ -46,7 +46,7 @@ def : Function {
 
 def : Enum {
   let name = "ol_platform_info_t";
-  let desc = "Supported platform info";
+  let desc = "Supported platform info.";
   let is_typed = 1;
   let etors = [
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
@@ -58,7 +58,7 @@ def : Enum {
 
 def : Enum {
   let name = "ol_platform_backend_t";
-  let desc = "Identifies the native backend of the platform";
+  let desc = "Identifies the native backend of the platform.";
   let etors =[
     Etor<"UNKNOWN", "The backend is not recognized">,
     Etor<"CUDA", "The backend is CUDA">,
@@ -68,7 +68,7 @@ def : Enum {
 
 def : Function {
   let name = "olGetPlatformInfo";
-  let desc = "Queries the given property of the platform";
+  let desc = "Queries the given property of the platform.";
   let details = [
     "`olGetPlatformInfoSize` can be used to query the storage size "
     "required for the given query."
@@ -96,7 +96,7 @@ def : Function {
 
 def : Function {
   let name = "olGetPlatformInfoSize";
-  let desc = "Returns the storage size of the given platform query";
+  let desc = "Returns the storage size of the given platform query.";
   let details = [];
   let params = [
     Param<"ol_platform_handle_t", "Platform", "handle of the platform", PARAM_IN>,

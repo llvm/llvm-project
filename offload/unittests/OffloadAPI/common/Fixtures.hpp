@@ -27,6 +27,14 @@
   } while (0)
 #endif
 
+#ifndef ASSERT_ANY_ERROR
+#define ASSERT_ANY_ERROR(ACTUAL)                                               \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    ASSERT_TRUE(Res);                                                          \
+  } while (0)
+#endif
+
 #define RETURN_ON_FATAL_FAILURE(...)                                           \
   __VA_ARGS__;                                                                 \
   if (this->HasFatalFailure() || this->IsSkipped()) {                          \
@@ -34,13 +42,13 @@
   }                                                                            \
   (void)0
 
-struct offloadTest : ::testing::Test {
+struct OffloadTest : ::testing::Test {
   // No special behavior now, but just in case we need to override it in future
 };
 
-struct offloadPlatformTest : offloadTest {
+struct OffloadPlatformTest : OffloadTest {
   void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(offloadTest::SetUp());
+    RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
 
     Platform = TestEnvironment::getPlatform();
     ASSERT_NE(Platform, nullptr);
@@ -49,9 +57,9 @@ struct offloadPlatformTest : offloadTest {
   ol_platform_handle_t Platform;
 };
 
-struct offloadDeviceTest : offloadPlatformTest {
+struct OffloadDeviceTest : OffloadPlatformTest {
   void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(offloadPlatformTest::SetUp());
+    RETURN_ON_FATAL_FAILURE(OffloadPlatformTest::SetUp());
 
     uint32_t NumDevices;
     ASSERT_SUCCESS(olGetDeviceCount(Platform, &NumDevices));
@@ -60,5 +68,59 @@ struct offloadDeviceTest : offloadPlatformTest {
     ASSERT_SUCCESS(olGetDevice(Platform, 1, &Device));
   }
 
-  ol_device_handle_t Device;
+  ol_device_handle_t Device = nullptr;
+};
+
+// Fixture for a generic program test. If you want a different program, use
+// offloadQueueTest and create your own program handle with the binary you want.
+struct OffloadProgramTest : OffloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Platform, DeviceBin));
+    ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+                                   DeviceBin->getBufferSize(), &Program));
+  }
+
+  void TearDown() override {
+    if (Program) {
+      olReleaseProgram(Program);
+    }
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
+  }
+
+  ol_program_handle_t Program = nullptr;
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+};
+
+struct OffloadKernelTest : OffloadProgramTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUp());
+    ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+  }
+
+  void TearDown() override {
+    if (Kernel) {
+      olReleaseKernel(Kernel);
+    }
+    RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
+  }
+
+  ol_kernel_handle_t Kernel = nullptr;
+};
+
+struct OffloadQueueTest : OffloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
+    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  }
+
+  void TearDown() override {
+    if (Queue) {
+      olReleaseQueue(Queue);
+    }
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
+  }
+
+  ol_queue_handle_t Queue = nullptr;
 };
