@@ -114,8 +114,8 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_upward(float inreg %a, ptr addr
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, 0xffff, s0
 ; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
   %bitcast = bitcast half %res to i16
@@ -129,8 +129,8 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_downward(float inreg %a, ptr ad
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_and_b32 s0, 0xffff, s0
 ; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.downward")
   %bitcast = bitcast half %res to i16
@@ -257,10 +257,10 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> in
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_and_b32 s0, 0xffff, s0
+; CHECK-NEXT:    s_and_b32 s1, 0xffff, s1
 ; CHECK-NEXT:    ; return to shader part epilog
   %res = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.upward")
   %bitcast = bitcast <2 x half> %res to <2 x i16>
@@ -276,10 +276,10 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_downward(<2 x float> 
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
+; CHECK-NEXT:    s_and_b32 s0, 0xffff, s0
+; CHECK-NEXT:    s_and_b32 s1, 0xffff, s1
 ; CHECK-NEXT:    ; return to shader part epilog
   %res = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.downward")
   %bitcast = bitcast <2 x half> %res to <2 x i16>
