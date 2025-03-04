@@ -59,11 +59,17 @@
 # RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
 # RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
 # RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=warning -z gcs-report=error -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report=warning -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report=error -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=warning -z gcs=always 2>&1 | count 0
+# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=error -z gcs=always 2>&1 | count 0
 
-# REPORT-WARN-DYNAMIC: warning: no-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
-# REPORT-WARN-DYNAMIC-NOT: warning: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
-# REPORT-ERROR-DYNAMIC: error: no-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
-# REPORT-ERROR-DYNAMIC-NOT: error: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependancies have the GCS marking.
+# REPORT-WARN-DYNAMIC: warning: no-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependencies have the GCS marking.
+# REPORT-WARN-DYNAMIC-NOT: warning: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependencies have the GCS marking.
+# REPORT-ERROR-DYNAMIC: error: no-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependencies have the GCS marking.
+# REPORT-ERROR-DYNAMIC-NOT: error: force-gcs.so: GCS is required by -z gcs, but this shared library lacks the necessary property note. The dynamic loader might not enable GCS or refuse to load the program unless all shared library dependencies have the GCS marking.
 
 ## An invalid gcs option should give an error
 # RUN: not ld.lld func1-gcs.o func2-gcs.o func3-gcs.o -z gcs=nonsense -z gcs-report=nonsense -z gcs-report-dynamic=nonsense 2>&1 | FileCheck --check-prefix=INVALID %s

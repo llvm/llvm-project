@@ -206,10 +206,6 @@ public:
     return typename ELFT::ShdrRange(
         reinterpret_cast<const typename ELFT::Shdr *>(elfShdrs), numELFShdrs);
   }
-  template <typename ELFT> typename ELFT::PhdrRange getELFPhdrs() const {
-    return typename ELFT::PhdrRange(
-        reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
-  }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
         reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numSymbols);
@@ -228,10 +224,8 @@ protected:
   StringRef stringTable;
   const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
-  const void *elfPhdrs = nullptr;
   uint32_t numELFShdrs = 0;
   uint32_t firstGlobal = 0;
-  uint32_t numElfPhdrs = 0;
 
   // Below are ObjFile specific members.
 
@@ -366,12 +360,21 @@ public:
   // parsed. Only filled for `--no-allow-shlib-undefined`.
   SmallVector<Symbol *, 0> requiredSymbols;
 
+  template <typename ELFT> typename ELFT::PhdrRange getELFPhdrs() const {
+    return typename ELFT::PhdrRange(
+        reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
+  }
+
+protected:
+  const void *elfPhdrs = nullptr;
+  uint32_t numElfPhdrs = 0;
+
 private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
   template <typename ELFT>
-  void parseGnuAttributes(const uint8_t *base,
+  void parseGnuAndFeatures(const uint8_t *base,
                           const typename ELFT::PhdrRange headers,
                           const typename ELFT::Shdr *sHeader);
 };

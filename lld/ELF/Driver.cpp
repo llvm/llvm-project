@@ -596,6 +596,10 @@ getZGcsReport(Ctx &ctx, opt::InputArgList &args, bool isReportDynamic,
     }
   }
 
+  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When -zgcs-report
+  // is set to `warning` or `error`, -zgcs-report-dynamic will inherit this value if
+  // there is no user set value. This detects shared libraries without the GCS
+  // property but does not the shared-libraries to be rebuilt for successful linking
   if (isReportDynamic && gcsReportValue.getValue() != GcsReportPolicy::None &&
       ret.getValue() == GcsReportPolicy::None)
     ret = GcsReportPolicy::Warning;
@@ -1582,9 +1586,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
-  ctx.arg.zGcsReport = getZGcsReport(ctx, args, false);
+  ctx.arg.zGcsReport = getZGcsReport(ctx, args, /* isReportDynamic */ false);
   ctx.arg.zGcsReportDynamic =
-      getZGcsReport(ctx, args, true, ctx.arg.zGcsReport);
+      getZGcsReport(ctx, args, /* isReportDynamic */ true, ctx.arg.zGcsReport);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -2956,7 +2960,7 @@ static void readSecurityNotes(Ctx &ctx) {
              "necessary property note. The "
           << "dynamic loader might not enable GCS or refuse to load the "
              "program unless all shared library "
-          << "dependancies have the GCS marking.";
+          << "dependencies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
