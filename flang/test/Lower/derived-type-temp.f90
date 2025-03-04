@@ -13,7 +13,7 @@ program derived_temp_init
   y = t2(x)
 end
 
-! CHECK: %[[temp:.*]] = fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
-! CHECK: %[[box:.*]] = fir.embox %[[temp]] : (!fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
-! CHECK: %[[box_none:.*]] = fir.convert %[[box]] : (!fir.box<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAInitialize(%[[box_none]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> ()
+! CHECK: %[[x:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
+! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QFTt1.DerivedInit) : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
+! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
+! CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
