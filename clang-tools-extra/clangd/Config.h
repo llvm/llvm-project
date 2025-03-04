@@ -59,6 +59,7 @@ struct Config {
     std::optional<std::string> FixedCDBPath;
   };
 
+  enum class BuiltinHeaderPolicy { Clangd, QueryDriver };
   /// Controls how the compile command for the current file is determined.
   struct {
     /// Edits to apply to the compile command, in sequence.
@@ -66,6 +67,7 @@ struct Config {
         Edits;
     /// Where to search for compilation databases for this file's flags.
     CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
+    BuiltinHeaderPolicy BuiltinHeaders = BuiltinHeaderPolicy::Clangd;
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
