@@ -1886,11 +1886,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
   else
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
-
-  // Routines to handle fp16 storage type.
-  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
-  setLibcallName(RTLIB::FPROUND_F64_F16, "__truncdfhf2");
-  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
 }
 
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {

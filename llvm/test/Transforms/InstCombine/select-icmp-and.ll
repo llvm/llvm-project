@@ -391,9 +391,8 @@ define i32 @test15e_extra_use(i32 %X) {
 ;; (a & 128) ? 256 : 0
 define i32 @test15e_zext(i8 %X) {
 ; CHECK-LABEL: @test15e_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[T2_NOT:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2_NOT]], i32 0, i32 256
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t1 = and i8 %X, 128
@@ -406,9 +405,7 @@ define i32 @test15e_zext(i8 %X) {
 define i32 @test15e_zext_extra_use(i8 %X) {
 ; CHECK-LABEL: @test15e_zext_extra_use(
 ; CHECK-NEXT:    [[T2:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2]], i32 256, i32 0
 ; CHECK-NEXT:    call void @use1(i1 [[T2]])
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -438,8 +435,7 @@ define i32 @test15f_extra_use(i32 %X) {
 ; CHECK-LABEL: @test15f_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
 ; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[T1]], 1
-; CHECK-NEXT:    [[T3:%.*]] = xor i32 [[TMP1]], 256
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2]], i32 0, i32 256
 ; CHECK-NEXT:    call void @use1(i1 [[T2]])
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -453,10 +449,9 @@ define i32 @test15f_extra_use(i32 %X) {
 ;; (a & 128) ? 0 : 256
 define i16 @test15f_trunc(i32 %X) {
 ; CHECK-LABEL: @test15f_trunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 256
-; CHECK-NEXT:    [[T3:%.*]] = xor i16 [[TMP3]], 256
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[T2_NOT:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T2_NOT]], i16 256, i16 0
 ; CHECK-NEXT:    ret i16 [[T3]]
 ;
   %t1 = and i32 %X, 128
@@ -799,7 +794,9 @@ define i8 @select_bittest_to_xor(i8 %x) {
 ; CHECK-LABEL: @select_bittest_to_xor(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
-; CHECK-NEXT:    [[MASKSEL:%.*]] = xor i8 [[X]], -128
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 127
+; CHECK-NEXT:    [[MASKSEL1:%.*]] = select i1 [[CMP]], i8 -128, i8 0
+; CHECK-NEXT:    [[MASKSEL:%.*]] = or disjoint i8 [[AND]], [[MASKSEL1]]
 ; CHECK-NEXT:    ret i8 [[MASKSEL]]
 ;
   %cmp = icmp sgt i8 %x, -1
@@ -808,4 +805,110 @@ define i8 @select_bittest_to_xor(i8 %x) {
   %or = or i8 %x, -128
   %masksel = select i1 %cmp, i8 %or, i8 %and
   ret i8 %masksel
+}
+
+define i8 @select_trunc_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nsw_bittest_to_sub(i8 %x) {
+; CHECK-LABEL: @select_trunc_nsw_bittest_to_sub(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nsw i8 %x to i1
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_sub_extra_use(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_sub_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @neg_select_trunc_bittest_to_sub_extra_use(i8 %x) {
+; CHECK-LABEL: @neg_select_trunc_bittest_to_sub_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 3, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 3, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_nuw_bittest_to_shl_not(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_to_shl_not(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 0, i8 4
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %ret = select i1 %trunc, i8 0, i8 4
+  ret i8 %ret
+}
+
+define i8 @select_trunc_bittest_to_shl(i8 %x) {
+; CHECK-LABEL: @select_trunc_bittest_to_shl(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 4, i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  %ret = select i1 %trunc, i8 4, i8 0
+  ret i8 %ret
+}
+
+define i8 @neg_select_trunc_bittest_to_shl_extra_use(i8 %x) {
+; CHECK-LABEL: @neg_select_trunc_bittest_to_shl_extra_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TRUNC]], i8 4, i8 0
+; CHECK-NEXT:    ret i8 [[RET]]
+;
+  %trunc = trunc i8 %x to i1
+  call void @use1(i1 %trunc)
+  %ret = select i1 %trunc, i8 4, i8 0
+  ret i8 %ret
+}
+
+define i16 @select_trunc_nuw_bittest_or(i8 %x) {
+; CHECK-LABEL: @select_trunc_nuw_bittest_or(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP1]], i16 20, i16 4
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %select = select i1 %trunc, i16 16, i16 0
+  %res = or i16 4, %select
+  ret i16 %res
 }

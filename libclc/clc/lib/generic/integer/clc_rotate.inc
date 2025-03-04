@@ -1,6 +1,3 @@
-#define __CLC_AS_GENTYPE(x) __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)(x)
-#define __CLC_AS_U_GENTYPE(x) __CLC_XCONCAT(__clc_as_, __CLC_U_GENTYPE)(x)
-
 // The rotate(A, B) builtin left-shifts corresponding to the usual OpenCL shift
 // modulo rules. These rules state that A is left-shifted by the log2(N) least
 // significant bits in B when viewed as an unsigned integer value. Thus we don't

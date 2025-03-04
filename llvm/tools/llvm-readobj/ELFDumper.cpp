@@ -1624,8 +1624,6 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
@@ -7670,7 +7668,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printFlags("Flags", D.Flags, ArrayRef(SymVersionFlags));
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
-    W.printString("Name", D.Name.c_str());
+    W.printString("Name", D.Name);
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });

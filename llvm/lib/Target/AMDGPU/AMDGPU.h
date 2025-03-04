@@ -270,6 +270,12 @@ private:
   ScanOptions ScanImpl;
 };
 
+struct AMDGPUInsertDelayAluPass
+    : public PassInfoMixin<AMDGPUInsertDelayAluPass> {
+  PreservedAnalyses run(MachineFunction &F,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
@@ -368,7 +374,7 @@ struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
+void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
 void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
@@ -416,7 +422,7 @@ extern char &SIMemoryLegalizerID;
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
 
-void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);
@@ -428,8 +434,8 @@ extern char &SIInsertWaitcntsID;
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSIPostRABundlerPass(PassRegistry&);
-extern char &SIPostRABundlerID;
+void initializeSIPostRABundlerLegacyPass(PassRegistry &);
+extern char &SIPostRABundlerLegacyID;
 
 void initializeGCNCreateVOPDPass(PassRegistry &);
 extern char &GCNCreateVOPDID;

@@ -452,8 +452,8 @@ void RISCVInstrInfo::copyPhysRegVector(
 
 void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
-                                 const DebugLoc &DL, MCRegister DstReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DstReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
@@ -2984,13 +2984,13 @@ static bool isCandidatePatchable(const MachineBasicBlock &MBB) {
 }
 
 static bool isMIReadsReg(const MachineInstr &MI, const TargetRegisterInfo *TRI,
-                         unsigned RegNo) {
+                         MCRegister RegNo) {
   return MI.readsRegister(RegNo, TRI) ||
          MI.getDesc().hasImplicitUseOfPhysReg(RegNo);
 }
 
 static bool isMIModifiesReg(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI, unsigned RegNo) {
+                            const TargetRegisterInfo *TRI, MCRegister RegNo) {
   return MI.modifiesRegister(RegNo, TRI) ||
          MI.getDesc().hasImplicitDefOfPhysReg(RegNo);
 }
@@ -3005,7 +3005,7 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   // that can be used for expanding PseudoTAIL instruction,
   // then we cannot insert tail call.
   const TargetSubtargetInfo &STI = MBB.getParent()->getSubtarget();
-  unsigned TailExpandUseRegNo =
+  MCRegister TailExpandUseRegNo =
       RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   for (const MachineInstr &MI : MBB) {
     if (isMIReadsReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))
@@ -3016,30 +3016,25 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   return false;
 }
 
-static std::optional<MachineOutlinerConstructionID>
-analyzeCandidate(outliner::Candidate &C) {
+static bool analyzeCandidate(outliner::Candidate &C) {
   // If last instruction is return then we can rely on
   // the verification already performed in the getOutliningTypeImpl.
   if (C.back().isReturn()) {
     assert(!cannotInsertTailCall(*C.getMBB()) &&
            "The candidate who uses return instruction must be outlined "
            "using tail call");
-    return MachineOutlinerTailCall;
+    return false;
   }
 
-  auto CandidateUsesX5 = [](outliner::Candidate &C) {
-    const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-    if (std::any_of(C.begin(), C.end(), [TRI](const MachineInstr &MI) {
-          return isMIModifiesReg(MI, TRI, RISCV::X5);
-        }))
-      return true;
-    return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
-  };
+  // Filter out candidates where the X5 register (t0) can't be used to setup
+  // the function call.
+  const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
+  if (std::any_of(C.begin(), C.end(), [TRI](const MachineInstr &MI) {
+        return isMIModifiesReg(MI, TRI, RISCV::X5);
+      }))
+    return true;
 
-  if (!CandidateUsesX5(C))
-    return MachineOutlinerDefault;
-
-  return std::nullopt;
+  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -3048,35 +3043,32 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs,
     unsigned MinRepeats) const {
 
-  // Each RepeatedSequenceLoc is identical.
-  outliner::Candidate &Candidate = RepeatedSequenceLocs[0];
-  auto CandidateInfo = analyzeCandidate(Candidate);
-  if (!CandidateInfo)
-    RepeatedSequenceLocs.clear();
+  // Analyze each candidate and erase the ones that are not viable.
+  llvm::erase_if(RepeatedSequenceLocs, analyzeCandidate);
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
+  // Each RepeatedSequenceLoc is identical.
+  outliner::Candidate &Candidate = RepeatedSequenceLocs[0];
   unsigned InstrSizeCExt =
       Candidate.getMF()->getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 2
                                                                           : 4;
   unsigned CallOverhead = 0, FrameOverhead = 0;
 
-  MachineOutlinerConstructionID MOCI = CandidateInfo.value();
-  switch (MOCI) {
-  case MachineOutlinerDefault:
-    // call t0, function = 8 bytes.
-    CallOverhead = 8;
-    // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
-    FrameOverhead = InstrSizeCExt;
-    break;
-  case MachineOutlinerTailCall:
+  MachineOutlinerConstructionID MOCI = MachineOutlinerDefault;
+  if (Candidate.back().isReturn()) {
+    MOCI = MachineOutlinerTailCall;
     // tail call = auipc + jalr in the worst case without linker relaxation.
     CallOverhead = 4 + InstrSizeCExt;
     // Using tail call we move ret instruction from caller to callee.
     FrameOverhead = 0;
-    break;
+  } else {
+    // call t0, function = 8 bytes.
+    CallOverhead = 8;
+    // jr t0 = 4 bytes, 2 bytes if compressed instructions are enabled.
+    FrameOverhead = InstrSizeCExt;
   }
 
   for (auto &C : RepeatedSequenceLocs)
@@ -4115,7 +4107,6 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
 
 std::optional<unsigned>
 RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
-  // TODO: Handle Zvbb instructions
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -4127,6 +4118,9 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.4. Vector Single-Width Scaling Shift Instructions
   case RISCV::VSSRL_VX:
   case RISCV::VSSRA_VX:
+  // Zvbb
+  case RISCV::VROL_VX:
+  case RISCV::VROR_VX:
     // Only the low lg2(SEW) bits of the shift-amount value are used.
     return Log2SEW;
 
@@ -4136,6 +4130,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.5. Vector Narrowing Fixed-Point Clip Instructions
   case RISCV::VNCLIPU_WX:
   case RISCV::VNCLIP_WX:
+  // Zvbb
+  case RISCV::VWSLL_VX:
     // Only the low lg2(2*SEW) bits of the shift-amount value are used.
     return Log2SEW + 1;
 
@@ -4221,6 +4217,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
+  // Zvbb
+  case RISCV::VANDN_VX:
     return 1U << Log2SEW;
   }
 }

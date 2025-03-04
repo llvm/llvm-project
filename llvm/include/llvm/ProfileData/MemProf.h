@@ -6,6 +6,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/Support/BLAKE3.h"
@@ -41,6 +42,16 @@ constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
+
+inline llvm::StringRef getMemprofOptionsSymbolDarwinLinkageName() {
+  return "___memprof_default_options_str";
+}
+
+inline llvm::StringRef getMemprofOptionsSymbolName() {
+  // Darwin linkage names are prefixed with an extra "_". See
+  // DataLayout::getGlobalPrefix().
+  return getMemprofOptionsSymbolDarwinLinkageName().drop_front();
+}
 
 enum class Meta : uint64_t {
   Start = 0,

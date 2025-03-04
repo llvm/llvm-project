@@ -1135,6 +1135,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_OMP_DECLARE_REDUCTION);
   RECORD(DECL_OMP_ALLOCATE);
   RECORD(DECL_HLSL_BUFFER);
+  RECORD(DECL_OPENACC_DECLARE);
 
   // Statements and Exprs can occur in the Decls and Types block.
   AddStmtsExprs(Stream, Record);
@@ -5539,15 +5540,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
-  RegisterPredefDecl(Context.MakeIntegerSeqDecl,
-                     PREDEF_DECL_MAKE_INTEGER_SEQ_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
   RegisterPredefDecl(Context.CFConstantStringTagDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
-  RegisterPredefDecl(Context.TypePackElementDecl,
-                     PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
-  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
+#define BuiltinTemplate(BTName)                                                \
+  RegisterPredefDecl(Context.Decl##BTName, PREDEF_DECL##BTName##_ID);
+#include "clang/Basic/BuiltinTemplates.inc"
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 
@@ -8830,10 +8829,20 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(const_cast<Expr *>(VC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::Link: {
+    const auto *LC = cast<OpenACCLinkClause>(C);
+    writeSourceLocation(LC->getLParenLoc());
+    writeOpenACCVarList(LC);
+    return;
+  }
+  case OpenACCClauseKind::DeviceResident: {
+    const auto *DRC = cast<OpenACCDeviceResidentClause>(C);
+    writeSourceLocation(DRC->getLParenLoc());
+    writeOpenACCVarList(DRC);
+    return;
+  }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

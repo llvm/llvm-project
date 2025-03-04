@@ -282,9 +282,8 @@ bool MemRefDependenceGraph::init() {
       // Create graph node for top-level op unless it is known to be
       // memory-effect free. This covers all unknown/unregistered ops,
       // non-affine ops with memory effects, and region-holding ops with a
-      // well-defined control flow. During the fusion validity checks, we look
-      // for non-affine ops on the path from source to destination, at which
-      // point we check which memrefs if any are used in the region.
+      // well-defined control flow. During the fusion validity checks, edges
+      // to/from these ops get looked at.
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
@@ -1256,7 +1255,8 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (sliceState != nullptr) {
     // Add dim and symbol slice operands.
     for (auto operand : sliceState->lbOperands[0]) {
-      cst.addInductionVarOrTerminalSymbol(operand);
+      if (failed(cst.addInductionVarOrTerminalSymbol(operand)))
+        return failure();
     }
     // Add upper/lower bounds from 'sliceState' to 'cst'.
     LogicalResult ret =
