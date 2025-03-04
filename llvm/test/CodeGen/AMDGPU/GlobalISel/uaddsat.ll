@@ -730,18 +730,18 @@ define amdgpu_ps i32 @s_uaddsat_v4i8(i32 inreg %lhs.arg, i32 inreg %rhs.arg) {
 ; GFX6-NEXT:    s_lshl_b32 s3, s4, 24
 ; GFX6-NEXT:    s_lshl_b32 s4, s7, 24
 ; GFX6-NEXT:    s_not_b32 s5, s3
-; GFX6-NEXT:    s_min_u32 s4, s5, s4
 ; GFX6-NEXT:    s_lshr_b32 s1, s1, 24
+; GFX6-NEXT:    s_min_u32 s4, s5, s4
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    s_lshr_b32 s2, s2, 24
 ; GFX6-NEXT:    s_add_i32 s3, s3, s4
-; GFX6-NEXT:    v_mov_b32_e32 v0, s0
-; GFX6-NEXT:    s_lshr_b32 s3, s3, 24
 ; GFX6-NEXT:    v_alignbit_b32 v0, s1, v0, 24
+; GFX6-NEXT:    s_lshr_b32 s3, s3, 24
 ; GFX6-NEXT:    s_lshl_b32 s0, s2, 16
-; GFX6-NEXT:    v_or_b32_e32 v0, s0, v0
-; GFX6-NEXT:    s_lshl_b32 s0, s3, 24
-; GFX6-NEXT:    v_or_b32_e32 v0, s0, v0
-; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX6-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX6-NEXT:    s_or_b32 s0, s1, s0
+; GFX6-NEXT:    s_lshl_b32 s1, s3, 24
+; GFX6-NEXT:    s_or_b32 s0, s0, s1
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_uaddsat_v4i8:
@@ -1020,8 +1020,8 @@ define amdgpu_ps i24 @s_uaddsat_i24(i24 inreg %lhs, i24 inreg %rhs) {
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, 8
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX8-NEXT:    v_add_u32_e64 v0, s[0:1], s0, v0 clamp
-; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    s_lshr_b32 s0, s0, 8
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_uaddsat_i24:
@@ -1030,8 +1030,8 @@ define amdgpu_ps i24 @s_uaddsat_i24(i24 inreg %lhs, i24 inreg %rhs) {
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 8
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX9-NEXT:    v_add_u32_e64 v0, s0, v0 clamp
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_lshr_b32 s0, s0, 8
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_uaddsat_i24:
@@ -1039,8 +1039,8 @@ define amdgpu_ps i24 @s_uaddsat_i24(i24 inreg %lhs, i24 inreg %rhs) {
 ; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 8
 ; GFX10PLUS-NEXT:    s_lshl_b32 s1, s1, 8
 ; GFX10PLUS-NEXT:    v_add_nc_u32_e64 v0, s0, s1 clamp
-; GFX10PLUS-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
 ; GFX10PLUS-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX10PLUS-NEXT:    s_lshr_b32 s0, s0, 8
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %result = call i24 @llvm.uadd.sat.i24(i24 %lhs, i24 %rhs)
   ret i24 %result

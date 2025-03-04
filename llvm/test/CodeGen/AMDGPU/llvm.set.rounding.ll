@@ -1193,9 +1193,8 @@ define amdgpu_gfx void @s_set_rounding_select_0_1(i32 inreg %cond) {
 ; GFX8-NEXT:    s_cselect_b64 s[34:35], -1, 0
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[34:35]
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX8-NEXT:    s_mov_b32 s34, 0xa50f
-; GFX8-NEXT:    v_lshrrev_b32_e64 v0, v0, s34
 ; GFX8-NEXT:    v_readfirstlane_b32 s34, v0
+; GFX8-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX8-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1206,9 +1205,8 @@ define amdgpu_gfx void @s_set_rounding_select_0_1(i32 inreg %cond) {
 ; GFX9-NEXT:    s_cselect_b64 s[34:35], -1, 0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[34:35]
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    s_mov_b32 s34, 0xa50f
-; GFX9-NEXT:    v_lshrrev_b32_e64 v0, v0, s34
 ; GFX9-NEXT:    v_readfirstlane_b32 s34, v0
+; GFX9-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX9-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1219,8 +1217,8 @@ define amdgpu_gfx void @s_set_rounding_select_0_1(i32 inreg %cond) {
 ; GFX10-NEXT:    s_cselect_b32 s34, -1, 0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s34
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_lshrrev_b32_e64 v0, v0, 0xa50f
 ; GFX10-NEXT:    v_readfirstlane_b32 s34, v0
+; GFX10-NEXT:    s_lshr_b32 s34, 0xa50f, s34
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s34
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1231,8 +1229,8 @@ define amdgpu_gfx void @s_set_rounding_select_0_1(i32 inreg %cond) {
 ; GFX11-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    v_lshrrev_b32_e64 v0, v0, 0xa50f
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_lshr_b32 s0, 0xa50f, s0
 ; GFX11-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 0, 4), s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %cond, 0

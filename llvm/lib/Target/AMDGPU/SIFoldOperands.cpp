@@ -126,6 +126,7 @@ public:
   std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
+  bool tryScalarizeReadLaneSrc(MachineInstr &MI) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
 
@@ -1407,6 +1408,148 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
+static unsigned
+getScalarizedReadLaneSrcOpc(const GCNSubtarget &ST, unsigned Opc,
+                            SmallVectorImpl<MachineOperand *> &Ops) {
+  // Opcodes here are added as-needed because there are hundreds of
+  // instructions we could convert, but realistically we only need
+  // the most frequent ones to make an impact.
+  //
+  // The InstCombine version of this transform will do the heavy
+  // lifting, this is just a cleanup for the readlanes added during
+  // lowering.
+  switch (Opc) {
+  case AMDGPU::V_OR_B32_e32:
+  case AMDGPU::V_OR_B32_e64:
+    return AMDGPU::S_OR_B32;
+  case AMDGPU::V_MUL_HI_U32_e64:
+    if (ST.getGeneration() >= GCNSubtarget::GFX9)
+      return AMDGPU::S_MUL_HI_U32;
+    break;
+  case AMDGPU::V_AND_B32_e32:
+  case AMDGPU::V_AND_B32_e64:
+    return AMDGPU::S_AND_B32;
+  case AMDGPU::V_LSHRREV_B32_e32: // dst = S1 >> S0
+  case AMDGPU::V_LSHRREV_B32_e64:
+    std::swap(Ops[0], Ops[1]); // dst = S0 >> S1 (!)
+    return AMDGPU::S_LSHR_B32;
+  case AMDGPU::V_CVT_U32_F32_e32:
+  case AMDGPU::V_CVT_U32_F32_e64:
+    if (ST.hasSALUFloatInsts())
+      return AMDGPU::S_CVT_U32_F32;
+    break;
+  case AMDGPU::V_MIN_U32_e32:
+  case AMDGPU::V_MIN_U32_e64:
+    return AMDGPU::S_MIN_U32;
+  case AMDGPU::V_MIN_I32_e32:
+  case AMDGPU::V_MIN_I32_e64:
+    return AMDGPU::S_MIN_I32;
+  case AMDGPU::V_MAX_U32_e32:
+  case AMDGPU::V_MAX_U32_e64:
+    return AMDGPU::S_MAX_U32;
+  case AMDGPU::V_MAX_I32_e32:
+  case AMDGPU::V_MAX_I32_e64:
+    return AMDGPU::S_MAX_I32;
+  default:
+    break;
+  }
+
+  return -1;
+}
+
+// Try to transform
+//    %0:vgpr = (valu op) %x:vgpr
+//    %1:sgpr = v_readfirstlane %0
+// Into
+//    %0:sgpr = v_readfirstlane %x:vgpr
+//    %1:sgpr = (salu op) %0
+bool SIFoldOperandsImpl::tryScalarizeReadLaneSrc(MachineInstr &MI) const {
+  const unsigned Opc = MI.getOpcode();
+  if (Opc != AMDGPU::V_READFIRSTLANE_B32 && Opc != AMDGPU::V_READLANE_B32)
+    return false;
+
+  const auto VSrcIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  const Register VSrc = MI.getOperand(VSrcIdx).getReg();
+
+  if (!MRI->hasOneNonDBGUse(VSrc))
+    return false;
+
+  MachineInstr *VSrcDef = MRI->getVRegDef(VSrc);
+  // Need a unary or binary VALU instruction as operand.
+  if (!VSrcDef || (VSrcDef->getParent() != MI.getParent()) ||
+      !TII->isVALU(*VSrcDef) || VSrcDef->getNumExplicitOperands() > 3 ||
+      execMayBeModifiedBeforeUse(*MRI, VSrc, *VSrcDef, MI))
+    return false;
+
+  const bool IsReadLane = (Opc == AMDGPU::V_READLANE_B32);
+  if (IsReadLane) {
+    MachineOperand &LaneOp = MI.getOperand(2);
+    if (LaneOp.isReg()) { // Can the lane be an imm?
+      Register LaneReg = LaneOp.getReg();
+      for (auto It = VSrcDef->getIterator(); It != MI.getIterator(); ++It) {
+        if (It->modifiesRegister(LaneReg, TRI))
+          return false;
+      }
+    }
+  }
+
+  SmallVector<MachineOperand *, 2> Ops;
+  MachineOperand *TargetOp = nullptr;
+  for (MachineOperand &SrcOp : VSrcDef->operands()) {
+    if (SrcOp.isReg()) {
+      if (SrcOp.isImplicit() || SrcOp.isDef())
+        continue;
+
+      Ops.push_back(&SrcOp);
+
+      Register Reg = SrcOp.getReg();
+      if (TRI->isVectorRegister(*MRI, Reg)) {
+        // This only works if we have one VGPR src.
+        if (TargetOp)
+          return false;
+        TargetOp = &SrcOp;
+      }
+    } else {
+      Ops.push_back(&SrcOp); // also collect imms
+    }
+  }
+  if (!TargetOp)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "tryScalarizeReadLaneSrc:\n\treadlane: " << MI
+                    << "\tsrc: " << *VSrcDef << "\top: " << *TargetOp << "\n");
+
+  const unsigned ScalarOp =
+      getScalarizedReadLaneSrcOpc(*ST, VSrcDef->getOpcode(), Ops);
+  if (ScalarOp == unsigned(-1))
+    return false;
+
+  // We only support unary/binary ops.
+  assert(Ops.size() <= 2);
+
+  MachineBasicBlock *MBB = VSrcDef->getParent();
+  auto InsertBefore = VSrcDef->getIterator();
+  const DebugLoc &DL = VSrcDef->getDebugLoc();
+  Register SDst = MI.getOperand(0).getReg();
+
+  Register STargetOp = MRI->createVirtualRegister(MRI->getRegClass(SDst));
+  auto NewMI = BuildMI(*MBB, InsertBefore, DL, MI.getDesc(), STargetOp)
+                   .addReg(TargetOp->getReg());
+  if (IsReadLane)
+    NewMI.add(MI.getOperand(2)); // lane index
+  auto ScalarMI = BuildMI(*MBB, InsertBefore, DL, TII->get(ScalarOp), SDst);
+  for (MachineOperand *Op : Ops) {
+    if (Op == TargetOp)
+      ScalarMI.addReg(STargetOp);
+    else
+      ScalarMI.add(*Op);
+  }
+
+  VSrcDef->eraseFromParent();
+  MI.eraseFromParent();
+  return true;
+}
+
 bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
   if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
       MI.getOpcode() != AMDGPU::V_AND_B32_e32)
@@ -2352,6 +2495,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
+
+      if (tryScalarizeReadLaneSrc(MI)) {
+        Changed = true;
+        continue;
+      }
 
       if (tryFoldZeroHighBits(MI)) {
         Changed = true;
