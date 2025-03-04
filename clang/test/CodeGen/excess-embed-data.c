@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c23 -emit-llvm -triple x86_64 %s -o - | FileCheck %s
 
 struct S {
   int arr[3];
