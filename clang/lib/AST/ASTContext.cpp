@@ -2005,8 +2005,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(T);
     TypeInfo EltInfo = getTypeInfo(VT->getElementType());
-    Width = VT->isExtVectorBoolType() ? VT->getNumElements()
-                                      : EltInfo.Width * VT->getNumElements();
+    Width = VT->isPackedVectorBoolType(*this)
+                ? VT->getNumElements()
+                : EltInfo.Width * VT->getNumElements();
     // Enforce at least byte size and alignment.
     Width = std::max<unsigned>(8, Width);
     Align = std::max<unsigned>(8, Width);
