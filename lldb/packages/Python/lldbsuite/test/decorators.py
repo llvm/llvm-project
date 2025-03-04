@@ -3,6 +3,7 @@ from functools import wraps
 from packaging import version
 import ctypes
 import locale
+import logging
 import os
 import platform
 import re
@@ -525,12 +526,24 @@ def expectedFailureWindows(bugnumber=None):
     return expectedFailureOS(["windows"], bugnumber)
 
 
-# TODO: This decorator does not do anything. Remove it.
-def expectedFlakey(expected_fn, bugnumber=None):
+# This decorator can be used to mark a test that can fail non-deterministically.
+# The decorator causes the underlying test to be re-run if it encounters a
+# failure. After `num_retries` attempts the test will be marked as a failure
+# if it has not yet passed.
+def expectedFlakey(expected_fn, bugnumber=None, num_retries=3):
     def expectedFailure_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            func(*args, **kwargs)
+            for i in range(1, num_retries+1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception:
+                    logging.warning(
+                        f"expectedFlakey: test {func} failed attempt ({i}/{num_retries})"
+                    )
+                    # If the last attempt fails then re-raise the original failure.
+                    if i == num_retries:
+                        raise
 
         return wrapper
 
