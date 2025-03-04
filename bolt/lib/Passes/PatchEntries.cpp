@@ -130,8 +130,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       assert(!ColdSize && "unexpected cold code");
       assert(HotSize <= PatchSize && "max patch size exceeded");
     }
-
-    Function.setIsPatched(true);
   }
   return Error::success();
 }
