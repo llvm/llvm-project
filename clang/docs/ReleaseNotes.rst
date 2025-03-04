@@ -237,6 +237,8 @@ Bug Fixes in This Version
   when it can affect template argument deduction (#GH122306).
 - Fix crash on code completion of function calls involving partial order of function templates
   (#GH125500).
+- Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer erroneously
+  considered an error in C23 mode and are allowed as an extension in earlier language modes.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
