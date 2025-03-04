@@ -411,6 +411,25 @@ llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
   llvm.return %r1 : i32
 }
 
+llvm.func @redux_sync_f32(%value: f32, %offset: i32) -> f32 {
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r1 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r2 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r3 = nvvm.redux.sync fmin %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r4 = nvvm.redux.sync fmin %value, %offset {abs = true, NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r5 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r6 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r7 = nvvm.redux.sync fmax %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r8 = nvvm.redux.sync fmax %value, %offset {abs = true, NaN = true}: f32 -> f32
+  llvm.return %r1 : f32
+}
 
 // -----
 

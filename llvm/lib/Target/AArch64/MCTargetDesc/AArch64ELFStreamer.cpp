@@ -27,6 +27,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -151,7 +152,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   }
 
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
-                     std::string String, bool Override) override {
+                     std::string String) override {
 
     // AArch64 build attributes for assembly attribute form:
     // .aeabi_attribute tag, value
@@ -163,19 +164,15 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     unsigned VendorID = AArch64BuildAttrs::getVendorID(VendorName);
 
     switch (VendorID) {
-    default:
-      assert(0 && "Subsection name error");
-      break;
     case AArch64BuildAttrs::VENDOR_UNKNOWN:
       if (unsigned(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
       }
       if ("" != String) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << String;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1),
-                                             String, Override);
+                                             String);
       }
       break;
     // Note: AEABI_FEATURE_AND_BITS takes only unsigned values
@@ -185,16 +182,14 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         // Keep the data structure consistent with the case of ELF emission
         // (important for llvm-mc asm parsing)
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       case AArch64BuildAttrs::TAG_FEATURE_BTI:
       case AArch64BuildAttrs::TAG_FEATURE_GCS:
       case AArch64BuildAttrs::TAG_FEATURE_PAC:
-        OS << "\t.aeabi_attribute" << "\t"
-           << AArch64BuildAttrs::getFeatureAndBitsTagsStr(Tag) << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
+           << AArch64BuildAttrs::getFeatureAndBitsTagsStr(Tag);
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       }
       break;
@@ -205,15 +200,13 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         // Keep the data structure consistent with the case of ELF emission
         // (important for llvm-mc asm parsing)
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       case AArch64BuildAttrs::TAG_PAUTH_PLATFORM:
       case AArch64BuildAttrs::TAG_PAUTH_SCHEMA:
-        OS << "\t.aeabi_attribute" << "\t"
-           << AArch64BuildAttrs::getPauthABITagsStr(Tag) << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value << "\t// "
+           << AArch64BuildAttrs::getPauthABITagsStr(Tag);
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
         break;
       }
       break;
@@ -240,8 +233,8 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     StringRef ParameterStr = getTypeStr(ParameterType);
 
     switch (SubsectionID) {
-    default: {
-      // Treated as a private subsection
+    case AArch64BuildAttrs::VENDOR_UNKNOWN: {
+      // Private subsection
       break;
     }
     case AArch64BuildAttrs::AEABI_PAUTHABI: {
@@ -324,6 +317,10 @@ public:
       LastEMS = EMS_None;
 
     MCELFStreamer::changeSection(Section, Subsection);
+
+    // Section alignment of 4 to match GNU Assembler
+    if (Section->isText())
+      Section->ensureMinAlignment(Align(4));
   }
 
   // Reset state between object emissions
@@ -426,13 +423,12 @@ void AArch64TargetELFStreamer::emitAtributesSubsection(
 }
 
 void AArch64TargetELFStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                             unsigned Value, std::string String,
-                                             bool Override) {
+                                             unsigned Value,
+                                             std::string String) {
   if (unsigned(-1) != Value)
-    AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "", Override);
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
   if ("" != String)
-    AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1), String,
-                                         Override);
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1), String);
 }
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
@@ -504,6 +500,23 @@ void AArch64TargetELFStreamer::finish() {
     }
   }
 
+  // The mix of execute-only and non-execute-only at link time is
+  // non-execute-only. To avoid the empty implicitly created .text
+  // section from making the whole .text section non-execute-only, we
+  // mark it execute-only if it is empty and there is at least one
+  // execute-only section in the object.
+  if (any_of(Asm, [](const MCSection &Sec) {
+        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_AARCH64_PURECODE;
+      })) {
+    auto *Text =
+        static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
+    for (auto &F : *Text)
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
+    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
+  }
+
   MCSectionELF *MemtagSec = nullptr;
   for (const MCSymbol &Symbol : Asm.symbols()) {
     const auto &Sym = cast<MCSymbolELF>(Symbol);
@@ -536,12 +549,11 @@ llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new AArch64TargetAsmStreamer(S, OS);
 }
 
-MCELFStreamer *
-llvm::createAArch64ELFStreamer(MCContext &Context,
-                               std::unique_ptr<MCAsmBackend> TAB,
-                               std::unique_ptr<MCObjectWriter> OW,
-                               std::unique_ptr<MCCodeEmitter> Emitter) {
-  AArch64ELFStreamer *S = new AArch64ELFStreamer(
-      Context, std::move(TAB), std::move(OW), std::move(Emitter));
-  return S;
+MCStreamer *
+llvm::createAArch64ELFStreamer(const Triple &, MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> &&TAB,
+                               std::unique_ptr<MCObjectWriter> &&OW,
+                               std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new AArch64ELFStreamer(Context, std::move(TAB), std::move(OW),
+                                std::move(Emitter));
 }

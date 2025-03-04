@@ -342,7 +342,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
       VMContext(M.getContext()), VTables(*this), StackHandler(diags),
-      SanitizerMD(new SanitizerMetadata(*this)) {
+      SanitizerMD(new SanitizerMetadata(*this)),
+      AtomicOpts(Target.getAtomicOpts()) {
 
   // Initialize the type cache.
   Types.reset(new CodeGenTypes(*this));
@@ -5513,6 +5514,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
+  // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
+  if (getLangOpts().HLSL &&
+      D->getType().getAddressSpace() == LangAS::hlsl_constant)
+    return;
+
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
   if (LangOpts.OpenMPIsTargetDevice && OpenMPRuntime &&
@@ -7920,4 +7926,50 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
+      Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  assert(getCXXABI().hasVectorDeletingDtors());
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
+  assert(getCXXABI().hasVectorDeletingDtors());
+  RequireVectorDeletingDtor.insert(RD);
+
+  // To reduce code size in general case we lazily emit scalar deleting
+  // destructor definition and an alias from vector deleting destructor to
+  // scalar deleting destructor. It may happen that we first emitted the scalar
+  // deleting destructor definition and the alias and then discovered that the
+  // definition of the vector deleting destructor is required. Then we need to
+  // remove the alias and the scalar deleting destructor and queue vector
+  // deleting destructor body for emission. Check if that is the case.
+  CXXDestructorDecl *DtorD = RD->getDestructor();
+  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
+  StringRef MangledName = getMangledName(ScalarDtorGD);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  if (Entry && !Entry->isDeclaration()) {
+    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
+    StringRef VDName = getMangledName(VectorDtorGD);
+    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
+    // It exists and it should be an alias.
+    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
+    auto *NewFn = llvm::Function::Create(
+        cast<llvm::FunctionType>(VDEntry->getValueType()),
+        llvm::Function::ExternalLinkage, VDName, &getModule());
+    NewFn->takeName(VDEntry);
+    VDEntry->replaceAllUsesWith(NewFn);
+    VDEntry->eraseFromParent();
+    Entry->replaceAllUsesWith(NewFn);
+    Entry->eraseFromParent();
+    addDeferredDeclToEmit(VectorDtorGD);
+  }
 }

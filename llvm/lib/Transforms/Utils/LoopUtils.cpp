@@ -820,7 +820,7 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
 
 /// Return the estimated trip count for any exiting branch which dominates
 /// the loop latch.
-static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
+static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
                                                      Loop *L,
                                                      uint64_t &OrigExitWeight) {
   // To estimate the number of times the loop body was executed, we want to
@@ -842,6 +842,11 @@ static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
   // Estimated exit count is a ratio of the loop weight by the weight of the
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+
+  // When ExitCount + 1 would wrap in unsigned, return std::nullopt instead.
+  if (ExitCount >= std::numeric_limits<unsigned>::max())
+    return std::nullopt;
+
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
 }
@@ -957,6 +962,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   }
 }
 
+// This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -984,6 +990,25 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unexpected ID");
   }
+}
+
+// This is the inverse to getArithmeticReductionInstruction
+Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
+  switch (Opc) {
+  default:
+    break;
+  case Instruction::Add:
+    return Intrinsic::vector_reduce_add;
+  case Instruction::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case Instruction::And:
+    return Intrinsic::vector_reduce_and;
+  case Instruction::Or:
+    return Intrinsic::vector_reduce_or;
+  case Instruction::Xor:
+    return Intrinsic::vector_reduce_xor;
+  }
+  return Intrinsic::not_intrinsic;
 }
 
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {

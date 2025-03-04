@@ -157,6 +157,8 @@ def : SysReg<"hideleg", 0x603>;
 def : SysReg<"hie", 0x604>;
 def : SysReg<"hcounteren", 0x606>;
 def : SysReg<"hgeie", 0x607>;
+let isRV32Only = 1 in
+def : SysReg<"hedelegh", 0x612>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Handling
@@ -233,8 +235,10 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
-let isRV32Only = 1 in
+let isRV32Only = 1 in {
 def : SysReg<"mstatush", 0x310>;
+def : SysReg<"medelegh", 0x312>;
+} // isRV32Only
 
 //===----------------------------------------------------------------------===//
 // Machine Trap Handling

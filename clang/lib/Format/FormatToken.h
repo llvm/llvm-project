@@ -594,6 +594,9 @@ public:
   /// Has "\n\f\n" or "\n\f\r\n" before TokenText.
   bool HasFormFeedBefore = false;
 
+  /// Is the first token after a PPDirective line.
+  bool FirstAfterPPDirectiveLine = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces
@@ -741,29 +744,6 @@ public:
 
   bool isPointerOrReference() const {
     return isOneOf(tok::star, tok::amp, tok::ampamp);
-  }
-
-  bool isCppAlternativeOperatorKeyword() const {
-    assert(!TokenText.empty());
-    if (!isalpha(TokenText[0]))
-      return false;
-
-    switch (Tok.getKind()) {
-    case tok::ampamp:
-    case tok::ampequal:
-    case tok::amp:
-    case tok::pipe:
-    case tok::tilde:
-    case tok::exclaim:
-    case tok::exclaimequal:
-    case tok::pipepipe:
-    case tok::pipeequal:
-    case tok::caret:
-    case tok::caretequal:
-      return true;
-    default:
-      return false;
-    }
   }
 
   bool isUnaryOperator() const {

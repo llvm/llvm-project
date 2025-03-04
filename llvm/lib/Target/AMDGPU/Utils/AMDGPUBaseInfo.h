@@ -113,6 +113,12 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+struct True16D16Info {
+  unsigned T16Op;
+  unsigned HiOp;
+  unsigned LoOp;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -120,9 +126,9 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#define GET_True16D16Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {

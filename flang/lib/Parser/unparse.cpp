@@ -1851,6 +1851,10 @@ public:
               Word("!DIR$ UNROLL");
               Walk(" ", unroll.v);
             },
+            [&](const CompilerDirective::UnrollAndJam &unrollAndJam) {
+              Word("!DIR$ UNROLL_AND_JAM");
+              Walk(" ", unrollAndJam.v);
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2175,6 +2179,8 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
+  void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
+  void Unparse(const OmpContainsClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAffinityClause &x) {
     using Modifier = OmpAffinityClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2658,6 +2664,18 @@ public:
       Walk(*end);
     }
   }
+  void Unparse(const OmpAssumeDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP ASSUME");
+    Walk(" ", std::get<OmpClauseList>(x.t).v);
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OmpEndAssumeDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP END ASSUME\n");
+    EndOpenMP();
+  }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();
     Word("!$OMP CRITICAL");
@@ -2681,23 +2699,38 @@ public:
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
   }
-  void Unparse(const OmpReductionInitializerClause &x) {
-    Word(" INITIALIZER(OMP_PRIV = ");
+  void Unparse(const OmpReductionInitializerProc &x) {
+    Walk(std::get<ProcedureDesignator>(x.t));
+    Put("(");
+    Walk(std::get<std::list<ActualArgSpec>>(x.t));
+    Put(")");
+  }
+  void Unparse(const OmpReductionInitializerExpr &x) {
+    Word("OMP_PRIV = ");
     Walk(x.v);
+  }
+  void Unparse(const OmpReductionInitializerClause &x) {
+    Word(" INITIALIZER(");
+    Walk(x.u);
     Put(")");
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
     Put("(");
-    Walk(std::get<OmpReductionIdentifier>(x.t)), Put(" : ");
-    Walk(std::get<std::list<DeclarationTypeSpec>>(x.t), ","), Put(" : ");
-    Walk(std::get<OmpReductionCombiner>(x.t));
+    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
     Put(")");
     Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
+    Put("\n");
     EndOpenMP();
   }
-
+  void Unparse(const OpenMPDeclarativeAssumes &x) {
+    BeginOpenMP();
+    Word("!$OMP ASSUMES ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPDeclareMapperConstruct &z) {
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
@@ -2851,9 +2884,14 @@ public:
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<std::list<OmpMemoryOrderClause>>>(x.t));
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH");
+    if (std::get</*ClausesTrailing=*/bool>(x.t)) {
+      Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+    } else {
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+      Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    }
     Put("\n");
     EndOpenMP();
   }
@@ -2865,7 +2903,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpClauseList &x) { Walk(" ", x.v, " "); }
+  void Unparse(const OmpClauseList &x, const char *sep = " ") {
+    Walk(" ", x.v, sep);
+  }
   void Unparse(const OpenMPSimpleStandaloneConstruct &x) {
     BeginOpenMP();
     Word("!$OMP ");

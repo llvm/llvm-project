@@ -176,7 +176,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register::virtReg2Index(v);
+      return Register(v).virtRegIndex();
     }
 
     static inline unsigned x2v(unsigned x) {
