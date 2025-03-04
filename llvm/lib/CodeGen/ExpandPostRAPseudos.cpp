@@ -30,7 +30,6 @@ using namespace llvm;
 
 namespace {
 struct ExpandPostRA {
-
   bool run(MachineFunction &);
 
 private:
@@ -64,11 +63,10 @@ ExpandPostRAPseudosPass::run(MachineFunction &MF,
   if (!ExpandPostRA().run(MF))
     return PreservedAnalyses::all();
 
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<MachineLoopAnalysis>()
+      .preserve<MachineDominatorTreeAnalysis>();
 }
 
 char ExpandPostRALegacy::ID = 0;
