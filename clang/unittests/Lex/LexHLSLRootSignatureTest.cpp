@@ -113,7 +113,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
   SmallVector<hlsl::RootSignatureToken> Tokens;
   SmallVector<hlsl::TokenKind> Expected = {
-#define TOK(NAME) hlsl::TokenKind::NAME,
+#define TOK(NAME, SPELLING) hlsl::TokenKind::NAME,
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 

@@ -1818,4 +1818,10 @@ def ext_hlsl_access_specifiers : ExtWarn<
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
 
+// HLSL Root Signature Parser Diagnostics
+def err_hlsl_rootsig_unexpected_token_kind : Error<"got %1 but expected %select{|one of}0 the following token kind%select{|s}0: %2">;
+def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
+def err_hlsl_rootsig_non_zero_flag : Error<"specified a non-zero integer as a flag">;
+
 } // end of Parser diagnostics
