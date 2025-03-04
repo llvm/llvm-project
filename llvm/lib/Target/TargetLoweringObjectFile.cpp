@@ -258,7 +258,11 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // into a mergable section: just drop it into the general read-only
       // section instead.
       if (!GVar->hasGlobalUnnamedAddr())
-        return SectionKind::getReadOnly();
+        if (GVar->isExecute())
+          return SectionKind::getExecuteOnly();
+      if (GVar->isShared())
+        return SectionKind::getShared();
+      return SectionKind::getReadOnly();
 
       // If initializer is a null-terminated string, put it in a "cstring"
       // section of the right width.
