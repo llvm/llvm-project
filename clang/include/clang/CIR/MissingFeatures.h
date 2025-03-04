@@ -27,9 +27,6 @@ struct MissingFeatures {
   // Address space related
   static bool addressSpace() { return false; }
 
-  // This isn't needed until we add support for bools.
-  static bool convertTypeForMemory() { return false; }
-
   // CIRGenFunction implementation details
   static bool cgfSymbolTable() { return false; }
 
@@ -40,10 +37,14 @@ struct MissingFeatures {
   static bool opGlobalAlignment() { return false; }
   static bool opGlobalLinkage() { return false; }
 
-  // Load attributes
+  // Load/store attributes
   static bool opLoadThreadLocal() { return false; }
   static bool opLoadEmitScalarRangeCheck() { return false; }
   static bool opLoadBooleanRepresentation() { return false; }
+  static bool opLoadStoreTbaa() { return false; }
+  static bool opLoadStoreMemOrder() { return false; }
+  static bool opLoadStoreVolatile() { return false; }
+  static bool opLoadStoreAlignment() { return false; }
 
   // AllocaOp handling
   static bool opAllocaVarDeclContext() { return false; }
@@ -55,11 +56,23 @@ struct MissingFeatures {
   static bool opAllocaOpenMPThreadPrivate() { return false; }
   static bool opAllocaEscapeByReference() { return false; }
   static bool opAllocaReference() { return false; }
+  static bool opAllocaAnnotations() { return false; }
+  static bool opAllocaDynAllocSize() { return false; }
+
+  // FuncOp handling
+  static bool opFuncOpenCLKernelMetadata() { return false; }
+  static bool opFuncCallingConv() { return false; }
+  static bool opFuncExtraAttrs() { return false; }
+  static bool opFuncDsolocal() { return false; }
+  static bool opFuncLinkage() { return false; }
+  static bool opFuncVisibility() { return false; }
 
   // Misc
   static bool scalarConversionOpts() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
+  static bool opGlobalViewAttr() { return false; }
+  static bool lowerModeOptLevel() { return false; }
 };
 
 } // namespace cir
