@@ -31,6 +31,9 @@ public:
     auto *Mem = Nodes.emplace_back(std::make_unique<char[]>(AllocSize)).get();
     std::memset(Mem, 0, AllocSize);
     auto *Ret = new (Mem) ContextNode(Guid, NumCounters, NumCallsites, Next);
+    // set the entrycount to something - unless we're creating an invalid root.
+    if (Ret->counters_size() > 0)
+      Ret->counters()[0] = 42;
     return Ret;
   }
 
@@ -98,8 +101,10 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     ASSERT_FALSE(EC);
     {
       PGOCtxProfileWriter Writer(Out);
+      Writer.startContextSection();
       for (auto &[_, R] : roots())
-        Writer.write(*R);
+        Writer.writeContextual(*R);
+      Writer.endContextSection();
     }
   }
   {
@@ -149,7 +154,9 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     ASSERT_FALSE(EC);
     {
       PGOCtxProfileWriter Writer(Out);
-      Writer.write(*R);
+      Writer.startContextSection();
+      Writer.writeContextual(*R);
+      Writer.endContextSection();
     }
   }
   {
@@ -160,6 +167,60 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
+  }
+}
+
+TEST_F(PGOCtxProfRWTest, CountersAllZero) {
+  auto *R = createNode(1, 2, 1);
+  R->counters()[0] = 0;
+  llvm::unittest::TempFile ProfileFile("ctx_profile", "", "", /*Unique*/ true);
+  {
+    std::error_code EC;
+    raw_fd_stream Out(ProfileFile.path(), EC);
+    ASSERT_FALSE(EC);
+    {
+      PGOCtxProfileWriter Writer(Out);
+      Writer.startContextSection();
+      Writer.writeContextual(*R);
+      Writer.endContextSection();
+    }
+  }
+  {
+    auto MB = MemoryBuffer::getFile(ProfileFile.path());
+    ASSERT_TRUE(!!MB);
+    ASSERT_NE(*MB, nullptr);
+    PGOCtxProfileReader Reader((*MB)->getBuffer());
+    auto Expected = Reader.loadProfiles();
+    EXPECT_TRUE(!!Expected);
+    EXPECT_TRUE(Expected->Contexts.empty());
+  }
+}
+
+TEST_F(PGOCtxProfRWTest, CountersAllZeroWithOverride) {
+  auto *R = createNode(42, 2, 1);
+  R->counters()[0] = 0;
+  llvm::unittest::TempFile ProfileFile("ctx_profile", "", "", /*Unique*/ true);
+  {
+    std::error_code EC;
+    raw_fd_stream Out(ProfileFile.path(), EC);
+    ASSERT_FALSE(EC);
+    {
+      PGOCtxProfileWriter Writer(Out, /*VersionOverride=*/std::nullopt,
+                                 /*IncludeEmpty=*/true);
+      Writer.startContextSection();
+      Writer.writeContextual(*R);
+      Writer.endContextSection();
+    }
+  }
+  {
+    auto MB = MemoryBuffer::getFile(ProfileFile.path());
+    ASSERT_TRUE(!!MB);
+    ASSERT_NE(*MB, nullptr);
+    PGOCtxProfileReader Reader((*MB)->getBuffer());
+    auto Expected = Reader.loadProfiles();
+    EXPECT_TRUE(!!Expected);
+    EXPECT_EQ(Expected->Contexts.size(), 1U);
+    EXPECT_EQ(Expected->Contexts.begin()->second.guid(), 42U);
   }
 }
 
@@ -229,9 +290,12 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
     raw_fd_stream Out(ProfileFile.path(), EC);
     ASSERT_FALSE(EC);
     {
-      PGOCtxProfileWriter Writer(Out);
-      Writer.write(*createNode(1, 1, 1));
-      Writer.write(*createNode(1, 1, 1));
+      PGOCtxProfileWriter Writer(Out, /*VersionOverride=*/std::nullopt,
+                                 /*IncludeEmpty=*/true);
+      Writer.startContextSection();
+      Writer.writeContextual(*createNode(1, 1, 1));
+      Writer.writeContextual(*createNode(1, 1, 1));
+      Writer.endContextSection();
     }
   }
   {
@@ -257,7 +321,9 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
       auto *L2 = createNode(2, 1, 0, L1);
       R->subContexts()[0] = L2;
       PGOCtxProfileWriter Writer(Out);
-      Writer.write(*R);
+      Writer.startContextSection();
+      Writer.writeContextual(*R);
+      Writer.endContextSection();
     }
   }
   {

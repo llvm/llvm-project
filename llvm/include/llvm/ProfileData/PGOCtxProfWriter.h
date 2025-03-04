@@ -23,7 +23,9 @@ enum PGOCtxProfileRecords { Invalid = 0, Version, Guid, CalleeIndex, Counters };
 
 enum PGOCtxProfileBlockIDs {
   ProfileMetadataBlockID = bitc::FIRST_APPLICATION_BLOCKID,
-  ContextNodeBlockID = ProfileMetadataBlockID + 1
+  ContextsSectionBlockID = ProfileMetadataBlockID + 1,
+  ContextRootBlockID = ContextsSectionBlockID + 1,
+  ContextNodeBlockID = ContextRootBlockID + 1,
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -60,23 +62,30 @@ enum PGOCtxProfileBlockIDs {
 /// like value profiling - which would appear as additional records. For
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
-class PGOCtxProfileWriter final {
-  BitstreamWriter Writer;
+class PGOCtxProfileWriter : public ctx_profile::ProfileWriter {
+  enum class EmptyContextCriteria { None, EntryIsZero, AllAreZero };
 
-  void writeCounters(const ctx_profile::ContextNode &Node);
+  BitstreamWriter Writer;
+  const bool IncludeEmpty;
+
+  void writeGuid(ctx_profile::GUID Guid);
+  void writeCounters(ArrayRef<uint64_t> Counters);
   void writeImpl(std::optional<uint32_t> CallerIndex,
                  const ctx_profile::ContextNode &Node);
 
 public:
   PGOCtxProfileWriter(raw_ostream &Out,
-                      std::optional<unsigned> VersionOverride = std::nullopt);
+                      std::optional<unsigned> VersionOverride = std::nullopt,
+                      bool IncludeEmpty = false);
   ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
 
-  void write(const ctx_profile::ContextNode &);
+  void startContextSection() override;
+  void writeContextual(const ctx_profile::ContextNode &RootNode) override;
+  void endContextSection() override;
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 1;
+  static constexpr uint32_t CurrentVersion = 2;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };
