@@ -61,6 +61,7 @@ Changes to the LLVM IR
   removed:
 
   * `mul`
+* A `load atomic` may now be used with vector types.
 
 Changes to LLVM infrastructure
 ------------------------------
