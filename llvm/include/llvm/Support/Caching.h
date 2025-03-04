@@ -30,6 +30,7 @@ public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
                    std::string OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
+  virtual Error commit() { return Error::success(); }
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;
   virtual ~CachedFileStream() = default;
