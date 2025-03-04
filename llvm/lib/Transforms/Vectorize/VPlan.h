@@ -3570,19 +3570,18 @@ public:
     return TripCount;
   }
 
+  /// Set the trip count assuming it is currently null; if it is not - use
+  /// resetTripCount().
+  void setTripCount(VPValue *NewTripCount) {
+    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
+    TripCount = NewTripCount;
+  }
+
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
     assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
            "TripCount must be set when resetting");
-    TripCount = NewTripCount;
-  }
-
-  // Set the trip count assuming it is currently null; if it is not - use
-  // resetTripCount().
-  void setTripCount(VPValue *NewTripCount) {
-    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
-
     TripCount = NewTripCount;
   }
 

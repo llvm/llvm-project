@@ -382,7 +382,7 @@ void PlainCFGBuilder::buildPlainCFG(
     if (!isHeaderBB(BB, LoopForBB)) {
       setVPBBPredsFromBB(VPBB, BB);
     } else if (Region) {
-      // BB is a loop header and there's a corresponding region , set the
+      // BB is a loop header and there's a corresponding region, set the
       // predecessor for it.
       setRegionPredsFromBB(Region, BB);
     }

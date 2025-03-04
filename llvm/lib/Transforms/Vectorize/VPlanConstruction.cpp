@@ -32,7 +32,8 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   VPBlockUtils::disconnectBlocks(OriginalLatch, HeaderVPBB);
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::connectBlocks(Plan.getEntry(), VecPreheader);
-  assert(OriginalLatch->getNumSuccessors() == 0 && "expected no predecessors");
+  assert(OriginalLatch->getNumSuccessors() == 0 &&
+         "Plan should end at top level latch");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -47,11 +48,13 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, TripCount, SE));
 
   // Create VPRegionBlock, with existing header and new empty latch block, to be
-  // filled
+  // filled.
   VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
   VPBlockUtils::insertBlockAfter(LatchVPBB, OriginalLatch);
   auto *TopRegion = Plan.createVPRegionBlock(
       HeaderVPBB, LatchVPBB, "vector loop", false /*isReplicator*/);
+  // All VPBB's reachable shallowly from HeaderVPBB belong to top level loop,
+  // because VPlan is expected to end at top level latch.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
     VPBB->setParent(TopRegion);
 
