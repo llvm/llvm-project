@@ -2468,6 +2468,7 @@ private:
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
+  void CheckVectorAccess(const Expr *BaseExpr, const Expr *IndexExpr);
 
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
                         const FunctionProtoType *Proto);
