@@ -162,6 +162,48 @@ define { <vscale x 64 x i8>, i32 } @vploadff_nxv64i8_allones_mask(ptr %ptr, i32 
   ret { <vscale x 64 x i8>, i32 } %load
 }
 
+define <vscale x 128 x i8> @vploadff_nxv128i8(ptr %ptr, ptr %evl_out, <vscale x 128 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_nxv128i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    bltu a2, a3, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
+; CHECK-NEXT:    csrr a0, vl
+; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    ret
+  %load = call { <vscale x 128 x i8>, i32 } @llvm.vp.load.ff.nxv128i8.p0(ptr %ptr, <vscale x 128 x i1> %m, i32 %evl)
+  %result0 = extractvalue { <vscale x 128 x i8>, i32 } %load, 0
+  %result1 = extractvalue { <vscale x 128 x i8>, i32 } %load, 1
+  store i32 %result1, ptr %evl_out
+  ret <vscale x 128 x i8> %result0
+}
+
+define <vscale x 128 x i8> @vploadff_nxv128i8_allones_mask(ptr %ptr, ptr %evl_out, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_nxv128i8_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    bltu a2, a3, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vl
+; CHECK-NEXT:    sw a0, 0(a1)
+; CHECK-NEXT:    ret
+  %load = call { <vscale x 128 x i8>, i32 } @llvm.vp.load.ff.nxv128i8.p0(ptr %ptr, <vscale x 128 x i1> splat (i1 true), i32 %evl)
+  %result0 = extractvalue { <vscale x 128 x i8>, i32 } %load, 0
+  %result1 = extractvalue { <vscale x 128 x i8>, i32 } %load, 1
+  store i32 %result1, ptr %evl_out
+  ret <vscale x 128 x i8> %result0
+}
+
 define { <vscale x 1 x i16>, i32 } @vploadff_nxv1i16(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1i16:
 ; CHECK:       # %bb.0:

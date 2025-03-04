@@ -272,6 +272,44 @@ define { <8 x i64>, i32 } @vploadff_v8i64_allones_mask(ptr %ptr, i32 zeroext %ev
   ret { <8 x i64>, i32 } %load
 }
 
+define { <32 x i64>, i32 } @vploadff_v32i64(ptr %ptr, <32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_v32i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 16
+; CHECK-NEXT:    bltu a2, a3, .LBB24_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:  .LBB24_2:
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vle64ff.v v8, (a1), v0.t
+; CHECK-NEXT:    csrr a1, vl
+; CHECK-NEXT:    sw a1, 256(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %load = call { <32 x i64>, i32 } @llvm.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> %m, i32 %evl)
+  ret { <32 x i64>, i32 } %load
+}
+
+define { <32 x i64>, i32 } @vploadff_v32i64_allones_mask(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_v32i64_allones_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 16
+; CHECK-NEXT:    bltu a2, a3, .LBB25_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:  .LBB25_2:
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vle64ff.v v8, (a1)
+; CHECK-NEXT:    csrr a1, vl
+; CHECK-NEXT:    sw a1, 256(a0)
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %load = call { <32 x i64>, i32 } @llvm.vp.load.ff.v32i64.p0(ptr %ptr, <32 x i1> splat (i1 true), i32 %evl)
+  ret { <32 x i64>, i32 } %load
+}
+
 define { <2 x half>, i32 } @vploadff_v2f16(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_v2f16:
 ; CHECK:       # %bb.0:
