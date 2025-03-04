@@ -781,6 +781,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   return debugger_sp;
 }
 
+void Debugger::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  lldb_private::telemetry::TelemeryManager::GetInstance()
+      ->DispatchClientTelemetry(entry);
+}
+
 void Debugger::HandleDestroyCallback() {
   const lldb::user_id_t user_id = GetID();
   // Invoke and remove all the callbacks in an FIFO order. Callbacks which are

@@ -13,6 +13,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -248,6 +249,8 @@ public:
   lldb::SBTarget CreateTarget(const char *filename);
 
   lldb::SBTarget GetDummyTarget();
+
+  void DispatchClientTelemetry(const lldb::SBStructuredData &data);
 
   // Return true if target is deleted from the target list of the debugger.
   bool DeleteTarget(lldb::SBTarget &target);

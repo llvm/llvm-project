@@ -59,6 +59,12 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
   if (end_time.has_value())
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
+void ClientInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+  serializer.write("request_name", request_name);
+  if (error_msg.has_value())
+    serializer.write("error_msg", error_msg.value());
+}
 
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
@@ -67,7 +73,7 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
-TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
+TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
@@ -79,23 +85,90 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
-const Config *TelemetryManager::GetConfig() { return m_config.get(); }
+void TelemetryManager::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry, Debugger *debugger) {
+  if (!m_config->m_enable_client_telemetry)
+    return;
+
+  ClientInfo client_info;
+  client_info.debugger = debugger;
+
+  std::optional<llvm::StringRef> request_name = entry.getString("request_name");
+  if (!request_name.has_value())
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine request name from client-telemetry entry");
+  else
+    client_info.request_name = request_name->str();
+
+  std::optional<int64_t> start_time = entry.getInteger("start_time");
+  std::optional<int64_t> end_time = entry.getInteger("end_time");
+  SteadyTimePoint epoch;
+  if (!start_time.has_value()) {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine start-time from client-telemetry entry");
+    client_info.start_time = 0;
+  } else {
+    client_info.start_time =
+        epoch + std::chrono::nanoseconds(static_cast<size_t>(*start_time));
+  }
+
+  if (!end_time.has_value()) {
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine end-time from client-telemetry entry");
+  } else {
+    client_info.end_time =
+        epoch + std::chrono::nanoseconds(static_cast<size_t>(*end_time));
+  }
+
+  std::optional<llvm::StringRef> error_msg = entry.getString("error");
+  if (error_msg.has_value())
+    client_info.error_msg = error_msg->str();
+
+  if (llvm::Error er = dispatch(&client_info))
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
+                   "Failed to dispatch client telemetry");
+}
+
+class NoOpTelemetryManager : public TelemetryManager {
+public:
+  llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  explicit NoOpTelemetryManager()
+      : TelemetryManager(std::make_unique<LLDBConfig>(
+            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
+
+  llvm::StringRef GetInstanceName() const override {
+    return "NoOpTelemetryManager";
+  }
+
+  llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
+    // Does nothing.
+    return llvm::Error::success();
+  }
+
+  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
+                               Debugger *debugger) override {
+    // Does nothing.
+  }
+
+  static NoOpTelemetryManager *GetInstance() {
+    static std::unique_ptr<NoOpTelemetryManager> g_ins =
+        std::make_unique<NoOpTelemetryManager>();
+    return g_ins.get();
+  }
+};
 
 std::unique_ptr<TelemetryManager> TelemetryManager::g_instance = nullptr;
 TelemetryManager *TelemetryManager::GetInstance() {
-  if (!Config::BuildTimeEnableTelemetry)
-    return nullptr;
+  // If Telemetry is disabled or if there is no default instance, then use the
+  // NoOp manager. We use a dummy instance to avoid having to do nullchecks in
+  // various places.
+  if (!Config::BuildTimeEnableTelemetry || !g_instance)
+    return NoOpTelemetryManager::GetInstance();
   return g_instance.get();
-}
-
-TelemetryManager *TelemetryManager::GetInstanceIfEnabled() {
-  // Telemetry may be enabled at build time but disabled at runtime.
-  if (TelemetryManager *ins = TelemetryManager::GetInstance()) {
-    if (ins->GetConfig()->EnableTelemetry)
-      return ins;
-  }
-
-  return nullptr;
 }
 
 void TelemetryManager::SetInstance(std::unique_ptr<TelemetryManager> manager) {
