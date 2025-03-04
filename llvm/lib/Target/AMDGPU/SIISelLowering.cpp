@@ -2345,7 +2345,7 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   // Return the global position in the grid where clusters are supported.
-  if (MFI.mayUseClusters()) {
+  if (Subtarget->hasClusters()) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       return getGlobalWorkGroupId(
@@ -2396,6 +2396,12 @@ SDValue SITargetLowering::getPreloadedValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
+
+  auto LoadConstant = [&](unsigned N) {
+    return DAG.getConstant(N, SDLoc(), VT);
+  };
+
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
@@ -2418,31 +2424,43 @@ SDValue SITargetLowering::getPreloadedValue(
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      if (ClusterDims && (*ClusterDims)[0] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      if (ClusterDims && (*ClusterDims)[1] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      if (ClusterDims && (*ClusterDims)[2] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[0] - 1);
       Reg = &ClusterWorkGroupMaxIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[1] - 1);
       Reg = &ClusterWorkGroupMaxIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[2] - 1);
       Reg = &ClusterWorkGroupMaxIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
