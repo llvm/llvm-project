@@ -1210,16 +1210,51 @@ OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
+  auto operands = getOperands();
+  const unsigned int numOperands = getNumOperands();
+
+  // Fold concat when all operands are constant and the output is 'small'
+  if (llvm::all_of(operands, [](Value v) {
+        return llvm::dyn_cast_or_null<tosa::ConstOp>(v.getDefiningOp());
+      })) {
+    const ShapedType outputType = dyn_cast<ShapedType>(getOutput().getType());
+    if (!outputType || !outputType.hasStaticShape())
+      return {};
+
+    // A 'small' output is currently defined as 1D and <= 6 elements
+    // (tosa_level_8k MAX_RANK)
+    if (outputType.getRank() != 1)
+      return {};
+
+    const int64_t outputNumElements = outputType.getNumElements();
+    if (outputNumElements > 6)
+      return {};
+
+    llvm::SmallVector<Attribute> constOperands;
+    constOperands.reserve(outputNumElements);
+    for (const Attribute &operand : adaptor.getOperands()) {
+      const auto elementsAttr =
+          llvm::dyn_cast_if_present<DenseElementsAttr>(operand);
+      if (!elementsAttr)
+        return {};
+
+      constOperands.append(
+          llvm::to_vector(elementsAttr.getValues<Attribute>()));
+    }
+
+    return DenseElementsAttr::get(outputType, constOperands);
+  }
+
   // Fold consecutive concats on the same axis into a single op.
   // Keep track of the operands so we are able to construct a new concat
   // later. Conservatively assume that we double the number of operands when
   // folding
   SmallVector<Value, 8> concatOperands;
-  concatOperands.reserve(2 * getNumOperands());
+  concatOperands.reserve(2 * numOperands);
 
   // Find all operands that are foldable concats
   bool foundFoldableConcat = false;
-  for (Value operand : getOperands()) {
+  for (Value operand : operands) {
     concatOperands.emplace_back(operand);
 
     auto producer = dyn_cast_or_null<ConcatOp>(operand.getDefiningOp());
