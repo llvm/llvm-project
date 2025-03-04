@@ -52,8 +52,6 @@ Improvements and New Features
 
 - Updated formatting library to Unicode 16.0.0.
 
-- ``std::erase`` and ``std::erase_if`` overloads for ``std::basic_string`` are made ``constexpr`` in C++20 and later.
-
 Deprecations and Removals
 -------------------------
 
