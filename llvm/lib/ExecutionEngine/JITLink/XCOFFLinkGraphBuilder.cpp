@@ -310,18 +310,13 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
       B = CsectTable[CsectSymbolIndex];
     }
 
-    Scope S{Scope::Default};
+    Scope S{Scope::Local};
     if (Hidden)
       S = Scope::Hidden;
-    // TODO: Got this from llvm-objdump.cpp:2938 not sure if its correct
-    if (!Weak) {
-      if (Global)
-        S = Scope::Default;
-      else
-        S = Scope::Local;
-    }
+    else if (Global)
+      S = Scope::Default;
+    // TODO: map all symbols for c++ static initialization to SideEffectOnly
 
-    // TODO: figure out all symbols that should have Scope::SideEffectsOnly
     Linkage L = Weak ? Linkage::Weak : Linkage::Strong;
     auto SymbolAddr = Symbol.getAddress();
     if (!SymbolAddr)

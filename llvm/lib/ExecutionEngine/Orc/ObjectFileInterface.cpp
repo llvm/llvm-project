@@ -261,12 +261,17 @@ getXCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     if (!SymFlags)
       return SymFlags.takeError();
 
-    // TODO: Global symbols should have default visibility for now
+    // By default, only shared library with F_SHROBJ in the xcoff header will
+    // have SF_Exported. On AIX, we require the linker with the help of an
+    // export list to determine the visibility of the symbol. This mimics the
+    // behaviour of -bautoexp and CreateExportList utilities. In the abscence of
+    // the export list, this is the best we can do.
+    // TODO: Revisit
     *SymFlags |= JITSymbolFlags::Exported;
 
     I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
   }
-  // TODO: Implement init sections
+  // TODO: Find all initialization symbols for c++ static initializers
   return I;
 }
 
