@@ -27,6 +27,8 @@ static const char *VNamesFirst = NULL;
 static const char *VNamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
+static char *BitmapFirst = NULL;
+static char *BitmapLast = NULL;
 static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
