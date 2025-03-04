@@ -285,6 +285,6 @@ When upstreaming changes originally written by someone else:
   of their code, and that they are comfortable with you leading the process.
 * Properly attribute the original changes, e.g., by creating a commit with
   multiple authors ([GitHub guide](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors)).  
-* Invite the original author(s) to review the changes, but also include
+* Invite the original author(s) to review the changes, and also include
   additional reviewers. Specifically, an LGTM from a (co-)author does not
   constitute approval to land a change.
