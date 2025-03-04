@@ -65,6 +65,11 @@ function compute-runtimes-to-test() {
         echo $p
       done
     ;;
+    flang)
+      for p in flang-rt; do
+        echo $p
+      done
+    ;;
     *)
       # Nothing to do
     ;;
@@ -95,8 +100,18 @@ function add-dependencies() {
     compiler-rt|libc|openmp)
       echo clang lld
     ;;
-    flang|lldb|libclc)
+    lldb|libclc)
       for p in llvm clang; do
+        echo $p
+      done
+    ;;
+    flang)
+      for p in llvm clang mlir; do
+        echo $p
+      done
+    ;;
+    flang-rt)
+      for p in llvm clang mlir flang; do
         echo $p
       done
     ;;
