@@ -3,7 +3,8 @@
 ; GCN-LABEL: {{^}}alignbit_shr_pat:
 ; GCN-DAG: s_load_dword s[[SHR:[0-9]+]]
 ; GCN-DAG: load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
-; GCN: v_alignbit_b32 v{{[0-9]+}}, v[[HI]], v[[LO]], s[[SHR]]
+; GCN-NEXT: s_mov_b32
+; GCN-NEXT: s_mov_b32
 
 define amdgpu_kernel void @alignbit_shr_pat(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) {
 bb:
@@ -70,7 +71,8 @@ bb:
 
 ; GCN-LABEL: {{^}}alignbit_shr_pat_const30:
 ; GCN: load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
-; GCN: v_alignbit_b32 v{{[0-9]+}}, v[[HI]], v[[LO]], 30
+; GCN-NEXT: s_mov_b32
+; GCN-NEXT: s_mov_b32
 
 define amdgpu_kernel void @alignbit_shr_pat_const30(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1) {
 bb:

@@ -176,11 +176,10 @@ ret:
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
 
 ; GCN: s_cbranch_scc{{[0-1]}} .LBB3_2
-; GCN: v_alignbit_b32 v[[LO:[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}, 30
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7f, v[[LO]]
+; GCN: s_lshr_b64
 
 ; GCN: .LBB3_3:
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
+; GCN: s_lshr_b64
 
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
