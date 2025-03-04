@@ -459,7 +459,7 @@ reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
   }
 
   case Stmt::AttributedStmtClass: {
-    // for an attributed stmt, the "children()" returns only the NullStmt
+    // For an attributed stmt, the "children()" returns only the NullStmt
     // (;) but semantically the "children" are supposed to be the
     // expressions _within_ i.e. the two square brackets i.e. [[ HERE ]]
     // so we add the subexpressions first, _then_ add the "children"

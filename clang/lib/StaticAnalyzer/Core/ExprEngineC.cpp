@@ -796,7 +796,6 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
 
   // Find the predecessor block.
   ProgramStateRef SrcState = state;
-
   for (const ExplodedNode *N = Pred ; N ; N = *N->pred_begin()) {
     auto Edge = N->getLocationAs<BlockEdge>();
     if (!Edge.has_value()) {
