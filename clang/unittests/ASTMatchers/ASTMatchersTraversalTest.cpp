@@ -28,6 +28,18 @@ TEST(DeclarationMatcher, hasMethod) {
                          cxxRecordDecl(hasMethod(isPublic()))));
 }
 
+TEST(DeclarationMatcher, shouldTraverse) {
+  MatchFinder::MatchFinderOptions Options;
+  Options.ShouldTraverseDecl = [](const Decl &decl) { return true; };
+  EXPECT_TRUE(matches("class A { void func(); };",
+                      cxxRecordDecl(hasMethod(hasName("func"))), langCxx11(),
+                      Options));
+  Options.ShouldTraverseDecl = [](const Decl &decl) { return false; };
+  EXPECT_FALSE(matches("class A { void func(); };",
+                       cxxRecordDecl(hasMethod(hasName("func"))), langCxx11(),
+                       Options));
+}
+
 TEST(DeclarationMatcher, ClassDerivedFromDependentTemplateSpecialization) {
   EXPECT_TRUE(matches(
     "template <typename T> struct A {"
