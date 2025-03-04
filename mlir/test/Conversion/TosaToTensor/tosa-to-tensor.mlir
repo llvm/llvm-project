@@ -498,35 +498,38 @@ func.func @slice_dyn(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
 // CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 func.func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   %0 = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %pad_const = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant 1 : index
   // CHECK-DAG: [[INDEX2:%.+]] = arith.constant 2 : index
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
-  // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG: [[CST:%.+]] = arith.constant 3.140000e+00 : f32
   // CHECK: tensor.pad %[[ARG0]] low{{\[}}[[INDEX1]], [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
-  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<4x9xf32>)
+  %1 = "tosa.pad"(%arg0, %0, %pad_const)  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
   return %1 : tensor<4x9xf32>
 }
 // -----
 
 func.func @pad_int(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
   %0 = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  // CHECK: [[CST:%.+]] = arith.constant 0 : i32
+  %pad_const = "tosa.const"() {value = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: [[CST:%.+]] = arith.constant 3 : i32
   // CHECK: tensor.pad
   // CHECK:   tensor.yield [[CST]]
-  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xi32>, !tosa.shape<4>)  -> (tensor<4x9xi32>)
+  %1 = "tosa.pad"(%arg0, %0, %pad_const)  : (tensor<1x2xi32>, !tosa.shape<4>, tensor<1xi32>)  -> (tensor<4x9xi32>)
   return %1 : tensor<4x9xi32>
 }
 // -----
 
 func.func @pad_quant(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
   %0 = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  // CHECK: [[CST:%.+]] = arith.constant 42 : i32
+  %pad_const = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: [[CST:%.+]] = arith.constant 0 : i32
   // CHECK: tensor.pad
   // CHECK:   tensor.yield [[CST]]
-  %1 = "tosa.pad"(%arg0, %0) {input_zp = 42 : i32} : (tensor<1x2xi32>, !tosa.shape<4>)  -> (tensor<4x9xi32>)
+  %1 = "tosa.pad"(%arg0, %0, %pad_const) {input_zp = 42 : i32} : (tensor<1x2xi32>, !tosa.shape<4>, tensor<1xi32>)  -> (tensor<4x9xi32>)
   return %1 : tensor<4x9xi32>
 }
 
@@ -551,30 +554,32 @@ func.func @pad_float_explicit(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
 
 func.func @pad_dyn_input(%arg0 : tensor<?x2xf32>) -> (tensor<?x9xf32>) {
   %0 = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %pad_const = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant 1 : index
   // CHECK-DAG: [[INDEX2:%.+]] = arith.constant 2 : index
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
-  // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG: [[CST:%.+]] = arith.constant 3.140000e+00 : f32
   // CHECK: tensor.pad %[[ARG0]] low{{\[}}[[INDEX1]], [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<?x2xf32> to tensor<?x9xf32>
-  %1 = "tosa.pad"(%arg0, %0)  : (tensor<?x2xf32>, !tosa.shape<4>)  -> (tensor<?x9xf32>)
+  %1 = "tosa.pad"(%arg0, %0, %pad_const)  : (tensor<?x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
   return %1 : tensor<?x9xf32>
 }
 // -----
 
 func.func @pad_dyn_padding(%arg0 : tensor<1x2xf32>) -> (tensor<?x9xf32>) {
   %0 = tosa.const_shape {value = dense<[-1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %pad_const = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // CHECK-DAG: [[INDEX1:%.+]] = arith.constant -1 : index
   // CHECK-DAG: [[INDEX2:%.+]] = arith.constant 2 : index
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
-  // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
+  // CHECK-DAG: [[CST:%.+]] = arith.constant 3.140000e+00 : f32
   // CHECK: tensor.pad %[[ARG0]] low{{\[}}[[INDEX1]], [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<?x9xf32>
-  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<?x9xf32>)
+  %1 = "tosa.pad"(%arg0, %0, %pad_const)  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
   return %1 : tensor<?x9xf32>
 }
 

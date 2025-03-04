@@ -175,53 +175,6 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
-struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::PadOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getPadConst())
-      return failure();
-
-    auto input = op.getInput1();
-    auto padding = op.getPadding();
-
-    ShapedType inputTy = llvm::cast<ShapedType>(input.getType());
-    Type elementTy = inputTy.getElementType();
-
-    Attribute constantAttr;
-    if (llvm::isa<FloatType>(elementTy)) {
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
-      int64_t value = op.getInputZpAttr().getInt();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value);
-    }
-
-    if (!constantAttr) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "tosa.pad to linalg lowering encountered an unknown element type");
-    }
-
-    auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({1}, elementTy), constantAttr);
-    auto constantVal = rewriter.create<tosa::ConstOp>(
-        op.getLoc(), denseAttr.getType(), denseAttr);
-
-    rewriter.replaceOpWithNewOp<tosa::PadOp>(
-        op, op.getType(), ValueRange{input, padding, constantVal},
-        op->getAttrs());
-    return success();
-  }
-};
-
-void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MaterializePadValue>(context);
-}
-
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
