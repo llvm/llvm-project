@@ -3,7 +3,7 @@ How To Cross-Compile Clang/LLVM using Clang/LLVM
 ===================================================================
 
 Introduction
-============
+------------
 
 This document contains information about building LLVM and
 Clang on a host machine, targeting another platform.
@@ -14,13 +14,10 @@ please check https://clang.llvm.org/docs/CrossCompilation.html.
 This document describes cross-building a compiler in a single stage, using an
 existing ``clang`` install as the host compiler.
 
-
-Cross-Compiling from x86_64 to ARM, AArch64, or RISC-V
-======================================================
-
-These instructions have been tested for targeting 32-bit ARM, AArch64, or
-RISC-V but should be equally applicable to any other target.
-
+.. note::
+  These instructions have been tested for targeting 32-bit ARM, AArch64, or
+  64-bit RISC-V from an x86_64 host. But should be equally applicable to any
+  other target.
 
 Setting up an appropriate sysroot
 ---------------------------------
