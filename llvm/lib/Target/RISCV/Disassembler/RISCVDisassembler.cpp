@@ -224,6 +224,12 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRVPGPRPair(MCInst &Inst, uint32_t RegNo,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  return DecodeGPRPairRegisterClass(Inst, RegNo << 1, Address, Decoder);
+}
+
 static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -716,6 +722,9 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE(true, DecoderTableZfinx32, "Zfinx (Float in Integer)");
   TRY_TO_DECODE(true, DecoderTableZdinxRV32GPRPair32,
                 "ZdinxRV32GPRPair (rv32 and Double in Integer)");
+  TRY_TO_DECODE_AND_ADD_SP(!STI.hasFeature(RISCV::Feature64Bit),
+                           DecoderTableRISCV32Only_32,
+                           "RISCV32Only_32 table (32-bit Instruction)");
 
   return MCDisassembler::Fail;
 }
