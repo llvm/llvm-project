@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zvfbfmin,+v \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare { <vscale x 1 x i8>, i32 } @llvm.vp.load.ff.nxv1i8.p0(ptr, <vscale x 1 x i1>, i32)
-
 define { <vscale x 1 x i8>, i32 } @vploadff_nxv1i8(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -28,13 +26,9 @@ define { <vscale x 1 x i8>, i32 } @vploadff_nxv1i8_allones_mask(ptr %ptr, i32 ze
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x i8>, i32 } @llvm.vp.load.ff.nxv1i8.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x i8>, i32 } @llvm.vp.load.ff.nxv1i8.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x i8>, i32 } %load
 }
-
-declare { <vscale x 2 x i8>, i32 } @llvm.vp.load.ff.nxv2i8.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x i8>, i32 } @vploadff_nxv2i8(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2i8:
@@ -54,13 +48,9 @@ define { <vscale x 2 x i8>, i32 } @vploadff_nxv2i8_allones_mask(ptr %ptr, i32 ze
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x i8>, i32 } @llvm.vp.load.ff.nxv2i8.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x i8>, i32 } @llvm.vp.load.ff.nxv2i8.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x i8>, i32 } %load
 }
-
-declare { <vscale x 4 x i8>, i32 } @llvm.vp.load.ff.nxv4i8.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x i8>, i32 } @vploadff_nxv4i8(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4i8:
@@ -80,13 +70,9 @@ define { <vscale x 4 x i8>, i32 } @vploadff_nxv4i8_allones_mask(ptr %ptr, i32 ze
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x i8>, i32 } @llvm.vp.load.ff.nxv4i8.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x i8>, i32 } @llvm.vp.load.ff.nxv4i8.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x i8>, i32 } %load
 }
-
-declare { <vscale x 8 x i8>, i32 } @llvm.vp.load.ff.nxv8i8.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x i8>, i32 } @vploadff_nxv8i8(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8i8:
@@ -106,13 +92,9 @@ define { <vscale x 8 x i8>, i32 } @vploadff_nxv8i8_allones_mask(ptr %ptr, i32 ze
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x i8>, i32 } @llvm.vp.load.ff.nxv8i8.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x i8>, i32 } @llvm.vp.load.ff.nxv8i8.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x i8>, i32 } %load
 }
-
-declare { <vscale x 16 x i8>, i32 } @llvm.vp.load.ff.nxv16i8.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x i8>, i32 } @vploadff_nxv16i8(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16i8:
@@ -132,13 +114,9 @@ define { <vscale x 16 x i8>, i32 } @vploadff_nxv16i8_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x i8>, i32 } @llvm.vp.load.ff.nxv16i8.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x i8>, i32 } @llvm.vp.load.ff.nxv16i8.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x i8>, i32 } %load
 }
-
-declare { <vscale x 32 x i8>, i32 } @llvm.vp.load.ff.nxv32i8.p0(ptr, <vscale x 32 x i1>, i32)
 
 define { <vscale x 32 x i8>, i32 } @vploadff_nxv32i8(ptr %ptr, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv32i8:
@@ -158,13 +136,9 @@ define { <vscale x 32 x i8>, i32 } @vploadff_nxv32i8_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 32 x i1> %a, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %load = call { <vscale x 32 x i8>, i32 } @llvm.vp.load.ff.nxv32i8.p0(ptr %ptr, <vscale x 32 x i1> %b, i32 %evl)
+  %load = call { <vscale x 32 x i8>, i32 } @llvm.vp.load.ff.nxv32i8.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 32 x i8>, i32 } %load
 }
-
-declare { <vscale x 64 x i8>, i32 } @llvm.vp.load.ff.nxv64i8.p0(ptr, <vscale x 64 x i1>, i32)
 
 define { <vscale x 64 x i8>, i32 } @vploadff_nxv64i8(ptr %ptr, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv64i8:
@@ -184,13 +158,9 @@ define { <vscale x 64 x i8>, i32 } @vploadff_nxv64i8_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle8ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 64 x i1> %a, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
-  %load = call { <vscale x 64 x i8>, i32 } @llvm.vp.load.ff.nxv64i8.p0(ptr %ptr, <vscale x 64 x i1> %b, i32 %evl)
+  %load = call { <vscale x 64 x i8>, i32 } @llvm.vp.load.ff.nxv64i8.p0(ptr %ptr, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 64 x i8>, i32 } %load
 }
-
-declare { <vscale x 1 x i16>, i32 } @llvm.vp.load.ff.nxv1i16.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x i16>, i32 } @vploadff_nxv1i16(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1i16:
@@ -210,13 +180,9 @@ define { <vscale x 1 x i16>, i32 } @vploadff_nxv1i16_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x i16>, i32 } @llvm.vp.load.ff.nxv1i16.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x i16>, i32 } @llvm.vp.load.ff.nxv1i16.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x i16>, i32 } %load
 }
-
-declare { <vscale x 2 x i16>, i32 } @llvm.vp.load.ff.nxv2i16.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x i16>, i32 } @vploadff_nxv2i16(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2i16:
@@ -236,13 +202,9 @@ define { <vscale x 2 x i16>, i32 } @vploadff_nxv2i16_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x i16>, i32 } @llvm.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x i16>, i32 } @llvm.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x i16>, i32 } %load
 }
-
-declare { <vscale x 4 x i16>, i32 } @llvm.vp.load.ff.nxv4i16.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x i16>, i32 } @vploadff_nxv4i16(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4i16:
@@ -262,13 +224,9 @@ define { <vscale x 4 x i16>, i32 } @vploadff_nxv4i16_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x i16>, i32 } @llvm.vp.load.ff.nxv4i16.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x i16>, i32 } @llvm.vp.load.ff.nxv4i16.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x i16>, i32 } %load
 }
-
-declare { <vscale x 8 x i16>, i32 } @llvm.vp.load.ff.nxv8i16.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x i16>, i32 } @vploadff_nxv8i16(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8i16:
@@ -288,13 +246,9 @@ define { <vscale x 8 x i16>, i32 } @vploadff_nxv8i16_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x i16>, i32 } @llvm.vp.load.ff.nxv8i16.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x i16>, i32 } @llvm.vp.load.ff.nxv8i16.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x i16>, i32 } %load
 }
-
-declare { <vscale x 16 x i16>, i32 } @llvm.vp.load.ff.nxv16i16.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x i16>, i32 } @vploadff_nxv16i16(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16i16:
@@ -314,13 +268,9 @@ define { <vscale x 16 x i16>, i32 } @vploadff_nxv16i16_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x i16>, i32 } @llvm.vp.load.ff.nxv16i16.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x i16>, i32 } @llvm.vp.load.ff.nxv16i16.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x i16>, i32 } %load
 }
-
-declare { <vscale x 32 x i16>, i32 } @llvm.vp.load.ff.nxv32i16.p0(ptr, <vscale x 32 x i1>, i32)
 
 define { <vscale x 32 x i16>, i32 } @vploadff_nxv32i16(ptr %ptr, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv32i16:
@@ -340,13 +290,9 @@ define { <vscale x 32 x i16>, i32 } @vploadff_nxv32i16_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 32 x i1> %a, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %load = call { <vscale x 32 x i16>, i32 } @llvm.vp.load.ff.nxv32i16.p0(ptr %ptr, <vscale x 32 x i1> %b, i32 %evl)
+  %load = call { <vscale x 32 x i16>, i32 } @llvm.vp.load.ff.nxv32i16.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 32 x i16>, i32 } %load
 }
-
-declare { <vscale x 1 x i32>, i32 } @llvm.vp.load.ff.nxv1i32.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x i32>, i32 } @vploadff_nxv1i32(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1i32:
@@ -366,13 +312,9 @@ define { <vscale x 1 x i32>, i32 } @vploadff_nxv1i32_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x i32>, i32 } @llvm.vp.load.ff.nxv1i32.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x i32>, i32 } @llvm.vp.load.ff.nxv1i32.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x i32>, i32 } %load
 }
-
-declare { <vscale x 2 x i32>, i32 } @llvm.vp.load.ff.nxv2i32.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x i32>, i32 } @vploadff_nxv2i32(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2i32:
@@ -392,13 +334,9 @@ define { <vscale x 2 x i32>, i32 } @vploadff_nxv2i32_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x i32>, i32 } @llvm.vp.load.ff.nxv2i32.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x i32>, i32 } @llvm.vp.load.ff.nxv2i32.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x i32>, i32 } %load
 }
-
-declare { <vscale x 4 x i32>, i32 } @llvm.vp.load.ff.nxv4i32.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x i32>, i32 } @vploadff_nxv4i32(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4i32:
@@ -418,13 +356,9 @@ define { <vscale x 4 x i32>, i32 } @vploadff_nxv4i32_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x i32>, i32 } @llvm.vp.load.ff.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x i32>, i32 } @llvm.vp.load.ff.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x i32>, i32 } %load
 }
-
-declare { <vscale x 8 x i32>, i32 } @llvm.vp.load.ff.nxv8i32.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x i32>, i32 } @vploadff_nxv8i32(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8i32:
@@ -444,13 +378,9 @@ define { <vscale x 8 x i32>, i32 } @vploadff_nxv8i32_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x i32>, i32 } @llvm.vp.load.ff.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x i32>, i32 } @llvm.vp.load.ff.nxv8i32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x i32>, i32 } %load
 }
-
-declare { <vscale x 16 x i32>, i32 } @llvm.vp.load.ff.nxv16i32.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x i32>, i32 } @vploadff_nxv16i32(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16i32:
@@ -470,13 +400,9 @@ define { <vscale x 16 x i32>, i32 } @vploadff_nxv16i32_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x i32>, i32 } @llvm.vp.load.ff.nxv16i32.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x i32>, i32 } @llvm.vp.load.ff.nxv16i32.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x i32>, i32 } %load
 }
-
-declare { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x i64>, i32 } @vploadff_nxv1i64(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1i64:
@@ -496,13 +422,9 @@ define { <vscale x 1 x i64>, i32 } @vploadff_nxv1i64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x i64>, i32 } %load
 }
-
-declare { <vscale x 2 x i64>, i32 } @llvm.vp.load.ff.nxv2i64.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x i64>, i32 } @vploadff_nxv2i64(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2i64:
@@ -522,13 +444,9 @@ define { <vscale x 2 x i64>, i32 } @vploadff_nxv2i64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x i64>, i32 } @llvm.vp.load.ff.nxv2i64.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x i64>, i32 } @llvm.vp.load.ff.nxv2i64.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x i64>, i32 } %load
 }
-
-declare { <vscale x 4 x i64>, i32 } @llvm.vp.load.ff.nxv4i64.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x i64>, i32 } @vploadff_nxv4i64(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4i64:
@@ -548,13 +466,9 @@ define { <vscale x 4 x i64>, i32 } @vploadff_nxv4i64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x i64>, i32 } @llvm.vp.load.ff.nxv4i64.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x i64>, i32 } @llvm.vp.load.ff.nxv4i64.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x i64>, i32 } %load
 }
-
-declare { <vscale x 8 x i64>, i32 } @llvm.vp.load.ff.nxv8i64.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x i64>, i32 } @vploadff_nxv8i64(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8i64:
@@ -574,13 +488,9 @@ define { <vscale x 8 x i64>, i32 } @vploadff_nxv8i64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x i64>, i32 } @llvm.vp.load.ff.nxv8i64.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x i64>, i32 } @llvm.vp.load.ff.nxv8i64.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x i64>, i32 } %load
 }
-
-declare { <vscale x 1 x half>, i32 } @llvm.vp.load.ff.nxv1f16.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x half>, i32 } @vploadff_nxv1f16(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1f16:
@@ -600,13 +510,9 @@ define { <vscale x 1 x half>, i32 } @vploadff_nxv1f16_allones_mask(ptr %ptr, i32
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x half>, i32 } @llvm.vp.load.ff.nxv1f16.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x half>, i32 } @llvm.vp.load.ff.nxv1f16.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x half>, i32 } %load
 }
-
-declare { <vscale x 2 x half>, i32 } @llvm.vp.load.ff.nxv2f16.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x half>, i32 } @vploadff_nxv2f16(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2f16:
@@ -626,13 +532,9 @@ define { <vscale x 2 x half>, i32 } @vploadff_nxv2f16_allones_mask(ptr %ptr, i32
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x half>, i32 } @llvm.vp.load.ff.nxv2f16.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x half>, i32 } @llvm.vp.load.ff.nxv2f16.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x half>, i32 } %load
 }
-
-declare { <vscale x 4 x half>, i32 } @llvm.vp.load.ff.nxv4f16.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x half>, i32 } @vploadff_nxv4f16(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4f16:
@@ -652,13 +554,9 @@ define { <vscale x 4 x half>, i32 } @vploadff_nxv4f16_allones_mask(ptr %ptr, i32
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x half>, i32 } @llvm.vp.load.ff.nxv4f16.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x half>, i32 } @llvm.vp.load.ff.nxv4f16.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x half>, i32 } %load
 }
-
-declare { <vscale x 8 x half>, i32 } @llvm.vp.load.ff.nxv8f16.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x half>, i32 } @vploadff_nxv8f16(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8f16:
@@ -678,13 +576,9 @@ define { <vscale x 8 x half>, i32 } @vploadff_nxv8f16_allones_mask(ptr %ptr, i32
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x half>, i32 } @llvm.vp.load.ff.nxv8f16.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x half>, i32 } @llvm.vp.load.ff.nxv8f16.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x half>, i32 } %load
 }
-
-declare { <vscale x 16 x half>, i32 } @llvm.vp.load.ff.nxv16f16.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x half>, i32 } @vploadff_nxv16f16(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16f16:
@@ -704,13 +598,9 @@ define { <vscale x 16 x half>, i32 } @vploadff_nxv16f16_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x half>, i32 } @llvm.vp.load.ff.nxv16f16.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x half>, i32 } @llvm.vp.load.ff.nxv16f16.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x half>, i32 } %load
 }
-
-declare { <vscale x 32 x half>, i32 } @llvm.vp.load.ff.nxv32f16.p0(ptr, <vscale x 32 x i1>, i32)
 
 define { <vscale x 32 x half>, i32 } @vploadff_nxv32f16(ptr %ptr, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv32f16:
@@ -730,13 +620,9 @@ define { <vscale x 32 x half>, i32 } @vploadff_nxv32f16_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 32 x i1> %a, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %load = call { <vscale x 32 x half>, i32 } @llvm.vp.load.ff.nxv32f16.p0(ptr %ptr, <vscale x 32 x i1> %b, i32 %evl)
+  %load = call { <vscale x 32 x half>, i32 } @llvm.vp.load.ff.nxv32f16.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 32 x half>, i32 } %load
 }
-
-declare { <vscale x 1 x float>, i32 } @llvm.vp.load.ff.nxv1f32.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x float>, i32 } @vploadff_nxv1f32(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1f32:
@@ -756,13 +642,9 @@ define { <vscale x 1 x float>, i32 } @vploadff_nxv1f32_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x float>, i32 } @llvm.vp.load.ff.nxv1f32.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x float>, i32 } @llvm.vp.load.ff.nxv1f32.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x float>, i32 } %load
 }
-
-declare { <vscale x 2 x float>, i32 } @llvm.vp.load.ff.nxv2f32.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x float>, i32 } @vploadff_nxv2f32(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2f32:
@@ -782,13 +664,9 @@ define { <vscale x 2 x float>, i32 } @vploadff_nxv2f32_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x float>, i32 } @llvm.vp.load.ff.nxv2f32.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x float>, i32 } @llvm.vp.load.ff.nxv2f32.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x float>, i32 } %load
 }
-
-declare { <vscale x 4 x float>, i32 } @llvm.vp.load.ff.nxv4f32.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x float>, i32 } @vploadff_nxv4f32(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4f32:
@@ -808,13 +686,9 @@ define { <vscale x 4 x float>, i32 } @vploadff_nxv4f32_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x float>, i32 } @llvm.vp.load.ff.nxv4f32.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x float>, i32 } @llvm.vp.load.ff.nxv4f32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x float>, i32 } %load
 }
-
-declare { <vscale x 8 x float>, i32 } @llvm.vp.load.ff.nxv8f32.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x float>, i32 } @vploadff_nxv8f32(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8f32:
@@ -834,13 +708,9 @@ define { <vscale x 8 x float>, i32 } @vploadff_nxv8f32_allones_mask(ptr %ptr, i3
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x float>, i32 } @llvm.vp.load.ff.nxv8f32.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x float>, i32 } @llvm.vp.load.ff.nxv8f32.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x float>, i32 } %load
 }
-
-declare { <vscale x 16 x float>, i32 } @llvm.vp.load.ff.nxv16f32.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x float>, i32 } @vploadff_nxv16f32(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16f32:
@@ -860,13 +730,9 @@ define { <vscale x 16 x float>, i32 } @vploadff_nxv16f32_allones_mask(ptr %ptr, 
 ; CHECK-NEXT:    vle32ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x float>, i32 } @llvm.vp.load.ff.nxv16f32.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x float>, i32 } @llvm.vp.load.ff.nxv16f32.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x float>, i32 } %load
 }
-
-declare { <vscale x 1 x double>, i32 } @llvm.vp.load.ff.nxv1f64.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x double>, i32 } @vploadff_nxv1f64(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1f64:
@@ -886,13 +752,9 @@ define { <vscale x 1 x double>, i32 } @vploadff_nxv1f64_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x double>, i32 } @llvm.vp.load.ff.nxv1f64.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x double>, i32 } @llvm.vp.load.ff.nxv1f64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x double>, i32 } %load
 }
-
-declare { <vscale x 2 x double>, i32 } @llvm.vp.load.ff.nxv2f64.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x double>, i32 } @vploadff_nxv2f64(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2f64:
@@ -912,13 +774,9 @@ define { <vscale x 2 x double>, i32 } @vploadff_nxv2f64_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x double>, i32 } @llvm.vp.load.ff.nxv2f64.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x double>, i32 } @llvm.vp.load.ff.nxv2f64.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x double>, i32 } %load
 }
-
-declare { <vscale x 4 x double>, i32 } @llvm.vp.load.ff.nxv4f64.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x double>, i32 } @vploadff_nxv4f64(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4f64:
@@ -938,13 +796,9 @@ define { <vscale x 4 x double>, i32 } @vploadff_nxv4f64_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x double>, i32 } @llvm.vp.load.ff.nxv4f64.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x double>, i32 } @llvm.vp.load.ff.nxv4f64.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x double>, i32 } %load
 }
-
-declare { <vscale x 8 x double>, i32 } @llvm.vp.load.ff.nxv8f64.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x double>, i32 } @vploadff_nxv8f64(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8f64:
@@ -964,13 +818,9 @@ define { <vscale x 8 x double>, i32 } @vploadff_nxv8f64_allones_mask(ptr %ptr, i
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x double>, i32 } @llvm.vp.load.ff.nxv8f64.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x double>, i32 } @llvm.vp.load.ff.nxv8f64.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x double>, i32 } %load
 }
-
-declare { <vscale x 1 x bfloat>, i32 } @llvm.vp.load.ff.nxv1bf16.p0(ptr, <vscale x 1 x i1>, i32)
 
 define { <vscale x 1 x bfloat>, i32 } @vploadff_nxv1bf16(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv1bf16:
@@ -990,13 +840,9 @@ define { <vscale x 1 x bfloat>, i32 } @vploadff_nxv1bf16_allones_mask(ptr %ptr, 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call { <vscale x 1 x bfloat>, i32 } @llvm.vp.load.ff.nxv1bf16.p0(ptr %ptr, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call { <vscale x 1 x bfloat>, i32 } @llvm.vp.load.ff.nxv1bf16.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 1 x bfloat>, i32 } %load
 }
-
-declare { <vscale x 2 x bfloat>, i32 } @llvm.vp.load.ff.nxv2bf16.p0(ptr, <vscale x 2 x i1>, i32)
 
 define { <vscale x 2 x bfloat>, i32 } @vploadff_nxv2bf16(ptr %ptr, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv2bf16:
@@ -1016,13 +862,9 @@ define { <vscale x 2 x bfloat>, i32 } @vploadff_nxv2bf16_allones_mask(ptr %ptr, 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call { <vscale x 2 x bfloat>, i32 } @llvm.vp.load.ff.nxv2bf16.p0(ptr %ptr, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call { <vscale x 2 x bfloat>, i32 } @llvm.vp.load.ff.nxv2bf16.p0(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 2 x bfloat>, i32 } %load
 }
-
-declare { <vscale x 4 x bfloat>, i32 } @llvm.vp.load.ff.nxv4bf16.p0(ptr, <vscale x 4 x i1>, i32)
 
 define { <vscale x 4 x bfloat>, i32 } @vploadff_nxv4bf16(ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv4bf16:
@@ -1042,13 +884,9 @@ define { <vscale x 4 x bfloat>, i32 } @vploadff_nxv4bf16_allones_mask(ptr %ptr, 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call { <vscale x 4 x bfloat>, i32 } @llvm.vp.load.ff.nxv4bf16.p0(ptr %ptr, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call { <vscale x 4 x bfloat>, i32 } @llvm.vp.load.ff.nxv4bf16.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 4 x bfloat>, i32 } %load
 }
-
-declare { <vscale x 8 x bfloat>, i32 } @llvm.vp.load.ff.nxv8bf16.p0(ptr, <vscale x 8 x i1>, i32)
 
 define { <vscale x 8 x bfloat>, i32 } @vploadff_nxv8bf16(ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv8bf16:
@@ -1068,13 +906,9 @@ define { <vscale x 8 x bfloat>, i32 } @vploadff_nxv8bf16_allones_mask(ptr %ptr, 
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call { <vscale x 8 x bfloat>, i32 } @llvm.vp.load.ff.nxv8bf16.p0(ptr %ptr, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call { <vscale x 8 x bfloat>, i32 } @llvm.vp.load.ff.nxv8bf16.p0(ptr %ptr, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 8 x bfloat>, i32 } %load
 }
-
-declare { <vscale x 16 x bfloat>, i32 } @llvm.vp.load.ff.nxv16bf16.p0(ptr, <vscale x 16 x i1>, i32)
 
 define { <vscale x 16 x bfloat>, i32 } @vploadff_nxv16bf16(ptr %ptr, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv16bf16:
@@ -1094,13 +928,9 @@ define { <vscale x 16 x bfloat>, i32 } @vploadff_nxv16bf16_allones_mask(ptr %ptr
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 16 x i1> %a, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %load = call { <vscale x 16 x bfloat>, i32 } @llvm.vp.load.ff.nxv16bf16.p0(ptr %ptr, <vscale x 16 x i1> %b, i32 %evl)
+  %load = call { <vscale x 16 x bfloat>, i32 } @llvm.vp.load.ff.nxv16bf16.p0(ptr %ptr, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 16 x bfloat>, i32 } %load
 }
-
-declare { <vscale x 32 x bfloat>, i32 } @llvm.vp.load.ff.nxv32bf16.p0(ptr, <vscale x 32 x i1>, i32)
 
 define { <vscale x 32 x bfloat>, i32 } @vploadff_nxv32bf16(ptr %ptr, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vploadff_nxv32bf16:
@@ -1120,8 +950,6 @@ define { <vscale x 32 x bfloat>, i32 } @vploadff_nxv32bf16_allones_mask(ptr %ptr
 ; CHECK-NEXT:    vle16ff.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 32 x i1> %a, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-  %load = call { <vscale x 32 x bfloat>, i32 } @llvm.vp.load.ff.nxv32bf16.p0(ptr %ptr, <vscale x 32 x i1> %b, i32 %evl)
+  %load = call { <vscale x 32 x bfloat>, i32 } @llvm.vp.load.ff.nxv32bf16.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 32 x bfloat>, i32 } %load
 }
