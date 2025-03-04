@@ -25,6 +25,7 @@ set(ANALYSIS_TEST_SOURCES
   ConstraintSystemTest.cpp
   CtxProfAnalysisTest.cpp
   DDGTest.cpp
+  DebugInfoCacheTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp
   GraphWriterTest.cpp
