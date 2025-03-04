@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IOStream.h"
+#include "DAPLog.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
-#include <fstream>
 #include <string>
 
 using namespace lldb_dap;
+using namespace lldb_private;
 
 bool OutputStream::write_full(llvm::StringRef str) {
   if (!descriptor)
@@ -23,8 +24,7 @@ bool OutputStream::write_full(llvm::StringRef str) {
   return status.Success();
 }
 
-bool InputStream::read_full(std::ofstream *log, size_t length,
-                            std::string &text) {
+bool InputStream::read_full(size_t length, std::string &text) {
   if (!descriptor)
     return false;
 
@@ -39,10 +39,10 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
   return true;
 }
 
-bool InputStream::read_line(std::ofstream *log, std::string &line) {
+bool InputStream::read_line(std::string &line) {
   line.clear();
   while (true) {
-    if (!read_full(log, 1, line))
+    if (!read_full(1, line))
       return false;
 
     if (llvm::StringRef(line).ends_with("\r\n"))
@@ -52,14 +52,13 @@ bool InputStream::read_line(std::ofstream *log, std::string &line) {
   return true;
 }
 
-bool InputStream::read_expected(std::ofstream *log, llvm::StringRef expected) {
+bool InputStream::read_expected(llvm::StringRef expected) {
   std::string result;
-  if (!read_full(log, expected.size(), result))
+  if (!read_full(expected.size(), result))
     return false;
   if (expected != result) {
-    if (log)
-      *log << "Warning: Expected '" << expected.str() << "', got '" << result
-           << "\n";
+    LLDB_LOG(GetLog(DAPLog::Transport), "Warning: Expected '{0}', got '{1}'",
+             expected, result);
   }
   return true;
 }

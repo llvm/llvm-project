@@ -11,7 +11,6 @@
 
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include <fstream>
 #include <string>
 
 namespace lldb_dap {
@@ -22,11 +21,11 @@ struct InputStream {
   explicit InputStream(lldb::IOObjectSP descriptor)
       : descriptor(std::move(descriptor)) {}
 
-  bool read_full(std::ofstream *log, size_t length, std::string &text);
+  bool read_full(size_t length, std::string &text);
 
-  bool read_line(std::ofstream *log, std::string &line);
+  bool read_line(std::string &line);
 
-  bool read_expected(std::ofstream *log, llvm::StringRef expected);
+  bool read_expected(llvm::StringRef expected);
 };
 
 struct OutputStream {
