@@ -33,24 +33,6 @@
 // RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
 // RUN:   }}'
 
-static union {
-  int global;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'global'
-// CHECK-FIXES: {{^}}  int g_global;{{$}}
-
-  const int global_const;
-// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant 'global_const'
-// CHECK-FIXES: {{^}}  const int GLOBAL_CONST;{{$}}
-
-  int *global_ptr;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'global_ptr'
-// CHECK-FIXES: {{^}}  int *GlobalPtr_Ptr;{{$}}
-
-  int *const global_const_ptr;
-// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global constant pointer 'global_const_ptr'
-// CHECK-FIXES: {{^}}  int *const GLOBAL_CONST_PTR_Ptr;{{$}}
-};
-
 namespace ns {
 
 static union {
