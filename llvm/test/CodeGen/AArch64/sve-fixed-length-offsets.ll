@@ -185,3 +185,178 @@ define void @nxv2i64(ptr %ldptr, ptr %stptr) {
   store <vscale x 2 x i64> %x, ptr %stoff, align 8
   ret void
 }
+
+define void @nxv4i8(ptr %ldptr, ptr %stptr) {
+; CHECK-LABEL: nxv4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #32 // =0x20
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    st1b { z0.s }, p0, [x1, x8]
+; CHECK-NEXT:    ret
+;
+; CHECK-128-LABEL: nxv4i8:
+; CHECK-128:       // %bb.0:
+; CHECK-128-NEXT:    ptrue p0.s
+; CHECK-128-NEXT:    mov w8, #32 // =0x20
+; CHECK-128-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-128-NEXT:    st1b { z0.s }, p0, [x1, x8]
+; CHECK-128-NEXT:    ret
+;
+; CHECK-256-LABEL: nxv4i8:
+; CHECK-256:       // %bb.0:
+; CHECK-256-NEXT:    ptrue p0.s
+; CHECK-256-NEXT:    ld1b { z0.s }, p0/z, [x0, #4, mul vl]
+; CHECK-256-NEXT:    st1b { z0.s }, p0, [x1, #4, mul vl]
+; CHECK-256-NEXT:    ret
+;
+; CHECK-512-LABEL: nxv4i8:
+; CHECK-512:       // %bb.0:
+; CHECK-512-NEXT:    ptrue p0.s
+; CHECK-512-NEXT:    ld1b { z0.s }, p0/z, [x0, #2, mul vl]
+; CHECK-512-NEXT:    st1b { z0.s }, p0, [x1, #2, mul vl]
+; CHECK-512-NEXT:    ret
+;
+; CHECK-1024-LABEL: nxv4i8:
+; CHECK-1024:       // %bb.0:
+; CHECK-1024-NEXT:    ptrue p0.s
+; CHECK-1024-NEXT:    ld1b { z0.s }, p0/z, [x0, #1, mul vl]
+; CHECK-1024-NEXT:    st1b { z0.s }, p0, [x1, #1, mul vl]
+; CHECK-1024-NEXT:    ret
+;
+; CHECK-2048-LABEL: nxv4i8:
+; CHECK-2048:       // %bb.0:
+; CHECK-2048-NEXT:    ptrue p0.s
+; CHECK-2048-NEXT:    mov w8, #32 // =0x20
+; CHECK-2048-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
+; CHECK-2048-NEXT:    st1b { z0.s }, p0, [x1, x8]
+; CHECK-2048-NEXT:    ret
+  %ldoff = getelementptr inbounds nuw i8, ptr %ldptr, i64 32
+  %stoff = getelementptr inbounds nuw i8, ptr %stptr, i64 32
+  %x = load <vscale x 4 x i8>, ptr %ldoff, align 1
+  store <vscale x 4 x i8> %x, ptr %stoff, align 1
+  ret void
+}
+
+define void @nxv2f32(ptr %ldptr, ptr %stptr) {
+; CHECK-LABEL: nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov x8, #16 // =0x10
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
+; CHECK-NEXT:    ret
+;
+; CHECK-128-LABEL: nxv2f32:
+; CHECK-128:       // %bb.0:
+; CHECK-128-NEXT:    ptrue p0.d
+; CHECK-128-NEXT:    mov x8, #16 // =0x10
+; CHECK-128-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; CHECK-128-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
+; CHECK-128-NEXT:    ret
+;
+; CHECK-256-LABEL: nxv2f32:
+; CHECK-256:       // %bb.0:
+; CHECK-256-NEXT:    ptrue p0.d
+; CHECK-256-NEXT:    ld1w { z0.d }, p0/z, [x0, #4, mul vl]
+; CHECK-256-NEXT:    st1w { z0.d }, p0, [x1, #4, mul vl]
+; CHECK-256-NEXT:    ret
+;
+; CHECK-512-LABEL: nxv2f32:
+; CHECK-512:       // %bb.0:
+; CHECK-512-NEXT:    ptrue p0.d
+; CHECK-512-NEXT:    ld1w { z0.d }, p0/z, [x0, #2, mul vl]
+; CHECK-512-NEXT:    st1w { z0.d }, p0, [x1, #2, mul vl]
+; CHECK-512-NEXT:    ret
+;
+; CHECK-1024-LABEL: nxv2f32:
+; CHECK-1024:       // %bb.0:
+; CHECK-1024-NEXT:    ptrue p0.d
+; CHECK-1024-NEXT:    ld1w { z0.d }, p0/z, [x0, #1, mul vl]
+; CHECK-1024-NEXT:    st1w { z0.d }, p0, [x1, #1, mul vl]
+; CHECK-1024-NEXT:    ret
+;
+; CHECK-2048-LABEL: nxv2f32:
+; CHECK-2048:       // %bb.0:
+; CHECK-2048-NEXT:    ptrue p0.d
+; CHECK-2048-NEXT:    mov x8, #16 // =0x10
+; CHECK-2048-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; CHECK-2048-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
+; CHECK-2048-NEXT:    ret
+  %ldoff = getelementptr inbounds nuw i8, ptr %ldptr, i64 64
+  %stoff = getelementptr inbounds nuw i8, ptr %stptr, i64 64
+  %x = load <vscale x 2 x float>, ptr %ldoff, align 1
+  store <vscale x 2 x float> %x, ptr %stoff, align 1
+  ret void
+}
+
+define void @nxv4f64(ptr %ldptr, ptr %stptr) {
+; CHECK-LABEL: nxv4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov x8, #16 // =0x10
+; CHECK-NEXT:    add x9, x0, #128
+; CHECK-NEXT:    ldr z1, [x9, #1, mul vl]
+; CHECK-NEXT:    add x9, x1, #128
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; CHECK-NEXT:    str z1, [x9, #1, mul vl]
+; CHECK-NEXT:    ret
+;
+; CHECK-128-LABEL: nxv4f64:
+; CHECK-128:       // %bb.0:
+; CHECK-128-NEXT:    add x8, x0, #128
+; CHECK-128-NEXT:    ldr z1, [x0, #8, mul vl]
+; CHECK-128-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-128-NEXT:    add x8, x1, #128
+; CHECK-128-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-128-NEXT:    str z1, [x1, #8, mul vl]
+; CHECK-128-NEXT:    ret
+;
+; CHECK-256-LABEL: nxv4f64:
+; CHECK-256:       // %bb.0:
+; CHECK-256-NEXT:    add x8, x0, #128
+; CHECK-256-NEXT:    ldr z1, [x0, #4, mul vl]
+; CHECK-256-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-256-NEXT:    add x8, x1, #128
+; CHECK-256-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-256-NEXT:    str z1, [x1, #4, mul vl]
+; CHECK-256-NEXT:    ret
+;
+; CHECK-512-LABEL: nxv4f64:
+; CHECK-512:       // %bb.0:
+; CHECK-512-NEXT:    add x8, x0, #128
+; CHECK-512-NEXT:    ldr z1, [x0, #2, mul vl]
+; CHECK-512-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-512-NEXT:    add x8, x1, #128
+; CHECK-512-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-512-NEXT:    str z1, [x1, #2, mul vl]
+; CHECK-512-NEXT:    ret
+;
+; CHECK-1024-LABEL: nxv4f64:
+; CHECK-1024:       // %bb.0:
+; CHECK-1024-NEXT:    add x8, x0, #128
+; CHECK-1024-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-1024-NEXT:    ldr z0, [x8, #1, mul vl]
+; CHECK-1024-NEXT:    add x8, x1, #128
+; CHECK-1024-NEXT:    str z0, [x8, #1, mul vl]
+; CHECK-1024-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-1024-NEXT:    ret
+;
+; CHECK-2048-LABEL: nxv4f64:
+; CHECK-2048:       // %bb.0:
+; CHECK-2048-NEXT:    ptrue p0.d
+; CHECK-2048-NEXT:    mov x8, #16 // =0x10
+; CHECK-2048-NEXT:    add x9, x0, #128
+; CHECK-2048-NEXT:    ldr z1, [x9, #1, mul vl]
+; CHECK-2048-NEXT:    add x9, x1, #128
+; CHECK-2048-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
+; CHECK-2048-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
+; CHECK-2048-NEXT:    str z1, [x9, #1, mul vl]
+; CHECK-2048-NEXT:    ret
+  %ldoff = getelementptr inbounds nuw i8, ptr %ldptr, i64 128
+  %stoff = getelementptr inbounds nuw i8, ptr %stptr, i64 128
+  %x = load <vscale x 4 x double>, ptr %ldoff, align 1
+  store <vscale x 4 x double> %x, ptr %stoff, align 1
+  ret void
+}
