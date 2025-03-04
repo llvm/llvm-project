@@ -1117,13 +1117,13 @@ public:
               dialectReader.withEncodingReader(reader).readBlob(rawProperties)))
         return failure();
     }
-
     // Setup a new reader to read from the `rawProperties` sub-buffer.
     EncodingReader reader(
         StringRef(rawProperties.begin(), rawProperties.size()), fileLoc);
     DialectReader propReader = dialectReader.withEncodingReader(reader);
 
-    if (auto *iface = opName->getInterface<BytecodeOpInterface>())
+    auto *iface = opName->getInterface<BytecodeOpInterface>();
+    if (iface)
       return iface->readProperties(propReader, opState);
     if (opName->isRegistered())
       return propReader.emitError(

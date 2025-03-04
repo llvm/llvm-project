@@ -43,8 +43,8 @@ def BytecodeOpInterface : OpInterface<"BytecodeOpInterface"> {
 // `FallbackBytecodeOpInterface`
 def FallbackBytecodeOpInterface : OpInterface<"FallbackBytecodeOpInterface"> {
   let description = [{
-    This interface allows fallback operations direct access to the bytecode
-    property streams.
+    This interface allows fallback operations sideband access to the 
+    original operation's intrinsic details.
   }];
   let cppNamespace = "::mlir";
 
