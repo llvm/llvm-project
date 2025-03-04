@@ -77,7 +77,7 @@ Error convertToYaml() {
   auto Prof = Reader.loadProfiles();
   if (!Prof)
     return Prof.takeError();
-  llvm::convertCtxProfToYaml(Out, Prof->Contexts);
+  llvm::convertCtxProfToYaml(Out, *Prof);
   Out << "\n";
   return Error::success();
 }
