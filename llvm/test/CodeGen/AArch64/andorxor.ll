@@ -184,8 +184,7 @@ define void @and_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
+; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    strb w8, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -221,8 +220,7 @@ define void @or_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
+; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    strb w8, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -258,8 +256,7 @@ define void @xor_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
+; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    strb w8, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;

@@ -198,6 +198,8 @@ std::string EVT::getEVTString() const {
     return "amdgpuBufferFatPointer";
   case MVT::amdgpuBufferStridedPointer:
     return "amdgpuBufferStridedPointer";
+  case MVT::vi8:
+    return "vi8";
   }
 }
 

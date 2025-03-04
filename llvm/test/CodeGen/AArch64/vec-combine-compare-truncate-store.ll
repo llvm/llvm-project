@@ -56,8 +56,7 @@ define void @store_4_elements(<4 x i32> %vec, ptr %out) {
 ; CHECK-NEXT:    ldr q1, [x8, lCPI2_0@PAGEOFF]
 ; CHECK-NEXT:    bic.16b v0, v1, v0
 ; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
 
@@ -99,8 +98,7 @@ define void @add_trunc_compare_before_store(<4 x i32> %vec, ptr %out) {
 ; CHECK-NEXT:    cmlt.4s v0, v0, #0
 ; CHECK-NEXT:    and.16b v0, v0, v1
 ; CHECK-NEXT:    addv.4s s0, v0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 
@@ -141,7 +139,7 @@ define void @store_8_elements_64_bit_vector(<8 x i8> %vec, ptr %out) {
 ; CHECK-NEXT:    ldr d1, [x8, lCPI6_0@PAGEOFF]
 ; CHECK-NEXT:    bic.8b v0, v1, v0
 ; CHECK-NEXT:    addv.8b b0, v0
-; CHECK-NEXT:    st1.b { v0 }[0], [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh13
 
@@ -182,8 +180,7 @@ define void @store_2_elements_64_bit_vector(<2 x i32> %vec, ptr %out) {
 ; CHECK-NEXT:    ldr d1, [x8, lCPI8_0@PAGEOFF]
 ; CHECK-NEXT:    bic.8b v0, v1, v0
 ; CHECK-NEXT:    addp.2s v0, v0, v0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh17
 

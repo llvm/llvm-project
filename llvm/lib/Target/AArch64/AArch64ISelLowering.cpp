@@ -401,6 +401,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasFPARMv8()) {
+    addRegisterClass(MVT::vi8, &AArch64::FPR8RegClass);
     addRegisterClass(MVT::f16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::bf16, &AArch64::FPR16RegClass);
     addRegisterClass(MVT::f32, &AArch64::FPR32RegClass);
