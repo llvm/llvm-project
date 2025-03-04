@@ -863,6 +863,12 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
             ? PPMacrosFlag::Include
             : PPMacrosFlag::Exclude;
+  // Enable -cpp based on -x unless explicitly disabled with -nocpp
+  if (opts.macrosFlag != PPMacrosFlag::Exclude)
+    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+      opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
+                            .Case("f95-cpp-input", PPMacrosFlag::Include)
+                            .Default(opts.macrosFlag);
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
