@@ -63,6 +63,7 @@ namespace Recursion {
     template<typename T,
              typename = typename InvokeCopyConstructor<typename T::type>::type>
     // expected-note@-1 {{in instantiation of template class}}
+    // expected-note@-2 {{template parameter is declared here}}
     A(const T &);
     // expected-note@-1 {{in instantiation of default argument}}
   };

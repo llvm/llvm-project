@@ -77,9 +77,9 @@ template<typename T> struct wrap {
 
 template<typename T> struct takedrop_impl;
 template<place...X> struct takedrop_impl<places<X...>> {
-  template<template<decltype(X)> class ...Take,
+  template<template<decltype(X)> class ...Take, // expected-note 2{{template parameter is declared here}}
            template<place      > class ...Drop>
-  struct inner { // expected-note 2{{declared}}
+  struct inner {
     typedef types<typename Take<_>::type...> take;
     typedef types<typename Drop<_>::type...> drop;
   };
@@ -87,11 +87,11 @@ template<place...X> struct takedrop_impl<places<X...>> {
 
 template<unsigned N, typename...Ts> struct take {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::take; // expected-error {{too few template arguments}}
+    template inner<wrap<Ts>::template inner...>::take; // expected-error {{missing template argument}}
 };
 template<unsigned N, typename...Ts> struct drop {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{too few template arguments}}
+    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{missing template argument}}
 };
 
 using T1 = take<3, int, char, double, long>::type; // expected-note {{previous}}
@@ -118,7 +118,7 @@ using D3 = drop<5, int, char, double, long>::type; // expected-note {{in instant
 // implicitly a pack expansion.
 template<typename ...Default> struct DefArg {
   template<template<typename T = Default> class ...Classes> struct Inner { // expected-error {{default argument contains unexpanded parameter pack}} expected-note {{here}}
-    Inner(Classes<>...); // expected-error {{too few}}
+    Inner(Classes<>...); // expected-error {{missing template argument}}
   };
 };
 template<typename T> struct vector {};

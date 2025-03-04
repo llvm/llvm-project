@@ -5,10 +5,12 @@
 #  error
 #endif
 
-// expected-note@*:* {{template declaration from hidden source: template <template <class ...> class, template <class> class, class, class ...>}}
+// expected-note@*:* {{template parameter from hidden source: template <class ...> class}}
+// expected-note@*:* {{template parameter from hidden source: class ...}}
+// expected-note@*:* 2{{template parameter from hidden source: template <class ...> class}}
 
 void test() {
-  __builtin_common_type<> a; // expected-error {{too few template arguments for template '__builtin_common_type'}}
+  __builtin_common_type<> a; // expected-error {{missing template argument for template parameter}}
   __builtin_common_type<1> b; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
   __builtin_common_type<int, 1> c; // expected-error {{template argument for template template parameter must be a class template or type alias template}}
 }

@@ -17,7 +17,7 @@ template<typename T, typename Class>
 struct X2 {
   T f(Class &obj, T Class::*pm) { // expected-error{{to a reference}} \
                       // expected-error{{member pointer to void}}
-    return obj.*pm; 
+    return obj.*pm;
   }
 };
 
@@ -39,12 +39,12 @@ typedef int Y::*IntMember;
 template<IntMember Member>
 struct X4 {
   X3<int, Y, Member> member;
-  
+
   int &getMember(Y& y) { return y.*Member; }
 };
 
-int &get_X4(X4<&Y::x> x4, Y& y) { 
-  return x4.getMember(y); 
+int &get_X4(X4<&Y::x> x4, Y& y) {
+  return x4.getMember(y);
 }
 
 template<IntMember Member>
@@ -63,12 +63,12 @@ namespace ValueDepMemberPointer {
   template <typename T> void S<T>::instantiate() {
     int a[(int)sizeof(T)-42]; // expected-error{{array with a negative size}}
   }
-  S<int> s; 
+  S<int> s;
 }
 
 namespace PR18192 {
   struct A { struct { int n; }; };
-  template<int A::*> struct X {};
+  template<int A::*> struct X {}; // expected-note {{template parameter is declared here}}
   constexpr int A::*p = &A::n;
   X<p> x; // expected-error{{not a pointer to member constant}}
 }

@@ -5,16 +5,16 @@ struct Test {
     int b = 42;
 };
 
-template <Test t>
+template <Test t> // expected-note {{template parameter is declared here}}
 struct A {
     static constexpr auto a = t.a;
     static constexpr auto b = t.b;
 };
 
-template <auto N>
+template <auto N> // expected-note {{template parameter is declared here}}
 struct Auto {};
 
-template <typename T, T elem>
+template <typename T, T elem> // expected-note {{template parameter is declared here}}
 struct Explicit{};
 
 struct L {};
@@ -57,8 +57,8 @@ void test() {
     DefaultParam3<> d3;
 }
 
-template<auto n> struct B { /* ... */ };
-template<int i> struct C { /* ... */ };
+template<auto n> struct B { /* ... */ }; // expected-note 2{{template parameter is declared here}}
+template<int i> struct C { /* ... */ }; // expected-note {{template parameter is declared here}}
 C<{ 42 }> c1;  // expected-warning {{braces around scalar initializer}}
 
 struct J1 {

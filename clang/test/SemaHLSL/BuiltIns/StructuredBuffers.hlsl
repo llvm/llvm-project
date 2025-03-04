@@ -8,8 +8,8 @@ StructuredBuffer<float3> Buffer;
 // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
 StructuredBuffer BufferErr1;
 
-// expected-error@+2 {{too few template arguments for class template 'StructuredBuffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+// expected-error@+2 {{missing template argument for template parameter}}
+// expected-note@*:* {{template parameter from hidden source: typename element_type}}
 StructuredBuffer<> BufferErr2;
 
 // test elements of 0 size
