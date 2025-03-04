@@ -5450,10 +5450,20 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
            NumInitializers * sizeof(CXXCtorInitializer*));
     Constructor->setCtorInitializers(baseOrMemberInitializers);
 
+    SourceLocation Location = Constructor->getLocation();
+
     // Constructors implicitly reference the base and member
     // destructors.
-    MarkBaseAndMemberDestructorsReferenced(Constructor->getLocation(),
-                                           Constructor->getParent());
+
+    for (CXXCtorInitializer *Initializer : Info.AllToInit) {
+      FieldDecl *Field = Initializer->getAnyMember();
+      if (!Field)
+        continue;
+
+      MarkFieldDestructorReferenced(Location, Field);
+    }
+
+    MarkBaseDestructorsReferenced(Location, Constructor->getParent());
   }
 
   return HadError;
@@ -5758,55 +5768,46 @@ void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
   DiagnoseUninitializedFields(*this, Constructor);
 }
 
-void
-Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
-                                             CXXRecordDecl *ClassDecl) {
-  // Ignore dependent contexts. Also ignore unions, since their members never
-  // have destructors implicitly called.
-  if (ClassDecl->isDependentContext() || ClassDecl->isUnion())
+void Sema::MarkFieldDestructorReferenced(SourceLocation Location,
+                                         FieldDecl *Field) {
+  if (Field->isInvalidDecl())
     return;
 
-  // FIXME: all the access-control diagnostics are positioned on the
-  // field/base declaration.  That's probably good; that said, the
-  // user might reasonably want to know why the destructor is being
-  // emitted, and we currently don't say.
+  // Don't destroy incomplete or zero-length arrays.
+  if (isIncompleteOrZeroLengthArrayType(Context, Field->getType()))
+    return;
 
-  // Non-static data members.
-  for (auto *Field : ClassDecl->fields()) {
-    if (Field->isInvalidDecl())
-      continue;
+  QualType FieldType = Context.getBaseElementType(Field->getType());
 
-    // Don't destroy incomplete or zero-length arrays.
-    if (isIncompleteOrZeroLengthArrayType(Context, Field->getType()))
-      continue;
+  const RecordType *RT = FieldType->getAs<RecordType>();
+  if (!RT)
+    return;
 
-    QualType FieldType = Context.getBaseElementType(Field->getType());
+  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+  if (FieldClassDecl->isInvalidDecl())
+    return;
+  if (FieldClassDecl->hasIrrelevantDestructor())
+    return;
+  // The destructor for an implicit anonymous union member is never invoked.
+  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
+    return;
 
-    const RecordType* RT = FieldType->getAs<RecordType>();
-    if (!RT)
-      continue;
+  CXXDestructorDecl *Dtor = LookupDestructor(FieldClassDecl);
+  // Dtor might still be missing, e.g because it's invalid.
+  if (!Dtor)
+    return;
+  CheckDestructorAccess(Field->getLocation(), Dtor,
+                        PDiag(diag::err_access_dtor_field)
+                            << Field->getDeclName() << FieldType);
 
-    CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    if (FieldClassDecl->isInvalidDecl())
-      continue;
-    if (FieldClassDecl->hasIrrelevantDestructor())
-      continue;
-    // The destructor for an implicit anonymous union member is never invoked.
-    if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
-      continue;
+  MarkFunctionReferenced(Location, Dtor);
+  DiagnoseUseOfDecl(Dtor, Location);
+}
 
-    CXXDestructorDecl *Dtor = LookupDestructor(FieldClassDecl);
-    // Dtor might still be missing, e.g because it's invalid.
-    if (!Dtor)
-      continue;
-    CheckDestructorAccess(Field->getLocation(), Dtor,
-                          PDiag(diag::err_access_dtor_field)
-                            << Field->getDeclName()
-                            << FieldType);
-
-    MarkFunctionReferenced(Location, Dtor);
-    DiagnoseUseOfDecl(Dtor, Location);
-  }
+void Sema::MarkBaseDestructorsReferenced(SourceLocation Location,
+                                         CXXRecordDecl *ClassDecl) {
+  if (ClassDecl->isDependentContext())
+    return;
 
   // We only potentially invoke the destructors of potentially constructed
   // subobjects.
@@ -5861,6 +5862,26 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
   if (VisitVirtualBases)
     MarkVirtualBaseDestructorsReferenced(Location, ClassDecl,
                                          &DirectVirtualBases);
+}
+
+void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
+                                                  CXXRecordDecl *ClassDecl) {
+  // Ignore dependent contexts. Also ignore unions, since their members never
+  // have destructors implicitly called.
+  if (ClassDecl->isDependentContext() || ClassDecl->isUnion())
+    return;
+
+  // FIXME: all the access-control diagnostics are positioned on the
+  // field/base declaration.  That's probably good; that said, the
+  // user might reasonably want to know why the destructor is being
+  // emitted, and we currently don't say.
+
+  // Non-static data members.
+  for (auto *Field : ClassDecl->fields()) {
+    MarkFieldDestructorReferenced(Location, Field);
+  }
+
+  MarkBaseDestructorsReferenced(Location, ClassDecl);
 }
 
 void Sema::MarkVirtualBaseDestructorsReferenced(
