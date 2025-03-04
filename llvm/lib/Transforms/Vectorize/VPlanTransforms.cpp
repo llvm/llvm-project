@@ -1659,10 +1659,13 @@ void VPlanTransforms::addActiveLaneMask(
 /// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
+/// \p PrevEVL     The explicit vector length of the previous iteration. Only
+/// required if \p CurRecipe is a VPInstruction::FirstOrderRecurrenceSplice.
 static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
                                      VPRecipeBase &CurRecipe,
                                      VPTypeAnalysis &TypeInfo,
-                                     VPValue &AllOneMask, VPValue &EVL) {
+                                     VPValue &AllOneMask, VPValue &EVL,
+                                     VPValue *PrevEVL) {
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
@@ -1690,6 +1693,18 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
                                           Sel->getDebugLoc());
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
+        if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
+          assert(PrevEVL && "Fixed-order recurrences require previous EVL");
+          VPValue *MinusOneVPV = VPI->getParent()->getPlan()->getOrAddLiveIn(
+              ConstantInt::getSigned(Type::getInt32Ty(TypeInfo.getContext()),
+                                     -1));
+          SmallVector<VPValue *> Ops(VPI->operands());
+          Ops.append({MinusOneVPV, &AllOneMask, PrevEVL, &EVL});
+          return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
+                                            Ops, TypeInfo.inferScalarType(VPI),
+                                            VPI->getDebugLoc());
+        }
+
         VPValue *LHS, *RHS;
         // Transform select with a header mask condition
         //   select(header_mask, LHS, RHS)
@@ -1713,6 +1728,30 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  // Create a scalar phi to track the previous EVL if fixed-order recurrence is
+  // contained.
+  VPScalarPHIRecipe *PrevEVL = nullptr;
+  bool ContainsFORs =
+      any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
+  if (ContainsFORs) {
+    // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
+    VPValue *MaxEVL = &Plan.getVF();
+    // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
+    if (unsigned VFSize =
+            TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
+        VFSize != 32) {
+      MaxEVL = new VPScalarCastRecipe(
+          VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
+          Type::getInt32Ty(Ctx), DebugLoc());
+      VPBasicBlock *Preheader = LoopRegion->getPreheaderVPBB();
+      Preheader->appendRecipe(cast<VPScalarCastRecipe>(MaxEVL));
+    }
+    PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
+  }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
@@ -1724,8 +1763,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
-      VPRecipeBase *EVLRecipe =
-          createEVLRecipe(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+      VPRecipeBase *EVLRecipe = createEVLRecipe(
+          HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL, PrevEVL);
       if (!EVLRecipe)
         continue;
 

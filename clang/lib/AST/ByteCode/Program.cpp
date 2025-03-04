@@ -419,7 +419,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,
+        return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
       }
     }
