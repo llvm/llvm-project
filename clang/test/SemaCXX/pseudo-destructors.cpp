@@ -22,21 +22,21 @@ void cv_test(const volatile T* cvt) {
 void f(A* a, Foo *f, int *i, double *d, int ii) {
   a->~A();
   a->A::~A();
-  
+
   a->~foo(); // expected-error{{undeclared identifier 'foo' in destructor name}}
-  
+
   a->~Bar(); // expected-error{{destructor type 'Bar' (aka 'Foo') in object destruction expression does not match the type 'A' of the object being destroyed}}
-  
+
   f->~Bar();
   f->~Foo();
   i->~Bar(); // expected-error{{does not match}}
-  
+
   g().~Bar(); // expected-error{{non-scalar}}
-  
+
   f->::~Bar(); // expected-error {{not a structure or union}}
   f->::Bar::~Bar();
   f->N::~Wibble(); // expected-error{{'N' does not refer to a type}} expected-error{{'Wibble' does not refer to a type}}
-  
+
   f->Bar::~Bar(17, 42); // expected-error{{cannot have any arguments}}
 
   i->~Integer();
@@ -148,12 +148,12 @@ namespace TwoPhaseLookup {
   namespace Template {
     template<typename T> struct Y {};
     template<class U> using G = Y<U>;
-    template<typename T> void f(T *p) { p->~G<int>(); } // expected-error {{no member named '~Y'}}
+    template<typename T> void f(T *p) { p->~G<int>(); } // expected-error {{no member named 'G'}}
     void h1(Y<int> *p) { p->~G<int>(); }
-    void h2(Y<int> *p) { f(p); }
+    void h2(Y<int> *p) { f(p); } // expected-note {{in instantiation of}}
     namespace N { template<typename T> struct G {}; }
     void h3(N::G<int> *p) { p->~G<int>(); }
-    void h4(N::G<int> *p) { f(p); } // expected-note {{instantiation of}}
+    void h4(N::G<int> *p) { f(p); }
   }
 
   namespace TemplateUndeclared {
@@ -172,7 +172,10 @@ namespace TwoPhaseLookup {
 
   namespace TemplateNamesNonTemplate {
     int A; // expected-note 2{{non-template here}}
-    template<typename> int B; // expected-note 2{{variable template 'B' declared here}} expected-warning {{extension}}
+    template<typename> int B; // expected-note 2{{variable template 'B' declared here}}
+    #if __cplusplus < 201402L
+    // expected-warning@-2 {{extension}}
+    #endif
     using C = int; // expected-note 2{{non-template here}}
 
     template<typename T> void f1(int *p) { p->~A<int>(); } // expected-error {{'A' does not refer to a template}}

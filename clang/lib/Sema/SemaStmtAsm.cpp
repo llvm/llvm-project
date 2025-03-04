@@ -898,7 +898,8 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
     return CXXDependentScopeMemberExpr::Create(
         Context, E, T, /*IsArrow=*/false, AsmLoc, NestedNameSpecifierLoc(),
         SourceLocation(),
-        /*FirstQualifierFoundInScope=*/nullptr, NameInfo, /*TemplateArgs=*/nullptr);
+        /*UnqualifiedLookups=*/std::nullopt, NameInfo,
+        /*TemplateArgs=*/nullptr);
   }
 
   const RecordType *RT = T->getAs<RecordType>();
@@ -921,8 +922,9 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
 
   // Make an Expr to thread through OpDecl.
   ExprResult Result = BuildMemberReferenceExpr(
-      E, E->getType(), AsmLoc, /*IsArrow=*/false, CXXScopeSpec(),
-      SourceLocation(), nullptr, FieldResult, nullptr, nullptr);
+      E, E->getType(), AsmLoc, /*IsArrow=*/false, /*SS=*/CXXScopeSpec(),
+      /*TemplateKWLoc*/ SourceLocation(), FieldResult,
+      /*TemplateArgs=*/nullptr, /*S=*/nullptr);
 
   return Result;
 }
