@@ -775,6 +775,17 @@ Register createVirtualRegister(
       MIRBuilder);
 }
 
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B) {
+  SmallVector<Value *, 4> Args;
+  Args.push_back(Arg2);
+  Args.push_back(buildMD(Arg));
+  for (auto *Imm : Imms)
+    Args.push_back(Imm);
+  return B.CreateIntrinsic(IntrID, {Types}, Args);
+}
+
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty) {
   if (Ty->isPtrOrPtrVectorTy())

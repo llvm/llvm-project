@@ -537,7 +537,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
-  initializeSIModeRegisterPass(*PR);
+  initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
