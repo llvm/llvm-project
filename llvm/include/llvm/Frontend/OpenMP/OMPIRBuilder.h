@@ -1245,7 +1245,7 @@ public:
   void applySimd(CanonicalLoopInfo *Loop,
                  MapVector<Value *, Value *> AlignedVars, Value *IfCond,
                  omp::OrderKind Order, ConstantInt *Simdlen,
-                 ConstantInt *Safelen);
+                 ConstantInt *Safelen, ArrayRef<Value *> NontempralVars = {});
 
   /// Generator for '#omp flush'
   ///
