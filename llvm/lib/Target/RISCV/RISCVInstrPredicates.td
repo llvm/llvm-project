@@ -68,8 +68,8 @@ def isVectorConfigInstr
                        PseudoVSETIVLI
                      ]>>>;
 
-/// Return true if this is 'vsetvli x0, x0, vtype' which preserves
-/// VL and only sets VTYPE.
+// Return true if this is 'vsetvli x0, x0, vtype' which preserves
+// VL and only sets VTYPE.
 def isVLPreservingConfig
     : TIIPredicate<"isVLPreservingConfig",
                    MCReturnStatement<
