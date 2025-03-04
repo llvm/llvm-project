@@ -17,6 +17,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 
@@ -624,6 +625,13 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
+  auto _ = llvm::make_scope_exit([&]() {
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
+      if (isa<CXXMethodDecl>(FD) ||
+          FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
+        Actions.ActOnFinishInlineFunctionDef(FD);
+  });
+
   if (Tok.is(tok::kw_try)) {
     ParseFunctionTryBlock(LM.D, FnScope);
 
@@ -632,11 +640,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
     if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
       ConsumeAnyToken();
-
-    if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
-      if (isa<CXXMethodDecl>(FD) ||
-          FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
-        Actions.ActOnFinishInlineFunctionDef(FD);
     return;
   }
   if (Tok.is(tok::colon)) {
@@ -671,11 +674,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
     ConsumeAnyToken();
-
-  if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
-    if (isa<CXXMethodDecl>(FD) ||
-        FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
-      Actions.ActOnFinishInlineFunctionDef(FD);
 }
 
 /// ParseLexedMemberInitializers - We finished parsing the member specification
