@@ -199,10 +199,8 @@ struct TargetI386 : public GenericTarget<TargetI386> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct TargetI386Win : public GenericTarget<TargetI386Win> {
-  using GenericTarget::GenericTarget;
-
-  static constexpr int defaultWidth = 32;
+struct TargetI386Win : public TargetI386 {
+  using TargetI386::TargetI386;
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
@@ -718,10 +716,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct TargetX86_64Win : public GenericTarget<TargetX86_64Win> {
-  using GenericTarget::GenericTarget;
-
-  static constexpr int defaultWidth = 64;
+struct TargetX86_64Win : public TargetX86_64 {
+  using TargetX86_64::TargetX86_64;
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
