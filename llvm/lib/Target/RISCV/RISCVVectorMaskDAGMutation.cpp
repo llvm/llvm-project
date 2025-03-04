@@ -14,7 +14,7 @@
 // 1. When tracking register pressure, we don't track physical registers.
 // 2. We have a RegisterClass for mask register (which is `VMV0`), but we don't
 //    use it by the time we reach scheduling. Instead, we use physical
-//    register V0 directly and insert a `$v0 = COPY ...` before the use. 
+//    register V0 directly and insert a `$v0 = COPY ...` before the use.
 // 3. For mask producers, we are using VR RegisterClass (we can allocate V0-V31
 //    to it). So if V0 is not available, there are still 31 available registers
 //    out there.
@@ -40,32 +40,32 @@
 
 namespace llvm {
 
+static bool isCopyToV0(const MachineInstr &MI) {
+  return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
+         MI.getOperand(1).getReg().isVirtual() &&
+         MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
+}
+
+static bool isSoleUseCopyToV0(SUnit &SU) {
+  if (SU.Succs.size() != 1)
+    return false;
+  SDep &Dep = SU.Succs[0];
+  // Ignore dependencies other than data or strong ordering.
+  if (Dep.isWeak())
+    return false;
+
+  SUnit &DepSU = *Dep.getSUnit();
+  if (DepSU.isBoundaryNode())
+    return false;
+  return isCopyToV0(*DepSU.getInstr());
+}
+
 class RISCVVectorMaskDAGMutation : public ScheduleDAGMutation {
 private:
   const TargetRegisterInfo *TRI;
 
 public:
   RISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI) : TRI(TRI) {}
-
-  bool isCopyToV0(const MachineInstr &MI) {
-    return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
-           MI.getOperand(1).getReg().isVirtual() &&
-           MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
-  }
-
-  bool isSoleUseCopyToV0(SUnit &SU) {
-    if (SU.Succs.size() != 1)
-      return false;
-    SDep &Dep = SU.Succs[0];
-    // Ignore dependencies other than data or strong ordering.
-    if (Dep.isWeak())
-      return false;
-
-    SUnit &DepSU = *Dep.getSUnit();
-    if (DepSU.isBoundaryNode())
-      return false;
-    return isCopyToV0(*DepSU.getInstr());
-  }
 
   void apply(ScheduleDAGInstrs *DAG) override {
     SUnit *NearestUseV0SU = nullptr;
