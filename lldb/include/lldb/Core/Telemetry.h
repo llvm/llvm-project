@@ -83,7 +83,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
 
   // If the command is/can be associated with a target entry this field contains
   // that target's UUID. <EMPTY> otherwise.
-  std::string target_uuid;
+  UUID target_uuid;
   // A unique ID for a command so the manager can match the start entry with
   // its end entry. These values only need to be unique within the same session.
   // Necessary because we'd send off an entry right before a command's execution
