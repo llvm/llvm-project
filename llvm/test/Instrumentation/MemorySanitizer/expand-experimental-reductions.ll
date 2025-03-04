@@ -155,20 +155,21 @@ entry:
   ret float %r
 }
 
-define float @fadd_f32_strict(<4 x float> %vec) #0 {
+define float @fadd_f32_strict(float %param, <4 x float> %vec) #0 {
 ; CHECK-LABEL: define float @fadd_f32_strict(
-; CHECK-SAME: <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: float [[PARAM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 -1, [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float undef, <4 x float> [[VEC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float [[PARAM]], <4 x float> [[VEC]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
-  %r = call float @llvm.vector.reduce.fadd.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call float @llvm.vector.reduce.fadd.f32.v4f32(float %param, <4 x float> %vec)
   ret float %r
 }
 
@@ -225,20 +226,21 @@ entry:
   ret float %r
 }
 
-define float @fmul_f32_strict(<4 x float> %vec) #0 {
+define float @fmul_f32_strict(float %param, <4 x float> %vec) #0 {
 ; CHECK-LABEL: define float @fmul_f32_strict(
-; CHECK-SAME: <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: float [[PARAM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 -1, [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.vector.reduce.fmul.v4f32(float undef, <4 x float> [[VEC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.vector.reduce.fmul.v4f32(float [[PARAM]], <4 x float> [[VEC]])
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
-  %r = call float @llvm.vector.reduce.fmul.f32.v4f32(float undef, <4 x float> %vec)
+  %r = call float @llvm.vector.reduce.fmul.f32.v4f32(float %param, <4 x float> %vec)
   ret float %r
 }
 
@@ -415,3 +417,6 @@ entry:
 }
 
 attributes #0 = { sanitize_memory }
+;.
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
