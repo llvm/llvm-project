@@ -2,6 +2,7 @@ set(ORC_RT_HEADERS
     orc-rt-c/orc-rt.h
 )
 
+# TODO: Switch to filesets when we move to cmake-3.23.
 add_library(orc-rt-headers INTERFACE)
 target_include_directories(orc-rt-headers INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
