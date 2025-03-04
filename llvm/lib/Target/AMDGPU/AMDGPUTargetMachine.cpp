@@ -1481,15 +1481,14 @@ bool GCNPassConfig::addILPOpts() {
 
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
+  addPass(&SIFixSGPRCopiesLegacyID);
   if (!WaveTransformCF) {
-    addPass(&SIFixSGPRCopiesLegacyID);
     addPass(createSILowerI1CopiesLegacyPass());
   }
   // Else {
   // TODO-WAVETRANSFORM:
-  // When WaveTransform happens later, we do not need SIFixSGPRCopies.
-  // We may want a different algorithm of LowerI1Copies, and maybe some
-  // other lowering work needed?
+  // When WaveTransform happens later, We may want a different algorithm
+  // for LowerI1Copies, and maybe some other lowering work needed?
   //   addPass(&AMDGPUFinalizeISelWaveTransformID);
   // }
   return false;
