@@ -35,39 +35,6 @@ struct InductionVariableInfo {
 using LoopNestToIndVarMap =
     llvm::MapVector<fir::DoLoopOp, InductionVariableInfo>;
 
-/// Given an operation `op`, this returns true if one of `op`'s operands is
-/// "ultimately" the loop's induction variable. This helps in cases where the
-/// induction variable's use is "hidden" behind a convert/cast.
-///
-/// For example, give the following loop:
-/// ```
-///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
-///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
-///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
-///     ...
-///   }
-/// ```
-///
-/// If \p op is the `fir.store` operation, then this function will return true
-/// since the IV is the "ultimate" operand to the `fir.store` op through the
-/// `%ind_var_conv` -> `%ind_var` conversion sequence.
-///
-/// For why this is useful, see its use in `findLoopIndVarMemDecl`.
-bool isIndVarUltimateOperand(mlir::Operation *op, fir::DoLoopOp doLoop) {
-  while (op != nullptr && op->getNumOperands() > 0) {
-    auto ivIt = llvm::find_if(op->getOperands(), [&](mlir::Value operand) {
-      return operand == doLoop.getInductionVar();
-    });
-
-    if (ivIt != op->getOperands().end())
-      return true;
-
-    op = op->getOperand(0).getDefiningOp();
-  }
-
-  return false;
-}
-
 /// For the \p doLoop parameter, find the operation that declares its iteration
 /// variable or allocates memory for it.
 ///
@@ -84,19 +51,20 @@ bool isIndVarUltimateOperand(mlir::Operation *op, fir::DoLoopOp doLoop) {
 /// ```
 ///
 /// This function returns the `hlfir.declare` op for `%i`.
+///
+/// Note: The current implementation is dependent on how flang emits loop
+/// bodies; which is sufficient for the current simple test/use cases. If this
+/// proves to be insufficient, this should be made more generic.
 mlir::Operation *findLoopIterationVarMemDecl(fir::DoLoopOp doLoop) {
   mlir::Value result = nullptr;
-  mlir::visitUsedValuesDefinedAbove(
-      doLoop.getRegion(), [&](mlir::OpOperand *operand) {
-        if (result)
-          return;
-
-        if (isIndVarUltimateOperand(operand->getOwner(), doLoop)) {
-          assert(result == nullptr &&
-                 "loop can have only one induction variable");
-          result = operand->get();
-        }
-      });
+  for (mlir::Operation &op : doLoop) {
+    // The first `fir.store` op we come across should be the op that updates the
+    // loop's iteration variable.
+    if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op)) {
+      result = storeOp.getMemref();
+      break;
+    }
+  }
 
   assert(result != nullptr && result.getDefiningOp() != nullptr);
   return result.getDefiningOp();
@@ -239,6 +207,10 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::DoLoopOp doLoop, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    if (mapToDevice)
+      return doLoop.emitError(
+          "not yet implemented: Mapping `do concurrent` loops to device");
+
     looputils::LoopNestToIndVarMap loopNest;
     bool hasRemainingNestedLoops =
         failed(looputils::collectLoopNest(doLoop, loopNest));
@@ -407,8 +379,6 @@ public:
 
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
                                                std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
-                      "error in converting do-concurrent op");
       signalPassFailure();
     }
   }
