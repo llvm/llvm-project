@@ -4596,7 +4596,7 @@ private:
                       const InstructionsState &S);
 
     /// Un-bundles a group of instructions.
-    void cancelScheduling(ArrayRef<Value *> VL, Value *OpValue);
+    void cancelScheduling(ArrayRef<Value *> VL, Value *Inst);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
