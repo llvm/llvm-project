@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
-#include "clang/Tooling/DependencyScanning/ModuleCacheMutexLock.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/ModuleCacheMutexLock.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
 namespace clang {
