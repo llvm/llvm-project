@@ -1065,7 +1065,8 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   for (const auto &P : {LHS, RHS}) {
     if (P.isZero())
       continue;
-    if (BothNonNull && P.pointsToLiteral()) {
+    if (BothNonNull && P.pointsToLiteral() &&
+        isa<StringLiteral>(P.getDeclDesc()->asExpr())) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
       return false;

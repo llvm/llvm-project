@@ -116,7 +116,7 @@ void initializeFEntryInserterPass(PassRegistry &);
 void initializeFinalizeISelPass(PassRegistry &);
 void initializeFinalizeMachineBundlesPass(PassRegistry &);
 void initializeFixIrreduciblePass(PassRegistry &);
-void initializeFixupStatepointCallerSavedPass(PassRegistry &);
+void initializeFixupStatepointCallerSavedLegacyPass(PassRegistry &);
 void initializeFlattenCFGLegacyPassPass(PassRegistry &);
 void initializeFuncletLayoutPass(PassRegistry &);
 void initializeGCEmptyBasicBlocksPass(PassRegistry &);
