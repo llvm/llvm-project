@@ -916,50 +916,57 @@ entry:
 }
 
 define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
-; CHECK-LABEL: usdot_multiple_zext_users:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI28_0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI28_0]
-; CHECK-NEXT:    adrp x8, .LCPI28_1
-; CHECK-NEXT:    adrp x9, .LCPI28_2
-; CHECK-NEXT:    adrp x10, .LCPI28_3
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI28_1]
-; CHECK-NEXT:    ldr q4, [x9, :lo12:.LCPI28_2]
-; CHECK-NEXT:    ldr q5, [x10, :lo12:.LCPI28_3]
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  .LBB28_1: // %vector.body
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q6, [x2, x8]
-; CHECK-NEXT:    ldr q18, [x0, x8]
-; CHECK-NEXT:    ldr q19, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    tbl v7.16b, { v6.16b }, v1.16b
-; CHECK-NEXT:    tbl v16.16b, { v6.16b }, v3.16b
-; CHECK-NEXT:    tbl v17.16b, { v6.16b }, v4.16b
-; CHECK-NEXT:    tbl v6.16b, { v6.16b }, v5.16b
-; CHECK-NEXT:    cmp x8, #1024
-; CHECK-NEXT:    uzp1 v7.8h, v16.8h, v7.8h
-; CHECK-NEXT:    sshll v16.8h, v18.8b, #0
-; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v17.8h
-; CHECK-NEXT:    sshll2 v17.8h, v18.16b, #0
-; CHECK-NEXT:    sshll v18.8h, v19.8b, #0
-; CHECK-NEXT:    sshll2 v19.8h, v19.16b, #0
-; CHECK-NEXT:    smlal v0.4s, v16.4h, v7.4h
-; CHECK-NEXT:    smlal v2.4s, v18.4h, v7.4h
-; CHECK-NEXT:    smull v20.4s, v17.4h, v6.4h
-; CHECK-NEXT:    smull v21.4s, v19.4h, v6.4h
-; CHECK-NEXT:    smlal2 v0.4s, v17.8h, v6.8h
-; CHECK-NEXT:    smlal2 v2.4s, v19.8h, v6.8h
-; CHECK-NEXT:    smlal2 v20.4s, v16.8h, v7.8h
-; CHECK-NEXT:    smlal2 v21.4s, v18.8h, v7.8h
-; CHECK-NEXT:    add v0.4s, v20.4s, v0.4s
-; CHECK-NEXT:    add v2.4s, v21.4s, v2.4s
-; CHECK-NEXT:    b.ne .LBB28_1
-; CHECK-NEXT:  // %bb.2: // %end
-; CHECK-NEXT:    add v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOI8MM-LABEL: usdot_multiple_zext_users:
+; CHECK-NOI8MM:       // %bb.0: // %entry
+; CHECK-NOI8MM-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NOI8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NOI8MM-NEXT:    mov x8, xzr
+; CHECK-NOI8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-NOI8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NOI8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-NOI8MM-NEXT:    ldr q3, [x2, x8]
+; CHECK-NOI8MM-NEXT:    ldr q4, [x1, x8]
+; CHECK-NOI8MM-NEXT:    add x8, x8, #16
+; CHECK-NOI8MM-NEXT:    sshll v5.8h, v2.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NOI8MM-NEXT:    ushll2 v6.8h, v3.16b, #0
+; CHECK-NOI8MM-NEXT:    ushll v3.8h, v3.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll v7.8h, v4.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll2 v4.8h, v4.16b, #0
+; CHECK-NOI8MM-NEXT:    cmp x8, #1024
+; CHECK-NOI8MM-NEXT:    smull v16.4s, v2.4h, v6.4h
+; CHECK-NOI8MM-NEXT:    smlal v0.4s, v5.4h, v3.4h
+; CHECK-NOI8MM-NEXT:    smull v17.4s, v4.4h, v6.4h
+; CHECK-NOI8MM-NEXT:    smlal v1.4s, v7.4h, v3.4h
+; CHECK-NOI8MM-NEXT:    smlal2 v16.4s, v5.8h, v3.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v0.4s, v2.8h, v6.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v17.4s, v7.8h, v3.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v1.4s, v4.8h, v6.8h
+; CHECK-NOI8MM-NEXT:    add v0.4s, v16.4s, v0.4s
+; CHECK-NOI8MM-NEXT:    add v1.4s, v17.4s, v1.4s
+; CHECK-NOI8MM-NEXT:    b.ne .LBB28_1
+; CHECK-NOI8MM-NEXT:  // %bb.2: // %end
+; CHECK-NOI8MM-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOI8MM-NEXT:    ret
+;
+; CHECK-I8MM-LABEL: usdot_multiple_zext_users:
+; CHECK-I8MM:       // %bb.0: // %entry
+; CHECK-I8MM-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-I8MM-NEXT:    mov x8, xzr
+; CHECK-I8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-I8MM-NEXT:    ldr q4, [x2, x8]
+; CHECK-I8MM-NEXT:    add x8, x8, #16
+; CHECK-I8MM-NEXT:    usdot v0.4s, v4.16b, v2.16b
+; CHECK-I8MM-NEXT:    usdot v1.4s, v4.16b, v3.16b
+; CHECK-I8MM-NEXT:    cmp x8, #1024
+; CHECK-I8MM-NEXT:    b.ne .LBB28_1
+; CHECK-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-I8MM-NEXT:    ret
 entry:
   br label %vector.body
 
