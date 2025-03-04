@@ -3616,7 +3616,6 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
 
   SmallVector<DictionaryAttr> argAttrs;
   SmallVector<DictionaryAttr> resultAttrs;
-  // TODO: add argument/result attribute support
   if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
                                       operands, argAttrs, resultAttrs))
     return failure();
