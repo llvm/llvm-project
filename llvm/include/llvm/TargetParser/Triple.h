@@ -1109,6 +1109,11 @@ public:
            Env == llvm::Triple::EABIHF;
   }
 
+  /// Tests if the target represents a device which can be offloaded to.
+  bool isOffloadingTarget() const {
+    return isAMDGPU() || isNVPTX() || isSPIRV();
+  }
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
