@@ -1873,7 +1873,7 @@ multiclass FLAT_Real_AllAddr_LDS<bits<7> op, bits<7> pre_gfx940_op,
     }
   }
 
-  let SubtargetPredicate = isGFX940Plus in {
+  let AssemblerPredicate = isGFX940Plus in {
     def _gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
     def _SADDR_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
   }
