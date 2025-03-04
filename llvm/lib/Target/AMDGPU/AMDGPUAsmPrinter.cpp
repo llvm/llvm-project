@@ -1417,10 +1417,6 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
     if (ST.isDynamicVGPREnabled())
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
-
-    MD->setHwStage(CC, ".lds_size",
-                   (unsigned)(CurrentProgramInfo.LdsSize *
-                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
   }
 
   MD->setHwStage(CC, ".lds_size",

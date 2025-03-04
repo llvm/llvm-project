@@ -1008,9 +1008,8 @@ namespace shufflevector {
 
 namespace FunctionStart {
   void a(void) {}
-  static_assert(__builtin_function_start(a) == a, ""); // ref-error {{not an integral constant expression}} \
-                                                       // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
-                                                       // expected-error {{static assertion failed}}
+  static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
+                                                       // both-note {{comparison against opaque constant address '&__builtin_function_start(a)'}}
 }
 
 namespace BuiltinInImplicitCtor {
