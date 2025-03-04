@@ -316,6 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
+    IK_SelectOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1181,6 +1182,38 @@ public:
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  const Init *resolveReferences(Resolver &R) const override;
+
+  const Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
+/// !select<type>(regex) - Produces a list of records whose type is `type` and
+/// record names match regular expression `regex`.
+class SelectOpInit final : public TypedInit, public FoldingSetNode {
+private:
+  const RecTy *Type;
+  const Init *Regex;
+
+  SelectOpInit(const RecTy *Type, const Init *Regex)
+      : TypedInit(IK_SelectOpInit, IntRecTy::get(Type->getRecordKeeper())),
+        Type(Type), Regex(Regex) {}
+
+public:
+  SelectOpInit(const SelectOpInit &) = delete;
+  SelectOpInit &operator=(const SelectOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_SelectOpInit; }
+
+  static const SelectOpInit *get(const RecTy *Type, const Init *Regex);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  const Init *Fold() const;
 
   bool isComplete() const override { return false; }
 
