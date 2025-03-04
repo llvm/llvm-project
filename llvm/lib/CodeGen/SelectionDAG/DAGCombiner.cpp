@@ -21366,16 +21366,15 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
   // Check if a call exists in the store chain.
   auto HasCallInLdStChain = [](SDNode *Load, SDNode *Store) {
     bool FoundCall = false;
-    SmallVector<SDNode *, 8> Nodes = {Store->getOperand(0).getNode()};
-    while (!Nodes.empty()) {
-      SDNode *Node = Nodes.pop_back_val();
+    SmallVector<SDValue, 8> Values = {Store->getOperand(0)};
+    while (!Values.empty()) {
+      SDNode *Node = Values.pop_back_val().getNode();
       if (Node->getNumOperands() == 0)
         continue;
 
       switch (Node->getOpcode()) {
       case ISD::TokenFactor:
-        for (unsigned Nops = Node->getNumOperands(); Nops;)
-          Nodes.push_back(Node->getOperand(--Nops).getNode());
+        append_range(Values, Node->op_values());
         break;
       case ISD::CALLSEQ_END:
         FoundCall = true;
@@ -21385,7 +21384,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
           return false;
         [[fallthrough]];
       case ISD::STORE:
-        Nodes.push_back(Node->getOperand(0).getNode());
+        Values.push_back(Node->getOperand(0));
       default:
         break;
       }
