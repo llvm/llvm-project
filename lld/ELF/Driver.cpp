@@ -596,10 +596,11 @@ getZGcsReport(Ctx &ctx, opt::InputArgList &args, bool isReportDynamic,
     }
   }
 
-  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When -zgcs-report
-  // is set to `warning` or `error`, -zgcs-report-dynamic will inherit this value if
-  // there is no user set value. This detects shared libraries without the GCS
-  // property but does not the shared-libraries to be rebuilt for successful linking
+  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When
+  // -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
+  // inherit this value if there is no user set value. This detects shared
+  // libraries without the GCS property but does not the shared-libraries to be
+  // rebuilt for successful linking
   if (isReportDynamic && gcsReportValue.getValue() != GcsReportPolicy::None &&
       ret.getValue() == GcsReportPolicy::None)
     ret = GcsReportPolicy::Warning;
@@ -1661,10 +1662,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');

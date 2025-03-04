@@ -375,8 +375,8 @@ private:
                                      const typename ELFT::Shdr *sec);
   template <typename ELFT>
   void parseGnuAndFeatures(const uint8_t *base,
-                          const typename ELFT::PhdrRange headers,
-                          const typename ELFT::Shdr *sHeader);
+                           const typename ELFT::PhdrRange headers,
+                           const typename ELFT::Shdr *sHeader);
 };
 
 class BinaryFile : public InputFile {
