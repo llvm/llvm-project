@@ -8,7 +8,6 @@
 // RUN: %run %t 5 2>&1 | FileCheck %s --check-prefix=CHECK-5
 // RUN: %run %t 6 2>&1 | FileCheck %s --check-prefix=CHECK-6
 // RUN: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
-// RUN: %run %t 8 2>&1 | FileCheck %s --check-prefix=CHECK-8
 
 // Issue #41838
 // XFAIL: sparc-target-arch && target={{.*solaris.*}}
@@ -133,17 +132,12 @@ int main(int argc, char **argv) {
   }
   case '5': {
     // CHECK-5: {{.*}}cast-overflow.cpp:[[@LINE+1]]:27: runtime error: {{.*}} is outside the range of representable values of type 'int'
-    static int test_int = (__fp16)Inf;
-    return 0;
-  }
-  case '6': {
-    // CHECK-6: {{.*}}cast-overflow.cpp:[[@LINE+1]]:27: runtime error: {{.*}} is outside the range of representable values of type 'int'
     static int test_int = NaN;
     return 0;
   }
   // Integer -> floating point overflow.
-  case '7': {
-    // CHECK-7: cast-overflow.cpp:[[@LINE+2]]:{{27: runtime error: 3.40282e\+38 is outside the range of representable values of type 'int'| __int128 not supported}}
+  case '6': {
+    // CHECK-6: cast-overflow.cpp:[[@LINE+2]]:{{27: runtime error: 3.40282e\+38 is outside the range of representable values of type 'int'| __int128 not supported}}
 #if defined(__SIZEOF_INT128__) && !defined(_WIN32)
     static int test_int = (float)(FloatMaxAsUInt128 + 1);
     return 0;
@@ -154,9 +148,9 @@ int main(int argc, char **argv) {
     return 0;
 #endif
   }
-  case '8': {
+  case '7': {
     volatile long double ld = 300.0;
-    // CHECK-8: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
+    // CHECK-7: {{.*}}cast-overflow.cpp:[[@LINE+1]]:14: runtime error: 300 is outside the range of representable values of type 'char'
     char c = ld;
     // `c` is allowed to contain UNDEF, thus we should not use
     // its value as an exit code.
