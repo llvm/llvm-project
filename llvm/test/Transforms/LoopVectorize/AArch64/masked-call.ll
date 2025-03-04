@@ -1037,8 +1037,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFALWAYS-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7]]
 ; TFALWAYS-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
 ; TFALWAYS-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[TMP6]], i32 1
-; TFALWAYS-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
-; TFALWAYS-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP9]], splat (i1 true)
+; TFALWAYS-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP8]], zeroinitializer
 ; TFALWAYS-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[ACTIVE_LANE_MASK]], <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
 ; TFALWAYS-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP11]], <2 x double> splat (double 1.000000e+00), <2 x double> zeroinitializer
 ; TFALWAYS-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
@@ -1082,8 +1081,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7]]
 ; TFFALLBACK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
 ; TFFALLBACK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[TMP6]], i32 1
-; TFFALLBACK-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
-; TFFALLBACK-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP9]], splat (i1 true)
+; TFFALLBACK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP8]], zeroinitializer
 ; TFFALLBACK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[ACTIVE_LANE_MASK]], <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
 ; TFFALLBACK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP11]], <2 x double> splat (double 1.000000e+00), <2 x double> zeroinitializer
 ; TFFALLBACK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
@@ -1133,10 +1131,8 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP10:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR7]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i32 0
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[TMP10]], i32 1
-; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x double> [[TMP12]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = xor <2 x i1> [[TMP13]], splat (i1 true)
-; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = xor <2 x i1> [[TMP14]], splat (i1 true)
+; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = fcmp ule <2 x double> [[TMP8]], zeroinitializer
+; TFA_INTERLEAVE-NEXT:    [[TMP16:%.*]] = fcmp ule <2 x double> [[TMP12]], zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[ACTIVE_LANE_MASK]], <2 x i1> [[TMP15]], <2 x i1> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[ACTIVE_LANE_MASK2]], <2 x i1> [[TMP16]], <2 x i1> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP17]], <2 x double> splat (double 1.000000e+00), <2 x double> zeroinitializer
