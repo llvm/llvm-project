@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -151,6 +152,32 @@ namespace {
 // corresponding calls to g are determined and the code for computing
 // x, y, and a can be removed.
 //
+// Similarly, there are cases where peeling makes Phi nodes loop-inductions
+// (i.e., the value is increased or decreased by a fixed amount on every
+// iteration). For example, consider the following function.
+//
+//   #define N 100
+//   void f(int a[], int b[]) {
+//     int im = N - 1;
+//     for (int i = 0; i < N; i++) {
+//       a[i] = b[i] + b[im];
+//       im = i;
+//     }
+//   }
+//
+// The IR of the loop will look something like the following.
+//
+//   %i = phi i32 [ 0, %entry ], [ %i.next, %for.body ]
+//   %im = phi i32 [ 99, %entry ], [ %i, %for.body ]
+//   ...
+//   %i.next = add nuw nsw i32 %i, 1
+//   ...
+//
+// In this case, %im becomes a loop-induction variable by peeling 1 iteration,
+// because %i is a loop-induction one. The peeling count can be determined by
+// the same algorithm with loop-invariant case. Such peeling is profitable for
+// loop-vectorization.
+//
 // The PhiAnalyzer class calculates how many times a loop should be
 // peeled based on the above analysis of the phi nodes in the loop while
 // respecting the maximum specified.
@@ -177,17 +204,82 @@ protected:
   // becomes an invariant.
   PeelCounter calculate(const Value &);
 
+  // Returns true if the \p Phi is an induction in the target loop. This
+  // function is a wrapper of `InductionDescriptor::isInductionPHI`.
+  bool isInductionPHI(const PHINode *Phi) const;
+
   const Loop &L;
   const unsigned MaxIterations;
 
-  // Map of Values to number of iterations to invariance
-  SmallDenseMap<const Value *, PeelCounter> IterationsToInvariance;
+  // Map of Values to number of iterations to invariance or induction
+  SmallDenseMap<const Value *, PeelCounter> IterationsToInvarianceOrInduction;
 };
 
 PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
     : L(L), MaxIterations(MaxIterations) {
   assert(canPeel(&L) && "loop is not suitable for peeling");
   assert(MaxIterations > 0 && "no peeling is allowed?");
+}
+
+// Test if \p Phi is induction variable or not. It can be checked by using SCEV,
+// but it's expensive to calculate it here. Instead, we perform the cheaper
+// checks, which cannot detect complex one but enough for some cases.
+bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
+  // Currently, we only support loops that consist of one basic block. In this
+  // case, the phi can become an IV if it has an incoming value from the basic
+  // block that this phi is also included.
+  int LoopIdx = -1;
+  for (unsigned I = 0; I != Phi->getNumIncomingValues(); I++) {
+    if (Phi->getIncomingBlock(I) == Phi->getParent()) {
+      LoopIdx = I;
+      break;
+    }
+  }
+  if (LoopIdx == -1)
+    return false;
+
+  Value *Cur = Phi->getIncomingValue(LoopIdx);
+  SmallPtrSet<Value *, 4> Visited;
+  bool VisitBinOp = false;
+
+  // Start at the incoming value of the phi and follow definitions. We consider
+  // the phi to be an IV if we can return to it again by traversing only add,
+  // sub, or cast instructions.
+  while (true) {
+    if (Cur == Phi)
+      break;
+
+    // Avoid infinite loop.
+    if (Visited.contains(Cur))
+      return false;
+
+    Instruction *I = dyn_cast<Instruction>(Cur);
+    if (!I || I->getParent() != Phi->getParent())
+      return false;
+
+    Visited.insert(Cur);
+
+    if (auto *Cast = dyn_cast<CastInst>(I)) {
+      Cur = Cast->getOperand(0);
+    } else if (auto *BinOp = dyn_cast<BinaryOperator>(I)) {
+      if (BinOp->getOpcode() != Instruction::Add &&
+          BinOp->getOpcode() != Instruction::Sub)
+        return false;
+      if (!BinOp->hasNoUnsignedWrap() || !BinOp->hasNoSignedWrap())
+        return false;
+      if (!isa<ConstantInt>(BinOp->getOperand(1)))
+        return false;
+
+      VisitBinOp = true;
+      Cur = BinOp->getOperand(0);
+    } else {
+      return false;
+    }
+  }
+
+  // If there are only cast instructions, the phi is not an IV. Return false in
+  // this case.
+  return VisitBinOp;
 }
 
 // This function calculates the number of iterations after which the value
@@ -208,25 +300,32 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   // If we already know the answer, take it from the map.
   // Otherwise, place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
-  auto [I, Inserted] = IterationsToInvariance.try_emplace(&V, Unknown);
+  auto [I, Inserted] =
+      IterationsToInvarianceOrInduction.try_emplace(&V, Unknown);
   if (!Inserted)
     return I->second;
 
   if (L.isLoopInvariant(&V))
     // Loop invariant so known at start.
-    return (IterationsToInvariance[&V] = 0);
+    return (IterationsToInvarianceOrInduction[&V] = 0);
   if (const PHINode *Phi = dyn_cast<PHINode>(&V)) {
     if (Phi->getParent() != L.getHeader()) {
       // Phi is not in header block so Unknown.
-      assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+      assert(IterationsToInvarianceOrInduction[&V] == Unknown &&
+             "unexpected value saved");
       return Unknown;
     }
+
+    // If Phi is an induction, register it as a starting point.
+    if (isInductionPHI(Phi))
+      return (IterationsToInvarianceOrInduction[&V] = 0);
+
     // We need to analyze the input from the back edge and add 1.
     Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
     PeelCounter Iterations = calculate(*Input);
-    assert(IterationsToInvariance[Input] == Iterations &&
+    assert(IterationsToInvarianceOrInduction[Input] == Iterations &&
            "unexpected value saved");
-    return (IterationsToInvariance[Phi] = addOne(Iterations));
+    return (IterationsToInvarianceOrInduction[Phi] = addOne(Iterations));
   }
   if (const Instruction *I = dyn_cast<Instruction>(&V)) {
     if (isa<CmpInst>(I) || I->isBinaryOp()) {
@@ -237,26 +336,29 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
       PeelCounter RHS = calculate(*I->getOperand(1));
       if (RHS == Unknown)
         return Unknown;
-      return (IterationsToInvariance[I] = {std::max(*LHS, *RHS)});
+      return (IterationsToInvarianceOrInduction[I] = {std::max(*LHS, *RHS)});
     }
     if (I->isCast())
       // Cast instructions get the value of the operand.
-      return (IterationsToInvariance[I] = calculate(*I->getOperand(0)));
+      return (IterationsToInvarianceOrInduction[I] =
+                  calculate(*I->getOperand(0)));
   }
   // TODO: handle more expressions
 
   // Everything else is Unknown.
-  assert(IterationsToInvariance[&V] == Unknown && "unexpected value saved");
+  assert(IterationsToInvarianceOrInduction[&V] == Unknown &&
+         "unexpected value saved");
   return Unknown;
 }
 
 std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
-    PeelCounter ToInvariance = calculate(PHI);
-    if (ToInvariance != Unknown) {
-      assert(*ToInvariance <= MaxIterations && "bad result in phi analysis");
-      Iterations = std::max(Iterations, *ToInvariance);
+    PeelCounter ToInvarianceOrInduction = calculate(PHI);
+    if (ToInvarianceOrInduction != Unknown) {
+      assert(*ToInvarianceOrInduction <= MaxIterations &&
+             "bad result in phi analysis");
+      Iterations = std::max(Iterations, *ToInvarianceOrInduction);
       if (Iterations == MaxIterations)
         break;
     }
@@ -585,11 +687,11 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
   unsigned DesiredPeelCount = TargetPeelCount;
 
-  // Here we try to get rid of Phis which become invariants after 1, 2, ..., N
-  // iterations of the loop. For this we compute the number for iterations after
-  // which every Phi is guaranteed to become an invariant, and try to peel the
-  // maximum number of iterations among these values, thus turning all those
-  // Phis into invariants.
+  // Here we try to get rid of Phis which become invariants or inductions after
+  // 1, 2, ..., N iterations of the loop. For this we compute the number for
+  // iterations after which every Phi is guaranteed to become an invariant or an
+  // induction, and try to peel the maximum number of iterations among these
+  // values, thus turning all those Phis into invariants or inductions.
   if (MaxPeelCount > DesiredPeelCount) {
     // Check how many iterations are useful for resolving Phis
     auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel();
@@ -610,7 +712,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     if (DesiredPeelCount + AlreadyPeeled <= UnrollPeelMaxCount) {
       LLVM_DEBUG(dbgs() << "Peel " << DesiredPeelCount
                         << " iteration(s) to turn"
-                        << " some Phis into invariants.\n");
+                        << " some Phis into invariants or inductions.\n");
       PP.PeelCount = DesiredPeelCount;
       PP.PeelProfiledIterations = false;
       return;
