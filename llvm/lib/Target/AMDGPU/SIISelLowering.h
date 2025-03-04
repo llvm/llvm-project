@@ -306,7 +306,7 @@ public:
   // have a MVT to prevent some analyses that query this function from breaking.
   // We use the custum MVT::amdgpuBufferFatPointer and
   // amdgpu::amdgpuBufferStridedPointer for this, though we use v8i32 for the
-  // momyr type (which is probably unused).
+  // memory type (which is probably unused).
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
