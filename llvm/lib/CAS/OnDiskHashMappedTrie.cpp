@@ -1598,6 +1598,12 @@ void OnDiskHashMappedTrie::print(
   report_fatal_error("not supported");
 }
 
+Error OnDiskHashMappedTrie::validate(
+    function_ref<Error(FileOffset, OnDiskHashMappedTrie::ConstValueProxy)>
+        RecordVerifier) const {
+  report_fatal_error("not supported");
+}
+
 size_t OnDiskHashMappedTrie::size() const {
   report_fatal_error("not supported");
 }
