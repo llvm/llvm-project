@@ -2511,6 +2511,33 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 } // end True16Predicate = NotHasTrue16BitInsts
 
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (rotr i32:$src0, i32:$src1),
+  (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src0,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG $src1, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+          (V_ALIGNBIT_B32_t16_e64 0, /* src0_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                          0, /* src1_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                          0, /* src2_modifiers */
+                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+          (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src1,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG VGPR_32:$src2, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+} // end True16Predicate = UseRealTrue16Insts
+
 let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat <
   (rotr i32:$src0, i32:$src1),
