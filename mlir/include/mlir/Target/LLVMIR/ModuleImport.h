@@ -272,8 +272,8 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
-  /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`.
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
   void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
                                   ArrayAttr &resAttr, OpBuilder &builder);
 
