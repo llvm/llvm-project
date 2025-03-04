@@ -12,7 +12,7 @@
 !CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:          fir.store %[[IV]] to %[[I]]#1 : !fir.ref<i32>
+!CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
 !CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]] : i32
@@ -46,7 +46,7 @@ end subroutine
 !CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:          fir.store %[[IV]] to %[[I]]#1 : !fir.ref<i32>
+!CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
 !CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]] : i32
