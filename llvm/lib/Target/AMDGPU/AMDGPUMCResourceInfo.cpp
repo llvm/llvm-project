@@ -182,14 +182,14 @@ void MCResourceInfo::gatherResourceInfo(
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
 
   LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
-                    << FnSym->getName() << "\n");
+                    << FnSym->getName() << '\n');
   // clang-format off
   LLVM_DEBUG(
     if (!FRI.Callees.empty()) {
       dbgs() << "MCResUse: Callees:\n";
       for (const Function *Callee : FRI.Callees) {
         MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
-        dbgs() << "MCResUse:   " << CalleeFnSym->getName() << "\n";
+        dbgs() << "MCResUse:   " << CalleeFnSym->getName() << '\n';
       }
     }
   );
@@ -212,7 +212,7 @@ void MCResourceInfo::gatherResourceInfo(
     }
   };
 
-  LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
   SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
   SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
