@@ -1,4 +1,6 @@
 import requests
+import dateutil
+import json
 import time
 import os
 from dataclasses import dataclass
@@ -16,6 +18,17 @@ GITHUB_PROJECT = "llvm/llvm-project"
 WORKFLOWS_TO_TRACK = ["LLVM Premerge Checks"]
 SCRAPE_INTERVAL_SECONDS = 5 * 60
 
+# Number of builds to fetch per page. Since we scrape regularly, this can
+# remain small.
+BUILDKITE_GRAPHQL_BUILDS_PER_PAGE = 10
+
+# Lists the BuildKite jobs we want to track. Maps the BuildKite job name to
+# the metric name in Grafana. This is important not to lose metrics history
+# if the workflow name changes.
+BUILDKITE_WORKFLOW_TO_TRACK = {
+    ":linux: Linux x64": "buildkite_linux",
+    ":windows: Windows x64": "buildkite_windows",
+}
 
 @dataclass
 class JobMetrics:
@@ -33,6 +46,146 @@ class GaugeMetric:
     name: str
     value: int
     time_ns: int
+
+
+# Fetches a page of the build list using the GraphQL BuildKite API.
+# Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last **finished** builds by
+# default, or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE **finished** builds older
+# than the one pointer by
+# |cursor| if provided.
+# The |cursor| value is taken from the previous page returned by the API.
+# The returned data had the following format:
+# [
+#   {
+#       "cursor": <value>,
+#       "number": <build-number>,
+#   }
+# ]
+def buildkite_fetch_page_build_list(buildkite_token, after_cursor=None):
+    BUILDKITE_GRAPHQL_QUERY = """
+  query OrganizationShowQuery {{
+    organization(slug: "llvm-project") {{
+      pipelines(search: "Github pull requests", first: 1) {{
+        edges {{
+          node {{
+            builds (state: [FAILED, PASSED], first: {PAGE_SIZE}, after: {AFTER}) {{
+              edges {{
+                cursor
+                node {{
+                  number
+                }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+  }}
+  """
+    data = BUILDKITE_GRAPHQL_QUERY.format(
+        PAGE_SIZE=BUILDKITE_GRAPHQL_BUILDS_PER_PAGE,
+        AFTER="null" if after_cursor is None else '"{}"'.format(after_cursor),
+    )
+    data = data.replace("\n", "").replace('"', '\\"')
+    data = '{ "query": "' + data + '" }'
+    url = "https://graphql.buildkite.com/v1"
+    headers = {
+        "Authorization": "Bearer " + buildkite_token,
+        "Content-Type": "application/json",
+    }
+    r = requests.post(url, data=data, headers=headers)
+    data = r.json()
+    # De-nest the build list.
+    builds = data["data"]["organization"]["pipelines"]["edges"][0]["node"]["builds"][
+        "edges"
+    ]
+    # Fold cursor info into the node dictionnary.
+    return [{**x["node"], "cursor": x["cursor"]} for x in builds]
+
+
+# Returns all the info associated with the provided |build_number|.
+# Note: for unknown reasons, graphql returns no jobs for a given build, while
+# this endpoint does, hence why this uses this API instead of graphql.
+def buildkite_get_build_info(build_number):
+    URL = "https://buildkite.com/llvm-project/github-pull-requests/builds/{}.json"
+    return requests.get(URL.format(build_number)).json()
+
+
+# returns the last BUILDKITE_GRAPHQL_BUILDS_PER_PAGE builds by default, or
+# until the build pointed by |last_cursor| is found.
+def buildkite_get_builds_up_to(buildkite_token, last_cursor=None):
+    output = []
+    cursor = None
+
+    while True:
+        page = buildkite_fetch_page_build_list(buildkite_token, cursor)
+        # No cursor provided, return the first page.
+        if last_cursor is None:
+            return page
+
+        # Cursor has been provided, check if present in this page.
+        match_index = next(
+            (i for i, x in enumerate(page) if x["cursor"] == last_cursor), None
+        )
+        # Not present, continue loading more pages.
+        if match_index is None:
+            output += page
+            cursor = page[-1]["cursor"]
+            continue
+        # Cursor found, keep results up to cursor
+        output += page[:match_index]
+        return output
+
+
+# Returns a (metrics, cursor) tuple.
+# Returns the BuildKite workflow metrics up to the build pointed by |last_cursor|.
+# If |last_cursor| is None, no metrics are returned.
+# The returned cursor is either:
+#  - the last processed build.
+#  - the last build if no initial cursor was provided.
+def buildkite_get_metrics(buildkite_token, last_cursor=None):
+
+    builds = buildkite_get_builds_up_to(buildkite_token, last_cursor)
+    # Don't return any metrics if last_cursor is None.
+    # This happens when the program starts.
+    if last_cursor is None:
+        return [], builds[0]["cursor"]
+
+    last_recorded_build = last_cursor
+    output = []
+    for build in builds:
+        info = buildkite_get_build_info(build["number"])
+        last_recorded_build = build["cursor"]
+        for job in info["jobs"]:
+            # Skip this job.
+            if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
+                continue
+
+            created_at = dateutil.parser.isoparse(job["created_at"])
+            scheduled_at = dateutil.parser.isoparse(job["scheduled_at"])
+            started_at = dateutil.parser.isoparse(job["started_at"])
+            finished_at = dateutil.parser.isoparse(job["finished_at"])
+
+            job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
+            queue_time = (started_at - scheduled_at).seconds
+            run_time = (finished_at - started_at).seconds
+            status = bool(job["passed"])
+            created_at_ns = int(created_at.timestamp()) * 10**9
+            workflow_id = build["number"]
+            workflow_name = "Github pull requests"
+            output.append(
+                JobMetrics(
+                    job_name,
+                    queue_time,
+                    run_time,
+                    status,
+                    created_at_ns,
+                    workflow_id,
+                    workflow_name,
+                )
+            )
+
+    return output, last_recorded_build
 
 
 def get_sampled_workflow_metrics(github_repo: github.Repository):
@@ -104,7 +257,6 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
         GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
     )
     return workflow_metrics
-
 
 def get_per_workflow_metrics(
     github_repo: github.Repository, workflows_to_track: dict[str, int]
@@ -211,7 +363,6 @@ def get_per_workflow_metrics(
 
     return workflow_metrics
 
-
 def upload_metrics(workflow_metrics, metrics_userid, api_key):
     """Upload metrics to Grafana.
 
@@ -260,9 +411,12 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def main():
     # Authenticate with Github
     auth = Auth.Token(os.environ["GITHUB_TOKEN"])
-
     grafana_api_key = os.environ["GRAFANA_API_KEY"]
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
+    buildkite_token = os.environ["BUILDKITE_TOKEN"]
+
+    # The last buildkite build recorded.
+    buildkite_last_cursor = None
 
     workflows_to_track = {}
     for workflow_to_track in WORKFLOWS_TO_TRACK:
@@ -274,7 +428,10 @@ def main():
         github_object = Github(auth=auth)
         github_repo = github_object.get_repo("llvm/llvm-project")
 
-        current_metrics = get_per_workflow_metrics(github_repo, workflows_to_track)
+        current_metrics, buildkite_last_cursor = buildkite_get_metrics(
+            buildkite_token, buildkite_last_cursor
+        )
+        current_metrics += get_per_workflow_metrics(github_repo, workflows_to_track)
         current_metrics += get_sampled_workflow_metrics(github_repo)
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
