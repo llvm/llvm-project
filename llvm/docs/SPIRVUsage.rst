@@ -306,7 +306,7 @@ SPIR-V backend, along with their descriptions and argument details.
    * - `int_spv_assign_aliasing_decoration`
      - None
      - `[Type, 32-bit Integer, Metadata]`
-     - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original alasing list metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+     - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
