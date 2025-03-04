@@ -496,8 +496,7 @@ signature and passed to the shader without requiring a constant buffer resource:
 #. **RegisterSpace**: The register space used for the binding.
 #. **Num32BitValues**: The number of 32-bit values included in this constant buffer.
 
-Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead 
-of creating and binding a constant buffer resource.
+Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
 
 Root Descriptor
 ~~~~~~~~~~~~~~
