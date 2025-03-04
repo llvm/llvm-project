@@ -1,5 +1,5 @@
 ===================================================================
-How To Cross-Compile Clang/LLVM using Clang/LLVM
+How to cross-compile Clang/LLVM using Clang/LLVM
 ===================================================================
 
 Introduction
