@@ -229,6 +229,45 @@ def LoadOp : CIR_Op<"load", [
 }
 
 //===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+def StoreOp : CIR_Op<"store", [
+  TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
+                 "addr", "value",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+
+  let summary = "Store value to memory address";
+  let description = [{
+    `cir.store` stores a value (first operand) to the memory address specified
+    in the second operand. A unit attribute `volatile` can be used to indicate
+    a volatile store. Store's can be marked atomic by using
+    `atomic(<mem_order>)`.
+
+    `align` can be used to specify an alignment that's different from the
+    default, which is computed from `result`'s type ABI data layout.
+
+    Example:
+
+    ```mlir
+    // Store a function argument to local storage, address in %0.
+    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$value,
+                       Arg<CIR_PointerType, "the address to store the value",
+                           [MemWrite]>:$addr);
+
+  let assemblyFormat = [{
+    $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+  }];
+
+  // FIXME: add verifier.
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 

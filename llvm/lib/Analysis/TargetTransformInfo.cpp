@@ -1476,6 +1476,7 @@ TargetIRAnalysis::TargetIRAnalysis(
 
 TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F,
                                                FunctionAnalysisManager &) {
+  assert(!F.isIntrinsic() && "Should not request TTI for intrinsics");
   return TTICallback(F);
 }
 

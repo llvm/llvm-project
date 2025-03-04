@@ -248,7 +248,12 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
-      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+      if (const auto *RD = ElemType->getAsRecordDecl();
+          RD && !RD->getDefinition()) {
+        // Ignore this for the offset.
+      } else {
+        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+      }
       if (Ptr.getArray().getType()->isArrayType())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
@@ -384,7 +389,6 @@ void Pointer::initialize() const {
     return;
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
-  const Descriptor *Desc = getFieldDesc();
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
     GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
@@ -393,6 +397,7 @@ void Pointer::initialize() const {
     return;
   }
 
+  const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     // Primitive global arrays don't have an initmap.

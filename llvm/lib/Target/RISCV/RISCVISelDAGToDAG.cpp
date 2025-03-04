@@ -34,18 +34,6 @@ static cl::opt<bool> UsePseudoMovImm(
              "constant materialization"),
     cl::init(false));
 
-namespace llvm::RISCV {
-#define GET_RISCVVSSEGTable_IMPL
-#define GET_RISCVVLSEGTable_IMPL
-#define GET_RISCVVLXSEGTable_IMPL
-#define GET_RISCVVSXSEGTable_IMPL
-#define GET_RISCVVLETable_IMPL
-#define GET_RISCVVSETable_IMPL
-#define GET_RISCVVLXTable_IMPL
-#define GET_RISCVVSXTable_IMPL
-#include "RISCVGenSearchableTables.inc"
-} // namespace llvm::RISCV
-
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 

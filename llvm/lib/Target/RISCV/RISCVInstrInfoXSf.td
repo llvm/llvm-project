@@ -223,7 +223,7 @@ let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
-    Uses = [FRM] in {
+    Uses = [FRM, VL, VTYPE] in {
   def VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
   def VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
 }

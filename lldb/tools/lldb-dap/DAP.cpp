@@ -64,7 +64,7 @@ namespace lldb_dap {
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
          lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
-    : name(std::move(name)), debug_adaptor_path(path), log(log),
+    : name(std::move(name)), debug_adapter_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
@@ -856,7 +856,11 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 }
 
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  auto cleanup = llvm::make_scope_exit([this]() {
+    if (output.descriptor)
+      output.descriptor->Close();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
