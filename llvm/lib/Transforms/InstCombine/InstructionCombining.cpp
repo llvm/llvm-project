@@ -4812,7 +4812,14 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   //
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
-  auto getUndefReplacement = [&I](Type *Ty) {
+  auto getUndefReplacement = [&I, &AC = this->AC,
+                              &DT = this->DT](Type *Ty) -> Value * {
+    Value *SelectArgument = nullptr;
+    if (match(&I, m_OneUse(m_Freeze(m_Poison()))) &&
+        match(I.user_back(),
+              m_c_Select(m_Specific(&I), m_Value(SelectArgument))) &&
+        isGuaranteedNotToBeUndefOrPoison(SelectArgument, &AC, &I, &DT))
+      return SelectArgument;
     Constant *BestValue = nullptr;
     Constant *NullValue = Constant::getNullValue(Ty);
     for (const auto *U : I.users()) {
@@ -4842,8 +4849,11 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
 
   Constant *C;
   if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement()) {
-    Constant *ReplaceC = getUndefReplacement(I.getType()->getScalarType());
-    return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
+    Value *Replace = getUndefReplacement(I.getType()->getScalarType());
+    if (Constant *ReplaceC = dyn_cast<Constant>(Replace))
+      return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
+    else
+      return replaceInstUsesWith(I, Replace);
   }
 
   // Replace uses of Op with freeze(Op).
