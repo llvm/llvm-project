@@ -308,6 +308,8 @@ void FunctionSection::writeBody() {
 void FunctionSection::addFunction(InputFunction *func) {
   if (!func->live)
     return;
+  if (func->hasFunctionIndex())
+    return;
   uint32_t functionIndex =
       out.importSec->getNumImportedFunctions() + inputFunctions.size();
   inputFunctions.emplace_back(func);
