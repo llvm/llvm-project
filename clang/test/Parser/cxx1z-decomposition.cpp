@@ -103,10 +103,10 @@ namespace BadSpecifiers {
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
-    auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{expected initializer before '['}}
+    auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{decomposition declaration '[e]' requires an initializer; got '['}}
 
     // FIXME: This should fire the 'misplaced array declarator' diagnostic.
-    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{expected initializer before 'arr'}}
+    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{decomposition declaration '[K]' requires an initializer; got 'arr'}}
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
@@ -146,7 +146,7 @@ namespace Init {
   template<typename T> T f(T t) {
     int arr[1];
     struct S { int n; };
-    auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' expected initializer before ';'}}
+    auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' requires an initializer; got ';'}}
     const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
     const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;
@@ -154,9 +154,9 @@ namespace Init {
     const auto &[good3](S{});
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
-    auto [A, B] C = {1, 2}; // expected-error{{decomposition declaration '[A, B]' expected initializer before 'C'}} expected-error{{expected ';' at end of declaration}}
+    auto [A, B] C = {1, 2}; // expected-error{{decomposition declaration '[A, B]' requires an initializer; got 'C'}} expected-error{{expected ';' at end of declaration}}
     T t1 = t; // check that uninitialized decomposition declaration error works with templates and macros
-    auto [t0, t2] MYC = {t, t1}; // expected-error{{decomposition declaration '[t0, t2]' expected initializer before 'C'}} expected-error{{expected ';' at end of declaration}}
+    auto [t0, t2] MYC = {t, t1}; // expected-error{{decomposition declaration '[t0, t2]' requires an initializer; got 'C'}} expected-error{{expected ';' at end of declaration}}
   }
 }
 
