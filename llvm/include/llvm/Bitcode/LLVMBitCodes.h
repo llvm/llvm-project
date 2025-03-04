@@ -335,6 +335,7 @@ enum GlobalValueSummarySymtabCodes {
   // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   // [n x entry]
   FS_CONTEXT_RADIX_TREE_ARRAY = 32,
+  FS_RTTI = 33,
 };
 
 enum MetadataCodes {
