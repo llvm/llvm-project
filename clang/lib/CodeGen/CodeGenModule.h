@@ -528,6 +528,9 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting dtor.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -1544,6 +1547,7 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1568,6 +1572,9 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
+
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -1804,6 +1811,8 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
