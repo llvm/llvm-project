@@ -728,8 +728,11 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
           DICtx.getInliningInfoForAddress(SectAddr, DLIS);
       uint32_t NumDwarfInlineInfos = DwarfInlineInfos.getNumberOfFrames();
       if (NumDwarfInlineInfos == 0) {
-        DwarfInlineInfos.addFrame(
-            DICtx.getLineInfoForAddress(SectAddr, DLIS));
+        if (std::optional<DILineInfo> DwarfLineInfo =
+                DICtx.getLineInfoForAddress(SectAddr, DLIS))
+          DwarfInlineInfos.addFrame(*DwarfLineInfo);
+        else
+          DwarfInlineInfos.addFrame(DILineInfo());
       }
 
       // Check for 1 entry that has no file and line info

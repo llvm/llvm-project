@@ -32,8 +32,9 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
 
 void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
 
-DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                             DILineInfoSpecifier Specifier) {
+std::optional<DILineInfo>
+PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                  DILineInfoSpecifier Specifier) {
   DILineInfo Result;
   Result.FunctionName = getFunctionName(Address.Address, Specifier.FNKind);
 
@@ -64,11 +65,11 @@ DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 PDBContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   // Unimplemented. S_GDATA and S_LDATA in CodeView (used to describe global
   // variables) aren't capable of carrying line information.
-  return DILineInfo();
+  return std::nullopt;
 }
 
 DILineInfoTable
@@ -84,9 +85,11 @@ PDBContext::getLineInfoForAddressRange(object::SectionedAddress Address,
     return Table;
 
   while (auto LineInfo = LineNumbers->getNext()) {
-    DILineInfo LineEntry = getLineInfoForAddress(
+    std::optional<DILineInfo> LineEntry = getLineInfoForAddress(
         {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier);
-    Table.push_back(std::make_pair(LineInfo->getVirtualAddress(), LineEntry));
+    if (LineEntry)
+      Table.push_back(
+          std::make_pair(LineInfo->getVirtualAddress(), *LineEntry));
   }
   return Table;
 }
@@ -95,19 +98,22 @@ DIInliningInfo
 PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
                                       DILineInfoSpecifier Specifier) {
   DIInliningInfo InlineInfo;
-  DILineInfo CurrentLine = getLineInfoForAddress(Address, Specifier);
+  std::optional<DILineInfo> CurrentLine =
+      getLineInfoForAddress(Address, Specifier);
 
   // Find the function at this address.
   std::unique_ptr<PDBSymbol> ParentFunc =
       Session->findSymbolByAddress(Address.Address, PDB_SymType::Function);
   if (!ParentFunc) {
-    InlineInfo.addFrame(CurrentLine);
+    if (CurrentLine)
+      InlineInfo.addFrame(*CurrentLine);
     return InlineInfo;
   }
 
   auto Frames = ParentFunc->findInlineFramesByVA(Address.Address);
   if (!Frames || Frames->getChildCount() == 0) {
-    InlineInfo.addFrame(CurrentLine);
+    if (CurrentLine)
+      InlineInfo.addFrame(*CurrentLine);
     return InlineInfo;
   }
 
@@ -131,7 +137,8 @@ PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
     InlineInfo.addFrame(LineInfo);
   }
 
-  InlineInfo.addFrame(CurrentLine);
+  if (CurrentLine)
+    InlineInfo.addFrame(*CurrentLine);
   return InlineInfo;
 }
 

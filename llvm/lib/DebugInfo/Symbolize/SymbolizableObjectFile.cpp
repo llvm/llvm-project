@@ -276,8 +276,11 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  DILineInfo LineInfo =
-      DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
+  DILineInfo LineInfo;
+  if (std::optional<DILineInfo> DBGLineInfo =
+          DebugInfoContext->getLineInfoForAddress(ModuleOffset,
+                                                  LineInfoSpecifier))
+    LineInfo = *DBGLineInfo;
 
   // Override function name from symbol table if necessary.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -334,10 +337,11 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   Res.DeclFile = FileName;
 
   // Try and get a better filename:lineno pair from the debuginfo, if present.
-  DILineInfo DL = DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
-  if (DL.Line != 0) {
-    Res.DeclFile = DL.FileName;
-    Res.DeclLine = DL.Line;
+  std::optional<DILineInfo> DL =
+      DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
+  if (DL && DL->Line != 0) {
+    Res.DeclFile = DL->FileName;
+    Res.DeclLine = DL->Line;
   }
   return Res;
 }
