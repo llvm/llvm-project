@@ -812,6 +812,7 @@ void AArch64PassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+  addPass(createAArch64WinFixupBufferSecurityCheckPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
