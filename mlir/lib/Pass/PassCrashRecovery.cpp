@@ -419,7 +419,7 @@ LogicalResult PassManager::runWithCrashRecovery(Operation *op,
   // thread local storage upon function exit. This is required to persist any
   // attribute storage allocated during passes beyond the lifetime of the
   // recovery context thread.
-  auto *ctx = getContext();
+  MLIRContext *ctx = getContext();
   ctx->disableThreadLocalStorage();
   auto guard =
       llvm::make_scope_exit([ctx]() { ctx->enableThreadLocalStorage(); });
