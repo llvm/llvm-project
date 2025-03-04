@@ -17,6 +17,7 @@
 #include "flang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
+#include "flang/Parser/parsing.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace Fortran::frontend;
