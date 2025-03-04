@@ -395,17 +395,17 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
   assert(LegalVT.isFixedLengthVector());
-  InstructionCost NumOfDests = InstructionCost::getInvalid();
-  if (VLen && !Mask.empty()) {
-    MVT ElemVT = LegalVT.getVectorElementType();
-    unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
-    LegalVT = TTI.getTypeLegalizationCost(
-                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
-                  .second;
-    // Number of destination vectors after legalization:
-    NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
-  }
-  if (!NumOfDests.isValid() || NumOfDests <= 1 ||
+  if (!VLen || Mask.empty())
+    return InstructionCost::getInvalid();
+  MVT ElemVT = LegalVT.getVectorElementType();
+  unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
+  LegalVT = TTI.getTypeLegalizationCost(
+                   FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
+                .second;
+  // Number of destination vectors after legalization:
+  InstructionCost NumOfDests =
+      divideCeil(Mask.size(), LegalVT.getVectorNumElements());
+  if (NumOfDests <= 1 ||
       LegalVT.getVectorElementType().getSizeInBits() !=
           Tp->getElementType()->getPrimitiveSizeInBits() ||
       LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
