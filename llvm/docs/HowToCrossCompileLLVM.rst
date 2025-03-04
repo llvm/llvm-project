@@ -23,8 +23,8 @@ Setting up a sysroot
 --------------------
 
 You will need a sysroot that contains essential build dependencies compiled
-for the target architecture. In this case, we'll be using CMake and Ninja on a
-Linux host and compiling against a Debian sysroot. Detailed instructions on
+for the target architecture. In this case, we will be using CMake and Ninja on
+a Linux host and compiling against a Debian sysroot. Detailed instructions on
 producing sysroots are outside of the scope of this documentation, but the
 following instructions should work on any Linux distribution with these
 pre-requisites:
@@ -37,7 +37,7 @@ pre-requisites:
  * The ``debootstrap`` tool. This is available in most distributions.
 
 The following snippet will initialise sysroots for 32-bit Arm, AArch64, and
-64-bit RISC-V (you can of course just pick the target you're interested in):
+64-bit RISC-V (just pick the target(s) you are interested in):
 
    .. code-block:: bash
 
@@ -153,8 +153,8 @@ Working around a ninja dependency issue
 If you followed the instructions above to create a sysroot, you may run into a
 `longstanding problem related to path canonicalization in ninja
 <https://github.com/ninja-build/ninja/issues/1330>_`. GCC canonicalizes system
-headers in dependency files, so when ninja reads them it doesn't need to do
-so. Clang doesn't, and unfortunately ninja doesn't implement the
+headers in dependency files, so when ninja reads them it does not need to do
+so. Clang does not do this, and unfortunately ninja does not implement the
 canonicalization logic at all, meaning for some system headers with symlinks
 in the paths, it can incorrectly compute a non-existing path and consider it
 as always modified.
@@ -163,14 +163,14 @@ If you are suffering from this issue, you will find ny attempt at an
 incremental build (including the suggested command to build the ``install``
 target in the next section) results in recompiling everything.  ``ninja -C
 build/$TARGET -t deps`` shows files in ``$SYSROOT/include/*`` that
-don't exist (as the ``$SYSROOT/include`` folder doesn't exist) and you can
+do not exist (as the ``$SYSROOT/include`` folder does not exist) and you can
 further confirm these files are causing ``ninja`` to determine a rebuild is
 necessary with ``ninja -C build/$TARGET -d deps``.
 
 A workaround is to create a symlink so that the incorrect
 ``$SYSROOT/include/*`` dependencies resolve to files within
 ``$SYSROOT/usr/include/*``. This works in practice for the simple
-cross-compilation use case described here, but isn't a general solution.
+cross-compilation use case described here, but is not a general solution.
 
    .. code-block:: bash
 
