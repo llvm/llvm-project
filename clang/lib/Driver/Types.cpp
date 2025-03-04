@@ -345,7 +345,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("F95", TY_Fortran)
       .Case("f95", TY_PP_Fortran)
       .Case("for", TY_PP_Fortran)
-      .Case("FOR", TY_PP_Fortran)
+      .Case("FOR", TY_Fortran)
       .Case("fpp", TY_Fortran)
       .Case("FPP", TY_Fortran)
       .Case("gch", TY_PCH)
