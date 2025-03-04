@@ -3087,7 +3087,7 @@ bool X86DAGToDAGISel::selectLEA64_Addr(SDValue N, SDValue &Base, SDValue &Scale,
     Base = CurDAG->getTargetInsertSubreg(SubReg, DL, MVT::i64, ImplDef, Base);
   }
 
-  EVT IndexType = Index.getValueType();
+  [[maybe_unused]] EVT IndexType = Index.getValueType();
   RN = dyn_cast<RegisterSDNode>(Index);
   if (RN && RN->getReg() == 0)
     Index = CurDAG->getRegister(0, MVT::i64);
