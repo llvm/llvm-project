@@ -11,11 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaOpenACC.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 
@@ -80,6 +81,9 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::HostData:
   case OpenACCDirectiveKind::Atomic:
     return true;
+  case OpenACCDirectiveKind::Cache:
+  case OpenACCDirectiveKind::Routine:
+  case OpenACCDirectiveKind::Declare:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::Wait:
@@ -88,7 +92,6 @@ bool PreserveLoopRAIIDepthInAssociatedStmtRAII(OpenACCDirectiveKind DK) {
   case OpenACCDirectiveKind::Set:
   case OpenACCDirectiveKind::Update:
     llvm_unreachable("Doesn't have an associated stmt");
-  default:
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Unhandled directive kind?");
   }
@@ -333,7 +336,9 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
   case OpenACCDirectiveKind::Update:
+  case OpenACCDirectiveKind::Cache:
   case OpenACCDirectiveKind::Atomic:
+  case OpenACCDirectiveKind::Declare:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -478,15 +483,68 @@ bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
   return false;
 }
 
-ExprResult SemaOpenACC::ActOnVar(OpenACCClauseKind CK, Expr *VarExpr) {
+ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
+  Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+  if (!isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
+    return ExprError();
+  }
+
+  // It isn't clear what 'simple array element or simple subarray' means, so we
+  // will just allow arbitrary depth.
+  while (isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    if (auto *SubScrpt = dyn_cast<ArraySubscriptExpr>(CurVarExpr))
+      CurVarExpr = SubScrpt->getBase()->IgnoreParenImpCasts();
+    else
+      CurVarExpr =
+          cast<ArraySectionExpr>(CurVarExpr)->getBase()->IgnoreParenImpCasts();
+  }
+
+  // References to a VarDecl are fine.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
+    if (isa<VarDecl, NonTypeTemplateParmDecl>(
+            DRE->getFoundDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl())) {
+      return VarExpr;
+    }
+  }
+
+  // Nothing really we can do here, as these are dependent.  So just return they
+  // are valid.
+  if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
+    return VarExpr;
+
+  // There isn't really anything we can do in the case of a recovery expr, so
+  // skip the diagnostic rather than produce a confusing diagnostic.
+  if (isa<RecoveryExpr>(CurVarExpr))
+    return ExprError();
+
+  Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
+  return ExprError();
+}
+ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                 Expr *VarExpr) {
+  // This has unique enough restrictions that we should split it to a separate
+  // function.
+  if (DK == OpenACCDirectiveKind::Cache)
+    return ActOnCacheVar(VarExpr);
+
   Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
 
   // 'use_device' doesn't allow array subscript or array sections.
   // OpenACC3.3 2.8:
   // A 'var' in a 'use_device' clause must be the name of a variable or array.
-  if (CK == OpenACCClauseKind::UseDevice &&
+  // OpenACC3.3 2.13:
+  // A 'var' in a 'declare' directive must be a variable or array name.
+  if ((CK == OpenACCClauseKind::UseDevice ||
+       DK == OpenACCDirectiveKind::Declare) &&
       isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
-    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device);
+    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device_declare)
+        << (DK == OpenACCDirectiveKind::Declare);
     return ExprError();
   }
 
@@ -510,20 +568,30 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCClauseKind CK, Expr *VarExpr) {
   // If CK is a Reduction, this special cases for OpenACC3.3 2.5.15: "A var in a
   // reduction clause must be a scalar variable name, an aggregate variable
   // name, an array element, or a subarray.
-  // If CK is a 'use_device', this also isn't valid, as it isn' the name of a
-  // variable or array.
+  // If CK is a 'use_device', this also isn't valid, as it isn't the name of a
+  // variable or array, if not done as a member expr.
   // A MemberExpr that references a Field is valid for other clauses.
-  if (CK != OpenACCClauseKind::Reduction &&
-      CK != OpenACCClauseKind::UseDevice) {
-    if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
-      if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl()))
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl())) {
+      if (DK == OpenACCDirectiveKind::Declare ||
+          CK == OpenACCClauseKind::Reduction ||
+          CK == OpenACCClauseKind::UseDevice) {
+
+        // We can allow 'member expr' if the 'this' is implicit in the case of
+        // declare, reduction, and use_device.
+        const auto *This = dyn_cast<CXXThisExpr>(ME->getBase());
+        if (This && This->isImplicit())
+          return VarExpr;
+      } else {
         return VarExpr;
+      }
     }
   }
 
-  // Referring to 'this' is ok for the most part, but for 'use_device' doesn't
-  // fall into 'variable or array name'
-  if (CK != OpenACCClauseKind::UseDevice && isa<CXXThisExpr>(CurVarExpr))
+  // Referring to 'this' is ok for the most part, but for 'use_device'/'declare'
+  // doesn't fall into 'variable or array name'
+  if (CK != OpenACCClauseKind::UseDevice &&
+      DK != OpenACCDirectiveKind::Declare && isa<CXXThisExpr>(CurVarExpr))
     return VarExpr;
 
   // Nothing really we can do here, as these are dependent.  So just return they
@@ -538,8 +606,12 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCClauseKind CK, Expr *VarExpr) {
   if (isa<RecoveryExpr>(CurVarExpr))
     return ExprError();
 
-  if (CK == OpenACCClauseKind::UseDevice)
-    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device);
+  if (DK == OpenACCDirectiveKind::Declare)
+    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device_declare)
+        << /*declare*/ 1;
+  else if (CK == OpenACCClauseKind::UseDevice)
+    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device_declare)
+        << /*use_device*/ 0;
   else
     Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref)
         << (CK != OpenACCClauseKind::Reduction);
@@ -1413,6 +1485,12 @@ std::string GetListOfClauses(llvm::ArrayRef<OpenACCClauseKind> Clauses) {
 bool SemaOpenACC::ActOnStartStmtDirective(
     OpenACCDirectiveKind K, SourceLocation StartLoc,
     ArrayRef<const OpenACCClause *> Clauses) {
+
+  // Declaration directives an appear in a statement location, so call into that
+  // function here.
+  if (K == OpenACCDirectiveKind::Declare || K == OpenACCDirectiveKind::Routine)
+    return ActOnStartDeclDirective(K, StartLoc);
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 
@@ -1597,6 +1675,20 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(
         getASTContext(), StartLoc, DirLoc, AtomicKind, EndLoc,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
+  case OpenACCDirectiveKind::Cache: {
+    assert(Clauses.empty() && "Cache doesn't allow clauses");
+    return OpenACCCacheConstruct::Create(getASTContext(), StartLoc, DirLoc,
+                                         LParenLoc, MiscLoc, Exprs, RParenLoc,
+                                         EndLoc);
+  }
+  case OpenACCDirectiveKind::Declare: {
+    // Declare is a declaration directive, but can be used here as long as we
+    // wrap it in a DeclStmt.  So make sure we do that here.
+
+    DeclGroupRef DR =
+        ActOnEndDeclDirective(K, StartLoc, DirLoc, EndLoc, Clauses);
+    return SemaRef.ActOnDeclStmt(DeclGroupPtrTy::make(DR), StartLoc, EndLoc);
+  }
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
@@ -1614,6 +1706,7 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Set:
+  case OpenACCDirectiveKind::Cache:
     llvm_unreachable(
         "these don't have associated statements, so shouldn't get here");
   case OpenACCDirectiveKind::Atomic:
@@ -1683,7 +1776,33 @@ bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
-DeclGroupRef SemaOpenACC::ActOnEndDeclDirective() { return DeclGroupRef{}; }
+DeclGroupRef SemaOpenACC::ActOnEndDeclDirective(
+    OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+    SourceLocation EndLoc, ArrayRef<OpenACCClause *> Clauses) {
+  switch (K) {
+  default:
+  case OpenACCDirectiveKind::Invalid:
+    return DeclGroupRef{};
+  case OpenACCDirectiveKind::Declare: {
+    // OpenACC3.3 2.13: At least one clause must appear on a declare directive.
+    if (Clauses.empty()) {
+      Diag(EndLoc, diag::err_acc_declare_required_clauses);
+      // No reason to add this to the AST, as we would just end up trying to
+      // instantiate this, which would double-diagnose here, which we wouldn't
+      // want to do.
+      return DeclGroupRef{};
+    }
+
+    auto *DeclareDecl = OpenACCDeclareDecl::Create(
+        getASTContext(), getCurContext(), StartLoc, DirLoc, EndLoc, Clauses);
+    DeclareDecl->setAccess(AS_public);
+    getCurContext()->addDecl(DeclareDecl);
+    return DeclGroupRef{DeclareDecl};
+  }
+  }
+
+  llvm_unreachable("unhandled case in directive handling?");
+}
 
 ExprResult
 SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {

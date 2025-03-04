@@ -77,9 +77,6 @@ class AVRAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
-
   MCRegister toDREG(MCRegister Reg, unsigned From = AVR::sub_lo) {
     MCRegisterClass const *Class = &AVRMCRegisterClasses[AVR::DREGSRegClassID];
     return MRI->getMatchingSuperReg(Reg, From, Class);
@@ -785,13 +782,4 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     }
   }
   return Match_InvalidOperand;
-}
-
-MCSymbolRefExpr::VariantKind
-AVRAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("lo8", MCSymbolRefExpr::VK_AVR_LO8)
-      .Case("hi8", MCSymbolRefExpr::VK_AVR_HI8)
-      .Case("hlo8", MCSymbolRefExpr::VK_AVR_HLO8)
-      .Default(MCSymbolRefExpr::VK_Invalid);
 }

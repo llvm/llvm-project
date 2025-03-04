@@ -95,9 +95,9 @@ struct InlineDescriptor {
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
-  /// Flat indicating if this field is in a union (even if nested).
-  unsigned InUnion : 1;
+  /// Flag indicating if this field is in a union (even if nested).
   LLVM_PREFERRED_TYPE(bool)
+  unsigned InUnion : 1;
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
