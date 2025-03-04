@@ -403,7 +403,7 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add.4h v0, v0, v1
 ; CHECK-NEXT:    st1.b { v0 }[2], [x8]
 ; CHECK-NEXT:    st1.b { v0 }[4], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x1]
+; CHECK-NEXT:    str b0, [x1]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 ;
@@ -592,7 +592,7 @@ define void @shift_trunc_store(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ushr.4s v0, v0, #16
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    st1.b { v0 }[8], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x1]
+; CHECK-NEXT:    str b0, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store:
@@ -626,7 +626,7 @@ define void @shift_trunc_store_default_align(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ushr.4s v0, v0, #16
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    st1.b { v0 }[8], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x1]
+; CHECK-NEXT:    str b0, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_default_align:
@@ -660,7 +660,7 @@ define void @shift_trunc_store_align_4(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ushr.4s v0, v0, #16
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    st1.b { v0 }[8], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x1]
+; CHECK-NEXT:    str b0, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_align_4:
@@ -693,9 +693,8 @@ define void @shift_trunc_store_const_offset_1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x9, x1, #3
 ; CHECK-NEXT:    ushr.4s v0, v0, #16
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
-; CHECK-NEXT:    add x8, x1, #1
 ; CHECK-NEXT:    st1.b { v0 }[8], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x8]
+; CHECK-NEXT:    str b0, [x1, #1]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_const_offset_1:
@@ -729,9 +728,8 @@ define void @shift_trunc_store_const_offset_3(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x9, x1, #5
 ; CHECK-NEXT:    ushr.4s v0, v0, #16
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
-; CHECK-NEXT:    add x8, x1, #3
 ; CHECK-NEXT:    st1.b { v0 }[8], [x9]
-; CHECK-NEXT:    st1.b { v0 }[0], [x8]
+; CHECK-NEXT:    str b0, [x1, #3]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: shift_trunc_store_const_offset_3:
@@ -807,12 +805,12 @@ define void @load_v3i8_zext_to_3xi32_add_trunc_store(ptr %src) {
 ; CHECK-NEXT:    add x8, x0, #2
 ; CHECK-NEXT:    orr w9, w10, w9, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    add x9, x0, #1
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    uaddw.4s v0, v1, v0
 ; CHECK-NEXT:    st1.b { v0 }[8], [x8]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    st1.b { v0 }[0], [x0]
-; CHECK-NEXT:    st1.b { v0 }[4], [x8]
+; CHECK-NEXT:    st1.b { v0 }[4], [x9]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
 ;
@@ -860,12 +858,12 @@ define void @load_v3i8_sext_to_3xi32_add_trunc_store(ptr %src) {
 ; CHECK-NEXT:    add x8, x0, #2
 ; CHECK-NEXT:    orr w9, w10, w9, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    add x9, x0, #1
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    uaddw.4s v0, v1, v0
 ; CHECK-NEXT:    st1.b { v0 }[8], [x8]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    st1.b { v0 }[0], [x0]
-; CHECK-NEXT:    st1.b { v0 }[4], [x8]
+; CHECK-NEXT:    st1.b { v0 }[4], [x9]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
 ;

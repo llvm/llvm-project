@@ -111,8 +111,7 @@ define void @store_v2i8(<2 x i8> %a, ptr %ptr){
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
+; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    strb w8, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;

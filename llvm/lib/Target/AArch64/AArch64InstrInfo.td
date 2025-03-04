@@ -3575,7 +3575,7 @@ defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDRB : LoadUI<0b00, 1, 0b01, FPR8Op, uimm12s1, "ldr",
-                   [(set FPR8Op:$Rt,
+                   [(set (i8 FPR8Op:$Rt),
                          (load (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)))]>;
 defm LDRH : LoadUI<0b01, 1, 0b01, FPR16Op, uimm12s2, "ldr",
                    [(set (f16 FPR16Op:$Rt),
@@ -3763,7 +3763,7 @@ defm LDURW : LoadUnscaled<0b10, 0, 0b01, GPR32z, "ldur",
                           (load (am_unscaled32 GPR64sp:$Rn, simm9:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDURB : LoadUnscaled<0b00, 1, 0b01, FPR8Op, "ldur",
-                    [(set FPR8Op:$Rt,
+                    [(set (i8 FPR8Op:$Rt),
                           (load (am_unscaled8 GPR64sp:$Rn, simm9:$offset)))]>;
 defm LDURH : LoadUnscaled<0b01, 1, 0b01, FPR16Op, "ldur",
                     [(set (f16 FPR16Op:$Rt),
@@ -4333,7 +4333,7 @@ defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STRB : StoreUI<0b00, 1, 0b00, FPR8Op, uimm12s1, "str",
-                    [(store FPR8Op:$Rt,
+                    [(store (i8 FPR8Op:$Rt),
                             (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))]>;
 defm STRH : StoreUI<0b01, 1, 0b00, FPR16Op, uimm12s2, "str",
                     [(store (f16 FPR16Op:$Rt),
@@ -4451,6 +4451,8 @@ multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop
 }
 
 let AddedComplexity = 19 in {
+  defm : VecStoreLane0Pat<am_indexed8,   truncstorei8, v16i8, i32, vi8, bsub, uimm12s2, STRBui>;
+  defm : VecStoreLane0Pat<am_indexed8,   truncstorei8, v4i32, i32, vi8, bsub, uimm12s2, STRBui>;
   defm : VecStoreLane0Pat<am_indexed16, truncstorei16, v8i16, i32, f16, hsub, uimm12s2, STRHui>;
   defm : VecStoreLane0Pat<am_indexed16,         store, v8f16, f16, f16, hsub, uimm12s2, STRHui>;
   defm : VecStoreLane0Pat<am_indexed32,         store, v4i32, i32, i32, ssub, uimm12s4, STRSui>;
@@ -4469,7 +4471,7 @@ defm STURW : StoreUnscaled<0b10, 0, 0b00, GPR32z, "stur",
                                  (am_unscaled32 GPR64sp:$Rn, simm9:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STURB : StoreUnscaled<0b00, 1, 0b00, FPR8Op, "stur",
-                         [(store FPR8Op:$Rt,
+                         [(store (i8 FPR8Op:$Rt),
                                  (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 defm STURH : StoreUnscaled<0b01, 1, 0b00, FPR16Op, "stur",
                          [(store (f16 FPR16Op:$Rt),
@@ -4598,6 +4600,7 @@ multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
 }
 
 let AddedComplexity = 19 in {
+  defm : VecStoreULane0Pat<truncstorei8,  v16i8, i32, vi8, bsub, STURBi>;
   defm : VecStoreULane0Pat<truncstorei16, v8i16, i32, f16, hsub, STURHi>;
   defm : VecStoreULane0Pat<store,         v8f16, f16, f16, hsub, STURHi>;
   defm : VecStoreULane0Pat<store,         v4i32, i32, i32, ssub, STURSi>;

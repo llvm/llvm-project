@@ -64,8 +64,7 @@ define void @v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strb w9, [x0]
+; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    strb w8, [x0, #1]
 ; CHECK-SD-NEXT:    ret
 ;
