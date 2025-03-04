@@ -2597,7 +2597,6 @@ private:
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
 
-  bool BuiltinMaxNumMinNumMath(CallExpr *TheCall);
   /// \param FPOnly restricts the arguments to floating-point types.
   bool BuiltinElementwiseMath(CallExpr *TheCall,
                               EltwiseBuiltinArgTyRestriction ArgTyRestr =
