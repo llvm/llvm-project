@@ -359,10 +359,10 @@ public:
     case RecurKind::UMin:
     case RecurKind::UMax:
     case RecurKind::IAnyOf:
-    case RecurKind::FAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
       return true;
+    case RecurKind::FAnyOf:
     case RecurKind::FAdd:
     case RecurKind::FMulAdd:
       // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
