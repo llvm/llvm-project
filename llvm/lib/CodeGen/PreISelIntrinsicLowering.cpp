@@ -560,6 +560,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::exp:
     case Intrinsic::exp2:
+    case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
