@@ -5008,35 +5008,35 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
   unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (KnownTC > 0) {
-    // At least one iteration must be scalar when this constraint holds. So the
-    // maximum available iterations for interleaving is one less.
-    unsigned AvailableTC =
-        requiresScalarEpilogue(VF.isVector()) ? KnownTC - 1 : KnownTC;
+      // At least one iteration must be scalar when this constraint holds. So the
+      // maximum available iterations for interleaving is one less.
+      unsigned AvailableTC =
+          requiresScalarEpilogue(VF.isVector()) ? KnownTC - 1 : KnownTC;
 
-    // If trip count is known we select between two prospective ICs, where
-    // 1) the aggressive IC is capped by the trip count divided by VF
-    // 2) the conservative IC is capped by the trip count divided by (VF * 2)
-    // The final IC is selected in a way that the epilogue loop trip count is
-    // minimized while maximizing the IC itself, so that we either run the
-    // vector loop at least once if it generates a small epilogue loop, or else
-    // we run the vector loop at least twice.
+      // If trip count is known we select between two prospective ICs, where
+      // 1) the aggressive IC is capped by the trip count divided by VF
+      // 2) the conservative IC is capped by the trip count divided by (VF * 2)
+      // The final IC is selected in a way that the epilogue loop trip count is
+      // minimized while maximizing the IC itself, so that we either run the
+      // vector loop at least once if it generates a small epilogue loop, or else
+      // we run the vector loop at least twice.
 
-    unsigned InterleaveCountUB = bit_floor(
-        std::max(1u, std::min(AvailableTC / EstimatedVF, MaxInterleaveCount)));
-    unsigned InterleaveCountLB = bit_floor(std::max(
-        1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
-    MaxInterleaveCount = InterleaveCountLB;
+      unsigned InterleaveCountUB = bit_floor(
+          std::max(1u, std::min(AvailableTC / EstimatedVF, MaxInterleaveCount)));
+      unsigned InterleaveCountLB = bit_floor(std::max(
+          1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
+      MaxInterleaveCount = InterleaveCountLB;
 
-    if (InterleaveCountUB != InterleaveCountLB) {
-      unsigned TailTripCountUB =
-          (AvailableTC % (EstimatedVF * InterleaveCountUB));
-      unsigned TailTripCountLB =
-          (AvailableTC % (EstimatedVF * InterleaveCountLB));
-      // If both produce same scalar tail, maximize the IC to do the same work
-      // in fewer vector loop iterations
-      if (TailTripCountUB == TailTripCountLB)
-        MaxInterleaveCount = InterleaveCountUB;
-    }
+      if (InterleaveCountUB != InterleaveCountLB) {
+        unsigned TailTripCountUB =
+            (AvailableTC % (EstimatedVF * InterleaveCountUB));
+        unsigned TailTripCountLB =
+            (AvailableTC % (EstimatedVF * InterleaveCountLB));
+        // If both produce same scalar tail, maximize the IC to do the same work
+        // in fewer vector loop iterations
+        if (TailTripCountUB == TailTripCountLB)
+          MaxInterleaveCount = InterleaveCountUB;
+      }
   } else if (BestKnownTC) {
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
