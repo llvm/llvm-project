@@ -1,7 +1,7 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
-#include <clc/utils.h>
 #include <clc/float/definitions.h>
+#include <clc/utils.h>
 
 // Define some useful macros for type conversions.
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
