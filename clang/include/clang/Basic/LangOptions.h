@@ -636,6 +636,8 @@ public:
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
 
+  bool IsOffloadingTarget = false;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -838,6 +840,8 @@ public:
       return FPExceptionModeKind::FPE_Ignore;
     return EM;
   }
+
+  bool isOffloadingTarget() const { return IsOffloadingTarget; }
 };
 
 /// Floating point control options
