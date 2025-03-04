@@ -594,6 +594,9 @@ public:
   /// Has "\n\f\n" or "\n\f\r\n" before TokenText.
   bool HasFormFeedBefore = false;
 
+  /// Is the first token after a PPDirective line.
+  bool FirstAfterPPDirectiveLine = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces
