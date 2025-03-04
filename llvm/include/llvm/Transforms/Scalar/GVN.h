@@ -25,6 +25,8 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -137,9 +139,11 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  void markInstructionForDeletion(Instruction *I) {
+  void doInstructionDeletion(Instruction *I) {
+    salvageKnowledge(I, AC);
+    salvageDebugInfo(*I);
     VN.erase(I);
-    InstrsToErase.push_back(I);
+    removeInstruction(I);
   }
 
   DominatorTree &getDominatorTree() const { return *DT; }
@@ -306,7 +310,6 @@ private:
   // propagate to any successors. Entries added mid-block are applied
   // to the remaining instructions in the block.
   SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-  SmallVector<Instruction *, 8> InstrsToErase;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
