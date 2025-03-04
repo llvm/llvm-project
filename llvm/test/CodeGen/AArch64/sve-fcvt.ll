@@ -113,6 +113,120 @@ define <vscale x 2 x float> @fcvts_nxv2f64(<vscale x 2 x double> %a) {
 ; FP_TO_SINT
 ;
 
+define <vscale x 2 x i1> @fcvtzs_nxv2f16_to_nxv2i1(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fcvtzs_nxv2f16_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x half> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @fcvtzs_nxv2f32_to_nxv2i1(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fcvtzs_nxv2f32_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x float> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @fcvtzs_nxv2f64_to_nxv2i1(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fcvtzs_nxv2f64_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 2 x double> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzs_nxv4f16_to_nxv4i1(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fcvtzs_nxv4f16_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 4 x half> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzs_nxv4f32_to_nxv4i1(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fcvtzs_nxv4f32_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 4 x float> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzs_nxv4f64_to_nxv4i1(<vscale x 4 x double> %a) {
+; CHECK-LABEL: fcvtzs_nxv4f64_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 4 x double> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzs_nxv8f16_to_nxv8i1(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fcvtzs_nxv8f16_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcvtzs z0.h, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 8 x half> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzs_nxv8f32_to_nxv8i1(<vscale x 8 x float> %a) {
+; CHECK-LABEL: fcvtzs_nxv8f32_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 8 x float> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzs_nxv8f64_to_nxv8i1(<vscale x 8 x double> %a) {
+; CHECK-LABEL: fcvtzs_nxv8f64_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
+; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, #0
+; CHECK-NEXT:    cmpne p3.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = fptosi <vscale x 8 x double> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
+
 define <vscale x 2 x i16> @fcvtzs_h_nxv2f16(<vscale x 2 x half> %a) {
 ; CHECK-LABEL: fcvtzs_h_nxv2f16:
 ; CHECK:       // %bb.0:
@@ -276,6 +390,120 @@ define <vscale x 2 x i64> @fcvtzs_d_nxv2f64(<vscale x 2 x double> %a) {
 ;
 ; FP_TO_UINT
 ;
+
+define <vscale x 2 x i1> @fcvtzu_nxv2f16_to_nxv2i1(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fcvtzu_nxv2f16_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x half> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @fcvtzu_nxv2f32_to_nxv2i1(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fcvtzu_nxv2f32_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x float> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 2 x i1> @fcvtzu_nxv2f64_to_nxv2i1(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fcvtzu_nxv2f64_to_nxv2i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 2 x double> %a to <vscale x 2 x i1>
+  ret <vscale x 2 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzu_nxv4f16_to_nxv4i1(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fcvtzu_nxv4f16_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 4 x half> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzu_nxv4f32_to_nxv4i1(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fcvtzu_nxv4f32_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 4 x float> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 4 x i1> @fcvtzu_nxv4f64_to_nxv4i1(<vscale x 4 x double> %a) {
+; CHECK-LABEL: fcvtzu_nxv4f64_to_nxv4i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 4 x double> %a to <vscale x 4 x i1>
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzu_nxv8f16_to_nxv8i1(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fcvtzu_nxv8f16_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcvtzu z0.h, p0/m, z0.h
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 8 x half> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzu_nxv8f32_to_nxv8i1(<vscale x 8 x float> %a) {
+; CHECK-LABEL: fcvtzu_nxv8f32_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 8 x float> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 8 x i1> @fcvtzu_nxv8f64_to_nxv8i1(<vscale x 8 x double> %a) {
+; CHECK-LABEL: fcvtzu_nxv8f64_to_nxv8i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.d
+; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.d
+; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, #0
+; CHECK-NEXT:    cmpne p3.d, p0/z, z1.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-NEXT:    ret
+  %res = fptoui <vscale x 8 x double> %a to <vscale x 8 x i1>
+  ret <vscale x 8 x i1> %res
+}
 
 ; NOTE: Using fcvtzs is safe as fptoui overflow is considered poison and a
 ; 64bit signed value encompasses the entire range of a 16bit unsigned value
