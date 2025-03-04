@@ -1455,6 +1455,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
+  if (Info.CallConv == CallingConv::SwiftCoro)
+    MF.getFrameInfo().setHasPoplessCall();
+
   if (Info.SwiftErrorVReg) {
     MIB.addDef(AArch64::X21, RegState::Implicit);
     MIRBuilder.buildCopy(Info.SwiftErrorVReg, Register(AArch64::X21));

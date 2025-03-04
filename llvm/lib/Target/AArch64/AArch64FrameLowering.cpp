@@ -350,7 +350,8 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   // Bail on stack adjustment needed on return for simplicity.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  if (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF))
+  if (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasPoplessCall())
     return false;
   if (Exit && getArgumentStackToRestore(MF, *Exit))
     return false;
@@ -502,6 +503,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+      MFI.hasPoplessCall() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
       RegInfo->hasStackRealignment(MF))
     return true;
@@ -1184,6 +1186,9 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     return false;
 
   if (MFI.hasVarSizedObjects())
+    return false;
+
+  if (MFI.hasPoplessCall())
     return false;
 
   if (RegInfo->hasStackRealignment(MF))
@@ -2214,7 +2219,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   StackOffset LocalsSize = SVELocalsSize + StackOffset::getFixed(NumBytes);
   allocateStackSpace(MBB, CalleeSavesBegin, 0, SVECalleeSavesSize, false,
                      nullptr, EmitAsyncCFI && !HasFP, CFAOffset,
-                     MFI.hasVarSizedObjects() || LocalsSize);
+                     MFI.hasVarSizedObjects() || LocalsSize ||
+                         MFI.hasPoplessCall());
   CFAOffset += SVECalleeSavesSize;
 
   if (EmitAsyncCFI)
@@ -2231,7 +2237,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     allocateStackSpace(MBB, CalleeSavesEnd, RealignmentPadding,
                        SVELocalsSize + StackOffset::getFixed(NumBytes),
                        NeedsWinCFI, &HasWinCFI, EmitAsyncCFI && !HasFP,
-                       CFAOffset, MFI.hasVarSizedObjects());
+                       CFAOffset,
+                       MFI.hasVarSizedObjects() || MFI.hasPoplessCall());
   }
 
   // If we need a base pointer, set it up here. It's whatever the value of the
@@ -2551,7 +2558,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // If we have stack realignment or variable sized objects on the stack,
     // restore the stack pointer from the frame pointer prior to SVE CSR
     // restoration.
-    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) {
+    if (AFI->isStackRealigned() || MFI.hasVarSizedObjects() ||
+        MFI.hasPoplessCall()) {
       if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
         // Set SP to start of SVE callee-save area from which they can
         // be reloaded. The code below will deallocate the stack space
@@ -2623,7 +2631,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // FIXME: Rather than doing the math here, we should instead just use
   // non-post-indexed loads for the restores if we aren't actually going to
   // be able to save any instructions.
-  if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned())) {
+  if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned() ||
+                     MFI.hasPoplessCall())) {
     emitFrameOffset(
         MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
         StackOffset::getFixed(-AFI->getCalleeSaveBaseToFrameRecordOffset()),
@@ -2825,7 +2834,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // If the FPOffset is positive, that'll always be best, as the SP/BP
         // will be even further away.
         UseFP = true;
-      } else if (MFI.hasVarSizedObjects()) {
+      } else if (MFI.hasVarSizedObjects() || MFI.hasPoplessCall()) {
         // If we have variable sized objects, we can use either FP or BP, as the
         // SP offset is unknown. We can use the base pointer if we have one and
         // FP is not preferred. If not, we're stuck with using FP.
@@ -5082,6 +5091,7 @@ StackOffset AArch64FrameLowering::getFrameIndexReferencePreferSP(
 
   // Go to common code if we cannot provide sp + offset.
   if (MFI.hasVarSizedObjects() ||
+      MFI.hasPoplessCall() ||
       MF.getInfo<AArch64FunctionInfo>()->getStackSizeSVE() ||
       MF.getSubtarget().getRegisterInfo()->hasStackRealignment(MF))
     return getFrameIndexReference(MF, FI, FrameReg);

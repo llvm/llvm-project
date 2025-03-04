@@ -319,6 +319,10 @@ private:
   /// instructions which manipulate the stack pointer.
   bool HasCopyImplyingStackAdjustment = false;
 
+  /// True if the function contains a call using a calling convention that
+  /// allows it to be "popless", i.e., to not restore SP when the call returns.
+  bool HasPoplessCall = false;
+
   /// True if the function contains a call to the llvm.vastart intrinsic.
   bool HasVAStart = false;
 
@@ -633,6 +637,9 @@ public:
   void setHasCopyImplyingStackAdjustment(bool B) {
     HasCopyImplyingStackAdjustment = B;
   }
+
+  bool hasPoplessCall() const { return HasPoplessCall; }
+  void setHasPoplessCall(bool B = true) { HasPoplessCall = B; }
 
   /// Returns true if the function calls the llvm.va_start intrinsic.
   bool hasVAStart() const { return HasVAStart; }
