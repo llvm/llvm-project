@@ -97,9 +97,9 @@ public:
 private:
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(mlir::Value addrVal, const clang::Decl *var,
-                              clang::QualType ty, mlir::Location loc,
-                              clang::CharUnits alignment, bool isParam = false);
+  void declare(mlir::Value addrVal, const clang::Decl *var, clang::QualType ty,
+               mlir::Location loc, clang::CharUnits alignment,
+               bool isParam = false);
 
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
