@@ -175,6 +175,9 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   if (GetBoolean(arguments, "disableASLR", true))
     flags |= lldb::eLaunchFlagDisableASLR;
+  else
+    flags &= ~lldb::eLaunchFlagDisableASLR;
+
   if (GetBoolean(arguments, "disableSTDIO", false))
     flags |= lldb::eLaunchFlagDisableSTDIO;
   if (GetBoolean(arguments, "shellExpandArguments", false))
