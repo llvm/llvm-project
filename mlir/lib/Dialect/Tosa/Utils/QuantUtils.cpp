@@ -107,6 +107,45 @@ void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
   }
 }
 
+// Return a const value for array of int8 vec
+Value mlir::tosa::getConstTensorInt8(OpBuilder &builder, Location loc,
+                                     ArrayRef<int8_t> vec) {
+  int64_t count = vec.size();
+  assert(count > 0);
+  auto element_type = builder.getI8Type();
+  mlir::RankedTensorType const_type =
+      RankedTensorType::get({count}, element_type);
+  mlir::DenseElementsAttr const_attr = DenseElementsAttr::get(const_type, vec);
+  auto const_op = builder.create<tosa::ConstOp>(loc, const_type, const_attr);
+  return const_op.getResult();
+}
+
+// Return a const value for array of int16 vec
+Value mlir::tosa::getConstTensorInt16(OpBuilder &builder, Location loc,
+                                      ArrayRef<int16_t> vec) {
+  int64_t count = vec.size();
+  assert(count > 0);
+  auto element_type = builder.getI16Type();
+  mlir::RankedTensorType const_type =
+      RankedTensorType::get({count}, element_type);
+  mlir::DenseElementsAttr const_attr = DenseElementsAttr::get(const_type, vec);
+  auto const_op = builder.create<tosa::ConstOp>(loc, const_type, const_attr);
+  return const_op.getResult();
+}
+
+// Return a const value for array of int32 vec
+Value mlir::tosa::getConstTensorInt32(OpBuilder &builder, Location loc,
+                                      ArrayRef<int32_t> vec) {
+  int64_t count = vec.size();
+  assert(count > 0);
+  auto element_type = builder.getI32Type();
+  mlir::RankedTensorType const_type =
+      RankedTensorType::get({count}, element_type);
+  mlir::DenseElementsAttr const_attr = DenseElementsAttr::get(const_type, vec);
+  auto const_op = builder.create<tosa::ConstOp>(loc, const_type, const_attr);
+  return const_op.getResult();
+}
+
 #define GET_UQTYPE(inputType)                                                  \
   (llvm::dyn_cast<quant::UniformQuantizedType>((inputType).getElementType()))
 #define GET_QTYPE(inputType)                                                   \

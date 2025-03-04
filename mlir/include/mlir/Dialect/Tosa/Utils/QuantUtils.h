@@ -31,6 +31,18 @@ namespace tosa {
 void computeMultiplierAndShift(double scale, int32_t &multiplier,
                                int32_t &shift, int32_t scaleWidth);
 
+// Return a const value for array of int8 vec
+Value getConstTensorInt8(OpBuilder &builder, Location loc,
+                         ArrayRef<int8_t> vec);
+
+// Return a const value for array of int16 vec
+Value getConstTensorInt16(OpBuilder &builder, Location loc,
+                          ArrayRef<int16_t> vec);
+
+// Return a const value for array of int32 vec
+Value getConstTensorInt32(OpBuilder &builder, Location loc,
+                          ArrayRef<int32_t> vec);
+
 //// Builds ConvOpQuantizationAttr from input and weight.
 ConvOpQuantizationAttr buildConvOpQuantizationAttr(OpBuilder &builder,
                                                    Value input, Value weight);
