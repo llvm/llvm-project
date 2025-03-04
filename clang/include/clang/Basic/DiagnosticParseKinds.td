@@ -1817,5 +1817,9 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
+def err_hlsl_virtual_function
+    : Error<"virtual functions are unsupported in HLSL">;
+def err_hlsl_virtual_inheritance
+    : Error<"virtual inheritance is unsupported in HLSL">;
 
 } // end of Parser diagnostics

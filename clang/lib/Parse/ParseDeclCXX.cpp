@@ -2491,6 +2491,9 @@ BaseResult Parser::ParseBaseSpecifier(Decl *ClassDecl) {
     IsVirtual = true;
   }
 
+  if (getLangOpts().HLSL && IsVirtual)
+    Diag(Tok.getLocation(), diag::err_hlsl_virtual_inheritance);
+
   CheckMisplacedCXX11Attribute(Attributes, StartLoc);
 
   // Parse the class-name.
