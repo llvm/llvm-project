@@ -146,12 +146,23 @@ contains
     end
   end
 
-  ! C1026 (R1037) A data-target shall not be a coindexed object.
+  ! F'2023 C1029 A data-target shall not be a coindexed object.
   subroutine s10
     real, target, save :: a[*]
     real, pointer :: b
     !ERROR: A coindexed object may not be a pointer target
     b => a[1]
+  end
+
+  ! F'2023 C1027 the LHS may not be coindexed
+  subroutine s11
+    type t
+      real, pointer :: p
+    end type
+    type(t), save :: ca[*]
+    real, target :: x
+    !ERROR: The left-hand side of a pointer assignment must not be coindexed
+    ca[1]%p => x
   end
 
 end
