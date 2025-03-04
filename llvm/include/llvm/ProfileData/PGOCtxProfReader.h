@@ -164,6 +164,23 @@ public:
   }
 };
 
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
+
+using CtxProfContextualProfiles =
+    std::map<GlobalValue::GUID, PGOCtxProfContext>;
+struct PGOCtxProfile {
+  CtxProfContextualProfiles Contexts;
+
+  PGOCtxProfile() = default;
+  PGOCtxProfile(const PGOCtxProfile &) = delete;
+  PGOCtxProfile(PGOCtxProfile &&) = default;
+  PGOCtxProfile &operator=(PGOCtxProfile &&) = default;
+};
+
 class PGOCtxProfileReader final {
   StringRef Magic;
   BitstreamCursor Cursor;
@@ -181,7 +198,7 @@ public:
       : Magic(Buffer.substr(0, PGOCtxProfileWriter::ContainerMagic.size())),
         Cursor(Buffer.substr(PGOCtxProfileWriter::ContainerMagic.size())) {}
 
-  Expected<std::map<GlobalValue::GUID, PGOCtxProfContext>> loadContexts();
+  Expected<PGOCtxProfile> loadProfiles();
 };
 
 void convertCtxProfToYaml(raw_ostream &OS,
