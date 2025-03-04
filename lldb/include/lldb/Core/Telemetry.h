@@ -175,17 +175,17 @@ template <typename Info> struct ScopedDispatcher {
   ScopedDispatcher(Debugger *debugger = nullptr) {
     // Start the timer.
     m_start_time = std::chrono::steady_clock::now();
-    debugger = debugger;
+    this->debugger = debugger;
   }
   ScopedDispatcher(llvm::unique_function<void(Info *info)> final_callback,
                    Debugger *debugger = nullptr)
       : m_final_callback(std::move(final_callback)) {
     // Start the timer.
     m_start_time = std::chrono::steady_clock::now();
-    debugger = debugger;
+    this->debugger = debugger;
   }
 
-  void SetDebugger(Debugger *debugger) { debugger = debugger; }
+  void SetDebugger(Debugger *debugger) { this->debugger = debugger; }
 
   void DispatchOnExit(llvm::unique_function<void(Info *info)> final_callback) {
     // We probably should not be overriding previously set cb.
