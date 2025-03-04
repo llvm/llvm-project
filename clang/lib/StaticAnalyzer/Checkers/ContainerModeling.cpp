@@ -445,10 +445,10 @@ void ContainerModeling::handlePushBack(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto newEndSym =
-      SVB.evalBinOp(State, BO_Add,
-                    nonloc::SymbolVal(EndSym),
+        SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(EndSym),
                       nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(EndSym)).getAsSymbol();
+                      SymMgr.getType(EndSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
         getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newEnd(newEndSym));
@@ -474,10 +474,10 @@ void ContainerModeling::handlePopBack(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto BackSym =
-      SVB.evalBinOp(State, BO_Sub,
-                    nonloc::SymbolVal(EndSym),
+        SVB.evalBinOp(State, BO_Sub, nonloc::SymbolVal(EndSym),
                       nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(EndSym)).getAsSymbol();
+                      SymMgr.getType(EndSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
         getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
     // For vector-like and deque-like containers invalidate the last and the
@@ -519,10 +519,10 @@ void ContainerModeling::handlePushFront(CheckerContext &C, SVal Cont,
       auto &BVF = SymMgr.getBasicVals();
       auto &SVB = C.getSValBuilder();
       const auto newBeginSym =
-        SVB.evalBinOp(State, BO_Sub,
-                      nonloc::SymbolVal(BeginSym),
+          SVB.evalBinOp(State, BO_Sub, nonloc::SymbolVal(BeginSym),
                         nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                      SymMgr.getType(BeginSym)).getAsSymbol();
+                        SymMgr.getType(BeginSym))
+              .getAsSymbol();
       const NoteTag *ChangeTag =
         getChangeTag(C, "extended to the front by 1 position", ContReg, ContE);
       State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
@@ -556,10 +556,10 @@ void ContainerModeling::handlePopFront(CheckerContext &C, SVal Cont,
     auto &BVF = SymMgr.getBasicVals();
     auto &SVB = C.getSValBuilder();
     const auto newBeginSym =
-      SVB.evalBinOp(State, BO_Add,
-                    nonloc::SymbolVal(BeginSym),
+        SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(BeginSym),
                       nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                    SymMgr.getType(BeginSym)).getAsSymbol();
+                      SymMgr.getType(BeginSym))
+            .getAsSymbol();
     const NoteTag *ChangeTag =
         getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
@@ -681,10 +681,10 @@ void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
   auto &BVF = SymMgr.getBasicVals();
   auto &SVB = C.getSValBuilder();
   const auto NextSym =
-    SVB.evalBinOp(State, BO_Add,
-                  nonloc::SymbolVal(Pos->getOffset()),
+      SVB.evalBinOp(State, BO_Add, nonloc::SymbolVal(Pos->getOffset()),
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
-                  SymMgr.getType(Pos->getOffset())).getAsSymbol();
+                    SymMgr.getType(Pos->getOffset()))
+          .getAsSymbol();
   State = invalidateIteratorPositions(State, NextSym, BO_EQ);
   C.addTransition(State);
 }
