@@ -777,80 +777,80 @@ void test_core(void) {
   // CHECK: <2 x i64> splat (i64 -4503582447501313)
 
   vsc = vec_splat(vsc, 0);
-  // CHECK: shufflevector <1 x i8> %{{.*}}, <1 x i8> poison, <16 x i32> zeroinitializer
-  // CHECK-ASM: vlrepb
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> zeroinitializer
+  // CHECK-ASM: vrepb
   vsc = vec_splat(vsc, 15);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
   // CHECK-ASM: vrepb
   vuc = vec_splat(vuc, 0);
-  // CHECK: store volatile <16 x i8> splat (i8 {{.*}}), ptr @vuc
-  // CHECK-ASM: vst
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> zeroinitializer
+  // CHECK-ASM: vrepb
   vuc = vec_splat(vuc, 15);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
   // CHECK-ASM: vrepb
   vbc = vec_splat(vbc, 0);
-  // CHECK: shufflevector <1 x i8> %{{.*}}, <1 x i8> poison, <16 x i32> zeroinitializer
-  // CHECK-ASM: vlrepb
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> zeroinitializer
+  // CHECK-ASM: vrepb
   vbc = vec_splat(vbc, 15);
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> poison, <16 x i32> <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
   // CHECK-ASM: vrepb
   vss = vec_splat(vss, 0);
-  // CHECK: shufflevector <1 x i16> %{{.*}}, <1 x i16> poison, <8 x i32> zeroinitializer
-  // CHECK-ASM: vlreph
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> zeroinitializer
+  // CHECK-ASM: vreph
   vss = vec_splat(vss, 7);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   // CHECK-ASM: vreph
   vus = vec_splat(vus, 0);
-  // CHECK: store volatile <8 x i16> splat (i16 {{.*}}), ptr @vus
-  // CHECK-ASM: vst
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> zeroinitializer
+  // CHECK-ASM: vreph
   vus = vec_splat(vus, 7);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   // CHECK-ASM: vreph
   vbs = vec_splat(vbs, 0);
-  // CHECK: shufflevector <1 x i16> %{{.*}}, <1 x i16> poison, <8 x i32> zeroinitializer
-  // CHECK-ASM: vlreph
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> zeroinitializer
+  // CHECK-ASM: vreph
   vbs = vec_splat(vbs, 7);
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   // CHECK-ASM: vreph
   vsi = vec_splat(vsi, 0);
-  // CHECK: shufflevector <1 x i32> %{{.*}}, <1 x i32> poison, <4 x i32> zeroinitializer
-  // CHECK-ASM: vlrepf
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
+  // CHECK-ASM: vrepf
   vsi = vec_splat(vsi, 3);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   // CHECK-ASM: vrepf
   vui = vec_splat(vui, 0);
-  // CHECK: store volatile <4 x i32> splat (i32 {{.*}}), ptr @vui
-  // CHECK-ASM: vst
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
+  // CHECK-ASM: vrepf
   vui = vec_splat(vui, 3);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   // CHECK-ASM: vrepf
   vbi = vec_splat(vbi, 0);
-  // CHECK: shufflevector <1 x i32> %{{.*}}, <1 x i32> poison, <4 x i32> zeroinitializer
-  // CHECK-ASM: vlrepf
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
+  // CHECK-ASM: vrepf
   vbi = vec_splat(vbi, 3);
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   // CHECK-ASM: vrepf
   vsl = vec_splat(vsl, 0);
-  // CHECK: shufflevector <1 x i64> %{{.*}}, <1 x i64> poison, <2 x i32> zeroinitializer
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> zeroinitializer
   // CHECK-ASM: vrepg
   vsl = vec_splat(vsl, 1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
-  // CHECK-ASM: vst
+  // CHECK-ASM: vrepg
   vul = vec_splat(vul, 0);
-  // CHECK: store volatile <2 x i64> splat (i64 {{.*}}), ptr @vul
-  // CHECK-ASM: vst
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> zeroinitializer
+  // CHECK-ASM: vrepg
   vul = vec_splat(vul, 1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
   vbl = vec_splat(vbl, 0);
-  // CHECK: shufflevector <1 x i64> %{{.*}}, <1 x i64> poison, <2 x i32> zeroinitializer
-  // CHECK-ASM: vlrepg
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> zeroinitializer
+  // CHECK-ASM: vrepg
   vbl = vec_splat(vbl, 1);
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
   vd = vec_splat(vd, 0);
-  // CHECK: shufflevector <1 x double> %{{.*}}, <1 x double> poison, <2 x i32> zeroinitializer
-  // CHECK-ASM: vlrepg
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> zeroinitializer
+  // CHECK-ASM: vrepg
   vd = vec_splat(vd, 1);
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> poison, <2 x i32> <i32 1, i32 1>
   // CHECK-ASM: vrepg
