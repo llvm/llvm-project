@@ -332,6 +332,14 @@ public:
     m_language = SourceLanguage(language_type);
   }
 
+  void SetPreferredModules(std::unordered_set<lldb::ModuleSP> modules) {
+    m_preferred_modules = std::move(modules);
+  }
+
+  const std::unordered_set<lldb::ModuleSP> &GetPreferredModules() const {
+    return m_preferred_modules;
+  }
+
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
   /// WARNING: These codes may change until DWARF 6 is finalized.
@@ -500,6 +508,8 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  std::unordered_set<lldb::ModuleSP> m_preferred_modules;
 };
 
 // Target

@@ -52,7 +52,7 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
       m_cpu_features(cpu_features), m_name(name), m_sym_ctx(sym_ctx),
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
-      m_reported_allocations(false) {}
+      m_reported_allocations(false), m_preferred_modules() {}
 
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
                                        Status &error) {
@@ -785,6 +785,13 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   // We'll process module_sp separately, before the other modules.
   non_local_images.Remove(sc.module_sp);
 
+  ModuleList preferred_images;
+  // TODO: make m_preferred_modules a ModuleList
+  for (auto const &m : m_preferred_modules) {
+    non_local_images.Remove(m);
+    preferred_images.Append(m);
+  }
+
   LoadAddressResolver resolver(target, symbol_was_missing_weak);
 
   ModuleFunctionSearchOptions function_options;
@@ -808,6 +815,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
 
     {
       SymbolContextList sc_list;
+      preferred_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
+                                     function_options, sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
       non_local_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
                                      function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
@@ -818,6 +833,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       SymbolContextList sc_list;
       sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
                                                sc_list);
+      if (auto load_addr = resolver.Resolve(sc_list))
+        return *load_addr;
+    }
+
+    {
+      SymbolContextList sc_list;
+      preferred_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                                  sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
