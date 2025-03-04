@@ -1,4 +1,5 @@
 # RUN: llc  -mtriple=x86_64-unknown-unknown %s -run-pass=postra-machine-sink -o - | FileCheck %s
+# RUN: llc  -mtriple=x86_64-unknown-unknown %s -passes='postra-machine-sink' -o - | FileCheck %s
 # Test that when we run the postra machine sinker (which sinks COPYs), that
 # DBG_VALUEs of both sub and super-registers that depend on such COPYs are
 # sunk with them.
