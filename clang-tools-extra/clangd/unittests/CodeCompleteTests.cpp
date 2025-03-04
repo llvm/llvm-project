@@ -882,7 +882,8 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
               ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
   // Can be disabled via option.
   CodeCompleteOptions NoInsertion;
-  NoInsertion.InsertIncludes = CodeCompleteOptions::NeverInsert;
+  NoInsertion.InsertIncludes =
+      CodeCompleteOptions::IncludeInsertion::NeverInsert;
   Results = completions(TU, Test.point(), {Sym}, NoInsertion);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(named("X"), Not(insertInclude()))));
