@@ -150,11 +150,11 @@ public:
 private:
   void addProfiledCall(FunctionId CallerName, FunctionId CalleeName,
                        uint64_t Weight = 0) {
-    auto CallerIt = ProfiledFunctions.find(CallerName);
-    assert(CallerIt != ProfiledFunctions.end());
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
+    auto CallerIt = ProfiledFunctions.find(CallerName);
+    assert(CallerIt != ProfiledFunctions.end());
     ProfiledCallGraphEdge Edge(CallerIt->second, CalleeIt->second, Weight);
     auto &Edges = CallerIt->second->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
