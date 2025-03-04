@@ -16,7 +16,7 @@ void applyThreadFence() {
 }
 
 // CIR-LABEL: @applyThreadFence
-// CIR:   cir.atomic.fence system seq_cst
+// CIR:   cir.atomic.fence syncscope(system) seq_cst
 // CIR:   cir.return
 
 // LLVM-LABEL: @applyThreadFence
@@ -27,7 +27,7 @@ void applySignalFence() {
   __atomic_signal_fence(__ATOMIC_SEQ_CST);
 }
 // CIR-LABEL: @applySignalFence
-// CIR:    cir.atomic.fence single_thread seq_cst
+// CIR:    cir.atomic.fence syncscope(single_thread) seq_cst
 // CIR:    cir.return
 
 // LLVM-LABEL: @applySignalFence
@@ -40,7 +40,7 @@ void modifyWithThreadFence(DataPtr d) {
 }
 // CIR-LABEL: @modifyWithThreadFence
 // CIR:    %[[DATA:.*]] = cir.alloca !cir.ptr<!ty_Data>, !cir.ptr<!cir.ptr<!ty_Data>>, ["d", init] {alignment = 8 : i64}
-// CIR:    cir.atomic.fence system seq_cst
+// CIR:    cir.atomic.fence syncscope(system) seq_cst
 // CIR:    %[[VAL_42:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_VALUE:.*]] = cir.get_member %[[LOAD_DATA]][0] {name = "value"} : !cir.ptr<!ty_Data> -> !cir.ptr<!s32i>
@@ -61,7 +61,7 @@ void modifyWithSignalFence(DataPtr d) {
 }
 // CIR-LABEL: @modifyWithSignalFence
 // CIR:    %[[DATA:.*]] = cir.alloca !cir.ptr<!ty_Data>, !cir.ptr<!cir.ptr<!ty_Data>>, ["d", init] {alignment = 8 : i64}
-// CIR:    cir.atomic.fence single_thread seq_cst
+// CIR:    cir.atomic.fence syncscope(single_thread) seq_cst
 // CIR:    %[[VAL_42:.*]] = cir.const #cir.int<24> : !s32i
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_VALUE:.*]] = cir.get_member %[[LOAD_DATA]][0] {name = "value"} : !cir.ptr<!ty_Data> -> !cir.ptr<!s32i>
@@ -83,7 +83,7 @@ void loadWithThreadFence(DataPtr d) {
 // CIR-LABEL: @loadWithThreadFence
 // CIR:    %[[DATA:.*]] = cir.alloca !cir.ptr<!ty_Data>, !cir.ptr<!cir.ptr<!ty_Data>>, ["d", init] {alignment = 8 : i64}
 // CIR:    %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["atomic-temp"] {alignment = 8 : i64}
-// CIR:    cir.atomic.fence system seq_cst
+// CIR:    cir.atomic.fence syncscope(system) seq_cst
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_VALUE:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!ty_Data> -> !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[CASTED_DATA_VALUE:.*]] = cir.cast(bitcast, %[[DATA_VALUE]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>
@@ -112,7 +112,7 @@ void loadWithSignalFence(DataPtr d) {
 // CIR-LABEL: @loadWithSignalFence
 // CIR:    %[[DATA:.*]] = cir.alloca !cir.ptr<!ty_Data>, !cir.ptr<!cir.ptr<!ty_Data>>, ["d", init] {alignment = 8 : i64}
 // CIR:    %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["atomic-temp"] {alignment = 8 : i64}
-// CIR:    cir.atomic.fence single_thread seq_cst
+// CIR:    cir.atomic.fence syncscope(single_thread) seq_cst
 // CIR:    %[[LOAD_DATA:.*]] = cir.load %[[DATA]] : !cir.ptr<!cir.ptr<!ty_Data>>, !cir.ptr<!ty_Data>
 // CIR:    %[[DATA_PTR:.*]] = cir.get_member %[[LOAD_DATA]][1] {name = "ptr"} : !cir.ptr<!ty_Data> -> !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[CASTED_DATA_PTR:.*]] = cir.cast(bitcast, %[[DATA_PTR]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!u64i>

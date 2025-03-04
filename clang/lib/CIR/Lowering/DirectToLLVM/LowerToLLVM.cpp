@@ -405,6 +405,14 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   return value;
 }
 
+std::optional<llvm::StringRef>
+getLLVMSyncScope(std::optional<cir::MemScopeKind> syncScope) {
+  if (syncScope.has_value())
+    return syncScope.value() == cir::MemScopeKind::MemScope_SingleThread
+               ? "singlethread"
+               : "";
+  return std::nullopt;
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -3217,11 +3225,6 @@ mlir::LLVM::AtomicOrdering getLLVMAtomicOrder(cir::MemOrder memo) {
   llvm_unreachable("shouldn't get here");
 }
 
-llvm::StringRef getLLVMSyncScope(cir::MemScopeKind syncScope) {
-  return syncScope == cir::MemScopeKind::MemScope_SingleThread ? "singlethread"
-                                                               : "";
-}
-
 mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
     cir::AtomicCmpXchg op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -3232,8 +3235,7 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgLowering::matchAndRewrite(
       op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMAtomicOrder(adaptor.getSuccOrder()),
       getLLVMAtomicOrder(adaptor.getFailOrder()));
-  if (const auto ss = adaptor.getSyncscope(); ss.has_value())
-    cmpxchg.setSyncscope(getLLVMSyncScope(ss.value()));
+  cmpxchg.setSyncscope(getLLVMSyncScope(adaptor.getSyncscope()));
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());
@@ -3395,10 +3397,11 @@ mlir::LogicalResult CIRToLLVMAtomicFenceLowering::matchAndRewrite(
     cir::AtomicFence op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto llvmOrder = getLLVMAtomicOrder(adaptor.getOrdering());
-  auto llvmSyncScope = getLLVMSyncScope(adaptor.getSyncScope());
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::FenceOp>(op, llvmOrder,
-                                                   llvmSyncScope);
+  auto fence = rewriter.create<mlir::LLVM::FenceOp>(op.getLoc(), llvmOrder);
+  fence.setSyncscope(getLLVMSyncScope(adaptor.getSyncscope()));
+
+  rewriter.replaceOp(op, fence);
 
   return mlir::success();
 }

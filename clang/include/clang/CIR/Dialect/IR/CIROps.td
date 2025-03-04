@@ -5697,17 +5697,17 @@ def AtomicFence : CIR_Op<"atomic.fence"> {
 
     Example:
     ```mlir
-      cir.atomic.fence system seq_cst
-      cir.atomic.fence single_thread seq_cst
+      cir.atomic.fence syncscope(system) seq_cst
+      cir.atomic.fence syncscope(single_thread) seq_cst
     ```
 
   }];
+  let arguments = (ins Arg<MemOrder, "memory order">:$ordering,
+                       OptionalAttr<MemScopeKind>:$syncscope);
   let results = (outs);
-  let arguments = (ins Arg<MemScopeKind, "sync scope">:$sync_scope,
-                       Arg<MemOrder, "memory order">:$ordering);
 
   let assemblyFormat = [{
-    $sync_scope $ordering attr-dict
+    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
   }];
 
   let hasVerifier = 0;
