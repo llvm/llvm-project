@@ -8341,7 +8341,7 @@ public:
           FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
-      } else if (FD->isReplaceableGlobalAllocationFunction()) {
+      } else if (FD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
         if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
             FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
           LValue Ptr;
@@ -10271,7 +10271,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     Info.FFDiag(E, diag::note_constexpr_new_placement)
         << /*Unsupported*/ 0 << E->getSourceRange();
     return false;
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+  } else if (!OperatorNew
+                  ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
     return false;
@@ -16423,7 +16424,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
 
   FunctionDecl *OperatorDelete = E->getOperatorDelete();
-  if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+  if (!OperatorDelete
+           ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
     return false;
@@ -16467,7 +16469,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!E->isArrayForm() && !E->isGlobalDelete()) {
     const FunctionDecl *VirtualDelete = getVirtualOperatorDelete(AllocType);
     if (VirtualDelete &&
-        !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+        !VirtualDelete
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
       return false;

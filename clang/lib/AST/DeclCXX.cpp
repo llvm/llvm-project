@@ -2533,11 +2533,34 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
+
   // C++ [basic.stc.dynamic.deallocation]p2:
+  //   Pre-type aware allocators:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
-  if (getPrimaryTemplate())
-    return false;
+  //   Pending final C++26 text:
+  //   A template instance is only a usual deallocation function if it
+  //   is a type aware deallocation function, and only the type-identity
+  //   parameter is dependent.
+  if (FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate()) {
+    if (!IsTypeAware) {
+      // Stop early on if the specialization is not explicitly type aware
+      return false;
+    }
+
+    FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
+    // A type aware allocation function template is only valid if the first
+    // parameter is dependent
+    if (!SpecializedDecl->getParamDecl(0)->getType()->isDependentType())
+      return false;
+
+    // and none of the other parameters are dependent
+    for (unsigned Idx = 1; Idx < getNumParams(); ++Idx) {
+      if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
+        return false;
+    }
+  }
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
@@ -2546,6 +2569,9 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   if (getNumParams() == 1)
     return true;
   unsigned UsualParams = 1;
+
+  if (IsTypeAware)
+    ++UsualParams;
 
   // C++ P0722:
   //   A destroying operator delete is a usual deallocation function if
@@ -2584,8 +2610,8 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   // FIXME(EricWF): Destroying Delete should be a language option. How do we
   // handle when destroying delete is used prior to C++17?
   if (Context.getLangOpts().CPlusPlus17 ||
-      Context.getLangOpts().AlignedAllocation ||
-      isDestroyingOperatorDelete())
+      Context.getLangOpts().AlignedAllocation || isDestroyingOperatorDelete() ||
+      IsTypeAware)
     return true;
 
   // This function is a usual deallocation function if there are no
