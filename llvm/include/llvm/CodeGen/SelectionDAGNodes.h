@@ -692,13 +692,9 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Returns true if the node type is UNDEF or, when DoNotIncludeExplicitPoison
-  /// is false, POISON.
-  /// @param DoNotIncludeExplicitPoison Determines whether to check only for
-  /// UNDEF.
-  bool isUndef(bool DoNotIncludeExplicitPoison = false) const {
-    return NodeType == ISD::UNDEF ||
-           (!DoNotIncludeExplicitPoison && NodeType == ISD::POISON);
+  /// Returns true if the node type is UNDEF or POISON.
+  bool isUndef() const {
+    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
   }
 
   /// Return true if the type of the node type poison.

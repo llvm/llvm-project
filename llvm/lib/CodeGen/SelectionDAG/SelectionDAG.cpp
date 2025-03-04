@@ -9204,10 +9204,6 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   SDVTList VTs = Indexed ?
     getVTList(VT, Ptr.getValueType(), MVT::Other) : getVTList(VT, MVT::Other);
 
-  // Lower poison to undef.
-  if (Ptr.getNode()->isPoison())
-    Ptr = getUNDEF(Ptr.getValueType());
-
   SDValue Ops[] = { Chain, Ptr, Offset };
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::LOAD, VTs, Ops);
