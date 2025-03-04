@@ -544,3 +544,73 @@ Version 1.1 Root Descriptor
 The Version 1.1 RootDescriptor_V1_1 extends the base structure with the following additional fields:
 
 #. **Flags**: Provides additional metadata about the descriptor's usage pattern.
+
+Root Descriptor Table
+~~~~~~~~~~~~~~~~~~~~~
+
+Descriptor tables provide a flexible mechanism for grouping and managing multiple resource descriptors within 
+a single root signature parameter. They enable efficient binding of complex shader resource sets while minimizing 
+root signature space consumption.
+
+.. code-block:: cpp
+
+   struct DescriptorRange_V1_0 {
+      dxbc::DescriptorRangeType RangeType;
+      uint32_t NumDescriptors;
+      uint32_t BaseShaderRegister;
+      uint32_t RegisterSpace;
+      uint32_t OffsetInDescriptorsFromTableStart;
+   };
+
+   struct DescriptorRange_V1_1 {
+      dxbc::DescriptorRangeType RangeType;
+      uint32_t NumDescriptors;
+      uint32_t BaseShaderRegister;
+      uint32_t RegisterSpace;
+      uint32_t OffsetInDescriptorsFromTableStart;
+      Copy// New flags for Version 1.1
+      enum Flags {
+        None                        = 0x0,
+        // Descriptors are static and known at root signature creation
+        DESCRIPTORS_STATIC          = 0x1,
+        // Descriptors remain constant during command list execution
+        DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS = 0x2,
+        // Descriptors may change frequently
+        DESCRIPTORS_VOLATILE        = 0x4
+      };
+      
+      // Bitfield of flags from the Flags enum
+      uint32_t Flags;
+   };
+
+   struct RootDescriptorTable {
+      uint32_t NumDescriptorRanges;      
+      uint32_t DescriptorRangesOffset;  
+   };
+
+
+Descriptor Range Version 1.0
+''''''''''''''''''''''''''''
+
+The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
+
+#. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
+#. **NumDescriptors**: Number of descriptors in the range
+#. **BaseShaderRegister**: First shader register in the range
+#. **RegisterSpace**: Register space for the range
+#. **OffsetInDescriptorsFromTableStart**: Offset from the descriptor heap start
+
+Descriptor Range Version 1.1
+''''''''''''''''''''''''''''
+The Version 1.1 DescriptorRange_V1_1 extends the base structure with performance optimization flags.
+
+#. **Flags**: Provide additional information about the descriptors and enable further driver optimizations.
+
+Root Descriptor Table
+'''''''''''''''''''''
+
+RootDescriptorTable provides basic table structure:
+
+#. **NumDescriptorRanges**: Number of descriptor ranges
+#. **DescriptorRangesOffset**: Offset to descriptor range array
+
