@@ -1827,6 +1827,43 @@ let Predicates = [HasSVE] in {
   defm : adrXtwShiftPat<nxv2i64, nxv2i1, 3>;
 } // End HasSVE
 
+multiclass SVEVecStoreLanePat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
+                              ValueType VTy, ValueType STy,
+                              ValueType SubRegTy,
+                              SubRegIndex SubRegIdx, Operand IndexType,
+                              Instruction STR,
+                              Instruction DUP, AsmVectorIndexOpnd DUPIdxTy> {
+  let Predicates = [HasSVE_or_SME] in {
+    // Same as Neon VecStoreLane0Pat but without matching VecListOne128.
+    def : Pat<(storeop (STy (vector_extract VTy:$Vt, (i64 0))),
+                       (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
+              (STR (SubRegTy (EXTRACT_SUBREG $Vt, SubRegIdx)),
+                    GPR64sp:$Rn, IndexType:$offset)>;
+  }
+
+  // Non-zero immediate index:
+  def : Pat<(storeop (STy (vector_extract VTy:$Vt, DUPIdxTy:$idx)),
+                     (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
+            (STR (SubRegTy (EXTRACT_SUBREG (DUP $Vt, DUPIdxTy:$idx), SubRegIdx)),
+                  GPR64sp:$Rn, IndexType:$offset)>;
+}
+
+// Note: Types other than i8 are handled in performSTORECombine -- i8 is tricky
+// to handle before ISEL as it is not really a legal type in many places, nor
+// is its equivalently sized FP variant.
+let AddedComplexity = 19 in {
+  // Lane 0 truncating stores
+  // i32 -> i8
+  defm : SVEVecStoreLanePat<am_indexed8,  truncstorei8, nxv4i32, i32, vi8, bsub, uimm12s4, STRBui, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  defm : SVEVecStoreLanePat<am_unscaled8, truncstorei8, nxv4i32, i32, vi8, bsub, simm9, STURBi, DUP_ZZI_S, sve_elm_idx_extdup_s>;
+  // i64 -> i8
+  defm : SVEVecStoreLanePat<am_indexed8,  truncstorei8, nxv2i64, i64, vi8, bsub, uimm12s4, STRBui, DUP_ZZI_D, sve_elm_idx_extdup_d>;
+  defm : SVEVecStoreLanePat<am_unscaled8, truncstorei8, nxv2i64, i64, vi8, bsub, simm9, STURBi, DUP_ZZI_D, sve_elm_idx_extdup_d>;
+  // i8 -> i8 (technically a truncate as the extracted type is i32)
+  defm : SVEVecStoreLanePat<am_indexed8,  truncstorei8, nxv16i8, i32, vi8, bsub, uimm12s4, STRBui, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+  defm : SVEVecStoreLanePat<am_unscaled8, truncstorei8, nxv16i8, i32, vi8, bsub, simm9, STURBi, DUP_ZZI_B, sve_elm_idx_extdup_b>;
+}
+
 let Predicates = [HasSVE_or_SME] in {
   defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
 
