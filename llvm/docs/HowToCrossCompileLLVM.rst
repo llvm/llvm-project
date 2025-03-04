@@ -157,18 +157,20 @@ headers in dependency files, so when ninja reads them it doesn't need to do
 so. Clang doesn't, and unfortunately ninja doesn't implement the
 canonicalization logic at all, meaning for some system headers with symlinks
 in the paths, it can incorrectly compute a non-existing path and consider it
-as always dirty. If you are suffering from this issue, you will find at any
-attempt at an incremental build (including the suggested command to build the
-``install`` target in the next section) results in recompiling everything.
-``ninja -C build/$TARGET -t deps`` shows files in ``$SYSROOT/include/*`` that
-don't (as the ``$SYSROOT/include`` folder doesn't exist) and you can
-further confirm these files are causing the build to be seen as dirty with
-``ninja -C build/$TARGET -d deps``. Until such time as the issue is avoided
-due to a change in behaviour for Clang or for Ninja, a functional workaround
-is to create a symlink so that the incorrect ``$SYSROOT/include/*``
-dependencies resolve to files within ``$SYSROOT/usr/include/*``. This works in
-practice for the simple cross-compilation use case described here, but isn't
-a general solution.
+as always modified.
+
+If you are suffering from this issue, you will find ny attempt at an
+incremental build (including the suggested command to build the ``install``
+target in the next section) results in recompiling everything.  ``ninja -C
+build/$TARGET -t deps`` shows files in ``$SYSROOT/include/*`` that
+don't exist (as the ``$SYSROOT/include`` folder doesn't exist) and you can
+further confirm these files are causing ``ninja`` to determine a rebuild is
+necessary with ``ninja -C build/$TARGET -d deps``.
+
+A workaround is to create a symlink so that the incorrect
+``$SYSROOT/include/*`` dependencies resolve to files within
+``$SYSROOT/usr/include/*``. This works in practice for the simple
+cross-compilation use case described here, but isn't a general solution.
 
    .. code-block:: bash
 
