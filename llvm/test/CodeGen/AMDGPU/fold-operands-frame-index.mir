@@ -393,3 +393,37 @@ body:             |
     SI_RETURN implicit $vgpr0, implicit $vgpr1
 
 ...
+
+---
+name:  fold_frame_index__through_reg_sequence_to_user_subreg
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    liveins: $sgpr8
+    ; CHECK-LABEL: name: fold_frame_index__through_reg_sequence_to_user_subreg
+    ; CHECK: liveins: $sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
+    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def $scc
+    ; CHECK-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], 123, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
+    ; CHECK-NEXT: $sgpr5 = COPY [[S_ADD_I32_1]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4, implicit $sgpr5
+    %0:sreg_32 = COPY $sgpr8
+    %1:sreg_32 = S_MOV_B32 123
+    %2:sreg_32 = S_MOV_B32 %stack.0
+    %3:sreg_64 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1
+    %4:sreg_32 = S_ADD_I32 %0, %3.sub1, implicit-def $scc
+    %5:sreg_32 = S_ADD_I32 %0, %3.sub0, implicit-def $scc
+    $sgpr4 = COPY %4
+    $sgpr5 = COPY %5
+    SI_RETURN implicit $sgpr4, implicit $sgpr5
+...

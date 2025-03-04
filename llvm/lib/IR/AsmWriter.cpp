@@ -2124,45 +2124,42 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
   Out << "!DIGenericSubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto IsConstant = [&](Metadata *Bound) -> bool {
-    if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
-      return BE->isConstant() &&
-             DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-                 *BE->isConstant();
-    }
-    return false;
-  };
-
-  auto GetConstant = [&](Metadata *Bound) -> int64_t {
-    assert(IsConstant(Bound) && "Expected constant");
+  auto GetConstant = [&](Metadata *Bound) -> std::optional<int64_t> {
     auto *BE = dyn_cast_or_null<DIExpression>(Bound);
-    return static_cast<int64_t>(BE->getElement(1));
+    if (!BE)
+      return std::nullopt;
+    if (BE->isConstant() &&
+        DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+            *BE->isConstant()) {
+      return static_cast<int64_t>(BE->getElement(1));
+    }
+    return std::nullopt;
   };
 
   auto *Count = N->getRawCountNode();
-  if (IsConstant(Count))
-    Printer.printInt("count", GetConstant(Count),
+  if (auto ConstantCount = GetConstant(Count))
+    Printer.printInt("count", *ConstantCount,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
 
   auto *LBound = N->getRawLowerBound();
-  if (IsConstant(LBound))
-    Printer.printInt("lowerBound", GetConstant(LBound),
+  if (auto ConstantLBound = GetConstant(LBound))
+    Printer.printInt("lowerBound", *ConstantLBound,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
 
   auto *UBound = N->getRawUpperBound();
-  if (IsConstant(UBound))
-    Printer.printInt("upperBound", GetConstant(UBound),
+  if (auto ConstantUBound = GetConstant(UBound))
+    Printer.printInt("upperBound", *ConstantUBound,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
 
   auto *Stride = N->getRawStride();
-  if (IsConstant(Stride))
-    Printer.printInt("stride", GetConstant(Stride),
+  if (auto ConstantStride = GetConstant(Stride))
+    Printer.printInt("stride", *ConstantStride,
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
