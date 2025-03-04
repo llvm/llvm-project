@@ -211,7 +211,13 @@ Or, if binfmt_misc is configured (as was necessary for debootstrap):
 Installing and using
 --------------------
 
-If you want to transfer a copy of the built compiler to another machine, you can first install it via:
+.. note::
+  Use of the ``install`` target requires that you have set
+  ``CMAKE_INSTALL_PREFIX`` otherwise it will attempt to install in
+  directories under `/` on your host.
+
+If you want to transfer a copy of the built compiler to another machine, you
+can first install it to a location on the host via:
 
    .. code-block:: bash
 
@@ -228,8 +234,3 @@ to a device that runs the target architecture natively:
 The generated toolchain is portable, but requires compatible versions of any
 shared libraries it links against. This means using a sysroot that is as
 similar to your target operating system as possible is desirable.
-
-.. note::
-  Use of the ``install`` target requires that you have set
-  ``CMAKE_INSTALL_PREFIX`` otherwise it will attempt to install in
-  directories under `/` on your host.
