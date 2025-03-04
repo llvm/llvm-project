@@ -31,7 +31,7 @@ using namespace iterator;
 namespace {
 
 class ContainerModeling
-  : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
+    : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
 
   void handleBegin(CheckerContext &C, const Expr *CE, SVal RetVal,
                    SVal Cont) const;
@@ -74,19 +74,25 @@ public:
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
       {{CDM::CXXMethod, {"clear"}, 0}, &ContainerModeling::handleClear},
       {{CDM::CXXMethod, {"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{CDM::CXXMethod, {"assign_range"}, 1}, &ContainerModeling::handleAssign},
       {{CDM::CXXMethod, {"push_back"}, 1}, &ContainerModeling::handlePushBack},
       {{CDM::CXXMethod, {"emplace_back"}, 1},
+       &ContainerModeling::handlePushBack},
+      {{CDM::CXXMethod, {"append_range"}, 1},
        &ContainerModeling::handlePushBack},
       {{CDM::CXXMethod, {"pop_back"}, 0}, &ContainerModeling::handlePopBack},
       {{CDM::CXXMethod, {"push_front"}, 1},
        &ContainerModeling::handlePushFront},
       {{CDM::CXXMethod, {"emplace_front"}, 1},
        &ContainerModeling::handlePushFront},
+      {{CDM::CXXMethod, {"prepend_range"}, 1},
+       &ContainerModeling::handlePushFront},
       {{CDM::CXXMethod, {"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
       {{CDM::CXXMethod, {"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{CDM::CXXMethod, {"insert_range"}, 2}, &ContainerModeling::handleInsert},
       {{CDM::CXXMethod, {"emplace"}, 2}, &ContainerModeling::handleInsert},
       {{CDM::CXXMethod, {"erase"}, 1}, &ContainerModeling::handleErase},
       {{CDM::CXXMethod, {"erase_after"}, 1},
@@ -143,13 +149,13 @@ ProgramStateRef rebaseSymbolInIteratorPositionsIf(
     ProgramStateRef State, SValBuilder &SVB, SymbolRef OldSym,
     SymbolRef NewSym, SymbolRef CondSym, BinaryOperator::Opcode Opc);
 SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB, SymbolRef Expr,
-                        SymbolRef OldSym, SymbolRef NewSym);
+                       SymbolRef OldSym, SymbolRef NewSym);
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont);
 
 } // namespace
 
 void ContainerModeling::checkPostCall(const CallEvent &Call,
-                                     CheckerContext &C) const {
+                                      CheckerContext &C) const {
   const auto *Func = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!Func)
     return;
@@ -161,7 +167,7 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
       const auto *InstCall = cast<CXXInstanceCall>(&Call);
       if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssignment(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
-                     Call.getArgSVal(0));
+                         Call.getArgSVal(0));
         return;
       }
 
@@ -248,7 +254,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
 }
 
 void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
-                                   SVal RetVal, SVal Cont) const {
+                                    SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -270,7 +276,7 @@ void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
 }
 
 void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
-                                 SVal RetVal, SVal Cont) const {
+                                  SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -441,10 +447,10 @@ void ContainerModeling::handlePushBack(CheckerContext &C, SVal Cont,
     const auto newEndSym =
       SVB.evalBinOp(State, BO_Add,
                     nonloc::SymbolVal(EndSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(EndSym)).getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
+        getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newEnd(newEndSym));
     C.addTransition(State, ChangeTag);
   }
@@ -470,10 +476,10 @@ void ContainerModeling::handlePopBack(CheckerContext &C, SVal Cont,
     const auto BackSym =
       SVB.evalBinOp(State, BO_Sub,
                     nonloc::SymbolVal(EndSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(EndSym)).getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
+        getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
     // For vector-like and deque-like containers invalidate the last and the
     // past-end iterator positions. For list-like containers only invalidate
     // the last position
@@ -515,7 +521,7 @@ void ContainerModeling::handlePushFront(CheckerContext &C, SVal Cont,
       const auto newBeginSym =
         SVB.evalBinOp(State, BO_Sub,
                       nonloc::SymbolVal(BeginSym),
-                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                        nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                       SymMgr.getType(BeginSym)).getAsSymbol();
       const NoteTag *ChangeTag =
         getChangeTag(C, "extended to the front by 1 position", ContReg, ContE);
@@ -552,10 +558,10 @@ void ContainerModeling::handlePopFront(CheckerContext &C, SVal Cont,
     const auto newBeginSym =
       SVB.evalBinOp(State, BO_Add,
                     nonloc::SymbolVal(BeginSym),
-                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                      nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(BeginSym)).getAsSymbol();
     const NoteTag *ChangeTag =
-      getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
+        getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
     C.addTransition(State, ChangeTag);
   }
@@ -663,7 +669,7 @@ void ContainerModeling::handleErase(CheckerContext &C, SVal Cont, SVal Iter1,
 }
 
 void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
-                                        SVal Iter) const {
+                                         SVal Iter) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Iter);
   if (!Pos)
@@ -677,7 +683,7 @@ void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
   const auto NextSym =
     SVB.evalBinOp(State, BO_Add,
                   nonloc::SymbolVal(Pos->getOffset()),
-                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                    nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                   SymMgr.getType(Pos->getOffset())).getAsSymbol();
   State = invalidateIteratorPositions(State, NextSym, BO_EQ);
   C.addTransition(State);
@@ -705,9 +711,9 @@ const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
   // First try to get the name of the variable from the region
   if (const auto *DR = dyn_cast<DeclRegion>(ContReg)) {
     Name = DR->getDecl()->getName();
-  // If the region is not a `DeclRegion` then use the expression instead
+    // If the region is not a `DeclRegion` then use the expression instead
   } else if (const auto *DRE =
-             dyn_cast<DeclRefExpr>(ContE->IgnoreParenCasts())) {
+                 dyn_cast<DeclRefExpr>(ContE->IgnoreParenCasts())) {
     Name = DRE->getDecl()->getName();
   }
 
@@ -725,7 +731,7 @@ const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
 }
 
 void ContainerModeling::printState(raw_ostream &Out, ProgramStateRef State,
-                                  const char *NL, const char *Sep) const {
+                                   const char *NL, const char *Sep) const {
   auto ContMap = State->get<ContainerMap>();
 
   if (!ContMap.isEmpty()) {
@@ -998,7 +1004,7 @@ ProgramStateRef reassignAllIteratorPositionsUnless(ProgramStateRef State,
                                                    BinaryOperator::Opcode Opc) {
   auto MatchContAndCompare = [&](const IteratorPosition &Pos) {
     return Pos.getContainer() == Cont &&
-    !compare(State, Pos.getOffset(), Offset, Opc);
+           !compare(State, Pos.getOffset(), Offset, Opc);
   };
   auto ReAssign = [&](const IteratorPosition &Pos) {
     return Pos.reAssign(NewCont);
@@ -1070,7 +1076,7 @@ bool ento::shouldRegisterContainerModeling(const CheckerManager &mgr) {
   if (!mgr.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation) {
     mgr.getASTContext().getDiagnostics().Report(
         diag::err_analyzer_checker_incompatible_analyzer_option)
-      << "aggressive-binary-operation-simplification" << "false";
+        << "aggressive-binary-operation-simplification" << "false";
     return false;
   }
 
