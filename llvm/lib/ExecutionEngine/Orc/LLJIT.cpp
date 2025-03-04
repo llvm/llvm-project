@@ -950,8 +950,18 @@ Expected<std::unique_ptr<ObjectLayer>>
 LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
-  if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
+  if (S.CreateObjectLinkingLayer) {
+    auto Layer = S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
+    if (Layer && S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
+      auto *RTDyldLayer =
+          dyn_cast_or_null<RTDyldObjectLinkingLayer>(Layer.get().get());
+      if (RTDyldLayer) {
+        RTDyldLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+        RTDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+      }
+    }
+    return Layer;
+  }
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
