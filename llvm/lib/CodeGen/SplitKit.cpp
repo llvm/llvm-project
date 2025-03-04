@@ -588,6 +588,38 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
   return Def;
 }
 
+bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
+                                               MachineBasicBlock &MBB,
+                                               SlotIndex UseIdx) const {
+  if (!DefMI)
+    return false;
+
+  const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
+  if (!UseMI)
+    return false;
+
+  Register Reg = Edit->getReg();
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+
+  // We want to find the register class that can be inflated to after the split
+  // occurs in recomputeRegClass
+  const TargetRegisterClass *SuperRC =
+      TRI.getLargestLegalSuperClass(RC, *MBB.getParent());
+
+  // We want to compute the static register class constraint for the instruction
+  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
+  // site, then rematerializing it will increase the constraints.
+  const TargetRegisterClass *DefConstrainRC =
+      DefMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
+                                                /*ExploreBundle=*/true);
+
+  const TargetRegisterClass *UseConstrainRC =
+      UseMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
+                                                /*ExploreBundle=*/true);
+
+  return UseConstrainRC->hasSubClass(DefConstrainRC);
+}
+
 VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
                                    SlotIndex UseIdx, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I) {
@@ -609,9 +641,16 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (Edit->canRematerializeAt(RM, OrigVNI, UseIdx, true)) {
-      Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
-      ++NumRemats;
-      DidRemat = true;
+      if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
+        Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        ++NumRemats;
+        DidRemat = true;
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "skipping rematerialize of " << printReg(Reg) << " at "
+                   << UseIdx
+                   << " since it will increase register class restrictions\n");
+      }
     }
   }
   if (!DidRemat) {

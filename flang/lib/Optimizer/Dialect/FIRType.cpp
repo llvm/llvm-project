@@ -210,7 +210,8 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
-      .Case<fir::BoxType>([](auto p) { return getDerivedType(p.getEleTy()); })
+      .Case<fir::BaseBoxType>(
+          [](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
 }
 
