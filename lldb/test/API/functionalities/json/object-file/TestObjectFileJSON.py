@@ -98,13 +98,11 @@ class TestObjectFileJSON(TestBase):
                     "type": "data",
                     "address": bar_file_addr,
                     "size": bar_size,
-                }
-
+                },
             ],
         }
 
         json_object_file_c = self.getBuildArtifact("c.json")
-        print('EXE = %s' % (json_object_file_c))
         self.emitJSON(data, json_object_file_c)
 
         module = target.AddModule(self.toModuleSpec(json_object_file_c))
@@ -132,13 +130,9 @@ class TestObjectFileJSON(TestBase):
         self.assertEqual(bar_symbol.addr.GetFileAddress(), bar_file_addr)
         self.assertEqual(bar_symbol.GetSize(), bar_size)
 
-        error = target.SetSectionLoadAddress(text_section,
-                                             TEXT_file_addr + slide)
+        error = target.SetSectionLoadAddress(text_section, TEXT_file_addr + slide)
         self.assertSuccess(error)
-        error = target.SetSectionLoadAddress(data_section,
-                                             DATA_file_addr + slide)
+        error = target.SetSectionLoadAddress(data_section, DATA_file_addr + slide)
         self.assertSuccess(error)
-        self.assertEqual(foo_symbol.addr.GetLoadAddress(target),
-                         foo_file_addr + slide)
-        self.assertEqual(bar_symbol.addr.GetLoadAddress(target),
-                         bar_file_addr + slide)
+        self.assertEqual(foo_symbol.addr.GetLoadAddress(target), foo_file_addr + slide)
+        self.assertEqual(bar_symbol.addr.GetLoadAddress(target), bar_file_addr + slide)
