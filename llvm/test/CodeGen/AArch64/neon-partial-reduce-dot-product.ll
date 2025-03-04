@@ -887,3 +887,74 @@ entry:
   %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
 }
+
+define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
+; CHECK-LABEL: usdot_multiple_zext_users:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    adrp x9, .LCPI28_0
+; CHECK-NEXT:    adrp x10, .LCPI28_3
+; CHECK-NEXT:    ldr q0, [x2]
+; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI28_0]
+; CHECK-NEXT:    adrp x9, .LCPI28_1
+; CHECK-NEXT:    ldr q4, [x10, :lo12:.LCPI28_3]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI28_1]
+; CHECK-NEXT:    adrp x9, .LCPI28_2
+; CHECK-NEXT:    ldr q5, [x1]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI28_2]
+; CHECK-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
+; CHECK-NEXT:    mov w9, #1024 // =0x400
+; CHECK-NEXT:    tbl v3.16b, { v0.16b }, v3.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v4.16b
+; CHECK-NEXT:    ldr q4, [x0]
+; CHECK-NEXT:    uzp1 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    sshll v2.8h, v4.8b, #0
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    sshll2 v3.8h, v4.16b, #0
+; CHECK-NEXT:    sshll v4.8h, v5.8b, #0
+; CHECK-NEXT:    sshll2 v5.8h, v5.16b, #0
+; CHECK-NEXT:    smull v6.4s, v2.4h, v1.4h
+; CHECK-NEXT:    smull v17.4s, v4.4h, v1.4h
+; CHECK-NEXT:    smull v7.4s, v3.4h, v0.4h
+; CHECK-NEXT:    smull v16.4s, v5.4h, v0.4h
+; CHECK-NEXT:    smlal2 v6.4s, v3.8h, v0.8h
+; CHECK-NEXT:    smlal2 v17.4s, v5.8h, v0.8h
+; CHECK-NEXT:    smlal2 v7.4s, v2.8h, v1.8h
+; CHECK-NEXT:    smlal2 v16.4s, v4.8h, v1.8h
+; CHECK-NEXT:    add v0.4s, v7.4s, v6.4s
+; CHECK-NEXT:    add v1.4s, v16.4s, v17.4s
+; CHECK-NEXT:  .LBB28_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    subs x9, x9, #16
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    b.ne .LBB28_1
+; CHECK-NEXT:  // %bb.2: // %end
+; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %vector.body ]
+  %ptr1 = getelementptr i8, ptr %p1, i64 %iv
+  %ptr2 = getelementptr i8, ptr %p2, i64 %iv
+  %ptr3 = getelementptr i8, ptr %p3, i64 %iv
+  %load1 = load <16 x i8>, ptr %p1, align 1
+  %load2 = load <16 x i8>, ptr %p2, align 1
+  %load3 = load <16 x i8>, ptr %p3, align 1
+  %1 = sext <16 x i8> %load1 to <16 x i32>
+  %2 = zext <16 x i8> %load3 to <16 x i32>
+  %3 = mul <16 x i32> %1, %2
+  %psum1 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> zeroinitializer, <16 x i32> %3)
+  %4 = sext <16 x i8> %load2 to <16 x i32>
+  %5 = mul <16 x i32> %4, %2
+  %psum2 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> zeroinitializer, <16 x i32> %5)
+  %iv.next = add i64 %iv, 16
+  %6 = icmp eq i64 %iv.next, 1024
+  br i1 %6, label %end, label %vector.body
+
+end:
+  %7 = add <4 x i32> %psum2, %psum1
+  ret <4 x i32> %7
+}
