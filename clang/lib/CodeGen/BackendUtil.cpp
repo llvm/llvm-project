@@ -1334,7 +1334,10 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = std::move(CGOpts.InstrProfileOutput);
+    Conf.CSIRProfile = CGOpts.InstrProfileOutput.empty()
+                           ? getDefaultProfileGenName()
+                           : std::move(CGOpts.InstrProfileOutput);
+
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);
