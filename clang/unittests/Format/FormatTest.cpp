@@ -12100,6 +12100,7 @@ TEST_F(FormatTest, PointerAlignmentFallback) {
 }
 
 TEST_F(FormatTest, UnderstandsNewAndDelete) {
+  verifyFormat("A(void *p) : a(new (p) int) {}");
   verifyFormat("void f() {\n"
                "  A *a = new A;\n"
                "  A *a = new (placement) A;\n"
@@ -12122,7 +12123,8 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
   verifyFormat("void new(link p);\n"
                "void delete(link p);",
                "void new (link p);\n"
-               "void delete (link p);");
+               "void delete (link p);",
+               getLLVMStyle(FormatStyle::LK_C));
 
   verifyFormat("{\n"
                "  p->new();\n"
