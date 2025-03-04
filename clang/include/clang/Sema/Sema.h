@@ -867,6 +867,8 @@ public:
   /// checks.
   const TranslationUnitKind TUKind;
 
+  bool AtEndOfTU = false;
+
   /// Translation Unit Scope - useful to Objective-C actions that need
   /// to lookup file scope declarations in the "ordinary" C decl namespace.
   /// For example, user-defined classes, built-in "id" type, etc.
@@ -13662,7 +13664,9 @@ public:
           S.PendingLocalImplicitInstantiations);
     }
 
-    void perform() { S.PerformPendingInstantiations(/*LocalOnly=*/true); }
+    void perform() {
+      S.PerformPendingInstantiations(/*LocalOnly=*/true);
+    }
 
     ~LocalEagerInstantiationScope() {
       assert(S.PendingLocalImplicitInstantiations.empty() &&
@@ -13710,7 +13714,7 @@ public:
     void perform() {
       if (Enabled) {
         S.DefineUsedVTables();
-        S.PerformPendingInstantiations();
+        S.PerformPendingInstantiations(false);
       }
     }
 
@@ -13821,8 +13825,7 @@ public:
   void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                      FunctionDecl *Function,
                                      bool Recursive = false,
-                                     bool DefinitionRequired = false,
-                                     bool AtEndOfTU = false);
+                                     bool DefinitionRequired = false);
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList *PartialSpecArgs,

@@ -515,7 +515,7 @@ static void instantiateOMPDeclareVariantAttr(
           return;
         S.InstantiateFunctionDefinition(
             New->getLocation(), SubstFD, /* Recursive */ true,
-            /* DefinitionRequired */ false, /* AtEndOfTU */ false);
+            /* DefinitionRequired */ false);
         SubstFD->setInstantiationIsPending(!SubstFD->isDefined());
         E = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
                                 SourceLocation(), SubstFD,
@@ -5230,8 +5230,7 @@ FunctionDecl *Sema::InstantiateFunctionDeclaration(
 void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                                          FunctionDecl *Function,
                                          bool Recursive,
-                                         bool DefinitionRequired,
-                                         bool AtEndOfTU) {
+                                         bool DefinitionRequired) {
   if (Function->isInvalidDecl() || isa<CXXDeductionGuideDecl>(Function))
     return;
 
@@ -6796,15 +6795,17 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
         getASTContext().forEachMultiversionedFunctionVersion(
             Function, [this, Inst, DefinitionRequired](FunctionDecl *CurFD) {
               InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, CurFD, true,
-                                            DefinitionRequired, true);
+                                            DefinitionRequired);
               if (CurFD->isDefined())
                 CurFD->setInstantiationIsPending(false);
             });
       } else {
         InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, Function, true,
-                                      DefinitionRequired, true);
+                                      DefinitionRequired);
         if (Function->isDefined())
           Function->setInstantiationIsPending(false);
+        else if (!AtEndOfTU)
+          LateParsedInstantiations.push_back(Inst);
       }
       // Definition of a PCH-ed template declaration may be available only in the TU.
       if (!LocalOnly && LangOpts.PCHInstantiateTemplates &&
