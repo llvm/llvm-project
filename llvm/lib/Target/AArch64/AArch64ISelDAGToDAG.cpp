@@ -7379,13 +7379,27 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
   if (N.getOpcode() != ISD::ADD)
     return false;
 
-  SDValue VScale = N.getOperand(1);
-  if (VScale.getOpcode() != ISD::VSCALE)
+  int64_t MulImm = std::numeric_limits<int64_t>::max();
+  if (SDValue VScale = N.getOperand(1); VScale.getOpcode() == ISD::VSCALE)
+    MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
+  else if (auto C = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+    int64_t ByteOffset = C->getSExtValue();
+    constexpr auto SVEBitsPerBlock = AArch64::SVEBitsPerBlock;
+    auto MinVScale = Subtarget->getMinSVEVectorSizeInBits() / SVEBitsPerBlock;
+    auto MaxVScale = Subtarget->getMaxSVEVectorSizeInBits() / SVEBitsPerBlock;
+
+    if (!MaxVScale || MinVScale != MaxVScale || ByteOffset % MaxVScale != 0)
+      return false;
+
+    MulImm = ByteOffset / MaxVScale;
+  } else
     return false;
+
+  assert(MulImm != std::numeric_limits<int64_t>::max() &&
+         "Uninitialized MulImm.");
 
   TypeSize TS = MemVT.getSizeInBits();
   int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
-  int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)
     return false;
