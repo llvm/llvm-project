@@ -6,6 +6,8 @@
 
 #include "../assembly.h"
 
+#if !defined(__ARM_FEATURE_SVE) || __ARM_FP == 0
+
 //
 //  __arm_sc_memcpy / __arm_sc_memmove
 //
@@ -234,8 +236,10 @@ END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
+#endif // !defined(__ARM_FEATURE_SVE) || __ARM_FP == 0
+
 // This version uses FP registers. Use this only on targets with them
-#if defined(__aarch64__) && __ARM_FP != 0
+#if __ARM_FP != 0
 //
 //  __arm_sc_memset
 //
@@ -346,4 +350,4 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
         ret
 END_COMPILERRT_FUNCTION(__arm_sc_memset)
 
-#endif // __aarch64__
+#endif // __ARM_FP != 0
