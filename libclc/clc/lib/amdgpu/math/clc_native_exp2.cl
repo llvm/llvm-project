@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_native_cos.h>
+#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION native_cos
-#define __CLC_BODY <clc/shared/unary_def.inc>
+_CLC_OVERLOAD _CLC_DEF float __clc_native_exp2(float val) {
+  return __builtin_amdgcn_exp2f(val);
+}
 
-#include <clc/math/gentype.inc>
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_native_exp2, float)
