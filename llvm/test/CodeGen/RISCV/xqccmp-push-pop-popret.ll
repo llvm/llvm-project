@@ -1589,7 +1589,7 @@ define void @alloca(i32 %n) {
 declare i32 @foo_test_irq(...)
 @var_test_irq = global [32 x i32] zeroinitializer
 
-define void @foo_with_irq() "interrupt"="user" {
+define void @foo_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-LABEL: foo_with_irq:
 ; RV32IXQCCMP:       # %bb.0:
 ; RV32IXQCCMP-NEXT:    qc.cm.push {ra}, -64
@@ -2101,7 +2101,7 @@ define void @foo_no_irq() {
   ret void
 }
 
-define void @callee_with_irq() "interrupt"="user" {
+define void @callee_with_irq() "interrupt"="machine" {
 ; RV32IXQCCMP-LABEL: callee_with_irq:
 ; RV32IXQCCMP:       # %bb.0:
 ; RV32IXQCCMP-NEXT:    qc.cm.push {ra, s0-s11}, -112
