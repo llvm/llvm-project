@@ -141,6 +141,8 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     return;
   }
 
+  II = PP.getIdentifierInfo(II->getName().lower());
+
   SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
