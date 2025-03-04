@@ -195,10 +195,10 @@ endif()
   # include the .lib/.dll directory.
   if (UNIX)
     set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE_DIR=;")
+      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE=0;")
   else()
     set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE_DIR=;")
+      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE=0;")
   endif()
 endmacro()
 
