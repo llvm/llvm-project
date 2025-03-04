@@ -290,6 +290,11 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       Phi1ToMove.moveBefore(*Merge2, Merge2->begin());
     }
 
+    // Remove the dead recipes in Region1's entry block.
+    for (VPRecipeBase &R :
+         make_early_inc_range(reverse(*Region1->getEntryBasicBlock())))
+      R.eraseFromParent();
+
     // Finally, remove the first region.
     for (VPBlockBase *Pred : make_early_inc_range(Region1->getPredecessors())) {
       VPBlockUtils::disconnectBlocks(Pred, Region1);
