@@ -183,8 +183,7 @@ void MCResourceInfo::gatherResourceInfo(
 
   LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
                     << FnSym->getName() << '\n');
-  // clang-format off
-  LLVM_DEBUG(
+  LLVM_DEBUG({
     if (!FRI.Callees.empty()) {
       dbgs() << "MCResUse: Callees:\n";
       for (const Function *Callee : FRI.Callees) {
@@ -192,8 +191,7 @@ void MCResourceInfo::gatherResourceInfo(
         dbgs() << "MCResUse:   " << CalleeFnSym->getName() << '\n';
       }
     }
-  );
-  // clang-format on
+  });
 
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
