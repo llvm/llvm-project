@@ -3470,8 +3470,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
                                 unsigned Version, APValue *&Result) {
   // C++23 [expr.const]p8 If we have a reference type allow unknown references
   // and pointers.
-  bool AllowConstexprUnknown =
-      Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
+  bool AllowConstexprUnknown = VD->getType()->isReferenceType();
 
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 
@@ -8893,8 +8892,7 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
 bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   // C++23 [expr.const]p8 If we have a reference type allow unknown references
   // and pointers.
-  bool AllowConstexprUnknown =
-      Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
+  bool AllowConstexprUnknown = VD->getType()->isReferenceType();
   // If we are within a lambda's call operator, check whether the 'VD' referred
   // to within 'E' actually represents a lambda-capture that maps to a
   // data-member/field within the closure object, and if so, evaluate to the
