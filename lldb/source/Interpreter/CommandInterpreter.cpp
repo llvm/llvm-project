@@ -1886,11 +1886,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
-  lldb_private::telemetry::ScopedDispatcher<
-      lldb_private::telemetry::CommandInfo>
+  telemetry::ScopedDispatcher<
+      telemetry::CommandInfo>
       helper(&m_debugger);
-  lldb_private::telemetry::TelemetryManager *ins =
-      lldb_private::telemetry::TelemetryManager::GetInstance();
+  telemetry::TelemetryManager *ins =
+      telemetry::TelemetryManager::GetInstance();
   const int command_id = ins->MakeNextCommandId();
 
   std::string command_string(command_line);
