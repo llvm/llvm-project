@@ -300,7 +300,7 @@ struct __forward_node_traits {
     return __p;
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__node_pointer __p) {
-    return __static_fancy_pointer_cast<__begin_node_pointer>(__p);
+    return std::__static_fancy_pointer_cast<__begin_node_pointer>(__p);
   }
 };
 
@@ -315,7 +315,7 @@ struct __forward_begin_node {
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit __forward_begin_node(pointer __n) : __next_(__n) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __next_as_begin() const {
-    return __static_fancy_pointer_cast<__begin_node_pointer>(__next_);
+    return std::__static_fancy_pointer_cast<__begin_node_pointer>(__next_);
   }
 };
 
@@ -371,7 +371,7 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const { return __ptr_; }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __node_pointer __get_unsafe_node_pointer() const {
-    return __static_fancy_pointer_cast<__node_pointer>(__ptr_);
+    return std::__static_fancy_pointer_cast<__node_pointer>(__ptr_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(nullptr_t) _NOEXCEPT
@@ -441,7 +441,7 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const { return __ptr_; }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __node_pointer __get_unsafe_node_pointer() const {
-    return __static_fancy_pointer_cast<__node_pointer>(__ptr_);
+    return std::__static_fancy_pointer_cast<__node_pointer>(__ptr_);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(nullptr_t) _NOEXCEPT
