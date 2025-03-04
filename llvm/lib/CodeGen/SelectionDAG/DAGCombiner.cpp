@@ -21394,7 +21394,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
   };
 
   auto StIt = StoreNodes.begin();
-  while (StIt != StoreNodes.end()) {
+  unsigned i = 0;
+  while (StIt != StoreNodes.end() && i < NumConsecutiveStores) {
     StoreSDNode *St = cast<StoreSDNode>(StIt->MemNode);
     SDValue Val = peekThroughBitcasts(St->getValue());
     LoadSDNode *Ld = cast<LoadSDNode>(Val);
@@ -21412,13 +21413,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     }
 
     // Check if there is a call in the load/store chain.
-    if (!TLI.shouldMergeStoreOfLoadsOverCall() &&
-        HasCallInLdStChain(Ld, St)) {
+    if (!TLI.shouldMergeStoreOfLoadsOverCall() && HasCallInLdStChain(Ld, St)) {
       StIt = StoreNodes.erase(StIt);
     } else {
       LoadNodes.push_back(MemOpLink(Ld, LdOffset));
       ++StIt;
     }
+    ++i;
   }
 
   while (NumConsecutiveStores >= 2 && LoadNodes.size() >= 2) {
