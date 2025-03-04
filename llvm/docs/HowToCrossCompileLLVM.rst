@@ -159,7 +159,7 @@ canonicalization logic at all, meaning for some system headers with symlinks
 in the paths, it can incorrectly compute a non-existing path and consider it
 as always modified.
 
-If you are suffering from this issue, you will find ny attempt at an
+If you are suffering from this issue, you will find any attempt at an
 incremental build (including the suggested command to build the ``install``
 target in the next section) results in recompiling everything.  ``ninja -C
 build/$TARGET -t deps`` shows files in ``$SYSROOT/include/*`` that
@@ -226,7 +226,7 @@ to a device that runs the target architecture natively:
 
 The generated toolchain is portable, but requires compatible versions of any
 shared libraries it links against. This means using a sysroot that is as
-similar to your target operating system as poasible is desirable.
+similar to your target operating system as possible is desirable.
 
 .. note::
   Use of the ``install`` target requires that you have set
