@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_BAREMETAL_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_BAREMETAL_H
 
+#include "ToolChains/Gnu.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -19,7 +20,7 @@ namespace driver {
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY BareMetal : public ToolChain {
+class LLVM_LIBRARY_VISIBILITY BareMetal : public Generic_ELF {
 public:
   BareMetal(const Driver &D, const llvm::Triple &Triple,
             const llvm::opt::ArgList &Args);
@@ -35,7 +36,6 @@ protected:
   Tool *buildStaticLibTool() const override;
 
 public:
-  bool useIntegratedAs() const override { return true; }
   bool isBareMetal() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool HasNativeLLVMSupport() const override { return true; }
@@ -67,6 +67,9 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const override;
   std::string computeSysRoot() const override;
   SanitizerMask getSupportedSanitizers() const override;
 
@@ -79,7 +82,6 @@ private:
   OrderedMultilibs getOrderedMultilibs() const;
 
   std::string SysRoot;
-
   SmallVector<std::string> MultilibMacroDefines;
 };
 
