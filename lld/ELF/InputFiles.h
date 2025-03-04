@@ -360,10 +360,23 @@ public:
   // parsed. Only filled for `--no-allow-shlib-undefined`.
   SmallVector<Symbol *, 0> requiredSymbols;
 
+  template <typename ELFT> typename ELFT::PhdrRange getELFPhdrs() const {
+    return typename ELFT::PhdrRange(
+        reinterpret_cast<const typename ELFT::Phdr *>(elfPhdrs), numElfPhdrs);
+  }
+
+protected:
+  const void *elfPhdrs = nullptr;
+  uint32_t numElfPhdrs = 0;
+
 private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
+  template <typename ELFT>
+  void parseGnuAndFeatures(const uint8_t *base,
+                           const typename ELFT::PhdrRange headers,
+                           const typename ELFT::Shdr *sHeader);
 };
 
 class BinaryFile : public InputFile {
