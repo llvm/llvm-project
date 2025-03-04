@@ -28,19 +28,18 @@ Below are examples in Python for deterministic and non-deterministic progresses.
     deterministic_progress1 = lldb.SBProgress('Deterministic Progress', 'Detail', 3, lldb.SBDebugger) 
     for i in range(3): 
         deterministic_progress1.Increment(1, f'Update {i}') 
-        
     # The call to Finalize() is a no-op as we already incremented the right amount of 
     # times and caused the end event to be sent. 
-    deterministic_progress1.Finalize() 
+    deterministic_progress1.Finalize()
+
     deterministic_progress2 = lldb.SBProgress('Deterministic Progress', 'Detail', 10, lldb.SBDebugger) 
     for i in range(3): 
-        deterministic_progress2.Increment(1, f'Update {i}') 
-        
+        deterministic_progress2.Increment(1, f'Update {i}')      
     # Cause the progress end event to be sent even if we didn't increment the right 
     # number of times. Real world examples would be in a try-finally block to ensure
     # progress clean-up.
-
     deterministic_progress2.Finalize() 
+
 If you don't call Finalize() when the progress is not done, the progress object will eventually get
 garbage collected by the Python runtime, the end event will eventually get sent, but it is best not to 
 rely on the garbage collection when using lldb.SBProgress.
