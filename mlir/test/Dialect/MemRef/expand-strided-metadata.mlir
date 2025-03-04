@@ -354,67 +354,22 @@ func.func @extract_strided_metadata_of_subview_all_dynamic(
 
 // Check that we properly simplify expand_shape into:
 // reinterpret_cast(extract_strided_metadata) + <some math>
-//
-// Here we have:
-// For the group applying to dim0:
-// size 0 = baseSizes#0 / (all static sizes in that group)
-//        = baseSizes#0 / (7 * 8 * 9)
-//        = baseSizes#0 / 504
-// size 1 = 7
-// size 2 = 8
-// size 3 = 9
-// stride 0 = baseStrides#0 * 7 * 8 * 9
-//          = baseStrides#0 * 504
-// stride 1 = baseStrides#0 * 8 * 9
-//          = baseStrides#0 * 72
-// stride 2 = baseStrides#0 * 9
-// stride 3 = baseStrides#0
-//
-// For the group applying to dim1:
-// size 4 = 10
-// size 5 = 2
-// size 6 = baseSizes#1 / (all static sizes in that group)
-//        = baseSizes#1 / (10 * 2 * 3)
-//        = baseSizes#1 / 60
-// size 7 = 3
-// stride 4 = baseStrides#1 * size 5 * size 6 * size 7
-//          = baseStrides#1 * 2 * (baseSizes#1 / 60) * 3
-//          = baseStrides#1 * (baseSizes#1 / 60) * 6
-//          and since we know that baseSizes#1 is a multiple of 60:
-//          = baseStrides#1 * (baseSizes#1 / 10)
-// stride 5 = baseStrides#1 * size 6 * size 7
-//          = baseStrides#1 * (baseSizes#1 / 60) * 3
-//          = baseStrides#1 * (baseSizes#1 / 20)
-// stride 6 = baseStrides#1 * size 7
-//          = baseStrides#1 * 3
-// stride 7 = baseStrides#1
-//
-// Base and offset are unchanged.
-//
-//   CHECK-DAG: #[[$DIM0_SIZE_MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 504)>
-//   CHECK-DAG: #[[$DIM6_SIZE_MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 60)>
-//
-//   CHECK-DAG: #[[$DIM0_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 504)>
-//   CHECK-DAG: #[[$DIM1_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 72)>
-//   CHECK-DAG: #[[$DIM2_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 9)>
-//   CHECK-DAG: #[[$DIM4_STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 floordiv 10) * s1)>
-//   CHECK-DAG: #[[$DIM5_STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 floordiv 20) * s1)>
-//   CHECK-DAG: #[[$DIM6_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 3)>
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 9)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 * 72)>
+// CHECK-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 * 504)>
+// CHECK-DAG: #[[$MAP3:.*]] = affine_map<()[s0] -> (s0 * 3)>
+// CHECK-DAG: #[[$MAP4:.*]] = affine_map<()[s0, s1] -> ((s1 * s0) * 3)>
+// CHECK-DAG: #[[$MAP5:.*]] = affine_map<()[s0, s1] -> ((s1 * s0) * 6)>
 // CHECK-LABEL: func @simplify_expand_shape
-//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32,
-//
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %[[sz0:.*]]: index, %[[sz1:.*]]: index
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?], offset: ?>> -> memref<f32>, index, index, index, index, index
-//
-//   CHECK-DAG: %[[DYN_SIZE0:.*]] = affine.apply #[[$DIM0_SIZE_MAP]]()[%[[SIZES]]#0]
-//   CHECK-DAG: %[[DYN_SIZE6:.*]] = affine.apply #[[$DIM6_SIZE_MAP]]()[%[[SIZES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #[[$DIM0_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #[[$DIM1_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE2:.*]] = affine.apply #[[$DIM2_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE4:.*]] = affine.apply #[[$DIM4_STRIDE_MAP]]()[%[[SIZES]]#1, %[[STRIDES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE5:.*]] = affine.apply #[[$DIM5_STRIDE_MAP]]()[%[[SIZES]]#1, %[[STRIDES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE6:.*]] = affine.apply #[[$DIM6_STRIDE_MAP]]()[%[[STRIDES]]#1]
-//
-//   CHECK-DAG: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [%[[DYN_SIZE0]], 7, 8, 9, 10, 2, %[[DYN_SIZE6]], 3], strides: [%[[DYN_STRIDE0]], %[[DYN_STRIDE1]], %[[DYN_STRIDE2]], %[[STRIDES]]#0, %[[DYN_STRIDE4]], %[[DYN_STRIDE5]], %[[DYN_STRIDE6]], %[[STRIDES]]#1]
+//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #map()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #map1()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE2:.*]] = affine.apply #map2()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE3:.*]] = affine.apply #map3()[%[[STRIDES]]#1]
+//   CHECK-DAG: %[[DYN_STRIDE4:.*]] = affine.apply #map4()[%[[STRIDES]]#1, %[[sz1]]]
+//   CHECK-DAG: %[[DYN_STRIDE5:.*]] = affine.apply #map5()[%[[STRIDES]]#1, %[[sz1]]]
+//   CHECK-DAG: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[OFFSET]]], sizes: [%[[sz0]], 7, 8, 9, 10, 2, %[[sz1]], 3], strides: [%[[DYN_STRIDE2]], %[[DYN_STRIDE1]], %[[DYN_STRIDE0]], %[[STRIDES]]#0, %[[DYN_STRIDE5]], %[[DYN_STRIDE4]], %[[DYN_STRIDE3]], %[[STRIDES]]#1]
 //
 //   CHECK: return %[[REINTERPRET_CAST]]
 func.func @simplify_expand_shape(
@@ -525,73 +480,34 @@ func.func @extract_strided_metadata_of_expand_shape_all_static(
 // 2. We properly compute the strides affected by dynamic shapes. (When the
 //    dynamic dimension is not the first one.)
 //
-// Here we have:
-// For the group applying to dim0:
-// size 0 = baseSizes#0 / (all static sizes in that group)
-//        = baseSizes#0 / (7 * 8 * 9)
-//        = baseSizes#0 / 504
-// size 1 = 7
-// size 2 = 8
-// size 3 = 9
-// stride 0 = baseStrides#0 * 7 * 8 * 9
-//          = baseStrides#0 * 504
-// stride 1 = baseStrides#0 * 8 * 9
-//          = baseStrides#0 * 72
-// stride 2 = baseStrides#0 * 9
-// stride 3 = baseStrides#0
-//
-// For the group applying to dim1:
-// size 4 = 10
-// size 5 = 2
-// size 6 = baseSizes#1 / (all static sizes in that group)
-//        = baseSizes#1 / (10 * 2 * 3)
-//        = baseSizes#1 / 60
-// size 7 = 3
-// stride 4 = baseStrides#1 * size 5 * size 6 * size 7
-//          = baseStrides#1 * 2 * (baseSizes#1 / 60) * 3
-//          = baseStrides#1 * (baseSizes#1 / 60) * 6
-//          and since we know that baseSizes#1 is a multiple of 60:
-//          = baseStrides#1 * (baseSizes#1 / 10)
-// stride 5 = baseStrides#1 * size 6 * size 7
-//          = baseStrides#1 * (baseSizes#1 / 60) * 3
-//          = baseStrides#1 * (baseSizes#1 / 20)
-// stride 6 = baseStrides#1 * size 7
-//          = baseStrides#1 * 3
-// stride 7 = baseStrides#1
-//
 // Base and offset are unchanged.
 //
-//   CHECK-DAG: #[[$DIM0_SIZE_MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 504)>
-//   CHECK-DAG: #[[$DIM6_SIZE_MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 60)>
-//
-//   CHECK-DAG: #[[$DIM0_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 504)>
-//   CHECK-DAG: #[[$DIM1_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 72)>
-//   CHECK-DAG: #[[$DIM2_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 9)>
-//   CHECK-DAG: #[[$DIM4_STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 floordiv 10) * s1)>
-//   CHECK-DAG: #[[$DIM5_STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> ((s0 floordiv 20) * s1)>
-//   CHECK-DAG: #[[$DIM6_STRIDE_MAP:.*]] = affine_map<()[s0] -> (s0 * 3)>
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 9)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 * 72)>
+// CHECK-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 * 504)>
+// CHECK-DAG: #[[$MAP3:.*]] = affine_map<()[s0] -> (s0 * 3)>
+// CHECK-DAG: #[[$MAP4:.*]] = affine_map<()[s0, s1] -> ((s1 * s0) * 3)>
+// CHECK-DAG: #[[$MAP5:.*]] = affine_map<()[s0, s1] -> ((s1 * s0) * 6)>
 // CHECK-LABEL: func @extract_strided_metadata_of_expand_shape_all_dynamic
-//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32,
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %[[sz0:.*]]: index, %[[sz1:.*]]: index
 //
+//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
 //   CHECK-DAG: %[[C9:.*]] = arith.constant 9 : index
 //   CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
 //   CHECK-DAG: %[[C7:.*]] = arith.constant 7 : index
-//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<?x?xf32, strided<[?, ?], offset: ?>> -> memref<f32>, index, index, index, index, index
 //
-//   CHECK-DAG: %[[DYN_SIZE0:.*]] = affine.apply #[[$DIM0_SIZE_MAP]]()[%[[SIZES]]#0]
-//   CHECK-DAG: %[[DYN_SIZE6:.*]] = affine.apply #[[$DIM6_SIZE_MAP]]()[%[[SIZES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #[[$DIM0_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #[[$DIM1_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE2:.*]] = affine.apply #[[$DIM2_STRIDE_MAP]]()[%[[STRIDES]]#0]
-//   CHECK-DAG: %[[DYN_STRIDE4:.*]] = affine.apply #[[$DIM4_STRIDE_MAP]]()[%[[SIZES]]#1, %[[STRIDES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE5:.*]] = affine.apply #[[$DIM5_STRIDE_MAP]]()[%[[SIZES]]#1, %[[STRIDES]]#1]
-//   CHECK-DAG: %[[DYN_STRIDE6:.*]] = affine.apply #[[$DIM6_STRIDE_MAP]]()[%[[STRIDES]]#1]
-
-//   CHECK: return %[[BASE]], %[[OFFSET]], %[[DYN_SIZE0]], %[[C7]], %[[C8]], %[[C9]], %[[C10]], %[[C2]], %[[DYN_SIZE6]], %[[C3]], %[[DYN_STRIDE0]], %[[DYN_STRIDE1]], %[[DYN_STRIDE2]], %[[STRIDES]]#0, %[[DYN_STRIDE4]], %[[DYN_STRIDE5]], %[[DYN_STRIDE6]], %[[STRIDES]]#1 : memref<f32>, index, index, index, index, index, index, index, index, index, index, index, index, index
+//   CHECK-DAG: %[[DYN_STRIDE0:.*]] = affine.apply #[[$MAP]]()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE1:.*]] = affine.apply #[[$MAP1]]()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE2:.*]] = affine.apply #[[$MAP2]]()[%[[STRIDES]]#0]
+//   CHECK-DAG: %[[DYN_STRIDE3:.*]] = affine.apply #[[$MAP3]]()[%[[STRIDES]]#1]
+//   CHECK-DAG: %[[DYN_STRIDE4:.*]] = affine.apply #[[$MAP4]]()[%[[STRIDES]]#1, %[[sz1]]]
+//   CHECK-DAG: %[[DYN_STRIDE5:.*]] = affine.apply #[[$MAP5]]()[%[[STRIDES]]#1, %[[sz1]]]
+//
+//   CHECK: return %[[BASE]], %[[OFFSET]], %[[sz0]], %[[C7]], %[[C8]], %[[C9]], %[[C10]], %[[C2]], %[[sz1]], %[[C3]], %[[DYN_STRIDE2]], %[[DYN_STRIDE1]], %[[DYN_STRIDE0]], %[[STRIDES]]#0, %[[DYN_STRIDE5]], %[[DYN_STRIDE4]], %[[DYN_STRIDE3]], %[[STRIDES]]#1 : memref<f32>, index, index, index, index, index, index, index, index, index, index, index, index, index
 func.func @extract_strided_metadata_of_expand_shape_all_dynamic(
     %base: memref<?x?xf32, strided<[?,?], offset:?>>,
     %offset0: index, %offset1: index, %offset2: index,
@@ -619,7 +535,6 @@ func.func @extract_strided_metadata_of_expand_shape_all_dynamic(
       index, index, index, index, index, index, index, index,
       index, index, index, index, index, index, index, index
 }
-
 
 // -----
 
@@ -1582,3 +1497,27 @@ func.func @extract_strided_metadata_of_memory_space_cast_no_base(%base: memref<2
 
 // CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast_no_base
 //   CHECK-NOT:  memref.memory_space_cast
+
+// -----
+
+// CHECK-DAG:    #[[$MAP:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
+// CHECK-DAG:    #[[$MAP1:.*]] = affine_map<()[s0, s1, s2] -> ((s1 * s2) * s0)>
+// CHECK-LABEL:  expand_shape_dynamic
+// CHECK-DAG:    %[[C256:.*]] = arith.constant 256 : index
+// CHECK:        %[[ALLOC:.*]] = memref.alloc
+// CHECK:        %[[ID0:.*]] = arith.index_cast
+// CHECK:        %[[ID1:.*]] = arith.index_cast
+// CHECK:        %[[ID2:.*]] = arith.index_cast
+// CHECK:        %[[MAP_RES0:.*]] = affine.apply #[[$MAP]]()[%[[ID2]], %[[C256]]]
+// CHECK:        %[[MAP_RES1:.*]] = affine.apply #[[$MAP1]]()[%[[C256]], %[[ID2]], %[[ID1]]]
+// CHECK:        %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %[[ALLOC]] to offset: [0], sizes: [%[[ID0]], %[[ID1]], %[[ID2]], 256], strides: [%[[MAP_RES1]], %[[MAP_RES0]], 256, 1] : memref<?x256xf32> to memref<?x?x?x256xf32>
+// CHECK:        return %[[REINTERPRET_CAST]] : memref<?x?x?x256xf32>
+func.func @expand_shape_dynamic(%arg0: index, %arg1: i64, %arg2: i64, %arg3: i64) -> memref<?x?x?x256xf32>
+{
+  %alloc_52 = memref.alloc(%arg0) {alignment = 64 : i64} : memref<?x256xf32>
+  %120 = arith.index_cast %arg1 : i64 to index
+  %121 = arith.index_cast %arg2 : i64 to index
+  %122 = arith.index_cast %arg3 : i64 to index
+  %expand_shape = memref.expand_shape %alloc_52 [[0, 1, 2], [3]] output_shape [%120, %121, %122, 256] : memref<?x256xf32> into memref<?x?x?x256xf32>
+  return %expand_shape : memref<?x?x?x256xf32>
+}
