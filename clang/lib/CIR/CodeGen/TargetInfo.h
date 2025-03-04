@@ -18,6 +18,8 @@
 #include "CIRGenValue.h"
 #include "mlir/IR/Types.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Target/AArch64.h"
+#include "clang/CIR/Target/x86.h"
 
 #include <memory>
 
@@ -122,7 +124,20 @@ public:
   virtual ~TargetCIRGenInfo() {}
 };
 
+std::unique_ptr<TargetCIRGenInfo>
+createAArch64TargetCIRGenInfo(CIRGenTypes &CGT, cir::AArch64ABIKind Kind);
+
+std::unique_ptr<TargetCIRGenInfo>
+createX86_64TargetCIRGenInfo(CIRGenTypes &CGT, cir::X86AVXABILevel AVXLevel);
+
 void computeSPIRKernelABIInfo(CIRGenModule &CGM, CIRGenFunctionInfo &FI);
+
+std::unique_ptr<TargetCIRGenInfo> createSPIRVTargetCIRGenInfo(CIRGenTypes &CGT);
+
+std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &CGT);
+
+std::unique_ptr<TargetCIRGenInfo>
+createAMDGPUTargetCIRGenInfo(CIRGenTypes &CGT);
 
 } // namespace clang::CIRGen
 

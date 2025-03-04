@@ -74,7 +74,7 @@ public:
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
 
 private:
-  mutable std::unique_ptr<TargetCIRGenInfo> TheTargetCIRGenInfo;
+  mutable std::unique_ptr<TargetCIRGenInfo> theTargetCIRGenInfo;
 
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this

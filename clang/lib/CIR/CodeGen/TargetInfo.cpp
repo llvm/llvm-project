@@ -95,11 +95,9 @@ public:
 //===----------------------------------------------------------------------===//
 
 namespace {
+using ABIKind = cir::AArch64ABIKind;
 
 class AArch64ABIInfo : public ABIInfo {
-public:
-  enum ABIKind { AAPCS = 0, DarwinPCS, Win64 };
-
 private:
   ABIKind Kind;
 
@@ -113,7 +111,7 @@ public:
 
 private:
   ABIKind getABIKind() const { return Kind; }
-  bool isDarwinPCS() const { return Kind == DarwinPCS; }
+  bool isDarwinPCS() const { return Kind == ABIKind::DarwinPCS; }
 
   cir::ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
   cir::ABIArgInfo classifyArgumentType(QualType RetTy, bool IsVariadic,
@@ -143,11 +141,17 @@ private:
 
 class AArch64TargetCIRGenInfo : public TargetCIRGenInfo {
 public:
-  AArch64TargetCIRGenInfo(CIRGenTypes &CGT, AArch64ABIInfo::ABIKind Kind)
+  AArch64TargetCIRGenInfo(CIRGenTypes &CGT, ABIKind Kind)
       : TargetCIRGenInfo(std::make_unique<AArch64ABIInfo>(CGT, Kind)) {}
 };
 
 } // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAArch64TargetCIRGenInfo(CIRGenTypes &CGT,
+                                             cir::AArch64ABIKind Kind) {
+  return std::make_unique<AArch64TargetCIRGenInfo>(CGT, Kind);
+}
 
 //===----------------------------------------------------------------------===//
 // X86 ABI Implementation
@@ -230,6 +234,12 @@ public:
 };
 } // namespace
 
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createX86_64TargetCIRGenInfo(CIRGenTypes &CGT,
+                                            X86AVXABILevel AVXLevel) {
+  return std::make_unique<X86_64TargetCIRGenInfo>(CGT, AVXLevel);
+}
+
 //===----------------------------------------------------------------------===//
 // Base ABI and target codegen info implementation common between SPIR and
 // SPIR-V.
@@ -309,6 +319,11 @@ public:
 
 } // namespace
 
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createSPIRVTargetCIRGenInfo(CIRGenTypes &CGT) {
+  return std::make_unique<SPIRVTargetCIRGenInfo>(CGT);
+}
+
 //===----------------------------------------------------------------------===//
 // NVPTX ABI Implementation
 //===----------------------------------------------------------------------===//
@@ -332,6 +347,11 @@ public:
 };
 
 } // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &CGT) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(CGT);
+}
 
 //===----------------------------------------------------------------------===//
 // AMDGPU ABI Implementation
@@ -360,6 +380,11 @@ public:
 };
 
 } // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &CGT) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(CGT);
+}
 
 // TODO(cir): remove the attribute once this gets used.
 LLVM_ATTRIBUTE_UNUSED
@@ -701,58 +726,4 @@ mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
     llvm_unreachable("Global ops addrspace cast NYI");
   // Try to preserve the source's name to make IR more readable.
   return CGF.getBuilder().createAddrSpaceCast(Src, DestTy);
-}
-
-const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
-  if (TheTargetCIRGenInfo)
-    return *TheTargetCIRGenInfo;
-
-  // Helper to set the unique_ptr while still keeping the return value.
-  auto SetCIRGenInfo = [&](TargetCIRGenInfo *P) -> const TargetCIRGenInfo & {
-    this->TheTargetCIRGenInfo.reset(P);
-    return *P;
-  };
-
-  const llvm::Triple &Triple = getTarget().getTriple();
-
-  switch (Triple.getArch()) {
-  default:
-    assert(false && "Target not yet supported!");
-
-  case llvm::Triple::aarch64_be:
-  case llvm::Triple::aarch64: {
-    AArch64ABIInfo::ABIKind Kind = AArch64ABIInfo::AAPCS;
-    assert(getTarget().getABI() == "aapcs" ||
-           getTarget().getABI() == "darwinpcs" &&
-               "Only Darwin supported for aarch64");
-    Kind = AArch64ABIInfo::DarwinPCS;
-    return SetCIRGenInfo(new AArch64TargetCIRGenInfo(genTypes, Kind));
-  }
-
-  case llvm::Triple::x86_64: {
-    StringRef ABI = getTarget().getABI();
-    X86AVXABILevel AVXLevel = (ABI == "avx512" ? X86AVXABILevel::AVX512
-                               : ABI == "avx"  ? X86AVXABILevel::AVX
-                                               : X86AVXABILevel::None);
-
-    switch (Triple.getOS()) {
-    default:
-      assert(false && "OSType NYI");
-    case llvm::Triple::Linux:
-      return SetCIRGenInfo(new X86_64TargetCIRGenInfo(genTypes, AVXLevel));
-    }
-  }
-
-  case llvm::Triple::spirv64: {
-    return SetCIRGenInfo(new SPIRVTargetCIRGenInfo(genTypes));
-  }
-
-  case llvm::Triple::nvptx64: {
-    return SetCIRGenInfo(new NVPTXTargetCIRGenInfo(genTypes));
-  }
-
-  case llvm::Triple::amdgcn: {
-    return SetCIRGenInfo(new AMDGPUTargetCIRGenInfo(genTypes));
-  }
-  }
 }

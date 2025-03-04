@@ -507,6 +507,56 @@ void CIRGenModule::setDSOLocal(CIRGlobalValueInterface gv) const {
   gv.setDSOLocal(shouldAssumeDSOLocal(*this, gv));
 }
 
+const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
+  if (theTargetCIRGenInfo)
+    return *theTargetCIRGenInfo;
+
+  const llvm::Triple &triple = getTarget().getTriple();
+
+  switch (triple.getArch()) {
+  default:
+    assert(false && "Target not yet supported!");
+
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::aarch64: {
+    AArch64ABIKind kind = AArch64ABIKind::AAPCS;
+    assert(getTarget().getABI() == "aapcs" ||
+           getTarget().getABI() == "darwinpcs" &&
+               "Only Darwin supported for aarch64");
+    kind = AArch64ABIKind::DarwinPCS;
+    return *(theTargetCIRGenInfo =
+                 createAArch64TargetCIRGenInfo(genTypes, kind));
+  }
+
+  case llvm::Triple::x86_64: {
+    StringRef abi = getTarget().getABI();
+    X86AVXABILevel avxLevel = (abi == "avx512" ? X86AVXABILevel::AVX512
+                               : abi == "avx"  ? X86AVXABILevel::AVX
+                                               : X86AVXABILevel::None);
+
+    switch (triple.getOS()) {
+    default:
+      assert(false && "OSType NYI");
+    case llvm::Triple::Linux:
+      return *(theTargetCIRGenInfo =
+                   createX86_64TargetCIRGenInfo(genTypes, avxLevel));
+    }
+  }
+
+  case llvm::Triple::spirv64: {
+    return *(theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes));
+  }
+
+  case llvm::Triple::nvptx64: {
+    return *(theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes));
+  }
+
+  case llvm::Triple::amdgcn: {
+    return *(theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes));
+  }
+  }
+}
+
 const ABIInfo &CIRGenModule::getABIInfo() {
   return getTargetCIRGenInfo().getABIInfo();
 }
