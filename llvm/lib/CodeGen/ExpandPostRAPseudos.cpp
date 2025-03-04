@@ -11,8 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -26,14 +29,21 @@ using namespace llvm;
 #define DEBUG_TYPE "postrapseudos"
 
 namespace {
-struct ExpandPostRA : public MachineFunctionPass {
+struct ExpandPostRA {
+  bool run(MachineFunction &);
+
 private:
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
 
-public:
-  static char ID; // Pass identification, replacement for typeid
-  ExpandPostRA() : MachineFunctionPass(ID) {}
+  bool LowerSubregToReg(MachineInstr *MI);
+};
+
+struct ExpandPostRALegacy : public MachineFunctionPass {
+  static char ID;
+  ExpandPostRALegacy() : MachineFunctionPass(ID) {
+    initializeExpandPostRALegacyPass(*PassRegistry::getPassRegistry());
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -43,17 +53,26 @@ public:
   }
 
   /// runOnMachineFunction - pass entry point
-  bool runOnMachineFunction(MachineFunction&) override;
-
-private:
-  bool LowerSubregToReg(MachineInstr *MI);
+  bool runOnMachineFunction(MachineFunction &) override;
 };
 } // end anonymous namespace
 
-char ExpandPostRA::ID = 0;
-char &llvm::ExpandPostRAPseudosID = ExpandPostRA::ID;
+PreservedAnalyses
+ExpandPostRAPseudosPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  if (!ExpandPostRA().run(MF))
+    return PreservedAnalyses::all();
 
-INITIALIZE_PASS(ExpandPostRA, DEBUG_TYPE,
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<MachineLoopAnalysis>()
+      .preserve<MachineDominatorTreeAnalysis>();
+}
+
+char ExpandPostRALegacy::ID = 0;
+char &llvm::ExpandPostRAPseudosID = ExpandPostRALegacy::ID;
+
+INITIALIZE_PASS(ExpandPostRALegacy, DEBUG_TYPE,
                 "Post-RA pseudo instruction expansion pass", false, false)
 
 bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
@@ -115,10 +134,14 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
   return true;
 }
 
+bool ExpandPostRALegacy::runOnMachineFunction(MachineFunction &MF) {
+  return ExpandPostRA().run(MF);
+}
+
 /// runOnMachineFunction - Reduce subregister inserts and extracts to register
 /// copies.
 ///
-bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
+bool ExpandPostRA::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Machine Function\n"
                     << "********** EXPANDING POST-RA PSEUDO INSTRS **********\n"
                     << "********** Function: " << MF.getName() << '\n');
