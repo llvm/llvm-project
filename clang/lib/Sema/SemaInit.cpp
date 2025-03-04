@@ -519,12 +519,13 @@ class InitListChecker {
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
     if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+      unsigned ArrIndex = Entity.getElementIndex();
       auto *AType =
           SemaRef.Context.getAsArrayType(Entity.getParent()->getType());
       assert(AType && "expected array type when initializing array");
       ElsCount = Embed->getDataElementCount();
       if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
-        ElsCount = std::min(CAType->getSize().getZExtValue(),
+        ElsCount = std::min(CAType->getSize().getZExtValue() - ArrIndex,
                             ElsCount - CurEmbedIndex);
       if (ElsCount == Embed->getDataElementCount()) {
         CurEmbed = nullptr;
@@ -1317,7 +1318,7 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
     return;
 
   // Don't complain for incomplete types, since we'll get an error elsewhere.
-  if (Index < IList->getNumInits() && !T->isIncompleteType()) {
+  if ((Index < IList->getNumInits() || CurEmbed) && !T->isIncompleteType()) {
     // We have leftover initializers
     bool ExtraInitsIsError = SemaRef.getLangOpts().CPlusPlus ||
           (SemaRef.getLangOpts().OpenCL && T->isVectorType());
@@ -2180,6 +2181,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
 
     InitializedEntity ElementEntity = InitializedEntity::InitializeElement(
         SemaRef.Context, StructuredIndex, Entity);
+    ElementEntity.setElementIndex(elementIndex.getExtValue());
 
     unsigned EmbedElementIndexBeforeInit = CurEmbedIndex;
     // Check this element.
