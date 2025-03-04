@@ -936,6 +936,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   derived().addPostRegAlloc(addPass);
 
   addPass(RemoveRedundantDebugValuesPass());
+  addPass(FixupStatepointCallerSavedPass());
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOptLevel::None) {
