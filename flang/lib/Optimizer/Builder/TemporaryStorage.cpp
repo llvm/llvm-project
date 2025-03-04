@@ -355,3 +355,27 @@ void fir::factory::AnyVectorSubscriptStack::destroy(
   static_cast<AnyVariableStack *>(this)->destroy(loc, builder);
   shapeTemp->destroy(loc, builder);
 }
+
+//===----------------------------------------------------------------------===//
+// fir::factory::AnyDescriptorAddressStack implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::AnyDescriptorAddressStack::AnyDescriptorAddressStack(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    mlir::Type descriptorAddressType)
+    : AnyValueStack(loc, builder, builder.getIntPtrType()),
+      descriptorAddressType{descriptorAddressType} {}
+
+void fir::factory::AnyDescriptorAddressStack::pushValue(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value variable) {
+  mlir::Value cast =
+      builder.createConvert(loc, builder.getIntPtrType(), variable);
+  static_cast<AnyValueStack *>(this)->pushValue(loc, builder, cast);
+}
+
+mlir::Value
+fir::factory::AnyDescriptorAddressStack::fetch(mlir::Location loc,
+                                               fir::FirOpBuilder &builder) {
+  mlir::Value addr = static_cast<AnyValueStack *>(this)->fetch(loc, builder);
+  return builder.createConvert(loc, descriptorAddressType, addr);
+}

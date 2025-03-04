@@ -249,8 +249,11 @@ mlir::Value genVariableBoxChar(mlir::Location loc, fir::FirOpBuilder &builder,
                                hlfir::Entity var);
 
 /// Get or create a fir.box or fir.class from a variable.
+/// A fir.box with different attributes that \p var can be created
+/// using \p forceBoxType.
 hlfir::Entity genVariableBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                             hlfir::Entity var);
+                             hlfir::Entity var,
+                             fir::BaseBoxType forceBoxType = {});
 
 /// If the entity is a variable, load its value (dereference pointers and
 /// allocatables if needed). Do nothing if the entity is already a value, and

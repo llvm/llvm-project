@@ -1377,7 +1377,7 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
         regions.push_back(&getUserDefinedAssignment());
     }
     mlir::Region* getSubTreeRegion() { return nullptr; }
-
+    bool isPointerAssignment();
   }];
 
   let hasCustomAssemblyFormat = 1;
