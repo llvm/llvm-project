@@ -1299,11 +1299,12 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
   // Save vector subscripted LHS address.
   mlir::Location loc = region.getParentOp()->getLoc();
   LhsValueAndCleanUp loweredLhs = generateYieldedLHS(loc, region);
-  assert(loweredLhs.vectorSubscriptLoopNest &&
-         "expect vector subscript loop nest");
-  constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  // loweredLhs.vectorSubscriptLoopNest is empty inside a WHERE because the
+  // WHERE loops are already indexing the vector subscripted designator.
+  if (loweredLhs.vectorSubscriptLoopNest)
+    constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerOp);
   fir::factory::TemporaryStorage *temp = nullptr;
-  if (!rhsIsArray(regionAssignOp)) {
+  if (loweredLhs.vectorSubscriptLoopNest && !rhsIsArray(regionAssignOp)) {
     // Vector subscripted entity for which the shape must also be saved on top
     // of the element addresses (e.g. the shape may change in each forall
     // iteration and is needed to create the elemental loops).
@@ -1341,8 +1342,10 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
   }
   temp->pushValue(loc, builder, loweredLhs.lhs);
   generateCleanupIfAny(loweredLhs.elementalCleanup);
-  constructStack.pop_back();
-  builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  if (loweredLhs.vectorSubscriptLoopNest) {
+    constructStack.pop_back();
+    builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  }
 }
 
 /// Lower an ordered assignment tree to fir.do_loop and hlfir.assign given
