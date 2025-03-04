@@ -137,10 +137,10 @@ enum WaitEventType {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
+  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
+  AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 256,  // Maximum programmable SGPRs across all targets.
+  NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
   // unknown use the first slot. The first slot is also always updated in
@@ -164,6 +164,18 @@ enum VmemType {
   VMEM_BVH,
   NUM_VMEM_TYPES
 };
+
+static unsigned getRegPoint(const GCNSubtarget &ST, MCRegister Reg,
+                            const SIRegisterInfo &TRI) {
+  // Order register interval points so that intervals of 32-bit VGPRs
+  // include intervals of their 16-bit halves.
+  MCRegister MCReg = AMDGPU::getMCReg(Reg, ST);
+  unsigned RegIdx = TRI.getHWRegIndex(MCReg);
+  bool IsHi = AMDGPU::isHi16Reg(MCReg, TRI);
+  bool IsVector = TRI.isVectorRegister(MCReg);
+  assert(isUInt<8>(RegIdx));
+  return (IsVector ? 0x200 : 0) | (RegIdx << 1) | (IsHi ? 1 : 0);
+}
 
 // Maps values of InstCounterType to the instruction that waits on that
 // counter. Only used if GCNSubtarget::hasExtendedWaitCounts()
@@ -757,29 +769,30 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST)) &
-                 AMDGPU::HWEncoding::REG_IDX_MASK;
+  unsigned Reg = getRegPoint(*ST, Op.getReg(), *TRI);
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
+  unsigned Size = TRI->getRegSizeInBits(*RC);
 
+  // VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
     Result.first = Reg - Encoding.VGPR0;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
+    assert(Size % 16 == 0);
+    Result.second = Result.first + (Size / 16);
   } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
+    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS * 2);
+    Result.first = ((Reg - Encoding.SGPR0) >> 1) + NUM_ALL_VGPRS;
     assert(Result.first >= NUM_ALL_VGPRS &&
            Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
+    Result.second = Result.first + divideCeil(Size, 32);
   }
   // TODO: Handle TTMP
   // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
   else
     return {-1, -1};
-
-  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
-  unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + ((Size + 16) / 32);
 
   return Result;
 }
@@ -2452,16 +2465,14 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
   unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
-  assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
+  assert(NumVGPRsMax + AGPR_OFFSET <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
   RegisterEncoding Encoding = {};
-  Encoding.VGPR0 =
-      TRI->getEncodingValue(AMDGPU::VGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 =
-      TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
+  Encoding.VGPR0 = getRegPoint(*ST, AMDGPU::VGPR0, *TRI);
+  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax * 2 - 1;
+  Encoding.SGPR0 = getRegPoint(*ST, AMDGPU::SGPR0, *TRI);
+  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax * 2 - 1;
 
   BlockInfos.clear();
   bool Modified = false;
