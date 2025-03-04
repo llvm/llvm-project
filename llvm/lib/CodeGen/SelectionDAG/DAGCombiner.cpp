@@ -21385,6 +21385,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
         [[fallthrough]];
       case ISD::STORE:
         Values.push_back(Node->getOperand(0));
+        [[fallthrough]];
       default:
         break;
       }
