@@ -436,6 +436,8 @@ if(OFFLOAD_ENABLE_EMISSARY_APIS)
   add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryIds.h
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION_MAJOR}/include)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryMPI.h
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION_MAJOR}/include)
 endif()
 
 # Build offloading plugins and device RTLs if they are available.

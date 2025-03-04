@@ -1,4 +1,4 @@
-//===---- offload/plugins-nextgen/common/src/EmissaryFortrt.cpp  ----------===//
+//===--------------- offload/DeviceRTL/include/EmissaryMPI.h --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,32 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Host support for Fortran runtime Emissary API
+// EmissaryMPI.h This include must be included by MPI application
 //
 //===----------------------------------------------------------------------===//
-#include "PluginInterface.h"
-#include "RPC.h"
-#include "Shared/Debug.h"
-#include "Shared/RPCOpcodes.h"
-#include "shared/rpc.h"
-#include "shared/rpc_opcodes.h"
-#include "../../../DeviceRTL/include/EmissaryIds.h"
-#include "Emissary.h"
-#include <assert.h>
-#include <cstring>
-#include <ctype.h>
-#include <list>
-#include <mpi.h>
+#include "EmissaryIds.h"
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <tuple>
-#include <vector>
 
+typedef enum {
+  _MPI_INVALID,
+  _MPI_Send_idx,
+  _MPI_Recv_idx,
+} offload_emis_mpi_t;
+
+///  Device stubs that call _emissary_exec using identical host API interface
+#if defined(__NVPTX__) || defined(__AMDGCN__)
+extern "C" int MPI_Send(const void *buf, int count, MPI_Datatype datatype,
+                        int dest, int tag, MPI_Comm comm) {
+  return (int)_emissary_exec(_PACK_EMIS_IDS(EMIS_ID_MPI, _MPI_Send_idx), buf,
+                             count, datatype, dest, tag, comm);
+}
+extern "C" int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source,
+                        int tag, MPI_Comm comm, MPI_Status *st) {
+  return (int)_emissary_exec(_PACK_EMIS_IDS(EMIS_ID_MPI, _MPI_Recv_idx), buf,
+                             count, datatype, source, tag, comm, st);
+}
+#endif
+
+/// Host variadic wrapper functions.
 extern "C" {
 extern int V_MPI_Send(void *fnptr, ...) {
   va_list args;
@@ -61,11 +62,8 @@ extern int V_MPI_Recv(void *fnptr, ...) {
   return rval;
 }
 
-emis_return_t EmissaryMPI(char *data, emisArgBuf_t *ab) {
-  uint64_t *a[MAXVARGS];
-  if (EmissaryBuildVargs(ab->NumArgs, ab->keyptr, ab->argptr, ab->strptr,
-                         &ab->data_not_used, &a[0]) != _RC_SUCCESS)
-    return (emis_return_t)0;
+/// EmissaryMPI function selector
+emis_return_t EmissaryMPI(char *data, emisArgBuf_t *ab, emis_argptr_t *a[]) {
 
   switch (ab->emisfnid) {
   case _MPI_Send_idx: {
