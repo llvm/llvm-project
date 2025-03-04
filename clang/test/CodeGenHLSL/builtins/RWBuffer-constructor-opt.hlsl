@@ -7,7 +7,9 @@ RWBuffer<float> Buf : register(u5, space3);
 [shader("compute")]
 [numthreads(1, 1, 1)]
 void main() {
+// CHECK-NOT: resource.handlefrombinding
 // CHECK: define void @main()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: ret void
+// CHECK-NOT: resource.handlefrombinding
 }
