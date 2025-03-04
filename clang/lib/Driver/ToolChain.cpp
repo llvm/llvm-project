@@ -210,7 +210,9 @@ static void getAArch64MultilibFlags(const Driver &D,
                                           const llvm::opt::ArgList &Args,
                                           Multilib::flags_list &Result) {
   std::vector<StringRef> Features;
-  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, false);
+  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features,
+                                           /*ForAS=*/false,
+                                           /*ForMultilib=*/true);
   const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
   llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
                                        UnifiedFeatures.end());

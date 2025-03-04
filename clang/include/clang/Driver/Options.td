@@ -4725,9 +4725,9 @@ def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
 } // let Flags = [TargetSpecific]
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Disallow generation of data access to code sections (ARM only)">;
+  HelpText<"Disallow generation of data access to code sections (AArch64/ARM only)">;
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Allow generation of data access to code sections (ARM only)">;
+  HelpText<"Allow generation of data access to code sections (AArch64/ARM only)">;
 let Flags = [TargetSpecific] in {
 def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "
