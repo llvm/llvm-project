@@ -281,6 +281,8 @@ public:
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
 
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *E);

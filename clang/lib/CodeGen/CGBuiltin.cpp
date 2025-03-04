@@ -4378,7 +4378,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umax,
                                              Op0, Op1, nullptr, "elt.max");
     } else
-      Result = Builder.CreateMaxNum(Op0, Op1, "elt.max");
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4394,7 +4394,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umin,
                                              Op0, Op1, nullptr, "elt.min");
     } else
-      Result = Builder.CreateMinNum(Op0, Op1, "elt.min");
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
   }
 
@@ -20225,7 +20225,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
-
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:

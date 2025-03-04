@@ -482,6 +482,33 @@ define <vscale x 2 x double> @splat_nxv2f64_imm() {
   ret <vscale x 2 x double> splat(double 1.0)
 }
 
+; NOTE: f16(1.875) == bf16(1.0)
+define <vscale x 8 x bfloat> @splat_nxv8bf16_imm() {
+; CHECK-LABEL: splat_nxv8bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat(bfloat 1.0)
+}
+
+; NOTE: f16(-1.875) == bf16(-1.0)
+define <vscale x 4 x bfloat> @splat_nxv4bf16_imm() {
+; CHECK-LABEL: splat_nxv4bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #-1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat(bfloat -1.0)
+}
+
+; NOTE: f16(1.875) == bf16(1.0)
+define <vscale x 2 x bfloat> @splat_nxv2bf16_imm() {
+; CHECK-LABEL: splat_nxv2bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat(bfloat 1.0)
+}
+
 define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: splat_nxv4i32_fold:
 ; CHECK:       // %bb.0:
@@ -554,8 +581,8 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    adrp x8, .LCPI57_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI57_0
+; CHECK-NEXT:    adrp x8, .LCPI60_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI60_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x double> splat(double 3.33)

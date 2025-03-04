@@ -83,15 +83,6 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
-  for raw instruction access.
-
-* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
-
-* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
-
-* Initial support for gfx950
-
 Changes to the ARM Backend
 --------------------------
 
@@ -120,6 +111,7 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
   is a frame-pointer convention compatible version of Zcmp.
+* Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
 
 Changes to the WebAssembly Backend
 ----------------------------------

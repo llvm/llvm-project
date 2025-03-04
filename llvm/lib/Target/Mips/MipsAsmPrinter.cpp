@@ -821,6 +821,29 @@ void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   getTargetStreamer().emitDirectiveSetPop();
 }
 
+void MipsAsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                        const MachineBasicBlock *MBB,
+                                        unsigned uid) const {
+  MCSymbol *MBBSym = MBB->getSymbol();
+  switch (MJTI.getEntryKind()) {
+  case MachineJumpTableInfo::EK_BlockAddress:
+    OutStreamer->emitValue(MCSymbolRefExpr::create(MBBSym, OutContext),
+                           getDataLayout().getPointerSize());
+    break;
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+    // Each entry is a GP-relative value targeting the block symbol.
+    getTargetStreamer().emitGPRel32Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    getTargetStreamer().emitGPRel64Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  default:
+    llvm_unreachable("");
+  }
+}
+
 void MipsAsmPrinter::EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol) {
   MCInst I;
   I.setOpcode(Mips::JAL);

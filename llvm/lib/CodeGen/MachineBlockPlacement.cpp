@@ -1792,12 +1792,12 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
 
   for (MachineFunction::iterator I = PrevUnplacedBlockIt, E = F->end(); I != E;
        ++I) {
-    if (BlockToChain[&*I] != &PlacedChain) {
+    if (BlockChain *Chain = BlockToChain[&*I]; Chain != &PlacedChain) {
       PrevUnplacedBlockIt = I;
       // Now select the head of the chain to which the unplaced block belongs
       // as the block to place. This will force the entire chain to be placed,
       // and satisfies the requirements of merging chains.
-      return *BlockToChain[&*I]->begin();
+      return *Chain->begin();
     }
   }
   return nullptr;
