@@ -2003,9 +2003,9 @@ static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
   if (TexFailCtrl)
     IsTexFail = true;
 
-  TFE = (TexFailCtrl & 0x1) ? true : false;
+  TFE = TexFailCtrl & 0x1;
   TexFailCtrl &= ~(uint64_t)0x1;
-  LWE = (TexFailCtrl & 0x2) ? true : false;
+  LWE = TexFailCtrl & 0x2;
   TexFailCtrl &= ~(uint64_t)0x2;
 
   return TexFailCtrl == 0;

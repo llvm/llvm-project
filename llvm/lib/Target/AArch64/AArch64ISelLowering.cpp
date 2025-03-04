@@ -505,8 +505,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
-  setOperationAction(ISD::SELECT, MVT::f16, Custom);
-  setOperationAction(ISD::SELECT, MVT::bf16, Custom);
+  if (Subtarget->hasFPARMv8()) {
+    setOperationAction(ISD::SELECT, MVT::f16, Custom);
+    setOperationAction(ISD::SELECT, MVT::bf16, Custom);
+  }
   setOperationAction(ISD::SELECT, MVT::f32, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);

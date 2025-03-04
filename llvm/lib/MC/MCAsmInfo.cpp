@@ -133,22 +133,19 @@ void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
         NameToVariantKind.try_emplace(Desc.Name.lower(), Desc.Kind);
-    // Workaround for VK_PPC_L/VK_PPC_LO ("l"), VK_PPC_TLSGD, and VK_PPC_TLSLD.
-    assert(It2.second ||
-           (Desc.Name == "l" || Desc.Name == "tlsgd" || Desc.Name == "tlsld"));
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
+    assert(It2.second || Desc.Name == "l");
   }
 }
 
 StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
-  if (!VariantKindToName.empty())
-    return VariantKindToName.find(Kind)->second;
-  return MCSymbolRefExpr::getVariantKindName(
-      MCSymbolRefExpr::VariantKind(Kind));
+  auto It = VariantKindToName.find(Kind);
+  assert(It != VariantKindToName.end() &&
+         "ensure the VariantKind is set in initializeVariantKinds");
+  return It->second;
 }
 
 uint32_t MCAsmInfo::getVariantKindForName(StringRef Name) const {
-  if (NameToVariantKind.empty())
-    return MCSymbolRefExpr::getVariantKindForName(Name);
   auto It = NameToVariantKind.find(Name.lower());
   if (It != NameToVariantKind.end())
     return It->second;

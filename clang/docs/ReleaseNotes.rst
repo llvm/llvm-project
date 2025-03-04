@@ -126,6 +126,10 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The ARM AArch32 ``-mtp`` option accepts and defaults to ``auto``, a value of ``auto`` uses the best available method of providing the frame pointer supported by the hardware. This matches
+  the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
+  Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
+
 Removed Compiler Flags
 -------------------------
 
@@ -161,7 +165,7 @@ related warnings within the method body.
       print_status("%s (%#08x)\n");
       // order of %s and %x is swapped but there is no diagnostic
     }
-  
+
   Before the introducion of ``format_matches``, this code cannot be verified
   at compile-time. ``format_matches`` plugs that hole:
 
@@ -216,6 +220,8 @@ Improvements to Clang's diagnostics
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
 
+- Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -229,6 +235,8 @@ Bug Fixes in This Version
   signed char values (#GH102798).
 - Fixed rejects-valid problem when #embed appears in std::initializer_list or
   when it can affect template argument deduction (#GH122306).
+- Fix crash on code completion of function calls involving partial order of function templates
+  (#GH125500).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

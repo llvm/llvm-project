@@ -384,7 +384,6 @@ void Pointer::initialize() const {
     return;
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
-  const Descriptor *Desc = getFieldDesc();
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
     GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
@@ -393,6 +392,7 @@ void Pointer::initialize() const {
     return;
   }
 
+  const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     // Primitive global arrays don't have an initmap.
