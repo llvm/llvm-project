@@ -63,9 +63,11 @@ class MIRAddFSDiscriminatorsLegacy : public MachineFunctionPass {
 
 public:
   static char ID;
+
   MIRAddFSDiscriminatorsLegacy(
       FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
       : MachineFunctionPass(ID), Pass(P) {}
+
   StringRef getPassName() const override {
     return "Add FS discriminators in MIR";
   }

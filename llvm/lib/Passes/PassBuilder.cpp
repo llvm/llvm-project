@@ -1434,11 +1434,10 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
       inconvertibleErrorCode());
 }
 
-<<<<<<< HEAD
 Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
-  }
+}
 
 Expected<FSDiscriminatorPass>
 parseFSDiscriminatorPassOptions(PassBuilder &PB, StringRef Params) {
