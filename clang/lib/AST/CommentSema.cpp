@@ -360,12 +360,13 @@ void Sema::actOnTParamCommandFinish(TParamCommandComment *Command,
 InlineCommandComment *
 Sema::actOnInlineCommand(SourceLocation CommandLocBegin,
                          SourceLocation CommandLocEnd, unsigned CommandID,
+                         CommandMarkerKind CommandMarker,
                          ArrayRef<Comment::Argument> Args) {
   StringRef CommandName = Traits.getCommandInfo(CommandID)->Name;
 
   return new (Allocator)
       InlineCommandComment(CommandLocBegin, CommandLocEnd, CommandID,
-                           getInlineCommandRenderKind(CommandName), Args);
+                           getInlineCommandRenderKind(CommandName), CommandMarker, Args);
 }
 
 InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,

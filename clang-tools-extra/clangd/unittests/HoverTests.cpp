@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "Config.h"
 #include "Hover.h"
+#include "SymbolDocumentation.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -639,7 +640,7 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "DECL_STR";
          HI.Kind = index::SymbolKind::Macro;
-         HI.Type = HoverInfo::PrintedType("const char *");
+         HI.Type = SymbolPrintedType("const char *");
          HI.Definition = "#define DECL_STR(NAME, VALUE) const char *v_##NAME = "
                          "STRINGIFY(VALUE)\n\n"
                          "// Expands to\n"
@@ -1848,7 +1849,7 @@ TEST(Hover, All) {
             HI.Type = "int ()";
             HI.Definition = "int x()";
             HI.ReturnType = "int";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
           }},
       {
           R"cpp(// Static method call
@@ -1865,7 +1866,7 @@ TEST(Hover, All) {
             HI.Type = "int ()";
             HI.Definition = "static int x()";
             HI.ReturnType = "int";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
           }},
       {
           R"cpp(// Typedef
@@ -1944,7 +1945,7 @@ TEST(Hover, All) {
             HI.Definition = "void foo()";
             HI.Documentation = "";
             HI.ReturnType = "void";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
           }},
       {
           R"cpp( // using declaration and two possible function declarations
@@ -2032,7 +2033,7 @@ TEST(Hover, All) {
             HI.Definition = "void foo()";
             HI.Documentation = "Function declaration";
             HI.ReturnType = "void";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
           }},
       {
           R"cpp(// Enum declaration
@@ -2173,7 +2174,7 @@ TEST(Hover, All) {
             HI.Definition = "template <> int foo<int>()";
             HI.Documentation = "Templated function";
             HI.ReturnType = "int";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
             // FIXME: We should populate template parameters with arguments in
             // case of instantiations.
           }},
@@ -2207,7 +2208,7 @@ TEST(Hover, All) {
             HI.Type = "void ()";
             HI.Definition = "void indexSymbol()";
             HI.ReturnType = "void";
-            HI.Parameters = std::vector<HoverInfo::Param>{};
+            HI.Parameters = std::vector<SymbolParam>{};
             HI.Documentation = "comment from index";
           }},
       {
@@ -3440,8 +3441,8 @@ TEST(Hover, Present) {
           },
           R"(class foo
 
-Size: 10 bytes
 documentation
+Size: 10 bytes
 
 template <typename T, typename C = bool> class Foo {})",
       },
@@ -3452,7 +3453,7 @@ template <typename T, typename C = bool> class Foo {})",
             HI.Type = {"type", "c_type"};
             HI.ReturnType = {"ret_type", "can_ret_type"};
             HI.Parameters.emplace();
-            HoverInfo::Param P;
+            SymbolParam P;
             HI.Parameters->push_back(P);
             P.Type = {"type", "can_type"};
             HI.Parameters->push_back(P);
@@ -3955,7 +3956,7 @@ TEST(Hover, DisableShowAKA) {
   auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
 
   ASSERT_TRUE(H);
-  EXPECT_EQ(H->Type, HoverInfo::PrintedType("m_int"));
+  EXPECT_EQ(H->Type, SymbolPrintedType("m_int"));
 }
 
 TEST(Hover, HideBigInitializers) {
@@ -4093,7 +4094,7 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
           /*Validator=*/
           [](std::optional<HoverInfo> HI, size_t) {
             EXPECT_EQ(HI->Value, "42 (0x2a)");
-            EXPECT_EQ(HI->Type, HoverInfo::PrintedType("int"));
+            EXPECT_EQ(HI->Type, SymbolPrintedType("int"));
           },
       },
       {
@@ -4184,7 +4185,7 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
           [](std::optional<HoverInfo> HI, size_t Id) {
             switch (Id) {
             case 0:
-              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("int[10]"));
+              EXPECT_EQ(HI->Type, SymbolPrintedType("int[10]"));
               break;
             case 1:
             case 2:
@@ -4210,11 +4211,11 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
             switch (Id) {
             case 0:
               EXPECT_FALSE(HI->Value);
-              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("const (lambda)"));
+              EXPECT_EQ(HI->Type, SymbolPrintedType("const (lambda)"));
               break;
             case 1:
               EXPECT_EQ(HI->Value, "0");
-              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("u64"));
+              EXPECT_EQ(HI->Type, SymbolPrintedType("u64"));
               break;
             case 2:
               EXPECT_FALSE(HI);

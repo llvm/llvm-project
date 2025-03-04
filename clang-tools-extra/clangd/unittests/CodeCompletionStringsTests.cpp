@@ -11,6 +11,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -234,6 +235,224 @@ TEST_F(CompletionStringTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
   computeSignature(*CCS);
   EXPECT_EQ(Signature, "(type2)");
   EXPECT_EQ(Snippet, "${1:(type2)}");
+}
+
+TEST(CompletionString, ParseDocumentation) {
+
+  llvm::BumpPtrAllocator Allocator;
+  CommentOptions CommentOpts;
+  comments::CommandTraits Traits(Allocator, CommentOpts);
+
+  struct Case {
+    llvm::StringRef Documentation;
+    std::optional<SymbolPrintedType> SymbolType;
+    std::optional<SymbolPrintedType> SymbolReturnType;
+    std::optional<std::vector<SymbolParam>> SymbolParameters;
+    llvm::StringRef ExpectedRenderMarkdown;
+    llvm::StringRef ExpectedRenderPlainText;
+  } Cases[] = {
+      {
+          "foo bar",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo bar",
+          "foo bar",
+      },
+      {
+          "foo\nbar\n",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo bar",
+          "foo bar",
+      },
+      {
+          "foo\n\nbar\n",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo  \nbar",
+          "foo\nbar",
+      },
+      {
+          "foo \\p bar baz",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo `bar` baz",
+          "foo bar baz",
+      },
+      {
+          "foo \\e bar baz",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo \\*bar\\* baz",
+          "foo *bar* baz",
+      },
+      {
+          "foo \\b bar baz",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo \\*\\*bar\\*\\* baz",
+          "foo **bar** baz",
+      },
+      {
+          "foo \\ref bar baz",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo \\*\\*\\\\ref\\*\\* \\*bar\\* baz",
+          "foo **\\ref** *bar* baz",
+      },
+      {
+          "foo @ref bar baz",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "foo \\*\\*@ref\\*\\* \\*bar\\* baz",
+          "foo **@ref** *bar* baz",
+      },
+      {
+          "\\throw exception foo",
+          std::nullopt,
+          std::nullopt,
+          std::nullopt,
+          "\\*\\*\\\\throw\\*\\* \\*exception\\* foo",
+          "**\\throw** *exception* foo",
+      },
+      {"@throws exception foo\n\n@note bar\n\n@warning baz\n\n@details "
+       "qux\n\nfree standing paragraph",
+       std::nullopt, std::nullopt, std::nullopt,
+       "Warning:  \n- baz\n\n---\n"
+       "Note:  \n- bar\n\n---\n"
+       "\\*\\*@throws\\*\\* \\*exception\\* foo  \n"
+       "\\*\\*@details\\*\\* qux  \n"
+       "free standing paragraph",
+       "Warning:\n- baz\n\n"
+       "Note:\n- bar\n\n"
+       "**@throws** *exception* foo\n"
+       "**@details** qux\n"
+       "free standing paragraph"},
+      {"@throws exception foo\n\n@note bar\n\n@warning baz\n\n@note another "
+       "note\n\n@warning another warning\n\n@details qux\n\nfree standing "
+       "paragraph",
+       std::nullopt, std::nullopt, std::nullopt,
+       "Warnings:  \n- baz\n- another warning\n\n---\n"
+       "Notes:  \n- bar\n- another note\n\n---\n"
+       "\\*\\*@throws\\*\\* \\*exception\\* foo  \n"
+       "\\*\\*@details\\*\\* qux  \n"
+       "free standing paragraph",
+       "Warnings:\n- baz\n- another warning\n\n"
+       "Notes:\n- bar\n- another note\n\n"
+       "**@throws** *exception* foo\n"
+       "**@details** qux\n"
+       "free standing paragraph"},
+      {
+          "",
+          SymbolPrintedType("my_type", "type"),
+          std::nullopt,
+          std::nullopt,
+          "Type: `my_type (aka type)`",
+          "Type: my_type (aka type)",
+      },
+      {
+          "",
+          SymbolPrintedType("my_type", "type"),
+          SymbolPrintedType("my_ret_type", "type"),
+          std::nullopt,
+          "→ `my_ret_type (aka type)`",
+          "→ my_ret_type (aka type)",
+      },
+      {
+          "\\return foo",
+          SymbolPrintedType("my_type", "type"),
+          SymbolPrintedType("my_ret_type", "type"),
+          std::nullopt,
+          "→ `my_ret_type (aka type)`: foo",
+          "→ my_ret_type (aka type): foo",
+      },
+      {
+          "\\returns foo",
+          SymbolPrintedType("my_type", "type"),
+          SymbolPrintedType("my_ret_type", "type"),
+          std::nullopt,
+          "→ `my_ret_type (aka type)`: foo",
+          "→ my_ret_type (aka type): foo",
+      },
+      {
+          "",
+          std::nullopt,
+          std::nullopt,
+          std::vector<SymbolParam>{
+              {SymbolPrintedType("my_type", "type"), "foo", "default"}},
+          "Parameters:  \n- `my_type foo = default (aka type)`",
+          "Parameters:\n- my_type foo = default (aka type)",
+      },
+      {
+          "\\param foo bar",
+          std::nullopt,
+          std::nullopt,
+          std::vector<SymbolParam>{
+              {SymbolPrintedType("my_type", "type"), "foo", "default"}},
+          "Parameters:  \n- `my_type foo = default (aka type)`: bar",
+          "Parameters:\n- my_type foo = default (aka type): bar",
+      },
+      {
+          "\\param foo bar\n\n\\param baz qux",
+          std::nullopt,
+          std::nullopt,
+          std::vector<SymbolParam>{
+              {SymbolPrintedType("my_type", "type"), "foo", "default"}},
+          "Parameters:  \n- `my_type foo = default (aka type)`: bar",
+          "Parameters:\n- my_type foo = default (aka type): bar",
+      },
+      {
+          "\\brief This is a brief description\n\nlonger description "
+          "paragraph\n\n\\note foo\n\n\\warning warning\n\njust another "
+          "paragraph\\param foo bar\\return baz",
+          SymbolPrintedType("my_type", "type"),
+          SymbolPrintedType("my_ret_type", "type"),
+          std::vector<SymbolParam>{
+              {SymbolPrintedType("my_type", "type"), "foo", "default"}},
+          "This is a brief description  \n\n"
+          "---\n"
+          "→ `my_ret_type (aka type)`: baz  \n"
+          "Parameters:  \n"
+          "- `my_type foo = default (aka type)`: bar\n\n"
+          "Warning:  \n"
+          "- warning\n\n"
+          "---\n"
+          "Note:  \n"
+          "- foo\n\n"
+          "---\n"
+          "longer description paragraph  \n"
+          "just another paragraph",
+
+          R"(This is a brief description
+
+→ my_ret_type (aka type): baz
+Parameters:
+- my_type foo = default (aka type): bar
+Warning:
+- warning
+
+Note:
+- foo
+
+longer description paragraph
+just another paragraph)",
+      }};
+
+  for (const auto &C : Cases) {
+    markup::Document Doc;
+    docCommentToMarkup(Doc, C.Documentation, Allocator, Traits, C.SymbolType,
+                       C.SymbolReturnType, C.SymbolParameters);
+    EXPECT_EQ(Doc.asPlainText(), C.ExpectedRenderPlainText);
+    EXPECT_EQ(Doc.asMarkdown(), C.ExpectedRenderMarkdown);
+  }
 }
 
 } // namespace

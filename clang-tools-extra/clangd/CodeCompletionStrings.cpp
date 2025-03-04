@@ -9,6 +9,10 @@
 #include "CodeCompletionStrings.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/CommentCommandTraits.h"
+#include "clang/AST/CommentLexer.h"
+#include "clang/AST/CommentParser.h"
+#include "clang/AST/CommentSema.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -314,6 +318,47 @@ std::string getReturnType(const CodeCompletionString &CCS) {
     if (Chunk.Kind == CodeCompletionString::CK_ResultType)
       return Chunk.Text;
   return "";
+}
+
+void docCommentToMarkup(
+    markup::Document &Doc, llvm::StringRef Comment,
+    llvm::BumpPtrAllocator &Allocator, comments::CommandTraits &Traits,
+    std::optional<SymbolPrintedType> SymbolType,
+    std::optional<SymbolPrintedType> SymbolReturnType,
+    const std::optional<std::vector<SymbolParam>> &SymbolParameters) {
+
+  // The comment lexer expects doxygen markers, so add them back.
+  // We need to use the /// style doxygen markers because the comment could
+  // contain the closing the closing tag "*/" of a C Style "/** */" comment
+  // which would break the parsing if we would just enclose the comment text
+  // with "/** */".
+  std::string CommentWithMarkers = "///";
+  for (char C : Comment) {
+    if (C == '\n') {
+      CommentWithMarkers += "\n///";
+    } else {
+      CommentWithMarkers += C;
+    }
+  }
+  SourceManagerForFile SourceMgrForFile("mock_file.cpp", CommentWithMarkers);
+
+  SourceManager &SourceMgr = SourceMgrForFile.get();
+  // The doxygen Sema requires a Diagostics consumer, since it reports warnings
+  // e.g. when parameters are not documented correctly.
+  // These warnings are not relevant for us, so we can ignore them.
+  SourceMgr.getDiagnostics().setClient(new IgnoringDiagConsumer);
+
+  comments::Sema S(Allocator, SourceMgr, SourceMgr.getDiagnostics(), Traits,
+                   /*PP=*/nullptr);
+  comments::Lexer L(Allocator, SourceMgr.getDiagnostics(), Traits,
+                    SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID()),
+                    CommentWithMarkers.data(),
+                    CommentWithMarkers.data() + CommentWithMarkers.size());
+  comments::Parser P(L, S, Allocator, SourceMgr, SourceMgr.getDiagnostics(),
+                     Traits);
+
+  fullCommentToMarkupDocument(Doc, P.parseFullComment(), Traits, SymbolType,
+                              SymbolReturnType, SymbolParameters);
 }
 
 } // namespace clangd

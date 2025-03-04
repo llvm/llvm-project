@@ -210,6 +210,36 @@ TEST(Paragraph, NewLines) {
   EXPECT_EQ(P.asPlainText(), "foo bar foo bar");
 }
 
+TEST(Paragraph, BoldText) {
+  Paragraph P;
+  P.appendBoldText("");
+  EXPECT_EQ(P.asMarkdown(), "");
+  EXPECT_EQ(P.asPlainText(), "");
+
+  P.appendBoldText(" \n foo\nbar\n ");
+  EXPECT_EQ(P.asMarkdown(), "\\*\\*foo bar\\*\\*");
+  EXPECT_EQ(P.asPlainText(), "**foo bar**");
+
+  P.appendSpace().appendBoldText("foobar");
+  EXPECT_EQ(P.asMarkdown(), "\\*\\*foo bar\\*\\* \\*\\*foobar\\*\\*");
+  EXPECT_EQ(P.asPlainText(), "**foo bar** **foobar**");
+}
+
+TEST(Paragraph, EmphasizedText) {
+  Paragraph P;
+  P.appendEmphasizedText("");
+  EXPECT_EQ(P.asMarkdown(), "");
+  EXPECT_EQ(P.asPlainText(), "");
+
+  P.appendEmphasizedText(" \n foo\nbar\n ");
+  EXPECT_EQ(P.asMarkdown(), "\\*foo bar\\*");
+  EXPECT_EQ(P.asPlainText(), "*foo bar*");
+
+  P.appendSpace().appendEmphasizedText("foobar");
+  EXPECT_EQ(P.asMarkdown(), "\\*foo bar\\* \\*foobar\\*");
+  EXPECT_EQ(P.asPlainText(), "*foo bar* *foobar*");
+}
+
 TEST(Document, Separators) {
   Document D;
   D.addParagraph().appendText("foo");

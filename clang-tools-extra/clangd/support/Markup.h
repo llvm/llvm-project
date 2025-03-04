@@ -49,6 +49,12 @@ public:
   /// Append plain text to the end of the string.
   Paragraph &appendText(llvm::StringRef Text);
 
+  /// Append emphasized text, this translates to the * block in markdown.
+  Paragraph &appendEmphasizedText(llvm::StringRef Text);
+
+  /// Append bold text, this translates to the ** block in markdown.
+  Paragraph &appendBoldText(llvm::StringRef Text);
+
   /// Append inline code, this translates to the ` block in markdown.
   /// \p Preserve indicates the code span must be apparent even in plaintext.
   Paragraph &appendCode(llvm::StringRef Code, bool Preserve = false);

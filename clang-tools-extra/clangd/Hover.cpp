@@ -17,6 +17,7 @@
 #include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "SymbolDocumentation.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
@@ -40,6 +41,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -160,14 +162,14 @@ const char *getMarkdownLanguage(const ASTContext &Ctx) {
   return LangOpts.ObjC ? "objective-c" : "cpp";
 }
 
-HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
+SymbolPrintedType printType(QualType QT, ASTContext &ASTCtx,
                                  const PrintingPolicy &PP) {
   // TypePrinter doesn't resolve decltypes, so resolve them here.
   // FIXME: This doesn't handle composite types that contain a decltype in them.
   // We should rather have a printing policy for that.
   while (!QT.isNull() && QT->isDecltypeType())
     QT = QT->castAs<DecltypeType>()->getUnderlyingType();
-  HoverInfo::PrintedType Result;
+  SymbolPrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
   // Special case: if the outer type is a tag type without qualifiers, then
   // include the tag for extra clarity.
@@ -189,15 +191,15 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
   return Result;
 }
 
-HoverInfo::PrintedType printType(const TemplateTypeParmDecl *TTP) {
-  HoverInfo::PrintedType Result;
+SymbolPrintedType printType(const TemplateTypeParmDecl *TTP) {
+  SymbolPrintedType Result;
   Result.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
   if (TTP->isParameterPack())
     Result.Type += "...";
   return Result;
 }
 
-HoverInfo::PrintedType printType(const NonTypeTemplateParmDecl *NTTP,
+SymbolPrintedType printType(const NonTypeTemplateParmDecl *NTTP,
                                  const PrintingPolicy &PP) {
   auto PrintedType = printType(NTTP->getType(), NTTP->getASTContext(), PP);
   if (NTTP->isParameterPack()) {
@@ -208,9 +210,9 @@ HoverInfo::PrintedType printType(const NonTypeTemplateParmDecl *NTTP,
   return PrintedType;
 }
 
-HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
+SymbolPrintedType printType(const TemplateTemplateParmDecl *TTP,
                                  const PrintingPolicy &PP) {
-  HoverInfo::PrintedType Result;
+  SymbolPrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
   OS << "template <";
   llvm::StringRef Sep = "";
@@ -230,14 +232,14 @@ HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
   return Result;
 }
 
-std::vector<HoverInfo::Param>
+std::vector<SymbolParam>
 fetchTemplateParameters(const TemplateParameterList *Params,
                         const PrintingPolicy &PP) {
   assert(Params);
-  std::vector<HoverInfo::Param> TempParameters;
+  std::vector<SymbolParam> TempParameters;
 
   for (const Decl *Param : *Params) {
-    HoverInfo::Param P;
+    SymbolParam P;
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
       P.Type = printType(TTP);
 
@@ -351,41 +353,13 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
   });
 }
 
-// Default argument might exist but be unavailable, in the case of unparsed
-// arguments for example. This function returns the default argument if it is
-// available.
-const Expr *getDefaultArg(const ParmVarDecl *PVD) {
-  // Default argument can be unparsed or uninstantiated. For the former we
-  // can't do much, as token information is only stored in Sema and not
-  // attached to the AST node. For the latter though, it is safe to proceed as
-  // the expression is still valid.
-  if (!PVD->hasDefaultArg() || PVD->hasUnparsedDefaultArg())
-    return nullptr;
-  return PVD->hasUninstantiatedDefaultArg() ? PVD->getUninstantiatedDefaultArg()
-                                            : PVD->getDefaultArg();
-}
-
-HoverInfo::Param toHoverInfoParam(const ParmVarDecl *PVD,
-                                  const PrintingPolicy &PP) {
-  HoverInfo::Param Out;
-  Out.Type = printType(PVD->getType(), PVD->getASTContext(), PP);
-  if (!PVD->getName().empty())
-    Out.Name = PVD->getNameAsString();
-  if (const Expr *DefArg = getDefaultArg(PVD)) {
-    Out.Default.emplace();
-    llvm::raw_string_ostream OS(*Out.Default);
-    DefArg->printPretty(OS, nullptr, PP);
-  }
-  return Out;
-}
-
 // Populates Type, ReturnType, and Parameters for function-like decls.
 void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
                                const FunctionDecl *FD,
                                const PrintingPolicy &PP) {
   HI.Parameters.emplace();
   for (const ParmVarDecl *PVD : FD->parameters())
-    HI.Parameters->emplace_back(toHoverInfoParam(PVD, PP));
+    HI.Parameters->emplace_back(createSymbolParam(PVD, PP));
 
   // We don't want any type info, if name already contains it. This is true for
   // constructors/destructors and conversion operators.
@@ -626,6 +600,9 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   HI.Name = printName(Ctx, *D);
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
+  // safe the language options to be able to create the comment::CommandTraits
+  // to parse the documentation
+  HI.CommentOpts = D->getASTContext().getLangOpts().CommentOpts;
   enhanceFromIndex(HI, *CommentD, Index);
   if (HI.Documentation.empty())
     HI.Documentation = synthesizeDocumentation(D);
@@ -812,7 +789,7 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
   return HI;
 }
 
-std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
+std::string typeAsDefinition(const SymbolPrintedType &PType) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << PType.Type;
@@ -1095,7 +1072,7 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
 
     // Extract matching argument from function declaration.
     if (const ParmVarDecl *PVD = Parameters[I]) {
-      HI.CalleeArgInfo.emplace(toHoverInfoParam(PVD, PP));
+      HI.CalleeArgInfo.emplace(createSymbolParam(PVD, PP));
       if (N == &OuterNode)
         PassType.PassBy = getPassMode(PVD->getType());
     }
@@ -1455,30 +1432,38 @@ markup::Document HoverInfo::present() const {
 
   // Put a linebreak after header to increase readability.
   Output.addRuler();
-  // Print Types on their own lines to reduce chances of getting line-wrapped by
-  // editor, as they might be long.
-  if (ReturnType) {
-    // For functions we display signature in a list form, e.g.:
-    // → `x`
-    // Parameters:
-    // - `bool param1`
-    // - `int param2 = 5`
-    Output.addParagraph().appendText("→ ").appendCode(
-        llvm::to_string(*ReturnType));
-  }
 
-  if (Parameters && !Parameters->empty()) {
-    Output.addParagraph().appendText("Parameters: ");
-    markup::BulletList &L = Output.addBulletList();
-    for (const auto &Param : *Parameters)
-      L.addItem().addParagraph().appendCode(llvm::to_string(Param));
-  }
+  if (!Documentation.empty()) {
+    llvm::BumpPtrAllocator Allocator;
+    comments::CommandTraits Traits(Allocator, CommentOpts);
+    docCommentToMarkup(Output, Documentation, Allocator, Traits, Type, ReturnType,
+                 Parameters);
+  } else {
+    // Print Types on their own lines to reduce chances of getting line-wrapped by
+    // editor, as they might be long.
+    if (ReturnType) {
+      // For functions we display signature in a list form, e.g.:
+      // → `x`
+      // Parameters:
+      // - `bool param1`
+      // - `int param2 = 5`
+      Output.addParagraph().appendText("→ ").appendCode(
+          llvm::to_string(*ReturnType));
+    }
 
-  // Don't print Type after Parameters or ReturnType as this will just duplicate
-  // the information
-  if (Type && !ReturnType && !Parameters)
-    Output.addParagraph().appendText("Type: ").appendCode(
-        llvm::to_string(*Type));
+    if (Parameters && !Parameters->empty()) {
+      Output.addParagraph().appendText("Parameters: ");
+      markup::BulletList &L = Output.addBulletList();
+      for (const auto &Param : *Parameters)
+        L.addItem().addParagraph().appendCode(llvm::to_string(Param));
+    }
+
+    // Don't print Type after Parameters or ReturnType as this will just duplicate
+    // the information
+    if (Type && !ReturnType && !Parameters)
+      Output.addParagraph().appendText("Type: ").appendCode(
+          llvm::to_string(*Type));
+  }
 
   if (Value) {
     markup::Paragraph &P = Output.addParagraph();
@@ -1517,9 +1502,6 @@ markup::Document HoverInfo::present() const {
       OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
     Output.addParagraph().appendText(OS.str());
   }
-
-  if (!Documentation.empty())
-    parseDocumentation(Documentation, Output);
 
   if (!Definition.empty()) {
     Output.addRuler();
@@ -1644,27 +1626,6 @@ void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
     }
   }
   FlushParagraph();
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const HoverInfo::PrintedType &T) {
-  OS << T.Type;
-  if (T.AKA)
-    OS << " (aka " << *T.AKA << ")";
-  return OS;
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const HoverInfo::Param &P) {
-  if (P.Type)
-    OS << P.Type->Type;
-  if (P.Name)
-    OS << " " << *P.Name;
-  if (P.Default)
-    OS << " = " << *P.Default;
-  if (P.Type && P.Type->AKA)
-    OS << " (aka " << *P.Type->AKA << ")";
-  return OS;
 }
 
 } // namespace clangd

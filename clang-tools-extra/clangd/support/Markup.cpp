@@ -433,6 +433,20 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
   return *this;
 }
 
+Paragraph &Paragraph::appendEmphasizedText(llvm::StringRef Text) {
+  std::string ItalicText = "*" + canonicalizeSpaces(Text) + "*";
+  if (ItalicText.size() == 2)
+    return *this;
+  return appendText(ItalicText);
+}
+
+Paragraph &Paragraph::appendBoldText(llvm::StringRef Text) {
+  std::string BoldText = "**" + canonicalizeSpaces(Text) + "**";
+  if (BoldText.size() == 4)
+    return *this;
+  return appendText(BoldText);
+}
+
 Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   bool AdjacentCode =
       !Chunks.empty() && Chunks.back().Kind == Chunk::InlineCode;
