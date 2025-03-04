@@ -611,6 +611,9 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputModuleSection(SPIRV::MB_DebugNames);
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
+  // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
+  // "All annotation instructions"
+  outputModuleSection(SPIRV::MB_AliasingInsts);
   // 8. All annotation instructions (all decorations).
   outputAnnotations(*M);
   // 9. All type declarations (OpTypeXXX instructions), all constant

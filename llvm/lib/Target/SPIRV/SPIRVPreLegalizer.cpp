@@ -813,11 +813,19 @@ static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration) &&
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_aliasing_decoration))
         continue;
       MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
-      buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
-                              MI.getOperand(2).getMetadata());
+      if (isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration)) {
+        buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
+                                MI.getOperand(2).getMetadata());
+      } else {
+        buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
+                                   MI.getOperand(2).getImm(),
+                                   MI.getOperand(3).getMetadata());
+      }
+
       ToErase.push_back(&MI);
     }
   }
