@@ -3707,7 +3707,6 @@ void OpEmitter::genTypeInterfaceMethods() {
           typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
                      "].getType()")
                         .str();
-
           // If this is an attribute, index into the attribute dictionary.
         } else {
           auto *attr =
@@ -3743,7 +3742,8 @@ void OpEmitter::genTypeInterfaceMethods() {
         continue;
       }
       body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
-           << tgfmt(infer.getTransformer(), &fctx.withSelf(typeStr)) << ";\n";
+           << tgfmt(infer.getTransformer(), &fctx.addSubst("arg0", typeStr))
+           << ";\n";
       constructedIndices[i] = inferredTypeIdx - 1;
     }
   }
