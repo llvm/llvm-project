@@ -532,7 +532,7 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
   // involves the specific register.
   for (const auto &PI : SUI->Preds)
     if (PI.getKind() != SDep::Anti &&
-        (PI.getKind() != SDep::Data || PI.getReg() != Reg))
+        (PI.getKind() != SDep::Data || Register(PI.getReg()) != Reg))
       return false;
   int Incr;
   if (!HII->getIncrementValue(MJ, Incr))
