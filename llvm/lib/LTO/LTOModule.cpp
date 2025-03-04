@@ -200,7 +200,7 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
     return EC;
   std::unique_ptr<Module> &M = *MOrErr;
 
-  std::string TripleStr = M->getTargetTriple();
+  std::string TripleStr = M->getTargetTriple().str();
   if (TripleStr.empty())
     TripleStr = sys::getDefaultTargetTriple();
   llvm::Triple Triple(TripleStr);
@@ -691,11 +691,11 @@ const char *LTOModule::getDependentLibrary(lto::InputFile *input, size_t index,
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUType() const {
-  return MachO::getCPUType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUType(Mod->getTargetTriple());
 }
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
-  return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+  return MachO::getCPUSubType(Mod->getTargetTriple());
 }
 
 bool LTOModule::hasCtorDtor() const {

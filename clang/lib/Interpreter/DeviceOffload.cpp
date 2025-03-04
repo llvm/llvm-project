@@ -77,13 +77,13 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
   std::string Error;
 
   const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(
-      PTU.TheModule->getTargetTriple(), Error);
+      PTU.TheModule->getTargetTriple().str(), Error);
   if (!Target)
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
+      PTU.TheModule->getTargetTriple().str(), TargetOpts.CPU, "", TO,
       llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 

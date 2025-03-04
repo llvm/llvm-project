@@ -139,7 +139,7 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
+      : Mod(Mod), TT(Mod->getTargetTriple().normalize()), DL(DL), AA(AA),
         AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {

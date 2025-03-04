@@ -255,7 +255,7 @@ public:
     if (Diags.hasErrorOccurred())
       return;
 
-    M->setTargetTriple(Ctx.getTargetInfo().getTriple().getTriple());
+    M->setTargetTriple(Ctx.getTargetInfo().getTriple());
     M->setDataLayout(Ctx.getTargetInfo().getDataLayoutString());
 
     // PCH files don't have a signature field in the control block,
