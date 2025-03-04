@@ -44,7 +44,7 @@ namespace lldb_dap {
 //   }]
 // }
 
-void AttachRequestHandler::operator()(const llvm::json::Object &request) {
+void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.is_attach = true;
   dap.last_launch_or_attach_request = request;
   llvm::json::Object response;

@@ -48,7 +48,8 @@ namespace lldb_dap {
 //     "required": [ "body" ]
 //   }]
 // }
-void ThreadsRequestHandler::operator()(const llvm::json::Object &request) {
+void ThreadsRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   lldb::SBProcess process = dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);

@@ -908,8 +908,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 
       // If the source register was virtual and if we know something about it,
       // add an assert node.
-      if (!Register::isVirtualRegister(Regs[Part + i]) ||
-          !RegisterVT.isInteger())
+      if (!Regs[Part + i].isVirtual() || !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -1023,7 +1022,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
   InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
     Flag.setMatchingOp(MatchingIdx);
-  else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
+  else if (!Regs.empty() && Regs.front().isVirtual()) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
     // assembly as well as normal instructions.
@@ -1061,7 +1060,7 @@ void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                            RegisterVT);
     for (unsigned i = 0; i != NumRegs; ++i) {
       assert(Reg < Regs.size() && "Mismatch in # registers expected");
-      unsigned TheReg = Regs[Reg++];
+      Register TheReg = Regs[Reg++];
       Ops.push_back(DAG.getRegister(TheReg, RegisterVT));
     }
   }
@@ -1385,12 +1384,12 @@ static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
                                             DebugLoc DL, unsigned Order,
                                             SmallVectorImpl<Value *> &Values,
                                             DIExpression *Expression) {
-  // For variadic dbg_values we will now insert an undef.
+  // For variadic dbg_values we will now insert poison.
   // FIXME: We can potentially recover these!
   SmallVector<SDDbgOperand, 2> Locs;
   for (const Value *V : Values) {
-    auto *Undef = UndefValue::get(V->getType());
-    Locs.push_back(SDDbgOperand::fromConst(Undef));
+    auto *Poison = PoisonValue::get(V->getType());
+    Locs.push_back(SDDbgOperand::fromConst(Poison));
   }
   SDDbgValue *SDV = DAG.getDbgValueList(Variable, Expression, Locs, {},
                                         /*IsIndirect=*/false, DL, Order,
@@ -1409,9 +1408,9 @@ void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
     return;
   }
   // TODO: Dangling debug info will eventually either be resolved or produce
-  // an Undef DBG_VALUE. However in the resolution case, a gap may appear
+  // a poison DBG_VALUE. However in the resolution case, a gap may appear
   // between the original dbg.value location and its resolved DBG_VALUE,
-  // which we should ideally fill with an extra Undef DBG_VALUE.
+  // which we should ideally fill with an extra poison DBG_VALUE.
   assert(Values.size() == 1);
   DanglingDebugInfoMap[Values[0]].emplace_back(Var, Expr, DL, Order);
 }
@@ -1489,9 +1488,9 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(V, DDI)
                         << "\n");
-      auto Undef = UndefValue::get(V->getType());
+      auto Poison = PoisonValue::get(V->getType());
       auto SDV =
-          DAG.getConstantDbgValue(Variable, Expr, Undef, DL, DbgSDNodeOrder);
+          DAG.getConstantDbgValue(Variable, Expr, Poison, DL, DbgSDNodeOrder);
       DAG.AddDbgValue(SDV, false);
     }
   }
@@ -1554,11 +1553,11 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   }
 
   // This was the final opportunity to salvage this debug information, and it
-  // couldn't be done. Place an undef DBG_VALUE at this location to terminate
+  // couldn't be done. Place a poison DBG_VALUE at this location to terminate
   // any earlier variable location.
   assert(OrigV && "V shouldn't be null");
-  auto *Undef = UndefValue::get(OrigV->getType());
-  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
+  auto *Poison = PoisonValue::get(OrigV->getType());
+  auto *SDV = DAG.getConstantDbgValue(Var, Expr, Poison, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
   LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
                     << printDDI(OrigV, DDI) << "\n");
@@ -1660,7 +1659,7 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
     // an associated VReg, we can refer to that instead.
     auto VMI = FuncInfo.ValueMap.find(V);
     if (VMI != FuncInfo.ValueMap.end()) {
-      unsigned Reg = VMI->second;
+      Register Reg = VMI->second;
       // If this is a PHI node, it may be split up into several MI PHI nodes
       // (in FunctionLoweringInfo::set).
       RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
@@ -3360,16 +3359,28 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow: {
-      // This is usually done in visitTargetIntrinsic, but this intrinsic is
-      // special because it can be invoked, so we manually lower it to a DAG
-      // node here.
-      SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getControlRoot()); // inchain for the terminator node
+    // wasm_throw, wasm_rethrow: This is usually done in visitTargetIntrinsic,
+    // but these intrinsics are special because they can be invoked, so we
+    // manually lower it to a DAG node here.
+    case Intrinsic::wasm_throw: {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      Ops.push_back(
+      std::array<SDValue, 4> Ops = {
+          getControlRoot(), // inchain for the terminator node
+          DAG.getTargetConstant(Intrinsic::wasm_throw, getCurSDLoc(),
+                                TLI.getPointerTy(DAG.getDataLayout())),
+          getValue(I.getArgOperand(0)), // tag
+          getValue(I.getArgOperand(1))  // thrown value
+      };
+      SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
+      DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
+      break;
+    }
+    case Intrinsic::wasm_rethrow: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      std::array<SDValue, 2> Ops = {
+          getControlRoot(), // inchain for the terminator node
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
-                                TLI.getPointerTy(DAG.getDataLayout())));
+                                TLI.getPointerTy(DAG.getDataLayout()))};
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
@@ -6180,10 +6191,10 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
             Expr, Offset, RegFragmentSizeInBits);
         Offset += RegAndSize.second;
         // If a valid fragment expression cannot be created, the variable's
-        // correct value cannot be determined and so it is set as Undef.
+        // correct value cannot be determined and so it is set as poison.
         if (!FragmentExpr) {
           SDDbgValue *SDV = DAG.getConstantDbgValue(
-              Variable, Expr, UndefValue::get(V->getType()), DL, SDNodeOrder);
+              Variable, Expr, PoisonValue::get(V->getType()), DL, SDNodeOrder);
           DAG.AddDbgValue(SDV, false);
           continue;
         }
@@ -10126,9 +10137,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     auto DetectWriteToReservedRegister = [&]() {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      for (unsigned Reg : OpInfo.AssignedRegs.Regs) {
-        if (Register::isPhysicalRegister(Reg) &&
-            TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
+      for (Register Reg : OpInfo.AssignedRegs.Regs) {
+        if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
           const char *RegName = TRI.getName(Reg);
           emitInlineAsmError(Call, "write to reserved register '" +
                                        Twine(RegName) + "'");
@@ -11384,13 +11394,13 @@ SDValue TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 }
 
 void SelectionDAGBuilder::CopyValueToVirtualRegister(const Value *V,
-                                                     unsigned Reg,
+                                                     Register Reg,
                                                      ISD::NodeType ExtendType) {
   SDValue Op = getNonRegisterValue(V);
   assert((Op.getOpcode() != ISD::CopyFromReg ||
           cast<RegisterSDNode>(Op.getOperand(1))->getReg() != Reg) &&
          "Copy from a reg to the same reg!");
-  assert(!Register::isPhysicalRegister(Reg) && "Is a physreg");
+  assert(!Reg.isPhysical() && "Is a physreg");
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   // If this is an InlineAsm we have to match the registers required, not the
@@ -12004,13 +12014,13 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       if (PN.getType()->isEmptyTy())
         continue;
 
-      unsigned Reg;
+      Register Reg;
       const Value *PHIOp = PN.getIncomingValueForBlock(LLVMBB);
 
       if (const auto *C = dyn_cast<Constant>(PHIOp)) {
-        unsigned &RegOut = ConstantsOut[C];
-        if (RegOut == 0) {
-          RegOut = FuncInfo.CreateRegs(C);
+        Register &RegOut = ConstantsOut[C];
+        if (!RegOut) {
+          RegOut = FuncInfo.CreateRegs(&PN);
           // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
           ISD::NodeType ExtendType = ISD::ANY_EXTEND;
@@ -12041,8 +12051,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       for (EVT VT : ValueVTs) {
         const unsigned NumRegisters = TLI.getNumRegisters(*DAG.getContext(), VT);
         for (unsigned i = 0; i != NumRegisters; ++i)
-          FuncInfo.PHINodesToUpdate.push_back(
-              std::make_pair(&*MBBI++, Reg + i));
+          FuncInfo.PHINodesToUpdate.emplace_back(&*MBBI++, Reg + i);
         Reg += NumRegisters;
       }
     }
@@ -12749,7 +12758,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   const TargetRegisterInfo *TRI = DAG.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
 
-  unsigned InitialDef = FuncInfo.ValueMap[CBR];
+  Register InitialDef = FuncInfo.ValueMap[CBR];
   SDValue Chain = DAG.getRoot();
 
   // Re-parse the asm constraints string.

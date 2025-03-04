@@ -397,21 +397,10 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
   const Floating &LHS = getParam<Floating>(Frame, 0);
   const Floating &RHS = getParam<Floating>(Frame, 1);
 
-  Floating Result;
-
-  if (IsNumBuiltin) {
-    Result = llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat());
-  } else {
-    // When comparing zeroes, return -0.0 if one of the zeroes is negative.
-    if (LHS.isZero() && RHS.isZero() && RHS.isNegative())
-      Result = RHS;
-    else if (LHS.isNan() || RHS < LHS)
-      Result = RHS;
-    else
-      Result = LHS;
-  }
-
-  S.Stk.push<Floating>(Result);
+  if (IsNumBuiltin)
+    S.Stk.push<Floating>(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+  else
+    S.Stk.push<Floating>(minnum(LHS.getAPFloat(), RHS.getAPFloat()));
   return true;
 }
 
@@ -421,21 +410,10 @@ static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
   const Floating &LHS = getParam<Floating>(Frame, 0);
   const Floating &RHS = getParam<Floating>(Frame, 1);
 
-  Floating Result;
-
-  if (IsNumBuiltin) {
-    Result = llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat());
-  } else {
-    // When comparing zeroes, return +0.0 if one of the zeroes is positive.
-    if (LHS.isZero() && RHS.isZero() && LHS.isNegative())
-      Result = RHS;
-    else if (LHS.isNan() || RHS > LHS)
-      Result = RHS;
-    else
-      Result = LHS;
-  }
-
-  S.Stk.push<Floating>(Result);
+  if (IsNumBuiltin)
+    S.Stk.push<Floating>(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
+  else
+    S.Stk.push<Floating>(maxnum(LHS.getAPFloat(), RHS.getAPFloat()));
   return true;
 }
 

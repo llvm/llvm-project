@@ -56,7 +56,7 @@ namespace lldb_dap {
 //                     acknowledgement, so no body field is required."
 //   }]
 // }
-void NextRequestHandler::operator()(const llvm::json::Object &request) {
+void NextRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");

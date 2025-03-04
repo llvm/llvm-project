@@ -168,7 +168,8 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
 //     "required": [ "body" ]
 //   }]
 // }
-void StackTraceRequestHandler::operator()(const llvm::json::Object &request) {
+void StackTraceRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBError error;

@@ -263,7 +263,7 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), value & ~T(0));
+    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
@@ -293,7 +293,7 @@ LIBC_INLINE void store64_aligned(uint64_t value, Ptr dst, size_t offset) {
 // Advances the pointers p1 and p2 by offset bytes and decrease count by the
 // same amount.
 template <typename T1, typename T2>
-LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
+LIBC_INLINE void adjust(uintptr_t offset, T1 *__restrict &p1,
                         T2 *__restrict &p2, size_t &count) {
   p1 += offset;
   p2 += offset;

@@ -376,7 +376,7 @@ static int parse_remapped_files_with_try(int try_idx,
   if (ret)
     return ret;
 
-  sprintf(opt_name, "-remap-file-%d=", try_idx);
+  snprintf(opt_name, sizeof(opt_name), "-remap-file-%d=", try_idx);
   ret = parse_remapped_files_with_opt(opt_name, argc, argv, start_arg,
       &unsaved_files_try_idx, &num_unsaved_files_try_idx);
   if (ret)
@@ -1184,8 +1184,9 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       CXString Spelling = clang_getCursorSpelling(Cursor);
       const char *CName = clang_getCString(Name);
       const char *CSpelling = clang_getCString(Spelling);
-      char *DefaultSetter = malloc(strlen(CSpelling) + 5);
-      sprintf(DefaultSetter, "set%s:", CSpelling);
+      size_t Len = strlen(CSpelling) + 5;
+      char *DefaultSetter = malloc(Len);
+      snprintf(DefaultSetter, Len, "set%s:", CSpelling);
       DefaultSetter[3] &= ~(1 << 5); /* Make uppercase */
       if (CName && strcmp(CName, DefaultSetter)) {
         printf(" (setter=%s)", CName);
@@ -3545,19 +3546,20 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   char *newStr;
   CXIdxClientFile file;
   unsigned line, column;
-  
+  size_t len;
+
   name = info->name;
   if (!name)
     name = "<anon-tag>";
 
   clang_indexLoc_getFileLocation(loc, &file, 0, &line, &column, 0);
 
-  node =
-      (IndexDataStringList *)malloc(sizeof(IndexDataStringList) + strlen(name) +
-                                    digitCount(line) + digitCount(column) + 2);
+  len = sizeof(IndexDataStringList) + strlen(name) + digitCount(line) +
+        digitCount(column) + 2;
+  node = (IndexDataStringList *)malloc(len);
   assert(node);
   newStr = node->data;
-  sprintf(newStr, "%s:%d:%d", name, line, column);
+  snprintf(newStr, len, "%s:%d:%d", name, line, column);
 
   /* Remember string so it can be freed later. */
   index_data = (IndexData *)client_data;

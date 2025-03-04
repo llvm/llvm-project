@@ -1579,6 +1579,11 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     if (!UI || UI->getParent() != LI->getParent())
       return false;
 
+    // If any extract is waiting to be erased, then bail out as this will
+    // distort the cost calculation and possibly lead to infinite loops.
+    if (UI->use_empty())
+      return false;
+
     // Check if any instruction between the load and the extract may modify
     // memory.
     if (LastCheckedInst->comesBefore(UI)) {
@@ -1611,6 +1616,10 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
                             Align(1), LI->getPointerAddressSpace(), CostKind);
     ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
   }
+
+  LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I
+                    << "\n  LoadExtractCost: " << OriginalCost
+                    << " vs ScalarizedCost: " << ScalarizedCost << "\n");
 
   if (ScalarizedCost >= OriginalCost)
     return false;

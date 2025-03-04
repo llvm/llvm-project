@@ -422,10 +422,10 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     int RetCode = ExecuteAndWait(Executable, argv, std::nullopt, {}, 0, 0,
                                  &Error, &ExecutionFailed);
-    ASSERT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
+    EXPECT_LT(RetCode, 0) << "On error ExecuteAndWait should return 0 or "
                              "positive value indicating the result code";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+    EXPECT_TRUE(ExecutionFailed);
+    EXPECT_FALSE(Error.empty());
   }
 
   {
@@ -433,10 +433,10 @@ TEST(ProgramTest, TestExecuteNegative) {
     bool ExecutionFailed;
     ProcessInfo PI = ExecuteNoWait(Executable, argv, std::nullopt, {}, 0,
                                    &Error, &ExecutionFailed);
-    ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
+    EXPECT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
-    ASSERT_TRUE(ExecutionFailed);
-    ASSERT_FALSE(Error.empty());
+    EXPECT_TRUE(ExecutionFailed);
+    EXPECT_FALSE(Error.empty());
   }
 
 }

@@ -327,6 +327,11 @@ bool OpPrintingFlags::shouldPrintElementsAttrWithHex(ElementsAttr attr) const {
          !llvm::isa<SplatElementsAttr>(attr);
 }
 
+OpPrintingFlags &OpPrintingFlags::printNameLocAsPrefix(bool enable) {
+  useNameLocAsPrefix = enable;
+  return *this;
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;

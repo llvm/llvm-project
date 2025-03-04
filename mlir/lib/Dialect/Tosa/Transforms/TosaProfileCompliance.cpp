@@ -58,6 +58,8 @@ void ProfileInfoDepot::populateProfileInfo(tosa::ConcatOp op) {
 template <>
 void ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
   addType(op.getAccType());
   addValue(op.getOutput());
 }
@@ -272,7 +274,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(ReduceAny)
   POPULATE_PROFILE_INFO_COMMON(ReduceMax)
   POPULATE_PROFILE_INFO_COMMON(ReduceMin)
-  POPULATE_PROFILE_INFO_COMMON(ReduceProd)
+  POPULATE_PROFILE_INFO_COMMON(ReduceProduct)
   POPULATE_PROFILE_INFO_COMMON(ReduceSum)
   POPULATE_PROFILE_INFO_COMMON(Equal)
   POPULATE_PROFILE_INFO_COMMON(GreaterEqual)

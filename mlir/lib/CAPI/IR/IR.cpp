@@ -218,6 +218,10 @@ void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {
   unwrap(flags)->printGenericOpForm();
 }
 
+void mlirOpPrintingFlagsPrintNameLocAsPrefix(MlirOpPrintingFlags flags) {
+  unwrap(flags)->printNameLocAsPrefix();
+}
+
 void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
   unwrap(flags)->useLocalScope();
 }

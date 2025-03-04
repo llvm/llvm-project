@@ -456,6 +456,18 @@ def i64u8imm : Operand<i64> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+def lea64_8mem : Operand<i8> {
+  let PrintMethod = "printMemReference";
+  let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i8imm, SEGMENT_REG);
+  let ParserMatchClass = X86MemAsmOperand;
+}
+
+def lea64_16mem : Operand<i16> {
+  let PrintMethod = "printMemReference";
+  let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i16imm, SEGMENT_REG);
+  let ParserMatchClass = X86MemAsmOperand;
+}
+
 def lea64_32mem : Operand<i32> {
   let PrintMethod = "printMemReference";
   let MIOperandInfo = (ops GR64, i8imm, GR64_NOSP, i32imm, SEGMENT_REG);

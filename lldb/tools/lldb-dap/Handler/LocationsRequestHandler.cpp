@@ -91,7 +91,8 @@ namespace lldb_dap {
 //     }
 //   }]
 // },
-void LocationsRequestHandler::operator()(const llvm::json::Object &request) {
+void LocationsRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");

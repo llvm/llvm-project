@@ -538,8 +538,8 @@ public:
 
   bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                  const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII, unsigned &PhysReg,
-                                 int &Cost) const override;
+                                 const TargetInstrInfo *TII,
+                                 MCRegister &PhysReg, int &Cost) const override;
 
   bool isProfitableToHoist(Instruction *I) const override;
 

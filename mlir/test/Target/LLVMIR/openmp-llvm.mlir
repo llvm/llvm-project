@@ -2790,11 +2790,15 @@ llvm.func @par_task_(%arg0: !llvm.ptr {fir.bindc_name = "a"}) {
 }
 
 // CHECK-LABEL: @par_task_
+// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
 // CHECK: %[[TASK_ALLOC:.*]] = call ptr @__kmpc_omp_task_alloc({{.*}}ptr @[[task_outlined_fn:.+]])
 // CHECK: call i32 @__kmpc_omp_task({{.*}}, ptr %[[TASK_ALLOC]])
-// CHECK: define internal void @[[task_outlined_fn]]
-// CHECK: %[[ARG_ALLOC:.*]] = alloca { ptr }, align 8
-// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]], ptr %[[ARG_ALLOC]])
+// CHECK: define internal void @[[task_outlined_fn]](i32 %[[GLOBAL_TID_VAL:.*]], ptr %[[STRUCT_ARG:.*]])
+// CHECK: %[[LOADED_STRUCT_PTR:.*]] = load ptr, ptr %[[STRUCT_ARG]], align 8
+// CHECK: %[[GEP_STRUCTARG:.*]] = getelementptr { ptr }, ptr %[[LOADED_STRUCT_PTR]], i32 0, i32 0
+// CHECK: %[[LOADGEP_STRUCTARG:.*]] = load ptr, ptr %[[GEP_STRUCTARG]], align 8
+// CHEKC: %[[NEW_STRUCTARG:.*]] = alloca { ptr }, align 8
+// CHECK: call void ({{.*}}) @__kmpc_fork_call({{.*}}, ptr @[[parallel_outlined_fn:.+]],
 // CHECK: define internal void @[[parallel_outlined_fn]]
 // -----
 
@@ -2819,29 +2823,34 @@ llvm.func @task(%arg0 : !llvm.ptr) {
   }
   llvm.return
 }
-// CHECK-LABEL: @task..omp_par
-// CHECK:       task.alloca:
-// CHECK:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_12:.*]], align 8
-// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
-// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
-// CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
-// CHECK:         br label %omp.region.after_alloca
-
-// CHECK:       omp.region.after_alloca:
-// CHECK:         br label %task.body
-
-// CHECK:       task.body:                                        ; preds = %omp.region.after_alloca
+// CHECK-LABEL: @task
+// CHECK-SAME:      (ptr %[[ARG:.*]])
+// CHECK:         %[[STRUCT_ARG:.*]] = alloca { ptr }, align 8
+//                ...
 // CHECK:         br label %omp.private.init
+// CHECK:       omp.private.init:
+// CHECK:         %[[TASK_STRUCT:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ i32 }, ptr null, i32 1) to i64))
+// CHECK:         %[[GEP:.*]] = getelementptr { i32 }, ptr %[[TASK_STRUCT:.*]], i32 0, i32 0
+// CHECK:         br label %omp.private.copy1
+// CHECK:       omp.private.copy1:
+// CHECK:         %[[LOADED:.*]] = load i32, ptr %[[ARG]], align 4
+// CHECK:         store i32 %[[LOADED]], ptr %[[GEP]], align 4
+//                ...
+// CHECK:         br label %omp.task.start
+// CHECK:       omp.task.start:
+// CHECK:         br label %[[CODEREPL:.*]]
+// CHECK:       [[CODEREPL]]:
 
-// CHECK:       omp.private.init:                                 ; preds = %task.body
-// CHECK:         br label %omp.private.copy
-
-// CHECK:       omp.private.copy:                                 ; preds = %omp.private.init
-// CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
-// CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
+// CHECK-LABEL: @task..omp_par
+// CHECK:      task.alloca:
+// CHECK:         %[[VAL_12:.*]] = load ptr, ptr %[[STRUCT_ARG:.*]], align 8
+// CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_12]], i32 0, i32 0
+// CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
+// CHECK:         br label %task.body
+// CHECK:       task.body:                                        ; preds = %task.alloca
+// CHECK:         %[[VAL_15:.*]] = getelementptr { i32 }, ptr %[[VAL_14]], i32 0, i32 0
 // CHECK:         br label %omp.task.region
-
-// CHECK:       omp.task.region:                                  ; preds = %omp.private.copy
+// CHECK:       omp.task.region:                                  ; preds = %task.body
 // CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region
@@ -2915,6 +2924,19 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         br label %[[omp_region_cont:[^,]+]]
 // CHECK:       [[omp_taskgroup_region]]:
 // CHECK:         %{{.+}} = alloca i8, align 1
+// CHECK:         br label %[[omp_private_init:[^,]+]]
+// CHECK:       [[omp_private_init]]:
+// CHECK:         br label %[[omp_private_copy:[^,]+]]
+// CHECK:       [[omp_private_copy]]:
+// CHECK:         br label %[[omp_task_start:[^,]+]]
+
+// CHECK:       [[omp_region_cont:[^,]+]]:
+// CHECK:         br label %[[taskgroup_exit:[^,]+]]
+// CHECK:       [[taskgroup_exit]]:
+// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
+// CHECK:         ret void
+
+// CHECK:       [[omp_task_start]]:
 // CHECK:         br label %[[codeRepl:[^,]+]]
 // CHECK:       [[codeRepl]]:
 // CHECK:         %[[omp_global_thread_num_t1:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
@@ -2938,11 +2960,6 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         br label %[[task_exit3:[^,]+]]
 // CHECK:       [[task_exit3]]:
 // CHECK:         br label %[[omp_taskgroup_region1]]
-// CHECK:       [[omp_region_cont]]:
-// CHECK:         br label %[[taskgroup_exit:[^,]+]]
-// CHECK:       [[taskgroup_exit]]:
-// CHECK:         call void @__kmpc_end_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
-// CHECK:         ret void
 // CHECK:       }
 
 // -----
@@ -3270,3 +3287,91 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 // -----
 
 module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+
+// -----
+
+llvm.func @distribute() {
+  %0 = llvm.mlir.constant(42 : index) : i64
+  %1 = llvm.mlir.constant(10 : index) : i64
+  %2 = llvm.mlir.constant(1 : index) : i64
+  omp.distribute {
+    omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute
+// CHECK:         call void @[[OUTLINED:.*]]({{.*}})
+// CHECK-NEXT:    br label %[[EXIT:.*]]
+// CHECK:       [[EXIT]]:
+// CHECK:         ret void
+
+// CHECK:       define internal void @[[OUTLINED]]({{.*}})
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i64
+// CHECK:         %[[UB:.*]] = alloca i64
+// CHECK:         %[[STRIDE:.*]] = alloca i64
+// CHECK:         br label %[[BODY:.*]]
+// CHECK:       [[BODY]]:
+// CHECK-NEXT:    br label %[[REGION:.*]]
+// CHECK:       [[REGION]]:
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i64 0, ptr %[[LB]]
+// CHECK:         store i64 31, ptr %[[UB]]
+// CHECK:         store i64 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         call void @__kmpc_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 92, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[STRIDE]], i64 1, i64 0)
+
+// -----
+
+llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
+  omp.parallel {
+    omp.distribute {
+      omp.wsloop {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+      } {omp.composite}
+    } {omp.composite}
+    omp.terminator
+  } {omp.composite}
+  llvm.return
+}
+
+// CHECK-LABEL: define void @distribute_wsloop
+// CHECK:         call void{{.*}}@__kmpc_fork_call({{.*}}, ptr @[[OUTLINED_PARALLEL:.*]],
+
+// CHECK:       define internal void @[[OUTLINED_PARALLEL]]
+// CHECK:         call void @[[OUTLINED_DISTRIBUTE:.*]]({{.*}})
+
+// CHECK:       define internal void @[[OUTLINED_DISTRIBUTE]]
+// CHECK:         %[[LASTITER:.*]] = alloca i32
+// CHECK:         %[[LB:.*]] = alloca i32
+// CHECK:         %[[UB:.*]] = alloca i32
+// CHECK:         %[[STRIDE:.*]] = alloca i32
+// CHECK:         br label %[[AFTER_ALLOCA:.*]]
+
+// CHECK:       [[AFTER_ALLOCA]]:
+// CHECK:         br label %[[DISTRIBUTE_BODY:.*]]
+
+// CHECK:       [[DISTRIBUTE_BODY]]:
+// CHECK-NEXT:    br label %[[DISTRIBUTE_REGION:.*]]
+
+// CHECK:       [[DISTRIBUTE_REGION]]:
+// CHECK-NEXT:    br label %[[WSLOOP_REGION:.*]]
+
+// CHECK:       [[WSLOOP_REGION]]:
+// CHECK:         %omp_loop.tripcount = select {{.*}}
+// CHECK-NEXT:    br label %[[PREHEADER:.*]]
+
+// CHECK:       [[PREHEADER]]:
+// CHECK:         store i32 0, ptr %[[LB]]
+// CHECK:         %[[TRIPCOUNT:.*]] = sub i32 %omp_loop.tripcount, 1
+// CHECK:         store i32 %[[TRIPCOUNT]], ptr %[[UB]]
+// CHECK:         store i32 1, ptr %[[STRIDE]]
+// CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:         %[[DIST_UB:.*]] = alloca i32
+// CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)

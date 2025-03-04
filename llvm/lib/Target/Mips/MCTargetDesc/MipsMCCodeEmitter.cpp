@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsMCCodeEmitter.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
 #include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
@@ -578,23 +579,7 @@ getSImm9AddiuspValue(const MCInst &MI, unsigned OpNo,
 unsigned MipsMCCodeEmitter::
 getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                const MCSubtargetInfo &STI) const {
-  int64_t Res;
-
-  if (Expr->evaluateAsAbsolute(Res))
-    return Res;
-
   MCExpr::ExprKind Kind = Expr->getKind();
-  if (Kind == MCExpr::Constant) {
-    return cast<MCConstantExpr>(Expr)->getValue();
-  }
-
-  if (Kind == MCExpr::Binary) {
-    unsigned Res =
-        getExprOpValue(cast<MCBinaryExpr>(Expr)->getLHS(), Fixups, STI);
-    Res += getExprOpValue(cast<MCBinaryExpr>(Expr)->getRHS(), Fixups, STI);
-    return Res;
-  }
-
   if (Kind == MCExpr::Target) {
     const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
 
@@ -712,8 +697,7 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
     return 0;
   }
 
-  if (Kind == MCExpr::SymbolRef)
-    Ctx.reportError(Expr->getLoc(), "expected an immediate");
+  Ctx.reportError(Expr->getLoc(), "expected an immediate");
   return 0;
 }
 
@@ -732,9 +716,29 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   } else if (MO.isDFPImm()) {
     return static_cast<unsigned>(bit_cast<double>(MO.getDFPImm()));
   }
-  // MO must be an Expr.
+  // TODO: Set EncoderMethod to "getImmOpValue" for imm Operand so that
+  // getMachineOpValue will not be called for isExpr code paths.
   assert(MO.isExpr());
-  return getExprOpValue(MO.getExpr(),Fixups, STI);
+  return getImmOpValue(MI, MO, Fixups, STI);
+}
+
+unsigned MipsMCCodeEmitter::getImmOpValue(const MCInst &MI, const MCOperand &MO,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  if (MO.isImm())
+    return MO.getImm();
+  assert(MO.isExpr() && "getImmOpValue expects only expressions or immediates");
+  const MCExpr *Expr = MO.getExpr();
+  int64_t Res;
+  if (Expr->evaluateAsAbsolute(Res))
+    return Res;
+  unsigned MIFrm = MipsII::getFormat(MCII.get(MI.getOpcode()).TSFlags);
+  if (!isa<MCTargetExpr>(Expr) && MIFrm == MipsII::FrmI) {
+    Fixups.push_back(MCFixup::create(
+        0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), Expr->getLoc()));
+    return 0;
+  }
+  return getExprOpValue(Expr, Fixups, STI);
 }
 
 /// Return binary encoding of memory related operand.

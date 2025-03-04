@@ -46,7 +46,7 @@ body: |
     %2:sreg_32 = S_LSHL2_ADD_U32 %0, %1, implicit-def $scc
 ...
 # GCN-LABEL: name: test_frameindex{{$}}
-# GCN: %1:sreg_32 = S_ADD_I32 %stack.0, %0
+# GCN: %1:sreg_32 = S_ADD_I32 %stack.0, 70
 ---
 name: test_frameindex
 tracksRegLiveness: true
@@ -117,7 +117,7 @@ body: |
 ...
 
 # GCN-LABEL: name: test_fold_same_literal_2x{{$}}
-# GCN: %2:sreg_32 = S_ADD_I32 70, %1
+# GCN: %2:sreg_32 = S_ADD_I32 70, 70
 ---
 name: test_fold_same_literal_2x
 tracksRegLiveness: true
@@ -129,7 +129,7 @@ body: |
 ...
 
 # GCN-LABEL: name: test_fold_same_literal_lhs{{$}}
-# GCN: %1:sreg_32 = S_ADD_I32 70, %0
+# GCN: %1:sreg_32 = S_ADD_I32 70, 70
 ---
 name: test_fold_same_literal_lhs
 tracksRegLiveness: true
@@ -140,7 +140,7 @@ body: |
 ...
 
 # GCN-LABEL: name: test_fold_same_literal_rhs{{$}}
-# GCN: %1:sreg_32 = S_ADD_I32 %0, 70
+# GCN: %1:sreg_32 = S_ADD_I32 70, 70
 ---
 name: test_fold_same_literal_rhs
 tracksRegLiveness: true

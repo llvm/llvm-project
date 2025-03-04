@@ -484,6 +484,18 @@ namespace AddressOf {
   void testAddressof(int x) {
     static_assert(&x == __builtin_addressof(x), "");
   }
+
+  struct TS {
+    constexpr bool f(TS s) const {
+      /// The addressof call has a CXXConstructExpr as a parameter.
+      return this != __builtin_addressof(s);
+    }
+  };
+  constexpr bool exprAddressOf() {
+    TS s;
+    return s.f(s);
+  }
+  static_assert(exprAddressOf(), "");
 }
 
 namespace std {

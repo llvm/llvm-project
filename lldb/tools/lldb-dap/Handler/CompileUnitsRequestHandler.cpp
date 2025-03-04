@@ -53,7 +53,8 @@ namespace lldb_dap {
 //     }
 //   }]
 // }
-void CompileUnitsRequestHandler::operator()(const llvm::json::Object &request) {
+void CompileUnitsRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;

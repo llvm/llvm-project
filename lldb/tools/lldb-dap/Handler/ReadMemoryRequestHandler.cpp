@@ -92,7 +92,8 @@ namespace lldb_dap {
 //     }
 //   }]
 // },
-void ReadMemoryRequestHandler::operator()(const llvm::json::Object &request) {
+void ReadMemoryRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");

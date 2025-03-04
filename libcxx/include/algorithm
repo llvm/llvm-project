@@ -1498,7 +1498,7 @@ template <class InputIterator, class OutputIterator1,
                    Predicate pred);
 
 template <class ForwardIterator, class Predicate>
-    ForwardIterator
+    constexpr ForwardIterator                          // constexpr in C++26
     stable_partition(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 template<class ForwardIterator, class Predicate>

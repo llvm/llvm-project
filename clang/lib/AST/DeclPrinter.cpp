@@ -112,6 +112,8 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
+    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgument> Args,
@@ -494,6 +496,8 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D) ||
         isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D) ||
         isa<OMPAllocateDecl>(*D))
+      Terminator = nullptr;
+    else if (isa<OpenACCDeclareDecl>(*D))
       Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
@@ -1908,5 +1912,13 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);
+  }
+}
+
+void DeclPrinter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  if (!D->isInvalidDecl()) {
+    Out << "#pragma acc declare ";
+    OpenACCClausePrinter Printer(Out, Policy);
+    Printer.VisitClauseList(D->clauses());
   }
 }

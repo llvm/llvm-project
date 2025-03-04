@@ -18,11 +18,11 @@ entry:
   %x2 = alloca i32, align 4
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: #dbg_value(ptr undef, !{{.*}}, !{{.*}})
+; CHECK: #dbg_value(ptr poison, !{{.*}}, !{{.*}})
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !23), !dbg !16
 
 ; Unhandled dbg.value: expression does not start with OP_DW_deref
-; CHECK: #dbg_value(ptr undef, !{{.*}}, !{{.*}})
+; CHECK: #dbg_value(ptr poison, !{{.*}}, !{{.*}})
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !24), !dbg !16
 
 ; Supported dbg.value: rewritted based on the [[USP]] value.
@@ -34,8 +34,8 @@ entry:
   tail call void @llvm.dbg.value(metadata ptr %x1, metadata !10, metadata !15), !dbg !16
   call void @capture(ptr nonnull %x1), !dbg !17
 
-; An extra non-dbg.value metadata use of %x2. Replaced with undef.
-; CHECK: call void @llvm.random.metadata.use(metadata ptr undef
+; An extra non-dbg.value metadata use of %x2. Replaced with poison.
+; CHECK: call void @llvm.random.metadata.use(metadata ptr poison
   call void @llvm.random.metadata.use(metadata ptr %x2)
 
 ; CHECK: #dbg_value(ptr %[[USP]], ![[X2:.*]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref),

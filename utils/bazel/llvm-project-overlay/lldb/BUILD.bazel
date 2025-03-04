@@ -639,14 +639,12 @@ cc_library(
             "source/Core/**/*.cpp",
             "source/ValueObject/**/*.cpp",  # This should be its own library.
         ],
-        exclude = ["source/Core/Telemetry.cpp"],
     ),
     hdrs = glob(
         [
             "include/lldb/Core/**/*.h",
             "include/lldb/ValueObject/**/*.h",  # This should be its own library.
         ],
-        exclude = ["include/lldb/Core/Telemetry.h"],
     ),
     includes = ["include"],
     deps = [
@@ -661,12 +659,15 @@ cc_library(
         ":SymbolHeaders",
         ":TargetHeaders",
         ":Utility",
+        ":Version",
         "//clang:driver",
         "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
         "//lldb/source/Plugins:PluginObjCLanguageHeaders",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:Telemetry",
+        "//llvm:config",
     ],
 )
 

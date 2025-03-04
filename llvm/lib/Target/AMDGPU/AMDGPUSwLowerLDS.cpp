@@ -378,7 +378,7 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
 
 void AMDGPUSwLowerLDS::populateSwLDSAttributeAndMetadata(Function *Func) {
   auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-  bool IsDynLDSUsed = LDSParams.SwDynLDS ? true : false;
+  bool IsDynLDSUsed = LDSParams.SwDynLDS;
   uint32_t Offset = LDSParams.LDSSize;
   recordLDSAbsoluteAddress(M, LDSParams.SwLDS, 0);
   addLDSSizeAttribute(Func, Offset, IsDynLDSUsed);

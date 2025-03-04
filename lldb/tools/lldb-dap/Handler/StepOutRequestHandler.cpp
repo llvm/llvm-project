@@ -49,7 +49,8 @@ namespace lldb_dap {
 //     acknowledgement, so no body field is required."
 //   }]
 // }
-void StepOutRequestHandler::operator()(const llvm::json::Object &request) {
+void StepOutRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");

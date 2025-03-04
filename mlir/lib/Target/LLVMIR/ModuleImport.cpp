@@ -1071,10 +1071,20 @@ LogicalResult
 ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
     return failure();
-  auto *initializer =
-      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
-  if (!initializer)
+  llvm::Constant *initializer = globalVar->getInitializer();
+
+  bool knownInit = isa<llvm::ConstantArray>(initializer) ||
+                   isa<llvm::ConstantAggregateZero>(initializer);
+  if (!knownInit)
     return failure();
+
+  // ConstantAggregateZero does not engage with the operand initialization
+  // in the loop that follows - there should be no operands. This implies
+  // empty ctor/dtor lists.
+  if (auto *caz = dyn_cast<llvm::ConstantAggregateZero>(initializer)) {
+    if (caz->getElementCount().getFixedValue() != 0)
+      return failure();
+  }
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;

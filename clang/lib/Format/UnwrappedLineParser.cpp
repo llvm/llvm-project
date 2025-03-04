@@ -1712,12 +1712,6 @@ void UnwrappedLineParser::parseStructuralElement(
            OpeningBrace && OpeningBrace->isOneOf(TT_RequiresExpressionLBrace,
                                                  TT_CompoundRequirementLBrace);
        !eof();) {
-    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
-      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
-          Next && Next->isBinaryOperator()) {
-        FormatTok->Tok.setKind(tok::identifier);
-      }
-    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -5097,8 +5091,10 @@ UnwrappedLineParser::parseMacroCall() {
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
-    Line->Tokens.back().Tok->MustBreakBefore = true;
-    Line->Tokens.back().Tok->MustBreakBeforeFinalized = true;
+    auto &Tok = *Line->Tokens.back().Tok;
+    Tok.MustBreakBefore = true;
+    Tok.MustBreakBeforeFinalized = true;
+    Tok.FirstAfterPPDirectiveLine = true;
     MustBreakBeforeNextToken = false;
   }
 }

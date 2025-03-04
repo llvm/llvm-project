@@ -1682,6 +1682,12 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
+  case Match_InvalidStackAdj: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(
+        ErrorLoc,
+        "stack adjustment is invalid for this instruction and register list");
+  }
   }
 
   if (const char *MatchDiag = getMatchKindDiag((RISCVMatchResultTy)Result)) {
@@ -2747,8 +2753,7 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     RegEnd = RegStart;
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
-  if (Encode == RISCVZC::INVALID_RLIST)
-    return Error(S, "invalid register list");
+  assert(Encode != RISCVZC::INVALID_RLIST);
   Operands.push_back(RISCVOperand::createRlist(Encode, S));
 
   return ParseStatus::Success;
@@ -2760,12 +2765,25 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
 
   SMLoc S = getLoc();
   int64_t StackAdjustment = getLexer().getTok().getIntVal();
-  unsigned Spimm = 0;
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
-  if (Negative != ExpectNegative ||
-      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64()))
-    return ParseStatus::NoMatch;
+  assert(RlistVal != RISCVZC::INVALID_RLIST);
+  unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistVal, isRV64());
+  if (Negative != ExpectNegative || StackAdjustment % 16 != 0 ||
+      StackAdjustment < StackAdjBase || (StackAdjustment - StackAdjBase) > 48) {
+    int64_t Lower = StackAdjBase;
+    int64_t Upper = StackAdjBase + 48;
+    if (ExpectNegative) {
+      Lower = -Lower;
+      Upper = -Upper;
+      std::swap(Lower, Upper);
+    }
+    return generateImmOutOfRangeError(S, Lower, Upper,
+                                      "stack adjustment for register list must "
+                                      "be a multiple of 16 bytes in the range");
+  }
+
+  unsigned Spimm = (StackAdjustment - StackAdjBase) / 16;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();
   return ParseStatus::Success;
@@ -3640,7 +3658,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
-  if (Opcode == RISCV::CM_MVSA01) {
+  if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
     MCRegister Rd2 = Inst.getOperand(1).getReg();
     if (Rd1 == Rd2) {

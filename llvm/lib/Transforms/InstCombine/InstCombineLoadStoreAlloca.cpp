@@ -996,7 +996,8 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
   if (!V->hasOneUse())
     return nullptr;
 
-  if (Depth == 1)
+  constexpr unsigned RecursionLimit = 3;
+  if (Depth == RecursionLimit)
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
@@ -1008,6 +1009,21 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
         return nullptr;
       }
     }
+  }
+
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    bool Changed = false;
+    for (Use &U : PHI->incoming_values()) {
+      // We set Depth to RecursionLimit to avoid expensive recursion.
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
+                                             RecursionLimit)) {
+        replaceUse(U, Res);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      addToWorklist(PHI);
+    return nullptr;
   }
 
   return nullptr;

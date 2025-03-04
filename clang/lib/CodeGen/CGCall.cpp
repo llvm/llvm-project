@@ -77,6 +77,22 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
     // clang-format on
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    return llvm::CallingConv::RISCV_VLSCall_##ABI_VLEN;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
 }
 
@@ -265,6 +281,29 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;
+
+  if (RISCVVLSCCAttr *PCS = D->getAttr<RISCVVLSCCAttr>()) {
+    switch (PCS->getVectorWidth()) {
+    default:
+      llvm_unreachable("Invalid RISC-V VLS ABI VLEN");
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case ABI_VLEN:                                                               \
+    return CC_RISCVVLSCall_##ABI_VLEN;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    }
+  }
 
   return CC_C;
 }
@@ -2434,7 +2473,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addMemoryAttr(llvm::MemoryEffects::inaccessibleOrArgMemOnly());
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
-    if (TargetDecl->hasAttr<RestrictAttr>())
+    if (const auto *RA = TargetDecl->getAttr<RestrictAttr>();
+        RA && RA->getDeallocator() == nullptr)
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !CodeGenOpts.NullPointerIsValid)
@@ -3231,6 +3271,17 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             break;
           }
         }
+      }
+
+      // Struct of fixed-length vectors and struct of array of fixed-length
+      // vector in VLS calling convention are coerced to vector tuple
+      // type(represented as TargetExtType) and scalable vector type
+      // respectively, they're no longer handled as struct.
+      if (ArgI.isDirect() && isa<llvm::StructType>(ConvertType(Ty)) &&
+          (isa<llvm::TargetExtType>(ArgI.getCoerceToType()) ||
+           isa<llvm::ScalableVectorType>(ArgI.getCoerceToType()))) {
+        ArgVals.push_back(ParamValue::forDirect(AI));
+        break;
       }
 
       llvm::StructType *STy =
@@ -5163,6 +5214,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       }
     }
     if (IRFunctionArgs.hasSRetArg()) {
+      // A mismatch between the allocated return value's AS and the target's
+      // chosen IndirectAS can happen e.g. when passing the this pointer through
+      // a chain involving stores to / loads from the DefaultAS; we address this
+      // here, symmetrically with the handling we have for normal pointer args.
+      if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
+        llvm::Value *V = SRetPtr.getBasePointer();
+        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
+        LangAS DAS = getLangASFromTargetAS(RetAI.getIndirectAddrSpace());
+        llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
+                                                RetAI.getIndirectAddrSpace());
+
+        SRetPtr = SRetPtr.withPointer(
+            getTargetHooks().performAddrSpaceCast(*this, V, SAS, DAS, Ty, true),
+            SRetPtr.isKnownNonNull());
+      }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
     } else if (RetAI.isInAlloca()) {
@@ -5394,9 +5460,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             V->getType()->isIntegerTy())
           V = Builder.CreateZExt(V, ArgInfo.getCoerceToType());
 
-        // The only plausible mismatch here would be for pointer address spaces,
-        // which can happen e.g. when passing a sret arg that is in the AllocaAS
-        // to a function that takes a pointer to and argument in the DefaultAS.
+        // The only plausible mismatch here would be for pointer address spaces.
         // We assume that the target has a reasonable mapping for the DefaultAS
         // (it can be casted to from incoming specific ASes), and insert an AS
         // cast to address the mismatch.

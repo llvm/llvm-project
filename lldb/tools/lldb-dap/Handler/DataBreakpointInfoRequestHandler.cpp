@@ -108,7 +108,7 @@ namespace lldb_dap {
 //   }]
 // }
 void DataBreakpointInfoRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;

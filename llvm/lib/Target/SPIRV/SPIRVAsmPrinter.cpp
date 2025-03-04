@@ -70,11 +70,11 @@ public:
   void outputOpMemoryModel();
   void outputOpFunctionEnd();
   void outputExtFuncDecls();
-  void outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
+  void outputExecutionModeFromMDNode(MCRegister Reg, MDNode *Node,
                                      SPIRV::ExecutionMode::ExecutionMode EM,
                                      unsigned ExpectMDOps, int64_t DefVal);
   void outputExecutionModeFromNumthreadsAttribute(
-      const Register &Reg, const Attribute &Attr,
+      const MCRegister &Reg, const Attribute &Attr,
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
@@ -316,7 +316,7 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
   for (auto &CU : MAI->ExtInstSetMap) {
     unsigned Set = CU.first;
-    Register Reg = CU.second;
+    MCRegister Reg = CU.second;
     MCInst Inst;
     Inst.setOpcode(SPIRV::OpExtInstImport);
     Inst.addOperand(MCOperand::createReg(Reg));
@@ -341,7 +341,7 @@ void SPIRVAsmPrinter::outputOpMemoryModel() {
 // the interface of this entry point.
 void SPIRVAsmPrinter::outputEntryPoints() {
   // Find all OpVariable IDs with required StorageClass.
-  DenseSet<Register> InterfaceIDs;
+  DenseSet<MCRegister> InterfaceIDs;
   for (const MachineInstr *MI : MAI->GlobalVarList) {
     assert(MI->getOpcode() == SPIRV::OpVariable);
     auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
@@ -353,7 +353,7 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     if (ST->isAtLeastSPIRVVer(VersionTuple(1, 4)) ||
         SC == SPIRV::StorageClass::Input || SC == SPIRV::StorageClass::Output) {
       const MachineFunction *MF = MI->getMF();
-      Register Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+      MCRegister Reg = MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
       InterfaceIDs.insert(Reg);
     }
   }
@@ -363,7 +363,7 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     SPIRVMCInstLower MCInstLowering;
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst, MAI);
-    for (Register Reg : InterfaceIDs) {
+    for (MCRegister Reg : InterfaceIDs) {
       assert(Reg.isValid());
       TmpInst.addOperand(MCOperand::createReg(Reg));
     }
@@ -444,7 +444,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
       if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
         Inst.addOperand(MCOperand::createImm(Const->getZExtValue()));
       } else if (auto *CE = dyn_cast<Function>(C)) {
-        Register FuncReg = MAI->getFuncReg(CE);
+        MCRegister FuncReg = MAI->getFuncReg(CE);
         assert(FuncReg.isValid());
         Inst.addOperand(MCOperand::createReg(FuncReg));
       }
@@ -453,7 +453,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
 }
 
 void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
-    Register Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM,
+    MCRegister Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM,
     unsigned ExpectMDOps, int64_t DefVal) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -470,7 +470,7 @@ void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
 }
 
 void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
-    const Register &Reg, const Attribute &Attr,
+    const MCRegister &Reg, const Attribute &Attr,
     SPIRV::ExecutionMode::ExecutionMode EM) {
   assert(Attr.isValid() && "Function called with an invalid attribute.");
 
@@ -508,7 +508,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // <Entry Point> operands of OpExecutionMode
     if (F.isDeclaration() || !isEntryPoint(F))
       continue;
-    Register FReg = MAI->getFuncReg(&F);
+    MCRegister FReg = MAI->getFuncReg(&F);
     assert(FReg.isValid());
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
       outputExecutionModeFromMDNode(FReg, Node, SPIRV::ExecutionMode::LocalSize,
@@ -560,7 +560,7 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       if (!isa<Function>(AnnotatedVar))
         report_fatal_error("Unsupported value in llvm.global.annotations");
       Function *Func = cast<Function>(AnnotatedVar);
-      Register Reg = MAI->getFuncReg(Func);
+      MCRegister Reg = MAI->getFuncReg(Func);
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);

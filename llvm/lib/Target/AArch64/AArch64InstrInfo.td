@@ -393,6 +393,8 @@ def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;
 
+def AllowMisalignedMemAccesses : Predicate<"!Subtarget->requiresStrictAlign()">;
+
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.

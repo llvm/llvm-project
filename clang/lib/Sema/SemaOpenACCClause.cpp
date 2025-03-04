@@ -10,8 +10,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -192,6 +193,7 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::Kernels:
     case OpenACCDirectiveKind::Data:
     case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::Declare:
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
@@ -424,6 +426,22 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Link: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Declare:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::DeviceResident: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Declare:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   case OpenACCClauseKind::UseDevice: {
     switch (DirectiveKind) {
@@ -588,8 +606,17 @@ bool checkValidAfterDeviceType(
 // with the one being currently implemented/only updated after the entire
 // construct has been implemented.
 bool isDirectiveKindImplemented(OpenACCDirectiveKind DK) {
-  return DK != OpenACCDirectiveKind::Declare &&
-         DK != OpenACCDirectiveKind::Routine;
+  return DK != OpenACCDirectiveKind::Routine;
+}
+
+// GCC looks through linkage specs, but not the other transparent declaration
+// contexts for 'declare' restrictions, so this helper function helps get us
+// through that.
+const DeclContext *removeLinkageSpecDC(const DeclContext *DC) {
+  while (isa<LinkageSpecDecl>(DC))
+    DC = DC->getParent();
+
+  return DC;
 }
 
 class SemaOpenACCClauseVisitor {
@@ -1006,15 +1033,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitNoCreateClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCPresentClause::Create(Ctx, Clause.getBeginLoc(),
                                       Clause.getLParenLoc(),
@@ -1045,32 +1071,57 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCCopyClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
       Clause.getVarList(), Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitLinkClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
+
+  Clause.setVarListDetails(SemaRef.CheckLinkClauseVarList(Clause.getVarList()),
+                           /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  return OpenACCLinkClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), Clause.getVarList(),
+                                   Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceResidentClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
+
+  return OpenACCDeviceResidentClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
+      Clause.getEndLoc());
+}
+
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCCopyInClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
@@ -1079,15 +1130,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyInClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyOutClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCCopyOutClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
@@ -1099,6 +1149,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCreateClause(
   // ActOnVar ensured that everything is a valid variable reference, so there
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCCreateClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
@@ -1156,13 +1211,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitUseDeviceClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute'/'combined'/'data'
-  // constructs, and 'compute'/'combined'/'data' constructs are the only
-  // construct that can do anything with this yet, so skip/treat as
-  // unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
   // ActOnVar ensured that everything is a valid variable reference, but we
   // still have to make sure it is a pointer type.
   llvm::SmallVector<Expr *> VarList{Clause.getVarList()};
@@ -1171,6 +1219,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDevicePtrClause(
   });
   Clause.setVarListDetails(VarList,
                            /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  // 'declare' has some restrictions that need to be enforced separately, so
+  // check it here.
+  if (SemaRef.CheckDeclareClause(Clause))
+    return nullptr;
 
   return OpenACCDevicePtrClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -2242,4 +2295,137 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
   auto *Ret = OpenACCReductionClause::Create(
       getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, EndLoc);
   return Ret;
+}
+
+llvm::SmallVector<Expr *>
+SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
+  const DeclContext *DC = removeLinkageSpecDC(getCurContext());
+
+  // Link has no special restrictions on its var list unless it is not at NS/TU
+  // scope.
+  if (isa<NamespaceDecl, TranslationUnitDecl>(DC))
+    return llvm::SmallVector<Expr *>(VarExprs);
+
+  llvm::SmallVector<Expr *> NewVarList;
+
+  for (Expr *VarExpr : VarExprs) {
+    if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(VarExpr)) {
+      NewVarList.push_back(VarExpr);
+      continue;
+    }
+
+    // Field decls can't be global, nor extern, and declare can't refer to
+    // non-static fields in class-scope, so this always fails the scope check.
+    // BUT for now we add this so it gets diagnosed by the general 'declare'
+    // rules.
+    if (isa<MemberExpr>(VarExpr)) {
+      NewVarList.push_back(VarExpr);
+      continue;
+    }
+
+    const auto *DRE = cast<DeclRefExpr>(VarExpr);
+    const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
+
+    if (!Var || !Var->hasExternalStorage())
+      Diag(VarExpr->getBeginLoc(), diag::err_acc_link_not_extern);
+    else
+      NewVarList.push_back(VarExpr);
+  }
+
+  return NewVarList;
+}
+bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause) {
+
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Declare)
+    return false;
+
+  const DeclContext *DC = removeLinkageSpecDC(getCurContext());
+
+  // Whether this is 'create', 'copyin', 'deviceptr', 'device_resident', or
+  // 'link', which have 2 special rules.
+  bool IsSpecialClause =
+      Clause.getClauseKind() == OpenACCClauseKind::Create ||
+      Clause.getClauseKind() == OpenACCClauseKind::CopyIn ||
+      Clause.getClauseKind() == OpenACCClauseKind::DevicePtr ||
+      Clause.getClauseKind() == OpenACCClauseKind::DeviceResident ||
+      Clause.getClauseKind() == OpenACCClauseKind::Link;
+
+  // OpenACC 3.3 2.13:
+  // In C or C++ global or namespace scope, only 'create',
+  // 'copyin', 'deviceptr', 'device_resident', or 'link' clauses are
+  // allowed.
+  if (!IsSpecialClause && isa<NamespaceDecl, TranslationUnitDecl>(DC)) {
+    return Diag(Clause.getBeginLoc(), diag::err_acc_declare_clause_at_global)
+           << Clause.getClauseKind();
+  }
+
+  llvm::SmallVector<Expr *> FilteredVarList;
+  const DeclaratorDecl *CurDecl = nullptr;
+  for (Expr *VarExpr : Clause.getVarList()) {
+    if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(VarExpr)) {
+      // There isn't really anything we can do here, so we add them anyway and
+      // we can check them again when we instantiate this.
+    } else if (const auto *MemExpr = dyn_cast<MemberExpr>(VarExpr)) {
+      FieldDecl *FD =
+          cast<FieldDecl>(MemExpr->getMemberDecl()->getCanonicalDecl());
+      CurDecl = FD;
+
+      if (removeLinkageSpecDC(
+              FD->getLexicalDeclContext()->getPrimaryContext()) != DC) {
+        Diag(MemExpr->getBeginLoc(), diag::err_acc_declare_same_scope)
+            << Clause.getClauseKind();
+        continue;
+      }
+    } else {
+      const auto *DRE = cast<DeclRefExpr>(VarExpr);
+      const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
+      if (Var)
+        CurDecl = Var->getCanonicalDecl();
+
+      // OpenACC3.3 2.13:
+      // A 'declare' directive must be in the same scope as the declaration of
+      // any var that appears in the clauses of the directive or any scope
+      // within a C/C++ function.
+      // We can't really check 'scope' here, so we check declaration context,
+      // which is a reasonable approximation, but misses scopes inside of
+      // functions.
+      if (removeLinkageSpecDC(Var->getCanonicalDecl()
+                                  ->getLexicalDeclContext()
+                                  ->getPrimaryContext()) != DC) {
+        Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_same_scope)
+            << Clause.getClauseKind();
+        continue;
+      }
+      // OpenACC3.3 2.13:
+      // C and C++ extern variables may only appear in 'create',
+      // 'copyin', 'deviceptr', 'device_resident', or 'link' clauses on a
+      // 'declare' directive.
+      if (!IsSpecialClause && Var && Var->hasExternalStorage()) {
+        Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_extern)
+            << Clause.getClauseKind();
+        continue;
+      }
+
+      // OpenACC3.3 2.13:
+      // A var may appear at most once in all the clauses of declare
+      // directives for a function, subroutine, program, or module.
+
+      if (CurDecl) {
+        auto Itr = DeclareVarReferences.find(CurDecl);
+        if (Itr != DeclareVarReferences.end()) {
+          Diag(VarExpr->getBeginLoc(), diag::err_acc_multiple_references)
+              << Clause.getClauseKind();
+          Diag(Itr->second, diag::note_acc_previous_reference);
+          continue;
+        } else {
+          DeclareVarReferences[CurDecl] = VarExpr->getBeginLoc();
+        }
+      }
+    }
+    FilteredVarList.push_back(VarExpr);
+  }
+
+  Clause.setVarListDetails(FilteredVarList, Clause.isReadOnly(),
+                           Clause.isZero());
+  return false;
 }

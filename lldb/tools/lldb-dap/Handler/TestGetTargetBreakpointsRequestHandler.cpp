@@ -14,7 +14,7 @@
 namespace lldb_dap {
 
 void TestGetTargetBreakpointsRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Array response_breakpoints;

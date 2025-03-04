@@ -43,8 +43,7 @@ program p
   ! CHECK:     %[[V_35:[0-9]+]]:2 = hlfir.declare %[[V_34]]
   ! CHECK:     %[[V_36:[0-9]+]] = fir.load %[[V_19]]#0 : !fir.ref<f32>
   ! CHECK:     %[[V_37:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_38:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_39:[0-9]+]] = fir.coordinate_of %[[V_35]]#1, %[[V_38]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_39:[0-9]+]] = fir.coordinate_of %[[V_35]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_40:[0-9]+]] = fir.load %[[V_39]] : !fir.ref<i8>
   ! CHECK:     %[[V_41:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_42:[0-9]+]] = arith.andi %[[V_40]], %[[V_41]] : i8
@@ -62,8 +61,7 @@ program p
   ! CHECK:     %[[V_49:[0-9]+]]:2 = hlfir.declare %[[V_48]]
   ! CHECK:     %[[V_50:[0-9]+]] = fir.load %[[V_19]]#0 : !fir.ref<f32>
   ! CHECK:     %[[V_51:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_52:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_53:[0-9]+]] = fir.coordinate_of %[[V_49]]#1, %[[V_52]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_53:[0-9]+]] = fir.coordinate_of %[[V_49]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_54:[0-9]+]] = fir.load %[[V_53]] : !fir.ref<i8>
   ! CHECK:     %[[V_55:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_56:[0-9]+]] = arith.andi %[[V_54]], %[[V_55]] : i8
@@ -104,8 +102,7 @@ program p
   ! CHECK:     %[[V_69:[0-9]+]]:2 = hlfir.declare %[[V_68]]
   ! CHECK:     %[[V_70:[0-9]+]] = fir.load %[[V_21]]#0 : !fir.ref<f16>
   ! CHECK:     %[[V_71:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_72:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_73:[0-9]+]] = fir.coordinate_of %[[V_69]]#1, %[[V_72]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_73:[0-9]+]] = fir.coordinate_of %[[V_69]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_74:[0-9]+]] = fir.load %[[V_73]] : !fir.ref<i8>
   ! CHECK:     %[[V_75:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_76:[0-9]+]] = arith.andi %[[V_74]], %[[V_75]] : i8
@@ -124,8 +121,7 @@ program p
   ! CHECK:     %[[V_84:[0-9]+]]:2 = hlfir.declare %[[V_83]]
   ! CHECK:     %[[V_85:[0-9]+]] = fir.load %[[V_21]]#0 : !fir.ref<f16>
   ! CHECK:     %[[V_86:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_87:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_88:[0-9]+]] = fir.coordinate_of %[[V_84]]#1, %[[V_87]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_88:[0-9]+]] = fir.coordinate_of %[[V_84]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_89:[0-9]+]] = fir.load %[[V_88]] : !fir.ref<i8>
   ! CHECK:     %[[V_90:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_91:[0-9]+]] = arith.andi %[[V_89]], %[[V_90]] : i8
@@ -180,8 +176,7 @@ program p
   ! CHECK:     %[[V_110:[0-9]+]]:2 = hlfir.declare %[[V_109]]
   ! CHECK:     %[[V_111:[0-9]+]] = fir.load %[[V_23]]#0 : !fir.ref<bf16>
   ! CHECK:     %[[V_112:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_113:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_114:[0-9]+]] = fir.coordinate_of %[[V_110]]#1, %[[V_113]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_114:[0-9]+]] = fir.coordinate_of %[[V_110]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_115:[0-9]+]] = fir.load %[[V_114]] : !fir.ref<i8>
   ! CHECK:     %[[V_116:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_117:[0-9]+]] = arith.andi %[[V_115]], %[[V_116]] : i8
@@ -219,8 +214,7 @@ program p
 
   ! CHECK:     %[[V_130:[0-9]+]] = fir.address_of(@_QQro._QMieee_arithmeticTieee_class_type.3) : !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
   ! CHECK:     %[[V_131:[0-9]+]]:2 = hlfir.declare %[[V_130]]
-  ! CHECK:     %[[V_132:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_133:[0-9]+]] = fir.coordinate_of %[[V_131]]#1, %[[V_132]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_133:[0-9]+]] = fir.coordinate_of %[[V_131]]#1, _QMieee_arithmeticTieee_class_type.which : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_134:[0-9]+]] = fir.load %[[V_133]] : !fir.ref<i8>
   ! CHECK:     %[[V_135:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_4) : !fir.ref<!fir.array<12xi32>>
   ! CHECK:     %[[V_136:[0-9]+]] = fir.coordinate_of %[[V_135]], %[[V_134]] : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
@@ -244,8 +238,7 @@ program p
   ! CHECK:     %[[V_144:[0-9]+]]:2 = hlfir.declare %[[V_143]]
   ! CHECK:     %[[V_145:[0-9]+]] = fir.load %[[V_25]]#0 : !fir.ref<f32>
   ! CHECK:     %[[V_146:[0-9]+]] = fir.call @llvm.get.rounding() fastmath<contract> : () -> i32
-  ! CHECK:     %[[V_147:[0-9]+]] = fir.field_index _QM__fortran_builtinsT__builtin_ieee_round_type.mode, !fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>
-  ! CHECK:     %[[V_148:[0-9]+]] = fir.coordinate_of %[[V_144]]#1, %[[V_147]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>, !fir.field) -> !fir.ref<i8>
+  ! CHECK:     %[[V_148:[0-9]+]] = fir.coordinate_of %[[V_144]]#1, _QM__fortran_builtinsT__builtin_ieee_round_type.mode : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_round_type{_QM__fortran_builtinsT__builtin_ieee_round_type.mode:i8}>>) -> !fir.ref<i8>
   ! CHECK:     %[[V_149:[0-9]+]] = fir.load %[[V_148]] : !fir.ref<i8>
   ! CHECK:     %[[V_150:[0-9]+]] = arith.shli %c-1{{.*}}, %c2{{.*}} : i8
   ! CHECK:     %[[V_151:[0-9]+]] = arith.andi %[[V_149]], %[[V_150]] : i8

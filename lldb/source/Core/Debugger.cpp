@@ -17,6 +17,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h"
@@ -52,6 +53,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Version/Version.h"
 #include "lldb/lldb-enumerations.h"
 
 #if defined(_WIN32)
@@ -62,6 +64,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
@@ -69,6 +72,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -761,7 +765,14 @@ void Debugger::InstanceInitialize() {
 
 DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
                                     void *baton) {
+  lldb_private::telemetry::ScopedDispatcher<
+      lldb_private::telemetry::DebuggerInfo>
+      helper([](lldb_private::telemetry::DebuggerInfo *entry) {
+        entry->lldb_version = lldb_private::GetVersion();
+      });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
+  helper.SetDebugger(debugger_sp.get());
+
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     g_debugger_list_ptr->push_back(debugger_sp);
@@ -987,6 +998,13 @@ void Debugger::Clear() {
   //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
   //     static void Debugger::Terminate();
   llvm::call_once(m_clear_once, [this]() {
+    telemetry::ScopedDispatcher<telemetry::DebuggerInfo> helper(
+        [this](lldb_private::telemetry::DebuggerInfo *info) {
+          assert(this == info->debugger);
+          (void)this;
+          info->is_exit_entry = true;
+        },
+        this);
     ClearIOHandlers();
     StopIOHandlerThread();
     StopEventHandlerThread();

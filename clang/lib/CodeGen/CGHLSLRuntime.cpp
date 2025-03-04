@@ -116,7 +116,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
   BufGlobals.push_back(ValueAsMetadata::get(BufGV));
 
   const auto *ElemIt = LayoutStruct->element_begin();
-  for (Decl *D : BufDecl->decls()) {
+  for (Decl *D : BufDecl->buffer_decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D))
       // Nothing to do for this declaration.
       continue;

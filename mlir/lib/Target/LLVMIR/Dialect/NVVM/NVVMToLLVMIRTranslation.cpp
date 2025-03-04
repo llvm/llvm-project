@@ -18,8 +18,10 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -195,48 +197,33 @@ public:
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
       return failure();
-    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
 
-    auto generateMetadata = [&](int dim, StringRef name) {
-      llvm::Metadata *llvmMetadata[] = {
-          llvm::ValueAsMetadata::get(llvmFunc),
-          llvm::MDString::get(llvmContext, name),
-          llvm::ValueAsMetadata::get(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(llvmContext), dim))};
-      llvm::MDNode *llvmMetadataNode =
-          llvm::MDNode::get(llvmContext, llvmMetadata);
-      moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
-          ->addOperand(llvmMetadataNode);
-    };
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
       if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
-      generateMetadata(values[0], NVVM::NVVMDialect::getMaxntidXName());
-      if (values.size() > 1)
-        generateMetadata(values[1], NVVM::NVVMDialect::getMaxntidYName());
-      if (values.size() > 2)
-        generateMetadata(values[2], NVVM::NVVMDialect::getMaxntidZName());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr("nvvm.maxntid", attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
       if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
-      generateMetadata(values[0], NVVM::NVVMDialect::getReqntidXName());
-      if (values.size() > 1)
-        generateMetadata(values[1], NVVM::NVVMDialect::getReqntidYName());
-      if (values.size() > 2)
-        generateMetadata(values[2], NVVM::NVVMDialect::getReqntidZName());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr("nvvm.reqntid", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
       if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
       auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
-      generateMetadata(values[0], NVVM::NVVMDialect::getClusterDimXName());
-      if (values.size() > 1)
-        generateMetadata(values[1], NVVM::NVVMDialect::getClusterDimYName());
-      if (values.size() > 2)
-        generateMetadata(values[2], NVVM::NVVMDialect::getClusterDimZName());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr("nvvm.cluster_dim", attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());

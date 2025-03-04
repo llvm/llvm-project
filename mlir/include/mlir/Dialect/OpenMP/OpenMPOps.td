@@ -146,13 +146,24 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
       return region.empty() ? nullptr : region.getArgument(0);
     }
 
+    /// Returns true if the init region might read from the mold argument
+    bool initReadsFromMold() {
+      BlockArgument moldArg = getInitMoldArg();
+      return moldArg && !moldArg.use_empty();
+    }
+
+    /// Returns true if any region of this privatizer might read from the mold
+    /// argument
+    bool readsFromMold() {
+      return initReadsFromMold() || !getCopyRegion().empty();
+    }
+
     /// needsMap returns true if the value being privatized should additionally
     /// be mapped to the target region using a MapInfoOp. This is most common
     /// when an allocatable is privatized. In such cases, the descriptor is used
     /// in privatization and needs to be mapped on to the device.
     bool needsMap() {
-      BlockArgument moldArg = getInitMoldArg();
-      return moldArg ? !moldArg.use_empty() : false;
+      return initReadsFromMold();
     }
 
     /// Get the type for arguments to nested regions. This should
