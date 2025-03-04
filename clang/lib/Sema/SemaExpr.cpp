@@ -14924,7 +14924,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
     if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
         BI && BI->isComparisonOp())
-      Diag(OpLoc, diag::warn_consecutive_comparison);
+      Diag(OpLoc, diag::warn_consecutive_comparison)
+          << BI->getOpcodeStr() << BinaryOperator::getOpcodeStr(Opc);
 
     break;
   case BO_EQ:
