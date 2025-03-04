@@ -8,7 +8,7 @@ define i64 @other_noundef() {
 ; CHECK-NEXT:  [[START:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[NONPOISON:%.*]] = phi i64 [ [[NONPOISON]], %[[BB0:.*]] ], [ [[NONPOISON]], %[[BB1:.*]] ], [ [[NONPOISON]], %[[BB2:.*]] ], [ [[NONPOISON]], %[[BB:.*]] ], [ [[I:%.*]], %[[BACK_TO_LOOP:.*]] ], [ 0, %[[START]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[R]], %[[BB0:.*]] ], [ [[R]], %[[BB1:.*]] ], [ [[R]], %[[BB2:.*]] ], [ [[R]], %[[BB:.*]] ], [ [[I:%.*]], %[[BACK_TO_LOOP:.*]] ], [ 0, %[[START]] ]
 ; CHECK-NEXT:    [[I]] = call i64 @opaque()
 ; CHECK-NEXT:    switch i64 [[I]], label %[[EXIT0:.*]] [
 ; CHECK-NEXT:      i64 -1, label %[[EXIT1:.*]]
@@ -18,12 +18,11 @@ define i64 @other_noundef() {
 ; CHECK:       [[EXIT0]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[NONPOISON]], %[[LOOP]] ], [ undef, %[[EXIT0]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ; CHECK:       [[BACK_TO_LOOP]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    switch i64 [[NONPOISON]], label %[[LOOP]] [
+; CHECK-NEXT:    switch i64 [[R]], label %[[LOOP]] [
 ; CHECK-NEXT:      i64 0, label %[[BB0]]
 ; CHECK-NEXT:      i64 1, label %[[BB1]]
 ; CHECK-NEXT:      i64 2, label %[[BB2]]
