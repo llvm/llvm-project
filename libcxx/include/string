@@ -1054,7 +1054,7 @@ public:
   basic_string(nullptr_t) = delete;
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* __s, size_type __n) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const _CharT* _LIBCPP_DIAGNOSE_NULLPTR __s, size_type __n) {
     _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
     __init(__s, __n);
   }
