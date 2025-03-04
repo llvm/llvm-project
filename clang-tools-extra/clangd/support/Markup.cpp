@@ -354,6 +354,12 @@ void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
     case Chunk::InlineCode:
       OS << renderInlineBlock(C.Contents);
       break;
+    case Chunk::Bold:
+      OS << "**" << renderText(C.Contents, !HasChunks) << "**";
+      break;
+    case Chunk::Emphasized:
+      OS << "*" << renderText(C.Contents, !HasChunks) << "*";
+      break;
     }
     HasChunks = true;
     NeedsSpace = C.SpaceAfter;
@@ -387,6 +393,10 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
     llvm::StringRef Marker = "";
     if (C.Preserve && C.Kind == Chunk::InlineCode)
       Marker = chooseMarker({"`", "'", "\""}, C.Contents);
+    else if (C.Kind == Chunk::Bold)
+      Marker = "**";
+    else if (C.Kind == Chunk::Emphasized)
+      Marker = "*";
     OS << Marker << C.Contents << Marker;
     NeedsSpace = C.SpaceAfter;
   }
@@ -434,17 +444,29 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
 }
 
 Paragraph &Paragraph::appendEmphasizedText(llvm::StringRef Text) {
-  std::string ItalicText = "*" + canonicalizeSpaces(Text) + "*";
-  if (ItalicText.size() == 2)
+  std::string Norm = canonicalizeSpaces(Text);
+  if (Norm.empty())
     return *this;
-  return appendText(ItalicText);
+  Chunks.emplace_back();
+  Chunk &C = Chunks.back();
+  C.Contents = std::move(Norm);
+  C.Kind = Chunk::Emphasized;
+  C.SpaceBefore = llvm::isSpace(Text.front());
+  C.SpaceAfter = llvm::isSpace(Text.back());
+  return *this;
 }
 
 Paragraph &Paragraph::appendBoldText(llvm::StringRef Text) {
-  std::string BoldText = "**" + canonicalizeSpaces(Text) + "**";
-  if (BoldText.size() == 4)
+  std::string Norm = canonicalizeSpaces(Text);
+  if (Norm.empty())
     return *this;
-  return appendText(BoldText);
+  Chunks.emplace_back();
+  Chunk &C = Chunks.back();
+  C.Contents = std::move(Norm);
+  C.Kind = Chunk::Bold;
+  C.SpaceBefore = llvm::isSpace(Text.front());
+  C.SpaceAfter = llvm::isSpace(Text.back());
+  return *this;
 }
 
 Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {

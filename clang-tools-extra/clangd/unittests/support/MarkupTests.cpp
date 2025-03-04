@@ -217,11 +217,11 @@ TEST(Paragraph, BoldText) {
   EXPECT_EQ(P.asPlainText(), "");
 
   P.appendBoldText(" \n foo\nbar\n ");
-  EXPECT_EQ(P.asMarkdown(), "\\*\\*foo bar\\*\\*");
+  EXPECT_EQ(P.asMarkdown(), "**foo bar**");
   EXPECT_EQ(P.asPlainText(), "**foo bar**");
 
   P.appendSpace().appendBoldText("foobar");
-  EXPECT_EQ(P.asMarkdown(), "\\*\\*foo bar\\*\\* \\*\\*foobar\\*\\*");
+  EXPECT_EQ(P.asMarkdown(), "**foo bar** **foobar**");
   EXPECT_EQ(P.asPlainText(), "**foo bar** **foobar**");
 }
 
@@ -232,11 +232,11 @@ TEST(Paragraph, EmphasizedText) {
   EXPECT_EQ(P.asPlainText(), "");
 
   P.appendEmphasizedText(" \n foo\nbar\n ");
-  EXPECT_EQ(P.asMarkdown(), "\\*foo bar\\*");
+  EXPECT_EQ(P.asMarkdown(), "*foo bar*");
   EXPECT_EQ(P.asPlainText(), "*foo bar*");
 
   P.appendSpace().appendEmphasizedText("foobar");
-  EXPECT_EQ(P.asMarkdown(), "\\*foo bar\\* \\*foobar\\*");
+  EXPECT_EQ(P.asMarkdown(), "*foo bar* *foobar*");
   EXPECT_EQ(P.asPlainText(), "*foo bar* *foobar*");
 }
 

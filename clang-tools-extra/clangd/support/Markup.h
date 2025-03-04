@@ -68,6 +68,8 @@ private:
     enum {
       PlainText,
       InlineCode,
+      Bold,
+      Emphasized
     } Kind = PlainText;
     // Preserve chunk markers in plaintext.
     bool Preserve = false;

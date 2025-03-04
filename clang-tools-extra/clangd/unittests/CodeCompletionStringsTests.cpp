@@ -288,7 +288,7 @@ TEST(CompletionString, ParseDocumentation) {
           std::nullopt,
           std::nullopt,
           std::nullopt,
-          "foo \\*bar\\* baz",
+          "foo *bar* baz",
           "foo *bar* baz",
       },
       {
@@ -296,7 +296,7 @@ TEST(CompletionString, ParseDocumentation) {
           std::nullopt,
           std::nullopt,
           std::nullopt,
-          "foo \\*\\*bar\\*\\* baz",
+          "foo **bar** baz",
           "foo **bar** baz",
       },
       {
@@ -304,7 +304,7 @@ TEST(CompletionString, ParseDocumentation) {
           std::nullopt,
           std::nullopt,
           std::nullopt,
-          "foo \\*\\*\\\\ref\\*\\* \\*bar\\* baz",
+          "foo **\\\\ref** *bar* baz",
           "foo **\\ref** *bar* baz",
       },
       {
@@ -312,7 +312,7 @@ TEST(CompletionString, ParseDocumentation) {
           std::nullopt,
           std::nullopt,
           std::nullopt,
-          "foo \\*\\*@ref\\*\\* \\*bar\\* baz",
+          "foo **@ref** *bar* baz",
           "foo **@ref** *bar* baz",
       },
       {
@@ -320,7 +320,7 @@ TEST(CompletionString, ParseDocumentation) {
           std::nullopt,
           std::nullopt,
           std::nullopt,
-          "\\*\\*\\\\throw\\*\\* \\*exception\\* foo",
+          "**\\\\throw** *exception* foo",
           "**\\throw** *exception* foo",
       },
       {"@throws exception foo\n\n@note bar\n\n@warning baz\n\n@details "
@@ -328,8 +328,8 @@ TEST(CompletionString, ParseDocumentation) {
        std::nullopt, std::nullopt, std::nullopt,
        "Warning:  \n- baz\n\n---\n"
        "Note:  \n- bar\n\n---\n"
-       "\\*\\*@throws\\*\\* \\*exception\\* foo  \n"
-       "\\*\\*@details\\*\\* qux  \n"
+       "**@throws** *exception* foo  \n"
+       "**@details** qux  \n"
        "free standing paragraph",
        "Warning:\n- baz\n\n"
        "Note:\n- bar\n\n"
@@ -342,8 +342,8 @@ TEST(CompletionString, ParseDocumentation) {
        std::nullopt, std::nullopt, std::nullopt,
        "Warnings:  \n- baz\n- another warning\n\n---\n"
        "Notes:  \n- bar\n- another note\n\n---\n"
-       "\\*\\*@throws\\*\\* \\*exception\\* foo  \n"
-       "\\*\\*@details\\*\\* qux  \n"
+       "**@throws** *exception* foo  \n"
+       "**@details** qux  \n"
        "free standing paragraph",
        "Warnings:\n- baz\n- another warning\n\n"
        "Notes:\n- bar\n- another note\n\n"
