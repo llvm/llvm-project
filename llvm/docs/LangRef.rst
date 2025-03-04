@@ -11096,8 +11096,8 @@ If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 <ordering>` and optional ``syncscope("<target-scope>")`` argument. The
 ``release`` and ``acq_rel`` orderings are not valid on ``load`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
-multiple atomic stores. The type of the pointee must be an integer, pointer, or
-floating-point type whose bit width is a power of two greater than or equal to
+multiple atomic stores. The type of the pointee must be an integer, pointer,
+floating-point, or vector type whose bit width is a power of two greater than or equal to
 eight and less than or equal to a target-specific size limit.  ``align`` must be
 explicitly specified on atomic loads. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
@@ -11237,8 +11237,8 @@ If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
 <ordering>` and optional ``syncscope("<target-scope>")`` argument. The
 ``acquire`` and ``acq_rel`` orderings aren't valid on ``store`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
-multiple atomic stores. The type of the pointee must be an integer, pointer, or
-floating-point type whose bit width is a power of two greater than or equal to
+multiple atomic stores. The type of the pointee must be an integer, pointer,
+floating-point, or vector type whose bit width is a power of two greater than or equal to
 eight and less than or equal to a target-specific size limit.  ``align`` must be
 explicitly specified on atomic stores. Note: if the alignment is not greater or
 equal to the size of the `<value>` type, the atomic operation is likely to
