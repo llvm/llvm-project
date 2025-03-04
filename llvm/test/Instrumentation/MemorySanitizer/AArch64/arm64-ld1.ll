@@ -1461,7 +1461,7 @@ define <8 x i8> @ld1r_8b(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i8, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i8> splat (i8 -1), i8 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <8 x i8> undef, i8 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <8 x i8> poison, i8 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i8> [[_MSPROP]], i8 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = insertelement <8 x i8> [[TMPVAR2]], i8 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i8> [[_MSPROP1]], i8 [[_MSLD]], i32 2
@@ -1481,7 +1481,7 @@ define <8 x i8> @ld1r_8b(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i8, ptr %bar
-  %tmpvar2 = insertelement <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, i8 %tmpvar1, i32 0
   %tmpvar3 = insertelement <8 x i8> %tmpvar2, i8 %tmpvar1, i32 1
   %tmpvar4 = insertelement <8 x i8> %tmpvar3, i8 %tmpvar1, i32 2
   %tmpvar5 = insertelement <8 x i8> %tmpvar4, i8 %tmpvar1, i32 3
@@ -1509,7 +1509,7 @@ define <16 x i8> @ld1r_16b(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i8, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i8> splat (i8 -1), i8 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <16 x i8> undef, i8 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <16 x i8> poison, i8 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <16 x i8> [[_MSPROP]], i8 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = insertelement <16 x i8> [[TMPVAR2]], i8 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <16 x i8> [[_MSPROP1]], i8 [[_MSLD]], i32 2
@@ -1545,7 +1545,7 @@ define <16 x i8> @ld1r_16b(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i8, ptr %bar
-  %tmpvar2 = insertelement <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <16 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, i8 %tmpvar1, i32 0
   %tmpvar3 = insertelement <16 x i8> %tmpvar2, i8 %tmpvar1, i32 1
   %tmpvar4 = insertelement <16 x i8> %tmpvar3, i8 %tmpvar1, i32 2
   %tmpvar5 = insertelement <16 x i8> %tmpvar4, i8 %tmpvar1, i32 3
@@ -1581,7 +1581,7 @@ define <4 x i16> @ld1r_4h(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <4 x i16> undef, i16 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <4 x i16> poison, i16 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <4 x i16> [[_MSPROP]], i16 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = insertelement <4 x i16> [[TMPVAR2]], i16 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <4 x i16> [[_MSPROP1]], i16 [[_MSLD]], i32 2
@@ -1593,7 +1593,7 @@ define <4 x i16> @ld1r_4h(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i16, ptr %bar
-  %tmpvar2 = insertelement <4 x i16> <i16 undef, i16 undef, i16 undef, i16 undef>, i16 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <4 x i16> <i16 poison, i16 poison, i16 poison, i16 poison>, i16 %tmpvar1, i32 0
   %tmpvar3 = insertelement <4 x i16> %tmpvar2, i16 %tmpvar1, i32 1
   %tmpvar4 = insertelement <4 x i16> %tmpvar3, i16 %tmpvar1, i32 2
   %tmpvar5 = insertelement <4 x i16> %tmpvar4, i16 %tmpvar1, i32 3
@@ -1617,7 +1617,7 @@ define <8 x i16> @ld1r_8h(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <8 x i16> splat (i16 -1), i16 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <8 x i16> undef, i16 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <8 x i16> poison, i16 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[_MSPROP]], i16 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = insertelement <8 x i16> [[TMPVAR2]], i16 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[_MSLD]], i32 2
@@ -1637,7 +1637,7 @@ define <8 x i16> @ld1r_8h(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i16, ptr %bar
-  %tmpvar2 = insertelement <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef>, i16 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <8 x i16> <i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>, i16 %tmpvar1, i32 0
   %tmpvar3 = insertelement <8 x i16> %tmpvar2, i16 %tmpvar1, i32 1
   %tmpvar4 = insertelement <8 x i16> %tmpvar3, i16 %tmpvar1, i32 2
   %tmpvar5 = insertelement <8 x i16> %tmpvar4, i16 %tmpvar1, i32 3
@@ -1665,7 +1665,7 @@ define <2 x i32> @ld1r_2s(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i32> undef, i32 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i32> poison, i32 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMPVAR2]], i32 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
@@ -1673,7 +1673,7 @@ define <2 x i32> @ld1r_2s(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i32, ptr %bar
-  %tmpvar2 = insertelement <2 x i32> <i32 undef, i32 undef>, i32 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <2 x i32> <i32 poison, i32 poison>, i32 %tmpvar1, i32 0
   %tmpvar3 = insertelement <2 x i32> %tmpvar2, i32 %tmpvar1, i32 1
   ret <2 x i32> %tmpvar3
 }
@@ -1695,7 +1695,7 @@ define <4 x i32> @ld1r_4s(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <4 x i32> undef, i32 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <4 x i32> poison, i32 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <4 x i32> [[_MSPROP]], i32 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMPVAR3:%.*]] = insertelement <4 x i32> [[TMPVAR2]], i32 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <4 x i32> [[_MSPROP1]], i32 [[_MSLD]], i32 2
@@ -1707,7 +1707,7 @@ define <4 x i32> @ld1r_4s(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i32, ptr %bar
-  %tmpvar2 = insertelement <4 x i32> <i32 undef, i32 undef, i32 undef, i32 undef>, i32 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 poison>, i32 %tmpvar1, i32 0
   %tmpvar3 = insertelement <4 x i32> %tmpvar2, i32 %tmpvar1, i32 1
   %tmpvar4 = insertelement <4 x i32> %tmpvar3, i32 %tmpvar1, i32 2
   %tmpvar5 = insertelement <4 x i32> %tmpvar4, i32 %tmpvar1, i32 3
@@ -1731,7 +1731,7 @@ define <2 x i64> @ld1r_2d(ptr %bar) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i64> undef, i64 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i64> poison, i64 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i64> [[_MSPROP]], i64 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMPVAR2]], i64 [[TMPVAR1]], i32 1
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
@@ -1739,7 +1739,7 @@ define <2 x i64> @ld1r_2d(ptr %bar) #0 {
 ;
 ; Make sure we are using the operands defined by the ABI
   %tmpvar1 = load i64, ptr %bar
-  %tmpvar2 = insertelement <2 x i64> <i64 undef, i64 undef>, i64 %tmpvar1, i32 0
+  %tmpvar2 = insertelement <2 x i64> <i64 poison, i64 poison>, i64 %tmpvar1, i32 0
   %tmpvar3 = insertelement <2 x i64> %tmpvar2, i64 %tmpvar1, i32 1
   ret <2 x i64> %tmpvar3
 }
@@ -2747,7 +2747,7 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ; CHECK-GI-NEXT:    str d0, [x2]
 ; CHECK-GI-NEXT:    ret
 ; CHECK-LABEL: define void @ld1r_2s_from_dup(
-; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]], ptr nocapture [[DIFF:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr captures(none) [[DIFF:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
@@ -2765,9 +2765,9 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i32> undef, i32 [[TMPVAR1]], i32 0
+; CHECK-NEXT:    [[TMPVAR2:%.*]] = insertelement <2 x i32> poison, i32 [[TMPVAR1]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i32> [[_MSPROP]], <2 x i32> splat (i32 -1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x i32> [[TMPVAR2]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x i32> [[TMPVAR2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[_MSPROP1]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i64 [[TMP1]], 0
@@ -2782,9 +2782,9 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
 ; CHECK-NEXT:    [[_MSLD2:%.*]] = load i32, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[_MSLD2]], i32 0
-; CHECK-NEXT:    [[TMPVAR6:%.*]] = insertelement <2 x i32> undef, i32 [[TMPVAR5]], i32 0
+; CHECK-NEXT:    [[TMPVAR6:%.*]] = insertelement <2 x i32> poison, i32 [[TMPVAR5]], i32 0
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = shufflevector <2 x i32> [[_MSPROP3]], <2 x i32> splat (i32 -1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE1:%.*]] = shufflevector <2 x i32> [[TMPVAR6]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE1:%.*]] = shufflevector <2 x i32> [[TMPVAR6]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[_MSPROP4]] to <8 x i8>
 ; CHECK-NEXT:    [[TMPVAR7:%.*]] = bitcast <2 x i32> [[LANE1]] to <8 x i8>
 ; CHECK-NEXT:    [[_MSPROP5:%.*]] = zext <8 x i8> [[TMP8]] to <8 x i16>
@@ -2796,7 +2796,7 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <8 x i16> [[_MSPROP7]] to <2 x i64>
 ; CHECK-NEXT:    [[TMPVAR8:%.*]] = bitcast <8 x i16> [[SUB_I]] to <2 x i64>
 ; CHECK-NEXT:    [[_MSPROP8:%.*]] = shufflevector <2 x i64> [[TMP15]], <2 x i64> splat (i64 -1), <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMPVAR8]], <2 x i64> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <2 x i64> [[TMPVAR8]], <2 x i64> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[_MSPROP8]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[SHUFFLE_I]] to <4 x i16>
 ; CHECK-NEXT:    [[_MSCMP10:%.*]] = icmp ne i64 [[TMP2]], 0
@@ -2814,18 +2814,18 @@ define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture 
 ;
 entry:
   %tmpvar1 = load i32, ptr %a, align 4
-  %tmpvar2 = insertelement <2 x i32> undef, i32 %tmpvar1, i32 0
-  %lane = shufflevector <2 x i32> %tmpvar2, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmpvar2 = insertelement <2 x i32> poison, i32 %tmpvar1, i32 0
+  %lane = shufflevector <2 x i32> %tmpvar2, <2 x i32> poison, <2 x i32> zeroinitializer
   %tmpvar3 = bitcast <2 x i32> %lane to <8 x i8>
   %tmpvar5 = load i32, ptr %b, align 4
-  %tmpvar6 = insertelement <2 x i32> undef, i32 %tmpvar5, i32 0
-  %lane1 = shufflevector <2 x i32> %tmpvar6, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmpvar6 = insertelement <2 x i32> poison, i32 %tmpvar5, i32 0
+  %lane1 = shufflevector <2 x i32> %tmpvar6, <2 x i32> poison, <2 x i32> zeroinitializer
   %tmpvar7 = bitcast <2 x i32> %lane1 to <8 x i8>
   %vmovl.i.i = zext <8 x i8> %tmpvar3 to <8 x i16>
   %vmovl.i4.i = zext <8 x i8> %tmpvar7 to <8 x i16>
   %sub.i = sub <8 x i16> %vmovl.i.i, %vmovl.i4.i
   %tmpvar8 = bitcast <8 x i16> %sub.i to <2 x i64>
-  %shuffle.i = shufflevector <2 x i64> %tmpvar8, <2 x i64> undef, <1 x i32> zeroinitializer
+  %shuffle.i = shufflevector <2 x i64> %tmpvar8, <2 x i64> poison, <1 x i32> zeroinitializer
   %tmpvar9 = bitcast <1 x i64> %shuffle.i to <4 x i16>
   store <4 x i16> %tmpvar9, ptr %diff, align 8
   ret void
@@ -2834,7 +2834,7 @@ entry:
 ; Tests for rdar://11947069: vld1_dup_* and vld1q_dup_* code gen is suboptimal
 define <4 x float> @ld1r_4s_float(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <4 x float> @ld1r_4s_float(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2850,7 +2850,7 @@ define <4 x float> @ld1r_4s_float(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <4 x i32> [[_MSPROP]], i32 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[TMP]], i32 1
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <4 x i32> [[_MSPROP1]], i32 [[_MSLD]], i32 2
@@ -2863,7 +2863,7 @@ define <4 x float> @ld1r_4s_float(ptr nocapture %x) #0 {
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load float, ptr %x, align 4
-  %tmpvar1 = insertelement <4 x float> undef, float %tmpvar, i32 0
+  %tmpvar1 = insertelement <4 x float> poison, float %tmpvar, i32 0
   %tmpvar2 = insertelement <4 x float> %tmpvar1, float %tmpvar, i32 1
   %tmpvar3 = insertelement <4 x float> %tmpvar2, float %tmpvar, i32 2
   %tmpvar4 = insertelement <4 x float> %tmpvar3, float %tmpvar, i32 3
@@ -2872,7 +2872,7 @@ entry:
 
 define <2 x float> @ld1r_2s_float(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <2 x float> @ld1r_2s_float(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2888,7 +2888,7 @@ define <2 x float> @ld1r_2s_float(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i32> [[_MSPROP]], i32 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[TMP]], i32 1
 ; CHECK-NEXT:    store <2 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
@@ -2897,14 +2897,14 @@ define <2 x float> @ld1r_2s_float(ptr nocapture %x) #0 {
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load float, ptr %x, align 4
-  %tmpvar1 = insertelement <2 x float> undef, float %tmpvar, i32 0
+  %tmpvar1 = insertelement <2 x float> poison, float %tmpvar, i32 0
   %tmpvar2 = insertelement <2 x float> %tmpvar1, float %tmpvar, i32 1
   ret <2 x float> %tmpvar2
 }
 
 define <2 x double> @ld1r_2d_double(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <2 x double> @ld1r_2d_double(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2920,7 +2920,7 @@ define <2 x double> @ld1r_2d_double(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i64> [[_MSPROP]], i64 [[_MSLD]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[TMP]], i32 1
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
@@ -2929,14 +2929,14 @@ define <2 x double> @ld1r_2d_double(ptr nocapture %x) #0 {
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load double, ptr %x, align 4
-  %tmpvar1 = insertelement <2 x double> undef, double %tmpvar, i32 0
+  %tmpvar1 = insertelement <2 x double> poison, double %tmpvar, i32 0
   %tmpvar2 = insertelement <2 x double> %tmpvar1, double %tmpvar, i32 1
   ret <2 x double> %tmpvar2
 }
 
 define <1 x double> @ld1r_1d_double(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <1 x double> @ld1r_1d_double(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2952,20 +2952,20 @@ define <1 x double> @ld1r_1d_double(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <1 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x double> undef, double [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x double> poison, double [[TMP]], i32 0
 ; CHECK-NEXT:    store <1 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x double> [[TMP1]]
 ;
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load double, ptr %x, align 4
-  %tmpvar1 = insertelement <1 x double> undef, double %tmpvar, i32 0
+  %tmpvar1 = insertelement <1 x double> poison, double %tmpvar, i32 0
   ret <1 x double> %tmpvar1
 }
 
 define <4 x float> @ld1r_4s_float_shuff(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <4 x float> @ld1r_4s_float_shuff(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -2981,23 +2981,23 @@ define <4 x float> @ld1r_4s_float_shuff(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <4 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <4 x i32> [[_MSPROP]], <4 x i32> splat (i32 -1), <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    store <4 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[LANE]]
 ;
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load float, ptr %x, align 4
-  %tmpvar1 = insertelement <4 x float> undef, float %tmpvar, i32 0
-  %lane = shufflevector <4 x float> %tmpvar1, <4 x float> undef, <4 x i32> zeroinitializer
+  %tmpvar1 = insertelement <4 x float> poison, float %tmpvar, i32 0
+  %lane = shufflevector <4 x float> %tmpvar1, <4 x float> poison, <4 x i32> zeroinitializer
   ret <4 x float> %lane
 }
 
 define <2 x float> @ld1r_2s_float_shuff(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <2 x float> @ld1r_2s_float_shuff(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
@@ -3013,28 +3013,28 @@ define <2 x float> @ld1r_2s_float_shuff(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[TMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i32> [[_MSPROP]], <2 x i32> splat (i32 -1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    store <2 x i32> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[LANE]]
 ;
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load float, ptr %x, align 4
-  %tmpvar1 = insertelement <2 x float> undef, float %tmpvar, i32 0
-  %lane = shufflevector <2 x float> %tmpvar1, <2 x float> undef, <2 x i32> zeroinitializer
+  %tmpvar1 = insertelement <2 x float> poison, float %tmpvar, i32 0
+  %lane = shufflevector <2 x float> %tmpvar1, <2 x float> poison, <2 x i32> zeroinitializer
   ret <2 x float> %lane
 }
 
 define <2 x double> @ld1r_2d_double_shuff(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <2 x double> @ld1r_2d_double_shuff(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP2:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP1:%.*]], label [[TMP2:%.*]], !prof [[PROF1]]
 ; CHECK:       1:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
@@ -3045,28 +3045,28 @@ define <2 x double> @ld1r_2d_double_shuff(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[TMP]], i32 0
+; CHECK-NEXT:    [[TMPVAR1:%.*]] = insertelement <2 x double> poison, double [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <2 x i64> [[_MSPROP]], <2 x i64> splat (i64 -1), <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <2 x double> [[TMPVAR1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    store <2 x i64> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[LANE]]
 ;
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load double, ptr %x, align 4
-  %tmpvar1 = insertelement <2 x double> undef, double %tmpvar, i32 0
-  %lane = shufflevector <2 x double> %tmpvar1, <2 x double> undef, <2 x i32> zeroinitializer
+  %tmpvar1 = insertelement <2 x double> poison, double %tmpvar, i32 0
+  %lane = shufflevector <2 x double> %tmpvar1, <2 x double> poison, <2 x i32> zeroinitializer
   ret <2 x double> %lane
 }
 
 define <1 x double> @ld1r_1d_double_shuff(ptr nocapture %x) #0 {
 ; CHECK-LABEL: define <1 x double> @ld1r_1d_double_shuff(
-; CHECK-SAME: ptr nocapture [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP2:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP1:%.*]], label [[TMP2:%.*]], !prof [[PROF1]]
 ; CHECK:       1:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
@@ -3077,17 +3077,17 @@ define <1 x double> @ld1r_1d_double_shuff(ptr nocapture %x) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <1 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x double> undef, double [[TMP]], i32 0
+; CHECK-NEXT:    [[TMPVAR1:%.*]] = insertelement <1 x double> poison, double [[TMP]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <1 x i64> [[_MSPROP]], <1 x i64> splat (i64 -1), <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <1 x double> [[TMP1]], <1 x double> undef, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[LANE:%.*]] = shufflevector <1 x double> [[TMPVAR1]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    store <1 x i64> [[_MSPROP1]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x double> [[LANE]]
 ;
 entry:
 ; Make sure we are using the operands defined by the ABI
   %tmpvar = load double, ptr %x, align 4
-  %tmpvar1 = insertelement <1 x double> undef, double %tmpvar, i32 0
-  %lane = shufflevector <1 x double> %tmpvar1, <1 x double> undef, <1 x i32> zeroinitializer
+  %tmpvar1 = insertelement <1 x double> poison, double %tmpvar, i32 0
+  %lane = shufflevector <1 x double> %tmpvar1, <1 x double> poison, <1 x i32> zeroinitializer
   ret <1 x double> %lane
 }
 
