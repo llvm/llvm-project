@@ -14,11 +14,19 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
 
-define i32 @vmin_u8x8(<8 x i8> %a) nounwind ssp {
+define i32 @vmin_u8x8(<8 x i8> %a) nounwind ssp #0 {
 ; CHECK-LABEL: define i32 @vmin_u8x8(
 ; CHECK-SAME: <8 x i8> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to i64
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[VMINV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> [[A]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i32 [[VMINV_I]] to i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[TMP]], 0
@@ -26,6 +34,11 @@ define i32 @vmin_u8x8(<8 x i8> %a) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 false, [[TMP2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[RETURN:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -33,8 +46,9 @@ define i32 @vmin_u8x8(<8 x i8> %a) nounwind ssp {
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSPHI_S:%.*]] = phi i32 [ [[_MSRET]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    store i32 [[_MSPHI_S]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -54,11 +68,19 @@ return:
 
 declare i32 @bar(...)
 
-define i32 @vmin_u4x16(<4 x i16> %a) nounwind ssp {
+define i32 @vmin_u4x16(<4 x i16> %a) nounwind ssp #0 {
 ; CHECK-LABEL: define i32 @vmin_u4x16(
 ; CHECK-SAME: <4 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP3]] to i64
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[VMINV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uminv.i32.v4i16(<4 x i16> [[A]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i32 [[VMINV_I]] to i16
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i16 [[TMP]], 0
@@ -66,6 +88,11 @@ define i32 @vmin_u4x16(<4 x i16> %a) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 false, [[TMP2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[RETURN:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -73,8 +100,9 @@ define i32 @vmin_u4x16(<4 x i16> %a) nounwind ssp {
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSPHI_S:%.*]] = phi i32 [ [[_MSRET]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    store i32 [[_MSPHI_S]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -92,11 +120,19 @@ return:
   ret i32 %retval.0
 }
 
-define i32 @vmin_u8x16(<8 x i16> %a) nounwind ssp {
+define i32 @vmin_u8x16(<8 x i16> %a) nounwind ssp #0 {
 ; CHECK-LABEL: define i32 @vmin_u8x16(
 ; CHECK-SAME: <8 x i16> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[VMINV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uminv.i32.v8i16(<8 x i16> [[A]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i32 [[VMINV_I]] to i16
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i16 [[TMP]], 0
@@ -104,6 +140,11 @@ define i32 @vmin_u8x16(<8 x i16> %a) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 false, [[TMP2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[RETURN:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -111,8 +152,9 @@ define i32 @vmin_u8x16(<8 x i16> %a) nounwind ssp {
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSPHI_S:%.*]] = phi i32 [ [[_MSRET]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    store i32 [[_MSPHI_S]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -130,11 +172,19 @@ return:
   ret i32 %retval.0
 }
 
-define i32 @vmin_u16x8(<16 x i8> %a) nounwind ssp {
+define i32 @vmin_u16x8(<16 x i8> %a) nounwind ssp #0 {
 ; CHECK-LABEL: define i32 @vmin_u16x8(
 ; CHECK-SAME: <16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i8> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[VMINV_I:%.*]] = tail call i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8> [[A]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i32 [[VMINV_I]] to i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[TMP]], 0
@@ -142,6 +192,11 @@ define i32 @vmin_u16x8(<16 x i8> %a) nounwind ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 false, [[TMP2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[_MSPROP_ICMP]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[RETURN:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -149,8 +204,9 @@ define i32 @vmin_u16x8(<16 x i8> %a) nounwind ssp {
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSPHI_S:%.*]] = phi i32 [ [[_MSRET]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL1]], %[[IF_THEN]] ], [ 0, %[[BB8]] ]
+; CHECK-NEXT:    store i32 [[_MSPHI_S]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -177,9 +233,9 @@ define <8 x i8> @test_vminv_u8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> [[A2]])
