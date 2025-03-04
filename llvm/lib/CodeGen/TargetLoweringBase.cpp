@@ -1923,6 +1923,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::log:
+    return ISD::FLOG;
   default:
     return ISD::DELETED_NODE;
   }
