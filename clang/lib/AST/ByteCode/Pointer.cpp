@@ -248,7 +248,12 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
-      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+      if (const auto *RD = ElemType->getAsRecordDecl();
+          RD && !RD->getDefinition()) {
+        // Ignore this for the offset.
+      } else {
+        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
+      }
       if (Ptr.getArray().getType()->isArrayType())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
