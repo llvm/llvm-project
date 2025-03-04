@@ -313,15 +313,17 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
-  // Set the insert point after the last scalarized instruction or after the
-  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-  // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP = isa<PHINode>(LastInst)
-                   ? LastInst->getParent()->getFirstNonPHIIt()
-                   : std::next(BasicBlock::iterator(LastInst));
-  Builder.SetInsertPoint(&*NewIP);
+  auto *LastVal = get(Def, LastLane);
+  if (auto *LastInst = dyn_cast<Instruction>(LastVal)) {
+    // Set the insert point after the last scalarized instruction or after the
+    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+    // will directly follow the scalar definitions.
+    auto NewIP = isa<PHINode>(LastInst)
+                     ? LastInst->getParent()->getFirstNonPHIIt()
+                     : std::next(BasicBlock::iterator(LastInst));
+    Builder.SetInsertPoint(&*NewIP);
+  }
 
   // However, if we are vectorizing, we need to construct the vector values.
   // If the value is known to be uniform after vectorization, we can just
@@ -336,7 +338,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(toVectorizedTy(LastInst->getType(), VF));
+    Value *Undef = PoisonValue::get(toVectorizedTy(LastVal->getType(), VF));
     set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
       packScalarIntoVectorizedValue(Def, Lane);
@@ -1050,17 +1052,11 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (isa<VPWidenInductionRecipe>(&R)) {
-      PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
-      }
+    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+             "recipe generating only scalars should have been replaced");
+      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
 
       Phi->setIncomingBlock(1, VectorLatchBB);
 
@@ -1068,10 +1064,6 @@ void VPlan::execute(VPTransformState *State) {
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
       Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-
-      // Use the steps for the last part as backedge value for the induction.
-      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
       continue;
     }
 

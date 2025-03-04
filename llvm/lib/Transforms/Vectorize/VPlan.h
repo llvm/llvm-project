@@ -882,6 +882,9 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
+    // Creates a step vector starting from 0 with a step of 1. The first operand
+    // is a dummy constant that should be used to specify the element type.
+    StepVector,
   };
 
 private:
@@ -1768,7 +1771,8 @@ public:
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
-/// producing their vector values.
+/// producing their vector values. This won't execute any LLVM IR and will get
+/// expanded later into several other recipes in convertToConcreteRecipes.
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
@@ -1801,9 +1805,10 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)
 
-  /// Generate the vectorized and scalarized versions of the phi node as
-  /// needed by their users.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenIntOrFpInductionRecipe");
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1932,11 +1937,16 @@ public:
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
+  /// Name to use for the generated IR instruction for the widened phi.
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  VPWidenPHIRecipe(Instruction *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+                   const Twine &Name = "vec.phi")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }

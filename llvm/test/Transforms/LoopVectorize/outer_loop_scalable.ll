@@ -29,9 +29,9 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP19]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP19]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[DOTSPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> splat (i64 1), [[DOTSPLAT]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[OUTER_LOOP_LATCH4:%.*]] ]
@@ -53,7 +53,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 4 x float> [ [[TMP12]], [[INNER_LOOP1]] ]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VEC_PHI5]], <vscale x 4 x ptr> [[TMP10]], i32 4, <vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

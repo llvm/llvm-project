@@ -892,10 +892,10 @@ define i32 @PR27246() {
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[I_016]], 8
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[I_016]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = sub i32 [[I_016]], [[N_VEC]]
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[E_015]], i32 3
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I_016]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[DOTSPLAT]], <i32 0, i32 -1, i32 -2, i32 -3>
+; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[E_015]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -986,10 +986,10 @@ define i32 @PR27246() {
 ; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[I_016]], 4
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i32 [[I_016]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[IND_END:%.*]] = sub i32 [[I_016]], [[N_VEC]]
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[E_015]], i32 3
 ; SINK-AFTER-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[I_016]], i64 0
 ; SINK-AFTER-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; SINK-AFTER-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[DOTSPLAT]], <i32 0, i32 -1, i32 -2, i32 -3>
+; SINK-AFTER-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[E_015]], i32 3
 ; SINK-AFTER-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SINK-AFTER:       vector.body:
 ; SINK-AFTER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

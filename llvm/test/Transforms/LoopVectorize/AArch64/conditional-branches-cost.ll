@@ -978,8 +978,8 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT-NEXT:    store i8 [[TMP33]], ptr [[TMP32]], align 1
 ; DEFAULT-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; DEFAULT:       pred.store.continue14:
-; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; DEFAULT-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -1080,8 +1080,8 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED-NEXT:    store i8 [[TMP33]], ptr [[TMP32]], align 1
 ; PRED-NEXT:    br label [[PRED_STORE_CONTINUE14]]
 ; PRED:       pred.store.continue14:
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; PRED-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; PRED:       middle.block:
 ; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]

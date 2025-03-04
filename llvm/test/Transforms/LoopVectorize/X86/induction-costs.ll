@@ -418,9 +418,9 @@ define i16 @iv_and_step_trunc() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP2]] = mul <2 x i16> [[VEC_IND1]], [[TMP1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <2 x i16> [[VEC_IND1]], splat (i16 2)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
@@ -713,15 +713,13 @@ define void @wombat(i32 %arg, ptr %dst) #1 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 56, [[ARG]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[MUL]], [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT2]]
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[ARG]], 8
-; CHECK-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP2]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = mul <8 x i32> [[DOTSPLAT2]], splat (i32 8)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -787,15 +785,13 @@ define void @wombat2(i32 %arg, ptr %dst) #1 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 56, [[ARG]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[MUL]], [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT2]]
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[ARG]], 8
-; CHECK-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP2]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = mul <8 x i32> [[DOTSPLAT2]], splat (i32 8)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -864,15 +860,13 @@ define void @with_dead_use(i32 %arg, ptr %dst) #1 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 56, [[ARG]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[MUL]], [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[DOTSPLAT2]]
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> poison, i32 [[MUL]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <8 x i32> [[DOTSPLAT]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[ARG]], 8
-; CHECK-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP2]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = mul <8 x i32> [[DOTSPLAT2]], splat (i32 8)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

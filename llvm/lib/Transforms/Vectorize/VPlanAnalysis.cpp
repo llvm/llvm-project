@@ -77,6 +77,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
+  case VPInstruction::StepVector:
     return SetResultTyFromOp();
   case VPInstruction::ExtractFirstActive:
   case VPInstruction::ExtractFromEnd: {
