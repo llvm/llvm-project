@@ -79,12 +79,12 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$output_zp,
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
-    TypeAttrOf<Tosa_AccType>:$acc_type,
-    OptionalAttr<I32Attr>:$input_zp,
-    OptionalAttr<I32Attr>:$output_zp
+    TypeAttrOf<Tosa_AccType>:$acc_type
   );
 
   let results = (outs
@@ -97,6 +97,14 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
   ];
 
   let builders = [Tosa_AvgPool2dOpQuantInfoBuilder];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInputZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -116,8 +124,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
     Tosa_Tensor4D:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
-    Tosa_ScalarTensor:$input_zp,
-    Tosa_ScalarTensor:$weight_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$weight_zp,
 
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
@@ -136,8 +144,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   ];
 
   let extraClassDeclaration = [{
-    LogicalResult getInputZeroPoint(int64_t &zp);
-    LogicalResult getWeightZeroPoint(int64_t &zp);
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getWeightZeroPoint();
     LogicalResult verifyInputZeroPoint(int64_t zp);
     LogicalResult verifyWeightZeroPoint(int64_t zp);
   }];
@@ -161,8 +169,8 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
     Tosa_Tensor5D:$input,
     TosaTensorRankOf<[Tosa_Weight], [5]>:$weight,
     Tosa_Tensor1D:$bias,
-    Tosa_ScalarTensor:$input_zp,
-    Tosa_ScalarTensor:$weight_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$weight_zp,
 
     Tosa_IntArrayAttr6:$pad,
     Tosa_IntArrayAttr3:$stride,
@@ -181,8 +189,8 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
   ];
 
   let extraClassDeclaration = [{
-    LogicalResult getInputZeroPoint(int64_t &zp);
-    LogicalResult getWeightZeroPoint(int64_t &zp);
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getWeightZeroPoint();
     LogicalResult verifyInputZeroPoint(int64_t zp);
     LogicalResult verifyWeightZeroPoint(int64_t zp);
   }];
@@ -207,8 +215,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
     Tosa_Tensor4D:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
-    Tosa_ScalarTensor:$input_zp,
-    Tosa_ScalarTensor:$weight_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$weight_zp,
 
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
@@ -227,8 +235,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   ];
 
   let extraClassDeclaration = [{
-    LogicalResult getInputZeroPoint(int64_t &zp);
-    LogicalResult getWeightZeroPoint(int64_t &zp);
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getWeightZeroPoint();
     LogicalResult verifyInputZeroPoint(int64_t zp);
     LogicalResult verifyWeightZeroPoint(int64_t zp);
   }];
@@ -412,8 +420,8 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
     Tosa_Tensor4D:$input,
     TosaTensorRankOf<[Tosa_Weight], [4]>:$weight,
     Tosa_Tensor1D:$bias,
-    Tosa_ScalarTensor:$input_zp,
-    Tosa_ScalarTensor:$weight_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$weight_zp,
 
     Tosa_IntArrayAttr4:$out_pad,
     Tosa_IntArrayAttr2:$stride,
@@ -431,8 +439,8 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
   ];
 
   let extraClassDeclaration = [{
-    LogicalResult getInputZeroPoint(int64_t &zp);
-    LogicalResult getWeightZeroPoint(int64_t &zp);
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getWeightZeroPoint();
     LogicalResult verifyInputZeroPoint(int64_t zp);
     LogicalResult verifyWeightZeroPoint(int64_t zp);
   }];
