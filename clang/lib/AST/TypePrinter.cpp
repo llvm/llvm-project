@@ -2093,6 +2093,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+  case attr::RequiresCapability:
+    OS << "requires_capability(...)";
+    break;
   }
   OS << "))";
 }

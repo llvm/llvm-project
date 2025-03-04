@@ -13961,6 +13961,12 @@ private:
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
+public:
+  void checkAttrArgsAreCapabilityObjs(Decl *D, const ParsedAttr &AL,
+                                      SmallVectorImpl<Expr *> &Args,
+                                      unsigned Sidx = 0,
+                                      bool ParamIdxOk = false);
+
   int ParsingClassDepth = 0;
 
   class SavePendingParsedClassStateRAII {
