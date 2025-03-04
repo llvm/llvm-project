@@ -238,6 +238,33 @@ static int writeValueProfData(ProfDataWriter *Writer,
   return 0;
 }
 
+/* Get value profile data size for function specified with \c Data.
+ * In this implementation, value profile data size is calculated with value
+ * profile header. */
+COMPILER_RT_VISIBILITY uint64_t lprofgetValueProfDataSize(
+    VPDataReaderType *VPDataReader, const __llvm_profile_data *Data) {
+  uint8_t *SiteCountArray[IPVK_Last + 1];
+
+  for (unsigned I = 0; I <= IPVK_Last; I++) {
+    if (!Data->NumValueSites[I])
+      SiteCountArray[I] = 0;
+    else {
+      uint32_t Sz =
+          VPDataReader->GetValueProfRecordHeaderSize(Data->NumValueSites[I]) -
+          offsetof(ValueProfRecord, SiteCountArray);
+      /* Only use alloca for this small byte array to avoid excessive
+       * stack growth.  */
+      SiteCountArray[I] = (uint8_t *)COMPILER_RT_ALLOCA(Sz);
+      memset(SiteCountArray[I], 0, Sz);
+    }
+  }
+
+  if (!(VPDataReader->InitRTRecord(Data, SiteCountArray)))
+    return 0;
+
+  return VPDataReader->GetValueProfDataSize();
+}
+
 COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
                                           VPDataReaderType *VPDataReader,
                                           int SkipNameDataWrite) {
