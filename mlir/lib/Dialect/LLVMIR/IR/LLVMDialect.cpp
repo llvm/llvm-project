@@ -3585,7 +3585,7 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
   SmallVector<SmallVector<Type>> opBundleOperandTypes;
   ArrayAttr opBundleTags;
 
-  // Parse intrinsic name
+  // Parse intrinsic name.
   if (parser.parseCustomAttributeWithFallback(
           intrinAttr, parser.getBuilder().getType<mlir::NoneType>())) {
     return mlir::failure();
