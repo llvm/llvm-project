@@ -762,6 +762,24 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
   }
 };
 
+template <> struct MappingTraits<FormatStyle::SpaceInEmptyBracesCustom> {
+  static void mapping(IO &IO, FormatStyle::SpaceInEmptyBracesCustom &Space) {
+    IO.mapOptional("Function", Space.Function);
+    IO.mapOptional("Record", Space.Record);
+    IO.mapOptional("InitList", Space.InitList);
+    IO.mapOptional("Block", Space.Block);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SpaceInEmptyBracesStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpaceInEmptyBracesStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SIEBO_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SIEBO_Always);
+    IO.enumCase(Value, "Custom", FormatStyle::SIEBO_Custom);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::SpacesInParensCustom> {
   static void mapping(IO &IO, FormatStyle::SpacesInParensCustom &Spaces) {
     IO.mapOptional("ExceptDoubleParentheses", Spaces.ExceptDoubleParentheses);
@@ -906,6 +924,7 @@ template <> struct MappingTraits<FormatStyle> {
     bool UseCRLF = false;
 
     bool SpaceInEmptyParentheses = false;
+    bool SpaceInEmptyBlock = false;
     bool SpacesInConditionalStatement = false;
     bool SpacesInCStyleCastParentheses = false;
     bool SpacesInParentheses = false;
@@ -935,6 +954,7 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("SpaceAfterControlStatementKeyword",
                      Style.SpaceBeforeParens);
       IO.mapOptional("SpaceInEmptyParentheses", SpaceInEmptyParentheses);
+      IO.mapOptional("SpaceInEmptyBlock", SpaceInEmptyBlock);
       IO.mapOptional("SpacesInConditionalStatement",
                      SpacesInConditionalStatement);
       IO.mapOptional("SpacesInCStyleCastParentheses",
@@ -1161,7 +1181,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
-    IO.mapOptional("SpaceInEmptyBlock", Style.SpaceInEmptyBlock);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
     IO.mapOptional("SpacesInAngles", Style.SpacesInAngles);
@@ -1169,6 +1188,9 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpacesInContainerLiterals);
     IO.mapOptional("SpacesInLineCommentPrefix",
                    Style.SpacesInLineCommentPrefix);
+    IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
+    IO.mapOptional("SpaceInEmptyBracesOptions",
+                   Style.SpaceInEmptyBracesOptions);
     IO.mapOptional("SpacesInParens", Style.SpacesInParens);
     IO.mapOptional("SpacesInParensOptions", Style.SpacesInParensOptions);
     IO.mapOptional("SpacesInSquareBrackets", Style.SpacesInSquareBrackets);
@@ -1266,6 +1288,15 @@ template <> struct MappingTraits<FormatStyle> {
             SpaceInEmptyParentheses;
       }
       Style.SpacesInParens = FormatStyle::SIPO_Custom;
+    }
+
+    if (Style.SpaceInEmptyBraces != FormatStyle::SIEBO_Custom &&
+        SpaceInEmptyBlock) {
+      Style.SpaceInEmptyBraces = FormatStyle::SIEBO_Custom;
+      Style.SpaceInEmptyBracesOptions.Function = true;
+      Style.SpaceInEmptyBracesOptions.Record = true;
+      Style.SpaceInEmptyBracesOptions.InitList = false;
+      Style.SpaceInEmptyBracesOptions.Block = true;
     }
   }
 };
@@ -1642,7 +1673,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
-  LLVMStyle.SpaceInEmptyBlock = false;
+  LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEBO_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
   LLVMStyle.SpacesInContainerLiterals = true;
@@ -1945,7 +1976,9 @@ FormatStyle getWebKitStyle() {
   Style.ObjCSpaceAfterProperty = true;
   Style.PointerAlignment = FormatStyle::PAS_Left;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.SpaceInEmptyBlock = true;
+  Style.SpaceInEmptyBraces = FormatStyle::SIEBO_Always;
+  Style.SpacesInParensOptions.InEmptyParentheses = false;
+  Style.SpacesInParensOptions.Other = false;
   return Style;
 }
 
