@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 
+import { pickProcess } from "./commands/pick-process";
 import {
   LLDBDapDescriptorFactory,
   isExecutable,
 } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
+import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -15,6 +17,12 @@ export class LLDBDapExtension extends DisposableContext {
     super();
     const factory = new LLDBDapDescriptorFactory();
     this.pushSubscription(factory);
+    this.pushSubscription(
+      vscode.debug.registerDebugConfigurationProvider(
+        "lldb-dap",
+        new LLDBDapConfigurationProvider(),
+      ),
+    );
     this.pushSubscription(
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",
@@ -36,6 +44,10 @@ export class LLDBDapExtension extends DisposableContext {
           LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
         }
       }),
+    );
+
+    this.pushSubscription(
+      vscode.commands.registerCommand("lldb-dap.pickProcess", pickProcess),
     );
   }
 }
