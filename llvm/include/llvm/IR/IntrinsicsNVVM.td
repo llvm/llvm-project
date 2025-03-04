@@ -5269,4 +5269,18 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
   }
 }
 
+//
+// Bulk store intrinsics
+//
+
+def int_nvvm_st_bulk: DefaultAttrsIntrinsic<[],
+  [llvm_global_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+
+def int_nvvm_st_bulk_shared_cta : DefaultAttrsIntrinsic<[],
+  [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+
 } // let TargetPrefix = "nvvm"
