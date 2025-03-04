@@ -1,6 +1,11 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
 // RUN:     -analyzer-checker=core,security.ArrayBound,unix.Malloc,optin.taint -verify %s
 
+// Miscellaneous tests for `security.ArrayBound` where we also verify the
+// content of the 'note' diagnostics. This makes the tests sensitive to textual
+// changes in the diagnostics, so prefer adding new tests to `brief-tests.c`
+// unless they need to verify the correctness of 'note' diagnostics.
+
 int TenElements[10];
 
 void arrayUnderflow(void) {
