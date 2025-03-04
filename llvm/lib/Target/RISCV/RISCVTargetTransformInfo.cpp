@@ -429,38 +429,17 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
          "Normalized mask expected to be not shorter than original mask.");
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
-  SmallBitVector ExtractedRegs(2 * NumOfSrcRegs);
   int NumShuffles = 0;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
-        if (ExtractedRegs.test(SrcReg)) {
-          Cost += TTI.getShuffleCost(TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-                                     (SrcReg % NumOfSrcRegs) *
-                                         SingleOpTy->getNumElements(),
-                                     SingleOpTy);
-          ExtractedRegs.set(SrcReg);
-        }
-        if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
-          ++NumShuffles;
-          Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                     RegMask, CostKind, 0, nullptr);
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
           return;
-        }
+        ++NumShuffles;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
       },
       [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
-        if (ExtractedRegs.test(Idx1)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx1 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx1);
-        }
-        if (ExtractedRegs.test(Idx2)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx2 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx2);
-        }
         Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                    CostKind, 0, nullptr);
         NumShuffles += 2;
