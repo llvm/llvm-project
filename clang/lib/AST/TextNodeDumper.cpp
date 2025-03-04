@@ -3042,6 +3042,12 @@ void TextNodeDumper::VisitOpenACCHostDataConstruct(
 void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
   VisitOpenACCConstructStmt(S);
 }
+void TextNodeDumper::VisitOpenACCCacheConstruct(
+    const OpenACCCacheConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  if (S->hasReadOnly())
+    OS <<" readonly";
+}
 void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
   VisitOpenACCConstructStmt(S);
 }
