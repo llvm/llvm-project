@@ -69,6 +69,7 @@ function compute-runtimes-to-test() {
       for p in flang-rt; do
         echo $p
       done
+    ;;
     *)
       # Nothing to do
     ;;
