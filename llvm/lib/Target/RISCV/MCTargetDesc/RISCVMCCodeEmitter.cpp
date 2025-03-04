@@ -80,6 +80,10 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  uint64_t getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
+
   uint64_t getImmOpValueAsr1(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
@@ -383,6 +387,20 @@ RISCVMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
 
   llvm_unreachable("Unhandled expression!");
   return 0;
+}
+
+uint64_t
+RISCVMCCodeEmitter::getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isImm()) {
+    uint64_t Res = MO.getImm();
+    return (Res - 1);
+  }
+
+  return getImmOpValue(MI, OpNo, Fixups, STI);
 }
 
 uint64_t
