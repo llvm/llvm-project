@@ -279,7 +279,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; ITERATE-NEXT:   S_CMP_LG_U32 [[S_ANDN2_B32_]], killed [[S_MOV_B32_3]], implicit-def $scc
   ; ITERATE-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; ITERATE-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_]]
-  ; ITERATE-NEXT:   SI_BRCOND killed [[COPY10]], %bb.5
+  ; ITERATE-NEXT:   SI_BRCOND_UNIFORM killed [[COPY10]], %bb.5
   ; ITERATE-NEXT:   S_BRANCH %bb.6
   ; ITERATE-NEXT: {{  $}}
   ; ITERATE-NEXT: bb.6.ComputeEnd:

@@ -2531,7 +2531,9 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   SDValue Cond = N->getOperand(1);
 
   if (EnableWaveTransformCF) {
-    CurDAG->SelectNodeTo(N, AMDGPU::SI_BRCOND, MVT::Other,
+    auto Opc =
+        Cond->isDivergent() ? AMDGPU::SI_BRCOND : AMDGPU::SI_BRCOND_UNIFORM;
+    CurDAG->SelectNodeTo(N, Opc, MVT::Other,
                          Cond,              // condition
                          N->getOperand(2),  // true basic block
                          N->getOperand(0)); // chain

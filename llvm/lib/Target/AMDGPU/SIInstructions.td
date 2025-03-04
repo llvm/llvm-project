@@ -552,6 +552,13 @@ def SI_BRCOND
   let isBranch = 1;
 }
 
+def SI_BRCOND_UNIFORM
+    : SPseudoInstSI<(outs), (ins SReg_1:$cond, SOPPBrTarget:$target)> {
+  let isTerminator = 1;
+  // let usesCustomInserter = 1;
+  let isBranch = 1;
+}
+
 def SI_PS_LIVE : PseudoInstSI <
   (outs SReg_1:$dst), (ins),
   [(set i1:$dst, (int_amdgcn_ps_live))]> {

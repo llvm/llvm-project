@@ -3156,7 +3156,8 @@ bool SIInstrInfo::analyzeBranchImpl(MachineBasicBlock &MBB,
     return true;
 
   MachineBasicBlock *CondBB = nullptr;
-  if (I->getOpcode() == AMDGPU::SI_BRCOND) {
+  if (I->getOpcode() == AMDGPU::SI_BRCOND ||
+      I->getOpcode() == AMDGPU::SI_BRCOND_UNIFORM) {
     CondBB = I->getOperand(1).getMBB();
     Cond.push_back(I->getOperand(0));
   } else {
