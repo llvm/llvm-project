@@ -757,6 +757,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // a new set of parameter attributes to correspond. Skip the first parameter
   // attribute, since that belongs to the return value.
   unsigned ArgI = 0;
+  bool CurrFuncArgEliminated = false;
+  bool CurrFuncRetEliminated = false;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgI) {
     RetOrArg Arg = createArg(F, ArgI);
@@ -767,6 +769,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       HasLiveReturnedArg |= PAL.hasParamAttr(ArgI, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
+      CurrFuncArgEliminated = true;
 
       ORE.emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
@@ -818,6 +821,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         NewRetIdxs[Ri] = RetTypes.size() - 1;
       } else {
         ++NumRetValsEliminated;
+        CurrFuncRetEliminated = true;
 
         ORE.emit([&]() {
           return OptimizationRemark(DEBUG_TYPE, "ReturnValueRemoved", F)
@@ -1099,6 +1103,12 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // to call this function or try to interpret the return value.
   if (NFTy != FTy && NF->getSubprogram()) {
     DISubprogram *SP = NF->getSubprogram();
+
+    if (CurrFuncArgEliminated)
+      SP->setArgChanged();
+    if (CurrFuncRetEliminated)
+      SP->setRetvalRemoved();
+
     auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
     SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
   }
