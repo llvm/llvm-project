@@ -101,15 +101,13 @@ class TargetRegisterInfo;
     SDep() : Dep(nullptr, Data) {}
 
     /// Constructs an SDep with the specified values.
-    SDep(SUnit *S, Kind kind, Register Reg)
-      : Dep(S, kind), Contents() {
+    SDep(SUnit *S, Kind kind, Register Reg) : Dep(S, kind), Contents() {
       switch (kind) {
       default:
         llvm_unreachable("Reg given for non-register dependence!");
       case Anti:
       case Output:
-        assert(Reg &&
-               "SDep::Anti and SDep::Output must use a non-zero Reg!");
+        assert(Reg && "SDep::Anti and SDep::Output must use a non-zero Reg!");
         Contents.Reg = Reg.id();
         Latency = 0;
         break;
@@ -208,9 +206,7 @@ class TargetRegisterInfo;
     }
 
     /// Tests if this is a Data dependence that is associated with a register.
-    bool isAssignedRegDep() const {
-      return getKind() == Data && Contents.Reg;
-    }
+    bool isAssignedRegDep() const { return getKind() == Data && Contents.Reg; }
 
     /// Returns the register associated with this edge. This is only valid on
     /// Data, Anti, and Output edges. On Data edges, this value may be zero,
