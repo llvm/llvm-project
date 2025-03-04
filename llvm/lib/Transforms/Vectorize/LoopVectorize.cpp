@@ -10190,8 +10190,7 @@ static InstructionCost calculateEarlyExitCost(LoopVectorizationCostModel &CM,
       // vector.early.exit block, which may contain work to calculate the exit
       // values of variables used outside the loop.
       if (PredVPBB != Plan.getMiddleBlock())
-        for (auto &R : *(cast<VPBasicBlock>(PredVPBB)))
-          Cost += R.cost(VF, CostCtx);
+        Cost += PredVPBB->cost(VF, CostCtx);
     }
   }
   return Cost;
@@ -10214,10 +10213,9 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   if (!TotalCost.isValid())
     return false;
 
-  // Add on the cost of work required in the vector early exit block, if one
-  // exists.
-  if (CM.Legal->hasUncountableEarlyExit())
-    TotalCost += calculateEarlyExitCost(CM, Plan, VF.Width);
+  // Add on the cost of any work required in the vector early exit block, if
+  // one exists.
+  TotalCost += calculateEarlyExitCost(CM, Plan, VF.Width);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.

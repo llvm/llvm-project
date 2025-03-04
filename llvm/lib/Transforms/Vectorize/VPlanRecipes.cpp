@@ -751,9 +751,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    Cost += Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                       Ctx.CostKind);
-    return Cost;
+    return Cost + Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                             Ctx.CostKind);
   }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
