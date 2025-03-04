@@ -196,6 +196,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  l64a
+  SRCS
+    l64a.cpp
+  HDRS
+    l64a.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp

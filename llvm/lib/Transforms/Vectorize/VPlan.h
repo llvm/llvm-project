@@ -534,6 +534,7 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
+    case VPRecipeBase::VPScalarPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1111,14 +1112,7 @@ public:
     return R;
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
   /// Produce a widened instruction using the opcode and operands of the recipe,
   /// processing State.VF elements.
@@ -1987,10 +1981,6 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
-  }
-
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
@@ -2057,10 +2047,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPReductionPHISC;
-  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2502,14 +2488,11 @@ public:
 /// A recipe for generating conditional branches on the bits of a mask.
 class VPBranchOnMaskRecipe : public VPRecipeBase {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask)
-      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {}) {
-    if (BlockInMask) // nullptr means all-one mask.
-      addOperand(BlockInMask);
-  }
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPBranchOnMaskSC, {BlockInMask}, DL) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0));
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBranchOnMaskSC)
@@ -2527,20 +2510,9 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {
     O << Indent << "BRANCH-ON-MASK ";
-    if (VPValue *Mask = getMask())
-      Mask->printAsOperand(O, SlotTracker);
-    else
-      O << " All-One";
+    printOperands(O, SlotTracker);
   }
 #endif
-
-  /// Return the mask used by this recipe. Note that a full mask is represented
-  /// by a nullptr.
-  VPValue *getMask() const {
-    assert(getNumOperands() <= 1 && "should have either 0 or 1 operands");
-    // Mask is optional.
-    return getNumOperands() == 1 ? getOperand(0) : nullptr;
-  }
 
   /// Returns true if the recipe uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
@@ -2894,10 +2866,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
-  }
-
   void execute(VPTransformState &State) override {
     llvm_unreachable(
         "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
@@ -2957,10 +2925,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPActiveLaneMaskPHISC;
-  }
-
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
 
@@ -2987,10 +2951,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
-  }
 
   void execute(VPTransformState &State) override {
     llvm_unreachable(

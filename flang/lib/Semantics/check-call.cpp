@@ -535,9 +535,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (actualLastSymbol) {
     actualLastSymbol = &ResolveAssociations(*actualLastSymbol);
   }
-  const ObjectEntityDetails *actualLastObject{actualLastSymbol
-          ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
-          : nullptr};
   int actualRank{actualType.Rank()};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
@@ -689,6 +686,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
   }
+  const ObjectEntityDetails *actualLastObject{actualLastSymbol
+          ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+          : nullptr};
   if (actualLastObject && actualLastObject->IsCoarray() &&
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
       dummy.intent == common::Intent::Out &&
@@ -793,21 +793,21 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     } else if (actualIsNull) {
       if (dummyIsOptional) {
-      } else if (dummy.intent == common::Intent::In) {
-        // Extension (Intel, NAG, XLF): a NULL() pointer is an acceptable
-        // actual argument for an INTENT(IN) allocatable dummy, and it
-        // is treated as an unassociated allocatable.
-        if (context.ShouldWarn(
-                common::LanguageFeature::NullActualForAllocatable)) {
-          messages.Say(common::LanguageFeature::NullActualForAllocatable,
-              "Allocatable %s is associated with a null pointer"_port_en_US,
-              dummyName);
-        }
-      } else {
+      } else if (dummy.intent == common::Intent::Default &&
+          context.ShouldWarn(
+              common::UsageWarning::NullActualForDefaultIntentAllocatable)) {
         messages.Say(
-            "A null pointer may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+            "A null pointer should not be associated with allocatable %s without INTENT(IN)"_warn_en_US,
+            dummyName);
+      } else if (dummy.intent == common::Intent::In &&
+          context.ShouldWarn(
+              common::LanguageFeature::NullActualForAllocatable)) {
+        messages.Say(common::LanguageFeature::NullActualForAllocatable,
+            "Allocatable %s is associated with a null pointer"_port_en_US,
             dummyName);
       }
+      // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere as being
+      // undefinable actual arguments.
     } else {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
@@ -1049,8 +1049,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     SemanticsContext &context, bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
-  auto restorer{
-      messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
+  parser::CharBlock location{arg.sourceLocation().value_or(messages.at())};
+  auto restorer{messages.SetLocation(location)};
   const characteristics::Procedure &interface { dummy.procedure.value() };
   if (const auto *expr{arg.UnwrapExpr()}) {
     bool dummyIsPointer{
@@ -1175,22 +1175,30 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             dummyName);
       }
     }
-    if (dummyIsPointer && dummy.intent != common::Intent::In) {
-      const Symbol *last{GetLastSymbol(*expr)};
-      if (last && IsProcedurePointer(*last)) {
-        if (dummy.intent != common::Intent::Default &&
-            IsIntentIn(last->GetUltimate())) { // 19.6.8
-          messages.Say(
-              "Actual argument associated with procedure pointer %s may not be INTENT(IN)"_err_en_US,
-              dummyName);
-        }
-      } else if (!(dummy.intent == common::Intent::Default &&
-                     IsNullProcedurePointer(*expr))) {
-        // 15.5.2.9(5) -- dummy procedure POINTER
-        // Interface compatibility has already been checked above
+    if (dummyIsPointer) {
+      if (dummy.intent == common::Intent::In) {
+        // need not be definable, can be a target
+      } else if (!IsProcedurePointer(*expr)) {
         messages.Say(
-            "Actual argument associated with procedure pointer %s must be a pointer unless INTENT(IN)"_err_en_US,
+            "Actual argument associated with procedure pointer %s is not a procedure pointer"_err_en_US,
             dummyName);
+      } else if (dummy.intent == common::Intent::Default) {
+        // ok, needs to be definable only if defined at run time
+      } else {
+        DefinabilityFlags flags{DefinabilityFlag::PointerDefinition};
+        if (dummy.intent != common::Intent::Out) {
+          flags.set(DefinabilityFlag::DoNotNoteDefinition);
+        }
+        if (auto whyNot{WhyNotDefinable(
+                location, context.FindScope(location), flags, *expr)}) {
+          if (auto *msg{messages.Say(
+                  "Actual argument associated with INTENT(%s) procedure pointer %s is not definable"_err_en_US,
+                  dummy.intent == common::Intent::Out ? "OUT" : "IN OUT",
+                  dummyName)}) {
+            msg->Attach(
+                std::move(whyNot->set_severity(parser::Severity::Because)));
+          }
+        }
       }
     }
   } else {
@@ -1292,19 +1300,24 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
                     evaluate::IsNullPointer(*expr)) {
-                  if (object.intent == common::Intent::In) {
-                    // Extension (Intel, NAG, XLF); see CheckExplicitDataArg.
-                    if (context.ShouldWarn(common::LanguageFeature::
-                                NullActualForAllocatable)) {
-                      messages.Say(
-                          common::LanguageFeature::NullActualForAllocatable,
-                          "Allocatable %s is associated with NULL()"_port_en_US,
-                          dummyName);
-                    }
-                  } else {
+                  if (object.intent == common::Intent::Out ||
+                      object.intent == common::Intent::InOut) {
                     messages.Say(
-                        "NULL() actual argument '%s' may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+                        "NULL() actual argument '%s' may not be associated with allocatable dummy argument %s that is INTENT(OUT) or INTENT(IN OUT)"_err_en_US,
                         expr->AsFortran(), dummyName);
+                  } else if (object.intent == common::Intent::Default &&
+                      context.ShouldWarn(common::UsageWarning::
+                              NullActualForDefaultIntentAllocatable)) {
+                    messages.Say(common::UsageWarning::
+                                     NullActualForDefaultIntentAllocatable,
+                        "NULL() actual argument '%s' should not be associated with allocatable dummy argument %s without INTENT(IN)"_warn_en_US,
+                        expr->AsFortran(), dummyName);
+                  } else if (context.ShouldWarn(common::LanguageFeature::
+                                     NullActualForAllocatable)) {
+                    messages.Say(
+                        common::LanguageFeature::NullActualForAllocatable,
+                        "Allocatable %s is associated with %s"_port_en_US,
+                        dummyName, expr->AsFortran());
                   }
                 } else {
                   messages.Say(
@@ -1478,6 +1491,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
       }
       if (const auto &targetArg{arguments[1]}) {
         // The standard requires that the TARGET= argument, when present,
+        // be type compatible with the POINTER= for a data pointer.  In
+        // the case of procedure pointers, the standard requires that it
         // be a valid RHS for a pointer assignment that has the POINTER=
         // argument as its LHS.  Some popular compilers misinterpret this
         // requirement more strongly than necessary, and actually validate
@@ -1584,7 +1599,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             }
             if (const auto pointerType{pointerArg->GetType()}) {
               if (const auto targetType{targetArg->GetType()}) {
-                ok = pointerType->IsTkCompatibleWith(*targetType);
+                ok = pointerType->IsTkCompatibleWith(*targetType) ||
+                    targetType->IsTkCompatibleWith(*pointerType);
               }
             }
           } else {
@@ -1613,6 +1629,99 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   if (!ok) {
     messages.Say(
         "Arguments of ASSOCIATED() must be a pointer and an optional valid target"_err_en_US);
+  }
+}
+
+// CO_REDUCE (F'2023 16.9.49)
+static void CheckCoReduce(
+    evaluate::ActualArguments &arguments, evaluate::FoldingContext &context) {
+  parser::ContextualMessages &messages{context.messages()};
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[0], "co_reduce", "a");
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[2], "co_reduce", "stat");
+  evaluate::CheckForCoindexedObject(
+      context.messages(), arguments[3], "co_reduce", "errmsg");
+
+  std::optional<evaluate::DynamicType> aType;
+  if (const auto &a{arguments[0]}) {
+    aType = a->GetType();
+  }
+  std::optional<characteristics::Procedure> procChars;
+  if (const auto &operation{arguments[1]}) {
+    if (const auto *expr{operation->UnwrapExpr()}) {
+      if (const auto *designator{
+              std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
+        procChars = characteristics::Procedure::Characterize(
+            *designator, context, /*emitError=*/true);
+      } else if (const auto *ref{
+                     std::get_if<evaluate::ProcedureRef>(&expr->u)}) {
+        procChars = characteristics::Procedure::Characterize(*ref, context);
+      }
+    }
+  }
+
+  static constexpr characteristics::DummyDataObject::Attrs notAllowedArgAttrs{
+      characteristics::DummyDataObject::Attr::Optional,
+      characteristics::DummyDataObject::Attr::Allocatable,
+      characteristics::DummyDataObject::Attr::Pointer,
+  };
+  static constexpr characteristics::FunctionResult::Attrs
+      notAllowedFuncResAttrs{
+          characteristics::FunctionResult::Attr::Allocatable,
+          characteristics::FunctionResult::Attr::Pointer,
+      };
+  const auto *result{
+      procChars ? procChars->functionResult->GetTypeAndShape() : nullptr};
+  if (!procChars || !procChars->IsPure() ||
+      procChars->dummyArguments.size() != 2 || !procChars->functionResult) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must be a pure function of two data arguments"_err_en_US);
+  } else if (procChars->attrs.test(characteristics::Procedure::Attr::BindC)) {
+    messages.Say(
+        "A BIND(C) OPERATION= argument of CO_REDUCE() is not supported"_err_en_US);
+  } else if (!result || result->Rank() != 0) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must be a scalar function"_err_en_US);
+  } else if (result->type().IsPolymorphic() ||
+      (aType && !aType->IsTkLenCompatibleWith(result->type()))) {
+    messages.Say(
+        "OPERATION= argument of CO_REDUCE() must have the same type as A="_err_en_US);
+  } else if (((procChars->functionResult->attrs & notAllowedFuncResAttrs) !=
+                 characteristics::FunctionResult::Attrs{}) ||
+      procChars->functionResult->GetTypeAndShape()->type().IsPolymorphic()) {
+    messages.Say(
+        "Result of OPERATION= procedure of CO_REDUCE() must be scalar and neither allocatable, pointer, nor polymorphic"_err_en_US);
+  } else {
+    const characteristics::DummyDataObject *data[2]{};
+    for (int j{0}; j < 2; ++j) {
+      const auto &dummy{procChars->dummyArguments.at(j)};
+      data[j] = std::get_if<characteristics::DummyDataObject>(&dummy.u);
+    }
+    if (!data[0] || !data[1]) {
+      messages.Say(
+          "OPERATION= argument of CO_REDUCE() may not have dummy procedure arguments"_err_en_US);
+    } else {
+      for (int j{0}; j < 2; ++j) {
+        if (((data[j]->attrs & notAllowedArgAttrs) !=
+                characteristics::DummyDataObject::Attrs{}) ||
+            data[j]->type.Rank() != 0 || data[j]->type.type().IsPolymorphic() ||
+            (aType && !data[j]->type.type().IsTkCompatibleWith(*aType))) {
+          messages.Say(
+              "Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional"_err_en_US);
+          break;
+        }
+      }
+      static constexpr characteristics::DummyDataObject::Attrs attrs{
+          characteristics::DummyDataObject::Attr::Asynchronous,
+          characteristics::DummyDataObject::Attr::Target,
+          characteristics::DummyDataObject::Attr::Value,
+      };
+      if ((data[0]->attrs & attrs) != (data[1]->attrs & attrs)) {
+        messages.Say(
+            "If either argument of the OPERATION= procedure of CO_REDUCE() has the ASYNCHRONOUS, TARGET, or VALUE attribute, both must have that attribute"_err_en_US);
+      }
+    }
   }
 }
 
@@ -1982,6 +2091,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "co_reduce") {
+    CheckCoReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "event_query") {
     CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {

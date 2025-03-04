@@ -93,6 +93,52 @@ baz:
   ret void
 }
 
+; Shouldn't be vectorized
+define void @f11(i1 %c, ptr %p, ptr %q, ptr %r) {
+; CHECK-LABEL: define void @f11(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[P1]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[FOO:.*]], label %[[BAR:.*]]
+; CHECK:       [[FOO]]:
+; CHECK-NEXT:    br label %[[BAZ:.*]]
+; CHECK:       [[BAR]]:
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    br label %[[BAZ]]
+; CHECK:       [[BAZ]]:
+; CHECK-NEXT:    [[PHI0:%.*]] = phi i64 [ 0, %[[FOO]] ], [ [[X0]], %[[BAR]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ 1, %[[FOO]] ], [ [[X1]], %[[BAR]] ]
+; CHECK-NEXT:    store i64 [[PHI0]], ptr [[Q]], align 8
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i64, ptr [[Q]], i64 1
+; CHECK-NEXT:    store i64 [[PHI1]], ptr [[Q1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i64, ptr %p
+  %p1 =  getelementptr i64, ptr %p, i64 1
+  %x1 = load i64, ptr %p1
+  br i1 %c, label %foo, label %bar
+foo:
+  br label %baz
+bar:
+  call void @g()
+  call void @g()
+  call void @g()
+  br label %baz
+baz:
+  %phi0 = phi i64 [0, %foo], [%x0, %bar]
+  %phi1 = phi i64 [1, %foo], [%x1, %bar]
+  store i64 %phi0, ptr %q
+  %q1 =  getelementptr i64, ptr %q, i64 1
+  store i64 %phi1, ptr %q1
+
+  ret void
+}
+
 ; Should be vectorized
 define void @f2(i1 %c, ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: define void @f2(

@@ -12515,7 +12515,7 @@ SmallVector<Expr *> ASTRecordReader::readOpenACCVarList() {
   unsigned NumVars = readInt();
   llvm::SmallVector<Expr *> VarList;
   for (unsigned I = 0; I < NumVars; ++I)
-    VarList.push_back(readSubExpr());
+    VarList.push_back(readExpr());
   return VarList;
 }
 
@@ -12781,10 +12781,20 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCVectorClause::Create(getContext(), BeginLoc, LParenLoc,
                                        VectorExpr, EndLoc);
   }
+  case OpenACCClauseKind::Link: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCLinkClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
+  }
+  case OpenACCClauseKind::DeviceResident: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDeviceResidentClause::Create(getContext(), BeginLoc,
+                                               LParenLoc, VarList, EndLoc);
+  }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

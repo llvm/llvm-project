@@ -11425,11 +11425,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             E->Idx != 0 &&
             (E->getOpcode() != Instruction::Load || E->UserTreeIndex)) {
           const EdgeInfo &EI = E->UserTreeIndex;
-          if (EI.UserTE->getOpcode() != Instruction::Select ||
+          if (!EI.UserTE->hasState() ||
+              EI.UserTE->getOpcode() != Instruction::Select ||
               EI.EdgeIdx != 0) {
             auto UserBWIt = MinBWs.find(EI.UserTE);
             Type *UserScalarTy =
-                EI.UserTE->getOperand(EI.EdgeIdx).front()->getType();
+                EI.UserTE->isGather()
+                    ? EI.UserTE->Scalars.front()->getType()
+                    : EI.UserTE->getOperand(EI.EdgeIdx).front()->getType();
             if (UserBWIt != MinBWs.end())
               UserScalarTy = IntegerType::get(ScalarTy->getContext(),
                                               UserBWIt->second.first);
@@ -12446,12 +12449,12 @@ InstructionCost BoUpSLP::getSpillCost() {
   // live. When we see a call instruction that is not part of our tree,
   // query TTI to see if there is a cost to keeping values live over it
   // (for example, if spills and fills are required).
-  InstructionCost Cost = 0;
 
   const TreeEntry *Root = VectorizableTree.front().get();
   if (Root->isGather())
-    return Cost;
+    return 0;
 
+  InstructionCost Cost = 0;
   SmallDenseMap<const TreeEntry *, SmallVector<const TreeEntry *>>
       EntriesToOperands;
   SmallDenseMap<const TreeEntry *, Instruction *> EntriesToLastInstruction;
@@ -12480,28 +12483,31 @@ InstructionCost BoUpSLP::getSpillCost() {
     return IntrCost < CallCost;
   };
 
+  // Maps last instruction in the entry to the last instruction for the one of
+  // operand entries and the flag. If the flag is true, there are no calls in
+  // between these instructions.
   SmallDenseMap<const Instruction *, PointerIntPair<const Instruction *, 1>>
       CheckedInstructions;
   unsigned Budget = 0;
   const unsigned BudgetLimit =
       ScheduleRegionSizeBudget / VectorizableTree.size();
   auto CheckForNonVecCallsInSameBlock = [&](Instruction *First,
-                                            Instruction *Last) {
+                                            const Instruction *Last) {
     assert(First->getParent() == Last->getParent() &&
            "Expected instructions in same block.");
-    if (Last == First || Last->comesBefore(First))
+    if (auto It = CheckedInstructions.find(Last);
+        It != CheckedInstructions.end()) {
+      const Instruction *Checked = It->second.getPointer();
+      if (Checked == First || Checked->comesBefore(First))
+        return It->second.getInt() != 0;
+      Last = Checked;
+    } else if (Last == First || Last->comesBefore(First)) {
       return true;
+    }
     BasicBlock::const_reverse_iterator InstIt =
                                            ++First->getIterator().getReverse(),
                                        PrevInstIt =
                                            Last->getIterator().getReverse();
-    auto It = CheckedInstructions.find(Last);
-    if (It != CheckedInstructions.end()) {
-      const Instruction *Checked = It->second.getPointer();
-      if (Checked == First || Checked->comesBefore(First))
-        return It->second.getInt() != 0;
-      PrevInstIt = Checked->getIterator().getReverse();
-    }
     SmallVector<const Instruction *> LastInstsInRange;
     while (InstIt != PrevInstIt && Budget <= BudgetLimit) {
       // Debug information does not impact spill cost.
@@ -12537,38 +12543,56 @@ InstructionCost BoUpSLP::getSpillCost() {
       Cost -= Op->Scalars.size() * TTI->getCostOfKeepingLiveOverCall(ScalarTy);
     }
   };
-  SmallDenseMap<const BasicBlock *, bool> BlocksToCalls;
+  // Memoize the relationship between blocks, i.e. if there is (at least one)
+  // non-vectorized call between the blocks. This allows to skip the analysis of
+  // the same block paths multiple times.
+  SmallDenseMap<std::pair<const BasicBlock *, const BasicBlock *>, bool>
+      ParentOpParentToPreds;
   auto CheckPredecessors = [&](BasicBlock *Root, BasicBlock *Pred,
                                BasicBlock *OpParent) {
+    auto Key = std::make_pair(Root, OpParent);
+    if (auto It = ParentOpParentToPreds.find(Key);
+        It != ParentOpParentToPreds.end())
+      return It->second;
     SmallVector<BasicBlock *> Worklist;
     if (Pred)
       Worklist.push_back(Pred);
     else
       Worklist.append(pred_begin(Root), pred_end(Root));
     SmallPtrSet<const BasicBlock *, 16> Visited;
+    SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>>
+        ParentsPairsToAdd;
+    bool Res = false;
+    auto Cleanup = make_scope_exit([&]() {
+      for (const auto &KeyPair : ParentsPairsToAdd) {
+        assert(!ParentOpParentToPreds.contains(KeyPair) &&
+               "Should not have been added before.");
+        ParentOpParentToPreds.try_emplace(KeyPair, Res);
+      }
+    });
     while (!Worklist.empty()) {
       BasicBlock *BB = Worklist.pop_back_val();
       if (BB == OpParent || !Visited.insert(BB).second)
         continue;
-      if (auto It = BlocksToCalls.find(BB); It != BlocksToCalls.end()) {
-        Worklist.append(pred_begin(BB), pred_end(BB));
-        if (!It->second)
-          return false;
-        continue;
+      if (auto It = ParentOpParentToPreds.find(std::make_pair(BB, OpParent));
+          It != ParentOpParentToPreds.end()) {
+        Res = It->second;
+        return Res;
       }
-      BlocksToCalls[BB] = false;
-      if (BB->sizeWithoutDebug() > ScheduleRegionSizeBudget)
-        return false;
-      Budget += BB->sizeWithoutDebug();
+      ParentsPairsToAdd.insert(std::make_pair(BB, OpParent));
+      unsigned BlockSize = BB->size();
+      if (BlockSize > static_cast<unsigned>(ScheduleRegionSizeBudget))
+        return Res;
+      Budget += BlockSize;
       if (Budget > BudgetLimit)
-        return false;
+        return Res;
       if (!CheckForNonVecCallsInSameBlock(&*BB->getFirstNonPHIOrDbgOrAlloca(),
                                           BB->getTerminator()))
-        return false;
-      BlocksToCalls[BB] = true;
+        return Res;
       Worklist.append(pred_begin(BB), pred_end(BB));
     }
-    return true;
+    Res = true;
+    return Res;
   };
   SmallVector<const TreeEntry *> LiveEntries(1, Root);
   while (!LiveEntries.empty()) {
@@ -12577,10 +12601,10 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (Operands.empty())
       continue;
     Instruction *LastInst = EntriesToLastInstruction.at(Entry);
+    BasicBlock *Parent = LastInst->getParent();
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
         LiveEntries.push_back(Op);
-      BasicBlock *Parent = Entry->getMainOp()->getParent();
       if ((Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
@@ -13150,8 +13174,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     }
   }
 
-  InstructionCost SpillCost = getSpillCost();
-  Cost += SpillCost + ExtractCost;
+  Cost += ExtractCost;
   auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
                                     bool) {
     InstructionCost C = 0;
@@ -13290,12 +13313,21 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     }
   }
 
+  InstructionCost SpillCost = InstructionCost::getInvalid();
+  if (Cost < -SLPCostThreshold) {
+    SpillCost = getSpillCost();
+    Cost += SpillCost;
+  }
 #ifndef NDEBUG
   SmallString<256> Str;
   {
     raw_svector_ostream OS(Str);
-    OS << "SLP: Spill Cost = " << SpillCost << ".\n"
-       << "SLP: Extract Cost = " << ExtractCost << ".\n"
+    OS << "SLP: Spill Cost = ";
+    if (SpillCost.isValid())
+      OS << SpillCost;
+    else
+      OS << "<skipped>";
+    OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n"
        << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
@@ -18514,6 +18546,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       KnownBits Known = computeKnownBits(R, *DL);
       return Known.isNonNegative();
     });
+
+    if (!IsKnownPositive && !IsTopRoot && E.UserTreeIndex &&
+        E.UserTreeIndex.UserTE->hasState() &&
+        E.UserTreeIndex.UserTE->getOpcode() == Instruction::UIToFP)
+      MaxBitWidth =
+          std::min(DL->getTypeSizeInBits(
+                       E.UserTreeIndex.UserTE->Scalars.front()->getType()),
+                   DL->getTypeSizeInBits(ScalarTy));
 
     // We first check if all the bits of the roots are demanded. If they're not,
     // we can truncate the roots to this narrower type.

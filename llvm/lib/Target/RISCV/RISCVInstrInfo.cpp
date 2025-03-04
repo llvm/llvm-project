@@ -4107,7 +4107,6 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
 
 std::optional<unsigned>
 RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
-  // TODO: Handle Zvbb instructions
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -4119,6 +4118,9 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.4. Vector Single-Width Scaling Shift Instructions
   case RISCV::VSSRL_VX:
   case RISCV::VSSRA_VX:
+  // Zvbb
+  case RISCV::VROL_VX:
+  case RISCV::VROR_VX:
     // Only the low lg2(SEW) bits of the shift-amount value are used.
     return Log2SEW;
 
@@ -4128,6 +4130,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.5. Vector Narrowing Fixed-Point Clip Instructions
   case RISCV::VNCLIPU_WX:
   case RISCV::VNCLIP_WX:
+  // Zvbb
+  case RISCV::VWSLL_VX:
     // Only the low lg2(2*SEW) bits of the shift-amount value are used.
     return Log2SEW + 1;
 
@@ -4213,6 +4217,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
+  // Zvbb
+  case RISCV::VANDN_VX:
     return 1U << Log2SEW;
   }
 }
