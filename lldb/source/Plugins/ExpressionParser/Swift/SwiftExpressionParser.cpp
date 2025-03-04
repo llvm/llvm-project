@@ -139,8 +139,7 @@ LLDBNameLookup::LLDBNameLookup(
     SwiftExpressionParser::SILVariableMap &variable_map, SymbolContext &sc,
     ExecutionContextScope &exe_scope)
     : SILDebuggerClient(source_file.getASTContext()),
-      m_log(GetLog(LLDBLog::Expressions)), m_source_file(source_file),
-      m_variable_map(variable_map), m_sc(sc) {
+      m_source_file(source_file), m_variable_map(variable_map), m_sc(sc) {
   source_file.getParentModule()->setDebugClient(this);
 
   if (!m_sc.target_sp)
@@ -178,11 +177,15 @@ void LLDBNameLookup::RegisterTypeAliases(
 
 /// A name lookup class for debugger expr mode.
 class LLDBExprNameLookup : public LLDBNameLookup {
+  const SwiftASTContextForExpressions *m_this_context;
+
 public:
   LLDBExprNameLookup(swift::SourceFile &source_file,
                      SwiftExpressionParser::SILVariableMap &variable_map,
-                     SymbolContext &sc, ExecutionContextScope &exe_scope)
-      : LLDBNameLookup(source_file, variable_map, sc, exe_scope) {}
+                     SymbolContext &sc, ExecutionContextScope &exe_scope,
+                     const SwiftASTContextForExpressions *this_context)
+      : LLDBNameLookup(source_file, variable_map, sc, exe_scope),
+        m_this_context(this_context) {}
 
   bool shouldGlobalize(swift::Identifier Name, swift::DeclKind Kind) override {
     // Extensions have to be globalized, there's no way to mark them
@@ -196,7 +199,7 @@ public:
       return true;
 
     if (Name.str().starts_with("$")) {
-      LLDB_LOG(m_log,
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
                "[LLDBExprNameLookup::shouldGlobalize] Returning true to "
                "globalizing {0}",
                Name.str());
@@ -224,7 +227,7 @@ public:
     static unsigned counter = 0;
     unsigned count = counter++;
 
-    LLDB_LOG(m_log,
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
              "[LLDBExprNameLookup::lookupOverrides({0})] Searching for \"{1}\"",
              count, Name.getIdentifier().get());
 
@@ -235,6 +238,8 @@ public:
                        swift::SourceLoc Loc, bool IsTypeLookup,
                        ResultVector &RV) override {
     LLDB_SCOPED_TIMER();
+    assert(SwiftASTContext::GetSwiftASTContext(&DC->getASTContext()) ==
+           m_this_context);
     static unsigned counter = 0;
     unsigned count = counter++;
 
@@ -243,7 +248,7 @@ public:
       return false;
 
     LLDB_LOG(
-        m_log,
+        GetLog(LLDBLog::Expressions),
         "[LLDBExprNameLookup::lookupAdditions ({0})] Searching for \"{1}\"",
         count, NameStr);
 
@@ -291,9 +296,10 @@ public:
                                                    persistent_results);
 
         for (CompilerDecl & decl : persistent_results) {
-          if (decl.GetTypeSystem() !=
-              SwiftASTContext::GetSwiftASTContext(&DC->getASTContext())) {
-            LLDB_LOG(m_log, "ignoring persistent result from other context");
+          if (decl.GetTypeSystem() != m_this_context) {
+            LLDB_LOG(GetLog(LLDBLog::Expressions),
+                     "Ignoring persistent result from other context: {0}",
+                     NameStr);
             continue;
           }
           auto *value_decl =
@@ -369,11 +375,15 @@ public:
 
 /// A name lookup class for REPL and Playground mode.
 class LLDBREPLNameLookup : public LLDBNameLookup {
+  const SwiftASTContextForExpressions *m_this_context;
+
 public:
   LLDBREPLNameLookup(swift::SourceFile &source_file,
                      SwiftExpressionParser::SILVariableMap &variable_map,
-                     SymbolContext &sc, ExecutionContextScope &exe_scope)
-      : LLDBNameLookup(source_file, variable_map, sc, exe_scope) {}
+                     SymbolContext &sc, ExecutionContextScope &exe_scope,
+                     const SwiftASTContextForExpressions *this_context)
+      : LLDBNameLookup(source_file, variable_map, sc, exe_scope),
+        m_this_context(this_context) {}
 
   bool shouldGlobalize(swift::Identifier Name, swift::DeclKind kind) override {
     return false;
@@ -391,6 +401,9 @@ public:
                        swift::SourceLoc Loc, bool IsTypeLookup,
                        ResultVector &RV) override {
     LLDB_SCOPED_TIMER();
+
+    assert(SwiftASTContext::GetSwiftASTContext(&DC->getASTContext()) ==
+           m_this_context);
     static unsigned counter = 0;
     unsigned count = counter++;
 
@@ -399,7 +412,7 @@ public:
       return false;
 
     LLDB_LOG(
-        m_log,
+        GetLog(LLDBLog::Expressions),
         "[LLDBREPLNameLookup::lookupAdditions ({0})] Searching for \"{1}\"",
         count, NameStr);
 
@@ -421,6 +434,12 @@ public:
 
     // Append the persistent decls that we found to the result vector.
     for (auto result : persistent_decl_results) {
+      if (result.GetTypeSystem() != m_this_context) {
+        LLDB_LOG(GetLog(LLDBLog::Expressions),
+                 "Ignoring persistent result from other context: {0}", NameStr);
+        continue;
+      }
+
       // No import required.
       auto *result_decl =
           static_cast<swift::ValueDecl *>(result.GetOpaqueDecl());
@@ -1380,11 +1399,11 @@ SwiftExpressionParser::ParseAndImport(
 
   LLDBNameLookup *external_lookup;
   if (m_options.GetPlaygroundTransformEnabled() || m_options.GetREPLEnabled()) {
-    external_lookup =
-        new LLDBREPLNameLookup(*source_file, variable_map, m_sc, *m_exe_scope);
+    external_lookup = new LLDBREPLNameLookup(*source_file, variable_map, m_sc,
+                                             *m_exe_scope, &m_swift_ast_ctx);
   } else {
-    external_lookup =
-        new LLDBExprNameLookup(*source_file, variable_map, m_sc, *m_exe_scope);
+    external_lookup = new LLDBExprNameLookup(*source_file, variable_map, m_sc,
+                                             *m_exe_scope, &m_swift_ast_ctx);
   }
 
   // FIXME: This call is here just so that the we keep the
@@ -1769,8 +1788,15 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
     // Signal that we want to retry the expression exactly once with a
     // fresh SwiftASTContext.
-    if (retry)
+    if (retry) {
+      if (auto *persistent_state =
+              llvm::cast_or_null<SwiftPersistentExpressionState>(
+                  m_sc.target_sp->GetPersistentExpressionStateForLanguage(
+                      lldb::eLanguageTypeSwift)))
+        persistent_state->Clear();
+
       return ParseResult::retry_fresh_context;
+    }
 
     // Unrecoverable error.
     return parse_result_failure;
@@ -2031,6 +2057,11 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (expr_diagnostics->HasErrors()) {
     DiagnoseSwiftASTContextError();
     return parse_result_failure;
+  }
+
+  if (m_swift_ast_ctx.GetASTContext()->hadError()) {
+    DiagnoseSwiftASTContextError();
+    return ParseResult::unrecoverable_error;
   }
 
   {

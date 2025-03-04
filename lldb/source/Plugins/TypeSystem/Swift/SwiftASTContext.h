@@ -1104,9 +1104,6 @@ protected:
   /// These are the names of modules that we have loaded by hand into
   /// the Contexts we make for parsing.
   HandLoadedModuleSet m_hand_loaded_modules;
-
-private:
-  std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
 
 } // namespace lldb_private
