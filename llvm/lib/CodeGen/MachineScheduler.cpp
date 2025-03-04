@@ -90,7 +90,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-cl::opt<MISched::Direction> PostRADirection(
+static cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
@@ -102,9 +102,9 @@ cl::opt<MISched::Direction> PostRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional post reg-alloc list scheduling")));
 
-cl::opt<bool>
-DumpCriticalPathLength("misched-dcpl", cl::Hidden,
-                       cl::desc("Print critical path length to stdout"));
+static cl::opt<bool>
+    DumpCriticalPathLength("misched-dcpl", cl::Hidden,
+                           cl::desc("Print critical path length to stdout"));
 
 cl::opt<bool> VerifyScheduling(
     "verify-misched", cl::Hidden,
@@ -602,11 +602,10 @@ MachineSchedulerPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveIntervalsAnalysis>();
 }
 
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -770,6 +769,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
 
     MBBRegionsVector MBBRegions;
     getSchedRegions(&*MBB, MBBRegions, Scheduler.doMBBSchedRegionsTopDown());
+    bool ScheduleSingleMI = Scheduler.shouldScheduleSingleMIRegions();
     for (const SchedRegion &R : MBBRegions) {
       MachineBasicBlock::iterator I = R.RegionBegin;
       MachineBasicBlock::iterator RegionEnd = R.RegionEnd;
@@ -779,8 +779,9 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // it. Perhaps it still needs to be bundled.
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
-      // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      // Skip empty scheduling regions and, conditionally, regions with a single
+      // MI.
+      if (I == RegionEnd || (!ScheduleSingleMI && I == std::prev(RegionEnd))) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();
@@ -3967,8 +3968,7 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
   for (SDep &Dep : Deps) {
-    if (Dep.getKind() != SDep::Data ||
-        !Register::isPhysicalRegister(Dep.getReg()))
+    if (Dep.getKind() != SDep::Data || !Dep.getReg().isPhysical())
       continue;
     SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)

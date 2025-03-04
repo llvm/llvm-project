@@ -1278,12 +1278,12 @@ define i32 @g(i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP20]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF7:%.*]] = urem i32 [[TMP1]], 4
 ; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF7]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT9]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT13]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
@@ -1335,6 +1335,71 @@ exit:
   ret i32 %select.next
 }
 
+; Test for https://github.com/llvm/llvm-project/issues/129236.
+define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
+; CHECK-LABEL: @cost_ashr_with_op_known_invariant_via_scev(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i16 0, 0
+; CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 0 to i32
+; CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ [[REM_I:%.*]], [[ELSE]] ], [ 0, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[SHR_I:%.*]] = ashr i32 [[CONV5_I]], [[P_1]]
+; CHECK-NEXT:    [[TOBOOL6_NOT_I:%.*]] = icmp eq i32 [[SHR_I]], 0
+; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i32 [[P_1]], 24
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i32 [[SEXT_I]], 24
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TOBOOL6_NOT_I]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       else:
+; CHECK-NEXT:    [[REM_I]] = urem i32 -1, [[CONV_I]]
+; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp sgt i32 [[REM_I]], 1
+; CHECK-NEXT:    br i1 [[CMP3_I]], label [[LOOP_LATCH]], label [[THEN]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 0, [[ELSE]] ], [ [[TMP1]], [[THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[P_2_LCSSA]]
+;
+entry:
+  %cmp.i = icmp eq i16 0, 0
+  %conv.i = sext i16 0 to i32
+  %conv5.i = sext i8 %a to i32
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 100, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %cmp.i, label %then, label %else
+
+then:
+  %p.1 = phi i32 [ %rem.i, %else ], [ 0, %loop.header ]
+  %shr.i = ashr i32 %conv5.i, %p.1
+  %tobool6.not.i = icmp eq i32 %shr.i, 0
+  %sext.i = shl i32 %p.1, 24
+  %2 = ashr exact i32 %sext.i, 24
+  %3 = select i1 %tobool6.not.i, i32 %2, i32 0
+  br label %loop.latch
+
+else:
+  %rem.i = urem i32 -1, %conv.i
+  %cmp3.i = icmp sgt i32 %rem.i, 1
+  br i1 %cmp3.i, label %loop.latch, label %then
+
+loop.latch:
+  %p.2 = phi i32 [ 0, %else ], [ %3, %then ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 0
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 %p.2
+}
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }

@@ -3168,6 +3168,13 @@ public:
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
 
+  enum class DiagCtorKind { None, Implicit, Typename };
+  /// Returns the TypeDeclType for the given type declaration,
+  /// as ASTContext::getTypeDeclType would, but
+  /// performs the required semantic checks for name lookup of said entity.
+  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                           TypeDecl *TD, SourceLocation NameLoc);
+
   /// If the identifier refers to a type name within this scope,
   /// return the declaration of that type.
   ///
@@ -4392,11 +4399,11 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
-private:
   /// Function or variable declarations to be checked for whether the deferred
   /// diagnostics should be emitted.
   llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
+private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
@@ -10519,7 +10526,8 @@ public:
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
       OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
-      TemplateSpecCandidateSet *FailedTSC = nullptr);
+      TemplateSpecCandidateSet *FailedTSC = nullptr,
+      bool ForTypeDeduction = false);
 
   // Resolve and fix an overloaded expression that can be resolved
   // because it identifies a single function template specialization.
@@ -12616,7 +12624,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false,
+      bool PartialOverloading = false);
 
   /// Retrieve the most specialized of the given function template
   /// specializations.
