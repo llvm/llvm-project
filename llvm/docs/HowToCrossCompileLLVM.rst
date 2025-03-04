@@ -210,16 +210,25 @@ Or, if binfmt_misc is configured (as was necessary for debootstrap):
 Installing and using
 --------------------
 
-After LLVM/Clang has built successfully, you can install it via:
+If you want to transfer a copy of the built compiler to another machine, you can first install it via:
 
    .. code-block:: bash
 
     cmake --build build/$TARGET --target=install
 
 This will install the LLVM/Clang headers, binaries, libraries, and other files
-to paths within ``CMAKE_INSTALL_PREFIX`` You can then tar that directory for
-transfer to a device that runs the target architecture natively:
+to paths within ``CMAKE_INSTALL_PREFIX``. Then tar that directory for transfer
+to a device that runs the target architecture natively:
 
    .. code-block:: bash
 
     tar -czvf clang-$TARGET.tar.gz -C $HOME clang-$TARGET
+
+The generated toolchain is portable, but requires compatible versions of any
+shared libraries it links against. This means using a sysroot that is as
+similar to your target operating system as poasible is desirable.
+
+.. note::
+  Use of the ``install`` target requires that you have set
+  ``CMAKE_INSTALL_PREFIX`` otherwise it will attempt to install in
+  directories under `/` on your host.
