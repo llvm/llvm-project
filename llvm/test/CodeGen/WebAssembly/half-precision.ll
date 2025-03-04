@@ -369,3 +369,23 @@ define <8 x half> @shuffle_poison_v8f16(<8 x half> %x, <8 x half> %y) {
                i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x half> %res
 }
+
+define <4 x float> @promote_low_v4f32(<8 x half> %x) {
+; CHECK-LABEL: promote_low_v4f32:
+; CHECK: .functype promote_low_v4f32 (v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.promote_low_f16x8 $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+  %v = shufflevector <8 x half> %x, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = fpext <4 x half> %v to <4 x float>
+  ret <4 x float> %a
+}
+
+define <4 x float> @promote_low_v4f32_2(<8 x half> %x) {
+; CHECK-LABEL: promote_low_v4f32_2:
+; CHECK:         .functype promote_low_v4f32_2 (v128) -> (v128)
+; CHECK-NEXT:    f32x4.promote_low_f16x8 $push[[R:[0-9]+]]=, $0
+; CHECK-NEXT: return $pop[[R]]
+  %v = fpext <8 x half> %x to <8 x float>
+  %a = shufflevector <8 x float> %v, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %a
+}
