@@ -1641,6 +1641,37 @@ the function call.
                            ptr %ctxt, ptr %task, ptr %actor)
   unreachable
 
+
+.. _coro.outside.frame:
+
+'llvm.coro.outside.frame' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+    declare void @llvm.coro.outside.frame(ptr %p)
+
+Overview:
+"""""""""
+
+Signifies that an alloca shouldn't be promoted to the coroutine frame.
+
+Arguments:
+""""""""""
+
+An alloca that should remain outside the coroutine frame.
+
+Semantics:
+""""""""""
+
+Calling `@llvm.coro.outside.frame` with an alloca signifies that the alloca
+should not be promoted to the coroutine frame. This allows the frontend to
+ensure that e.g. callee-destructed parameters are allocated on the stack of the
+ramp function, and thus available until the function returns.
+
+The intrinsic should only be used in presplit coroutines, and is consumed by
+the CoroSplit pass.
+
+
 .. _coro.suspend:
 .. _suspend points:
 
@@ -2178,25 +2209,6 @@ or deallocations that may be guarded by `@llvm.coro.alloc` and `@llvm.coro.free`
 
 CoroAnnotationElidePass performs the heap elision when possible. Note that for
 recursive or mutually recursive functions this elision is usually not possible.
-
-Metadata
-========
-
-'``coro.outside.frame``' Metadata
----------------------------------
-
-``coro.outside.frame`` metadata may be attached to an alloca instruction to
-to signify that it shouldn't be promoted to the coroutine frame, useful for
-filtering allocas out by the frontend when emitting internal control mechanisms.
-Additionally, this metadata is only used as a flag, so the associated
-node must be empty.
-
-.. code-block:: text
-
-  %__coro_gro = alloca %struct.GroType, align 1, !coro.outside.frame !0
-
-  ...
-  !0 = !{}
 
 Areas Requiring Attention
 =========================

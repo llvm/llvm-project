@@ -2015,7 +2015,13 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   simplifySuspendPoints(Shape);
 
   normalizeCoroutine(F, Shape, TTI);
+
   ABI.buildCoroutineFrame(OptimizeFrame);
+
+  // @llvm.coro.outside.frame is not needed after the frame has been built.
+  for (Instruction *I : Shape.OutsideFrames)
+    I->eraseFromParent();
+
   replaceFrameSizeAndAlignment(Shape);
 
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
