@@ -26,6 +26,7 @@
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
@@ -10332,6 +10333,75 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           NewFD->setInvalidDecl();
       }
     }
+
+    // Loop over the parameters to see if any of the size expressions contains
+    // a DeclRefExpr which refers to a variable from an outer scope that is
+    // also named later in the parameter list.
+    // e.g., int n; void func(int array[n], int n);
+    SmallVector<const DeclRefExpr *, 2> DRESizeExprs;
+    llvm::for_each(Params, [&](const ParmVarDecl *Param) {
+      // If we have any size expressions we need to check against, check them
+      // now.
+      for (const auto *DRE : DRESizeExprs) {
+        // Check to see if this parameter has the same name as one of the
+        // DeclRefExprs we wanted to test against. If so, then we found a
+        // situation where an earlier parameter refers to the name of a later
+        // parameter, which is (currently) only valid if there's a variable
+        // from an outer scope with the same name.
+        if (const auto *SizeExprND = dyn_cast<NamedDecl>(DRE->getDecl())) {
+          if (SizeExprND->getIdentifier() == Param->getIdentifier()) {
+            // Diagnose the DeclRefExpr from the parameter with the size
+            // expression.
+            Diag(DRE->getLocation(), diag::warn_vla_size_expr_shadow);
+            // Note the parameter that a user could be confused into thinking
+            // they're referring to.
+            Diag(Param->getLocation(), diag::note_vla_size_expr_shadow_param);
+            // Note the DeclRefExpr that's actually being used.
+            Diag(DRE->getDecl()->getLocation(),
+                 diag::note_vla_size_expr_shadow_actual);
+            
+          }
+        }
+      }
+
+      // To check whether its size expression is a simple DeclRefExpr, we first
+      // have to walk through pointers or references, but array types always
+      // decay to a pointer, so skip if this is a DecayedType.
+      QualType QT = Param->getType();
+      while (!isa<DecayedType>(QT.getTypePtr()) &&
+             (QT->isPointerType() || QT->isReferenceType()))
+        QT = QT->getPointeeType();
+
+      // An array type is always decayed to a pointer, so we need to get the
+      // original type in that case.
+      if (const auto *DT = QT->getAs<DecayedType>())
+        QT = DT->getOriginalType();
+
+      // Now we can see if it's a VLA type with a size expression.
+      // FIXME: it would be nice to handle constant-sized arrays as well,
+      // e.g., constexpr int n = 12; void foo(int array[n], int n);
+      // however, the constant expression is replaced by its value at the time
+      // we form the type, so we've lost that information here.
+      if (!QT->hasSizedVLAType())
+        return;
+
+      const VariableArrayType *VAT = getASTContext().getAsVariableArrayType(QT);
+      if (!VAT)
+        return;
+
+      class DeclRefFinder : public RecursiveASTVisitor<DeclRefFinder> {
+        SmallVectorImpl<const DeclRefExpr *> &Found;
+
+      public:
+        DeclRefFinder(SmallVectorImpl<const DeclRefExpr *> &Found)
+            : Found(Found) {}
+        bool VisitDeclRefExpr(const DeclRefExpr *DRE) {
+          Found.push_back(DRE);
+          return true;
+        }
+      } Finder(DRESizeExprs);
+      Finder.TraverseStmt(VAT->getSizeExpr());
+    });
 
     if (!getLangOpts().CPlusPlus) {
       // In C, find all the tag declarations from the prototype and move them
