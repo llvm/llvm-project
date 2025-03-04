@@ -1118,11 +1118,6 @@ public:
         return failure();
     }
 
-    // If the op is a "fallback" op, give it a handle to the raw properties
-    // buffer.
-    if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>())
-      return iface->readPropertiesBlob(rawProperties, opState);
-
     // Setup a new reader to read from the `rawProperties` sub-buffer.
     EncodingReader reader(
         StringRef(rawProperties.begin(), rawProperties.size()), fileLoc);
@@ -2182,6 +2177,9 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
 
         // Parse the bytecode.
         {
+          // If the op is registered (and serialized in a compatible manner), or
+          // unregistered but uses standard properties encoding, parsing without
+          // going through the fallback path should work.
           EncodingReader::Snapshot snapshot(reader);
           op = parseOpWithoutRegions(reader, readState, isIsolatedFromAbove,
                                      /*useDialectFallback=*/false);

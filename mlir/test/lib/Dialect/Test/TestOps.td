@@ -3030,23 +3030,28 @@ def TestVersionedOpC : TEST_Op<"versionedC"> {
   );
 }
 
-// def TestVersionedOpD : TEST_Op<"versionedD"> {
-//   let arguments = (ins AnyAttrOf<[TestAttrParams,
-//                                   I32ElementsAttr]>:$attribute
-//   );
+// This op is used to generate tests for the bytecode dialect fallback path.
+def TestVersionedOpD : TEST_Op<"versionedD"> {
+  let arguments = (ins AnyAttrOf<[TestAttrParams,
+                                  I32ElementsAttr]>:$attribute
+  );
 
-//   let useCustomPropertiesEncoding = 1;
-// }
+  let useCustomPropertiesEncoding = 1;
+}
 
 def TestBytecodeFallbackOp : TEST_Op<"bytecode.fallback", [
   DeclareOpInterfaceMethods<FallbackBytecodeOpInterface, ["setOriginalOperationName", "readPropertiesBlob", "getPropertiesBlob"]>
 ]> {
   let arguments = (ins 
     StrAttr:$opname,
-    DenseI8ArrayAttr:$bytecodeProperties,
+    IntProp<"int64_t">:$opversion,
+    ArrayAttr:$encodedReqdAttributes,
+    ArrayAttr:$encodedOptAttributes,
     Variadic<AnyType>:$operands);
   let regions = (region VariadicRegion<AnyRegion>:$bodyRegions);
   let results = (outs Variadic<AnyType>:$results);
+
+  let useCustomPropertiesEncoding = 1;
 }
 
 //===----------------------------------------------------------------------===//
