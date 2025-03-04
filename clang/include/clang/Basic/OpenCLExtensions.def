@@ -91,7 +91,7 @@ OPENCL_EXTENSION(__cl_clang_non_portable_kernel_param_types, true, 100)
 OPENCL_EXTENSION(__cl_clang_bitfields, true, 100)
 
 // Khronos OpenCL extensions
-OPENCL_EXTENSION(cl_khr_extended_bit_ops, true, 100)
+OPENCL_EXTENSION(cl_khr_extended_bit_ops, true, 200)
 OPENCL_EXTENSION(cl_khr_integer_dot_product, true, 200)
 OPENCL_EXTENSION(cl_khr_subgroup_ballot, true, 200)
 OPENCL_EXTENSION(cl_khr_subgroup_clustered_reduce, true, 200)
