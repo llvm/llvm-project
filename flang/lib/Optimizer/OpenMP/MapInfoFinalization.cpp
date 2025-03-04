@@ -247,16 +247,19 @@ class MapInfoFinalizationPass
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
-    bool hasImplicitMap =
-        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
+    llvm::omp::OpenMPOffloadMappingFlags implicit =
+        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
 
+    llvm::omp::OpenMPOffloadMappingFlags close =
+        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+
+    // TODO/FIXME: When we apply ALWAYS (an internal non-user specified always)
+    // to the descriptor, we must remove it when CLOSE is applied, as otherwise
+    // it'll break certain edge cases.
     return llvm::to_underlying(
-        hasImplicitMap
-            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
-            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO | implicit | close);
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
