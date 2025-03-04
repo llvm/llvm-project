@@ -343,8 +343,8 @@ static DecodeStatus decodeUImmOperandGE(MCInst &Inst, uint32_t Imm,
 
 template <unsigned Width, unsigned LowerBound>
 static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
-                                        int64_t Address,
-                                        const MCDisassembler *Decoder) {
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
   assert(isUInt<Width>(Imm) && "Invalid immediate");
 
   if (Imm < LowerBound)
