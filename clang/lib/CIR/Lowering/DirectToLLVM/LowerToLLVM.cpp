@@ -249,8 +249,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       *getTypeConverter(), dataLayout, op.getResult().getType());
   assert(!cir::MissingFeatures::opLoadStoreMemOrder());
   assert(!cir::MissingFeatures::opLoadStoreAlignment());
-  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-  unsigned alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
+  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -277,8 +276,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::opLoadStoreAlignment());
   const mlir::Type llvmTy =
       getTypeConverter()->convertType(op.getValue().getType());
-  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-  unsigned alignment = (unsigned)layout.getTypeABIAlignment(llvmTy);
+  unsigned alignment = (unsigned)dataLayout.getTypeABIAlignment(llvmTy);
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
