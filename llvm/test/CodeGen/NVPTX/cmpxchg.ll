@@ -1068,12 +1068,11 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM30-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; SM30-NEXT:    and.b32 %r8, %r7, %r2;
-; SM30-NEXT:    setp.ne.s32 %p2, %r19, %r8;
-; SM30-NEXT:    mov.u32 %r19, %r8;
-; SM30-NEXT:    @%p2 bra $L__BB8_1;
-; SM30-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
-; SM30-NEXT:    membar.sys;
-; SM30-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM30-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM30-NEXT:    mov.b32 %r20, %r8;
+; SM30-NEXT:    @%p2 bra $L__BB0_1;
+; SM30-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
+; SM30-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM30-NEXT:    ret;
 ;
 ; SM70-LABEL: acq_rel_sys_i16(
@@ -1110,12 +1109,11 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM70-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; SM70-NEXT:    and.b32 %r8, %r7, %r2;
-; SM70-NEXT:    setp.ne.s32 %p2, %r19, %r8;
-; SM70-NEXT:    mov.u32 %r19, %r8;
-; SM70-NEXT:    @%p2 bra $L__BB8_1;
-; SM70-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
-; SM70-NEXT:    fence.acq_rel.sys;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM70-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM70-NEXT:    mov.b32 %r20, %r8;
+; SM70-NEXT:    @%p2 bra $L__BB0_1;
+; SM70-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
+; SM70-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: acq_rel_sys_i16(
 ; SM90:       {
@@ -1199,10 +1197,9 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM30-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; SM30-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM30-NEXT:    setp.ne.s32 %p2, %r19, %r8;
-; SM30-NEXT:    mov.u32 %r19, %r8;
-; SM30-NEXT:    @%p2 bra $L__BB9_1;
-; SM30-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
-; SM30-NEXT:    membar.sys;
+; SM30-NEXT:    mov.b32 %r19, %r8;
+; SM30-NEXT:    @%p2 bra $L__BB1_1;
+; SM30-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
 ; SM30-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM30-NEXT:    ret;
 ;
@@ -1241,10 +1238,9 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM70-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; SM70-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM70-NEXT:    setp.ne.s32 %p2, %r19, %r8;
-; SM70-NEXT:    mov.u32 %r19, %r8;
-; SM70-NEXT:    @%p2 bra $L__BB9_1;
-; SM70-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
-; SM70-NEXT:    fence.acq_rel.sys;
+; SM70-NEXT:    mov.b32 %r19, %r8;
+; SM70-NEXT:    @%p2 bra $L__BB1_1;
+; SM70-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
 ; SM70-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM70-NEXT:    ret;
 ; SM90-LABEL: seq_cst_sys_i16(
