@@ -829,7 +829,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
         if ((Edge->getKind() != SDep::Anti) &&
             (Edge->getKind() != SDep::Output)) continue;
 
-        MCRegister AntiDepReg = MCRegister::from(Edge->getReg());
+        MCRegister AntiDepReg = Edge->getReg().asMCReg();
         LLVM_DEBUG(dbgs() << "\tAntidep reg: " << printReg(AntiDepReg, TRI));
         assert(AntiDepReg && "Anti-dependence on reg0?");
 
