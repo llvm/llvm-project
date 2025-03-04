@@ -108,7 +108,7 @@ void initializeEHContGuardCatchretPass(PassRegistry &);
 void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry &);
 void initializeExpandLargeDivRemLegacyPassPass(PassRegistry &);
 void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
-void initializeExpandPostRAPass(PassRegistry &);
+void initializeExpandPostRALegacyPass(PassRegistry &);
 void initializeExpandReductionsPass(PassRegistry &);
 void initializeExpandVariadicsPass(PassRegistry &);
 void initializeExternalAAWrapperPassPass(PassRegistry &);
