@@ -1006,8 +1006,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 llvm::DIType *CGDebugInfo::CreateType(const SubstTemplateTypeParmType *Ty,
                                       llvm::DIFile *U) {
   llvm::DIType *debugType = getOrCreateType(Ty->getReplacementType(), U);
+  auto *Tty = dyn_cast<ClassTemplateSpecializationDecl>(Ty->getAssociatedDecl());
+  llvm::DIType *Scope = CGDebugInfo::getOrCreateType(QualType(Tty->getTypeForDecl(),0),U);
   return DBuilder.createTemplateTypeParameterAsType(
-      U, Ty->getReplacedParameter()->getName(), debugType);
+      Scope, Ty->getReplacedParameter()->getName(), debugType);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
@@ -1248,7 +1250,7 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   if (CGM.getCodeGenOpts().DebugFwdTemplateParams)
     if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
       DBuilder.replaceArrays(RetTy, llvm::DINodeArray(),
-                             CollectCXXTemplateParams(TSpecial, DefUnit));
+                             CollectCXXTemplateParams(TSpecial, DefUnit,RetTy));
   ReplaceMap.emplace_back(
       std::piecewise_construct, std::make_tuple(Ty),
       std::make_tuple(static_cast<llvm::Metadata *>(RetTy)));
@@ -2282,12 +2284,13 @@ void CGDebugInfo::CollectCXXBasesAux(
 
 llvm::DINodeArray
 CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
-                                   llvm::DIFile *Unit) {
+                                   llvm::DIFile *Unit, llvm::DICompositeType *RealDecl) {
   if (!OArgs)
     return llvm::DINodeArray();
   TemplateArgs &Args = *OArgs;
   SmallVector<llvm::Metadata *, 16> TemplateParams;
   for (unsigned i = 0, e = Args.Args.size(); i != e; ++i) {
+
     const TemplateArgument &TA = Args.Args[i];
     StringRef Name;
     const bool defaultParameter = TA.getIsDefaulted();
@@ -2298,8 +2301,9 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
     case TemplateArgument::Type: {
       if (CGM.getCodeGenOpts().DebugTemplateParameterAsType) {
         llvm::DIType *debugType = getOrCreateType(TA.getAsType(), Unit);
+	llvm::DIScope *Scope = RealDecl ? RealDecl : Unit;
         llvm::DIType *TemplateType =
-            DBuilder.createTemplateTypeParameterAsType(Unit, Name, debugType);
+            DBuilder.createTemplateTypeParameterAsType(Scope, Name, debugType);
         TemplateParams.push_back(TemplateType);
       } else {
         llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
@@ -2471,8 +2475,8 @@ llvm::DINodeArray CGDebugInfo::CollectVarTemplateParams(const VarDecl *VL,
 }
 
 llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(const RecordDecl *RD,
-                                                        llvm::DIFile *Unit) {
-  return CollectTemplateParams(GetTemplateArgs(RD), Unit);
+                                                        llvm::DIFile *Unit, llvm::DICompositeType *RealDecl) {
+  return CollectTemplateParams(GetTemplateArgs(RD), Unit, RealDecl);
 }
 
 llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
@@ -4010,7 +4014,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
-                           CollectCXXTemplateParams(TSpecial, DefUnit));
+                           CollectCXXTemplateParams(TSpecial, DefUnit,RealDecl));
   return RealDecl;
 }
 

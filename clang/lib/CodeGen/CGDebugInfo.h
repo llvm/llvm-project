@@ -306,7 +306,7 @@ class CGDebugInfo {
   };
   /// A helper function to collect template parameters.
   llvm::DINodeArray CollectTemplateParams(std::optional<TemplateArgs> Args,
-                                          llvm::DIFile *Unit);
+                                          llvm::DIFile *Unit,llvm::DICompositeType* RealDecl = nullptr);
   /// A helper function to collect debug info for function template
   /// parameters.
   llvm::DINodeArray CollectFunctionTemplateParams(const FunctionDecl *FD,
@@ -324,7 +324,7 @@ class CGDebugInfo {
   /// A helper function to collect debug info for template
   /// parameters.
   llvm::DINodeArray CollectCXXTemplateParams(const RecordDecl *TS,
-                                             llvm::DIFile *F);
+                                             llvm::DIFile *F, llvm::DICompositeType* RealDecl = nullptr);
 
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
