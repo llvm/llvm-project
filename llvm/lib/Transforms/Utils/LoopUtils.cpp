@@ -843,9 +843,9 @@ static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
 
-  // When ExitCount + 1 would wrap in unsigned, return std::nullopt instead.
+  // When ExitCount + 1 would wrap in unsigned, saturate at UINT_MAX.
   if (ExitCount >= std::numeric_limits<unsigned>::max())
-    return std::nullopt;
+    return std::numeric_limits<unsigned>::max();
 
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
