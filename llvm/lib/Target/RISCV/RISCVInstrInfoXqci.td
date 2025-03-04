@@ -311,8 +311,8 @@ let Predicates = [HasVendorXqcisls, IsRV32] in {
 
 let Predicates = [HasVendorXqcia, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_SLASAT : QCIRVInstRR<0b01010, GPRNoX0, "qc.slasat">;
-  def QC_SLLSAT : QCIRVInstRR<0b01100, GPRNoX0, "qc.sllsat">;
+  def QC_SHLSAT : QCIRVInstRR<0b01010, GPRNoX0, "qc.shlsat">;
+  def QC_SHLUSAT : QCIRVInstRR<0b01100, GPRNoX0, "qc.shlusat">;
   def QC_ADDSAT : QCIRVInstRR<0b01110, GPRNoX0, "qc.addsat">;
   def QC_ADDUSAT : QCIRVInstRR<0b01111, GPRNoX0, "qc.addusat">;
   def QC_SUBSAT : QCIRVInstRR<0b10000, GPRNoX0, "qc.subsat">;

@@ -201,6 +201,7 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
     [PB = this](StringRef Params) {
       // TODO: parseRegAllocGreedyFilterFunc(*PB, Params);
+      (void)PB;
       return Expected<RAGreedyPass::Options>(RAGreedyPass::Options{});
     }, "reg-filter"
 )

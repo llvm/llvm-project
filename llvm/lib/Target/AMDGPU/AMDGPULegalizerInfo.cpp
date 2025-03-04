@@ -4545,6 +4545,13 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
+
+  auto LoadConstant = [&](unsigned N) {
+    B.buildConstant(DstReg, N);
+    return true;
+  };
+
   if (ST.hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (ArgType) {
@@ -4567,31 +4574,43 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      if (ClusterDims && (*ClusterDims)[0] == 1)
+        return LoadConstant(0);
       Arg = &ClusterWorkGroupIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      if (ClusterDims && (*ClusterDims)[1] == 1)
+        return LoadConstant(0);
       Arg = &ClusterWorkGroupIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      if (ClusterDims && (*ClusterDims)[2] == 1)
+        return LoadConstant(0);
       Arg = &ClusterWorkGroupIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[0] - 1);
       Arg = &ClusterWorkGroupMaxIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[1] - 1);
       Arg = &ClusterWorkGroupMaxIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[2] - 1);
       Arg = &ClusterWorkGroupMaxIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
@@ -4613,8 +4632,7 @@ bool AMDGPULegalizerInfo::loadInputValue(
     if (ArgType == AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR) {
       // The intrinsic may appear when we have a 0 sized kernarg segment, in which
       // case the pointer argument may be missing and we use null.
-      B.buildConstant(DstReg, 0);
-      return true;
+      return LoadConstant(0);
     }
 
     // It's undefined behavior if a function marked with the amdgpu-no-*

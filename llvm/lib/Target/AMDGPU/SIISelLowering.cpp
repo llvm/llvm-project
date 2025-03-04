@@ -2638,6 +2638,12 @@ SDValue SITargetLowering::getPreloadedValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
+
+  auto LoadConstant = [&](unsigned N) {
+    return DAG.getConstant(N, SDLoc(), VT);
+  };
+
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
@@ -2660,31 +2666,43 @@ SDValue SITargetLowering::getPreloadedValue(
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      if (ClusterDims && (*ClusterDims)[0] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      if (ClusterDims && (*ClusterDims)[1] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      if (ClusterDims && (*ClusterDims)[2] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[0] - 1);
       Reg = &ClusterWorkGroupMaxIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[1] - 1);
       Reg = &ClusterWorkGroupMaxIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[2] - 1);
       Reg = &ClusterWorkGroupMaxIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
@@ -5128,7 +5146,8 @@ emitScalarIdxFromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   const TargetRegisterClass *BoolRC = TRI->getBoolRC();
   Register PhiExec = MRI.createVirtualRegister(BoolRC);
   Register NewExec = MRI.createVirtualRegister(BoolRC);
-  Register CurrentIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+  Register CurrentIdxReg =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   Register CondReg = MRI.createVirtualRegister(BoolRC);
 
   if (PhiReg > 0) {
@@ -5557,7 +5576,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
 
     Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
-    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
+    Register LaneValueReg =
+        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
     bool IsWave32 = ST.isWave32();
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -6111,18 +6131,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                        ? AMDGPU::S_ADDC_U32
                        : AMDGPU::S_SUBB_U32;
     if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
-      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
           .addReg(Src0.getReg());
       Src0.setReg(RegOp0);
     }
     if (Src1.isReg() && TRI->isVectorRegister(MRI, Src1.getReg())) {
-      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp1)
           .addReg(Src1.getReg());
       Src1.setReg(RegOp1);
     }
-    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     if (TRI->isVectorRegister(MRI, Src2.getReg())) {
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp2)
           .addReg(Src2.getReg());

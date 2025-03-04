@@ -173,6 +173,7 @@ def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
 def LLVM_ATanOp : LLVM_UnaryIntrOpF<"atan">;
+def LLVM_ATan2Op : LLVM_BinarySameArgsIntrOpF<"atan2">;
 
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;

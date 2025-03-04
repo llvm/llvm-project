@@ -309,7 +309,9 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
   assert(Instr->getParent() && "Predicated instruction not in any basic block");
   auto *BlockInMask = PredRecipe->getMask();
-  auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
+  auto *MaskDef = BlockInMask->getDefiningRecipe();
+  auto *BOMRecipe = new VPBranchOnMaskRecipe(
+      BlockInMask, MaskDef ? MaskDef->getDebugLoc() : DebugLoc());
   auto *Entry =
       Plan.createVPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
 
@@ -887,6 +889,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     Blend->replaceAllUsesWith(NewBlend);
     Blend->eraseFromParent();
     recursivelyDeleteDeadRecipes(DeadMask);
+
+    /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
+    VPValue *NewMask;
+    if (NewBlend->getNumOperands() == 3 &&
+        match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
+      VPValue *Inc0 = NewBlend->getOperand(0);
+      VPValue *Inc1 = NewBlend->getOperand(1);
+      VPValue *OldMask = NewBlend->getOperand(2);
+      NewBlend->setOperand(0, Inc1);
+      NewBlend->setOperand(1, Inc0);
+      NewBlend->setOperand(2, NewMask);
+      if (OldMask->getNumUsers() == 0)
+        cast<VPInstruction>(OldMask)->eraseFromParent();
+    }
     return;
   }
 
@@ -2111,4 +2127,38 @@ void VPlanTransforms::handleUncountableEarlyExit(
       Instruction::Or, {IsEarlyExitTaken, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
+}
+
+void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+  auto *VectorPreheader = Plan.getVectorPreheader();
+  VPBuilder Builder(VectorPreheader);
+  for (VPValue *LiveIn : Plan.getLiveIns()) {
+    if (all_of(LiveIn->users(),
+               [LiveIn](VPUser *U) {
+                 return cast<VPRecipeBase>(U)->usesScalars(LiveIn);
+               }) ||
+        !LiveIn->getLiveInIRValue() ||
+        isa<Constant>(LiveIn->getLiveInIRValue()))
+      continue;
+
+    // Add explicit broadcast if the vector preheader dominates all users.
+    // TODO: Find valid insert point for all users.
+    if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
+          return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
+                 VPDT.dominates(VectorPreheader,
+                                cast<VPRecipeBase>(U)->getParent());
+        })) {
+      auto *Broadcast =
+          Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
+      LiveIn->replaceUsesWithIf(Broadcast, [LiveIn, Broadcast](VPUser &U,
+                                                               unsigned Idx) {
+        return Broadcast != &U && !cast<VPRecipeBase>(&U)->usesScalars(LiveIn);
+      });
+    }
+  }
 }

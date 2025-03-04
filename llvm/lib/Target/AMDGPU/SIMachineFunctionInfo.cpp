@@ -171,6 +171,17 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  if (F.hasFnAttribute("amdgpu-cluster-dims")) {
+    SmallVector<unsigned, 3> V =
+        AMDGPU::getIntegerVecAttribute(F, "amdgpu-cluster-dims", 3);
+    if (any_of(V, [](unsigned D) { return D == 0; })) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.emitError("invalid amdgpu-cluster-dims in " + F.getName());
+    } else {
+      ClusterDims = {V[0], V[1], V[2]};
+    }
+  }
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(

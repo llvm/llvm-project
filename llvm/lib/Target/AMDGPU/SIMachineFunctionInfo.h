@@ -482,6 +482,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
+  // Requested cluster dimensions.
+  std::optional<std::array<unsigned, 3>> ClusterDims;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -1213,6 +1216,11 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  /// \returns Requested cluster dimensions.
+  std::optional<std::array<unsigned, 3>> getClusterDims() const {
+    return ClusterDims;
+  }
 
   /// This number is computed in LowerVGPREncoding pass, and gets used by
   /// ResourceAnalsysis because it is difficult to derive this number from
