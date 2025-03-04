@@ -23943,6 +23943,63 @@ Examples:
      %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %ptr, i32 2, <8 x i1> %mask, <8 x i8> poison)
 
 
+.. _int_vp_ff_load:
+
+'``llvm.vp.ff.load``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare {<4 x float>, i32} @llvm.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %mask, i32 %evl)
+    declare {<vscale x 2 x i16>, i32} @llvm.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> %mask, i32 %evl)
+    declare {<8 x float>, i32} @llvm.vp.load.ff.v8f32.p1(ptr addrspace(1) %ptr, <8 x i1> %mask, i32 %evl)
+    declare {<vscale x 1 x i64>, i32} @llvm.vp.load.ff.nxv1i64.p6(ptr addrspace(6) %ptr, <vscale x 1 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.load.ff.*``' intrinsic is similar to '``llvm.vp.load.*``', but
+will not trap if there are not ``evl`` readable elements at the pointer.
+
+Arguments:
+""""""""""
+
+The first argument is the base pointer for the load. The second argument is a
+vector of boolean values with the same number of elements as the first return
+type.  The third is the explicit vector length of the operation. The first
+return type and underlying type of the base pointer are the same vector types.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+argument.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.load.ff``' intrinsic reads a vector from memory similar to
+'``llvm.vp.load``, but will only trap if the first lane is unreadable. If
+any other lane is unreadable, the number of successfully read lanes will
+be returned in the second return value. The result in the first return value
+for the lanes that were not successfully read is
+:ref:`poison value <poisonvalues>`. If ``evl`` is 0, no read occurs and thus no
+trap can occur for the first lane. If ``mask`` is 0 for the first lane, no
+trap occurs. This intrinsic is allowed to read fewer than ``evl`` lanes even
+if no trap would occur. If ``evl`` is non-zero, the result in the second result
+must be at least 1 even if the first lane is disabled by ``mask``.
+
+The default alignment is taken as the ABI alignment of the first return
+type as specified by the :ref:`datalayout string<langref_datalayout>`.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     %r = call {<8 x i8>, i32} @llvm.vp.load.ff.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
+
 .. _int_vp_store:
 
 '``llvm.vp.store``' Intrinsic
