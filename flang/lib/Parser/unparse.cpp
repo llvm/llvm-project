@@ -2716,7 +2716,7 @@ public:
     Put("(");
     Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
     Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
+    Walk(std::get<std::optional<OmpClauseList>>(x.t));
     Put("\n");
     EndOpenMP();
   }

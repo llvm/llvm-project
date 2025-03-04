@@ -1188,7 +1188,7 @@ TYPE_PARSER(construct<OmpInitializerClause>(
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
     verbatim("DECLARE REDUCTION"_tok),
     "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
-    Parser<OmpClauseList>{})))
+    maybe(Parser<OmpClauseList>{}))))
 
 // declare-target with list
 TYPE_PARSER(sourced(construct<OmpDeclareTargetWithList>(

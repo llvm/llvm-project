@@ -1496,11 +1496,9 @@ public:
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
-    parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        emptyList);
-    Walk(std::get<parser::OmpClauseList>(x.t));
+        std::get<std::optional<parser::OmpClauseList>>(x.t));
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1657,7 +1655,7 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &clauses);
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1752,7 +1750,7 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses) {
+    const std::optional<parser::OmpClauseList> &clauses) {
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
@@ -1794,7 +1792,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, *maybeClauses);
+        ProcessReductionSpecifier(*spec, maybeClauses);
       }
     }
     break;

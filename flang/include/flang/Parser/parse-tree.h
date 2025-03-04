@@ -4648,7 +4648,7 @@ struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
   std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      OmpClauseList>
+      std::optional<OmpClauseList>>
       t;
 };
 
