@@ -3925,9 +3925,8 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::BitCast: {
       Value *Src = U->getOperand(0);
       Type *SrcTy = Src->getType();
-      Type *SrcScalarTy = SrcTy->getScalarType();
 
-      if (!SrcScalarTy->isIntegerTy())
+      if (!SrcTy->isIntOrIntVectorTy())
         break;
 
       unsigned SrcBits = SrcTy->getScalarSizeInBits();
@@ -3935,7 +3934,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if ((SrcBits % TyBits) != 0)
         break;
 
-      if (auto *DstVTy = dyn_cast<FixedVectorType>(Ty)) {
+      if (isa<FixedVectorType>(Ty)) {
         if (auto *SrcVTy = dyn_cast<FixedVectorType>(SrcTy)) {
           APInt SrcDemandedElts =
               APInt::getSplat(SrcVTy->getNumElements(), APInt(1, 1));
