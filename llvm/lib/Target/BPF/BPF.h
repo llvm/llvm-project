@@ -22,6 +22,7 @@ class BPFTargetMachine;
 class InstructionSelector;
 class PassRegistry;
 
+ModulePass *createBPFCheckUnreachableIR();
 ModulePass *createBPFCheckAndAdjustIR();
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
@@ -34,6 +35,7 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFSubtarget &,
                                                   const BPFRegisterBankInfo &);
 
+void initializeBPFCheckUnreachableIRPass(PassRegistry &);
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
