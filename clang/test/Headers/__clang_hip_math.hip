@@ -4984,63 +4984,31 @@ extern "C" __device__ double test_rsqrt(double x) {
 
 // DEFAULT-LABEL: @test_scalblnf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// DEFAULT:       cond.true.i:
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
-// DEFAULT-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT:%.*]]
-// DEFAULT:       cond.false.i:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_scalb_f32(float noundef [[X]], float noundef 0x43E0000000000000) #[[ATTR12]]
-// DEFAULT-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT]]
-// DEFAULT:       _ZL8scalblnffl.exit:
-// DEFAULT-NEXT:    [[COND_I:%.*]] = phi contract float [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// DEFAULT-NEXT:    ret float [[COND_I]]
+// DEFAULT-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
+// DEFAULT-NEXT:    ret float [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_scalblnf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// FINITEONLY-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// FINITEONLY:       cond.true.i:
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
-// FINITEONLY-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT:%.*]]
-// FINITEONLY:       cond.false.i:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) float @__ocml_scalb_f32(float noundef nofpclass(nan inf) [[X]], float noundef nofpclass(nan inf) 0x43E0000000000000) #[[ATTR12]]
-// FINITEONLY-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT]]
-// FINITEONLY:       _ZL8scalblnffl.exit:
-// FINITEONLY-NEXT:    [[COND_I:%.*]] = phi nnan ninf contract float [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// FINITEONLY-NEXT:    ret float [[COND_I]]
+// FINITEONLY-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_scalblnf(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// APPROX-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// APPROX:       cond.true.i:
-// APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
-// APPROX-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT:%.*]]
-// APPROX:       cond.false.i:
-// APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract float @__ocml_scalb_f32(float noundef [[X]], float noundef 0x43E0000000000000) #[[ATTR12]]
-// APPROX-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT]]
-// APPROX:       _ZL8scalblnffl.exit:
-// APPROX-NEXT:    [[COND_I:%.*]] = phi contract float [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// APPROX-NEXT:    ret float [[COND_I]]
+// APPROX-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
+// APPROX-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_scalblnf(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// AMDGCNSPIRV:       cond.true.i:
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
-// AMDGCNSPIRV-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT:%.*]]
-// AMDGCNSPIRV:       cond.false.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func addrspace(4) float @__ocml_scalb_f32(float noundef [[X]], float noundef 0x43E0000000000000) #[[ATTR12]]
-// AMDGCNSPIRV-NEXT:    br label [[_ZL8SCALBLNFFL_EXIT]]
-// AMDGCNSPIRV:       _ZL8scalblnffl.exit:
-// AMDGCNSPIRV-NEXT:    [[COND_I:%.*]] = phi contract float [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// AMDGCNSPIRV-NEXT:    ret float [[COND_I]]
+// AMDGCNSPIRV-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call addrspace(4) i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
+// AMDGCNSPIRV-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_scalblnf(float x, long int y) {
   return scalblnf(x, y);
@@ -5048,63 +5016,31 @@ extern "C" __device__ float test_scalblnf(float x, long int y) {
 
 // DEFAULT-LABEL: @test_scalbln(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// DEFAULT-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// DEFAULT:       cond.true.i:
-// DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
-// DEFAULT-NEXT:    br label [[_ZL7SCALBLNDL_EXIT:%.*]]
-// DEFAULT:       cond.false.i:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_scalb_f64(double noundef [[X]], double noundef 0x43E0000000000000) #[[ATTR12]]
-// DEFAULT-NEXT:    br label [[_ZL7SCALBLNDL_EXIT]]
-// DEFAULT:       _ZL7scalblndl.exit:
-// DEFAULT-NEXT:    [[COND_I:%.*]] = phi contract double [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// DEFAULT-NEXT:    ret double [[COND_I]]
+// DEFAULT-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// DEFAULT-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
 //
 // FINITEONLY-LABEL: @test_scalbln(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// FINITEONLY-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// FINITEONLY:       cond.true.i:
-// FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
-// FINITEONLY-NEXT:    br label [[_ZL7SCALBLNDL_EXIT:%.*]]
-// FINITEONLY:       cond.false.i:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract nofpclass(nan inf) double @__ocml_scalb_f64(double noundef nofpclass(nan inf) [[X]], double noundef nofpclass(nan inf) 0x43E0000000000000) #[[ATTR12]]
-// FINITEONLY-NEXT:    br label [[_ZL7SCALBLNDL_EXIT]]
-// FINITEONLY:       _ZL7scalblndl.exit:
-// FINITEONLY-NEXT:    [[COND_I:%.*]] = phi nnan ninf contract double [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// FINITEONLY-NEXT:    ret double [[COND_I]]
+// FINITEONLY-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_scalbln(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// APPROX-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// APPROX:       cond.true.i:
-// APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
-// APPROX-NEXT:    br label [[_ZL7SCALBLNDL_EXIT:%.*]]
-// APPROX:       cond.false.i:
-// APPROX-NEXT:    [[CALL_I:%.*]] = tail call contract double @__ocml_scalb_f64(double noundef [[X]], double noundef 0x43E0000000000000) #[[ATTR12]]
-// APPROX-NEXT:    br label [[_ZL7SCALBLNDL_EXIT]]
-// APPROX:       _ZL7scalblndl.exit:
-// APPROX-NEXT:    [[COND_I:%.*]] = phi contract double [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// APPROX-NEXT:    ret double [[COND_I]]
+// APPROX-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// APPROX-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
+// APPROX-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_scalbln(
 // AMDGCNSPIRV-NEXT:  entry:
-// AMDGCNSPIRV-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[Y:%.*]], 9223372036854775807
-// AMDGCNSPIRV-NEXT:    br i1 [[CMP_NOT_I]], label [[COND_FALSE_I:%.*]], label [[COND_TRUE_I:%.*]]
-// AMDGCNSPIRV:       cond.true.i:
-// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[Y]] to i32
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract addrspace(4) double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
-// AMDGCNSPIRV-NEXT:    br label [[_ZL7SCALBLNDL_EXIT:%.*]]
-// AMDGCNSPIRV:       cond.false.i:
-// AMDGCNSPIRV-NEXT:    [[CALL_I:%.*]] = tail call contract spir_func addrspace(4) double @__ocml_scalb_f64(double noundef [[X]], double noundef 0x43E0000000000000) #[[ATTR12]]
-// AMDGCNSPIRV-NEXT:    br label [[_ZL7SCALBLNDL_EXIT]]
-// AMDGCNSPIRV:       _ZL7scalblndl.exit:
-// AMDGCNSPIRV-NEXT:    [[COND_I:%.*]] = phi contract double [ [[TMP0]], [[COND_TRUE_I]] ], [ [[CALL_I]], [[COND_FALSE_I]] ]
-// AMDGCNSPIRV-NEXT:    ret double [[COND_I]]
+// AMDGCNSPIRV-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call addrspace(4) i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
+// AMDGCNSPIRV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = tail call contract noundef addrspace(4) double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
+// AMDGCNSPIRV-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_scalbln(double x, long int y) {
   return scalbln(x, y);
