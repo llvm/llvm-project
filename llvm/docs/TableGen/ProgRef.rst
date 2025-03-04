@@ -226,10 +226,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !initialized !interleave  !isa         !le          !listconcat
                : !listflatten !listremove  !listsplat   !logtwo      !lt
                : !mul         !ne          !not         !or          !range
-               : !repr        !setdagarg   !setdagname  !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+               : !repr        !select      !setdagarg   !setdagname  !setdagop
+               : !shl         !size        !sra         !srl         !strconcat
+               : !sub         !subst       !substr      !tail        !tolower
+               : !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1919,6 +1919,10 @@ and non-0 as true.
 ``!repr(``\ *value*\ ``)``
     Represents *value* as a string. String format for the value is not
     guaranteed to be stable. Intended for debugging purposes only.
+
+``!select<``\ *type*\ ``>(``\ *regex*\ ``)``
+    This operator produces a list of records whose type is *type* and record
+    names match regular expression *regex*.
 
 ``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
     This operator produces a DAG node with the same operator and arguments as
