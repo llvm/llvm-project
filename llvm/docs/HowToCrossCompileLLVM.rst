@@ -19,14 +19,14 @@ existing ``clang`` install as the host compiler.
   64-bit RISC-V from an x86_64 host. But should be equally applicable to any
   other target.
 
-Setting up an appropriate sysroot
----------------------------------
+Setting up a sysroot
+--------------------
 
 You will need a sysroot that contains essential build dependencies compiled
 for the target architecture. In this case, we'll be using CMake and Ninja on a
 Linux host and compiling against a Debian sysroot. Detailed instructions on
 producing sysroots are outside of the scope of this documentation, but the
-following should work on any Linux distribution with the following
+following instructions should work on any Linux distribution with these
 pre-requisites:
 
  * ``binfmt_misc`` configured to execute ``qemu-user`` for binaries of the
@@ -37,7 +37,7 @@ pre-requisites:
  * The ``debootstrap`` tool. This is available in most distributions.
 
 The following snippet will initialise sysroots for 32-bit Arm, AArch64, and
-RISC-V (you can of course just pick the target you're interested in):
+64-bit RISC-V (you can of course just pick the target you're interested in):
 
    .. code-block:: bash
 
@@ -54,8 +54,8 @@ any absolute symlinks to relative ones:
     sudo chroot sysroot-of-your-choice symlinks -cr .
 
 
-Configuring CMake
------------------
+Configuring CMake and building
+------------------------------
 
 For more information on how to configure CMake for LLVM/Clang,
 see :doc:`CMake`. Following CMake's recommended practice, we will create a
@@ -66,7 +66,8 @@ The following assumes you have a system install of ``clang`` and ``lld`` that
 will be used for cross compiling and that the listed commands are executed
 from within the root of a checkout of the ``llvm-project`` git repository.
 
-First create a appropriate toolchain file:
+First, set variables in your shell session that will be used throughout the
+build instructions:
 
    .. code-block:: bash
 
@@ -74,6 +75,19 @@ First create a appropriate toolchain file:
     TARGET=aarch64-linux-gnu
     CFLAGS=""
 
+To customise details of the compilation target or choose a different
+architecture altogether, change the ``SYSROOT``,
+``TARGET``, and ``CFLAGS`` variables to something matching your target. For
+example, for 64-bit RISC-V you might set
+``SYSROOT=$HOME/sysroot-deb-riscv64-unstable``, ``TARGET=riscv64-linux-gnu``
+and ``CFLAGS="-march=rva20u64"``. Refer to documentation such as your target's
+compiler documentation or processor manual for guidance on which ``CFLAGS``
+settings may be appropriate. The specified ``TARGET`` should match the triple
+used within the sysroot (i.e. ``$SYSROOT/usr/lib/$TARGET`` should exist).
+
+Then execute the following snippet to create a toolchain file:
+
+   .. code-block:: bash
     cat - <<EOF > $TARGET-clang.cmake
     set(CMAKE_SYSTEM_NAME Linux)
     set(CMAKE_SYSROOT "$SYSROOT")
@@ -90,13 +104,8 @@ First create a appropriate toolchain file:
     set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
     EOF
 
-To customise details of the compilation target or choose a different
-architecture altogether, just change the ``SYSROOT``,
-``TARGET``, and ``CFLAGS`` variables before copy and pasting the rest (e.g.
-for RISC-V you might set ``SYSROOT=$HOME/sysroot-deb-riscv64-unstable``,
-``TARGET=riscv64-linux-gnu``, ``CFLAGS="-march=rva20u64"``).
 
-Then configure and build with ``cmake`` invocations such as the following:
+Then configure and build by invoking ``cmake``:
 
    .. code-block:: bash
 
@@ -110,8 +119,8 @@ Then configure and build with ``cmake`` invocations such as the following:
       -B build/$TARGET
     cmake --build build/$TARGET
 
-The following options from the toolchain file and ``cmake`` invocation above
-are worth highlighting:
+These options from the toolchain file and ``cmake`` invocation above are
+important:
 
  * ``CMAKE_SYSTEM_NAME``: Perhaps surprisingly, explicitly setting this
    variable `causes CMake to set
@@ -121,21 +130,25 @@ are worth highlighting:
    within the sysroot (i.e. ``$SYSROOT/usr/lib/$TARGET`` should exist).
  * ``CMAKE_FIND_ROOT_PATH_MODE_*``: These `control the search behaviour for
    finding libraries, includes or binaries
-   <https://cmake.org/cmake/help/book/mastering-cmake/chapter/Cross%20Compiling%20With%20CMake.html#finding-external-libraries-programs-and-other-files>`_
-   and are set so as to avoid files for the host being used in the build.
- * ``LLVM_HOST_TRIPLE``: Specifies the target triple the built LLVM will run
-   on, which also implicitly sets other defaults such as
-   ``LLVM_DEFAULT_TARGET_TRIPLE``.
- * ``CMAKE_SYSROOT``: Gives the path to the sysroot containing libraries and
-   headers for the target, as generated earlier in this document.
- * ``CMAKE_INSTALL_PREFIX``: Unnecessary if you don't intend to use the
-   ``install`` target. But setting it avoids installing binaries compiled for
-   the target across system directories on the host system.
+   <https://cmake.org/cmake/help/book/mastering-cmake/chapter/Cross%20Compiling%20With%20CMake.html#finding-external-libraries-programs-and-other-files>`_.
+   Setting these prevents files for the host being used in the build.
+ * ``LLVM_HOST_TRIPLE``: Specifies the target triple of the system the built
+   LLVM will run on, which also implicitly sets other defaults such as
+   ``LLVM_DEFAULT_TARGET_TRIPLE``. For example, if you are using an x86_64
+   host to compile for RISC-V, this will be a RISC-V triple.
+ * ``CMAKE_SYSROOT``: The path to the sysroot containing libraries and headers
+   for the target.
+ * ``CMAKE_INSTALL_PREFIX``: Setting this avoids installing binaries compiled
+   for the target system into system directories for the host system. It is
+   not required unless you are going to use the ``install`` target.
 
 See `LLVM's build documentation
 <https://llvm.org/docs/CMake.html#frequently-used-cmake-variables>`_ for more
 guidance on CMake variables (e.g. ``LLVM_TARGETS_TO_BUILD`` may be useful if
 your cross-compiled binaries only need to support compiling for one target).
+
+Testing the just-built compiler
+-------------------------------
 
 Assuming you have ``qemu-user`` installed you can test the produced target
 binaries either by relying on binfmt_misc (as was necessary for debootstrap)
