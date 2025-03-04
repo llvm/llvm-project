@@ -9,7 +9,6 @@
 #ifndef LLDB_UTILITY_SDK_H
 #define LLDB_UTILITY_SDK_H
 
-#include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -24,7 +23,6 @@ namespace lldb_private {
 /// An abstraction for Xcode-style SDKs that works like \ref ArchSpec.
 class XcodeSDK {
   std::string m_name;
-  FileSpec m_sysroot;
 
 public:
   /// Different types of Xcode SDKs.
@@ -64,8 +62,6 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
-  XcodeSDK(std::string name, FileSpec sysroot)
-      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {}
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
@@ -83,7 +79,6 @@ public:
   llvm::VersionTuple GetVersion() const;
   Type GetType() const;
   llvm::StringRef GetString() const;
-  const FileSpec &GetSysroot() const;
   /// Whether this Xcode SDK supports Swift.
   bool SupportsSwift() const;
 
