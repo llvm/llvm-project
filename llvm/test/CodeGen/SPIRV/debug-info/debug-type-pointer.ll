@@ -81,8 +81,6 @@
 
 ; CHECK-OPTION-NOT: DebugTypePointer
 
-%struct_wrapper = type { i32 }
-
 @gi0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !0
 @gv0 = dso_local addrspace(1) global ptr addrspace(4) null, align 4, !dbg !5
 
