@@ -97,10 +97,11 @@ namespace llvm {
       bool PeelFirst : 1; // Peeling the first iteration will break dependence.
       bool PeelLast  : 1; // Peeling the last iteration will break the dependence.
       bool Splitable : 1; // Splitting the loop will break dependence.
+      bool SeparateLoops : 1; // Is performed across two separate loop nests.
       const SCEV *Distance = nullptr; // NULL implies no distance available.
       DVEntry()
           : Direction(ALL), Scalar(true), PeelFirst(false), PeelLast(false),
-            Splitable(false) {}
+            Splitable(false), SeparateLoops(false) {}
     };
 
     /// getSrc - Returns the source instruction for this dependence.
@@ -181,6 +182,10 @@ namespace llvm {
     /// isSplitable - Returns true if splitting this loop will break
     /// the dependence.
     virtual bool isSplitable(unsigned Level) const { return false; }
+
+    /// inSeparateLoops - Returns true if this level is performed across
+    /// two separate loop nests.
+    virtual bool inSeparateLoops(unsigned Level) const { return false; }
 
     /// isScalar - Returns true if a particular level is scalar; that is,
     /// if no subscript in the source or destination mention the induction
@@ -274,6 +279,10 @@ namespace llvm {
     /// isSplitable - Returns true if splitting the loop will break
     /// the dependence.
     bool isSplitable(unsigned Level) const override;
+
+    /// inSeparateLoops - Returns true if this level is performed across
+    /// two separate loop nests.
+    bool inSeparateLoops(unsigned Level) const override;
 
     /// isScalar - Returns true if a particular level is scalar; that is,
     /// if no subscript in the source or destination mention the induction
@@ -405,7 +414,8 @@ namespace llvm {
       const SCEV *A;
       const SCEV *B;
       const SCEV *C;
-      const Loop *AssociatedLoop;
+      const Loop *AssociatedSrcLoop;
+      const Loop *AssociatedDstLoop;
 
     public:
       /// isEmpty - Return true if the constraint is of kind Empty.
@@ -449,18 +459,25 @@ namespace llvm {
       /// Otherwise assert.
       const SCEV *getD() const;
 
-      /// getAssociatedLoop - Returns the loop associated with this constraint.
-      const Loop *getAssociatedLoop() const;
+      /// getAssociatedSrcLoop - Returns the source loop associated with this
+      /// constraint.
+      const Loop *getAssociatedSrcLoop() const;
+
+      /// getAssociatedDstLoop - Returns the destination loop associated with
+      /// this constraint.
+      const Loop *getAssociatedDstLoop() const;
 
       /// setPoint - Change a constraint to Point.
-      void setPoint(const SCEV *X, const SCEV *Y, const Loop *CurrentLoop);
+      void setPoint(const SCEV *X, const SCEV *Y, const Loop *CurrentSrcLoop,
+                    const Loop *CurrentDstLoop);
 
       /// setLine - Change a constraint to Line.
-      void setLine(const SCEV *A, const SCEV *B,
-                   const SCEV *C, const Loop *CurrentLoop);
+      void setLine(const SCEV *A, const SCEV *B, const SCEV *C,
+                   const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop);
 
       /// setDistance - Change a constraint to Distance.
-      void setDistance(const SCEV *D, const Loop *CurrentLoop);
+      void setDistance(const SCEV *D, const Loop *CurrentSrcLoop,
+                       const Loop *CurrentDstLoop);
 
       /// setEmpty - Change a constraint to Empty.
       void setEmpty();
@@ -473,6 +490,10 @@ namespace llvm {
       void dump(raw_ostream &OS) const;
     };
 
+    /// Returns true if two loops are the same or they have the same upperbound
+    /// and depth
+    bool areLoopsSimilar(const Loop *SrcLoop, const Loop *DstLoop) const;
+
     /// establishNestingLevels - Examines the loop nesting of the Src and Dst
     /// instructions and establishes their shared loops. Sets the variables
     /// CommonLevels, SrcLevels, and MaxLevels.
@@ -484,8 +505,8 @@ namespace llvm {
     /// This lets us allocate vectors MaxLevels in length, with room for every
     /// distinct loop referenced in both the source and destination subscripts.
     /// The variable SrcLevels is the nesting depth of the source instruction.
-    /// It's used to help calculate distinct loops referenced by the destination.
-    /// Here's the map from loops to levels:
+    /// It's used to help calculate distinct loops referenced by the
+    /// destination. Here's the map from loops to levels:
     ///            0 - unused
     ///            1 - outermost common loop
     ///          ... - other common loops
@@ -523,10 +544,22 @@ namespace llvm {
     ///     e - 5
     ///     f - 6
     ///     g - 7 = MaxLevels
-    void establishNestingLevels(const Instruction *Src,
-                                const Instruction *Dst);
+    /// If ConsiderSeparateLoops is true then we also want to consider similar
+    /// seperate loops. Assume that loop nests at level c and e are similar,
+    /// meaning that they have the same upperbound and depth. Then we consider
+    /// them as a common level.
+    ///     a      - 1
+    ///     b      - 2
+    ///     <c, e> - 3 = CommonLevels
+    ///     d      - 4 = SrcLevels
+    ///     f      - 5
+    ///     g      - 6 = MaxLevels
+    /// SeparateLevels means that how many of the last common levels are
+    /// separated, which is 1 in this case.
+    void establishNestingLevels(const Instruction *Src, const Instruction *Dst,
+                                bool ConsiderSeparateLoops = false);
 
-    unsigned CommonLevels, SrcLevels, MaxLevels;
+    unsigned CommonLevels, SrcLevels, MaxLevels, SeparateLevels;
 
     /// mapSrcLoop - Given one of the loops containing the source, return
     /// its level index in our numbering scheme.
@@ -665,13 +698,10 @@ namespace llvm {
     /// Returns true if any possible dependence is disproved.
     /// If there might be a dependence, returns false.
     /// Sets appropriate direction and distance.
-    bool strongSIVtest(const SCEV *Coeff,
-                       const SCEV *SrcConst,
-                       const SCEV *DstConst,
-                       const Loop *CurrentLoop,
-                       unsigned Level,
-                       FullDependence &Result,
-                       Constraint &NewConstraint) const;
+    bool strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
+                       const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                       const Loop *CurrentDstLoop, unsigned Level,
+                       FullDependence &Result, Constraint &NewConstraint) const;
 
     /// weakCrossingSIVtest - Tests the weak-crossing SIV subscript pair
     /// (Src and Dst) for dependence.
@@ -683,13 +713,10 @@ namespace llvm {
     /// Sets appropriate direction entry.
     /// Set consistent to false.
     /// Marks the dependence as splitable.
-    bool weakCrossingSIVtest(const SCEV *SrcCoeff,
-                             const SCEV *SrcConst,
-                             const SCEV *DstConst,
-                             const Loop *CurrentLoop,
-                             unsigned Level,
-                             FullDependence &Result,
-                             Constraint &NewConstraint,
+    bool weakCrossingSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
+                             const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                             const Loop *CurrentDstLoop, unsigned Level,
+                             FullDependence &Result, Constraint &NewConstraint,
                              const SCEV *&SplitIter) const;
 
     /// ExactSIVtest - Tests the SIV subscript pair
@@ -701,13 +728,10 @@ namespace llvm {
     /// If there might be a dependence, returns false.
     /// Sets appropriate direction entry.
     /// Set consistent to false.
-    bool exactSIVtest(const SCEV *SrcCoeff,
-                      const SCEV *DstCoeff,
-                      const SCEV *SrcConst,
-                      const SCEV *DstConst,
-                      const Loop *CurrentLoop,
-                      unsigned Level,
-                      FullDependence &Result,
+    bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
+                      const SCEV *SrcConst, const SCEV *DstConst,
+                      const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
+                      unsigned Level, FullDependence &Result,
                       Constraint &NewConstraint) const;
 
     /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
@@ -720,11 +744,9 @@ namespace llvm {
     /// Sets appropriate direction entry.
     /// Set consistent to false.
     /// If loop peeling will break the dependence, mark appropriately.
-    bool weakZeroSrcSIVtest(const SCEV *DstCoeff,
-                            const SCEV *SrcConst,
-                            const SCEV *DstConst,
-                            const Loop *CurrentLoop,
-                            unsigned Level,
+    bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
+                            const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                            const Loop *CurrentDstLoop, unsigned Level,
                             FullDependence &Result,
                             Constraint &NewConstraint) const;
 
@@ -738,11 +760,9 @@ namespace llvm {
     /// Sets appropriate direction entry.
     /// Set consistent to false.
     /// If loop peeling will break the dependence, mark appropriately.
-    bool weakZeroDstSIVtest(const SCEV *SrcCoeff,
-                            const SCEV *SrcConst,
-                            const SCEV *DstConst,
-                            const Loop *CurrentLoop,
-                            unsigned Level,
+    bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
+                            const SCEV *DstConst, const Loop *CurrentSrcLoop,
+                            const Loop *CurrentDstLoop, unsigned Level,
                             FullDependence &Result,
                             Constraint &NewConstraint) const;
 
