@@ -8854,10 +8854,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     // as alternate ops.
     if (NumParts >= VL.size())
       return false;
-    if (LocalState.getMainOp()->isBinaryOp() &&
-        LocalState.getAltOp()->isBinaryOp() &&
-        (LocalState.isShiftOp() || LocalState.isBitwiseLogicOp() ||
-         LocalState.isAddSubLikeOp() || LocalState.isMulDivLikeOp())) {
+    if ((LocalState.getMainOp()->isBinaryOp() &&
+         LocalState.getAltOp()->isBinaryOp() &&
+         (LocalState.isShiftOp() || LocalState.isBitwiseLogicOp() ||
+          LocalState.isAddSubLikeOp() || LocalState.isMulDivLikeOp())) ||
+        (LocalState.getMainOp()->isCast() && LocalState.getAltOp()->isCast()) ||
+        (LocalState.getMainOp()->isUnaryOp() &&
+         LocalState.getAltOp()->isUnaryOp())) {
       constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
       InstructionCost InsertCost = ::getShuffleCost(
           TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
