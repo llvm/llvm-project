@@ -293,6 +293,94 @@ void fullCommentToMarkupDocument(
                               SymbolParameters);
 }
 
+class ParamDocStringVisitor
+    : public comments::ConstCommentVisitor<ParamDocStringVisitor> {
+public:
+  ParamDocStringVisitor(const comments::FullComment *FC, StringRef ParamName,
+                        const comments::CommandTraits &Traits)
+      : ParamName(ParamName), Traits(Traits) {
+    if (!FC)
+      return;
+
+    for (const auto *Block : FC->getBlocks()) {
+      visit(Block);
+      if (ParamCommentFound)
+        break;
+    }
+  }
+
+  void visitParamCommandComment(const comments::ParamCommandComment *P) {
+    if (P->getParamNameAsWritten() == ParamName) {
+      ParamCommentFound = true;
+      visit(P->getParagraph());
+    }
+  }
+
+  void visitParagraphComment(const comments::ParagraphComment *C) {
+    if (!ParamCommentFound)
+      return;
+    for (const auto *Child = C->child_begin(); Child != C->child_end();
+         ++Child) {
+      visit(*Child);
+    }
+  }
+
+  void visitTextComment(const comments::TextComment *C) {
+    if (!ParamCommentFound)
+      return;
+    if (Result.empty())
+      // When hovering over the parameter, the documentation is parsed the same
+      // way as any other comment. This means that the brief command is shown
+      // more prominently as the paragraph in the hover.
+      // Hence we add the brief command to the beginning of the documentation to
+      // reuse the same behaviour.
+      Result = "\\brief";
+
+    Result += " " + C->getText().trim().str();
+  }
+
+  void visitInlineCommandComment(const comments::InlineCommandComment *C) {
+    if (!ParamCommentFound)
+      return;
+
+    if (Result.empty())
+      // When hovering over the parameter, the documentation is parsed the same
+      // way as any other comment. This means that the brief command is shown
+      // more prominently as the paragraph in the hover.
+      // Hence we add the brief command to the beginning of the documentation to
+      // reuse the same behaviour.
+      Result = "\\brief";
+
+    Result += " ";
+    Result += C->getCommandMarker() == (comments::CommandMarkerKind::CMK_At)
+                  ? "@"
+                  : "\\" + C->getCommandName(Traits).str();
+
+    if (C->getNumArgs() > 0) {
+      for (unsigned I = 0; I < C->getNumArgs(); ++I) {
+        Result += " " + C->getArgText(I).str();
+      }
+    }
+  }
+
+  StringRef getParamDocString() const { return Result; }
+
+private:
+  StringRef ParamName;
+  std::string Result;
+  bool ParamCommentFound = false;
+  const comments::CommandTraits &Traits;
+};
+
+std::string getParamDocString(const comments::FullComment *FC,
+                              StringRef ParamName,
+                              const comments::CommandTraits &Traits) {
+  if (!FC)
+    return "";
+  ParamDocStringVisitor PDSV(FC, ParamName, Traits);
+  return PDSV.getParamDocString().str();
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const SymbolPrintedType &T) {
   OS << T.Type;

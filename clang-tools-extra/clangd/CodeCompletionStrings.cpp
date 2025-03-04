@@ -9,10 +9,12 @@
 #include "CodeCompletionStrings.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentLexer.h"
 #include "clang/AST/CommentParser.h"
 #include "clang/AST/CommentSema.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -104,14 +106,25 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, &Decl);
-  if (!RC)
-    return "";
-  // Sanity check that the comment does not come from the PCH. We choose to not
-  // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc =
-      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+
+  std::string Doc;
+
+  if (isa<ParmVarDecl>(Decl)) {
+    // Parameters are documented in the function comment.
+    if (const auto *FD = dyn_cast<FunctionDecl>(Decl.getDeclContext()))
+      Doc = getParamDocString(Ctx.getCommentForDecl(FD, nullptr),
+                              Decl.getName(), Ctx.getCommentCommandTraits());
+  } else {
+
+    const RawComment *RC = getCompletionComment(Ctx, &Decl);
+    if (!RC)
+      return "";
+    // Sanity check that the comment does not come from the PCH. We choose to
+    // not write them into PCH, because they are racy and slow to load.
+    assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+    Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  }
+
   if (!looksLikeDocComment(Doc))
     return "";
   // Clang requires source to be UTF-8, but doesn't enforce this in comments.

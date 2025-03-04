@@ -82,6 +82,10 @@ void fullCommentToMarkupDocument(
     std::optional<SymbolPrintedType> SymbolReturnType,
     const std::optional<std::vector<SymbolParam>> &SymbolParameters);
 
+std::string getParamDocString(const comments::FullComment *FC,
+                              StringRef ParamName,
+                              const comments::CommandTraits &Traits);
+
 } // namespace clangd
 } // namespace clang
 

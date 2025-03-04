@@ -4265,6 +4265,104 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
   EXPECT_TRUE(H->Value);
   EXPECT_TRUE(H->Type);
 }
+
+TEST(Hover, Function) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+      {R"cpp(/// Function doc
+      void foo(int [[^a]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int a";
+         HI.Documentation = "";
+       }},
+      {R"cpp(/// Function doc
+      /// @param a this is doc for a
+      void foo(int [[^a]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int a";
+         HI.Documentation = "\\brief this is doc for a";
+       }},
+      {R"cpp(/// Function doc
+      /// @param b this is doc for b
+      void foo(int [[^a]], int b);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int a";
+         HI.Documentation = "";
+       }},
+      {R"cpp(/// Function doc
+      /// @param b this is doc for \p b
+      void foo(int a, int [[^b]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "b";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int b";
+         HI.Documentation = "\\brief this is doc for \\p b";
+       }},
+  };
+
+  // Create a tiny index, so tests above can verify documentation is fetched.
+  Symbol IndexSym = func("indexSymbol");
+  IndexSym.Documentation = "comment from index";
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(IndexSym);
+  auto Index =
+      MemIndex::build(std::move(Symbols).build(), RefSlab(), RelationSlab());
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.ShowAKA = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), Index.get());
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+
+    SCOPED_TRACE(H->present().asPlainText());
+    EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
+    EXPECT_EQ(H->LocalScope, Expected.LocalScope);
+    EXPECT_EQ(H->Name, Expected.Name);
+    EXPECT_EQ(H->Kind, Expected.Kind);
+    EXPECT_EQ(H->Documentation, Expected.Documentation);
+    EXPECT_EQ(H->Definition, Expected.Definition);
+    EXPECT_EQ(H->Type, Expected.Type);
+    EXPECT_EQ(H->ReturnType, Expected.ReturnType);
+    EXPECT_EQ(H->Parameters, Expected.Parameters);
+    EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
+    EXPECT_EQ(H->SymRange, Expected.SymRange);
+    EXPECT_EQ(H->Value, Expected.Value);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
