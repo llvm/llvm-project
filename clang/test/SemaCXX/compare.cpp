@@ -233,10 +233,10 @@ void test4(short s) {
   // All negative shorts are cast towards the max unsigned range.  Relation
   // comparisons are possible, but equality comparisons are tautological.
   const unsigned A = 32768;
-  void (s < A); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s > A); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s <= A); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s >= A); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
+  void (s < A); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
+  void (s > A); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
+  void (s <= A); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
+  void (s >= A); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
 
   void (s == A); // expected-warning{{comparison of constant 32768 with expression of type 'short' is always false}}
   void (s != A); // expected-warning{{comparison of constant 32768 with expression of type 'short' is always true}}
@@ -245,12 +245,12 @@ void test4(short s) {
   // unsigned.  Likewise, a negative one short can also be converted to max
   // unsigned.
   const unsigned B = -1;
-  void (s < B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
+  void (s < B); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
   void (s > B); // expected-warning{{comparison 'short' > 4294967295 is always false}}
   void (s <= B); // expected-warning{{comparison 'short' <= 4294967295 is always true}}
-  void (s >= B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s == B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
-  void (s != B); // expected-warning{{comparison of integers of different signs: 'short' and 'const unsigned int'}}
+  void (s >= B); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
+  void (s == B); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
+  void (s != B); // expected-warning{{comparison of integers of different signs: 'short' and 'unsigned int'}}
 
 }
 
