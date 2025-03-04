@@ -34,8 +34,15 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-
 #define DEBUG_TYPE "spirv-isel"
+#ifdef _MSC_VER
+    #define NO_OPTIMIZE __pragma(optimize("", off))
+#elif defined(__GNUC__) || defined(__clang__)
+    #define NO_OPTIMIZE __attribute__((optimize("O0")))
+#else
+    #define NO_OPTIMIZE
+#endif
+
 
 using namespace llvm;
 namespace CL = SPIRV::OpenCLExtInst;
@@ -4127,22 +4134,25 @@ bool SPIRVInstructionSelector::selectIsFpclass(Register ResVReg, const SPIRVType
     }
 
 
-    //Instruction Template
+    // Instruction Template
     auto instructionTemplate = [&](unsigned Opcode, SPIRVType* DestType, SPIRVType* ReturnType, auto&&... args) -> Register {
       Register result = MRI->createVirtualRegister(GR.getRegClass(DestType));
       auto &Instr = MIRBuilder.buildInstr(Opcode)
                       .addDef(result)
                       .addUse(GR.getSPIRVTypeID(DestType));
-
-      ([&](auto&& arg) __attribute__((optimize("O0"))) {
-          if(std::is_integral_v<std::decay_t<decltype(arg)>>) {
-              Instr.addImm(arg);
-          }else{
-              Instr.addUse(arg);
-          }
-      }(args), ...);
+                      
+      (void)std::initializer_list<int>{
+        ([&](auto&& arg) NO_OPTIMIZE {
+            if constexpr (std::is_integral_v<std::decay_t<decltype(arg)>>) {
+                Instr.addImm(arg);
+            } else {
+                Instr.addUse(arg);
+            }
+        }(args), 0)...
+      };
       return result;
     };
+
     //function to check if the sign bit is set or not
     //1 sign is set if 0 sign is not set
     //inf && sign == 1 then -ve infinity
@@ -4298,7 +4308,7 @@ bool SPIRVInstructionSelector::selectIsFpclass(Register ResVReg, const SPIRVType
     }
     //check if the number is Zero
     if(FPClass & fcZero){
-      auto SetUpCMPToZero = [&](Register BitCastToInt,
+      auto SetUpCMPToZero = [&, bitWidth](Register BitCastToInt,
                                 bool IsPositive) -> Register {
         APInt ZeroInt = APInt::getZero(bitWidth);
         Register constantZero;
