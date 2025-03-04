@@ -5435,17 +5435,17 @@ define hidden void @extract_v6i16(ptr addrspace(1) %in0, ptr addrspace(1) %in1, 
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_clause 0x3
-; GFX13-NEXT:    global_load_u16 v2, v[0:1], off offset:6
-; GFX13-NEXT:    global_load_u16 v3, v[0:1], off
-; GFX13-NEXT:    global_load_u16 v8, v[0:1], off offset:2
-; GFX13-NEXT:    global_load_u16 v0, v[0:1], off offset:4
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_load_u16 v2, v[0:1], off
+; GFX13-NEXT:    global_load_u16 v3, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
-; GFX13-NEXT:    v_perm_b32 v1, v8, v3, 0x5040100
+; GFX13-NEXT:    global_load_d16_hi_b16 v2, v[0:1], off offset:2
+; GFX13-NEXT:    s_wait_loadcnt 0x1
+; GFX13-NEXT:    global_load_d16_hi_b16 v3, v[0:1], off offset:6
+; GFX13-NEXT:    s_wait_loadcnt 0x1
+; GFX13-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX13-NEXT:    global_store_b32 v[4:5], v1, off
-; GFX13-NEXT:    global_store_b32 v[6:7], v0, off
+; GFX13-NEXT:    global_store_b32 v[6:7], v3, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <6 x i16>, ptr addrspace(1) %in0, align 2
   %el0 = extractelement <6 x i16> %vec, i32 0
@@ -5700,12 +5700,11 @@ define hidden void @trunc_vector(ptr addrspace(1) %in0, ptr addrspace(1) %in1, p
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    global_load_u16 v2, v[0:1], off
-; GFX13-NEXT:    global_load_u16 v0, v[0:1], off offset:4
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
-; GFX13-NEXT:    global_store_b32 v[4:5], v0, off
+; GFX13-NEXT:    global_load_d16_hi_b16 v2, v[0:1], off offset:4
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = load <2 x i32>, ptr addrspace(1) %in0, align 2
   %tvec = trunc <2 x i32> %vec to <2 x i16>

@@ -2172,7 +2172,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureSupportsSRAMECC,
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
