@@ -28,7 +28,9 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an immediate value into a register.
 static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
-  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the Register"); 
+  // 0 <= Value.getZExtValue() < 2**16
+  assert(Value.getZExtValue() < (1 << 16) &&
+         "Value must be in the range of the immediate opcode");
   return MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
@@ -36,7 +38,9 @@ static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
                                const APInt &Value) {
-  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the ZPR Register");
+  // 0 <= Value.getZExtValue() < 2**13
+  assert(Value.getZExtValue() < (1 << 13) &&
+         "Value must be in the range of the immediate opcode");
   // For ZPR, we typically use DUPM instruction to load immediate values
   return MCInstBuilder(AArch64::DUPM_ZI)
       .addReg(Reg)
@@ -45,14 +49,13 @@ static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
                                const APInt &Value) {
-  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the PPR Register"); 
   // For PPR, we typically use PTRUE instruction to set predicate registers
   return MCInstBuilder(AArch64::PTRUE_B)
       .addReg(Reg)
       .addImm(31); // All lanes true for 16 bits
 }
 
-// Generates instruction to load an FP immediate value into a register.
+// Fetch base-instruction to load an FP immediate value into a register.
 static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
   case 64:
@@ -63,11 +66,23 @@ static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   llvm_unreachable("Invalid Value Width");
 }
 
-
 // Generates instruction to load an FP immediate value into a register.
 static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
-                            const APInt &Value) {
-  assert(Value.getBitWidth() <= RegBitWidth && "Value must fit in the FP Register");
+                              const APInt &Value) {
+  // -31 <= Value.getZExtValue() <= 31
+  assert(Value.getZExtValue() <= 31 &&
+         "Value must be in the range of the immediate opcode");
+  return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
+      .addReg(Reg)
+      .addImm(Value.getZExtValue());
+}
+
+// Generates instruction to load an FP128 immediate value into a register.
+static MCInst loadFP128Immediate(MCRegister Reg, unsigned RegBitWidth,
+                                 const APInt &Value) {
+  // 0 <= Value.getZExtValue() < 2**8
+  assert(Value.getZExtValue() < (1 << 8) &&
+         "Value must be in the range of the immediate opcode");
   return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
@@ -90,14 +105,14 @@ private:
     if (AArch64::GPR64RegClass.contains(Reg))
       return {loadImmediate(Reg, 64, Value)};
     if (AArch64::PPRRegClass.contains(Reg))
-      return {loadPPRImmediate(Reg, 16, Value)}; 
-    if (AArch64::FPR64RegClass.contains(Reg)) 
+      return {loadPPRImmediate(Reg, 16, Value)};
+    if (AArch64::FPR64RegClass.contains(Reg))
       return {loadFPImmediate(Reg, 64, Value)};
-    if (AArch64::FPR128RegClass.contains(Reg)) 
-      return {loadFPImmediate(Reg, 128, Value)};
-    if (AArch64::ZPRRegClass.contains(Reg)) 
+    if (AArch64::FPR128RegClass.contains(Reg))
+      return {loadFP128Immediate(Reg, 128, Value)};
+    if (AArch64::ZPRRegClass.contains(Reg))
       return {loadZPRImmediate(Reg, 128, Value)};
-    
+
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
   }
