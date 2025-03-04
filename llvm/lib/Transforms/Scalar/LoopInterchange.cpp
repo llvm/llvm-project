@@ -508,11 +508,11 @@ struct LoopInterchange {
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
     // and repeat this process.
-    for (unsigned J = SelecLoopId; J > 0; J--) {
+    for (unsigned j = SelecLoopId; j > 0; j--) {
       bool ChangedPerIter = false;
-      for (unsigned I = SelecLoopId; I > SelecLoopId - J; I--) {
+      for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
         bool Interchanged =
-            processLoop(LoopList, I, I - 1, DependencyMatrix, CostMap);
+            processLoop(LoopList, i, i - 1, DependencyMatrix, CostMap);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
