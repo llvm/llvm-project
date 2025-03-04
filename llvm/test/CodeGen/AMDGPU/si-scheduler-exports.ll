@@ -5,15 +5,14 @@ define amdgpu_gs void @_amdgpu_gs_main() {
 ; CHECK-LABEL: _amdgpu_gs_main:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    s_mov_b32 s2, s0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v3, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    exp mrt0 off, off, off, off
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v0, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, i1 false, i1 false)

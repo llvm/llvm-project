@@ -175,9 +175,9 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:  .LBB1_8: ; %post-loop-memcpy-expansion
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v2
-; CHECK-NEXT:    v_mov_b32_e32 v5, v2
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:  .LBB1_9: ; %loop-memcpy-expansion2

@@ -15,11 +15,9 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; SDAG-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; SDAG-NEXT:    v_mov_b32_e32 v8, 0
-; SDAG-NEXT:    s_mov_b32 s12, 0
+; SDAG-NEXT:    s_mov_b64 s[12:13], 0
 ; SDAG-NEXT:    s_mov_b32 s3, exec_lo
-; SDAG-NEXT:    s_mov_b32 s13, s12
-; SDAG-NEXT:    s_mov_b32 s14, s12
-; SDAG-NEXT:    s_mov_b32 s15, s12
+; SDAG-NEXT:    s_mov_b64 s[14:15], s[12:13]
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; SDAG-NEXT:    v_readfirstlane_b32 s4, v0
@@ -51,14 +49,10 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s3
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0x7fc00000 :: v_dual_mov_b32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 1.0
-; SDAG-NEXT:    s_mov_b32 s0, s12
-; SDAG-NEXT:    s_mov_b32 s1, s12
-; SDAG-NEXT:    s_mov_b32 s2, s12
-; SDAG-NEXT:    s_mov_b32 s3, s12
-; SDAG-NEXT:    s_mov_b32 s4, s12
-; SDAG-NEXT:    s_mov_b32 s5, s12
-; SDAG-NEXT:    s_mov_b32 s6, s12
-; SDAG-NEXT:    s_mov_b32 s7, s12
+; SDAG-NEXT:    s_mov_b64 s[0:1], s[12:13]
+; SDAG-NEXT:    s_mov_b64 s[2:3], s[12:13]
+; SDAG-NEXT:    s_mov_b64 s[4:5], s[12:13]
+; SDAG-NEXT:    s_mov_b64 s[6:7], s[12:13]
 ; SDAG-NEXT:    s_clause 0x2
 ; SDAG-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY

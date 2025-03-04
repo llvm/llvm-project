@@ -457,7 +457,9 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_loop_mfma_forward_init:
 
-; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0
+; GFX908:          v_mov_b32_e32 v0, 0
+; GFX908:          v_mov_b32_e32 v1, 0
+; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX908:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9:]+}}]
 ; GFX90A-NOT:      v_accvgpr
 ; GFX90A:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
@@ -498,7 +500,9 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_loop_agpr_init:
 
-; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, 0
+; GFX908:          v_mov_b32_e32 v0, 0
+; GFX908:          v_mov_b32_e32 v1, 0
+; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX908:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9:]+}}]
 ; GFX90A-NOT:      v_accvgpr
 ; GFX90A:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}

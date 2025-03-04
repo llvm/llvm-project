@@ -464,7 +464,9 @@ bb:
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x1f32_imm_splat:
 ; GCN-DAG:         v_mov_b32_e32 [[TWO:v[0-9]+]], 2.0
 ; GCN-DAG:         v_mov_b32_e32 [[ONE:v[0-9]+]], 1.0
-; NOLIT-SRCC-DAG:  v_accvgpr_write_b32 a{{[0-9]+}}, 0
+; NOLIT-SRCC-DAG:  v_mov_b32_e32 v0, 0
+; NOLIT-SRCC-DAG:  v_mov_b32_e32 v1, 0
+; NOLIT-SRCC-DAG:  v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; NOLIT-SRCC:      v_mfma_f32_32x32x1f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9:]+}}]
 ; LIT-SRCC:        v_mfma_f32_32x32x1f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], 0
 ; GFX90A:          v_mfma_f32_32x32x1f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], 0
