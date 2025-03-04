@@ -12,6 +12,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -159,6 +160,10 @@ public:
 
   const std::vector<JittedGlobalVariable> &GetJittedGlobalVariables() {
     return m_jitted_global_variables;
+  }
+
+  void SetPreferredModules(std::unordered_set<lldb::ModuleSP> modules) {
+    m_preferred_modules = std::move(modules);
   }
 
 private:
@@ -396,6 +401,7 @@ private:
   ///< defining no functions using that variable, would do this.)  If this
   ///< is true, any allocations need to be committed immediately -- no
   ///< opportunity for relocation.
+  std::unordered_set<lldb::ModuleSP> m_preferred_modules;
 };
 
 } // namespace lldb_private

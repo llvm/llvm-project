@@ -174,6 +174,21 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
+  const auto &target = process_sp->GetTarget();
+  std::unordered_set<ModuleSP> preferred_modules;
+  target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
+    llvm::Regex pattern("libclang_rt.asan_.*_dynamic.dylib");
+    if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
+      preferred_modules.insert(m);
+      return false;
+    }
+
+    return true;
+  });
+
+  if (!preferred_modules.empty())
+    options.SetPreferredModules(std::move(preferred_modules));
+
   ExpressionResults expr_result = UserExpression::Evaluate(
       exe_ctx, options, expr.GetString(), "", return_value_sp);
   if (expr_result != eExpressionCompleted) {
