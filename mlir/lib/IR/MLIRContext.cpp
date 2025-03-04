@@ -268,7 +268,8 @@ public:
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled) {
+      : threadingIsEnabled(threadingIsEnabled),
+        distinctAttributeAllocator(threadingIsEnabled) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();

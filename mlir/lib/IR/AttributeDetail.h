@@ -403,8 +403,8 @@ private:
 /// is freed after the destruction of the distinct attribute allocator.
 class DistinctAttributeAllocator {
 public:
-  DistinctAttributeAllocator()
-      : useThreadLocalAllocator(true), useSynchronizedAllocator(false) {};
+  DistinctAttributeAllocator(bool threadingIsEnabled)
+      : threadingIsEnabled(threadingIsEnabled), useThreadLocalAllocator(true) {};
 
   DistinctAttributeAllocator(DistinctAttributeAllocator &&) = delete;
   DistinctAttributeAllocator(const DistinctAttributeAllocator &) = delete;
@@ -414,14 +414,11 @@ public:
   /// Allocates a distinct attribute storage using a thread local bump pointer
   /// allocator to enable synchronization free parallel allocations.
   DistinctAttrStorage *allocate(Attribute referencedAttr) {
-    if (useSynchronizedAllocator && !useThreadLocalAllocator) {
+    if (!useThreadLocalAllocator && threadingIsEnabled) {
       std::scoped_lock<std::mutex> lock(allocatorMutex);
       return allocateImpl(referencedAttr);
     }
-    if (!useSynchronizedAllocator)
-      return allocateImpl(referencedAttr);
-    llvm_unreachable(
-        "Cannot use both a synchronised and thread_local allocator!");
+    return allocateImpl(referencedAttr);
   }
 
   /// Sets flags to use thread local bump pointer allocators or a single
@@ -429,8 +426,7 @@ public:
   /// enabled. Use this to disable the use of thread local storage and bypass
   /// thread safety synchronization overhead.
   void disableMultiThreading(bool disable = true) {
-    disableThreadLocalStorage(disable);
-    useSynchronizedAllocator = !disable;
+    threadingIsEnabled = !disable;
   }
 
   /// Sets flags to disable using thread local bump pointer allocators and use a
@@ -439,7 +435,6 @@ public:
   /// thread-safe allocation.
   void disableThreadLocalStorage(bool disable = true) {
     useThreadLocalAllocator = !disable;
-    useSynchronizedAllocator = disable;
   }
 
 private:
@@ -462,8 +457,8 @@ private:
   llvm::BumpPtrAllocator allocator;
   std::mutex allocatorMutex;
 
+  bool threadingIsEnabled : 1;
   bool useThreadLocalAllocator : 1;
-  bool useSynchronizedAllocator : 1;
 };
 } // namespace detail
 } // namespace mlir
