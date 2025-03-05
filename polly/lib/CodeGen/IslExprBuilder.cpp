@@ -625,7 +625,7 @@ IslExprBuilder::createOpBooleanConditional(__isl_take isl_ast_expr *Expr) {
   Builder.SetInsertPoint(CondBB);
   Builder.CreateBr(NextBB);
 
-  Builder.SetInsertPoint(InsertBB->getTerminator());
+  Builder.SetInsertPoint(InsertBB->getTerminator()->getIterator());
 
   LHS = create(isl_ast_expr_get_op_arg(Expr, 0));
   if (!LHS->getType()->isIntegerTy(1))
@@ -637,13 +637,13 @@ IslExprBuilder::createOpBooleanConditional(__isl_take isl_ast_expr *Expr) {
   else
     BR->setCondition(LHS);
 
-  Builder.SetInsertPoint(CondBB->getTerminator());
+  Builder.SetInsertPoint(CondBB->getTerminator()->getIterator());
   RHS = create(isl_ast_expr_get_op_arg(Expr, 1));
   if (!RHS->getType()->isIntegerTy(1))
     RHS = Builder.CreateIsNotNull(RHS);
   auto RightBB = Builder.GetInsertBlock();
 
-  Builder.SetInsertPoint(NextBB->getTerminator());
+  Builder.SetInsertPoint(NextBB->getTerminator()->getIterator());
   auto PHI = Builder.CreatePHI(Builder.getInt1Ty(), 2);
   PHI->addIncoming(OpType == isl_ast_op_and_then ? Builder.getFalse()
                                                  : Builder.getTrue(),
