@@ -87,15 +87,13 @@ protected:
   }
 
   void testRegAliases(Triple::ArchType Arch, uint64_t Register,
-                      uint64_t *Aliases, size_t Count,
+                      std::initializer_list<MCPhysReg> ExpectedAliases,
                       bool OnlySmaller = false) {
     if (GetParam() != Arch)
       GTEST_SKIP();
 
     const BitVector &BV = BC->MIB->getAliases(Register, OnlySmaller);
-    ASSERT_EQ(BV.count(), Count);
-    for (size_t I = 0; I < Count; ++I)
-      ASSERT_TRUE(BV[Aliases[I]]);
+    assertRegMask(BV, ExpectedAliases);
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
@@ -110,17 +108,15 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MCPlusBuilderTester,
                          ::testing::Values(Triple::aarch64));
 
 TEST_P(MCPlusBuilderTester, AliasX0) {
-  uint64_t AliasesX0[] = {AArch64::W0,    AArch64::W0_HI,
-                          AArch64::X0,    AArch64::W0_W1,
-                          AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0, AArch64::W0_W1,
+                  AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::W0_HI, AArch64::X0};
-  size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
-  testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count, true);
+  testRegAliases(Triple::aarch64, AArch64::X0,
+                 {AArch64::W0, AArch64::W0_HI, AArch64::X0},
+                 /*OnlySmaller=*/true);
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
@@ -273,15 +269,13 @@ INSTANTIATE_TEST_SUITE_P(X86, MCPlusBuilderTester,
                          ::testing::Values(Triple::x86_64));
 
 TEST_P(MCPlusBuilderTester, AliasAX) {
-  uint64_t AliasesAX[] = {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount);
+  testRegAliases(Triple::x86_64, X86::AX,
+                 {X86::RAX, X86::EAX, X86::AX, X86::AL, X86::AH});
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerAX) {
-  uint64_t AliasesAX[] = {X86::AX, X86::AL, X86::AH};
-  size_t AliasesAXCount = sizeof(AliasesAX) / sizeof(*AliasesAX);
-  testRegAliases(Triple::x86_64, X86::AX, AliasesAX, AliasesAXCount, true);
+  testRegAliases(Triple::x86_64, X86::AX, {X86::AX, X86::AL, X86::AH},
+                 /*OnlySmaller=*/true);
 }
 
 TEST_P(MCPlusBuilderTester, ReplaceRegWithImm) {
