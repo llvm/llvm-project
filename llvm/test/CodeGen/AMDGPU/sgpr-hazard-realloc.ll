@@ -4,40 +4,43 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-sgpr-hazard-regalloc=2 < %s | FileCheck -check-prefix V2 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-sgpr-hazard-regalloc=3 < %s | FileCheck -check-prefix V3 %s
 
-define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float %d, ptr addrspace(1) %out) {
+define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float %d, ptr addrspace(1) %out, <4 x i32> inreg %desc) {
 ; DEF-LABEL: fadd_f32:
 ; DEF:       ; %bb.0: ; %entry
-; DEF-NEXT:    s_add_f32 s3, s0, s1
+; DEF-NEXT:    s_mov_b32 s6, s4
+; DEF-NEXT:    s_mov_b32 s4, s2
+; DEF-NEXT:    s_add_f32 s2, s0, s1
 ; DEF-NEXT:    s_sub_f32 s1, s0, s1
-; DEF-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; DEF-NEXT:    v_dual_add_f32 v0, s3, v0 :: v_dual_add_f32 v1, s1, v1
+; DEF-NEXT:    s_mov_b32 s7, s5
+; DEF-NEXT:    s_mov_b32 s5, s3
+; DEF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; DEF-NEXT:    v_dual_add_f32 v0, s2, v0 :: v_dual_add_f32 v1, s1, v1
 ; DEF-NEXT:    v_readfirstlane_b32 s0, v0
 ; DEF-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; DEF-NEXT:    v_readfirstlane_b32 s4, v1
+; DEF-NEXT:    v_readfirstlane_b32 s3, v1
 ; DEF-NEXT:    v_mul_f32_e32 v4, v0, v1
-; DEF-NEXT:    s_and_b32 s0, s0, s4
+; DEF-NEXT:    s_and_b32 s0, s0, s3
 ; DEF-NEXT:    global_store_b32 v[2:3], v4, off
 ; DEF-NEXT:    s_wait_alu 0xfffe
 ; DEF-NEXT:    s_cmp_lg_u32 s0, 0
 ; DEF-NEXT:    s_mov_b32 s0, 0
 ; DEF-NEXT:    s_cbranch_scc0 .LBB0_5
 ; DEF-NEXT:  ; %bb.1: ; %false
-; DEF-NEXT:    s_mov_b32 s2, exec_lo
+; DEF-NEXT:    s_buffer_load_b32 s3, s[4:7], 0x0
+; DEF-NEXT:    s_and_b32 s1, s2, s1
 ; DEF-NEXT:    v_add_f32_e32 v0, v0, v1
-; DEF-NEXT:    s_buffer_load_b32 s4, s[0:3], 0x0
-; DEF-NEXT:    s_and_b32 s1, s3, s1
+; DEF-NEXT:    s_mov_b32 s8, exec_lo
 ; DEF-NEXT:    s_wait_kmcnt 0x0
 ; DEF-NEXT:    s_wait_alu 0xfffe
-; DEF-NEXT:    s_lshl_b32 s1, s4, s1
+; DEF-NEXT:    s_lshl_b32 s1, s3, s1
 ; DEF-NEXT:    s_wait_alu 0xfffe
 ; DEF-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s1, v1
 ; DEF-NEXT:    s_and_not1_b32 s1, exec_lo, vcc_lo
 ; DEF-NEXT:    s_wait_alu 0xfffe
-; DEF-NEXT:    s_and_not1_b32 s2, s2, s1
+; DEF-NEXT:    s_and_not1_b32 s8, s8, s1
 ; DEF-NEXT:    s_cbranch_scc0 .LBB0_6
 ; DEF-NEXT:  ; %bb.2: ; %false
-; DEF-NEXT:    s_wait_alu 0xfffe
-; DEF-NEXT:    s_and_b32 exec_lo, exec_lo, s2
+; DEF-NEXT:    s_and_b32 exec_lo, exec_lo, s8
 ; DEF-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DEF-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; DEF-NEXT:    s_cbranch_vccnz .LBB0_4
@@ -70,19 +73,23 @@ define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float
 ; V1-NEXT:    s_mov_b32 s0, 0
 ; V1-NEXT:    s_cbranch_scc0 .LBB0_5
 ; V1-NEXT:  ; %bb.1: ; %false
-; V1-NEXT:    s_mov_b32 s2, exec_lo
+; V1-NEXT:    s_mov_b32 s7, s5
+; V1-NEXT:    s_mov_b32 s6, s4
+; V1-NEXT:    s_mov_b32 s5, s3
+; V1-NEXT:    s_mov_b32 s4, s2
+; V1-NEXT:    s_and_b32 s2, s104, s103
+; V1-NEXT:    s_buffer_load_b32 s1, s[4:7], 0x0
 ; V1-NEXT:    v_add_f32_e32 v0, v0, v1
-; V1-NEXT:    s_buffer_load_b32 s1, s[0:3], 0x0
-; V1-NEXT:    s_and_b32 s3, s104, s103
+; V1-NEXT:    s_mov_b32 s8, exec_lo
 ; V1-NEXT:    s_wait_kmcnt 0x0
-; V1-NEXT:    s_lshl_b32 vcc_hi, s1, s3
+; V1-NEXT:    s_lshl_b32 vcc_hi, s1, s2
 ; V1-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; V1-NEXT:    v_cmp_ne_u32_e32 vcc_lo, vcc_hi, v1
 ; V1-NEXT:    s_and_not1_b32 s1, exec_lo, vcc_lo
-; V1-NEXT:    s_and_not1_b32 s2, s2, s1
+; V1-NEXT:    s_and_not1_b32 s8, s8, s1
 ; V1-NEXT:    s_cbranch_scc0 .LBB0_6
 ; V1-NEXT:  ; %bb.2: ; %false
-; V1-NEXT:    s_and_b32 exec_lo, exec_lo, s2
+; V1-NEXT:    s_and_b32 exec_lo, exec_lo, s8
 ; V1-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; V1-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; V1-NEXT:    s_wait_alu 0xfffe
@@ -102,10 +109,10 @@ define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float
 ;
 ; V2-LABEL: fadd_f32:
 ; V2:       ; %bb.0: ; %entry
-; V2-NEXT:    s_add_f32 s66, s0, s1
-; V2-NEXT:    s_sub_f32 s65, s0, s1
+; V2-NEXT:    s_add_f32 s62, s0, s1
+; V2-NEXT:    s_sub_f32 s61, s0, s1
 ; V2-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; V2-NEXT:    v_dual_add_f32 v0, s66, v0 :: v_dual_add_f32 v1, s65, v1
+; V2-NEXT:    v_dual_add_f32 v0, s62, v0 :: v_dual_add_f32 v1, s61, v1
 ; V2-NEXT:    v_readfirstlane_b32 s1, v0
 ; V2-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; V2-NEXT:    v_readfirstlane_b32 vcc_lo, v1
@@ -116,21 +123,23 @@ define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float
 ; V2-NEXT:    s_mov_b32 s1, 0
 ; V2-NEXT:    s_cbranch_scc0 .LBB0_5
 ; V2-NEXT:  ; %bb.1: ; %false
-; V2-NEXT:    s_buffer_load_b32 vcc_lo, s[0:3], 0x0
-; V2-NEXT:    s_and_b32 s66, s66, s65
+; V2-NEXT:    s_mov_b32 s55, s5
+; V2-NEXT:    s_mov_b32 s54, s4
+; V2-NEXT:    s_mov_b32 s53, s3
+; V2-NEXT:    s_mov_b32 s52, s2
 ; V2-NEXT:    v_add_f32_e32 v0, v0, v1
-; V2-NEXT:    s_mov_b32 s79, exec_lo
+; V2-NEXT:    s_buffer_load_b32 vcc_lo, s[52:55], 0x0
+; V2-NEXT:    s_and_b32 s54, s62, s61
+; V2-NEXT:    s_mov_b32 s69, exec_lo
 ; V2-NEXT:    s_wait_kmcnt 0x0
-; V2-NEXT:    s_wait_alu 0xfffe
-; V2-NEXT:    s_lshl_b32 s67, vcc_lo, s66
-; V2-NEXT:    s_wait_alu 0xfffe
+; V2-NEXT:    s_lshl_b32 s67, vcc_lo, s54
+; V2-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; V2-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s67, v1
 ; V2-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, vcc_lo
-; V2-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; V2-NEXT:    s_and_not1_b32 s79, s79, vcc_lo
+; V2-NEXT:    s_and_not1_b32 s69, s69, vcc_lo
 ; V2-NEXT:    s_cbranch_scc0 .LBB0_6
 ; V2-NEXT:  ; %bb.2: ; %false
-; V2-NEXT:    s_and_b32 exec_lo, exec_lo, s79
+; V2-NEXT:    s_and_b32 exec_lo, exec_lo, s69
 ; V2-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; V2-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s1
 ; V2-NEXT:    s_cbranch_vccnz .LBB0_4
@@ -163,20 +172,24 @@ define amdgpu_ps float @fadd_f32(float inreg %a, float inreg %b, float %c, float
 ; V3-NEXT:    s_mov_b32 s0, 0
 ; V3-NEXT:    s_cbranch_scc0 .LBB0_5
 ; V3-NEXT:  ; %bb.1: ; %false
-; V3-NEXT:    s_mov_b32 s2, exec_lo
-; V3-NEXT:    s_and_b32 s104, s104, s82
-; V3-NEXT:    s_buffer_load_b32 s1, s[0:3], 0x0
+; V3-NEXT:    s_mov_b32 s7, s5
+; V3-NEXT:    s_mov_b32 s6, s4
+; V3-NEXT:    s_mov_b32 s5, s3
+; V3-NEXT:    s_mov_b32 s4, s2
 ; V3-NEXT:    v_add_f32_e32 v0, v0, v1
+; V3-NEXT:    s_buffer_load_b32 s1, s[4:7], 0x0
+; V3-NEXT:    s_and_b32 s4, s104, s82
+; V3-NEXT:    s_mov_b32 s8, exec_lo
 ; V3-NEXT:    s_wait_kmcnt 0x0
-; V3-NEXT:    s_lshl_b32 s82, s1, s104
+; V3-NEXT:    s_lshl_b32 s82, s1, s4
 ; V3-NEXT:    s_wait_alu 0xfffe
 ; V3-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s82, v1
 ; V3-NEXT:    s_and_not1_b32 s1, exec_lo, vcc_lo
 ; V3-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; V3-NEXT:    s_and_not1_b32 s2, s2, s1
+; V3-NEXT:    s_and_not1_b32 s8, s8, s1
 ; V3-NEXT:    s_cbranch_scc0 .LBB0_6
 ; V3-NEXT:  ; %bb.2: ; %false
-; V3-NEXT:    s_and_b32 exec_lo, exec_lo, s2
+; V3-NEXT:    s_and_b32 exec_lo, exec_lo, s8
 ; V3-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; V3-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; V3-NEXT:    s_cbranch_vccnz .LBB0_4
@@ -214,7 +227,7 @@ true:
    br label %final
 false:
    %v.4 = fadd float %v.0, %v.1
-   %s.7 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> undef, i32 0, i32 0)
+   %s.7 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %desc, i32 0, i32 0)
    %s.8 = shl i32 %s.7, %s.6
    %c.1 = icmp ne i32 %tmp.1, %s.8
    call void @llvm.amdgcn.wqm.demote(i1 %c.1)
