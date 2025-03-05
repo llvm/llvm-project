@@ -48,20 +48,28 @@ class GaugeMetric:
     time_ns: int
 
 
-# Fetches a page of the build list using the GraphQL BuildKite API.
-# Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last **finished** builds by
-# default, or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE **finished** builds older
-# than the one pointer by
-# |cursor| if provided.
-# The |cursor| value is taken from the previous page returned by the API.
-# The returned data had the following format:
-# [
-#   {
-#       "cursor": <value>,
-#       "number": <build-number>,
-#   }
-# ]
-def buildkite_fetch_page_build_list(buildkite_token, after_cursor=None):
+def buildkite_fetch_page_build_list(
+    buildkite_token: str, after_cursor: str = None
+) -> list[dict[str, str]]:
+    """Fetches a page of the build list using the GraphQL BuildKite API. Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last **finished** builds by default, or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE **finished** builds older than the one pointer by |cursor| if provided.
+    The |cursor| value is taken from the previous page returned by the API.
+
+    The returned data had the following format:
+
+    Args:
+      buildkite_token: the secret token to authenticate GraphQL requests.
+      after_cursor: cursor after which to start the page fetch.
+
+    Returns:
+      Returns most recents builds after cursor (if set) with the following format:
+      [
+        {
+            "cursor": <value>,
+            "number": <build-number>,
+        }
+      ]
+    """
+
     BUILDKITE_GRAPHQL_QUERY = """
   query OrganizationShowQuery {{
     organization(slug: "llvm-project") {{
@@ -103,17 +111,29 @@ def buildkite_fetch_page_build_list(buildkite_token, after_cursor=None):
     return [{**x["node"], "cursor": x["cursor"]} for x in builds]
 
 
-# Returns all the info associated with the provided |build_number|.
-# Note: for unknown reasons, graphql returns no jobs for a given build, while
-# this endpoint does, hence why this uses this API instead of graphql.
-def buildkite_get_build_info(build_number):
+def buildkite_get_build_info(build_number: str) -> dict:
+    """Returns all the info associated with the provided build number.
+    Note: for unknown reasons, graphql returns no jobs for a given build, while this endpoint does, hence why this uses this API instead of graphql.
+
+      Args:
+        build_number: which build number to fetch info for.
+
+      Returns:
+        The info for the target build, a JSON dictionnary.
+    """
+
     URL = "https://buildkite.com/llvm-project/github-pull-requests/builds/{}.json"
     return requests.get(URL.format(build_number)).json()
 
 
-# returns the last BUILDKITE_GRAPHQL_BUILDS_PER_PAGE builds by default, or
-# until the build pointed by |last_cursor| is found.
-def buildkite_get_builds_up_to(buildkite_token, last_cursor=None):
+def buildkite_get_builds_up_to(buildkite_token: str, last_cursor: str = None) -> list:
+    """Returns the last BUILDKITE_GRAPHQL_BUILDS_PER_PAGE builds by default, or
+    until the build pointed by |last_cursor| is found.
+
+    Args:
+     buildkite_token: the secret token to authenticate GraphQL requests.
+     last_cursor: the cursor to stop at if set. If None, a full page is fetched.
+    """
     output = []
     cursor = None
 
@@ -137,13 +157,17 @@ def buildkite_get_builds_up_to(buildkite_token, last_cursor=None):
         return output
 
 
-# Returns a (metrics, cursor) tuple.
-# Returns the BuildKite workflow metrics up to the build pointed by |last_cursor|.
-# If |last_cursor| is None, no metrics are returned.
-# The returned cursor is either:
-#  - the last processed build.
-#  - the last build if no initial cursor was provided.
-def buildkite_get_metrics(buildkite_token, last_cursor=None):
+def buildkite_get_metrics(
+    buildkite_token: str, last_cursor: str = None
+) -> (list[JobMetrics], str):
+    """Returns a tuple with:
+    - the metrics to record until |last_cursor| is reached, or none if last cursor is None.
+    - the cursor of the most recent build processed.
+
+    Args:
+     buildkite_token: the secret token to authenticate GraphQL requests.
+     last_cursor: the cursor to stop at if set. If None, a full page is fetched.
+    """
     builds = buildkite_get_builds_up_to(buildkite_token, last_cursor)
     # Don't return any metrics if last_cursor is None.
     # This happens when the program starts.
