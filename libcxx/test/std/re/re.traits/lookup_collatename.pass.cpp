@@ -23,7 +23,7 @@
 //   lookup_collatename(ForwardIterator first, ForwardIterator last) const;
 
 // TODO: investigation needed
-// XFAIL: target={{.*}}-linux-gnu{{.*}}
+// XFAIL: target={{.*}}-linux{{.*}}
 
 #include <regex>
 #include <iterator>

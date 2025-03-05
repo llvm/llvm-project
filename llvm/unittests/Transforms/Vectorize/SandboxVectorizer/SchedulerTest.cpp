@@ -347,15 +347,15 @@ define void @foo(ptr %ptr, i16 %arg) {
   auto *F = Ctx.createFunction(LLVMF);
   auto *BB = &*F->begin();
   auto It = BB->begin();
-  auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
-  auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
-  auto *ZextX = cast<sandboxir::CastInst>(&*It++);
+  [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *ZextX = cast<sandboxir::CastInst>(&*It++);
   auto *Zext1 = cast<sandboxir::CastInst>(&*It++);
   auto *Zext0 = cast<sandboxir::CastInst>(&*It++);
   auto *Shl1 = cast<sandboxir::BinaryOperator>(&*It++);
   auto *Shl0 = cast<sandboxir::BinaryOperator>(&*It++);
-  auto *Sub1 = cast<sandboxir::BinaryOperator>(&*It++);
-  auto *Sub0 = cast<sandboxir::BinaryOperator>(&*It++);
+  [[maybe_unused]] auto *Sub1 = cast<sandboxir::BinaryOperator>(&*It++);
+  [[maybe_unused]] auto *Sub0 = cast<sandboxir::BinaryOperator>(&*It++);
   auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   auto *S1 = cast<sandboxir::StoreInst>(&*It++);
 
