@@ -46,7 +46,7 @@ namespace std {
     T* p;
     T *c_str();
     T *data();
-    unsigned size_bytes();
+    unsigned size();
   };
 
   typedef basic_string<char> string;
@@ -84,7 +84,6 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   snprintf(q, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf(cp, 10, "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   snprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
-  snprintf(nullptr, 0, "");                // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
   printf(nullptr);                         // expected-warning{{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   printf("%s", nullptr);                   // expected-warning{{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   snwprintf(s.data(), s2.size(), "%s%d", "hello", *p); // expected-warning{{function 'snwprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
@@ -105,7 +104,8 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
   std::wstring WS;
 
   snprintf(a, sizeof(b), "%s", __PRETTY_FUNCTION__);         // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
-  snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);  // expected-warning{{function 'snprintf' is unsafe}} expected-note{{buffer pointer and size may not match}}
+  snprintf((char*)c, sizeof(c), "%s", __PRETTY_FUNCTION__);
+  snprintf(nullptr, 0, "");  // no warn
   fprintf((FILE*)p, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   fprintf(fp, "%P%d%p%i hello world %32s", *p, *p, p, *p, "hello"); // no warn
   printf("%s%d", "hello", *p); // no warn
@@ -120,8 +120,8 @@ void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
 }
 
 void safe_examples(std::string s1, int *p) {
-  snprintf(s1.data(), s1.size_bytes(), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str()); // no warn
-  snprintf(s1.data(), s1.size_bytes(), s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());      // no warn
+  snprintf(s1.data(), s1.size(), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str()); // no warn
+  snprintf(s1.data(), s1.size(), s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());      // no warn
   printf("%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());              // no warn
   printf(s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                   // no warn
   fprintf((FILE*)0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", p, s1.c_str());   // no warn

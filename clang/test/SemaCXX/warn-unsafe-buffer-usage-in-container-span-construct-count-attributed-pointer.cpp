@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-container -fexperimental-bounds-safety-attributes -verify %s
+// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage-in-container\
+// RUN: -Wno-error=bounds-safety-strict-terminated-by-cast -fexperimental-bounds-safety-attributes -verify %s
 
 #include <ptrcheck.h>
 #include <stddef.h>
@@ -142,3 +143,22 @@ void span_from_output_parm(int * __counted_by(n)  *cb_p, size_t n,
   std::span<char>(sb_z, *l);  // no warn
   std::span<int>(*cb_q, n);   // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
 }
+
+size_t strlen( const char* __null_terminated str );
+size_t wcslen( const wchar_t* __null_terminated str );
+
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wunsafe-buffer-usage"
+
+void test_span_ctor(const char * __null_terminated p,
+		    const wchar_t * __null_terminated wp) {
+  std::span S{p, strlen(p)};
+  std::span S2{wp, wcslen(wp)};
+}
+
+void test_span_ctor_warn(const char * p,
+			 const wchar_t * wp) {
+  std::span S{p, strlen(p)}; // expected-warning{{passing 'const char *' to parameter of incompatible type 'const char * __terminated_by(0)' (aka 'const char *') is an unsafe operation}}
+  std::span S2{wp, wcslen(wp)}; // expected-warning{{passing 'const wchar_t *' to parameter of incompatible type 'const wchar_t * __terminated_by(0)' (aka 'const wchar_t *') is an unsafe operation}}
+}
+#pragma clang diagnostic pop

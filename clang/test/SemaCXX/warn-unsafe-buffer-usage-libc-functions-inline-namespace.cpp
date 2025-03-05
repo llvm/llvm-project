@@ -23,7 +23,7 @@ namespace std {
     T* p;
     T *c_str();
     T *data();
-    unsigned size_bytes();
+    unsigned size();
   };
 
   typedef basic_string<char> string;
@@ -50,8 +50,8 @@ void f(char * p, char * q, std::span<char> s) {
 }
 
 void v(std::string s1) {
-  std::snprintf(s1.data(), s1.size_bytes(), "%s%d", s1.c_str(), 0); // no warn
-  std::__1::snprintf(s1.data(), s1.size_bytes(), "%s%d", s1.c_str(), 0); // no warn
+  std::snprintf(s1.data(), s1.size(), "%s%d", s1.c_str(), 0); // no warn
+  std::__1::snprintf(s1.data(), s1.size(), "%s%d", s1.c_str(), 0); // no warn
 }
 
 void g(char *begin, char *end, char *p, std::span<char> s) {
