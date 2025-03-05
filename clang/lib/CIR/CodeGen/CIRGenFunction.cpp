@@ -388,6 +388,10 @@ void CIRGenFunction::LexicalScope::cleanup() {
     }
 
     if (localScope->Depth == 0) {
+      mlir::Block *currBlock = builder.getInsertionBlock();
+      if (currBlock->mightHaveTerminator())
+        currBlock->getTerminator()->erase();
+
       // TODO(cir): get rid of all this special cases once cleanups are properly
       // implemented.
       // TODO(cir): most of this code should move into emitBranchThroughCleanup
