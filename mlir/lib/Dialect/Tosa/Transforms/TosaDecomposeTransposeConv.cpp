@@ -135,18 +135,26 @@ public:
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);
 
     // Get and verify zero points.
-    int64_t inputZpVal;
-    int64_t weightZpVal;
-
-    if (op.getInputZeroPoint(inputZpVal).failed() ||
-        op.getWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
       return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
+          op, "input zero point cannot be statically determined");
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
-        op.verifyWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
       return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
+          op, "weight zero point cannot be statically determined");
+
+    int64_t inputZpVal = *maybeIZp;
+    int64_t weightZpVal = *maybeWZp;
+
+    if (op.verifyInputZeroPoint(inputZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+
+    if (op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
 
     if (weightZpVal != 0) {
       weight = CreateOpAndInferShape<tosa::PadOp>(

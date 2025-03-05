@@ -100,20 +100,20 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
   return GetUnsigned(*obj, key, fail_value);
 }
 
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
 }
 
 int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,

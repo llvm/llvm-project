@@ -395,17 +395,17 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
                             std::optional<unsigned> VLen, VectorType *Tp,
                             ArrayRef<int> Mask, TTI::TargetCostKind CostKind) {
   assert(LegalVT.isFixedLengthVector());
-  InstructionCost NumOfDests = InstructionCost::getInvalid();
-  if (VLen && !Mask.empty()) {
-    MVT ElemVT = LegalVT.getVectorElementType();
-    unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
-    LegalVT = TTI.getTypeLegalizationCost(
-                     FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
-                  .second;
-    // Number of destination vectors after legalization:
-    NumOfDests = divideCeil(Mask.size(), LegalVT.getVectorNumElements());
-  }
-  if (!NumOfDests.isValid() || NumOfDests <= 1 ||
+  if (!VLen || Mask.empty())
+    return InstructionCost::getInvalid();
+  MVT ElemVT = LegalVT.getVectorElementType();
+  unsigned ElemsPerVReg = *VLen / ElemVT.getFixedSizeInBits();
+  LegalVT = TTI.getTypeLegalizationCost(
+                   FixedVectorType::get(Tp->getElementType(), ElemsPerVReg))
+                .second;
+  // Number of destination vectors after legalization:
+  InstructionCost NumOfDests =
+      divideCeil(Mask.size(), LegalVT.getVectorNumElements());
+  if (NumOfDests <= 1 ||
       LegalVT.getVectorElementType().getSizeInBits() !=
           Tp->getElementType()->getPrimitiveSizeInBits() ||
       LegalVT.getVectorNumElements() >= Tp->getElementCount().getFixedValue())
@@ -429,38 +429,17 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
          "Normalized mask expected to be not shorter than original mask.");
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
-  SmallBitVector ExtractedRegs(2 * NumOfSrcRegs);
   int NumShuffles = 0;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
-        if (ExtractedRegs.test(SrcReg)) {
-          Cost += TTI.getShuffleCost(TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-                                     (SrcReg % NumOfSrcRegs) *
-                                         SingleOpTy->getNumElements(),
-                                     SingleOpTy);
-          ExtractedRegs.set(SrcReg);
-        }
-        if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
-          ++NumShuffles;
-          Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                     RegMask, CostKind, 0, nullptr);
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
           return;
-        }
+        ++NumShuffles;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
       },
       [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
-        if (ExtractedRegs.test(Idx1)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx1 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx1);
-        }
-        if (ExtractedRegs.test(Idx2)) {
-          Cost += TTI.getShuffleCost(
-              TTI::SK_ExtractSubvector, Tp, {}, CostKind,
-              (Idx2 % NumOfSrcRegs) * SingleOpTy->getNumElements(), SingleOpTy);
-          ExtractedRegs.set(Idx2);
-        }
         Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                    CostKind, 0, nullptr);
         NumShuffles += 2;
@@ -721,11 +700,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Extend for scalable subvector types
     if (std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
         SubLT.second.isValid() && SubLT.second.isFixedLengthVector()) {
-      const unsigned MinVLen = ST->getRealMinVLen();
-      const unsigned MaxVLen = ST->getRealMaxVLen();
-      if (MinVLen == MaxVLen &&
-          SubLT.second.getScalarSizeInBits() * Index % MinVLen == 0 &&
-          SubLT.second.getSizeInBits() <= MinVLen)
+      if (std::optional<unsigned> VLen = ST->getRealVLen();
+          VLen && SubLT.second.getScalarSizeInBits() * Index % *VLen == 0 &&
+          SubLT.second.getSizeInBits() <= *VLen)
         return TTI::TCC_Free;
     }
 
