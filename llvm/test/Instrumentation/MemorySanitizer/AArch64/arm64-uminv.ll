@@ -355,6 +355,3 @@ declare i32 @llvm.aarch64.neon.uminv.i32.v2i32(<2 x i32>) nounwind readnone
 declare i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32>) nounwind readnone
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
