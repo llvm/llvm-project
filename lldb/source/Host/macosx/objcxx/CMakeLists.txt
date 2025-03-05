@@ -16,6 +16,7 @@ add_lldb_library(lldbHostMacOSXObjCXX ${PLUGIN_DEPENDENCY_ARG}
   Host.mm
   HostInfoMacOSX.mm
   HostThreadMacOSX.mm
+  MemoryMonitorMacOSX.mm
 
   ${SWIFT_SOURCES}
 
