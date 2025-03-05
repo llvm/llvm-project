@@ -682,7 +682,8 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     return false;
 
   // Make sure that there are no padding bits.
-  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) || !DL.typeSizeEqualsStoreSize(LI2->getType()))
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
