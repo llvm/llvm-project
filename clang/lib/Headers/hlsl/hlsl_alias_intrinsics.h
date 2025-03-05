@@ -35,35 +35,40 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #endif
 
-#define _HLSL_CAT(a,b) a##b
-#define _HLSL_VEC_SCALAR_OVERLOADS(NAME, BASE_T, AVAIL) \
-  _HLSL_ALL_OVERLOADS(NAME, BASE_T, AVAIL, _HLSL_CAT(_HLSL_NUM_ARGS_,NAME))
+#define _HLSL_CAT(a, b) a##b
+#define _HLSL_VEC_SCALAR_OVERLOADS(NAME, BASE_T, AVAIL)                        \
+  _HLSL_ALL_OVERLOADS(NAME, BASE_T, AVAIL, _HLSL_CAT(_HLSL_NUM_ARGS_, NAME))
 
-#define _HLSL_ALL_OVERLOADS(NAME, BASE_T, AVAIL, NUM_ARGS) \
-  _HLSL_CAT(_HLSL_BOTH_OVERLOADS_,NUM_ARGS)(NAME, BASE_T, _HLSL_CAT(BASE_T,2), AVAIL) \
-  _HLSL_CAT(_HLSL_BOTH_OVERLOADS_,NUM_ARGS)(NAME, BASE_T, _HLSL_CAT(BASE_T,3), AVAIL) \
-  _HLSL_CAT(_HLSL_BOTH_OVERLOADS_,NUM_ARGS)(NAME, BASE_T, _HLSL_CAT(BASE_T,4), AVAIL)
+#define _HLSL_ALL_OVERLOADS(NAME, BASE_T, AVAIL, NUM_ARGS)                     \
+  _HLSL_CAT(_HLSL_BOTH_OVERLOADS_, NUM_ARGS)                                   \
+  (NAME, BASE_T, _HLSL_CAT(BASE_T, 2), AVAIL)                                  \
+      _HLSL_CAT(_HLSL_BOTH_OVERLOADS_, NUM_ARGS)(NAME, BASE_T,                 \
+                                                 _HLSL_CAT(BASE_T, 3), AVAIL)  \
+          _HLSL_CAT(_HLSL_BOTH_OVERLOADS_,                                     \
+                    NUM_ARGS)(NAME, BASE_T, _HLSL_CAT(BASE_T, 4), AVAIL)
 
-#define _HLSL_BOTH_OVERLOADS_2(NAME, BASE_T, VECTOR_T, AVAIL)           \
-  _HLSL_CAT(_HLSL_IF_TRUE_,AVAIL)(					\
-      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T        \
-  NAME(VECTOR_T p0, BASE_T p1) {                                    \
-    return _HLSL_CAT(__builtin_elementwise_,NAME)(p0, (VECTOR_T)p1);	\
+#define _HLSL_BOTH_OVERLOADS_2(NAME, BASE_T, VECTOR_T, AVAIL)                  \
+  _HLSL_CAT(_HLSL_IF_TRUE_, AVAIL)                                             \
+  (_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T NAME(        \
+      VECTOR_T p0, BASE_T p1) {                                                \
+    return _HLSL_CAT(__builtin_elementwise_, NAME)(p0, (VECTOR_T)p1);          \
   }                                                                            \
-  _HLSL_CAT(_HLSL_IF_TRUE_,AVAIL)(					\
-      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T        \
-  NAME(BASE_T p0, VECTOR_T p1) {                                    \
-    return _HLSL_CAT(__builtin_elementwise_,NAME)((VECTOR_T)p0, p1);	\
+  _HLSL_CAT(_HLSL_IF_TRUE_, AVAIL)                                             \
+  (_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T NAME(        \
+      BASE_T p0, VECTOR_T p1) {                                                \
+    return _HLSL_CAT(__builtin_elementwise_, NAME)((VECTOR_T)p0, p1);          \
   }
 
-#define _HLSL_BOTH_OVERLOADS_3(NAME, BASE_T, VECTOR_T, AVAIL)  \
-  _HLSL_CAT(_HLSL_IF_TRUE_,AVAIL)(_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2))	\
-  constexpr VECTOR_T NAME(VECTOR_T p0, VECTOR_T p1, BASE_T p2) { \
-    return _HLSL_CAT(__builtin_hlsl_elementwise_,NAME)(p0, p1, (VECTOR_T)p2); \
-  } \
-  _HLSL_CAT(_HLSL_IF_TRUE_,AVAIL)(_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) \
-  constexpr VECTOR_T NAME(VECTOR_T p0, BASE_T p1, VECTOR_T p2) { \
-    return _HLSL_CAT(__builtin_hlsl_elementwise_,NAME)(p0, (VECTOR_T)p1, p2); \
+#define _HLSL_BOTH_OVERLOADS_3(NAME, BASE_T, VECTOR_T, AVAIL)                  \
+  _HLSL_CAT(_HLSL_IF_TRUE_, AVAIL)                                             \
+  (_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T NAME(        \
+      VECTOR_T p0, VECTOR_T p1, BASE_T p2) {                                   \
+    return _HLSL_CAT(__builtin_hlsl_elementwise_, NAME)(p0, p1, (VECTOR_T)p2); \
+  }                                                                            \
+  _HLSL_CAT(_HLSL_IF_TRUE_, AVAIL)                                             \
+  (_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_T NAME(        \
+      VECTOR_T p0, BASE_T p1, VECTOR_T p2) {                                   \
+    return _HLSL_CAT(__builtin_hlsl_elementwise_, NAME)(p0, (VECTOR_T)p1, p2); \
   }
 
 #define _HLSL_IF_TRUE_0(EXPR)
@@ -72,7 +77,7 @@ namespace hlsl {
 #define _HLSL_NUM_ARGS_min 2
 #define _HLSL_NUM_ARGS_max 2
 #define _HLSL_NUM_ARGS_clamp 3
-  
+
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -622,7 +627,7 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
 half4 clamp(half4, half4, half4);
 _HLSL_VEC_SCALAR_OVERLOADS(clamp, half, 1)
-  
+
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
@@ -637,7 +642,7 @@ _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
 int16_t4 clamp(int16_t4, int16_t4, int16_t4);
 _HLSL_VEC_SCALAR_OVERLOADS(clamp, int16_t, 1)
-  
+
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
 uint16_t clamp(uint16_t, uint16_t, uint16_t);
