@@ -287,8 +287,8 @@ StringRef getCacheDirectory() {
   if (CacheDisabled)
     return "";
 
-  static const char *EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
-  if (EnvCacheDirectory)
+  StringRef EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
+  if (!EnvCacheDirectory.empty())
     return EnvCacheDirectory;
 
   // mark Result as static to keep it cached across calls
