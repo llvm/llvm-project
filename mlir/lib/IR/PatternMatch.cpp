@@ -425,37 +425,34 @@ void RewriterBase::moveOpAfter(Operation *op, Block *block,
 }
 
 //===----------------------------------------------------------------------===//
-// PatternRewriter
+// DiscardableAttributeConverter
 //===----------------------------------------------------------------------===//
 
-void PatternRewriter::eraseOp(Operation *op) {
-  if (hasAttributeConverter()) {
-    op->walk([](Operation *op) {
-      assert(op->getDiscardableAttrs().empty() &&
-             "attempting to drop discardable attribute");
-    });
-  }
-  RewriterBase::eraseOp(op);
+void DiscardableAttributeConverter::notifyOperationErased(Operation *op) {
+  op->walk([](Operation *op) {
+    assert(op->getDiscardableAttrs().empty() &&
+           "attempting to drop discardable attribute");
+  });
 }
 
-void PatternRewriter::replaceOp(Operation *oldOp, Operation *newOp) {
-  if (hasAttributeConverter() && !oldOp->getDiscardableAttrs().empty()) {
-    startOpModification(oldOp);
-    startOpModification(newOp);
+void DiscardableAttributeConverter::notifyOperationReplaced(Operation *oldOp,
+                                                            Operation *newOp) {
+  if (!oldOp->getDiscardableAttrs().empty()) {
+    rewriter.startOpModification(oldOp);
+    rewriter.startOpModification(newOp);
     bool success = false;
     for (DiscardableAttributeConverterFn fn :
          llvm::reverse(dicardableAttributeConverters)) {
       if (succeeded(fn(oldOp, newOp))) {
         success = true;
-        finalizeOpModification(oldOp);
-        finalizeOpModification(newOp);
+        rewriter.finalizeOpModification(oldOp);
+        rewriter.finalizeOpModification(newOp);
         break;
       }
     }
     if (!success) {
-      cancelOpModification(oldOp);
-      cancelOpModification(newOp);
+      rewriter.cancelOpModification(oldOp);
+      rewriter.cancelOpModification(newOp);
     }
   }
-  RewriterBase::replaceOp(oldOp, newOp);
 }
