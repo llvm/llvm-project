@@ -55,6 +55,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ffs
+  SRCS
+    ffs.cpp
+  HDRS
+    ffs.h
+)
+
+add_entrypoint_object(
+  ffsl
+  SRCS
+    ffsl.cpp
+  HDRS
+    ffsl.h
+)
+
+add_entrypoint_object(
+  ffsll
+  SRCS
+    ffsll.cpp
+  HDRS
+    ffsll.h
+)
+
+add_entrypoint_object(
   index
   SRCS
     index.cpp
