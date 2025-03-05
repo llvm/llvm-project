@@ -421,43 +421,31 @@ exit:
 
 define protected amdgpu_kernel void @waterfall(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CURRENT-CHECK-NEXT:  [[ENTRY:.*]]:
-; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
-; CURRENT-CHECK:       [[WHILE]]:
-; CURRENT-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[IS_FIRST_ACTIVE_ID:%.*]], %[[WHILE_BACKEDGE:.*]] ]
-; CURRENT-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
-; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[NOT_DONE]])
+; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
+; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP1]], 0
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[IF:.*]]
-; CURRENT-CHECK:       [[IF]]:
-; CURRENT-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP0]])
-; CURRENT-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID]] = icmp eq i32 [[TMP0]], [[FIRST_ACTIVE_ID]]
-; CURRENT-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[WHILE_BACKEDGE]]
-; CURRENT-CHECK:       [[WORK]]:
+; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[WORK_PEEL:.*]]
+; CURRENT-CHECK:       [[WORK_PEEL]]:
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CURRENT-CHECK-NEXT:    br label %[[WHILE_BACKEDGE]]
-; CURRENT-CHECK:       [[WHILE_BACKEDGE]]:
-; CURRENT-CHECK-NEXT:    br label %[[WHILE]]
+; CURRENT-CHECK-NEXT:    br label %[[EXIT]]
 ; CURRENT-CHECK:       [[EXIT]]:
 ; CURRENT-CHECK-NEXT:    ret void
 ;
 ; PASS-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
 ; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; PASS-CHECK-NEXT:    [[TID:%.*]] = tail call noundef i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP0]])
 ; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
 ; PASS-CHECK:       [[WHILE]]:
 ; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[NEW_DONE:%.*]], %[[TAIL:.*]] ]
 ; PASS-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
 ; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[NOT_DONE]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[NOT_DONE]], true
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
-; PASS-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[IF:.*]]
+; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TID]])
-; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[TID]], [[FIRST_ACTIVE_ID]]
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 0)
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 0, 0
 ; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
 ; PASS-CHECK:       [[WORK]]:
 ; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -470,30 +458,11 @@ define protected amdgpu_kernel void @waterfall(ptr addrspace(1) %out) {
 ;
 ; DCE-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
 ; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*]]:
-; DCE-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DCE-CHECK-NEXT:    br label %[[WHILE:.*]]
-; DCE-CHECK:       [[WHILE]]:
-; DCE-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[IS_FIRST_ACTIVE_ID:%.*]], %[[TAIL:.*]] ]
-; DCE-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
-; DCE-CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[NOT_DONE]])
-; DCE-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP1]], 0
-; DCE-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[IF:.*]]
-; DCE-CHECK:       [[IF]]:
-; DCE-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP0]])
-; DCE-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID]] = icmp eq i32 [[TMP0]], [[FIRST_ACTIVE_ID]]
-; DCE-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
-; DCE-CHECK:       [[WORK]]:
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
 ; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    br label %[[TAIL]]
-; DCE-CHECK:       [[TAIL]]:
-; DCE-CHECK-NEXT:    br label %[[WHILE]]
-; DCE-CHECK:       [[EXIT]]:
 ; DCE-CHECK-NEXT:    ret void
 ;
 entry:
-  %1 = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-  %tid = tail call noundef i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1)
   br label %while
 
 while:
@@ -504,8 +473,8 @@ while:
   br i1 %is_done, label %exit, label %if
 
 if:
-  %first_active_id = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 %tid)
-  %is_first_active_id = icmp eq i32 %tid, %first_active_id
+  %first_active_id = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 0)
+  %is_first_active_id = icmp eq i32 0, %first_active_id
   br i1 %is_first_active_id, label %work, label %tail
 
 work:
