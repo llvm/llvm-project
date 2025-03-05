@@ -158,6 +158,10 @@ private:
   void visitStoreNdOp(xegpu::StoreNdOp store, ArrayRef<SGMapLattice *> operands,
                       ArrayRef<const SGMapLattice *> results);
 
+  void visitStoreScatterOp(xegpu::StoreScatterOp storeScatter,
+                           ArrayRef<SGMapLattice *> operands,
+                           ArrayRef<const SGMapLattice *> results);
+
   void visitLoadNdOp(xegpu::LoadNdOp load, ArrayRef<SGMapLattice *> operands,
                      ArrayRef<const SGMapLattice *> results);
 
@@ -223,6 +227,8 @@ SGMapPropagation::visitOperation(Operation *op,
     visitCreateNdDescOp(createNdDesc, operands, results);
   else if (auto createDesc = dyn_cast<xegpu::CreateDescOp>(op))
     visitCreateDescOp(createDesc, operands, results);
+  else if (auto storeScatter = dyn_cast<xegpu::StoreScatterOp>(op))
+    visitStoreScatterOp(storeScatter, operands, results);
   /// All other ops
   else {
     for (const SGMapLattice *r : results) {
@@ -379,6 +385,22 @@ void SGMapPropagation::visitCreateDescOp(
   propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
+void SGMapPropagation::visitStoreScatterOp(
+    xegpu::StoreScatterOp storeScatter, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  /// StoreScatterOp has the transpose effect. Value has the regular layout,
+  /// while the tensor descriptor has the transposed layout.
+  auto valueLayout =
+      getDefaultSgMap(storeScatter.getTensorDescType().getElementType());
+  auto storeScatterLayout = valueLayout.getTransposedLayout({1, 0});
+  /// Propagate the value layout.
+  propagateIfChanged(operands[0], operands[0]->meet(valueLayout));
+  /// Propagate the tensor descriptor layout.
+  propagateIfChanged(operands[1], operands[1]->meet(storeScatterLayout));
+  /// Propagate the mask layout.
+  propagateIfChanged(operands[2], operands[2]->meet(valueLayout));
+}
+
 namespace {
 
 class RunSGMapPropagation {
@@ -411,20 +433,25 @@ SGMap RunSGMapPropagation::getSGMap(Value val) {
 void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   if (auto modOp = dyn_cast<ModuleOp>(target)) {
     for (auto funcOp : modOp.getOps<func::FuncOp>()) {
-      os << "sg_map for " << funcOp.getName() << ":\n";
-      // Function args
+      os << "function: " << funcOp.getName() << ":\n";
+      // Function arguments
       for (auto arg : funcOp.getArguments()) {
-        auto layouts = getSGMap(arg);
-        os << "sg_map for " << arg << ": ";
-        layouts.print(os);
+        auto layout = getSGMap(arg);
+        os << "argument: " << arg << "\n";
+        os << "sg_map  : ";
+        layout.print(os);
         os << "\n";
       }
       // Function ops
       funcOp.walk([&](Operation *op) {
+        // Skip ops that do not have results
         if (op->getResults().empty())
           return;
         auto layouts = getSGMap(op->getResult(0));
-        os << "sg_map for " << op->getName() << ": ";
+        os << "op    : ";
+        op->print(os);
+        os << "\n";
+        os << "sg_map: ";
         layouts.print(os);
         os << "\n";
       });
@@ -436,7 +463,18 @@ namespace {
 struct XeGPUSubgroupDistributePass final
     : public xegpu::impl::XeGPUSubgroupDistributeBase<
           XeGPUSubgroupDistributePass> {
+  XeGPUSubgroupDistributePass() = default;
+  XeGPUSubgroupDistributePass(const XeGPUSubgroupDistributePass &other)
+      : xegpu::impl::XeGPUSubgroupDistributeBase<XeGPUSubgroupDistributePass>(
+            other) {
+    this->printOnly = other.printOnly;
+  }
   void runOnOperation() override;
+  /// Print sg map propagation analysis result and exit for testing purposes.
+  Option<bool> printOnly{
+      *this, "print-only", llvm::cl::init(false),
+      llvm::cl::desc(
+          "Print the result of the subgroup map propagation analysis")};
 };
 } // namespace
 
@@ -446,8 +484,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   RunSGMapPropagation solver(op);
 
   // Print analysis results
-  auto &os = llvm::outs();
-  solver.printAnalysisResult(os);
+  if (printOnly) {
+    auto &os = llvm::outs();
+    solver.printAnalysisResult(os);
+  }
 }
 
 void xegpu::populateXeGPUSubgroupDistributePatterns(
