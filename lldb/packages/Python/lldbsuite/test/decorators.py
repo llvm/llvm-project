@@ -534,7 +534,7 @@ def expectedFlakey(expected_fn, bugnumber=None, num_retries=3):
     def expectedFailure_impl(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            for i in range(1, num_retries+1):
+            for i in range(1, num_retries + 1):
                 try:
                     return func(*args, **kwargs)
                 except Exception:
