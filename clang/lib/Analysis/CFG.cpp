@@ -2732,6 +2732,16 @@ static bool CanThrow(Expr *E, ASTContext &Ctx) {
   return true;
 }
 
+static bool isBuiltinAssumeWithSideEffects(const ASTContext &Ctx,
+                                           const CallExpr *CE) {
+  unsigned BuiltinID = CE->getBuiltinCallee();
+  if (BuiltinID != Builtin::BI__assume &&
+      BuiltinID != Builtin::BI__builtin_assume)
+    return false;
+
+  return CE->getArg(0)->HasSideEffects(Ctx);
+}
+
 CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   // Compute the callee type.
   QualType calleeType = C->getCallee()->getType();
@@ -2770,7 +2780,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
-    if (FD->getBuiltinID() == Builtin::BI__builtin_object_size ||
+    if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
+        FD->getBuiltinID() == Builtin::BI__builtin_object_size ||
         FD->getBuiltinID() == Builtin::BI__builtin_dynamic_object_size)
       OmitArguments = true;
   }

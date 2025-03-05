@@ -1,7 +1,9 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -verify %s \
+// RUN:   -triple=x86_64-unknown-linux-gnu \
 // RUN:   -analyzer-checker=unix,core,security.ArrayBound,debug.ExprInspection
 
 void clang_analyzer_eval(bool);
+void clang_analyzer_value(int);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -200,41 +202,34 @@ void using_many_assume_attr(int yx) {
   arrOf10[yx] = 406; // expected-warning{{Out of bound access to memory}}
 }
 
-
-int using_builtin_assume_has_no_sideeffects(int y) {
-  // We should not apply sideeffects of the argument of [[assume(...)]].
-  // "y" should not get incremented;
-  __builtin_assume(++y == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
-  clang_analyzer_eval(y == 42); // expected-warning {{FALSE}}
-  return y;
-}
-
-
-
 int using_assume_attr_has_no_sideeffects(int y) {
+  int orig_y = y;
+  clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
 
   // We should not apply sideeffects of the argument of [[assume(...)]].
   // "y" should not get incremented;
   [[assume(++y == 43)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
  
-  clang_analyzer_eval(y == 42); // expected-warning {{TRUE}} expected-warning {{FALSE}} FIXME: This should be only TRUE.
-
-  clang_analyzer_eval(y == 43); // expected-warning {{FALSE}} expected-warning {{TRUE}} FIXME: This should be only FALSE.
+  clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_eval(y == orig_y); // expected-warning {{TRUE}} Good.
 
   return y;
 }
 
+int using_builtin_assume_has_no_sideeffects(int y) {
+  int orig_y = y;
+  clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
 
-int using_builtinassume_has_no_sideeffects(int u) {
   // We should not apply sideeffects of the argument of __builtin_assume(...)
   // "u" should not get incremented;
-  __builtin_assume(++u == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
+  __builtin_assume(++y == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
  
-  // FIXME: evaluate this to true
-  clang_analyzer_eval(u == 42); // expected-warning {{FALSE}}  current behavior 
+  clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_eval(y == orig_y); // expected-warning {{TRUE}} Good.
 
-  // FIXME: evaluate this to false
-  clang_analyzer_eval(u == 43); // expected-warning {{TRUE}}  current behavior 
-
-  return u;
+  return y;
 }
