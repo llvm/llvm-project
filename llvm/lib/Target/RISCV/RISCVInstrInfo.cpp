@@ -953,14 +953,23 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC,
+                            const FeatureBitset &FeatureBits, bool Imm) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    return Imm ? RISCV::CV_BEQIMM : RISCV::BEQ;
+    if (Imm && FeatureBits[RISCV::FeatureVendorXCVbi])
+      return RISCV::CV_BEQIMM;
+    else
+      llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BEQ;
   case RISCVCC::COND_NE:
-    return Imm ? RISCV::CV_BNEIMM : RISCV::BNE;
+    if (Imm && FeatureBits[RISCV::FeatureVendorXCVbi])
+      return RISCV::CV_BNEIMM;
+    else
+      llvm_unreachable("Unknown branch immediate!");
+    return RISCV::BNE;
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -974,7 +983,7 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
 
 const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
                                              bool Imm) const {
-  return get(RISCVCC::getBrCond(CC, Imm));
+  return get(RISCVCC::getBrCond(CC, STI.getFeatureBits(), Imm));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {

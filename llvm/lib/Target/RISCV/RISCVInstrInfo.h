@@ -45,7 +45,8 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC, bool Imm = false);
+unsigned getBrCond(CondCode CC, const FeatureBitset &FeatureBits,
+                   bool Imm = false);
 
 } // end of namespace RISCVCC
 
