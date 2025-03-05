@@ -90,14 +90,6 @@ void MCTargetStreamer::emitRawBytes(StringRef Data) {
 
 void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
-void MCTargetStreamer::emitGPRel32Value(const MCExpr *) {
-  report_fatal_error("unsupported directive");
-}
-
-void MCTargetStreamer::emitGPRel64Value(const MCExpr *) {
-  report_fatal_error("unsupported directive");
-}
-
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
       CurrentProcWinFrameInfoStartIndex(0) {

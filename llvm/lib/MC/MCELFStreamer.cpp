@@ -419,12 +419,10 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
-    case MCSymbolRefExpr::VK_PPC_TLSGD:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA:
-    case MCSymbolRefExpr::VK_PPC_TLSLD:
       break;
     }
     getAssembler().registerSymbol(symRef.getSymbol());

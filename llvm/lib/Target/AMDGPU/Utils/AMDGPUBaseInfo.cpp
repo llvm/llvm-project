@@ -434,8 +434,6 @@ struct FP4FP8DstByteSelInfo {
 
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -497,17 +495,17 @@ int getMTBUFElements(unsigned Opc) {
 
 bool getMTBUFHasVAddr(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMTBUFHasSrsrc(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMTBUFHasSoffset(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 int getMUBUFBaseOpcode(unsigned Opc) {
@@ -527,47 +525,47 @@ int getMUBUFElements(unsigned Opc) {
 
 bool getMUBUFHasVAddr(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMUBUFHasSrsrc(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->IsBufferInv : false;
+  return Info && Info->IsBufferInv;
 }
 
 bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->tfe : false;
+  return Info && Info->tfe;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info ? Info->IsBuffer : false;
+  return Info && Info->IsBuffer;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -582,12 +580,12 @@ bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_dgemm : false;
+  return Info && Info->is_dgemm;
 }
 
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_gfx940_xdl : false;
+  return Info && Info->is_gfx940_xdl;
 }
 
 bool getWMMAIsXDL(unsigned Opc) {
@@ -775,7 +773,7 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info ? Info->IsTrue16 : false;
+  return Info && Info->IsTrue16;
 }
 
 FPType getFPDstSelType(unsigned Opc) {

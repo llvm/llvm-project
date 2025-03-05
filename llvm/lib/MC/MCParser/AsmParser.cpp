@@ -1229,7 +1229,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     // Lookup the symbol variant if used.
     if (!Split.second.empty()) {
-      Variant = getTargetParser().getVariantKindForName(Split.second);
+      Variant =
+          MCSymbolRefExpr::VariantKind(MAI.getVariantKindForName(Split.second));
       if (Variant != MCSymbolRefExpr::VK_Invalid) {
         SymbolName = Split.first;
       } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
@@ -1279,7 +1280,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       std::pair<StringRef, StringRef> Split = IDVal.split('@');
       MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
       if (Split.first.size() != IDVal.size()) {
-        Variant = MCSymbolRefExpr::getVariantKindForName(Split.second);
+        Variant = MCSymbolRefExpr::VariantKind(
+            MAI.getVariantKindForName(Split.second));
         if (Variant == MCSymbolRefExpr::VK_Invalid)
           return TokError("invalid variant '" + Split.second + "'");
         IDVal = Split.first;
@@ -1458,8 +1460,8 @@ static std::string angleBracketString(StringRef AltMacroStr) {
 bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
   // Parse the expression.
   Res = nullptr;
-  if (getTargetParser().parsePrimaryExpr(Res, EndLoc) ||
-      parseBinOpRHS(1, Res, EndLoc))
+  auto &TS = getTargetParser();
+  if (TS.parsePrimaryExpr(Res, EndLoc) || parseBinOpRHS(1, Res, EndLoc))
     return true;
 
   // As a special case, we support 'a op b @ modifier' by rewriting the
@@ -1469,8 +1471,8 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
-    MCSymbolRefExpr::VariantKind Variant =
-        MCSymbolRefExpr::getVariantKindForName(getTok().getIdentifier());
+    auto Variant = MCSymbolRefExpr::VariantKind(
+        MAI.getVariantKindForName(getTok().getIdentifier()));
     if (Variant == MCSymbolRefExpr::VK_Invalid)
       return TokError("invalid variant '" + getTok().getIdentifier() + "'");
 

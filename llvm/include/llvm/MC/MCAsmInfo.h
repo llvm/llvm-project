@@ -15,6 +15,8 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -61,6 +63,11 @@ public:
                   /// target.
     ACLS_SingleQuotePrefix, /// The desired character is prefixed by a single
                             /// quote, e.g., `'A`.
+  };
+
+  struct VariantKindDesc {
+    uint32_t Kind;
+    StringRef Name;
   };
 
 protected:
@@ -241,11 +248,6 @@ protected:
   /// True if data directives support signed values
   bool SupportsSignedData = true;
 
-  /// If non-null, a directive that is used to emit a word which should be
-  /// relocated as a 32-bit GP-relative offset, e.g. .gpword on Mips or .gprel32
-  /// on Alpha.  Defaults to nullptr.
-  const char *GPRel32Directive = nullptr;
-
   /// This is true if this target uses "Sun Style" syntax for section switching
   /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
@@ -422,6 +424,10 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
+  llvm::DenseMap<uint32_t, StringRef> VariantKindToName;
+  llvm::StringMap<uint32_t> NameToVariantKind;
+  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -450,7 +456,6 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-  const char *getGPRel32Directive() const { return GPRel32Directive; }
 
   /// Targets can implement this method to specify a section to switch to if the
   /// translation unit doesn't have any trampolines that require an executable
@@ -702,6 +707,9 @@ public:
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
+
+  StringRef getVariantKindName(uint32_t Kind) const;
+  uint32_t getVariantKindForName(StringRef Name) const;
 };
 
 } // end namespace llvm

@@ -24,8 +24,8 @@ class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);
 
-  void emitGPRel32Value(const MCExpr *) override;
-  void emitGPRel64Value(const MCExpr *) override;
+  virtual void emitGPRel32Value(const MCExpr *);
+  virtual void emitGPRel64Value(const MCExpr *);
   virtual void emitDTPRel32Value(const MCExpr *);
   virtual void emitDTPRel64Value(const MCExpr *);
   virtual void emitTPRel32Value(const MCExpr *);

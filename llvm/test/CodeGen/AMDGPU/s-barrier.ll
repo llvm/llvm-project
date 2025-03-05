@@ -286,14 +286,14 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-SDAG-NEXT:    s_get_barrier_state s2, m0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_get_pc_i64 s[2:3]
-; GFX13-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], func1@GOTPCREL+4
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], func1@gotpcrel+4
 ; GFX13-SDAG-NEXT:    s_barrier_signal -1
 ; GFX13-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX13-SDAG-NEXT:    s_barrier_wait -1
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[2:3]
 ; GFX13-SDAG-NEXT:    s_get_pc_i64 s[2:3]
-; GFX13-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], func2@GOTPCREL+4
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[2:3], s[2:3], func2@gotpcrel+4
 ; GFX13-SDAG-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX13-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[2:3]
@@ -335,7 +335,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-GISEL-NEXT:    s_get_barrier_state s0, m0
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func1@GOTPCREL+4
+; GFX13-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func1@gotpcrel+4
 ; GFX13-GISEL-NEXT:    s_add_co_u32 s8, s12, 48
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
@@ -344,7 +344,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-GISEL-NEXT:    s_barrier_wait -1
 ; GFX13-GISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX13-GISEL-NEXT:    s_get_pc_i64 s[0:1]
-; GFX13-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func2@GOTPCREL+4
+; GFX13-GISEL-NEXT:    s_add_nc_u64 s[0:1], s[0:1], func2@gotpcrel+4
 ; GFX13-GISEL-NEXT:    s_add_co_u32 s8, s12, 48
 ; GFX13-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX13-GISEL-NEXT:    s_add_co_ci_u32 s9, s13, 0
@@ -419,7 +419,7 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-SDAG:       ; %bb.0:
 ; GFX13-SDAG-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX13-SDAG-NEXT:    s_get_pc_i64 s[6:7]
-; GFX13-SDAG-NEXT:    s_add_nc_u64 s[6:7], s[6:7], func2@GOTPCREL+4
+; GFX13-SDAG-NEXT:    s_add_nc_u64 s[6:7], s[6:7], func2@gotpcrel+4
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX13-SDAG-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX13-SDAG-NEXT:    s_movk_i32 m0, 0x7002
@@ -439,7 +439,7 @@ define amdgpu_kernel void @kernel2(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-GISEL:       ; %bb.0:
 ; GFX13-GISEL-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX13-GISEL-NEXT:    s_get_pc_i64 s[6:7]
-; GFX13-GISEL-NEXT:    s_add_nc_u64 s[6:7], s[6:7], func2@GOTPCREL+4
+; GFX13-GISEL-NEXT:    s_add_nc_u64 s[6:7], s[6:7], func2@gotpcrel+4
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX13-GISEL-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
 ; GFX13-GISEL-NEXT:    s_add_co_u32 s8, s4, 48

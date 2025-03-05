@@ -2353,8 +2353,7 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
 
-    if (SIInstrInfo::isWMMA(Inst) || SIInstrInfo::isSWMMAC(Inst) ||
-        SIInstrInfo::isDOT(Inst))
+    if (TII->isXDL(Inst))
       return VGPR_XDL_WRITE;
 
     if (TII->isTRANS(Inst))

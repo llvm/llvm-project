@@ -46,7 +46,7 @@ define amdgpu_kernel void @caller_internal() {
 ; GFX1250-HSA-LABEL: caller_internal:
 ; GFX1250-HSA:       ; %bb.0:
 ; GFX1250-HSA-NEXT:    s_get_pc_i64 s[0:1]
-; GFX1250-HSA-NEXT:    s_add_nc_u64 s[0:1], s[0:1], internal_func@GOTPCREL+4
+; GFX1250-HSA-NEXT:    s_add_nc_u64 s[0:1], s[0:1], internal_func@gotpcrel+4
 ; GFX1250-HSA-NEXT:    s_mov_b32 s32, 0
 ; GFX1250-HSA-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX1250-HSA-NEXT:    s_wait_kmcnt 0x0

@@ -6060,7 +6060,7 @@ unsigned SIInstrInfo::buildExtractSubReg(
     return RI.getSubReg(SuperReg.getReg(), SubIdx);
 
   MachineBasicBlock *MBB = MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
   unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
@@ -10705,7 +10705,11 @@ bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (!SIInstrInfo::isMAI(MI) || isDGEMM(Opcode) ||
+  if (AMDGPU::isGFX12(ST))
+    if (isWMMA(MI) || isSWMMAC(MI) || isDOT(MI))
+      return true;
+
+  if (!isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
       Opcode == AMDGPU::V_ACCVGPR_READ_B32_e64)
     return false;

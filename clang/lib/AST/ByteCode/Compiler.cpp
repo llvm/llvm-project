@@ -2843,6 +2843,8 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
 
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
+  if (!R)
+    return false;
 
   auto *CaptureInitIt = E->capture_init_begin();
   // Initialize all fields (which represent lambda captures) of the
@@ -4087,9 +4089,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     } else if (D->isRecord()) {
       if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
         return false;
-    } else {
-      assert(false);
-    }
+    } else
+      return false;
 
     if (!this->emitFinishInitPop(E))
       return false;
@@ -6039,14 +6040,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult) {
-      // assert(false);
+    if (DiscardResult)
       return this->discard(SubExpr);
-    }
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr)
+    if (classifyPrim(SubExpr) == PT_Ptr && !E->getType()->isArrayType())
       return this->emitNarrowPtr(E);
     return true;
 
