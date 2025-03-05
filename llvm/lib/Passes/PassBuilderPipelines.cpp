@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/MitigationAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -304,6 +305,11 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
     cl::desc("File path for cold function only instrumentation(requires use "
              "with --pgo-instrument-cold-function-only)"),
     cl::Hidden);
+
+static cl::opt<bool>
+    EnableMitigationAnalysis("enable-mitigation-analysis", cl::init(false),
+                             cl::Hidden,
+                             cl::desc("Enable the MitigationAnalysis Pass"));
 
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
@@ -1851,6 +1857,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Create a function that performs CFI checks for cross-DSO calls with targets
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
+
+  if (EnableMitigationAnalysis)
+    MPM.addPass(MitigationAnalysis());
 
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type

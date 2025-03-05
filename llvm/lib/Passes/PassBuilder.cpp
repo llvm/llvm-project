@@ -58,6 +58,7 @@
 #include "llvm/Analysis/MemDerefPrinter.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MitigationAnalysis.h"
 #include "llvm/Analysis/ModuleDebugInfoPrinter.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/MustExecute.h"
