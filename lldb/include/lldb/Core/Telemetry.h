@@ -84,16 +84,16 @@ struct ExitDescription {
 struct TargetInfo : public LLDBBaseTelemetryInfo {
   lldb::ModuleSP exec_mod;
 
-  // The same as the executable-module's UUID.
-  std::string target_uuid;
+  /// The same as the executable-module's UUID.
+  UUID target_uuid;
   std::string arch_name;
 
-  // If true, this entry was emitted at the beginning of an event (eg., before
-  // the executable laod). Otherwise, it was emitted at the end of an event
-  // (eg., after the module and any dependency were loaded.)
+  /// If true, this entry was emitted at the beginning of an event (eg., before
+  /// the executable is loaded). Otherwise, it was emitted at the end of an
+  /// event (eg., after the module and any dependency were loaded.)
   bool is_start_entry;
 
-  // Describes the exit of the executable module.
+  /// Describes the exit of the executable module.
   std::optional<ExitDescription> exit_desc;
   TargetInfo() = default;
 

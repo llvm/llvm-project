@@ -1567,14 +1567,14 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   if (executable_sp) {
     helper.DispatchNow([&](telemetry::TargetInfo *info) {
       info->exec_mod = executable_sp;
-      info->target_uuid = executable_sp->GetUUID().GetAsString();
+      info->target_uuid = executable_sp->GetUUID();
       info->arch_name = executable_sp->GetArchitecture().GetArchitectureName();
       info->is_start_entry = true;
     });
 
     helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
       info->exec_mod = executable_sp;
-      info->target_uuid = executable_sp->GetUUID().GetAsString();
+      info->target_uuid = executable_sp->GetUUID();
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());

@@ -1068,8 +1068,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   Debugger *debugger = &(GetTarget().GetDebugger());
   telemetry::ScopedDispatcher<telemetry::TargetInfo> helper(debugger);
   // Save the Module UUID since the Module might be gone by end of scope.
-  std::string target_uuid =
-      GetTarget().GetExecutableModule()->GetUUID().GetAsString();
+  UUID target_uuid = GetTarget().GetExecutableModule()->GetUUID();
 
   helper.DispatchNow([&](telemetry::TargetInfo *info) {
     info->target_uuid = target_uuid;
