@@ -355,7 +355,7 @@ private:
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
   /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`. Implemented in terms of the other definition of
+  /// them to the `callOp`. Implemented in terms of the 
   /// the public definition of convertParameterAttributes.
   void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
                                   OpBuilder &builder);
