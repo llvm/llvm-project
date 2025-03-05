@@ -117,6 +117,9 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
+      -D CMAKE_Fortran_COMPILER_WORKS=ON \
+      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -135,6 +138,9 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
+      -D CMAKE_Fortran_COMPILER_WORKS=ON \
+      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
