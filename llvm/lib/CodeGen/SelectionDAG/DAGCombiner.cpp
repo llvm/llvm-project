@@ -21366,35 +21366,33 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
   // Check if a call exists in the store chain.
   auto HasCallInLdStChain = [](SDNode *Load, SDNode *Store) {
     SmallPtrSet<const SDNode *, 32> Visited;
-    SmallVector<const SDNode *, 8> Worklist;
-    Worklist.push_back(Store->getOperand(0).getNode());
+    SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
+    Worklist.emplace_back(Store->getOperand(0).getNode(), false);
 
-    bool FoundCall = false;
     while (!Worklist.empty()) {
-      auto Node = Worklist.pop_back_val();
+      auto [Node, FoundCall] = Worklist.pop_back_val();
       if (!Visited.insert(Node).second || Node->getNumOperands() == 0)
         continue;
 
       switch (Node->getOpcode()) {
+      case ISD::CALLSEQ_END:
+        Worklist.emplace_back(Node->getOperand(0).getNode(), true);
+        break;
       case ISD::TokenFactor:
         for (SDValue Op : Node->ops())
-          Worklist.push_back(Op.getNode());
-        break;
-      case ISD::CALLSEQ_END:
-        FoundCall = true;
+          Worklist.emplace_back(Op.getNode(), FoundCall);
         break;
       case ISD::LOAD:
         if (Node == Load)
-          return false;
-        [[fallthrough]];
-      case ISD::STORE:
-        Worklist.push_back(Node->getOperand(0).getNode());
+          return FoundCall;
         [[fallthrough]];
       default:
+        if (Node->getNumOperands() > 0)
+          Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
         break;
       }
     }
-    return FoundCall;
+    return false;
   };
 
   auto StIt = StoreNodes.begin();
