@@ -703,6 +703,41 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+
+  // FP6 conversions.
+  foreach type = ["e2m3x2", "e3m2x2"] in {
+    def CVT_ # type # _f32_sf : NVPTXInst<(outs Int16Regs:$dst),
+                                          (ins Float32Regs:$src1, 
+                                            Float32Regs:$src2, CvtMode:$mode),
+                                          "cvt${mode:base}.satfinite${mode:relu}." 
+                                            # type # ".f32 \t$dst, $src1, $src2;", []>;
+    def CVT_f16x2_ # type : NVPTXInst<(outs Int32Regs:$dst),
+                                      (ins Int16Regs:$src, CvtMode:$mode),
+                                      "cvt${mode:base}${mode:relu}.f16x2." 
+                                        # type # " \t$dst, $src;", []>;
+  }
+  
+  // UE8M0x2 conversions.
+  class CVT_f32_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.f32 \t$dst, $src1, $src2;", []>;
+  
+  class CVT_bf16x2_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Int32Regs:$src, CvtMode:$mode),
+              "cvt${mode:base}" # sat # ".ue8m0x2.bf16x2 \t$dst, $src;", []>;
+              
+  def CVT_ue8m0x2_f32 : CVT_f32_to_ue8m0x2;
+  def CVT_ue8m0x2_f32_sf : CVT_f32_to_ue8m0x2<".satfinite">;
+  def CVT_ue8m0x2_bf16x2 : CVT_bf16x2_to_ue8m0x2;
+  def CVT_ue8m0x2_bf16x2_sf : CVT_bf16x2_to_ue8m0x2<".satfinite">;
+
+  def CVT_bf16x2_ue8m0x2 :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int16Regs:$src),
+                "cvt.rn.bf16x2.ue8m0x2 \t$dst, $src;", []>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;
