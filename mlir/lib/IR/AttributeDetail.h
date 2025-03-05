@@ -421,17 +421,15 @@ public:
     return allocateImpl(referencedAttr);
   }
 
-  /// Sets flags to use thread local bump pointer allocators or a single
-  /// non-thread safe bump pointer allocator depending on if multi-threading is
-  /// enabled. Use this to disable the use of thread local storage and bypass
-  /// thread safety synchronization overhead.
+  /// Sets a flag that stores if multithreading is enabled. The flag is used to
+  /// decide if locking is needed when using a non thread-safe allocator.
   void disableMultiThreading(bool disable = true) {
     threadingIsEnabled = !disable;
   }
 
-  /// Sets flags to disable using thread local bump pointer allocators and use a
-  /// single thread-safe allocator. Use this to persist allocated storage beyond
-  /// the lifetime of a child thread calling this function while ensuring
+  /// Sets a flag to disable using thread local bump pointer allocators and use
+  /// a single thread-safe allocator. Use this to persist allocated storage
+  /// beyond the lifetime of a child thread calling this function while ensuring
   /// thread-safe allocation.
   void disableThreadLocalStorage(bool disable = true) {
     useThreadLocalAllocator = !disable;
