@@ -101,7 +101,7 @@ define void @test_x86_vcvtps2ph_128_m(ptr nocapture %d, <4 x float> %a) nounwind
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> [[A]], i32 3)
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB7]]:
@@ -117,7 +117,7 @@ define void @test_x86_vcvtps2ph_128_m(ptr nocapture %d, <4 x float> %a) nounwind
 ;
 entry:
   %0 = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a, i32 3)
-  %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %1 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i16> %1, ptr %d, align 8
   ret void
 }
