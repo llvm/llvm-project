@@ -104,8 +104,6 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx909"},    {"gfx909"},  GK_GFX909,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx90a"},    {"gfx90a"},  GK_GFX90A,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx90c"},    {"gfx90c"},  GK_GFX90C,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
-    {{"gfx940"},    {"gfx940"},  GK_GFX940,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
-    {{"gfx941"},    {"gfx941"},  GK_GFX941,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx942"},    {"gfx942"},  GK_GFX942,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx950"},    {"gfx950"},  GK_GFX950,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
     {{"gfx1010"},   {"gfx1010"}, GK_GFX1010, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -271,8 +269,6 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX909:  return {9, 0, 9};
   case GK_GFX90A:  return {9, 0, 10};
   case GK_GFX90C:  return {9, 0, 12};
-  case GK_GFX940:  return {9, 4, 0};
-  case GK_GFX941:  return {9, 4, 1};
   case GK_GFX942:  return {9, 4, 2};
   case GK_GFX950:  return {9, 5, 0};
   case GK_GFX1010: return {10, 1, 0};
@@ -410,6 +406,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1300:
       Features["gfx13-insts"] = true;
       Features["parallel-bit-insts"] = true;
+      Features["f32-to-f16bf16-cvt-sr-insts"] = true;
+      Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       [[fallthrough]];
     case GK_GFX1251:
       Features["gfx1251-gemm-insts"] = true;
@@ -442,6 +440,11 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
       Features["vmem-pref-insts"] = true;
+      Features["atomic-fadd-rtn-insts"] = true;
+      Features["atomic-buffer-global-pk-add-f16-insts"] = true;
+      Features["atomic-flat-pk-add-16-insts"] = true;
+      Features["atomic-global-pk-add-bf16-inst"] = true;
+      Features["atomic-ds-pk-add-16-insts"] = true;
       break;
     case GK_GFX120F:
     case GK_GFX120E:
@@ -571,8 +574,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx950-insts"] = true;
       [[fallthrough]];
     case GK_GFX942:
-    case GK_GFX941:
-    case GK_GFX940:
       Features["fp8-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       if (Kind != GK_GFX950)

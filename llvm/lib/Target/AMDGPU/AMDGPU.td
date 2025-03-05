@@ -1121,16 +1121,16 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
-def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
-  "HasForceStoreSC0SC1",
-  "true",
-  "Has SC0 and SC1 on stores"
->;
-
 def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "HasSALUFloatInsts",
   "true",
   "Has SALU floating point instructions"
+>;
+
+def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
+  "HasVGPRSingleUseHintInsts",
+  "true",
+  "Has single-use VGPR hint instructions"
 >;
 
 def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
@@ -1239,6 +1239,12 @@ def FeatureIndexedResources : SubtargetFeature<"indexed-resources",
   "HasIndexedResources",
   "true",
   "Has indexed resources."
+>;
+
+def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
+  "HasPointSampleAccel",
+  "true",
+  "Has point sample acceleration feature"
 >;
 
 //===------------------------------------------------------------===//
@@ -1834,28 +1840,6 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
-def FeatureISAVersion9_4_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
-def FeatureISAVersion9_4_1 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
@@ -2012,20 +1996,23 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      Feature1_5xVGPRs,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -2150,7 +2137,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
-   FeatureAddressableLocalMemorySize327680,
+   FeatureAddressableLocalMemorySize196608,
+   FeatureDefaultLocalMemorySize131072,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
@@ -2192,7 +2180,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureSupportsSRAMECC,
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
@@ -2204,7 +2191,10 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureVNBREncoding,
    FeatureGloballyAddressableScratch,
    FeatureIndexedResources,
-   FeatureVmemPrefInsts
+   FeatureVGPRSingleUseHintInsts,
+   FeatureVmemPrefInsts,
+   FeatureCvtPkF16F32Inst,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2452,10 +2442,6 @@ def HasPermlane16Swap :
 def HasPermlane32Swap :
   Predicate<"Subtarget->hasPermlane32Swap()">,
   AssemblerPredicate<(all_of FeaturePermlane32Swap)>;
-
-def isGFX940Only :
-  Predicate<"Subtarget->hasGFX940Insts() && !Subtarget->hasGFX950Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX940Insts, (not FeatureGFX950Insts))>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -2947,6 +2933,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
+  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;

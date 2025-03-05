@@ -38,13 +38,13 @@ void test_amdgcn_wmma_f16_16x16x32_f16(global v8h* out, v16h a, v16h b, v8h c, i
   *out = __builtin_amdgcn_wmma_f16_16x16x32_f16(0, a, 0, b, mod, c); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x32_f16' must be a constant integer}}
 }
 
-void test_amdgcn_swmmac_f32_16x16x64_f16(global v8f* out, v16h a, v32h b, v8f c, short index, int mod)
+void test_amdgcn_swmmac_f32_16x16x64_f16(global v8f* out, v16h a, v32h b, v8f c, int index, int mod)
 {
   *out = __builtin_amdgcn_swmmac_f32_16x16x64_f16(mod, a, 0, b, c, index); // expected-error {{'__builtin_amdgcn_swmmac_f32_16x16x64_f16' must be a constant integer}}
   *out = __builtin_amdgcn_swmmac_f32_16x16x64_f16(0, a, mod, b, c, index); // expected-error {{'__builtin_amdgcn_swmmac_f32_16x16x64_f16' must be a constant integer}}
 }
 
-void test_amdgcn_swmmac_f16_16x16x64_f16(global v8h* out, v16h a, v32h b, v8h c, short index, int mod)
+void test_amdgcn_swmmac_f16_16x16x64_f16(global v8h* out, v16h a, v32h b, v8h c, int index, int mod)
 {
   *out = __builtin_amdgcn_swmmac_f16_16x16x64_f16(mod, a, 0, b, c, index); // expected-error {{'__builtin_amdgcn_swmmac_f16_16x16x64_f16' must be a constant integer}}
   *out = __builtin_amdgcn_swmmac_f16_16x16x64_f16(0, a, mod, b, c, index); // expected-error {{'__builtin_amdgcn_swmmac_f16_16x16x64_f16' must be a constant integer}}

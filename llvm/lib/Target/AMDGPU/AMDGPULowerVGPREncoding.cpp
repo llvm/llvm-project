@@ -166,6 +166,20 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  struct OpMetaInfo {
+    uint32_t Indices = 0;
+    uint32_t AccessKinds = 0;
+
+    void Encode(MCRegister Reg, MachineMemOperand &MMO, int OpId) {
+      Indices |= ((Reg - AMDGPU::IDX0) & 0x3) << (OpId * 2);
+      AccessKinds |= ((MMO.getAddrSpace() == AMDGPUAS::LANE_SHARED)
+                          ? AMDGPU::IDX_LANESHARED
+                          : AMDGPU::IDX_PRIVATE_ARRAY)
+                     << (OpId * 2);
+    }
+
+  };
+
 private:
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
@@ -240,10 +254,6 @@ private:
   /// iterator to insert mode change. It may also modify the S_CLAUSE
   /// instruction to extend it or drop the clause if it cannot be adjusted.
   MachineInstr *handleClause(MachineInstr *I);
-
-  /// Precompute the maximum number of VGPRs used per wave before
-  /// we remove v_load/store_idx instructions.
-  void preComputeMaxPerWaveVGPR(MachineFunction &MF);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, MachineInstr *I) {
@@ -296,6 +306,40 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
 
   unsigned Idx = TRI->getHWRegIndex(Reg);
   return Idx >> 8;
+}
+
+static void TransferImplicitVGPROperands(MachineInstr &OldMI,
+                                         MachineInstr &NewMI,
+                                         const SIRegisterInfo *TRI) {
+  for (auto MO : OldMI.implicit_operands()) {
+    if (!MO.isReg())
+      continue;
+    MCRegister Reg = MO.getReg();
+    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+    if (!RC || !TRI->isVGPRClass(RC))
+      continue;
+    auto Existing = std::find_if(NewMI.implicit_operands().begin(),
+                                 NewMI.implicit_operands().end(),
+                                 [&MO](MachineOperand &ExistingMO) {
+                                   return MO.isIdenticalTo(ExistingMO);
+                                 });
+    if (Existing == NewMI.implicit_operands().end())
+      NewMI.addOperand(MO);
+  }
+}
+
+static void
+AddMetadataForOperandIndexing(MachineInstr &MI,
+                              AMDGPULowerVGPREncoding::OpMetaInfo Info) {
+  LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
+  SmallVector<Metadata *, 3> Ops;
+  // Use a unique string to identify this metadata.
+  Ops.push_back(MDString::get(Ctx, "vgpr_indexing_extra"));
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Ops.push_back(ConstantAsMetadata::get(ConstantInt::get(I32Ty, Info.Indices)));
+  Ops.push_back(
+      ConstantAsMetadata::get(ConstantInt::get(I32Ty, Info.AccessKinds)));
+  MI.addOperand(MachineOperand::CreateMetadata(MDTuple::get(Ctx, Ops)));
 }
 
 void AMDGPULowerVGPREncoding::lowerMovBundle(
@@ -354,6 +398,10 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
   NewMode.Ops[VSrc0] = {0, LoadIdxReg.asMCReg()};
   NewMode.Ops[VDst] = {0, StoreIdxReg.asMCReg()};
 
+  OpMetaInfo OpInfo;
+  OpInfo.Encode(StoreIdxReg.asMCReg(), *MMO, 0);
+  OpInfo.Encode(LoadIdxReg.asMCReg(), *LoadMMO, 1);
+
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
   for (unsigned I = 0; I < Size / 32; ++I) {
@@ -365,6 +413,10 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
         .addUse(AMDGPU::VGPR0 + CurLoadOffset, RegState::Undef);
     NewMode.Ops[VSrc0].MSBits = CurLoadOffset >> 8;
     NewMode.Ops[VDst].MSBits = CurStoreOffset >> 8;
+
+    AddMetadataForOperandIndexing(*MIB.getInstr(), OpInfo);
+    TransferImplicitVGPROperands(CoreMI, *MIB.getInstr(), TRI);
+    TransferImplicitVGPROperands(*LoadMI, *MIB.getInstr(), TRI);
 
     setMode(NewMode, &*MIB);
     MII = MachineBasicBlock::instr_iterator(MIB);
@@ -408,6 +460,9 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   else
     NewMode.Ops[VDst].IdxReg = IdxReg.asMCReg();
 
+  OpMetaInfo OpInfo;
+  OpInfo.Encode(IdxReg.asMCReg(), *MMO, IsLoad ? 1 : 0);
+
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
   for (unsigned i = 0; i < Size / 32; ++i) {
@@ -427,6 +482,8 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
       NewMode.Ops[VSrc0].MSBits = CurData >> 8;
       NewMode.Ops[VDst].MSBits = CurOffset >> 8;
     }
+    AddMetadataForOperandIndexing(*MIB.getInstr(), OpInfo);
+    TransferImplicitVGPROperands(MI, *MIB.getInstr(), TRI);
 
     setMode(NewMode, &*MIB);
     MII = MachineBasicBlock::instr_iterator(MIB);
@@ -442,6 +499,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
   if (!CoreMI)
     CoreMI = &MI;
   ModeTy NewMode;
+  OpMetaInfo OpInfo;
 
   for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
@@ -484,6 +542,12 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
             II->getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
                 .getReg()
                 .asMCReg();
+
+        MachineMemOperand *MMO = *(II->memoperands_begin());
+        int CoreOpId = AMDGPU::getNamedOperandIdx(CoreMI->getOpcode(), Ops[I]);
+
+        OpInfo.Encode(NewMode.Ops[I].IdxReg.value(), *MMO, CoreOpId);
+        TransferImplicitVGPROperands(*II, *CoreMI, TRI);
 
         bool HasOtherUsers =
             AMDGPU::STAGING_REGRegClass.contains(DataReg) &&
@@ -546,6 +610,7 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
   }
 
   if (IsBundleWithGPRIndexing) {
+    AddMetadataForOperandIndexing(*CoreMI, OpInfo);
     MachineBasicBlock::instr_iterator Start(MI.getIterator());
     for (MachineBasicBlock::instr_iterator I = ++Start,
                                            E = MI.getParent()->instr_end();
@@ -619,71 +684,6 @@ MachineInstr *AMDGPULowerVGPREncoding::handleClause(MachineInstr *I) {
   return I;
 }
 
-void AMDGPULowerVGPREncoding::preComputeMaxPerWaveVGPR(MachineFunction &MF) {
-  // If there are no calls, MachineRegisterInfo can tell us the used register
-  // count easily.
-  // A tail call isn't considered a call for MachineFrameInfo's purposes.
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    MFI->MaxPerWaveVGPR =
-        TRI->getNumUsedPhysRegs(MF.getRegInfo(), AMDGPU::VGPR_32RegClass) - 1;
-    return;
-  }
-
-  int MaxVGPR = -1;
-  for (auto &MBB : MF) {
-    for (MachineInstr &MI : MBB.instrs()) {
-      // iterate over all operands
-      for (const MachineOperand &MO : MI.operands()) {
-        if (!MO.isReg())
-          continue;
-
-        unsigned Width = 0;
-        Register Reg = MO.getReg();
-        if (AMDGPU::VGPR_32RegClass.contains(Reg) ||
-            AMDGPU::VGPR_16RegClass.contains(Reg))
-          Width = 1;
-        else if (AMDGPU::VReg_64RegClass.contains(Reg))
-          Width = 2;
-        else if (AMDGPU::VReg_96RegClass.contains(Reg))
-          Width = 3;
-        else if (AMDGPU::VReg_128RegClass.contains(Reg))
-          Width = 4;
-        else if (AMDGPU::VReg_160RegClass.contains(Reg))
-          Width = 5;
-        else if (AMDGPU::VReg_192RegClass.contains(Reg))
-          Width = 6;
-        else if (AMDGPU::VReg_224RegClass.contains(Reg))
-          Width = 7;
-        else if (AMDGPU::VReg_256RegClass.contains(Reg))
-          Width = 8;
-        else if (AMDGPU::VReg_288RegClass.contains(Reg))
-          Width = 9;
-        else if (AMDGPU::VReg_320RegClass.contains(Reg))
-          Width = 10;
-        else if (AMDGPU::VReg_352RegClass.contains(Reg))
-          Width = 11;
-        else if (AMDGPU::VReg_384RegClass.contains(Reg))
-          Width = 12;
-        else if (AMDGPU::VReg_512RegClass.contains(Reg))
-          Width = 16;
-        else if (AMDGPU::VReg_576RegClass.contains(Reg))
-          Width = 18;
-        else if (AMDGPU::VReg_1024RegClass.contains(Reg))
-          Width = 32;
-
-        if (Width) {
-          unsigned HWReg = TRI->getHWRegIndex(Reg);
-          int MaxUsed = HWReg + Width - 1;
-          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
-        }
-      }
-    }
-  }
-
-  MFI->MaxPerWaveVGPR = MaxVGPR;
-}
-
 bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->has1024AddressableVGPRs())
@@ -692,9 +692,6 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  if (ST->hasVGPRIndexingRegisters())
-    preComputeMaxPerWaveVGPR(MF);
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;

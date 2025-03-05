@@ -225,9 +225,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     // emit them now.
     auto Pos = SuppressedDiagnostics.find(D->getCanonicalDecl());
     if (Pos != SuppressedDiagnostics.end()) {
-      for (const PartialDiagnosticAt &Suppressed : Pos->second)
-        Diag(Suppressed.first, Suppressed.second);
-
+      for (const auto &[DiagLoc, PD] : Pos->second) {
+        DiagnosticBuilder Builder(Diags.Report(DiagLoc, PD.getDiagID()));
+        PD.Emit(Builder);
+      }
       // Clear out the list of suppressed diagnostics, so that we don't emit
       // them again for this specialization. However, we don't obsolete this
       // entry from the table, because we want to avoid ever emitting these
@@ -5570,10 +5571,8 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
-  Expr *RewrittenExpr = (Init == Param->getDefaultArg() ? nullptr : Init);
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
-                                   RewrittenExpr,
-                                   InitializationContext->Context);
+                                   Init, InitializationContext->Context);
 }
 
 static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
@@ -5691,11 +5690,10 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       return ExprError();
     }
     Init = Res.get();
-    Expr *RewrittenInit =
-        (Init == Field->getInClassInitializer() ? nullptr : Init);
+
     return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
                                       Field, InitializationContext->Context,
-                                      RewrittenInit);
+                                      Init);
   }
 
   // DR1351:
@@ -20681,7 +20679,8 @@ ExprResult RebuildUnknownAnyExpr::VisitCallExpr(CallExpr *E) {
   const FunctionType *FnType = CalleeType->castAs<FunctionType>();
 
   // Verify that this is a legal result type of a function.
-  if (DestType->isArrayType() || DestType->isFunctionType()) {
+  if ((DestType->isArrayType() && !S.getLangOpts().allowArrayReturnTypes()) ||
+      DestType->isFunctionType()) {
     unsigned diagID = diag::err_func_returning_array_function;
     if (Kind == FK_BlockPointer)
       diagID = diag::err_block_returning_array_function;

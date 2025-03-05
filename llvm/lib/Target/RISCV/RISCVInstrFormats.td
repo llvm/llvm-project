@@ -281,9 +281,10 @@ class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
-    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Size = 4;
 }
 
 class PseudoQuietFCMP<DAGOperand Ty>

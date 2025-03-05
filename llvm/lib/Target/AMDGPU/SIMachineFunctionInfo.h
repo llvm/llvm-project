@@ -320,6 +320,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+  bool UsesWholeWave = false;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -374,6 +375,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("usesWholeWave", MFI.UsesWholeWave, false);
   }
 };
 
@@ -487,6 +489,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
+  // Requested cluster dimensions.
+  std::optional<std::array<unsigned, 3>> ClusterDims;
+
 private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
@@ -541,8 +546,6 @@ private:
   // Maximum number of dwords that can be clusterred during instruction
   // scheduler stage.
   unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
-
-  mutable std::optional<bool> UsesAGPRs;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -1237,9 +1240,6 @@ public:
   // has a call which may use it.
   bool mayUseAGPRs(const Function &F) const;
 
-  // \returns true if a function needs or may need AGPRs.
-  bool usesAGPRs(const MachineFunction &MF) const;
-
   void setLdsSpill(LdsSpill Info) { LdsSpillInfo = Info; }
 
   LdsSpill getLdsSpill() const { return LdsSpillInfo; }
@@ -1253,10 +1253,10 @@ public:
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
-  /// This number is computed in LowerVGPREncoding pass, and gets used by
-  /// ResourceAnalsysis because it is difficult to derive this number from
-  /// MIR after LowerVGPREncoding.
-  std::optional<int> MaxPerWaveVGPR;
+  /// \returns Requested cluster dimensions.
+  std::optional<std::array<unsigned, 3>> getClusterDims() const {
+    return ClusterDims;
+  }
 };
 
 } // end namespace llvm

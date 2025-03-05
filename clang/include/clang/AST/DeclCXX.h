@@ -1720,14 +1720,6 @@ public:
   /// static analysis, or similar.
   bool hasMemberName(DeclarationName N) const;
 
-  /// Performs an imprecise lookup of a dependent name in this class.
-  ///
-  /// This function does not follow strict semantic rules and should be used
-  /// only when lookup rules can be relaxed, e.g. indexing.
-  std::vector<const NamedDecl *>
-  lookupDependentName(DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
-
   /// Renders and displays an inheritance diagram
   /// for this C++ class and all of its base classes (transitively) using
   /// GraphViz.

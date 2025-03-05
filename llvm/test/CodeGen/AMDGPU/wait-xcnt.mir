@@ -852,7 +852,7 @@ body: |
     ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: S_WAIT_XCNT 64
+    ; GCN-NEXT: S_WAIT_XCNT 62
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec

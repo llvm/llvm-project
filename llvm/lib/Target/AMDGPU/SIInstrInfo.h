@@ -268,7 +268,7 @@ public:
                                int64_t Offset1, unsigned NumLoads) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
@@ -864,6 +864,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  bool isXDL(const MachineInstr &MI) const;
+
+  static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
+
   static bool isLDSDIR(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
@@ -898,7 +902,8 @@ public:
     return Opcode == AMDGPU::S_CMPK_EQ_U32 || Opcode == AMDGPU::S_CMPK_LG_U32 ||
            Opcode == AMDGPU::S_CMPK_GT_U32 || Opcode == AMDGPU::S_CMPK_GE_U32 ||
            Opcode == AMDGPU::S_CMPK_LT_U32 || Opcode == AMDGPU::S_CMPK_LE_U32 ||
-           Opcode == AMDGPU::S_GETREG_B32;
+           Opcode == AMDGPU::S_GETREG_B32 ||
+           Opcode == AMDGPU::S_GETREG_B32_const;
   }
 
   /// \returns true if this is an s_store_dword* instruction. This is more

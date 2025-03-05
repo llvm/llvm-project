@@ -14,8 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
-#include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUISelLowering.h"
+#include "SIDefines.h"
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
@@ -91,6 +92,9 @@ private:
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWavegroupID(SelectionDAG &DAG, SDValue Op) const;
   SDValue lowerWaveIDInWavegroup(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
   SDValue buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG, SDValue Op,
@@ -315,8 +319,10 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   // While address space 7 should never make it to codegen, it still needs to
-  // have a MVT to prevent some analyses that query this function from breaking,
-  // so, to work around the lack of i160, map it to v5i32.
+  // have a MVT to prevent some analyses that query this function from breaking.
+  // We use the custum MVT::amdgpuBufferFatPointer and
+  // amdgpu::amdgpuBufferStridedPointer for this, though we use v8i32 for the
+  // memory type (which is probably unused).
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
@@ -550,8 +556,8 @@ public:
 
   bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                  const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII, unsigned &PhysReg,
-                                 int &Cost) const override;
+                                 const TargetInstrInfo *TII,
+                                 MCRegister &PhysReg, int &Cost) const override;
 
   bool isProfitableToHoist(Instruction *I) const override;
 

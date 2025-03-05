@@ -526,15 +526,19 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
 
 let OtherPredicates = [HasDot7Insts] in {
-defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
+}
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
-defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
+}
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
@@ -795,6 +799,7 @@ def VOPProfileMAI_F32_V8BF16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V1
 def VOPProfileMAI_F32_V8BF16_X4     : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8BF16_X4_VCD : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     VISrc_128_f32,  VDst_128, AVSrc_128>;
 
+
 // For i32_16x16x64_i8
 def VOPProfileMAI_I32_V4I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    VISrc_128_f32,  VDst_128, AVSrc_128>;
@@ -884,6 +889,7 @@ def VOPProfileMAI_I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32
 // For i32_32x32x32_i8
 def VOPProfileMAI_I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
+
 
 class MFMATable <bit is_mac, string Kind, string Name,
                  string AGPROpName = NAME> {
@@ -1234,7 +1240,7 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
   } // End SubtargetPredicate = HasPackedFP32Ops
 
-  let SubtargetPredicate = HasPkMovB32 in
+  let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
 
   let SubtargetPredicate = HasBF16PackedInsts in {

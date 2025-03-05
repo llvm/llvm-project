@@ -628,7 +628,8 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
       CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
   (void)PGRM_Rsrc3;
   (void)EvaluatableRsrc3;
-  assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
+  assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+         STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
          !EvaluatableRsrc3 || static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
@@ -854,7 +855,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                 false);
 
     [[maybe_unused]] int64_t PGMRSrc3;
-    assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
+    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+           STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
@@ -1315,8 +1317,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     const auto *Shft = MCConstantExpr::create(Shift, Ctx);
     const auto *Msk = MCConstantExpr::create(Mask, Ctx);
     Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-    Dst = MCBinaryExpr::createOr(
-        Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
+    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                                 Ctx);
     return Dst;
   };
 
@@ -1352,6 +1354,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             F.getName() + "': desired occupancy was " + Twine(MinWEU) +
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
+  }
+
+  if (isGFX11Plus(STM)) {
+    uint32_t CodeSizeInBytes = (uint32_t)std::min(
+        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
+        (uint64_t)std::numeric_limits<uint32_t>::max());
+    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
+    uint32_t Field, Shift, Width;
+    if (isGFX11(STM)) {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
+    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
+                                       CreateExpr(InstPrefSize), Field, Shift);
   }
 }
 
@@ -1482,10 +1504,6 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
     if (ST.isDynamicVGPREnabled())
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
-
-    MD->setHwStage(CC, ".lds_size",
-                   (unsigned)(CurrentProgramInfo.LdsSize *
-                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
   }
 
   MD->setHwStage(CC, ".lds_size",

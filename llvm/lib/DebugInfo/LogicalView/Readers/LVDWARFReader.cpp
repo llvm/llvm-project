@@ -565,12 +565,8 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
     // Insert the newly created element into the element symbol table. If the
     // element is in the list, it means there are previously created elements
     // referencing this element.
-    if (ElementTable.find(Offset) == ElementTable.end()) {
-      // No previous references to this offset.
-      ElementTable.emplace(std::piecewise_construct,
-                           std::forward_as_tuple(Offset),
-                           std::forward_as_tuple(CurrentElement));
-    } else {
+    auto [It, Inserted] = ElementTable.try_emplace(Offset, CurrentElement);
+    if (!Inserted) {
       // There are previous references to this element. We need to update the
       // element and all the references pointing to this element.
       LVElementEntry &Reference = ElementTable[Offset];

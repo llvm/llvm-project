@@ -464,6 +464,10 @@ public:
 
   void clearGprIdxImmedVal(unsigned Idx) { GprIdxImmedVals[Idx] = {}; }
 
+  bool hasPointSampleAccel(const MachineInstr &MI) const;
+  bool hasPointSamplePendingVmemTypes(const MachineInstr &MI,
+                                      RegInterval Interval) const;
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -870,7 +874,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
 #endif
 
   Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
-  auto MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
+  int MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
   if (GprIdxImmedVals[Idx].has_value()) {
     auto OffsetSrcIdx =
         AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
@@ -969,6 +973,34 @@ void WaitcntBrackets::setScoreByOperand(const MachineInstr *MI,
                                         InstCounterType CntTy, unsigned Score) {
   RegInterval Interval = getRegInterval(MI, MRI, TRI, Op);
   setScoreByInterval(Interval, CntTy, Score);
+}
+
+// Return true if the subtarget is one that enables Point Sample Acceleration
+// and the MachineInstr passed in is one to which it might be applied (the
+// hardware makes this decision based on several factors, but we can't determine
+// this at compile time, so we have to assume it might be applied if the
+// instruction supports it).
+bool WaitcntBrackets::hasPointSampleAccel(const MachineInstr &MI) const {
+  if (!ST->hasPointSampleAccel() || !SIInstrInfo::isMIMG(MI))
+    return false;
+
+  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
+      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+  return BaseInfo->PointSampleAccel;
+}
+
+// Return true if the subtarget enables Point Sample Acceleration, the supplied
+// MachineInstr is one to which it might be applied and the supplied interval is
+// one that has outstanding writes to vmem-types different than VMEM_NOSAMPLER
+// (this is the type that a point sample accelerated instruction effectively
+// becomes)
+bool WaitcntBrackets::hasPointSamplePendingVmemTypes(
+    const MachineInstr &MI, RegInterval Interval) const {
+  if (!hasPointSampleAccel(MI))
+    return false;
+
+  return hasOtherPendingVmemTypes(Interval, VMEM_NOSAMPLER);
 }
 
 void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
@@ -1111,8 +1143,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           // defs. That's required for a sane index into `VgprMemTypes` below
           assert(TRI->isVectorRegister(*MRI, Op.getReg()));
           VmemType V = getVmemType(Inst);
+          unsigned char TypesMask = 1 << V;
+          // If instruction can have Point Sample Accel applied, we have to flag
+          // this with another potential dependency
+          if (hasPointSampleAccel(Inst))
+            TypesMask |= 1 << VMEM_NOSAMPLER;
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
-            VgprVmemTypes[RegNo] |= 1 << V;
+            VgprVmemTypes[RegNo] |= TypesMask;
         }
       }
       setScoreByInterval(Interval, T, CurrScore);
@@ -2190,9 +2227,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           // previous write and this write are the same type of VMEM
           // instruction, in which case they are (in some architectures)
           // guaranteed to write their results in order anyway.
+          // Additionally check instructions where Point Sample Acceleration
+          // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
               ScoreBrackets.hasOtherPendingVmemTypes(Interval,
                                                      getVmemType(MI)) ||
+              ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Interval) ||
               !ST->hasVmemWriteVgprInOrder()) {
             ScoreBrackets.determineWait(LOAD_CNT, Interval, Wait);
             ScoreBrackets.determineWait(STORE_CNT, Interval, Wait);
@@ -2353,8 +2393,7 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
 
-    if (SIInstrInfo::isWMMA(Inst) || SIInstrInfo::isSWMMAC(Inst) ||
-        SIInstrInfo::isDOT(Inst))
+    if (TII->isXDL(Inst))
       return VGPR_XDL_WRITE;
 
     if (TII->isTRANS(Inst))

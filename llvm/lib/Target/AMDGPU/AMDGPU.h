@@ -315,6 +315,12 @@ private:
   ScanOptions ScanImpl;
 };
 
+struct AMDGPUInsertDelayAluPass
+    : public PassInfoMixin<AMDGPUInsertDelayAluPass> {
+  PreservedAnalyses run(MachineFunction &F,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
@@ -391,6 +397,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
+public:
+  SIModeRegisterPass() {}
+  PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -413,7 +425,7 @@ struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
+void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
 void initializeSIOptimizeVGPRLiveRangeLegacyPass(PassRegistry &);
@@ -458,11 +470,14 @@ extern char &SIAnnotateControlFlowLegacyPassID;
 void initializeSIMemoryLegalizerPass(PassRegistry&);
 extern char &SIMemoryLegalizerID;
 
-void initializeSIModeRegisterPass(PassRegistry&);
+void initializeSIModeRegisterLegacyPass(PassRegistry &);
 extern char &SIModeRegisterID;
 
-void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
+
+void initializeAMDGPUInsertSingleUseVDSTPass(PassRegistry &);
+extern char &AMDGPUInsertSingleUseVDSTID;
 
 void initializeAMDGPULowerVGPREncodingPass(PassRegistry &);
 extern char &AMDGPULowerVGPREncodingID;
@@ -476,8 +491,8 @@ extern char &SIInsertWaitcntsID;
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
 extern char &SIFormMemoryClausesID;
 
-void initializeSIPostRABundlerPass(PassRegistry&);
-extern char &SIPostRABundlerID;
+void initializeSIPostRABundlerLegacyPass(PassRegistry &);
+extern char &SIPostRABundlerLegacyID;
 
 void initializeGCNCreateVOPDPass(PassRegistry &);
 extern char &GCNCreateVOPDID;

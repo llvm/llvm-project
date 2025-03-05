@@ -1000,8 +1000,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (Subtarget->hasMinimum3Maximum3F32())
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
 
-    if (Subtarget->hasMinimum3Maximum3PKF16())
+    if (Subtarget->hasMinimum3Maximum3PKF16()) {
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
+
+      // If only the vector form is available, we need to widen to a vector.
+      if (!Subtarget->hasMinimum3Maximum3F16())
+        setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+    }
   }
 
   if (Subtarget->hasIntMinMax64())
@@ -1324,19 +1329,20 @@ static EVT memVTFromLoadIntrReturn(const SITargetLowering &TLI,
   return memVTFromLoadIntrData(TLI, DL, ST->getContainedType(0), MaxNumLanes);
 }
 
-/// Map address space 7 to MVT::v5i32 because that's its in-memory
-/// representation. This return value is vector-typed because there is no
-/// MVT::i160 and it is not clear if one can be added. While this could
-/// cause issues during codegen, these address space 7 pointers will be
-/// rewritten away by then. Therefore, we can return MVT::v5i32 in order
-/// to allow pre-codegen passes that query TargetTransformInfo, often for cost
-/// modeling, to work.
+/// Map address space 7 to MVT::amdgpuBufferFatPointer because that's its
+/// in-memory representation. This return value is a custom type because there
+/// is no MVT::i160 and adding one breaks integer promotion logic. While this
+/// could cause issues during codegen, these address space 7 pointers will be
+/// rewritten away by then. Therefore, we can return MVT::amdgpuBufferFatPointer
+/// in order to allow pre-codegen passes that query TargetTransformInfo, often
+/// for cost modeling, to work. (This also sets us up decently for doing the
+/// buffer lowering in GlobalISel if SelectionDAG ever goes away.)
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
-    return MVT::v5i32;
+    return MVT::amdgpuBufferFatPointer;
   if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
       DL.getPointerSizeInBits(AS) == 192)
-    return MVT::v6i32;
+    return MVT::amdgpuBufferStridedPointer;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
@@ -2563,7 +2569,7 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
           : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4),
       SL, VT);
   SDNode *GetReg =
-      DAG.getMachineNode(AMDGPU::S_GETREG_B32, SL, VT, ClusterIdField);
+      DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
   SDValue ClusterId(GetReg, 0);
   SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
   SDValue One = DAG.getConstant(1, SL, VT);
@@ -2633,6 +2639,12 @@ SDValue SITargetLowering::getPreloadedValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
+
+  auto LoadConstant = [&](unsigned N) {
+    return DAG.getConstant(N, SDLoc(), VT);
+  };
+
   if (Subtarget->hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
@@ -2655,31 +2667,43 @@ SDValue SITargetLowering::getPreloadedValue(
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
+      if (ClusterDims && (*ClusterDims)[0] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
+      if (ClusterDims && (*ClusterDims)[1] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
+      if (ClusterDims && (*ClusterDims)[2] == 1)
+        return LoadConstant(0);
       Reg = &ClusterWorkGroupIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[0] - 1);
       Reg = &ClusterWorkGroupMaxIDX;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[1] - 1);
       Reg = &ClusterWorkGroupMaxIDY;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
+      if (ClusterDims)
+        return LoadConstant((*ClusterDims)[2] - 1);
       Reg = &ClusterWorkGroupMaxIDZ;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
@@ -5148,7 +5172,8 @@ emitScalarIdxFromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   const TargetRegisterClass *BoolRC = TRI->getBoolRC();
   Register PhiExec = MRI.createVirtualRegister(BoolRC);
   Register NewExec = MRI.createVirtualRegister(BoolRC);
-  Register CurrentIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+  Register CurrentIdxReg =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   Register CondReg = MRI.createVirtualRegister(BoolRC);
 
   if (PhiReg > 0) {
@@ -5577,7 +5602,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
 
     Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
-    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
+    Register LaneValueReg =
+        MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
     bool IsWave32 = ST.isWave32();
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -6131,18 +6157,18 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                        ? AMDGPU::S_ADDC_U32
                        : AMDGPU::S_SUBB_U32;
     if (Src0.isReg() && TRI->isVectorRegister(MRI, Src0.getReg())) {
-      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register RegOp0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp0)
           .addReg(Src0.getReg());
       Src0.setReg(RegOp0);
     }
     if (Src1.isReg() && TRI->isVectorRegister(MRI, Src1.getReg())) {
-      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      Register RegOp1 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp1)
           .addReg(Src1.getReg());
       Src1.setReg(RegOp1);
     }
-    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register RegOp2 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     if (TRI->isVectorRegister(MRI, Src2.getReg())) {
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RegOp2)
           .addReg(Src2.getReg());
@@ -9676,10 +9702,23 @@ SDValue SITargetLowering::lowerWaveIDInWavegroup(SelectionDAG &DAG,
   using namespace AMDGPU::Hwreg;
   return {
       DAG.getMachineNode(
-          AMDGPU::S_GETREG_B32, SL, MVT::i32,
+          AMDGPU::S_GETREG_B32_const, SL, MVT::i32,
           DAG.getTargetConstant(
               HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4), SL, MVT::i32)),
       0};
+}
+
+SDValue SITargetLowering::lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                                              AMDGPU::Hwreg::Id HwReg,
+                                              unsigned LowBit,
+                                              unsigned Width) const {
+  SDLoc SL(Op);
+  using namespace AMDGPU::Hwreg;
+  return {DAG.getMachineNode(
+              AMDGPU::S_GETREG_B32_const, SL, MVT::i32,
+              DAG.getTargetConstant(HwregEncoding::encode(HwReg, LowBit, Width),
+                                    SL, MVT::i32)),
+          0};
 }
 
 SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
@@ -9868,27 +9907,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                                     SI::KernelInputOffsets::NGROUPS_Z, Align(4),
                                     false);
-  case Intrinsic::r600_read_global_size_x:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_X,
-                                    Align(4), false);
-  case Intrinsic::r600_read_global_size_y:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_Y,
-                                    Align(4), false);
-  case Intrinsic::r600_read_global_size_z:
-    if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, DL, VT);
-
-    return lowerKernargMemParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
-                                    SI::KernelInputOffsets::GLOBAL_SIZE_Z,
-                                    Align(4), false);
   case Intrinsic::r600_read_local_size_x:
     if (Subtarget->isAmdHsaOS())
       return emitNonHSAIntrinsicError(DAG, DL, VT);
@@ -9949,6 +9967,13 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      DAG, *MFI, VT,
                      AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
                : DAG.getUNDEF(VT);
+  case Intrinsic::amdgcn_cluster_workgroup_flat_id:
+    if (AMDGPU::isGFX13Plus(*Subtarget))
+      return lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 4,
+                                 4);
+    if (AMDGPU::isGFX1250Only(*Subtarget))
+      return lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4);
+    return SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
     return Subtarget->hasGFX1250Insts()
                ? getPreloadedValue(
@@ -16922,10 +16947,8 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned NewDmask = 0;
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
-  bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx)))
-                     ? true
-                     : false;
+  bool UsesTFC = (int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
+                 (int(LWEIdx) >= 0 && Node->getConstantOperandVal(LWEIdx));
   unsigned TFCLane = 0;
   bool HasChain = Node->getNumValues() > 1;
 
@@ -18442,39 +18465,39 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // safe. The message phrasing also should be better.
     if (globalMemoryFPAtomicIsLegal(*Subtarget, RMW, HasSystemScope)) {
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicFlatPkAdd16Insts() && isV2F16OrV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // gfx940, gfx12
+        // gfx942, gfx12
         if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-        // gfx90a, gfx940, gfx12
+        // gfx90a, gfx942, gfx12
         if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isV2F16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-        // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
+        // While gfx90a/gfx942 supports v2bf16 for global/flat, it does not for
         // buffer. gfx12 does have the buffer version.
         if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isV2BF16(Ty))
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
       }
 
-      // global and flat atomic fadd f64: gfx90a, gfx940.
+      // global and flat atomic fadd f64: gfx90a, gfx942.
       if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       if (AS != AMDGPUAS::FLAT_ADDRESS) {
         if (Ty->isFloatTy()) {
-          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940,
+          // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx942,
           // gfx11+.
           if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
-          // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+          // global/buffer atomic fadd f32 rtn: gfx90a, gfx942, gfx11+.
           if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
             return ReportUnsafeHWInst(AtomicExpansionKind::None);
         } else {
@@ -18486,7 +18509,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         }
       }
 
-      // flat atomic fadd f32: gfx940, gfx11+.
+      // flat atomic fadd f32: gfx942, gfx11+.
       if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
         if (Subtarget->hasFlatAtomicFaddF32Inst())
           return ReportUnsafeHWInst(AtomicExpansionKind::None);
@@ -18525,7 +18548,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // float, double restored in gfx10.
       // double removed again in gfx11, so only f32 for gfx11/gfx12.
       //
-      // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but
+      // For gfx9, gfx90a and gfx942 support f64 for global (same as fadd), but
       // no f32.
       if (AS == AMDGPUAS::FLAT_ADDRESS) {
         if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
@@ -18736,7 +18759,7 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
 
 bool SITargetLowering::checkForPhysRegDependency(
     SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
-    const TargetInstrInfo *TII, unsigned &PhysReg, int &Cost) const {
+    const TargetInstrInfo *TII, MCRegister &PhysReg, int &Cost) const {
   if (User->getOpcode() != ISD::CopyToReg)
     return false;
   if (!Def->isMachineOpcode())

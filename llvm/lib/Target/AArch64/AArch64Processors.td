@@ -1059,7 +1059,6 @@ def ProcessorFeatures {
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
                                      FeatureCCIDX,
                                      FeatureRDM];
-
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureRandGen,
                                      FeaturePAuth, FeatureSM4, FeatureSHA2,
@@ -1068,6 +1067,7 @@ def ProcessorFeatures {
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
+  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVE2SHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1151,6 +1151,8 @@ def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
                      [TuneX925]>;
+def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
+                     [TuneNeoverseV2]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model,
                      ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
@@ -1166,7 +1168,6 @@ def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
-def : ProcessorAlias<"grace", "neoverse-v2">;
 def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,

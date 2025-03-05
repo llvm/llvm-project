@@ -68,6 +68,7 @@ declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
 declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(3), i32) #1
 declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3)) #1
 declare void @llvm.amdgcn.s.barrier.leave(i16) #1
+declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3)) #1
 declare i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3)) #1
 
 attributes #0 = { nounwind }

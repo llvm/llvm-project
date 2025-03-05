@@ -165,34 +165,32 @@ define amdgpu_kernel void @workgroup_id_xy(ptr addrspace(1) %ptrx, ptr addrspace
 ;
 ; GFX1250-GISEL-LABEL: workgroup_id_xy:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x4000c
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s6, s6, 1
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
-; GFX1250-GISEL-NEXT:    s_and_b32 s5, ttmp6, 15
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s4, s4, 1
+; GFX1250-GISEL-NEXT:    s_and_b32 s4, ttmp6, 15
+; GFX1250-GISEL-NEXT:    s_mul_i32 s5, ttmp9, s6
 ; GFX1250-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX1250-GISEL-NEXT:    s_mul_i32 s4, ttmp9, s4
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s5, s5, s4
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s4, s4, s5
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s4, ttmp9, s5
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s4, ttmp9, s4
 ; GFX1250-GISEL-NEXT:    s_bfe_u32 s5, ttmp6, 0x40010
-; GFX1250-GISEL-NEXT:    s_and_b32 s4, ttmp7, 0xffff
+; GFX1250-GISEL-NEXT:    s_and_b32 s7, ttmp7, 0xffff
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s5, s5, 1
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x40004
-; GFX1250-GISEL-NEXT:    s_mul_i32 s5, s4, s5
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s6, s6, s5
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s4, s6
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s8, ttmp6, 0x40004
+; GFX1250-GISEL-NEXT:    s_mul_i32 s5, s7, s5
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s8, s8, s5
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s4, s7, s8
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    s_clause 0x1
+; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-GISEL-NEXT:    global_store_b32 v1, v2, s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1300-SDAG-LABEL: workgroup_id_xy:
@@ -223,32 +221,31 @@ define amdgpu_kernel void @workgroup_id_xy(ptr addrspace(1) %ptrx, ptr addrspace
 ;
 ; GFX1300-GISEL-LABEL: workgroup_id_xy:
 ; GFX1300-GISEL:       ; %bb.0:
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x4000c
 ; GFX1300-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s4, ttmp6, 0x4000c
-; GFX1300-GISEL-NEXT:    s_and_b32 s5, ttmp6, 15
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s4, s4, 1
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s6, s6, 1
+; GFX1300-GISEL-NEXT:    s_and_b32 s4, ttmp6, 15
+; GFX1300-GISEL-NEXT:    s_mul_i32 s5, ttmp9, s6
 ; GFX1300-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; GFX1300-GISEL-NEXT:    s_mul_i32 s4, ttmp9, s4
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s5, s5, s4
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s4, s4, s5
 ; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX1300-GISEL-NEXT:    s_cselect_b32 s4, ttmp9, s5
-; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s4
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1300-GISEL-NEXT:    s_cselect_b32 s4, ttmp9, s4
 ; GFX1300-GISEL-NEXT:    s_bfe_u32 s5, ttmp6, 0x40010
-; GFX1300-GISEL-NEXT:    s_and_b32 s4, ttmp7, 0xffff
+; GFX1300-GISEL-NEXT:    s_and_b32 s7, ttmp7, 0xffff
 ; GFX1300-GISEL-NEXT:    s_add_co_i32 s5, s5, 1
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x40004
-; GFX1300-GISEL-NEXT:    s_mul_i32 s5, s4, s5
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s6, s6, s5
-; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1300-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1300-GISEL-NEXT:    s_cselect_b32 s0, s4, s6
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s8, ttmp6, 0x40004
+; GFX1300-GISEL-NEXT:    s_mul_i32 s5, s7, s5
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s8, s8, s5
+; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1300-GISEL-NEXT:    s_cselect_b32 s4, s7, s8
 ; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-GISEL-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-GISEL-NEXT:    s_clause 0x1
+; GFX1300-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1300-GISEL-NEXT:    global_store_b32 v1, v2, s[2:3]
 ; GFX1300-GISEL-NEXT:    s_endpgm
 ; GFX12-LABEL: workgroup_id_xy:
 ; GFX12:       ; %bb.0:
@@ -342,47 +339,42 @@ define amdgpu_kernel void @workgroup_id_xyz(ptr addrspace(1) %ptrx, ptr addrspac
 ;
 ; GFX1250-GISEL-LABEL: workgroup_id_xyz:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
+; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp6, 15
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
+; GFX1250-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_IB_STS2, 6, 4)
+; GFX1250-GISEL-NEXT:    s_mul_i32 s0, ttmp9, s0
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s1, s1, s0
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s7, ttmp9, s1
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x40010
+; GFX1250-GISEL-NEXT:    s_and_b32 s8, ttmp7, 0xffff
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s9, ttmp6, 0x40004
+; GFX1250-GISEL-NEXT:    s_mul_i32 s10, s8, s0
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x4000c
-; GFX1250-GISEL-NEXT:    s_and_b32 s7, ttmp6, 15
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s6, s6, 1
-; GFX1250-GISEL-NEXT:    s_getreg_b32 s8, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX1250-GISEL-NEXT:    s_mul_i32 s6, ttmp9, s6
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s7, s7, s6
-; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s8, 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s6, ttmp9, s7
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s6
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s7, ttmp6, 0x40010
-; GFX1250-GISEL-NEXT:    s_and_b32 s6, ttmp7, 0xffff
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s7, s7, 1
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s8, ttmp6, 0x40004
-; GFX1250-GISEL-NEXT:    s_mul_i32 s7, s6, s7
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s8, s8, s7
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s9, s9, s10
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, s7
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s8, s8, s9
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s9, ttmp6, 0x40014
+; GFX1250-GISEL-NEXT:    s_lshr_b32 s10, ttmp7, 16
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s9, s9, 1
+; GFX1250-GISEL-NEXT:    s_bfe_u32 s11, ttmp6, 0x40008
+; GFX1250-GISEL-NEXT:    s_mul_i32 s9, s10, s9
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-GISEL-NEXT:    s_add_co_i32 s11, s11, s9
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s6, s10, s11
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v3, s6
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s6, s8
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s1, ttmp6, 0x40014
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1250-GISEL-NEXT:    s_lshr_b32 s0, ttmp7, 16
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s1, s1, 1
-; GFX1250-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x40008
-; GFX1250-GISEL-NEXT:    s_mul_i32 s1, s0, s1
-; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[2:3]
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
-; GFX1250-GISEL-NEXT:    s_add_co_i32 s6, s6, s1
-; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, s0, s6
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1250-GISEL-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1250-GISEL-NEXT:    s_clause 0x2
+; GFX1250-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1250-GISEL-NEXT:    global_store_b32 v1, v2, s[2:3]
+; GFX1250-GISEL-NEXT:    global_store_b32 v1, v3, s[4:5]
 ; GFX1250-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1300-SDAG-LABEL: workgroup_id_xyz:
@@ -424,44 +416,42 @@ define amdgpu_kernel void @workgroup_id_xyz(ptr addrspace(1) %ptrx, ptr addrspac
 ;
 ; GFX1300-GISEL-LABEL: workgroup_id_xyz:
 ; GFX1300-GISEL:       ; %bb.0:
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
+; GFX1300-GISEL-NEXT:    s_and_b32 s1, ttmp6, 15
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
+; GFX1300-GISEL-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
+; GFX1300-GISEL-NEXT:    s_mul_i32 s0, ttmp9, s0
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s1, s1, s0
+; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1300-GISEL-NEXT:    s_cselect_b32 s7, ttmp9, s1
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s0, ttmp6, 0x40010
+; GFX1300-GISEL-NEXT:    s_and_b32 s8, ttmp7, 0xffff
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s0, s0, 1
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s9, ttmp6, 0x40004
+; GFX1300-GISEL-NEXT:    s_mul_i32 s10, s8, s0
+; GFX1300-GISEL-NEXT:    s_clause 0x1
 ; GFX1300-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x4000c
-; GFX1300-GISEL-NEXT:    s_and_b32 s7, ttmp6, 15
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s6, s6, 1
-; GFX1300-GISEL-NEXT:    s_getreg_b32 s8, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; GFX1300-GISEL-NEXT:    s_mul_i32 s6, ttmp9, s6
 ; GFX1300-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s7, s7, s6
-; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s8, 0
-; GFX1300-GISEL-NEXT:    s_cselect_b32 s6, ttmp9, s7
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s6
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s7, ttmp6, 0x40010
-; GFX1300-GISEL-NEXT:    s_and_b32 s6, ttmp7, 0xffff
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s7, s7, 1
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s8, ttmp6, 0x40004
-; GFX1300-GISEL-NEXT:    s_mul_i32 s7, s6, s7
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s8, s8, s7
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s9, s9, s10
+; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, s7
+; GFX1300-GISEL-NEXT:    s_cselect_b32 s8, s8, s9
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s9, ttmp6, 0x40014
+; GFX1300-GISEL-NEXT:    s_lshr_b32 s10, ttmp7, 16
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s9, s9, 1
+; GFX1300-GISEL-NEXT:    s_bfe_u32 s11, ttmp6, 0x40008
+; GFX1300-GISEL-NEXT:    s_mul_i32 s9, s10, s9
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1300-GISEL-NEXT:    s_add_co_i32 s11, s11, s9
+; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s6, 0
+; GFX1300-GISEL-NEXT:    s_cselect_b32 s6, s10, s11
+; GFX1300-GISEL-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v3, s6
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX1300-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX1300-GISEL-NEXT:    s_cselect_b32 s0, s6, s8
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s1, ttmp6, 0x40014
-; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-GISEL-NEXT:    s_lshr_b32 s0, ttmp7, 16
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s1, s1, 1
-; GFX1300-GISEL-NEXT:    s_bfe_u32 s6, ttmp6, 0x40008
-; GFX1300-GISEL-NEXT:    s_mul_i32 s1, s0, s1
-; GFX1300-GISEL-NEXT:    global_store_b32 v0, v1, s[2:3]
-; GFX1300-GISEL-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_WAVE_GROUP_INFO, 0, 4)
-; GFX1300-GISEL-NEXT:    s_add_co_i32 s6, s6, s1
-; GFX1300-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
-; GFX1300-GISEL-NEXT:    s_cselect_b32 s0, s0, s6
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, s0
-; GFX1300-GISEL-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1300-GISEL-NEXT:    s_clause 0x2
+; GFX1300-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX1300-GISEL-NEXT:    global_store_b32 v1, v2, s[2:3]
+; GFX1300-GISEL-NEXT:    global_store_b32 v1, v3, s[4:5]
 ; GFX1300-GISEL-NEXT:    s_endpgm
 ; GFX12-LABEL: workgroup_id_xyz:
 ; GFX12:       ; %bb.0:

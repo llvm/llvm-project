@@ -421,3 +421,364 @@ v_pext_b32_dpp v5, v3, v1 row_share:1
 
 v_pext_b32_e64_dpp v5, v3, v1 row_share:1
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 clamp
+// GX13-NEXT:{{^}}                                              ^
+
+v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f32 v10, v[20:27], v8 mul:2
+// GFX13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_fp4_f32_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f32_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                        ^
+
+v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f32 v10, v[20:27], v8 mul:2
+// GFX13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_fp8_f32_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f32_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f32_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                         ^
+
+v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v10, v[20:27], v8 mul:2
+// GFX13-NEXT:{{^}}                                              ^
+
+v_cvt_scalef32_pk8_fp8_bf16_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16_dpp v5, v3, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16_e64_dpp v5, v3, v1 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                               ^
+
+v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f32 v10, v[20:27], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f32_dpp v10, v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f32_e64_dpp v10, v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                         ^
+
+v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f32 v[10:11], v[20:27], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                         ^
+
+v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_f32_dpp v[10:11], v[20:27], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_f32_e64_dpp v[10:11], v[20:27], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                        ^
+
+v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_f16 v10, v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f16_dpp v10, v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_f16_e64_dpp v10, v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                              ^
+
+v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_bf16 v[10:11], v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                                   ^
+
+v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_bf16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_bf16_e64_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                              ^
+
+v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_bf16 v[10:11], v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                                   ^
+
+v_cvt_scalef32_pk8_fp8_bf16_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                         ^
+
+v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp4_bf16 v10, v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                              ^
+
+v_cvt_scalef32_pk8_fp4_bf16_dpp v10, v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_bf16_dpp v10, v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp4_bf16_e64_dpp v10, v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                               ^
+
+v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_f16 v10, v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_fp4_f16_dpp v10, v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f16_dpp v10, v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_f16_e64_dpp v10, v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                ^
+
+v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp4_bf16 v10, v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                     ^
+
+v_cvt_scalef32_sr_pk8_fp4_bf16_dpp v10, v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_bf16_dpp v10, v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp4_bf16_e64_dpp v10, v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                         ^
+
+v_cvt_scalef32_sr_pk8_fp8_f16_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_f16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                     ^
+
+v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_fp8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                          ^
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                    ^
+
+v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_f16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                         ^
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_fp8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                                     ^
+
+v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_sr_pk8_bf8_bf16 v[10:11], v[20:23], v4, v8 mul:2
+// GFX13-NEXT:{{^}}                                                          ^
+
+v_cvt_scalef32_sr_pk8_bf8_bf16_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_bf16_dpp v[10:11], v[20:23], v4, v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_sr_pk8_bf8_bf16_e64_dpp v[10:11], v[20:23], v4, v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_fp8_f16 v[10:11], v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                                  ^
+
+v_cvt_scalef32_pk8_fp8_f16_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_fp8_f16_e64_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f32 v[10:11], v[20:27], v8 mul:2
+// GFX13-NEXT:{{^}}                                                  ^
+
+v_cvt_scalef32_pk8_bf8_f32_dpp v[10:11], v[20:27], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f32_dpp v[10:11], v[20:27], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f32_e64_dpp v[10:11], v[20:27], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 clamp
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 clamp
+// GFGFX13X13-NEXT:{{^}}                                             ^
+
+v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 mul:2
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX13-NEXT:{{^}}v_cvt_scalef32_pk8_bf8_f16 v[10:11], v[20:23], v8 mul:2
+// GFX13-NEXT:{{^}}                                                  ^
+
+v_cvt_scalef32_pk8_bf8_f16_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f16_dpp v[10:11], v[20:23], v8 dpp8:[7,6,5,4,3,2,1,0]
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: dpp variant of this instruction is not supported
+
+v_cvt_scalef32_pk8_bf8_f16_e64_dpp v[10:11], v[20:23], v8 row_share:1
+// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: e64_dpp variant of this instruction is not supported

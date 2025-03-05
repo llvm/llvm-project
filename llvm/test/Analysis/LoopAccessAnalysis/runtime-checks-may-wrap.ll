@@ -11,20 +11,21 @@ define void @geps_may_wrap(ptr %a, ptr %b, i64 %N) {
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.iv = getelementptr i32, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %b
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.iv = getelementptr i32, ptr %a, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %a High: (16 + (12 * (trunc i128 ((zext i64 %N to i128) /u 3) to i16)) + %a))
-; CHECK-NEXT:            Member: {%a,+,12}<%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
 ; CHECK-NEXT:          (Low: %b High: (4 + %b))
 ; CHECK-NEXT:            Member: %b
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: %a High: (16 + (12 * (trunc i128 ((zext i64 %N to i128) /u 3) to i16)) + %a))
+; CHECK-NEXT:            Member: {%a,+,12}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,3}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {%a,+,12}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

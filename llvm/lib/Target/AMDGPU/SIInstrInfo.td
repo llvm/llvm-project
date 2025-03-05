@@ -1930,26 +1930,18 @@ class getVOP3VRegSrcForVT<ValueType VT> {
                               1 : VRegSrc_32);
 }
 
-// VGPR only src, such as VOP3DPP src0.
-class getVGPRSrcForVT<ValueType VT> {
-  RegisterOperand ret = !cond(!eq(VT.Size, 96) : VGPRSrc_96,
-                              !eq(VT.Size, 64) : VGPRSrc_64,
-                              1 : VGPRSrc_32);
-}
-
-// Returns the vreg register class to use for sources of VOP3 instructions for the
-// given VT.
-class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
-   RegisterOperand ret =
-   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
-         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
-         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
-         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+// VGPR only VOP3 src with 8 bit encoding e.g. VOP3DPP src0.
+class getVGPRSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+  RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : VGPRSrc_128,
+         !eq(VT.Size, 96)  : VGPRSrc_96,
+         !eq(VT.Size, 64)  : VGPRSrc_64,
+         !eq(VT.Size, 48)  : VGPRSrc_64,
          !eq(VT.Size, 16)  : !if(IsTrue16,
-                                 !if(IsFake16, RegisterOperand<VGPR_32>,
-                                               RegisterOperand<VGPR_16>),
-                                 RegisterOperand<VGPR_32>),
-         1                 : RegisterOperand<VGPR_32>);
+                                 !if(IsFake16, VGPRSrc_32,
+                                               VGPRSrc_16),
+                                 VGPRSrc_32),
+         1                 : VGPRSrc_32);
 }
 
 // Src2 of VOP3 DPP instructions cannot be a literal
@@ -2691,9 +2683,16 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 // Return an AGPR+VGPR operand class for the given VGPR register class.
 // In case of a SGPR register class, just return the register operand.
 class getLdStRegisterOperand<RegisterClass RC> {
+  // This type of operands is only used in pseudo instructions helping
+  // code generation and thus doesn't need encoding and decoding methods.
+  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
+  // support True16.
+  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
+
   SIRegisterClass SIRC = !cast<SIRegisterClass>(RC);
   RegisterOperand ret =
     !cond(SIRC.HasSGPR       : RegisterOperand<RC>,
+          !eq(RC.Size, 16)   : VLdSt_16,
           !eq(RC.Size, 32)   : AVLdSt_32,
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
@@ -2737,6 +2736,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
+  field bit IsInvalidSingleUseConsumer = 0;
+  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -3100,6 +3101,7 @@ def VOP_V8F32_V2I32_I32 : VOPProfile<[v8f32, v2i32, i32, untyped]>;
 def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
 def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
 def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
 def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;

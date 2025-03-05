@@ -65,6 +65,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   MayNeedAGPRs = ST.hasMAIInsts();
+  if (ST.hasGFX90AInsts() && ST.getMaxNumVGPRs(F) <= 256 && !mayUseAGPRs(F))
+    MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to
@@ -99,11 +101,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;
-    MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
-                               MaxKernArgAlign);
-
-    if (ST.hasGFX90AInsts() && ST.getMaxNumVGPRs(F) <= 256 && !mayUseAGPRs(F))
-      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+    MaxKernArgAlign =
+        std::max(ST.getAlignmentForImplicitArgPtr(), MaxKernArgAlign);
   }
 
   if (!AMDGPU::isGraphics(CC) ||
@@ -171,6 +170,17 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
+  }
+
+  if (F.hasFnAttribute("amdgpu-cluster-dims")) {
+    SmallVector<unsigned, 3> V =
+        AMDGPU::getIntegerVecAttribute(F, "amdgpu-cluster-dims", 3);
+    if (any_of(V, [](unsigned D) { return D == 0; })) {
+      LLVMContext &Ctx = F.getContext();
+      Ctx.emitError("invalid amdgpu-cluster-dims in " + F.getName());
+    } else {
+      ClusterDims = {V[0], V[1], V[2]};
+    }
   }
 }
 
@@ -714,8 +724,9 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
-      NeedIdx0Restore(MFI.getNeedIdx0Restore()) {
+      Mode(MFI.getMode()), NeedIdx0Restore(MFI.getNeedIdx0Restore()),
+      HasInitWholeWave(MFI.hasInitWholeWave()),
+      UsesWholeWave(MFI.usesWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -784,47 +795,6 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 
 bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
   return !F.hasFnAttribute("amdgpu-no-agpr");
-}
-
-bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {
-  if (UsesAGPRs)
-    return *UsesAGPRs;
-
-  if (!mayNeedAGPRs()) {
-    UsesAGPRs = false;
-    return false;
-  }
-
-  if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) ||
-      MF.getFrameInfo().hasCalls()) {
-    UsesAGPRs = true;
-    return true;
-  }
-
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    const Register Reg = Register::index2VirtReg(I);
-    const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
-    if (RC && SIRegisterInfo::isAGPRClass(RC)) {
-      UsesAGPRs = true;
-      return true;
-    }
-    if (!RC && !MRI.use_empty(Reg) && MRI.getType(Reg).isValid()) {
-      // Defer caching UsesAGPRs, function might not yet been regbank selected.
-      return true;
-    }
-  }
-
-  for (MCRegister Reg : AMDGPU::AGPR_32RegClass) {
-    if (MRI.isPhysRegUsed(Reg)) {
-      UsesAGPRs = true;
-      return true;
-    }
-  }
-
-  UsesAGPRs = false;
-  return false;
 }
 
 bool SIMachineFunctionInfo::ldsSpillingEnabled(

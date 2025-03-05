@@ -23,11 +23,11 @@ for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %1 to i64
   %arrayidx = getelementptr inbounds [70 x float], ptr addrspace(10) @exchange, i64 17, i64 %idxprom
 ; CHECK: [[INLS:%[0-9]+]]:vgpr_32 = SCRATCH_LOAD_DWORD killed {{%[0-9]+}}, 4760, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.arrayidx, addrspace 10)
-; VIDX: [[RFL0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32
+; VIDX: [[RFL0:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32
 ; VIDX-NEXT: [[CMP0:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[RFL0]], {{%[0-9]+}}, implicit $exec
 ; VIDX-NEXT: [[ANDEXEC0:%[0-9]+]]:sreg_32 = S_AND_SAVEEXEC_B32 killed [[CMP0]], implicit-def $exec, implicit-def $scc, implicit $exec
-; VIDX-NEXT: [[DIV4A:%[0-9]+]]:sgpr_32 = S_LSHR_B32 [[RFL0]], 2, implicit-def dead $scc
-; VIDX-NEXT: [[ADD0:%[0-9]+]]:sgpr_32 = S_ADD_I32 [[DIV4A]], 1190, implicit-def dead $scc
+; VIDX-NEXT: [[DIV4A:%[0-9]+]]:sreg_32_xm0 = S_LSHR_B32 [[RFL0]], 2, implicit-def dead $scc
+; VIDX-NEXT: [[ADD0:%[0-9]+]]:sreg_32_xm0 = S_ADD_I32 [[DIV4A]], 1190, implicit-def dead $scc
 ; VIDX-NEXT: [[LOAD:%[0-9]+]]:vgpr_32 = V_LOAD_IDX [[ADD0]], 0, implicit $exec :: (load (s32) from %ir.arrayidx, addrspace 10)
 ; VIDX-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[ANDEXEC0]], implicit-def $scc
   %2 = load float, ptr addrspace(10) %arrayidx, align 4
@@ -65,10 +65,10 @@ for.body6:                                        ; preds = %for.cond4
   %idxprom10 = sext i32 %8 to i64
   %arrayidx11 = getelementptr inbounds [70 x float], ptr addrspace(10) @exchange, i64 5, i64 %idxprom10
 ; CHECK: SCRATCH_STORE_DWORD killed [[TOLS]], killed {{%[0-9]+}}, 1400, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx11, addrspace 10)
-; VIDX: [[RFL1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32
+; VIDX: [[RFL1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32
 ; VIDX-NEXT: [[CMP1:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[RFL1]], {{%[0-9]+}}, implicit $exec
 ; VIDX-NEXT: [[ANDEXEC1:%[0-9]+]]:sreg_32 = S_AND_SAVEEXEC_B32 killed [[CMP1]], implicit-def $exec, implicit-def $scc, implicit $exec
-; VIDX-NEXT: [[DIV4B:%[0-9]+]]:sgpr_32 = S_LSHR_B32 [[RFL1]], 2, implicit-def dead $scc
+; VIDX-NEXT: [[DIV4B:%[0-9]+]]:sreg_32_xm0 = S_LSHR_B32 [[RFL1]], 2, implicit-def dead $scc
 ; VIDX-NEXT: V_STORE_IDX {{%[0-9]+}}, [[DIV4B]], 350, implicit $exec :: (store (s32) into %ir.arrayidx11, addrspace 10)
 ; VIDX-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[ANDEXEC1]], implicit-def $scc
   store float %7, ptr addrspace(10) %arrayidx11, align 4

@@ -110,7 +110,7 @@ LIBC_INLINE int enable_except(int excepts) {
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   controlWord |= (newExcepts << FEnv::ExceptionControlFlagsBitPosition);
   FEnv::writeControlWord(controlWord);
-  return FEnv::exceptionStatusToMacro(oldExcepts);
+  return FEnv::exceptionStatusToMacro(static_cast<uint32_t>(oldExcepts));
 }
 
 LIBC_INLINE int disable_except(int excepts) {
@@ -120,12 +120,12 @@ LIBC_INLINE int disable_except(int excepts) {
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   controlWord &= ~(disabledExcepts << FEnv::ExceptionControlFlagsBitPosition);
   FEnv::writeControlWord(controlWord);
-  return FEnv::exceptionStatusToMacro(oldExcepts);
+  return FEnv::exceptionStatusToMacro(static_cast<uint32_t>(oldExcepts));
 }
 
 LIBC_INLINE int get_except() {
   uint32_t controlWord = FEnv::getControlWord();
-  int enabledExcepts =
+  uint32_t enabledExcepts =
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   return FEnv::exceptionStatusToMacro(enabledExcepts);
 }
@@ -250,8 +250,10 @@ LIBC_INLINE int set_round(int mode) {
   }
 
   uint32_t controlWord = FEnv::getControlWord();
-  controlWord &= ~(0x3 << FEnv::RoundingControlBitPosition);
-  controlWord |= (bitValue << FEnv::RoundingControlBitPosition);
+  controlWord &=
+      static_cast<uint32_t>(~(0x3 << FEnv::RoundingControlBitPosition));
+  controlWord |=
+      static_cast<uint32_t>(bitValue << FEnv::RoundingControlBitPosition);
   FEnv::writeControlWord(controlWord);
 
   return 0;

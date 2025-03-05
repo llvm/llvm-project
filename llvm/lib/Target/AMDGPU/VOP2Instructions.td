@@ -468,12 +468,27 @@ def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 def VOP_MADMK_F64 : VOP_MADMK <f64>;
 
+// Returns the vreg register class to use for sources of VOP3 instructions for the
+// given VT.
+class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+   RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 16)  : !if(IsTrue16,
+                                 !if(IsFake16, RegisterOperand<VGPR_32>,
+                                               RegisterOperand<VGPR_16>),
+                                 RegisterOperand<VGPR_32>),
+         1                 : RegisterOperand<VGPR_32>);
+}
+
 // FIXME: Remove src2_modifiers. It isn't used, so is wasting memory
 // and processing time but it makes it easier to convert to mad.
 class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, vt0]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT>.ret:$src2);
   // Src2 must accept the same operand types as vdst, namely VGPRs only
-  let Src2RC64 = getVOP3VRegForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
+  let Src2RC64 = getVGPRSrcForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
   let Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
@@ -810,7 +825,7 @@ def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
 }
 
 def VOP_READLANE : VOPProfile<[i32, i32, i32, untyped]> {
-  let Outs32 = (outs SReg_32:$vdst);
+  let Outs32 = (outs SReg_32_XM0:$vdst);
   let Outs64 = Outs32;
   let Ins32 = (ins VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1);
   let Ins64 = Ins32;
@@ -921,6 +936,8 @@ let isAdd = 1 in {
 let isReMaterializable = 1 in {
 let SubtargetPredicate = isGFX1250Plus, SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
+// We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
+let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SubtargetPredicate = isGFX1250Plus, SchedRW = [Write64Bit]
 let SubtargetPredicate = isGFX125xOnly, SchedRW = [WriteDouble] in
@@ -930,10 +947,12 @@ defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
-let isConvergent = 1, Uses = []<Register> in {
+let isConvergent = 1, Uses = []<Register>, IsInvalidSingleUseConsumer = 1 in {
 def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
 let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []>;
+def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []> {
+    let IsInvalidSingleUseProducer = 1;
+  }
 } // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
 

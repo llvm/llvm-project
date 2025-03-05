@@ -143,7 +143,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
   case ParsedAttr::AT_PreserveNone:                                            \
-  case ParsedAttr::AT_RISCVVectorCC
+  case ParsedAttr::AT_RISCVVectorCC:                                           \
+  case ParsedAttr::AT_RISCVVLSCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -2530,7 +2531,8 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
-  if (T->isArrayType() || T->isFunctionType()) {
+  if ((T->isArrayType() && !getLangOpts().allowArrayReturnTypes()) ||
+      T->isFunctionType()) {
     Diag(Loc, diag::err_func_returning_array_function)
       << T->isFunctionType() << T;
     return true;
@@ -4934,7 +4936,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // C99 6.7.5.3p1: The return type may not be a function or array type.
       // For conversion functions, we'll diagnose this particular error later.
-      if (!D.isInvalidType() && (T->isArrayType() || T->isFunctionType()) &&
+      if (!D.isInvalidType() &&
+          ((T->isArrayType() && !S.getLangOpts().allowArrayReturnTypes()) ||
+           T->isFunctionType()) &&
           (D.getName().getKind() !=
            UnqualifiedIdKind::IK_ConversionFunctionId)) {
         unsigned diagID = diag::err_func_returning_array_function;
@@ -7626,6 +7630,20 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVectorCC:
     return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
+    if (Attr.getNumArgs()) {
+      std::optional<llvm::APSInt> MaybeABIVLen =
+          Attr.getArgAsExpr(0)->getIntegerConstantExpr(Ctx);
+      if (!MaybeABIVLen)
+        llvm_unreachable("Invalid RISC-V ABI VLEN");
+      ABIVLen = MaybeABIVLen->getZExtValue();
+    }
+
+    return ::new (Ctx) RISCVVLSCCAttr(Ctx, Attr, ABIVLen);
+  }
   }
   llvm_unreachable("unexpected attribute kind!");
 }

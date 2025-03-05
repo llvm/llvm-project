@@ -123,14 +123,16 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   uint32_t RegSize = RI->getRegSizeInBits(*RFLRegRC) / 32;
   assert(RI->hasVGPRs(MRI->getRegClass(RFLSrcReg)) && "unexpected uniform operand for readfirstlane");
 
-  if (RegSize == 1)
+  if (RegSize == 1) {
+    MRI->constrainRegClass(RFLReg, &AMDGPU::SReg_32_XM0RegClass);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), RFLReg)
         .addReg(RFLSrcReg, getUndefRegState(RFLSrcOp.isUndef()),
                 RFLSrcOp.getSubReg());
+  }
   else {
     SmallVector<Register, 8> TRegs;
     for (unsigned i = 0; i < RegSize; ++i) {
-      Register TReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+      Register TReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), TReg)
           .addReg(RFLSrcReg, 0, RI->getSubRegFromChannel(i));
       TRegs.push_back(TReg);
@@ -577,6 +579,9 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       CurrIdx.Index = TII->getNamedOperand(*(BeginMI), AMDGPU::OpName::idx);
       CurrIdx.IndexRC = RI->getRegClassForOperandReg(*MRI, *CurrIdx.Index);
       CurrIdx.IndexSRC = RI->getEquivalentSGPRClass(CurrIdx.IndexRC);
+      if (CurrIdx.IndexSRC == &AMDGPU::SGPR_32RegClass)
+        CurrIdx.IndexSRC = &AMDGPU::SReg_32_XM0RegClass;
+
       IndexList.push_back(CurrIdx);
 
       LLVM_DEBUG(if (RI->hasVGPRs(CurrIdx.IndexRC))

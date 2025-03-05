@@ -94,13 +94,11 @@ class SPIRVGlobalRegistry {
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
-                             SPIRV::AccessQualifier::AccessQualifier AQ =
-                                 SPIRV::AccessQualifier::ReadWrite,
-                             bool EmitIR = true);
+                             SPIRV::AccessQualifier::AccessQualifier AQ,
+                             bool EmitIR);
   SPIRVType *findSPIRVType(const Type *Ty, MachineIRBuilder &MIRBuilder,
-                           SPIRV::AccessQualifier::AccessQualifier accessQual =
-                               SPIRV::AccessQualifier::ReadWrite,
-                           bool EmitIR = true);
+                           SPIRV::AccessQualifier::AccessQualifier accessQual,
+                           bool EmitIR);
   SPIRVType *
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
@@ -321,9 +319,8 @@ public:
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
                               MachineIRBuilder &MIRBuilder,
-                              SPIRV::AccessQualifier::AccessQualifier AQ =
-                                  SPIRV::AccessQualifier::ReadWrite,
-                              bool EmitIR = true);
+                              SPIRV::AccessQualifier::AccessQualifier AQ,
+                              bool EmitIR);
   SPIRVType *assignIntTypeToVReg(unsigned BitWidth, Register VReg,
                                  MachineInstr &I, const SPIRVInstrInfo &TII);
   SPIRVType *assignFloatTypeToVReg(unsigned BitWidth, Register VReg,
@@ -344,9 +341,8 @@ public:
   // want to emit extra IR instructions there.
   SPIRVType *getOrCreateSPIRVType(const Type *Type,
                                   MachineIRBuilder &MIRBuilder,
-                                  SPIRV::AccessQualifier::AccessQualifier AQ =
-                                      SPIRV::AccessQualifier::ReadWrite,
-                                  bool EmitIR = true);
+                                  SPIRV::AccessQualifier::AccessQualifier AQ,
+                                  bool EmitIR);
 
   const Type *getTypeForSPIRVType(const SPIRVType *Ty) const {
     auto Res = SPIRVToLLVMType.find(Ty);
@@ -363,7 +359,7 @@ public:
   // corresponding to the given string containing the name of the builtin type.
   // Return nullptr if unable to recognize SPIRV type name from `TypeStr`.
   SPIRVType *getOrCreateSPIRVTypeByName(
-      StringRef TypeStr, MachineIRBuilder &MIRBuilder,
+      StringRef TypeStr, MachineIRBuilder &MIRBuilder, bool EmitIR,
       SPIRV::StorageClass::StorageClass SC = SPIRV::StorageClass::Function,
       SPIRV::AccessQualifier::AccessQualifier AQ =
           SPIRV::AccessQualifier::ReadWrite);
@@ -470,13 +466,14 @@ private:
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeArray(uint32_t NumElems, SPIRVType *ElemType,
-                            MachineIRBuilder &MIRBuilder, bool EmitIR = true);
+                            MachineIRBuilder &MIRBuilder, bool EmitIR);
 
   SPIRVType *getOpTypeOpaque(const StructType *Ty,
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeStruct(const StructType *Ty, MachineIRBuilder &MIRBuilder,
-                             bool EmitIR = true);
+                             SPIRV::AccessQualifier::AccessQualifier AccQual,
+                             bool EmitIR);
 
   SPIRVType *getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                               SPIRVType *ElemType, MachineIRBuilder &MIRBuilder,
@@ -518,7 +515,7 @@ private:
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                            SPIRVType *SpvType, bool EmitIR = true,
+                            SPIRVType *SpvType, bool EmitIR,
                             bool ZeroAsNull = true);
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
@@ -539,7 +536,7 @@ public:
                                     SPIRVType *SpvType,
                                     const SPIRVInstrInfo &TII);
   Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
-                                    SPIRVType *SpvType, bool EmitIR = true);
+                                    SPIRVType *SpvType, bool EmitIR);
   Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
@@ -570,12 +567,14 @@ public:
                                   unsigned SPIRVOPcode, Type *LLVMTy);
   SPIRVType *getOrCreateSPIRVFloatType(unsigned BitWidth, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
-  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateSPIRVBoolType(MachineIRBuilder &MIRBuilder,
+                                      bool EmitIR);
   SPIRVType *getOrCreateSPIRVBoolType(MachineInstr &I,
                                       const SPIRVInstrInfo &TII);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements,
-                                        MachineIRBuilder &MIRBuilder);
+                                        MachineIRBuilder &MIRBuilder,
+                                        bool EmitIR);
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements, MachineInstr &I,
                                         const SPIRVInstrInfo &TII);
@@ -605,7 +604,8 @@ public:
                                        const TargetExtType *ExtensionType,
                                        const SPIRVType *ElemType,
                                        uint32_t Scope, uint32_t Rows,
-                                       uint32_t Columns, uint32_t Use);
+                                       uint32_t Columns, uint32_t Use,
+                                       bool EmitIR);
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
@@ -620,6 +620,14 @@ public:
 
   const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
   LLT getRegType(SPIRVType *SpvType) const;
+
+  // Replace all uses of a |Old| with |New| updates the global registry type
+  // mappings.
+  void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
+
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
+  void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

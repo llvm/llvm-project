@@ -1180,18 +1180,25 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "$sdst, $simm16"
 >;
 
-// This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
-// FIXME: Should have separate pseudos for known may read MODE and
-// only read MODE.
-def S_GETREG_B32 : SOPK_Pseudo <
+class S_GETREG_B32_Pseudo<list<dag> pattern=[]> : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
-  "$sdst, $simm16",
-  [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
+  "$sdst, $simm16", pattern>;
+
+// This is hasSideEffects to allow its use in readcyclecounter selection.
+// FIXME: Should have separate pseudos for known may read MODE and
+// only read MODE.
+def S_GETREG_B32 : S_GETREG_B32_Pseudo<
+    [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
   let hasSideEffects = 1;
   let Uses = [MODE];
 }
+
+// A version of the pseudo for reading hardware register fields that are
+// known to remain the same during the course of the run. Has no side
+// effects and doesn't read MODE.
+def S_GETREG_B32_const : S_GETREG_B32_Pseudo;
 
 let Defs = [MODE], Uses = [MODE] in {
 
@@ -1837,6 +1844,11 @@ let OtherPredicates = [HasExportInsts] in
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
+
+let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
+  def S_SINGLEUSE_VDST :
+    SOPP_Pseudo<"s_singleuse_vdst", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = HasVGPRSingeUseHintInsts
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_LOADCNT :
@@ -2888,6 +2900,7 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
 }
 
 defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
+defm S_SINGLEUSE_VDST    : SOPP_Real_32_gfx13<0x13>;
 defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
 defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx13<0x1c>;

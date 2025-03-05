@@ -32,12 +32,14 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpConstantI:
   case SPIRV::OpConstantF:
   case SPIRV::OpConstantComposite:
+  case SPIRV::OpConstantCompositeContinuedINTEL:
   case SPIRV::OpConstantSampler:
   case SPIRV::OpConstantNull:
   case SPIRV::OpSpecConstantTrue:
   case SPIRV::OpSpecConstantFalse:
   case SPIRV::OpSpecConstant:
   case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
   case SPIRV::OpSpecConstantOp:
   case SPIRV::OpUndef:
   case SPIRV::OpConstantFunctionPointerINTEL:
@@ -53,6 +55,7 @@ bool SPIRVInstrInfo::isSpecConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantFalse:
   case SPIRV::OpSpecConstant:
   case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
   case SPIRV::OpSpecConstantOp:
     return true;
   default:
@@ -76,7 +79,8 @@ bool SPIRVInstrInfo::isTypeDeclInstr(const MachineInstr &MI) const {
     auto DefRegClass = MRI.getRegClassOrNull(MI.getOperand(0).getReg());
     return DefRegClass && DefRegClass->getID() == SPIRV::TYPERegClass.getID();
   } else {
-    return MI.getOpcode() == SPIRV::OpTypeForwardPointer;
+    return MI.getOpcode() == SPIRV::OpTypeForwardPointer ||
+           MI.getOpcode() == SPIRV::OpTypeStructContinuedINTEL;
   }
 }
 
@@ -255,8 +259,8 @@ unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   // Actually we don't need this COPY instruction. However if we do nothing with
   // it, post RA pseudo instrs expansion just removes it and we get the code

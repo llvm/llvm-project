@@ -18,6 +18,8 @@ class LetDummies {
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   bit IsDPMACCInstruction;
+  bit IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -73,6 +75,8 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
   bit IsDPMACCInstruction = 0;
+  bit IsInvalidSingleUseConsumer = P.IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer = P.IsInvalidSingleUseProducer;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -171,6 +175,8 @@ class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
   bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
+  bit IsInvalidSingleUseConsumer = ps.Pfl.IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer = ps.Pfl.IsInvalidSingleUseProducer;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -1030,6 +1036,9 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "GFX8";
+
+  let IsInvalidSingleUseConsumer = !not(VINTERP);
+  let IsInvalidSingleUseProducer = !not(VINTERP);
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
@@ -2104,9 +2113,12 @@ multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = gfx12O
 multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
   VOP3_Real_Base<GFX1250Gen, op, NAME, 1/*IsSingle*/>;
 
+multiclass VOP3Only_Real_Base_gfx13<bits<10> op> :
+  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
+
 multiclass VOP3Only_Real_Base_gfx1250_gfx13<bits<10> gfx1250Op, bits<10> op> :
   VOP3Only_Real_Base_gfx1250<gfx1250Op>,
-  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
+  VOP3Only_Real_Base_gfx13<op>;
 
 multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX1250Gen, op, isSingle>;
@@ -2305,4 +2317,14 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getDPMACCInstructionHelper";
+}
+
+
+def SingleUseExceptionTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "SingleUseExceptionInfo";
+  let Fields = ["Opcode", "IsInvalidSingleUseConsumer", "IsInvalidSingleUseProducer"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getSingleUseExceptionHelper";
 }

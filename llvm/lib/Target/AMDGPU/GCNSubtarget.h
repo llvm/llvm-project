@@ -231,6 +231,7 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
@@ -264,7 +265,6 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasForceVALUThrottle = false;
@@ -279,6 +279,7 @@ protected:
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1338,8 +1339,6 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
-
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
@@ -1381,11 +1380,11 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
   // hasGFX940Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
@@ -1397,6 +1396,8 @@ public:
   }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
@@ -1471,6 +1472,8 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

@@ -50,7 +50,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0 = V_BPERMUTE_B32 undef $vgpr0, undef $vgpr10, 801, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0 = V_BPERMUTE_B32 undef $vgpr0, undef $vgpr10, 801, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
@@ -115,7 +115,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed undef $vgpr5, killed undef $vgpr4, 12290, -1, 52568609, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed undef $vgpr5, killed undef $vgpr4, 12290, -1, 52568609, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
@@ -173,7 +173,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 killed undef $vgpr8_vgpr9, killed undef $vgpr7, killed undef $vgpr12_vgpr13, 2, 0, 131617, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 killed undef $vgpr8_vgpr9, killed undef $vgpr7, killed undef $vgpr12_vgpr13, 2, 0, 131617, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     %2:vreg_64_align2 = V_LOAD_IDX %1:sreg_32_xexec_hi, 12, implicit $exec :: (dereferenceable load (s128), addrspace 10)
@@ -228,7 +228,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: undef early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr undef $vgpr12_vgpr13, undef $vgpr8_vgpr9, undef $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, -1, 8737, implicit $exec
+    ; LOWERED-NEXT: undef early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr undef $vgpr12_vgpr13, undef $vgpr8_vgpr9, undef $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, -1, 8737, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     %2:vreg_64_align2 = V_LOAD_IDX %1:sreg_32_xexec_hi, 12, implicit $exec :: (dereferenceable load (s128), addrspace 10)
@@ -302,7 +302,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
     ; LOWERED-NEXT: $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed undef $vgpr5, killed undef $vgpr4, 12290, -1, 3285265, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed undef $vgpr5, killed undef $vgpr4, 12290, -1, 3285265, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
@@ -381,12 +381,12 @@ body:             |
     ; LOWERED-NEXT: $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 6, implicit-def dead $scc
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr6, implicit $exec
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr6, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
-    ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr4, implicit $exec
+    ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr4, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed renamable $vgpr0, killed undef $vgpr5, killed renamable $vgpr1, 12290, -1, 3158561, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed renamable $vgpr0, killed undef $vgpr5, killed renamable $vgpr1, 12290, -1, 3158561, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
@@ -462,10 +462,10 @@ body:             |
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 5, implicit-def dead $scc
     ; LOWERED-NEXT: S_SET_VGPR_FRAMES 1
-    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr5, implicit $exec
+    ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr5, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed renamable $vgpr0, killed renamable $vgpr1, 12290, -1, 209441, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed renamable $vgpr0, killed renamable $vgpr1, 12290, -1, 209441, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
