@@ -115,7 +115,7 @@ std::unique_ptr<Module> llvm::parseInputFile(StringRef Filename,
   }
 
   // override the triple
-  Result->setTargetTriple(Triple(TargetTriple.getTriple()));
+  Result->setTargetTriple(TargetTriple);
   return Result;
 }
 

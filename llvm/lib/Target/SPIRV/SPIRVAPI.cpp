@@ -79,7 +79,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
-    M->setTargetTriple(Triple(DefaultTriple));
+    M->setTargetTriple(TargetTriple);
   }
   const Target *TheTarget =
       TargetRegistry::lookupTarget(DefaultMArch, TargetTriple, ErrMsg);

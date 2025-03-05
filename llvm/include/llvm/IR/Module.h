@@ -191,7 +191,7 @@ private:
   std::string SourceFileName;     ///< Original source file name for module,
                                   ///< recorded in bitcode.
   /// Platform target triple Module compiled on
-  /// Format: (arch)(sub)-(vendor)-(sys0-(abi)
+  /// Format: (arch)(sub)-(vendor)-(sys)-(abi)
   // FIXME: Default construction is not the same as empty triple :(
   Triple TargetTriple = Triple("");
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
