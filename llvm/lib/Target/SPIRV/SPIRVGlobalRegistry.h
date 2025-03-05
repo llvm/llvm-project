@@ -93,7 +93,7 @@ class SPIRVGlobalRegistry {
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
   // map of aliasing decorations to aliasing metadata
-std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
+  std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,

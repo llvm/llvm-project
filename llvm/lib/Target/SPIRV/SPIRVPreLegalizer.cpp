@@ -833,8 +833,8 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 MI.getOperand(2).getMetadata());
       } else {
         GR->buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
-                                   MI.getOperand(2).getImm(),
-                                   MI.getOperand(3).getMetadata());
+                                       MI.getOperand(2).getImm(),
+                                       MI.getOperand(3).getMetadata());
       }
 
       ToErase.push_back(&MI);

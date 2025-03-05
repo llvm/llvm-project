@@ -1828,7 +1828,7 @@ void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
       .addImm(Dec)
       .addUse(AliasList->getOperand(0).getReg());
 }
-  void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
+void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
                                              bool DeleteOld) {
   Old->replaceAllUsesWith(New);
   updateIfExistDeducedElementType(Old, New, DeleteOld);
