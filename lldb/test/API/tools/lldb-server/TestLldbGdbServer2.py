@@ -5,9 +5,11 @@ Tests run against debugserver and lldb-server (llgs).
 lldb-server tests run where the lldb-server exe is
 available.
 
-The tests are split between the LldbGdbServerTestCase and
-LldbGdbServerTestCase2 classes to avoid timeouts in the
-test suite.
+When running these tests with lit, the test timeout applies
+to the time it takes to run the whole file, rather than each
+`test_` method. To avoid hitting timeouts we split the tests
+between the LldbGdbServerTestCase and LldbGdbServerTestCase2
+test classes.
 """
 
 import binascii
