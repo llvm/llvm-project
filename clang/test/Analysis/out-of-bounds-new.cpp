@@ -4,6 +4,7 @@
 
 void clang_analyzer_eval(bool);
 void clang_analyzer_value(int);
+void clang_analyzer_dump(int);
 
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
@@ -206,11 +207,15 @@ int using_assume_attr_has_no_sideeffects(int y) {
   int orig_y = y;
   clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_dump(y);       // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
+  clang_analyzer_dump(orig_y);  // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
 
   // We should not apply sideeffects of the argument of [[assume(...)]].
   // "y" should not get incremented;
   [[assume(++y == 43)]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
  
+  clang_analyzer_dump(y);       // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
+  clang_analyzer_dump(orig_y);  // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
   clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_eval(y == orig_y); // expected-warning {{TRUE}} Good.
@@ -222,11 +227,15 @@ int using_builtin_assume_has_no_sideeffects(int y) {
   int orig_y = y;
   clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
+  clang_analyzer_dump(y);       // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
+  clang_analyzer_dump(orig_y);  // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
 
   // We should not apply sideeffects of the argument of __builtin_assume(...)
   // "u" should not get incremented;
   __builtin_assume(++y == 43); // expected-warning {{assumption is ignored because it contains (potential) side-effects}}
  
+  clang_analyzer_dump(y);       // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
+  clang_analyzer_dump(orig_y);  // expected-warning-re {{{{^}}reg_${{[0-9]+}}<int y> [debug.ExprInspection]{{$}}}}
   clang_analyzer_value(y);      // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_value(orig_y); // expected-warning {{32s:{ [-2147483648, 2147483647] }}}
   clang_analyzer_eval(y == orig_y); // expected-warning {{TRUE}} Good.
