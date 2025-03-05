@@ -157,6 +157,8 @@ Bug Fixes in This Version
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
 
+- Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
