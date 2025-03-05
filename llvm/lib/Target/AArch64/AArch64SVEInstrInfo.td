@@ -2023,8 +2023,12 @@ let Predicates = [HasSVE_or_SME] in {
     defm : SVEVecStoreLane0Pat<am_unscaled16, truncstorei16, nxv8i16, i32, f16, hsub, simm9, STURHi>;
 
     // Lane 0 stores
-    defm : SVEVecStoreLane0Pat<am_indexed32, store, nxv4i32, i32, f32, ssub, uimm12s4, STRSui>;
-    defm : SVEVecStoreLane0Pat<am_indexed64, store, nxv2i64, i64, f64, dsub, uimm12s4, STRDui>;
+    // i32
+    defm : SVEVecStoreLane0Pat<am_indexed32,  store, nxv4i32, i32, f32, ssub, uimm12s4, STRSui>;
+    defm : SVEVecStoreLane0Pat<am_unscaled32, store, nxv4i32, i32, f32, ssub, simm9, STURSi>;
+    // i64
+    defm : SVEVecStoreLane0Pat<am_indexed64,  store, nxv2i64, i64, f64, dsub, uimm12s4, STRDui>;
+    defm : SVEVecStoreLane0Pat<am_unscaled64, store, nxv2i64, i64, f64, dsub, simm9, STURDi>;
   }
 
   // Insert subvectors into FP SVE vectors.
