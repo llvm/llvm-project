@@ -1262,6 +1262,9 @@ Error TrieVisitor::visit() {
   if (auto Err = validateSubTrie(Root, /*IsRoot=*/true))
     return Err;
 
+  if (auto Err = visitSubTrie("", Root))
+    return Err;
+
   SmallVector<SubtrieHandle> Subs;
   SmallVector<std::string> Prefixes;
   const size_t NumSlots = Root.getNumSlots();
