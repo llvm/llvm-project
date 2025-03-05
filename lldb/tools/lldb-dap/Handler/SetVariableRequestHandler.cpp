@@ -115,7 +115,7 @@ void SetVariableRequestHandler::operator()(
   const auto *arguments = request.getObject("arguments");
   // This is a reference to the containing variable/scope
   const auto variablesReference =
-      GetUnsigned(arguments, "variablesReference", 0);
+      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
   llvm::StringRef name = GetString(arguments, "name");
 
   const auto value = GetString(arguments, "value");
@@ -133,7 +133,8 @@ void SetVariableRequestHandler::operator()(
   // the name of the variable. We could have two shadowed variables with the
   // same name in "Locals" or "Globals". In our case the "id" absolute index
   // of the variable within the dap.variables list.
-  const auto id_value = GetUnsigned(arguments, "id", UINT64_MAX);
+  const auto id_value =
+      GetInteger<uint64_t>(arguments, "id").value_or(UINT64_MAX);
   if (id_value != UINT64_MAX) {
     variable = dap.variables.GetVariable(id_value);
   } else {

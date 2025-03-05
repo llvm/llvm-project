@@ -1903,8 +1903,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
   let arguments = (ins
     Tosa_RankedTensor:$input1,
     Tosa_Shape:$padding,
-    Optional<Tosa_ScalarTensor>:$pad_const,
-    OptionalAttr<I32Attr>:$input_zp
+    Tosa_ScalarTensor:$pad_const
   );
 
   let results = (outs
@@ -1916,10 +1915,8 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
 
-  let builders = [Tosa_PadOpQuantInfoBuilder,
-                  Tosa_ExplicitValuePadOpQuantInfoBuilder];
+  let builders = [Tosa_PadOpQuantInfoBuilder];
 
-  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
