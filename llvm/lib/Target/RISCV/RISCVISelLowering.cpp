@@ -2869,10 +2869,19 @@ InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
 
 
 /// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
-/// is generally quadratic in the number of vreg implied by LMUL.  Note that
+/// may be quadratic in the number of vreg implied by LMUL, and is assumed to
+/// be by default.  VRGatherCostModel reflects available options.  Note that
 /// operand (index and possibly mask) are handled separately.
 InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
-  return getLMULCost(VT) * getLMULCost(VT);
+  auto LMULCost = getLMULCost(VT);
+  bool Log2CostModel =
+      Subtarget.getVRGatherCostModel() == llvm::RISCVSubtarget::NLog2N;
+  if (Log2CostModel && LMULCost.isValid()) {
+    unsigned Log = Log2_64(*LMULCost.getValue());
+    if (Log > 0)
+      return LMULCost * Log;
+  }
+  return LMULCost * LMULCost;
 }
 
 /// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
@@ -20822,7 +20831,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    if (!(Kind == "user" || Kind == "supervisor" || Kind == "machine"))
+    if (!(Kind == "supervisor" || Kind == "machine"))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
   }
@@ -23101,12 +23110,18 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
       {VTy, SI->getPointerOperandType(), XLenTy});
 
   SmallVector<Value *, 10> Ops;
+  SmallVector<int, 16> NewShuffleMask;
 
   for (unsigned i = 0; i < Factor; i++) {
+    // Collect shuffle mask for this lane.
+    for (unsigned j = 0; j < VTy->getNumElements(); j++)
+      NewShuffleMask.push_back(Mask[i + Factor * j]);
+
     Value *Shuffle = Builder.CreateShuffleVector(
-        SVI->getOperand(0), SVI->getOperand(1),
-        createSequentialMask(Mask[i], VTy->getNumElements(), 0));
+        SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask);
     Ops.push_back(Shuffle);
+
+    NewShuffleMask.clear();
   }
   // This VL should be OK (should be executable in one vsseg instruction,
   // potentially under larger LMULs) because we checked that the fixed vector

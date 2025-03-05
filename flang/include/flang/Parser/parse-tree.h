@@ -4246,6 +4246,20 @@ struct OmpInReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
+//                                              : combiner) [initializer-clause]
+struct OmpInitializerProc {
+  TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
+  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
+};
+WRAPPER_CLASS(OmpInitializerExpr, Expr);
+
+// Initialization for declare reduction construct
+struct OmpInitializerClause {
+  UNION_CLASS_BOILERPLATE(OmpInitializerClause);
+  std::variant<OmpInitializerProc, OmpInitializerExpr> u;
+};
+
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
 //
 // lastprivate-clause ->
@@ -4627,24 +4641,14 @@ struct OpenMPDeclareMapperConstruct {
   std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
+// ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-struct OmpReductionInitializerProc {
-  TUPLE_CLASS_BOILERPLATE(OmpReductionInitializerProc);
-  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
-};
-WRAPPER_CLASS(OmpReductionInitializerExpr, Expr);
-
-struct OmpReductionInitializerClause {
-  UNION_CLASS_BOILERPLATE(OmpReductionInitializerClause);
-  std::variant<OmpReductionInitializerProc, OmpReductionInitializerExpr> u;
-};
-
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
   std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      std::optional<OmpReductionInitializerClause>>
+      std::optional<OmpClauseList>>
       t;
 };
 

@@ -1059,9 +1059,11 @@ bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsProcedure(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
-bool IsNullObjectPointer(const Expr<SomeType> &);
-bool IsNullProcedurePointer(const Expr<SomeType> &);
-bool IsNullPointer(const Expr<SomeType> &);
+bool IsNullObjectPointer(const Expr<SomeType> *); // NULL() or NULL(objptr)
+bool IsNullProcedurePointer(const Expr<SomeType> *); // NULL() or NULL(procptr)
+bool IsNullPointer(const Expr<SomeType> *); // NULL() or NULL(pointer)
+bool IsNullAllocatable(const Expr<SomeType> *); // NULL(allocatable)
+bool IsNullPointerOrAllocatable(const Expr<SomeType> *); // NULL of any form
 bool IsObjectPointer(const Expr<SomeType> &);
 
 // Can Expr be passed as absent to an optional dummy argument.

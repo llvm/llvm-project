@@ -1261,6 +1261,18 @@ void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   PrintStmt(S->getAssociatedStmt());
 }
 
+void StmtPrinter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  Indent() << "#pragma acc cache(";
+  if (S->hasReadOnly())
+    OS << "readonly: ";
+
+  llvm::interleaveComma(S->getVarList(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy);
+  });
+
+  OS << ")\n";
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//

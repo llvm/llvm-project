@@ -202,8 +202,9 @@ const MCExpr *SIProgramInfo::getPGMRSrc2(CallingConv::ID CC,
   return MCConstantExpr::create(0, Ctx);
 }
 
-uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
-  if (CodeSizeInBytes.has_value())
+uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
+                                            bool IsLowerBound) {
+  if (!IsLowerBound && CodeSizeInBytes.has_value())
     return *CodeSizeInBytes;
 
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
@@ -216,12 +217,18 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
     // overestimated. In case of inline asm used getInstSizeInBytes() will
     // return a maximum size of a single instruction, where the real size may
     // differ. At this point CodeSize may be already off.
-    CodeSize = alignTo(CodeSize, MBB.getAlignment());
+    if (!IsLowerBound)
+      CodeSize = alignTo(CodeSize, MBB.getAlignment());
 
     for (const MachineInstr &MI : MBB) {
       // TODO: CodeSize should account for multiple functions.
 
       if (MI.isMetaInstruction())
+        continue;
+
+      // We cannot properly estimate inline asm size. It can be as small as zero
+      // if that is just a comment.
+      if (IsLowerBound && MI.isInlineAsm())
         continue;
 
       CodeSize += TII->getInstSizeInBytes(MI);
