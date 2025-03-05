@@ -180,7 +180,7 @@ cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
 
-cl::opt<bool> MemProfRequireDefinitionForPromotion(
+static cl::opt<bool> MemProfRequireDefinitionForPromotion(
     "memprof-require-definition-for-promotion", cl::init(false), cl::Hidden,
     cl::desc(
         "Require target function definition when promoting indirect calls"));
@@ -4266,6 +4266,11 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
               // callsites Caller calls, as well as any that does not have a
               // recorded callsite Call.
               if (Callee == Clone || !Callee->hasCall())
+                continue;
+              // Skip direct recursive calls. We don't need/want to clone the
+              // caller node again, and this loop will not behave as expected if
+              // we tried.
+              if (Callee == CalleeEdge->Caller)
                 continue;
               ContextNode *NewClone = moveEdgeToNewCalleeClone(CalleeEdge);
               removeNoneTypeCalleeEdges(NewClone);

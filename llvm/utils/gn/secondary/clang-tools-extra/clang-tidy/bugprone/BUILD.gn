@@ -99,6 +99,7 @@ static_library("bugprone") {
     "UndelegatedConstructorCheck.cpp",
     "UnhandledExceptionAtNewCheck.cpp",
     "UnhandledSelfAssignmentCheck.cpp",
+    "UnintendedCharOstreamOutputCheck.cpp",
     "UniquePtrArrayMismatchCheck.cpp",
     "UnsafeFunctionsCheck.cpp",
     "UnusedLocalNonTrivialVariableCheck.cpp",

@@ -83,9 +83,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
         return false;
       }
 
-      PendingPatches.emplace_back(Patch{Symbol, Function.getAddress() + Offset,
-                                        Function.getFileOffset() + Offset,
-                                        Function.getOriginSection()});
+      PendingPatches.emplace_back(
+          Patch{Symbol, Function.getAddress() + Offset});
       NextValidByte = Offset + PatchSize;
       if (NextValidByte > Function.getMaxSize()) {
         if (opts::Verbosity >= 1)
@@ -118,16 +117,12 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     }
 
     for (Patch &Patch : PendingPatches) {
-      BinaryFunction *PatchFunction = BC.createInjectedBinaryFunction(
+      // Add instruction patch to the binary.
+      InstructionListType Instructions;
+      BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());
+      BinaryFunction *PatchFunction = BC.createInstructionPatch(
+          Patch.Address, Instructions,
           NameResolver::append(Patch.Symbol->getName(), ".org.0"));
-      // Force the function to be emitted at the given address.
-      PatchFunction->setOutputAddress(Patch.Address);
-      PatchFunction->setFileOffset(Patch.FileOffset);
-      PatchFunction->setOriginSection(Patch.Section);
-
-      InstructionListType Seq;
-      BC.MIB->createLongTailCall(Seq, Patch.Symbol, BC.Ctx.get());
-      PatchFunction->addBasicBlock()->addInstructions(Seq);
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;
@@ -135,8 +130,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       assert(!ColdSize && "unexpected cold code");
       assert(HotSize <= PatchSize && "max patch size exceeded");
     }
-
-    Function.setIsPatched(true);
   }
   return Error::success();
 }

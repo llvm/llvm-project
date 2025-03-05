@@ -100,20 +100,20 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
   return GetUnsigned(*obj, key, fail_value);
 }
 
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
 }
 
 int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
@@ -1436,7 +1436,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adaptor_path,
+                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
@@ -1446,7 +1446,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adaptor_path.str(), "--comm-file",
+  std::vector<std::string> args = {debug_adapter_path.str(), "--comm-file",
                                    comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     args.push_back("--debugger-pid");

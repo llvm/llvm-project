@@ -124,6 +124,9 @@ namespace llvm {
     /// rescheduling).
     bool RemoveKillFlags;
 
+    /// True if regions with a single MI should be scheduled.
+    bool ScheduleSingleMIRegions = false;
+
     /// The standard DAG builder does not normally include terminators as DAG
     /// nodes because it does not create the necessary dependencies to prevent
     /// reordering. A specialized scheduler can override
@@ -286,6 +289,11 @@ namespace llvm {
     /// IsReachable - Checks if SU is reachable from TargetSU.
     bool IsReachable(SUnit *SU, SUnit *TargetSU) {
       return Topo.IsReachable(SU, TargetSU);
+    }
+
+    /// Whether regions with a single MI should be scheduled.
+    bool shouldScheduleSingleMIRegions() const {
+      return ScheduleSingleMIRegions;
     }
 
     /// Returns an iterator to the top of the current scheduling region.

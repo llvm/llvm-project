@@ -284,15 +284,12 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
 class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
-      StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      DependencyActionController &Controller,
+      DependencyScanningService &Service, StringRef WorkingDirectory,
+      DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, ScanningOptimizations OptimizeArgs,
-      bool EagerLoadModules, bool DisableFree,
-      std::optional<StringRef> ModuleName = std::nullopt)
-      : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        Controller(Controller), DepFS(std::move(DepFS)), Format(Format),
-        OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
+      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
+      : Service(Service), WorkingDirectory(WorkingDirectory),
+        Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
         DisableFree(DisableFree), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -303,7 +300,7 @@ public:
     CompilerInvocation OriginalInvocation(*Invocation);
     // Restore the value of DisableFree, which may be modified by Tooling.
     OriginalInvocation.getFrontendOpts().DisableFree = DisableFree;
-    if (any(OptimizeArgs & ScanningOptimizations::Macros))
+    if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
       canonicalizeDefines(OriginalInvocation.getPreprocessorOpts());
 
     if (Scanned) {
@@ -340,7 +337,7 @@ public:
     ScanInstance.getFrontendOpts().ModulesShareFileManager = true;
     ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
-        any(OptimizeArgs & ScanningOptimizations::VFS);
+        any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
 
     // Support for virtual file system overlays.
     auto FS = createVFSFromCompilerInvocation(
@@ -400,7 +397,7 @@ public:
                           ScanInstance.getFrontendOpts().Inputs)};
     Opts->IncludeSystemHeaders = true;
 
-    switch (Format) {
+    switch (Service.getFormat()) {
     case ScanningOutputFormat::Make:
       ScanInstance.addDependencyCollector(
           std::make_shared<DependencyConsumerForwarder>(
@@ -409,9 +406,8 @@ public:
     case ScanningOutputFormat::P1689:
     case ScanningOutputFormat::Full:
       MDC = std::make_shared<ModuleDepCollector>(
-          std::move(Opts), ScanInstance, Consumer, Controller,
-          OriginalInvocation, std::move(PrebuiltModuleVFSMap), OptimizeArgs,
-          EagerLoadModules, Format == ScanningOutputFormat::P1689);
+          Service, std::move(Opts), ScanInstance, Consumer, Controller,
+          OriginalInvocation, std::move(PrebuiltModuleVFSMap));
       ScanInstance.addDependencyCollector(MDC);
       break;
     }
@@ -433,7 +429,7 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (Format == ScanningOutputFormat::P1689)
+    if (Service.getFormat() == ScanningOutputFormat::P1689)
       Action = std::make_unique<PreprocessOnlyAction>();
     else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
@@ -476,14 +472,11 @@ private:
     LastCC1Arguments = CI.getCC1CommandLine();
   }
 
-private:
+  DependencyScanningService &Service;
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  ScanningOutputFormat Format;
-  ScanningOptimizations OptimizeArgs;
-  bool EagerLoadModules;
   bool DisableFree;
   std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
@@ -498,8 +491,7 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.getOptimizeArgs()),
-      EagerLoadModules(Service.shouldEagerLoadModules()) {
+    : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
   PCHContainerOps->registerReader(
@@ -655,9 +647,8 @@ bool DependencyScanningWorker::scanDependencies(
   // in-process; preserve the original value, which is
   // always true for a driver invocation.
   bool DisableFree = true;
-  DependencyScanningAction Action(WorkingDirectory, Consumer, Controller, DepFS,
-                                  Format, OptimizeArgs, EagerLoadModules,
-                                  DisableFree, ModuleName);
+  DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
+                                  Controller, DepFS, DisableFree, ModuleName);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
