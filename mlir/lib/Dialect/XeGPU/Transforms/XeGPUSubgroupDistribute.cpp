@@ -161,12 +161,25 @@ private:
   void visitLoadNdOp(xegpu::LoadNdOp load, ArrayRef<SGMapLattice *> operands,
                      ArrayRef<const SGMapLattice *> results);
 
+  void visitLoadGatherOp(xegpu::LoadGatherOp load,
+                         ArrayRef<SGMapLattice *> operands,
+                         ArrayRef<const SGMapLattice *> results);
+
   void visitTransposeOp(vector::TransposeOp transpose,
                         ArrayRef<SGMapLattice *> operands,
                         ArrayRef<const SGMapLattice *> results);
+
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
                             ArrayRef<SGMapLattice *> operands,
                             ArrayRef<const SGMapLattice *> results);
+
+  void visitCreateNdDescOp(xegpu::CreateNdDescOp createNdDesc,
+                           ArrayRef<SGMapLattice *> operands,
+                           ArrayRef<const SGMapLattice *> results);
+
+  void visitCreateDescOp(xegpu::CreateDescOp createDesc,
+                         ArrayRef<SGMapLattice *> operands,
+                         ArrayRef<const SGMapLattice *> results);
 
 public:
   SGMapPropagation(DataFlowSolver &solver, SymbolTableCollection &symbolTable)
@@ -204,6 +217,12 @@ SGMapPropagation::visitOperation(Operation *op,
     visitTransposeOp(transpose, operands, results);
   else if (auto bitcast = dyn_cast<vector::BitCastOp>(op))
     visitVectorBitcastOp(bitcast, operands, results);
+  else if (auto loadGather = dyn_cast<xegpu::LoadGatherOp>(op))
+    visitLoadGatherOp(loadGather, operands, results);
+  else if (auto createNdDesc = dyn_cast<xegpu::CreateNdDescOp>(op))
+    visitCreateNdDescOp(createNdDesc, operands, results);
+  else if (auto createDesc = dyn_cast<xegpu::CreateDescOp>(op))
+    visitCreateDescOp(createDesc, operands, results);
   /// All other ops
   else {
     for (const SGMapLattice *r : results) {
@@ -215,7 +234,8 @@ SGMapPropagation::visitOperation(Operation *op,
     }
   }
   /// Add a dependency from each reult to program point after the operation.
-  /// NOTE: not sure if this is required, but all other passes do this.
+  /// NOTE: not sure if this is required, but all other similar analysis do
+  /// this.
   for (const SGMapLattice *r : results) {
     addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
   }
@@ -289,19 +309,18 @@ void SGMapPropagation::visitVectorBitcastOp(
       bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
 
   /// WiLayout does not change.
-  WiLayout newWiLayout = resultLayout.getLayout();
+  const WiLayout &newWiLayout = resultLayout.getLayout();
+  const WiData &currData = resultLayout.getData();
   WiData newWiData;
   /// It's a widening bitcast
   if (inElemTyBitWidth < outElemTyBitWidth) {
     auto ratio = outElemTyBitWidth / inElemTyBitWidth;
-    const auto &currData = resultLayout.getData();
     newWiData = resultLayout.getData()[0] == 1
                     ? WiData({1, currData[1] * ratio})
                     : WiData({currData[0] * ratio, 1});
   } else {
     /// It's a narrowing bitcast
     auto ratio = inElemTyBitWidth / outElemTyBitWidth;
-    const auto &currData = resultLayout.getData();
     newWiData = resultLayout.getData()[0] == 1
                     ? WiData({1, currData[1] / ratio})
                     : WiData({currData[0] / ratio, 1});
@@ -309,6 +328,55 @@ void SGMapPropagation::visitVectorBitcastOp(
 
   propagateIfChanged(operands[0],
                      operands[0]->meet(SGMap(newWiLayout, newWiData)));
+}
+
+void SGMapPropagation::visitLoadGatherOp(
+    xegpu::LoadGatherOp load, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  auto valueLayout = results[0]->getValue();
+  /// Need the layout of the value to propagate to the tensor descriptor.
+  if (!valueLayout.isAssigned())
+    return;
+  /// LoadGatherOp has the transpose effect, so propagate the transposed layout
+  /// to the tensor descriptor.
+  SGMap tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
+  /// Mask operand should have the same layout as the value but with wi_data =
+  /// [1, 1]
+  SGMap maskLayout = SGMap(valueLayout.getLayout(), WiData({1, 1}));
+  /// Propagate the new layout to the tensor descriptor operand.
+  propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
+  /// Propagate the new layout to the mask operand.
+  propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
+}
+
+void SGMapPropagation::visitCreateNdDescOp(
+    xegpu::CreateNdDescOp createNdDesc, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  auto descLayout = results[0]->getValue();
+  /// Need the layout of the descriptor to propagate to the operands.
+  if (!descLayout.isAssigned())
+    return;
+  /// Propagate the layout to the source operand.
+  propagateIfChanged(operands[0], operands[0]->meet(descLayout));
+  /// For all other operands propagate the same layout with wi_data = [1, 1]
+  SGMap layout = SGMap(descLayout.getLayout(), WiData({1, 1}));
+  for (size_t i = 1; i < operands.size(); ++i) {
+    propagateIfChanged(operands[i], operands[i]->meet(layout));
+  }
+}
+
+void SGMapPropagation::visitCreateDescOp(
+    xegpu::CreateDescOp createDesc, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  auto descLayout = results[0]->getValue();
+  /// Need the layout of the descriptor to propagate to the operands.
+  if (!descLayout.isAssigned())
+    return;
+  /// Propagate the layout to the source operand.
+  propagateIfChanged(operands[0], operands[0]->meet(descLayout));
+  /// For offset operand propagate the same layout with wi_data = [1, 1]
+  SGMap layout = SGMap(descLayout.getLayout(), WiData({1, 1}));
+  propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
 namespace {
