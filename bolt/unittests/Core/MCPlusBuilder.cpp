@@ -8,6 +8,7 @@
 
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE
@@ -19,6 +20,7 @@
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -68,6 +70,20 @@ protected:
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
         createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
+  }
+
+  void assertRegMask(const BitVector &RegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    ASSERT_EQ(RegMask.count(), ExpectedRegs.size());
+    for (MCPhysReg Reg : ExpectedRegs)
+      ASSERT_TRUE(RegMask[Reg]) << "Expected " << BC->MRI->getName(Reg) << ".";
+  }
+
+  void assertRegMask(std::function<void(BitVector &)> FillRegMask,
+                     std::initializer_list<MCPhysReg> ExpectedRegs) {
+    BitVector RegMask(BC->MRI->getNumRegs());
+    FillRegMask(RegMask);
+    assertRegMask(RegMask, ExpectedRegs);
   }
 
   void testRegAliases(Triple::ArchType Arch, uint64_t Register,
@@ -153,6 +169,100 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
   const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
   ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitDef) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // adds x0, x5, #42
+  MCInst Inst = MCInstBuilder(AArch64::ADDSXri)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(42)
+                    .addImm(0);
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI,
+                 AArch64::X0_X1_X2_X3_X4_X5_X6_X7, AArch64::W0_W1,
+                 AArch64::X0_X1});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::NZCV, AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5,
+       AArch64::W0_HI, AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::NZCV, AArch64::W0, AArch64::X0, AArch64::W0_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitUse) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // b.eq <label>
+  MCInst Inst =
+      MCInstBuilder(AArch64::Bcc)
+          .addImm(AArch64CC::EQ)
+          .addImm(0); // <label> - should be Expr, but immediate 0 works too.
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+                {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); }, {});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::NZCV});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::NZCV});
+}
+
+TEST_P(MCPlusBuilderTester, testAccessedRegsMultipleDefs) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // ldr x0, [x5], #16
+  MCInst Inst = MCInstBuilder(AArch64::LDRXpost)
+                    .addReg(AArch64::X5)
+                    .addReg(AArch64::X0)
+                    .addReg(AArch64::X5)
+                    .addImm(16);
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getClobberedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask(
+      [&](BitVector &BV) { BC->MIB->getTouchedRegs(Inst, BV); },
+      {AArch64::W0, AArch64::W5, AArch64::X0, AArch64::X5, AArch64::W0_HI,
+       AArch64::W5_HI, AArch64::X0_X1_X2_X3_X4_X5_X6_X7,
+       AArch64::X2_X3_X4_X5_X6_X7_X8_X9, AArch64::X4_X5_X6_X7_X8_X9_X10_X11,
+       AArch64::W0_W1, AArch64::W4_W5, AArch64::X0_X1, AArch64::X4_X5});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getWrittenRegs(Inst, BV); },
+                {AArch64::W0, AArch64::X0, AArch64::W0_HI, AArch64::W5,
+                 AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getUsedRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
+
+  assertRegMask([&](BitVector &BV) { BC->MIB->getSrcRegs(Inst, BV); },
+                {AArch64::W5, AArch64::X5, AArch64::W5_HI});
 }
 
 #endif // AARCH64_AVAILABLE
