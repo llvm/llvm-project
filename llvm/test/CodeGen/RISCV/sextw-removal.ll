@@ -1352,7 +1352,6 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ; NOREMOVAL-LABEL: sextw_sh2add:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    sh2add a2, a2, a3
-; NOREMOVAL-NEXT:    mv a2, a2
 ; NOREMOVAL-NEXT:    beqz a0, .LBB22_2
 ; NOREMOVAL-NEXT:  # %bb.1:
 ; NOREMOVAL-NEXT:    sw a2, 0(a1)
