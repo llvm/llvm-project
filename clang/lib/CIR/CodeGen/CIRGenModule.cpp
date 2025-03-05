@@ -570,13 +570,13 @@ bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
   // their device-side incarnations.
 
   if (global->hasAttr<CUDAConstantAttr>() ||
-      global->hasAttr<CUDASharedAttr>() ||
       global->getType()->isCUDADeviceBuiltinSurfaceType() ||
       global->getType()->isCUDADeviceBuiltinTextureType()) {
     llvm_unreachable("NYI");
   }
 
-  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>();
+  return !langOpts.CUDAIsDevice || global->hasAttr<CUDADeviceAttr>() ||
+         global->hasAttr<CUDASharedAttr>();
 }
 
 void CIRGenModule::emitGlobal(GlobalDecl gd) {
@@ -599,8 +599,10 @@ void CIRGenModule::emitGlobal(GlobalDecl gd) {
   assert(!global->hasAttr<CPUDispatchAttr>() && "NYI");
 
   if (langOpts.CUDA || langOpts.HIP) {
-    // clang uses the same flag when building HIP code
-    if (langOpts.CUDAIsDevice) {
+    if (const auto *vd = dyn_cast<VarDecl>(global)) {
+      if (!shouldEmitCUDAGlobalVar(vd))
+        return;
+    } else if (langOpts.CUDAIsDevice) {
       // This will implicitly mark templates and their
       // specializations as __host__ __device__.
       if (langOpts.OffloadImplicitHostDeviceTemplates)
@@ -621,11 +623,6 @@ void CIRGenModule::emitGlobal(GlobalDecl gd) {
           global->hasAttr<CUDADeviceAttr>()) {
         return;
       }
-    }
-
-    if (const auto *vd = dyn_cast<VarDecl>(global)) {
-      if (!shouldEmitCUDAGlobalVar(vd))
-        return;
     }
   }
 
@@ -1395,7 +1392,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *d,
        d->getType()->isCUDADeviceBuiltinTextureType());
   if (getLangOpts().CUDA &&
       (isCudaSharedVar || isCudaShadowVar || isCudaDeviceShadowVar))
-    assert(0 && "not implemented");
+    init = UndefAttr::get(&getMLIRContext(), convertType(d->getType()));
   else if (d->hasAttr<LoaderUninitializedAttr>())
     assert(0 && "not implemented");
   else if (!initExpr) {
@@ -1491,11 +1488,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *d,
   cir::GlobalLinkageKind linkage =
       getCIRLinkageVarDefinition(d, /*IsConstant=*/false);
 
-  // TODO(cir):
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
   // CUDA B.2.2 "The __constant__ qualifier, optionally used together with
   // __device__, declares a variable that: [...]
+  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
+    // __shared__ variables is not marked as externally initialized,
+    // because they must not be initialized.
+    if (linkage != cir::GlobalLinkageKind::InternalLinkage &&
+        (d->hasAttr<CUDADeviceAttr>())) {
+      gv->setAttr(CUDAExternallyInitializedAttr::getMnemonic(),
+                  CUDAExternallyInitializedAttr::get(&getMLIRContext()));
+    }
+  }
 
   // Set initializer and finalize emission
   CIRGenModule::setInitializer(gv, init);

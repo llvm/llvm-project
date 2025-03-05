@@ -283,3 +283,23 @@ mlir::Operation *CIRGenCUDARuntime::getKernelHandle(cir::FuncOp fn,
 
   return globalOp;
 }
+
+void CIRGenCUDARuntime::internalizeDeviceSideVar(
+    const VarDecl *d, cir::GlobalLinkageKind &linkage) {
+  if (cgm.getLangOpts().GPURelocatableDeviceCode)
+    llvm_unreachable("NYI");
+
+  // __shared__ variables are odd. Shadows do get created, but
+  // they are not registered with the CUDA runtime, so they
+  // can't really be used to access their device-side
+  // counterparts. It's not clear yet whether it's nvcc's bug or
+  // a feature, but we've got to do the same for compatibility.
+  if (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
+      d->hasAttr<CUDASharedAttr>()) {
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
+  }
+
+  if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      d->getType()->isCUDADeviceBuiltinTextureType())
+    llvm_unreachable("NYI");
+}

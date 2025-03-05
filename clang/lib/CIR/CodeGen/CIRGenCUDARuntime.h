@@ -58,6 +58,8 @@ public:
                                         const CUDAKernelCallExpr *expr,
                                         ReturnValueSlot retValue);
   virtual mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl GD);
+  virtual void internalizeDeviceSideVar(const VarDecl *d,
+                                        cir::GlobalLinkageKind &linkage);
 };
 
 } // namespace clang::CIRGen

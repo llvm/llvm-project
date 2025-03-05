@@ -2397,6 +2397,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 
   attributes.push_back(rewriter.getNamedAttr("visibility_", visibility));
 
+  if (auto extInit =
+          op->getAttr(CUDAExternallyInitializedAttr::getMnemonic())) {
+    attributes.push_back(rewriter.getNamedAttr("externally_initialized",
+                                               rewriter.getUnitAttr()));
+  }
+
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
       // If a directly equivalent attribute is available, use it.
