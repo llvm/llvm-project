@@ -11,32 +11,21 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_copysign_f16(ptr %ap, ptr %bp) {
 ; SVE-LABEL: test_copysign_f16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    adrp x8, .LCPI0_0
+; SVE-NEXT:    ldr h0, [x1]
 ; SVE-NEXT:    ldr h1, [x0]
-; SVE-NEXT:    ldr h2, [x1]
-; SVE-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
-; SVE-NEXT:    adrp x8, .LCPI0_1
-; SVE-NEXT:    ldr q4, [x8, :lo12:.LCPI0_1]
-; SVE-NEXT:    mov z3.d, z0.d
-; SVE-NEXT:    fmov s0, s1
-; SVE-NEXT:    fmov s3, s2
-; SVE-NEXT:    bif v0.16b, v3.16b, v4.16b
+; SVE-NEXT:    and z0.h, z0.h, #0x8000
+; SVE-NEXT:    and z1.h, z1.h, #0x7fff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
 ; SVE-NEXT:    str h0, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: test_copysign_f16:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    adrp x8, .LCPI0_0
-; SVE2-NEXT:    ldr h1, [x0]
-; SVE2-NEXT:    ldr h2, [x1]
-; SVE2-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
-; SVE2-NEXT:    adrp x8, .LCPI0_1
-; SVE2-NEXT:    ldr q4, [x8, :lo12:.LCPI0_1]
-; SVE2-NEXT:    mov z3.d, z0.d
-; SVE2-NEXT:    fmov s0, s1
-; SVE2-NEXT:    fmov s3, s2
-; SVE2-NEXT:    bif v0.16b, v3.16b, v4.16b
-; SVE2-NEXT:    str h0, [x0]
+; SVE2-NEXT:    mov z0.h, #32767 // =0x7fff
+; SVE2-NEXT:    ldr h1, [x1]
+; SVE2-NEXT:    ldr h2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str h2, [x0]
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_copysign_f16:
@@ -66,32 +55,40 @@ define void @test_copysign_f16(ptr %ap, ptr %bp) {
 define void @test_copysign_bf16(ptr %ap, ptr %bp) {
 ; SVE-LABEL: test_copysign_bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    adrp x8, .LCPI1_0
-; SVE-NEXT:    ldr h1, [x0]
-; SVE-NEXT:    ldr h2, [x1]
-; SVE-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; SVE-NEXT:    adrp x8, .LCPI1_1
-; SVE-NEXT:    ldr q4, [x8, :lo12:.LCPI1_1]
-; SVE-NEXT:    mov z3.d, z0.d
-; SVE-NEXT:    fmov s0, s1
-; SVE-NEXT:    fmov s3, s2
-; SVE-NEXT:    bif v0.16b, v3.16b, v4.16b
+; SVE-NEXT:    sub sp, sp, #16
+; SVE-NEXT:    .cfi_def_cfa_offset 16
+; SVE-NEXT:    ldr h0, [x0]
+; SVE-NEXT:    ldr h1, [x1]
+; SVE-NEXT:    fmov w8, s0
+; SVE-NEXT:    str h1, [sp, #12]
+; SVE-NEXT:    ldrb w9, [sp, #13]
+; SVE-NEXT:    and w8, w8, #0x7fff
+; SVE-NEXT:    tst w9, #0x80
+; SVE-NEXT:    fmov s0, w8
+; SVE-NEXT:    eor w8, w8, #0x8000
+; SVE-NEXT:    fmov s1, w8
+; SVE-NEXT:    fcsel h0, h1, h0, ne
 ; SVE-NEXT:    str h0, [x0]
+; SVE-NEXT:    add sp, sp, #16
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: test_copysign_bf16:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    adrp x8, .LCPI1_0
-; SVE2-NEXT:    ldr h1, [x0]
-; SVE2-NEXT:    ldr h2, [x1]
-; SVE2-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; SVE2-NEXT:    adrp x8, .LCPI1_1
-; SVE2-NEXT:    ldr q4, [x8, :lo12:.LCPI1_1]
-; SVE2-NEXT:    mov z3.d, z0.d
-; SVE2-NEXT:    fmov s0, s1
-; SVE2-NEXT:    fmov s3, s2
-; SVE2-NEXT:    bif v0.16b, v3.16b, v4.16b
+; SVE2-NEXT:    sub sp, sp, #16
+; SVE2-NEXT:    .cfi_def_cfa_offset 16
+; SVE2-NEXT:    ldr h0, [x0]
+; SVE2-NEXT:    ldr h1, [x1]
+; SVE2-NEXT:    fmov w8, s0
+; SVE2-NEXT:    str h1, [sp, #12]
+; SVE2-NEXT:    ldrb w9, [sp, #13]
+; SVE2-NEXT:    and w8, w8, #0x7fff
+; SVE2-NEXT:    tst w9, #0x80
+; SVE2-NEXT:    fmov s0, w8
+; SVE2-NEXT:    eor w8, w8, #0x8000
+; SVE2-NEXT:    fmov s1, w8
+; SVE2-NEXT:    fcsel h0, h1, h0, ne
 ; SVE2-NEXT:    str h0, [x0]
+; SVE2-NEXT:    add sp, sp, #16
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_copysign_bf16:
@@ -139,32 +136,21 @@ define void @test_copysign_bf16(ptr %ap, ptr %bp) {
 define void @test_copysign_f32(ptr %ap, ptr %bp) {
 ; SVE-LABEL: test_copysign_f32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    adrp x8, .LCPI2_0
+; SVE-NEXT:    ldr s0, [x1]
 ; SVE-NEXT:    ldr s1, [x0]
-; SVE-NEXT:    ldr s2, [x1]
-; SVE-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; SVE-NEXT:    adrp x8, .LCPI2_1
-; SVE-NEXT:    ldr q4, [x8, :lo12:.LCPI2_1]
-; SVE-NEXT:    mov z3.d, z0.d
-; SVE-NEXT:    fmov s0, s1
-; SVE-NEXT:    fmov s3, s2
-; SVE-NEXT:    bif v0.16b, v3.16b, v4.16b
+; SVE-NEXT:    and z0.s, z0.s, #0x80000000
+; SVE-NEXT:    and z1.s, z1.s, #0x7fffffff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
 ; SVE-NEXT:    str s0, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: test_copysign_f32:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    adrp x8, .LCPI2_0
-; SVE2-NEXT:    ldr s1, [x0]
-; SVE2-NEXT:    ldr s2, [x1]
-; SVE2-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; SVE2-NEXT:    adrp x8, .LCPI2_1
-; SVE2-NEXT:    ldr q4, [x8, :lo12:.LCPI2_1]
-; SVE2-NEXT:    mov z3.d, z0.d
-; SVE2-NEXT:    fmov s0, s1
-; SVE2-NEXT:    fmov s3, s2
-; SVE2-NEXT:    bif v0.16b, v3.16b, v4.16b
-; SVE2-NEXT:    str s0, [x0]
+; SVE2-NEXT:    mov z0.s, #0x7fffffff
+; SVE2-NEXT:    ldr s1, [x1]
+; SVE2-NEXT:    ldr s2, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str s2, [x0]
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_copysign_f32:
@@ -187,36 +173,21 @@ define void @test_copysign_f32(ptr %ap, ptr %bp) {
 define void @test_copysign_f64(ptr %ap, ptr %bp) {
 ; SVE-LABEL: test_copysign_f64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    adrp x8, .LCPI3_1
-; SVE-NEXT:    ptrue p0.d, vl2
-; SVE-NEXT:    ldr d2, [x0]
-; SVE-NEXT:    ldr q0, [x8, :lo12:.LCPI3_1]
-; SVE-NEXT:    adrp x8, .LCPI3_0
-; SVE-NEXT:    ldr d3, [x1]
-; SVE-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; SVE-NEXT:    fneg z0.d, p0/m, z0.d
-; SVE-NEXT:    mov z4.d, z1.d
-; SVE-NEXT:    fmov d1, d2
-; SVE-NEXT:    fmov d4, d3
-; SVE-NEXT:    bsl v0.16b, v1.16b, v4.16b
+; SVE-NEXT:    ldr d0, [x1]
+; SVE-NEXT:    ldr d1, [x0]
+; SVE-NEXT:    and z0.d, z0.d, #0x8000000000000000
+; SVE-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
+; SVE-NEXT:    orr z0.d, z1.d, z0.d
 ; SVE-NEXT:    str d0, [x0]
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: test_copysign_f64:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    adrp x8, .LCPI3_1
-; SVE2-NEXT:    ptrue p0.d, vl2
+; SVE2-NEXT:    mov z0.d, #0x7fffffffffffffff
+; SVE2-NEXT:    ldr d1, [x1]
 ; SVE2-NEXT:    ldr d2, [x0]
-; SVE2-NEXT:    ldr q0, [x8, :lo12:.LCPI3_1]
-; SVE2-NEXT:    adrp x8, .LCPI3_0
-; SVE2-NEXT:    ldr d3, [x1]
-; SVE2-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; SVE2-NEXT:    fneg z0.d, p0/m, z0.d
-; SVE2-NEXT:    mov z4.d, z1.d
-; SVE2-NEXT:    fmov d1, d2
-; SVE2-NEXT:    fmov d4, d3
-; SVE2-NEXT:    bsl v0.16b, v1.16b, v4.16b
-; SVE2-NEXT:    str d0, [x0]
+; SVE2-NEXT:    bsl z2.d, z2.d, z1.d, z0.d
+; SVE2-NEXT:    str d2, [x0]
 ; SVE2-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: test_copysign_f64:
