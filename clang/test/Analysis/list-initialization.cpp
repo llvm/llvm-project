@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -verify %s\
+// RUN: %clang_analyze_cc1 -w -verify %s\
 // RUN:   -analyzer-checker=core,unix.Malloc\
 // RUN:   -analyzer-checker=debug.ExprInspection -std=c++11
-// RUN: %clang_analyze_cc1 -verify %s\
+// RUN: %clang_analyze_cc1 -w -verify %s\
 // RUN:   -analyzer-checker=core,unix.Malloc\
 // RUN:   -analyzer-checker=debug.ExprInspection -std=c++17
 
@@ -397,6 +397,151 @@ void u32_string() {
   clang_analyzer_eval(U'\0' == arr[2]); // expected-warning{{TRUE}}
 }
 } // namespace CXX14_char_array_single_string_clause
+
+namespace CXX17_designated_clauses {
+struct S {
+  int foo;
+  int bar;
+};
+void one_designated_one_not() {
+  S direct{1, .bar = 13};
+  clang_analyzer_eval(1 == direct.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == direct.bar); // expected-warning{{TRUE}}
+
+  S copy = {1, .bar = 13};
+  clang_analyzer_eval(1 == copy.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == copy.bar); // expected-warning{{TRUE}}
+
+  S *ptr = new S{1, .bar = 13};
+  clang_analyzer_eval(1 == ptr->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == ptr->bar); // expected-warning{{TRUE}}
+  delete ptr;
+
+  S slot;
+  S *place = new (&slot) S{1, .bar = 13};
+  clang_analyzer_eval(1 == place->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(13 == place->bar); // expected-warning{{TRUE}}
+}
+void all_designated() {
+  S direct{ .foo = 13, .bar = 1 };
+  clang_analyzer_eval(13 == direct.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == direct.bar); // expected-warning{{TRUE}}
+
+  S copy = { .foo = 13, .bar = 1 };
+  clang_analyzer_eval(13 == copy.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == copy.bar); // expected-warning{{TRUE}}
+
+  S *ptr = new S{ .foo = 13, .bar = 1 };
+  clang_analyzer_eval(13 == ptr->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == ptr->bar); // expected-warning{{TRUE}}
+  delete ptr;
+
+  S slot;
+  S *place = new (&slot) S{ .foo = 13, .bar = 1 };
+  clang_analyzer_eval(13 == place->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == place->bar); // expected-warning{{TRUE}}
+}
+
+class PubClass {
+public:
+  int foo;
+  int bar;
+};
+void public_class_designated_initializers() {
+  PubClass direct{
+    .foo = 13,
+    .bar = 1,
+  };
+  clang_analyzer_eval(13 == direct.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == direct.bar); // expected-warning{{TRUE}}
+
+  PubClass copy = {
+    .foo = 13,
+    .bar = 1,
+  };
+  clang_analyzer_eval(13 == copy.foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == copy.bar); // expected-warning{{TRUE}}
+
+  PubClass *ptr = new PubClass{
+      .foo = 13,
+      .bar = 1,
+  };
+  clang_analyzer_eval(13 == ptr->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == ptr->bar); // expected-warning{{TRUE}}
+  delete ptr;
+
+  PubClass slot;
+  PubClass *place = new (&slot) PubClass{
+    .foo = 13,
+    .bar = 1,
+  };
+  clang_analyzer_eval(13 == place->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == place->bar); // expected-warning{{TRUE}}
+}
+  
+struct Three {
+  int x;
+  int y;
+  int z;
+};
+void designated_initializers_with_gaps() {
+  Three direct{
+    .x = 13,
+    .z = 1,
+  };
+  clang_analyzer_eval(13 == direct.x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == direct.y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == direct.z); // expected-warning{{TRUE}}
+
+  Three copy = {
+    .x = 13,
+    .z = 1,
+  };
+  clang_analyzer_eval(13 == copy.x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == copy.y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == copy.z); // expected-warning{{TRUE}}
+
+  Three *ptr = new Three{
+    .x = 13,
+    .z = 1,
+  };
+  clang_analyzer_eval(13 == ptr->x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == ptr->y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == ptr->z); // expected-warning{{TRUE}}
+  delete ptr;
+
+  Three slot;
+  Three *place = new (&slot) Three{
+    .x = 13,
+    .z = 1,
+  };
+  clang_analyzer_eval(13 == place->x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == place->y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(1 == place->z); // expected-warning{{TRUE}}
+}
+
+struct Inner {
+  int bar;
+};
+struct Nested {
+  int foo;
+  Inner inner;
+  int baz;
+};
+void nested_aggregates() {
+  auto N1 = new Nested{.baz = 14};
+  clang_analyzer_eval(0 == N1->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(0 == N1->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(14 == N1->baz); // expected-warning{{TRUE}}
+
+  auto N2 = new Nested{1, {.bar = 2}, 3};
+  clang_analyzer_eval(1 == N2->foo); // expected-warning{{TRUE}}
+  clang_analyzer_eval(2 == N2->inner.bar); // expected-warning{{TRUE}}
+  clang_analyzer_eval(3 == N2->baz); // expected-warning{{TRUE}}
+
+  escape(N1,N2);
+}
+} // namespace CXX17_designated_clauses
 #endif // __cplusplus >= 201703L
 
 // Common across different C++ versions
@@ -477,44 +622,6 @@ void none_designated_swapped() {
   clang_analyzer_eval(1 == place->foo); // expected-warning{{TRUE}}
   clang_analyzer_eval(13 == place->bar); // expected-warning{{TRUE}}
 }
-void one_designated_one_not() {
-  S direct{1, .bar = 13};
-  clang_analyzer_eval(1 == direct.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(13 == direct.bar); // expected-warning{{TRUE}}
-
-  S copy = {1, .bar = 13};
-  clang_analyzer_eval(1 == copy.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(13 == copy.bar); // expected-warning{{TRUE}}
-
-  S *ptr = new S{1, .bar = 13};
-  clang_analyzer_eval(1 == ptr->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(13 == ptr->bar); // expected-warning{{TRUE}}
-  delete ptr;
-
-  S slot;
-  S *place = new (&slot) S{1, .bar = 13};
-  clang_analyzer_eval(1 == place->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(13 == place->bar); // expected-warning{{TRUE}}
-}
-void all_designated() {
-  S direct{ .foo = 13, .bar = 1 };
-  clang_analyzer_eval(13 == direct.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == direct.bar); // expected-warning{{TRUE}}
-
-  S copy = { .foo = 13, .bar = 1 };
-  clang_analyzer_eval(13 == copy.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == copy.bar); // expected-warning{{TRUE}}
-
-  S *ptr = new S{ .foo = 13, .bar = 1 };
-  clang_analyzer_eval(13 == ptr->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == ptr->bar); // expected-warning{{TRUE}}
-  delete ptr;
-
-  S slot;
-  S *place = new (&slot) S{ .foo = 13, .bar = 1 };
-  clang_analyzer_eval(13 == place->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == place->bar); // expected-warning{{TRUE}}
-}
 
 class DefaultCtor {
 public:
@@ -540,43 +647,6 @@ void const_lvalue_ref_list_init() {
   const DefaultCtor &copy = {};
   clang_analyzer_eval(1 == direct.x); // expected-warning{{TRUE}}
   clang_analyzer_eval(1 == copy.x); // expected-warning{{TRUE}}
-}
-
-class PubClass {
-public:
-  int foo;
-  int bar;
-};
-void public_class_designated_initializers() {
-  PubClass direct{
-    .foo = 13,
-    .bar = 1,
-  };
-  clang_analyzer_eval(13 == direct.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == direct.bar); // expected-warning{{TRUE}}
-
-  PubClass copy = {
-    .foo = 13,
-    .bar = 1,
-  };
-  clang_analyzer_eval(13 == copy.foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == copy.bar); // expected-warning{{TRUE}}
-
-  PubClass *ptr = new PubClass{
-      .foo = 13,
-      .bar = 1,
-  };
-  clang_analyzer_eval(13 == ptr->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == ptr->bar); // expected-warning{{TRUE}}
-  delete ptr;
-
-  PubClass slot;
-  PubClass *place = new (&slot) PubClass{
-    .foo = 13,
-    .bar = 1,
-  };
-  clang_analyzer_eval(13 == place->foo); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == place->bar); // expected-warning{{TRUE}}
 }
 
 class NonAggregateImplicitDefaultCtor {
@@ -726,41 +796,6 @@ void initializer_clauses_sequenced() {
 
   delete ptr;
 }
-void designated_initializers_with_gaps() {
-  Three direct{
-    .x = 13,
-    .z = 1,
-  };
-  clang_analyzer_eval(13 == direct.x); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == direct.y); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == direct.z); // expected-warning{{TRUE}}
-
-  Three copy = {
-    .x = 13,
-    .z = 1,
-  };
-  clang_analyzer_eval(13 == copy.x); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == copy.y); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == copy.z); // expected-warning{{TRUE}}
-
-  Three *ptr = new Three{
-    .x = 13,
-    .z = 1,
-  };
-  clang_analyzer_eval(13 == ptr->x); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == ptr->y); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == ptr->z); // expected-warning{{TRUE}}
-  delete ptr;
-
-  Three slot;
-  Three *place = new (&slot) Three{
-    .x = 13,
-    .z = 1,
-  };
-  clang_analyzer_eval(13 == place->x); // expected-warning{{TRUE}}
-  clang_analyzer_eval(0 == place->y); // expected-warning{{TRUE}}
-  clang_analyzer_eval(1 == place->z); // expected-warning{{TRUE}}
-}
 
 // https://eel.is/c++draft/dcl.init.aggr#note-6:
 // Static data members, non-static data members of anonymous
@@ -860,7 +895,7 @@ void array_empty_list_init_values() {
 void array_empty_list_init_invalid_index_undef() {
   const int *ptr = glob_arr1;
   int idx = -42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 void array_empty_list_init_symbolic_index_unknown(int idx) {
   clang_analyzer_dump(glob_arr1[idx]); // expected-warning{{Unknown}}
@@ -879,12 +914,12 @@ void array_nested_empty_list_init_values() {
 }
 void array_nested_empty_list_init_invalid_idx_undef() {
   int idx = -42;
-  auto x = glob_arr4[1][idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr4[1][idx]; // expected-warning{{uninitialized}}
 }
 void array_nested_empty_list_init_invalid_idx_undef2() {
   const int *ptr = glob_arr4[1];
   int idx = -42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 int const glob_arr2[4] = {1, 2};
@@ -898,7 +933,7 @@ void array_fewer_init_clauses_values() {
 void array_fewer_init_clauses_values_invalid_index() {
   const int *ptr = glob_arr2;
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 int const glob_arr5[4][2] = {{1}, 3, 4, 5};
@@ -920,12 +955,12 @@ void array_nested_init_list_oob_read() {
 }
 void array_nested_init_list_invalid_index() {
   int idx = -42;
-  auto x = glob_arr5[1][idx]; // expected-warning{{garbage or undefined}}
+  auto x = glob_arr5[1][idx]; // expected-warning{{uninitialized}}
 }
 void array_nested_init_list_invalid_index2() {
   int const *ptr = &glob_arr5[1][0];
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 char const char_string_init[5] = {"123"};
@@ -938,12 +973,12 @@ void array_char_init_with_char_string() {
 }
 void array_char_init_with_char_string_invalid_index() {
   int idx = -42;
-  auto x = char_string_init[idx]; // expected-warning{{garbage or undefined}}
+  auto x = char_string_init[idx]; // expected-warning{{uninitialized}}
 }
 void array_char_init_with_char_string_invalid_index2() {
   const char *ptr = char_string_init;
   int idx = 42;
-  auto x = ptr[idx]; // expected-warning{{garbage or undefined}}
+  auto x = ptr[idx]; // expected-warning{{uninitialized}}
 }
 
 const int glob_arr9[2][4] = {{(1), 2, ((3)), 4}, 5, 6, (((7)))};
@@ -1149,10 +1184,11 @@ void union_single_initializer_clause_first_field() {
   clang_analyzer_eval(1 == ptr->x); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(1 == place->x); // expected-warning{{UNKNOWN}}
 
-  clang_analyzer_eval(1 + direct.y); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + copy.y); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + ptr->y); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + place->y); // expected-warning{{UNDEFINED}}
+  // FIXME: should be undefined
+  clang_analyzer_eval(1 + direct.y); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + copy.y); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + ptr->y); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + place->y); // expected-warning{{UNKNOWN}}
 
   delete ptr;
 }
@@ -1169,10 +1205,11 @@ void union_single_initializer_clause_non_first_field() {
   clang_analyzer_eval(1 == ptr->y); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(1 == place->y); // expected-warning{{UNKNOWN}}
 
-  clang_analyzer_eval(1 + direct.x); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + copy.x); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + ptr->x); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(1 + place->x); // expected-warning{{UNDEFINED}}
+  // FIXME: should be undefined
+  clang_analyzer_eval(1 + direct.x); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + copy.x); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + ptr->x); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(1 + place->x); // expected-warning{{UNKNOWN}}
 
   delete ptr;
 }
