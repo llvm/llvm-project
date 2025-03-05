@@ -1786,7 +1786,6 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
   }
 }
 
-// TODO: Currently works for static memrefs with a single layout map.
 template <typename AllocLikeOp>
 LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
   MemRefType memrefType = allocOp->getType();
@@ -1799,7 +1798,6 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
     // Either memrefType already had an identity map or the map couldn't be
     // transformed to an identity map.
     return failure();
-
   Value oldMemRef = allocOp->getResult();
 
   SmallVector<Value, 4> symbolOperands(allocOp->getSymbolOperands());
@@ -1819,8 +1817,40 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
         b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType, newDynamicSizes,
                               allocOp->getAlignmentAttr());
   } else {
-    newAlloc = b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType,
-                                     allocOp->getAlignmentAttr());
+    mlir::ValueRange dynamicSizes = allocOp->getDynamicSizes();
+    mlir::ValueRange symbolOperands = allocOp->getSymbolOperands();
+    ArrayRef<int64_t> newShape = newMemRefType.getShape();
+    ArrayRef<int64_t> oldShape = memrefType.getShape();
+    SmallVector<Value> mapOperands(oldShape.size() + symbolOperands.size());
+    SmallVector<Value> dimensionOperands;
+    unsigned dimId = 0, symId = 0;
+    // Collect all the map operands of `allocOp` (both dynamic sizes and symbol
+    // operands), which will help us to compute the dynamic sizes of the new
+    // alloc op we are going to create.
+    for (unsigned i = 0, e = oldShape.size(); i < e; i++) {
+      if (oldShape[i] == ShapedType::kDynamic)
+        mapOperands[i] = dynamicSizes[dimId++];
+      else
+        mapOperands[i] =
+            b.create<arith::ConstantIndexOp>(allocOp->getLoc(), oldShape[i]);
+    }
+    for (unsigned i = oldShape.size(), e = mapOperands.size(); i < e; i++)
+      mapOperands[i] = symbolOperands[symId++];
+    // Compute the dynamic sizes operands for the new alloc op. If `newShape` is
+    // dynamic along a dimension, compute its shape using the layout map and
+    // dynamic sizes and symbol operands of the old `allocOp`.
+    for (unsigned i = 0, e = newShape.size(); i < e; i++) {
+      if (newShape[i] != ShapedType::kDynamic)
+        continue;
+      AffineExpr resExpr = layoutMap.getResult(i);
+      auto resMap = AffineMap::get(layoutMap.getNumDims(),
+                                   layoutMap.getNumSymbols(), resExpr);
+      dimensionOperands.push_back(
+          b.create<AffineApplyOp>(allocOp->getLoc(), resMap, mapOperands));
+    }
+    newAlloc =
+        b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType,
+                              dimensionOperands, allocOp->getAlignmentAttr());
   }
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
@@ -1868,11 +1898,8 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
 
   // Normalize only static memrefs and dynamic memrefs with a tiled-layout map
   // for now.
-  // TODO: Normalize the other types of dynamic memrefs.
   SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
   (void)getTileSizePos(layoutMap, tileSizePos);
-  if (memrefType.getNumDynamicDims() > 0 && tileSizePos.empty())
-    return memrefType;
 
   // We have a single map that is not an identity map. Create a new memref
   // with the right shape and an identity layout map.
@@ -1894,7 +1921,6 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   unsigned newRank = layoutMap.getNumResults();
   if (failed(fac.composeMatchingMap(layoutMap)))
     return memrefType;
-  // TODO: Handle semi-affine maps.
   // Project out the old data dimensions.
   fac.projectOut(newRank, fac.getNumVars() - newRank - fac.getNumLocalVars());
   SmallVector<int64_t, 4> newShape(newRank);
@@ -1910,14 +1936,14 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
     // For a static memref and an affine map with no symbols, this is
     // always bounded. However, when we have symbols, we may not be able to
     // obtain a constant upper bound. Also, mapping to a negative space is
-    // invalid for normalization.
-    if (!ubConst.has_value() || *ubConst < 0) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "can't normalize map due to unknown/invalid upper bound");
+    // invalid for normalization. If dimension of new memrefType is dynamic,
+    // the value is `ShapedType::kDynamic`.
+    if (!ubConst.has_value())
+      newShape[d] = ShapedType::kDynamic;
+    else if (*ubConst >= 0)
+      newShape[d] = *ubConst + 1;
+    else
       return memrefType;
-    }
-    // If dimension of new memrefType is dynamic, the value is -1.
-    newShape[d] = *ubConst + 1;
   }
 
   // Create the new memref type after trivializing the old layout map.

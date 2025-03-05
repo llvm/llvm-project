@@ -6,6 +6,8 @@
 // CHECK-DAG: #[[$REDUCE_MAP1:.*]] = affine_map<(d0, d1) -> ((d0 mod 2) * 2 + d1 mod 2 + (d0 floordiv 2) * 4 + (d1 floordiv 2) * 8)>
 // CHECK-DAG: #[[$REDUCE_MAP2:.*]] = affine_map<(d0, d1) -> (d0 mod 2 + (d1 mod 2) * 2 + (d0 floordiv 2) * 8 + (d1 floordiv 2) * 4)>
 // CHECK-DAG: #[[$REDUCE_MAP3:.*]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
+// CHECK-DAG: #[[$STRIDED_ACCESS:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
+// CHECK-DAG: #[[$STRIDED_ACCESS_1:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 3 + s0 + d1)>
 
 // CHECK-LABEL: func @permute()
 func.func @permute() {
@@ -33,7 +35,7 @@ func.func @permute() {
 
 // CHECK-LABEL: func @alloca
 func.func @alloca(%idx : index) {
-  // CHECK-NEXT: memref.alloca() : memref<65xf32>
+  // CHECK: memref.alloca() : memref<65xf32>
   %A = memref.alloca() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
@@ -47,7 +49,7 @@ func.func @alloca(%idx : index) {
 
 // CHECK-LABEL: func @shift
 func.func @shift(%idx : index) {
-  // CHECK-NEXT: memref.alloc() : memref<65xf32>
+  // CHECK: memref.alloc() : memref<65xf32>
   %A = memref.alloc() : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
   // CHECK-NEXT: affine.load %{{.*}}[symbol(%arg0) + 1] : memref<65xf32>
   affine.load %A[%idx] : memref<64xf32, affine_map<(d0) -> (d0 + 1)>>
@@ -144,13 +146,20 @@ func.func @symbolic_operands(%s : index) {
   return
 }
 
-// Semi-affine maps, normalization not implemented yet.
+// -----
+
+// Semi-affine maps.
 // CHECK-LABEL: func @semi_affine_layout_map
+// CHECK-SAME: %[[S0:.*]]: index, %[[S1:.*]]: index
 func.func @semi_affine_layout_map(%s0: index, %s1: index) {
+  // CHECK-DAG:  %[[C256:.*]] = arith.constant 256 : index
+  // CHECK-DAG:  %[[C1024:.*]] = arith.constant 1024 : index
+  // CHECK:      %[[DYNAMIC_SIZE:.*]] = affine.apply #[[$STRIDED_ACCESS]](%[[C256]], %[[C1024]])[%[[S0]], %[[S1]]]
+  // CHECK:      %[[ALLOC:.*]] = memref.alloc(%[[DYNAMIC_SIZE]]) : memref<?xf32>
   %A = memref.alloc()[%s0, %s1] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 1024 {
-      // CHECK: memref<256x1024xf32, #map{{[0-9a-zA-Z_]+}}>
+      // CHECK: affine.load %[[ALLOC]][%{{.*}} * symbol(%[[S0]]) + %{{.*}} * symbol(%[[S1]])] : memref<?xf32>
       affine.load %A[%i, %j] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
     }
   }
@@ -160,7 +169,7 @@ func.func @semi_affine_layout_map(%s0: index, %s1: index) {
 // CHECK-LABEL: func @alignment
 func.func @alignment() {
   %A = memref.alloc() {alignment = 32 : i64}: memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
-  // CHECK-NEXT: memref.alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
+  // CHECK: memref.alloc() {alignment = 32 : i64} : memref<256x64x128xf32>
   return
 }
 
@@ -355,12 +364,15 @@ func.func @affine_parallel_norm() ->  memref<8xf32, #tile> {
 // CHECK-LABEL: func.func @map_symbol
 func.func @map_symbol() -> memref<2x3xf32, #map> {
   %c1 = arith.constant 1 : index
-  // The constant isn't propagated here and the utility can't compute a constant
-  // upper bound for the memref dimension in the absence of that.
-  // CHECK: memref.alloc()[%{{.*}}]
   %0 = memref.alloc()[%c1] : memref<2x3xf32, #map>
   return %0 : memref<2x3xf32, #map>
 }
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
+// CHECK:       %[[DYNAMIC_SIZE:.*]] = affine.apply #[[$STRIDED_ACCESS_1]](%[[C2]], %[[C3]])[%[[C1]]]
+// CHECK-NEXT:  %[[ALLOC:.*]] = memref.alloc(%[[DYNAMIC_SIZE]]) : memref<?xf32>
+// CHECK-NEXT:  return %[[ALLOC]] : memref<?xf32>
 
 #neg = affine_map<(d0, d1) -> (d0, d1 - 100)>
 // CHECK-LABEL: func.func @neg_map
@@ -399,13 +411,13 @@ func.func @memref_load_with_reduction_map(%arg0 :  memref<4x4xf32,#map2>) -> () 
     affine.for %j = 0 to 8 {
       affine.for %k = 0 to 8 {
         // CHECK: %[[INDEX0:.*]] = affine.apply #[[$REDUCE_MAP1]](%{{.*}}, %{{.*}})
-        // CHECK: memref.load %alloc[%[[INDEX0]]] : memref<32xf32>
+        // CHECK: memref.load %{{.*}}[%[[INDEX0]]] : memref<32xf32>
         %a = memref.load %0[%i, %k] : memref<4x8xf32,#map0>
         // CHECK: %[[INDEX1:.*]] = affine.apply #[[$REDUCE_MAP2]](%{{.*}}, %{{.*}})
-        // CHECK: memref.load %alloc_0[%[[INDEX1]]] : memref<32xf32>
+        // CHECK: memref.load %{{.*}}[%[[INDEX1]]] : memref<32xf32>
         %b = memref.load %1[%k, %j] :memref<8x4xf32,#map1>
         // CHECK: %[[INDEX2:.*]] = affine.apply #[[$REDUCE_MAP3]](%{{.*}}, %{{.*}})
-        // CHECK: memref.load %alloc_1[%[[INDEX2]]] : memref<16xf32>
+        // CHECK: memref.load %{{.*}}[%[[INDEX2]]] : memref<16xf32>
         %c = memref.load %2[%i, %j] : memref<4x4xf32,#map2>
         %3 = arith.mulf %a, %b : f32
         %4 = arith.addf %3, %c : f32

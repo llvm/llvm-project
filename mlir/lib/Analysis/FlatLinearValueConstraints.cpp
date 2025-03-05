@@ -119,8 +119,10 @@ struct SemiAffineExprFlattener : public AffineExprFlattener {
       // assumption does not hold constraints (added above) are a contradiction.
 
       return success();
+    } else if (localExpr.getKind() == AffineExprKind::Mul) {
+      (void)localVarCst.appendVar(VarKind::Local);
+      return success();
     }
-
     // TODO: Support other semi-affine expressions.
     return failure();
   }
@@ -163,7 +165,6 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
 
     return success();
   };
-
   if (addConservativeSemiAffineBounds) {
     SemiAffineExprFlattener flattener(numDims, numSymbols);
     return flattenExprs(flattener);
@@ -229,7 +230,8 @@ LogicalResult FlatLinearConstraints::composeMatchingMap(AffineMap other) {
   assert(other.getNumSymbols() == getNumSymbolVars() && "symbol mismatch");
 
   std::vector<SmallVector<int64_t, 8>> flatExprs;
-  if (failed(flattenAlignedMapAndMergeLocals(other, &flatExprs)))
+  if (failed(flattenAlignedMapAndMergeLocals(
+          other, &flatExprs, /*addConservativeSemiAffineBounds=*/true)))
     return failure();
   assert(flatExprs.size() == other.getNumResults());
 
@@ -796,8 +798,6 @@ LogicalResult FlatLinearConstraints::flattenAlignedMapAndMergeLocals(
                << "composition unimplemented for semi-affine maps\n");
     return failure();
   }
-
-  // Add localCst information.
   if (localCst.getNumLocalVars() > 0) {
     unsigned numLocalVars = getNumLocalVars();
     // Insert local dims of localCst at the beginning.
