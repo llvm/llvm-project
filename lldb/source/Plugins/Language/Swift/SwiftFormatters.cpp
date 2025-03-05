@@ -955,6 +955,72 @@ private:
   ValueObjectSP m_is_running_sp;
 };
 
+class UnsafeContinuationSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  UnsafeContinuationSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
+    if (auto target_sp = m_backend.GetTargetSP()) {
+      if (auto ts_or_err =
+              target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift)) {
+        if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+                ts_or_err->get()))
+          // TypeMangling for "Swift.UnsafeCurrentTask"
+          m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                       ts_or_err.takeError(),
+                       "could not get Swift type system for UnsafeContinuation "
+                       "synthetic provider: {0}");
+      }
+    }
+  }
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    if (!m_task_sp)
+      return m_backend.GetNumChildren();
+
+    return 1;
+  }
+
+  bool MightHaveChildren() override { return true; }
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    if (!m_task_sp)
+      return m_backend.GetChildAtIndex(idx);
+
+    if (idx == 0)
+      return m_task_sp;
+
+    return {};
+  }
+
+  size_t GetIndexOfChildWithName(ConstString name) override {
+    if (!m_task_sp)
+      return m_backend.GetIndexOfChildWithName(name);
+
+    if (name == "task")
+      return 0;
+
+    return UINT32_MAX;
+  }
+
+  lldb::ChildCacheState Update() override {
+    if (auto context_sp = m_backend.GetChildMemberWithName("context"))
+      if (addr_t task_addr = context_sp->GetValueAsUnsigned(0)) {
+        m_task_sp = ValueObject::CreateValueObjectFromAddress(
+            "task", task_addr, m_backend.GetExecutionContextRef(), m_task_type,
+            false);
+        if (auto synthetic_sp = m_task_sp->GetSyntheticValue())
+          m_task_sp = synthetic_sp;
+      }
+    return ChildCacheState::eRefetch;
+  }
+
+private:
+  CompilerType m_task_type;
+  ValueObjectSP m_task_sp;
+};
+
 class TaskGroupSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   TaskGroupSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
@@ -1200,6 +1266,14 @@ lldb_private::formatters::swift::TaskSyntheticFrontEndCreator(
   if (!valobj_sp)
     return NULL;
   return new TaskSyntheticFrontEnd(valobj_sp);
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::swift::UnsafeContinuationSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  return new UnsafeContinuationSyntheticFrontEnd(valobj_sp);
 }
 
 SyntheticChildrenFrontEnd *

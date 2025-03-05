@@ -416,6 +416,12 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                   lldb_private::formatters::swift::TaskSyntheticFrontEndCreator,
                   "Swift.UnsafeCurrentTask synthetic children",
                   ConstString("Swift.UnsafeCurrentTask"), synth_flags);
+  AddCXXSynthetic(swift_category_sp,
+                  lldb_private::formatters::swift::
+                      UnsafeContinuationSyntheticFrontEndCreator,
+                  "Swift.UnsafeContinuation synthetic children",
+                  ConstString("^Swift\\.UnsafeContinuation<.+,.+>"),
+                  synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
       lldb_private::formatters::swift::TaskGroupSyntheticFrontEndCreator,

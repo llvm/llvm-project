@@ -121,6 +121,10 @@ SyntheticChildrenFrontEnd *TaskSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                         lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+UnsafeContinuationSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 TaskGroupSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
 }
 }

@@ -3673,7 +3673,8 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
           node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
           node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER ||
-          node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT)
+          node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT ||
+          node->getText() == swift::BUILTIN_TYPE_NAME_RAWUNSAFECONTINUATION)
         return lldb::eEncodingUint;
       if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_VEC)) {
         count = 0;
