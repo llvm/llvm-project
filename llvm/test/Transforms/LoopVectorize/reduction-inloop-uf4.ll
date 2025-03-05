@@ -66,8 +66,9 @@ entry:
   ret i32 %sum.0.lcssa
 }
 
-define i64 @reduction_sum_double(ptr noalias %p, ptr noalias %q) {
-; CHECK-LABEL: @reduction_sum_double(
+; Check that we correctly unroll two reductions chained together.
+define i64 @reduction_sum_chain(ptr noalias %p, ptr noalias %q) {
+; CHECK-LABEL: @reduction_sum_chain(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -128,6 +129,7 @@ define i64 @reduction_sum_double(ptr noalias %p, ptr noalias %q) {
 ;
 entry:
   br label %loop
+
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
   %rdx = phi i64 [0, %entry], [%add2, %loop]
@@ -144,6 +146,7 @@ loop:
   %iv.next = add i64 %iv, 1
   %done = icmp eq i64 %iv.next, 256
   br i1 %done, label %exit, label %loop
+
 exit:
   ret i64 %add2
 }
