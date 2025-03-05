@@ -276,23 +276,7 @@ Operation *MyDialect::materializeConstant(OpBuilder &builder, Attribute value,
 }
 ```
 
-### Choosing between implementing a Folder or a `RewritePattern`
+### When to use the `fold` method vs `RewriterPattern`s for canonicalizations
 
-When implementing a new canonicalization, an important thing to think about is
-if the canonicalization should be a folder or a `RewritePattern`. The generally
-accepted policy is:
-
-*   If a transformation should be a canonicalizer is a different question from
-    if a transformation should be a folder or a `RewritePattern`. A
-    transformation is promoted to a canonicalization as defined by the General
-    Design of canonicalizations.
-
-*   If a transformation is a canonicalization, there are two ways to implement
-    it: As a Folder or as a `RewritePattern`, both of which are implementation
-    details of how a canonicalization exists, with the difference being folders
-    have restrictions on what they can do. A `RewritePattern` can implement any
-    transformation a folder can.
-
-*   A canonicalization should always be implemented as a Folder if it fits
-    the "local" definition of a folder, otherwise it should be implemented
-    as a `RewritePattern`.
+A canonicalization should always be implemented as a `fold` method if it can
+be, otherwise it should be implemented as a `RewritePattern`.
