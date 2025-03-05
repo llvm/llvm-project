@@ -957,9 +957,6 @@ public:
     SeenBefore |= opcodeToMask(I->getOpcode());
     return trySet(getInterchangeableMask(I));
   }
-  bool contain(Instruction *I) const {
-    return Mask & getInterchangeableMask(I);
-  }
   unsigned getOpcode() const {
     MaskType Candidate = Mask & SeenBefore;
     if (Candidate & MainOpBIT)
@@ -1088,9 +1085,6 @@ class InstructionsState {
   /// The main/alternate instruction. MainOp is also VL0.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
-  // Only BinaryOperator will activate this.
-  std::optional<InterchangeableBinOp> MainOpConverter;
-  std::optional<InterchangeableBinOp> AltOpConverter;
 
 public:
   Instruction *getMainOp() const {
@@ -1108,26 +1102,11 @@ public:
 
   unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
 
-  const InterchangeableBinOp &getMainOpConverter() const {
-    assert(MainOpConverter && "MainOpConverter is not initialized.");
-    return *MainOpConverter;
-  }
-
-  const InterchangeableBinOp &getAltOpConverter() const {
-    assert(AltOpConverter && "AltOpConverter is not initialized.");
-    return *AltOpConverter;
-  }
-
-  bool hasOpConverter() const { return MainOpConverter && AltOpConverter; }
-
   /// Some of the instructions in the list have alternate opcodes.
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
-    if (MainOpConverter)
-      return getMainOpConverter().contain(I) || getAltOpConverter().contain(I);
-    unsigned CheckedOpcode = I->getOpcode();
-    return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
+    return isConvertible(I, MainOp, AltOp);
   }
 
   /// Checks if the current state is valid, i.e. has non-null MainOp
@@ -1136,12 +1115,8 @@ public:
   explicit operator bool() const { return valid(); }
 
   InstructionsState() = delete;
-  InstructionsState(
-      Instruction *MainOp, Instruction *AltOp,
-      const std::optional<InterchangeableBinOp> &MainOpConverter = {},
-      const std::optional<InterchangeableBinOp> &AltOpConverter = {})
-      : MainOp(MainOp), AltOp(AltOp), MainOpConverter(MainOpConverter),
-        AltOpConverter(AltOpConverter) {}
+  InstructionsState(Instruction *MainOp, Instruction *AltOp)
+      : MainOp(MainOp), AltOp(AltOp) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 };
 
@@ -1401,10 +1376,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     AltOp = AlternateInterchangeableConverter
                 ? FindOp(*AlternateInterchangeableConverter)
                 : MainOp;
-    return InstructionsState(MainOp, AltOp, InterchangeableConverter,
-                             AlternateInterchangeableConverter
-                                 ? AlternateInterchangeableConverter
-                                 : InterchangeableConverter);
   }
   return InstructionsState(MainOp, AltOp);
 }
