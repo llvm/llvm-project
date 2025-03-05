@@ -1224,7 +1224,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addBlockPlacement(
     AddMachinePass &addPass) const {
-  addPass(MachineBlockPlacementPass());
+  addPass(MachineBlockPlacementPass(Opt.EnableTailMerge));
   // Run a separate pass to collect block placement statistics.
   if (Opt.EnableBlockPlacementStats)
     addPass(MachineBlockPlacementStatsPass());
