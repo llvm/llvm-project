@@ -5,8 +5,6 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; TODO: Improve codegen for non-zero extract indices.
-
 define void @test_str_lane_s32(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: test_str_lane_s32:
 ; CHECK:       // %bb.0: // %entry
@@ -17,8 +15,7 @@ define void @test_str_lane_s32(ptr %a, <vscale x 4 x i32> %b) {
 ; STREAMING-COMPAT-LABEL: test_str_lane_s32:
 ; STREAMING-COMPAT:       // %bb.0: // %entry
 ; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
-; STREAMING-COMPAT-NEXT:    fmov w8, s0
-; STREAMING-COMPAT-NEXT:    str w8, [x0]
+; STREAMING-COMPAT-NEXT:    str s0, [x0]
 ; STREAMING-COMPAT-NEXT:    ret
 
 entry:
@@ -44,24 +41,6 @@ entry:
   ret void
 }
 
-define void @test_str_lane0_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: test_str_lane0_s32_negative_offset:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stur s0, [x0, #-32]
-; CHECK-NEXT:    ret
-;
-; STREAMING-COMPAT-LABEL: test_str_lane0_s32_negative_offset:
-; STREAMING-COMPAT:       // %bb.0: // %entry
-; STREAMING-COMPAT-NEXT:    stur s0, [x0, #-32]
-; STREAMING-COMPAT-NEXT:    ret
-
-entry:
-  %0 = extractelement <vscale x 4 x i32> %b, i32 0
-  %out_ptr = getelementptr inbounds i32, ptr %a, i64 -8
-  store i32 %0, ptr %out_ptr, align 4
-  ret void
-}
-
 define void @test_str_lane_s64(ptr %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_str_lane_s64:
 ; CHECK:       // %bb.0: // %entry
@@ -72,8 +51,7 @@ define void @test_str_lane_s64(ptr %a, <vscale x 2 x i64> %b) {
 ; STREAMING-COMPAT-LABEL: test_str_lane_s64:
 ; STREAMING-COMPAT:       // %bb.0: // %entry
 ; STREAMING-COMPAT-NEXT:    mov z0.d, z0.d[1]
-; STREAMING-COMPAT-NEXT:    fmov x8, d0
-; STREAMING-COMPAT-NEXT:    str x8, [x0]
+; STREAMING-COMPAT-NEXT:    str d0, [x0]
 ; STREAMING-COMPAT-NEXT:    ret
 
 entry:
@@ -191,6 +169,25 @@ entry:
   ret void
 }
 
+define void @test_str_lane0_s8(ptr %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: test_str_lane0_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strb w8, [x0]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s8:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    fmov w8, s0
+; STREAMING-COMPAT-NEXT:    strb w8, [x0]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 16 x i8> %b, i32 0
+  store i8 %0, ptr %a, align 1
+  ret void
+}
+
 define void @test_str_lane_s16(ptr %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: test_str_lane_s16:
 ; CHECK:       // %bb.0: // %entry
@@ -201,8 +198,7 @@ define void @test_str_lane_s16(ptr %a, <vscale x 8 x i16> %b) {
 ; STREAMING-COMPAT-LABEL: test_str_lane_s16:
 ; STREAMING-COMPAT:       // %bb.0: // %entry
 ; STREAMING-COMPAT-NEXT:    mov z0.h, z0.h[3]
-; STREAMING-COMPAT-NEXT:    fmov w8, s0
-; STREAMING-COMPAT-NEXT:    strh w8, [x0]
+; STREAMING-COMPAT-NEXT:    str h0, [x0]
 ; STREAMING-COMPAT-NEXT:    ret
 
 entry:
@@ -339,6 +335,239 @@ define void @test_str_reduction_i32_to_i16_negative_offset(ptr %ptr, <vscale x 4
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
   %trunc = trunc i64 %reduce to i16
   %out_ptr = getelementptr inbounds i16, ptr %ptr, i64 -8
+  store i16 %trunc, ptr %out_ptr, align 2
+  ret void
+}
+
+define void @test_str_lane_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_lane_s32_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, v0.s[3]
+; CHECK-NEXT:    stur w8, [x0, #-32]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s32_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    stur s0, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 3
+  %out_ptr = getelementptr inbounds i32, ptr %a, i64 -8
+  store i32 %0, ptr %out_ptr, align 4
+  ret void
+}
+
+define void @test_str_lane0_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_lane0_s32_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur s0, [x0, #-32]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s32_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    stur s0, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 0
+  %out_ptr = getelementptr inbounds i32, ptr %a, i64 -8
+  store i32 %0, ptr %out_ptr, align 4
+  ret void
+}
+
+define void @test_str_lane_s64_negative_offset(ptr %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: test_str_lane_s64_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    stur x8, [x0, #-64]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s64_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.d, z0.d[1]
+; STREAMING-COMPAT-NEXT:    stur d0, [x0, #-64]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 2 x i64> %b, i32 1
+  %out_ptr = getelementptr inbounds i64, ptr %a, i64 -8
+  store i64 %0, ptr %out_ptr, align 8
+  ret void
+}
+
+define void @test_str_lane0_s64_negative_offset(ptr %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: test_str_lane0_s64_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur d0, [x0, #-64]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s64_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    stur d0, [x0, #-64]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 2 x i64> %b, i32 0
+  %out_ptr = getelementptr inbounds i64, ptr %a, i64 -8
+  store i64 %0, ptr %out_ptr, align 8
+  ret void
+}
+
+define void @test_str_lane_s8_negative_offset(ptr %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: test_str_lane_s8_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umov w8, v0.b[7]
+; CHECK-NEXT:    sturb w8, [x0, #-8]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s8_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.b, z0.b[7]
+; STREAMING-COMPAT-NEXT:    fmov w8, s0
+; STREAMING-COMPAT-NEXT:    sturb w8, [x0, #-8]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 16 x i8> %b, i32 7
+  %out_ptr = getelementptr inbounds i8, ptr %a, i64 -8
+  store i8 %0, ptr %out_ptr, align 1
+  ret void
+}
+
+define void @test_str_lane0_s8_negative_offset(ptr %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: test_str_lane0_s8_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    sturb w8, [x0, #-8]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s8_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    fmov w8, s0
+; STREAMING-COMPAT-NEXT:    sturb w8, [x0, #-8]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 16 x i8> %b, i32 0
+  %out_ptr = getelementptr inbounds i8, ptr %a, i64 -8
+  store i8 %0, ptr %out_ptr, align 1
+  ret void
+}
+
+define void @test_str_lane_s16_negative_offset(ptr %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: test_str_lane_s16_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umov w8, v0.h[3]
+; CHECK-NEXT:    sturh w8, [x0, #-16]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.h, z0.h[3]
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 8 x i16> %b, i32 3
+  %out_ptr = getelementptr inbounds i16, ptr %a, i64 -8
+  store i16 %0, ptr %out_ptr, align 2
+  ret void
+}
+
+define void @test_str_lane0_s16_negative_offset(ptr %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: test_str_lane0_s16_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur h0, [x0, #-16]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 8 x i16> %b, i32 0
+  %out_ptr = getelementptr inbounds i16, ptr %a, i64 -8
+  store i16 %0, ptr %out_ptr, align 2
+  ret void
+}
+
+define void @test_str_trunc_lane_s32_to_s16(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_trunc_lane_s32_to_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, v0.s[3]
+; CHECK-NEXT:    strh w8, [x0]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane_s32_to_s16:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    str h0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 3
+  %trunc = trunc i32 %0 to i16
+  store i16 %trunc, ptr %a, align 2
+  ret void
+}
+
+define void @test_str_trunc_lane0_s32_to_s16(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_trunc_lane0_s32_to_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane0_s32_to_s16:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    str h0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 0
+  %trunc = trunc i32 %0 to i16
+  store i16 %trunc, ptr %a, align 2
+  ret void
+}
+
+define void @test_str_trunc_lane_s32_to_s16_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, v0.s[3]
+; CHECK-NEXT:    sturh w8, [x0, #-16]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 3
+  %trunc = trunc i32 %0 to i16
+  %out_ptr = getelementptr inbounds i16, ptr %a, i64 -8
+  store i16 %trunc, ptr %out_ptr, align 2
+  ret void
+}
+
+define void @test_str_trunc_lane0_s32_to_s16_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_trunc_lane0_s32_to_s16_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur h0, [x0, #-16]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane0_s32_to_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 0
+  %trunc = trunc i32 %0 to i16
+  %out_ptr = getelementptr inbounds i16, ptr %a, i64 -8
   store i16 %trunc, ptr %out_ptr, align 2
   ret void
 }
