@@ -155,7 +155,8 @@ public:
   // have any other uses.
   bool tryMoveVGPRConstToSGPR(MachineOperand &MO, Register NewDst,
                               MachineBasicBlock *BlockToInsertTo,
-                              MachineBasicBlock::iterator PointToInsertTo);
+                              MachineBasicBlock::iterator PointToInsertTo,
+                              const DebugLoc &DL);
 };
 
 class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
@@ -690,11 +691,11 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
               MachineBasicBlock::iterator PointToInsertCopy =
                   MI.isPHI() ? BlockToInsertCopy->getFirstInstrTerminator() : I;
 
+              const DebugLoc &DL = MI.getDebugLoc();
               if (!tryMoveVGPRConstToSGPR(MO, NewDst, BlockToInsertCopy,
-                                          PointToInsertCopy)) {
+                                          PointToInsertCopy, DL)) {
                 MachineInstr *NewCopy =
-                    BuildMI(*BlockToInsertCopy, PointToInsertCopy,
-                            PointToInsertCopy->getDebugLoc(),
+                    BuildMI(*BlockToInsertCopy, PointToInsertCopy, DL,
                             TII->get(AMDGPU::COPY), NewDst)
                         .addReg(MO.getReg());
                 MO.setReg(NewDst);
@@ -866,7 +867,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
 bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
     MachineOperand &MaybeVGPRConstMO, Register DstReg,
     MachineBasicBlock *BlockToInsertTo,
-    MachineBasicBlock::iterator PointToInsertTo) {
+    MachineBasicBlock::iterator PointToInsertTo, const DebugLoc &DL) {
 
   MachineInstr *DefMI = MRI->getVRegDef(MaybeVGPRConstMO.getReg());
   if (!DefMI || !DefMI->isMoveImmediate())
@@ -880,8 +881,7 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
       MRI->getRegClass(MaybeVGPRConstMO.getReg());
   unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
   unsigned MoveOp = MoveSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
-  BuildMI(*BlockToInsertTo, PointToInsertTo, PointToInsertTo->getDebugLoc(),
-          TII->get(MoveOp), DstReg)
+  BuildMI(*BlockToInsertTo, PointToInsertTo, DL, TII->get(MoveOp), DstReg)
       .add(*SrcConst);
   if (MRI->hasOneUse(MaybeVGPRConstMO.getReg()))
     DefMI->eraseFromParent();
@@ -907,7 +907,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
           .add(MI.getOperand(1));
       MI.getOperand(1).setReg(TmpReg);
     } else if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(),
-                                      MI)) {
+                                      MI, MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
     }
