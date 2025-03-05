@@ -127,7 +127,9 @@ struct TosaDialectBytecodeInterface : public BytecodeDialectInterface {
 //===----------------------------------------------------------------------===//
 
 /// Returns the while loop body.
-SmallVector<Region *> tosa::WhileOp::getLoopRegions() { return {&getBody()}; }
+SmallVector<Region *> tosa::WhileOp::getLoopRegions() {
+  return {&getBodyGraph()};
+}
 
 //===----------------------------------------------------------------------===//
 // Tosa dialect initialization.
@@ -2536,7 +2538,7 @@ LogicalResult WhileOp::inferReturnTypeComponents(
     WhileOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<tosa::YieldOp> yieldOps;
-  for (auto &block : adaptor.getBody())
+  for (auto &block : adaptor.getBodyGraph())
     if (auto returnOp = dyn_cast<tosa::YieldOp>(block.getTerminator()))
       yieldOps.push_back(returnOp);
 
@@ -2616,19 +2618,19 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 void IfOp::print(OpAsmPrinter &p) {
   bool printBlockTerminators = false;
 
-  p << " " << getCond();
+  p << " " << getCondition();
   if (!getResults().empty()) {
     p << " -> (" << getResultTypes() << ")";
     // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
   p << ' ';
-  p.printRegion(getThenBranch(),
+  p.printRegion(getThenGraph(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
-  auto &elseRegion = getElseBranch();
+  auto &elseRegion = getElseGraph();
   if (!elseRegion.empty()) {
     p << " else ";
     p.printRegion(elseRegion,
@@ -2726,14 +2728,15 @@ static void printInitializationList(OpAsmPrinter &parser,
 }
 
 void WhileOp::print(OpAsmPrinter &parser) {
-  printInitializationList(parser, getCond().front().getArguments(), getInputs(),
-                          " ");
+  printInitializationList(parser, getCondGraph().front().getArguments(),
+                          getInputList(), " ");
   parser << " : ";
-  parser.printFunctionalType(getInputs().getTypes(), getResults().getTypes());
+  parser.printFunctionalType(getInputList().getTypes(),
+                             getResults().getTypes());
   parser << ' ';
-  parser.printRegion(getCond(), /*printEntryBlockArgs=*/false);
+  parser.printRegion(getCondGraph(), /*printEntryBlockArgs=*/false);
   parser << " do ";
-  parser.printRegion(getBody());
+  parser.printRegion(getBodyGraph());
   parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
 }
 
