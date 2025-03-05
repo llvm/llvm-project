@@ -13,6 +13,7 @@
 
 #include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 using namespace llvm;
 
@@ -45,11 +46,34 @@ char RISCVPushPopOpt::ID = 0;
 INITIALIZE_PASS(RISCVPushPopOpt, "riscv-push-pop-opt", RISCV_PUSH_POP_OPT_NAME,
                 false, false)
 
+static bool isPop(unsigned Opcode) {
+  switch (Opcode) {
+  case RISCV::CM_POP:
+  case RISCV::QC_CM_POP:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static unsigned getPopRetOpcode(unsigned PopOpcode, bool IsReturnZero) {
+  assert(isPop(PopOpcode) && "Unexpected Pop Opcode");
+
+  switch (PopOpcode) {
+  case RISCV::CM_POP:
+    return IsReturnZero ? RISCV::CM_POPRETZ : RISCV::CM_POPRET;
+  case RISCV::QC_CM_POP:
+    return IsReturnZero ? RISCV::QC_CM_POPRETZ : RISCV::QC_CM_POPRET;
+  default:
+    llvm_unreachable("Unhandled Pop Opcode");
+  }
+}
+
 // Check if POP instruction was inserted into the MBB and return iterator to it.
 static MachineBasicBlock::iterator containsPop(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBB.end();
        MBBI = next_nodbg(MBBI, MBB.end()))
-    if (MBBI->getOpcode() == RISCV::CM_POP)
+    if (MBBI->getFlag(MachineInstr::FrameDestroy) && isPop(MBBI->getOpcode()))
       return MBBI;
 
   return MBB.end();
@@ -61,11 +85,12 @@ bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
   // Since Pseudo instruction lowering happen later in the pipeline,
   // this will detect all ret instruction.
   DebugLoc DL = NextI->getDebugLoc();
-  unsigned Opc = IsReturnZero ? RISCV::CM_POPRETZ : RISCV::CM_POPRET;
+  unsigned Opc = getPopRetOpcode(MBBI->getOpcode(), IsReturnZero);
   MachineInstrBuilder PopRetBuilder =
       BuildMI(*NextI->getParent(), NextI, DL, TII->get(Opc))
           .add(MBBI->getOperand(0))
-          .add(MBBI->getOperand(1));
+          .add(MBBI->getOperand(1))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
   // Copy over the variable implicit uses and defs from the CM_POP. They depend
   // on what register list has been picked during frame lowering.
@@ -120,12 +145,7 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
 
   // If Zcmp extension is not supported, abort.
   const RISCVSubtarget *Subtarget = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget->hasStdExtZcmp())
-    return false;
-
-  // If frame pointer elimination has been disabled, abort to avoid breaking the
-  // ABI.
-  if (Fn.getTarget().Options.DisableFramePointerElim(Fn))
+  if (!Subtarget->hasStdExtZcmp() && !Subtarget->hasVendorXqccmp())
     return false;
 
   TII = Subtarget->getInstrInfo();
