@@ -180,8 +180,8 @@ outer.exit:
 define void @outer_pgo_minus1(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_pgo_minus1'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK-NOT:  We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced
-; CHECK:      Total cost of runtime checks: 6
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 6 to 3
+; CHECK:      Total cost of runtime checks: 3
 ; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop

@@ -44,7 +44,7 @@ void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
   address = createTempAlloca(allocaTy, alignment, loc, d.getName());
-  declare(address, &d, ty, getLoc(d.getSourceRange()), alignment);
+  declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   setAddrOfLocalVar(&d, address);
 }
@@ -62,7 +62,7 @@ void CIRGenFunction::emitAutoVarInit(const clang::VarDecl &d) {
 
 void CIRGenFunction::emitAutoVarCleanups(const clang::VarDecl &d) {
   // Check the type for a cleanup.
-  if (QualType::DestructionKind dtorKind = d.needsDestruction(getContext()))
+  if (d.needsDestruction(getContext()))
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: type cleanup");
 
   assert(!cir::MissingFeatures::opAllocaPreciseLifetime());

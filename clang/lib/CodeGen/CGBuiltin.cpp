@@ -4378,7 +4378,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umax,
                                              Op0, Op1, nullptr, "elt.max");
     } else
-      Result = Builder.CreateMaxNum(Op0, Op1, "elt.max");
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4394,7 +4394,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umin,
                                              Op0, Op1, nullptr, "elt.min");
     } else
-      Result = Builder.CreateMinNum(Op0, Op1, "elt.min");
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
   }
 
@@ -19492,6 +19492,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateAnd(Op0, Op1, "hlsl.and");
+  }
+  case Builtin::BI__builtin_hlsl_or: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateOr(Op0, Op1, "hlsl.or");
   }
   case Builtin::BI__builtin_hlsl_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

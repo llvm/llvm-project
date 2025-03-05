@@ -74,7 +74,8 @@ void StepInRequestHandler::operator()(const llvm::json::Object &request) const {
   if (it != dap.step_in_targets.end())
     step_in_target = it->second;
 
-  const bool single_thread = GetBoolean(arguments, "singleThread", false);
+  const bool single_thread =
+      GetBoolean(arguments, "singleThread").value_or(false);
   lldb::RunMode run_mode =
       single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
   lldb::SBThread thread = dap.GetLLDBThread(*arguments);

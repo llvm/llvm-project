@@ -1891,6 +1891,20 @@ llvm::LogicalResult hlfir::RegionAssignOp::verify() {
   return mlir::success();
 }
 
+bool hlfir::RegionAssignOp::isPointerAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  hlfir::YieldOp yieldOp =
+      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getLhsRegion()));
+  if (!yieldOp)
+    return false;
+  mlir::Type lhsType = yieldOp.getEntity().getType();
+  if (!hlfir::isBoxAddressType(lhsType))
+    return false;
+  auto baseBoxType = llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(lhsType));
+  return baseBoxType.isPointer();
+}
+
 //===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
