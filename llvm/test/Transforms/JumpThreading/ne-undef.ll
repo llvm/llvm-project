@@ -5,20 +5,7 @@ declare i1 @cond()
 
 define hidden void @hoge(i1 %c1, i32 %x)  {
 ; CHECK-LABEL: @hoge(
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label [[BB13:%.*]]
-; CHECK:       bb4:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP7:%.*]], undef
-; CHECK-NEXT:    br i1 [[TMP3]], label [[BB5:%.*]], label [[BB13]]
-; CHECK:       bb5:
-; CHECK-NEXT:    br label [[BB6:%.*]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP7]] = phi i32 [ [[TMP7]], [[BB5]] ], [ [[X:%.*]], [[BB8:%.*]] ]
-; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[C]], label [[BB4:%.*]], label [[BB8]]
-; CHECK:       bb8:
-; CHECK-NEXT:    br label [[BB6]]
-; CHECK:       bb13:
+; CHECK-NEXT:  bb13:
 ; CHECK-NEXT:    ret void
 ;
 bb:
