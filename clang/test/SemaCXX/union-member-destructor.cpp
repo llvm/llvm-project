@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
-namespace t1{
+namespace t1 {
 template <class T> struct VSX {
   ~VSX() { static_assert(sizeof(T) != 4, ""); } // expected-error {{static assertion failed due to requirement 'sizeof(int) != 4':}} \
                                                 // expected-note {{expression evaluates to '4 != 4'}}
@@ -11,7 +11,9 @@ struct VS {
   };
   ~VS() { }
   VS(short);
+  VS();
 };
+VS::VS() : VS(0) { }
 VS::VS(short) : _Tail() { } // expected-note {{in instantiation of member function 't1::VSX<int>::~VSX' requested here}}
 }
 
