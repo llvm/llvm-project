@@ -32,12 +32,12 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
 }
 
 static uint32_t SetLaunchFlag(uint32_t flags, const llvm::json::Object *obj,
-                              llvm::StringRef key, lldb::LaunchFlags mask,
-                              bool default_value) {
-  if (GetBoolean(obj, key).value_or(default_value))
-    flags |= mask;
-  else
-    flags &= ~mask;
+                              llvm::StringRef key, lldb::LaunchFlags mask) {
+  if (const auto opt_value = GetBoolean(obj, key))
+    if (opt_value.value())
+      flags |= mask;
+    else
+      flags &= ~mask;
 
   return flags;
 }
@@ -185,11 +185,11 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   auto flags = launch_info.GetLaunchFlags();
 
   flags = SetLaunchFlag(flags, arguments, "disableASLR",
-                        lldb::eLaunchFlagDisableASLR, true);
+                        lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments, "disableSTDIO",
-                        lldb::eLaunchFlagDisableSTDIO, false);
+                        lldb::eLaunchFlagDisableSTDIO);
   flags = SetLaunchFlag(flags, arguments, "shellExpandArguments",
-                        lldb::eLaunchFlagShellExpandArguments, false);
+                        lldb::eLaunchFlagShellExpandArguments);
 
   const bool detachOnError =
       GetBoolean(arguments, "detachOnError").value_or(false);
