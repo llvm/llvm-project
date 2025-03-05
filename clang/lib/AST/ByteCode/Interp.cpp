@@ -1515,7 +1515,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // This happens when the call expression has been cast to
   // something else, but we don't support that.
   if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
-      S.Ctx.classify(CE->getType()))
+      S.Ctx.classify(CE->getCallReturnType(S.getASTContext())))
     return false;
 
   // Check argument nullability state.

@@ -50,6 +50,11 @@ struct FoldCandidate {
     }
   }
 
+  FoldCandidate(MachineInstr *MI, unsigned OpNo, int64_t FoldImm,
+                bool Commuted_ = false, int ShrinkOp = -1)
+      : UseMI(MI), ImmToFold(FoldImm), ShrinkOpcode(ShrinkOp), UseOpNo(OpNo),
+        Kind(MachineOperand::MO_Immediate), Commuted(Commuted_) {}
+
   bool isFI() const {
     return Kind == MachineOperand::MO_FrameIndex;
   }
@@ -578,16 +583,29 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
 }
 
 static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
+                                FoldCandidate &&Entry) {
+  // Skip additional folding on the same operand.
+  for (FoldCandidate &Fold : FoldList)
+    if (Fold.UseMI == Entry.UseMI && Fold.UseOpNo == Entry.UseOpNo)
+      return;
+  LLVM_DEBUG(dbgs() << "Append " << (Entry.Commuted ? "commuted" : "normal")
+                    << " operand " << Entry.UseOpNo << "\n  " << *Entry.UseMI);
+  FoldList.push_back(Entry);
+}
+
+static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                                 MachineInstr *MI, unsigned OpNo,
                                 MachineOperand *FoldOp, bool Commuted = false,
                                 int ShrinkOp = -1) {
-  // Skip additional folding on the same operand.
-  for (FoldCandidate &Fold : FoldList)
-    if (Fold.UseMI == MI && Fold.UseOpNo == OpNo)
-      return;
-  LLVM_DEBUG(dbgs() << "Append " << (Commuted ? "commuted" : "normal")
-                    << " operand " << OpNo << "\n  " << *MI);
-  FoldList.emplace_back(MI, OpNo, FoldOp, Commuted, ShrinkOp);
+  appendFoldCandidate(FoldList,
+                      FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
+}
+
+static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
+                                MachineInstr *MI, unsigned OpNo, int64_t ImmVal,
+                                bool Commuted = false, int ShrinkOp = -1) {
+  appendFoldCandidate(FoldList,
+                      FoldCandidate(MI, OpNo, ImmVal, Commuted, ShrinkOp));
 }
 
 bool SIFoldOperandsImpl::tryAddToFoldList(
@@ -847,10 +865,34 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
-  if (OpToFold.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
-    appendFoldCandidate(FoldList, UseMI, UseOpIdx, &OpToFold);
-    return true;
+  MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
+  if (OpToFold.isImm()) {
+    if (unsigned UseSubReg = UseOp.getSubReg()) {
+      std::optional<int64_t> SubImm =
+          SIInstrInfo::extractSubregFromImm(OpToFold.getImm(), UseSubReg);
+      if (!SubImm)
+        return false;
+
+      // TODO: Avoid the temporary MachineOperand
+      MachineOperand TmpOp = MachineOperand::CreateImm(*SubImm);
+      if (TII->isOperandLegal(*UseMI, UseOpIdx, &TmpOp)) {
+        appendFoldCandidate(FoldList, UseMI, UseOpIdx, *SubImm);
+        return true;
+      }
+
+      return false;
+    }
+
+    if (TII->isOperandLegal(*UseMI, UseOpIdx, &OpToFold)) {
+      appendFoldCandidate(FoldList, UseMI, UseOpIdx, &OpToFold);
+      return true;
+    }
   }
+
+  // TODO: Verify the following code handles subregisters correctly.
+  // TODO: Handle extract of global reference
+  if (UseOp.getSubReg())
+    return false;
 
   if (!OpToFold.isReg())
     return false;
@@ -861,8 +903,7 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
 
   // Maybe it is just a COPY of an immediate itself.
   MachineInstr *Def = MRI->getVRegDef(UseReg);
-  MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
-  if (!UseOp.getSubReg() && Def && TII->isFoldableCopy(*Def)) {
+  if (Def && TII->isFoldableCopy(*Def)) {
     MachineOperand &DefOp = Def->getOperand(1);
     if (DefOp.isImm() && TII->isOperandLegal(*UseMI, UseOpIdx, &DefOp)) {
       appendFoldCandidate(FoldList, UseMI, UseOpIdx, &DefOp);

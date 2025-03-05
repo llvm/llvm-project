@@ -47,7 +47,7 @@ TEST(LlvmLibcUtilsTest, DistanceToAlignDown) {
 TEST(LlvmLibcUtilsTest, Adjust2) {
   char a, b;
   const size_t base_size = 10;
-  for (ptrdiff_t I = -2; I < 2; ++I) {
+  for (uintptr_t I = 0; I < 4; ++I) {
     auto *p1 = &a;
     auto *p2 = &b;
     size_t size = base_size;
