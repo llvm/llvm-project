@@ -232,8 +232,7 @@ bool SIFoldOperandsImpl::frameIndexMayFold(
   const unsigned Opc = UseMI.getOpcode();
   switch (Opc) {
   case AMDGPU::S_ADD_I32:
-  case AMDGPU::S_OR_B32:
-  case AMDGPU::S_AND_B32:
+  case AMDGPU::S_ADD_U32:
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_CO_U32_e32:
     // TODO: Possibly relax hasOneUse. It matters more for mubuf, since we have
