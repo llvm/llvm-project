@@ -4311,8 +4311,8 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
           if (Base->getType()->isPointerType()) {
             LValueBaseInfo EltBaseInfo;
             TBAAAccessInfo EltTBAAInfo;
-            Address Addr = EmitPointerWithAlignment(Base, &EltBaseInfo,
-                                                    &EltTBAAInfo);
+            Address Addr =
+                EmitPointerWithAlignment(Base, &EltBaseInfo, &EltTBAAInfo);
             Res = Addr.getBasePointer();
           } else {
             Res = EmitLValue(Base).getPointer(*this);
@@ -4326,7 +4326,7 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
         }
       }
     }
-out:
+  out:
 
     return;
   }
