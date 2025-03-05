@@ -7381,9 +7381,9 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
 
   SDValue VScale = N.getOperand(1);
   int64_t MulImm = std::numeric_limits<int64_t>::max();
-  if (VScale.getOpcode() == ISD::VSCALE)
+  if (VScale.getOpcode() == ISD::VSCALE) {
     MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
-  else if (auto C = dyn_cast<ConstantSDNode>(VScale)) {
+  } else if (auto C = dyn_cast<ConstantSDNode>(VScale)) {
     int64_t ByteOffset = C->getSExtValue();
     constexpr auto SVEBitsPerBlock = AArch64::SVEBitsPerBlock;
     auto MinVScale = Subtarget->getMinSVEVectorSizeInBits() / SVEBitsPerBlock;
