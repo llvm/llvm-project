@@ -173,6 +173,11 @@ static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
+static cl::opt<unsigned> EphValuesCacheSizeLimit(
+    "inline-ephvalues-cache-size-limit", cl::Hidden, cl::init(8),
+    cl::desc(
+        "Clear the cache of ephemeral values if it grows larger than this"));
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -268,6 +273,10 @@ protected:
   /// analysis in the caller function; we want the inline cost query to be
   /// easily cacheable. Instead, use the cover function paramHasAttr.
   CallBase &CandidateCall;
+
+  /// Collecting the ephemeral values over and over again can be expensive, so
+  /// cache them.
+  EphValuesCacheT *EphValuesCache;
 
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
@@ -510,10 +519,11 @@ public:
       function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
-      OptimizationRemarkEmitter *ORE = nullptr)
+      OptimizationRemarkEmitter *ORE = nullptr,
+      EphValuesCacheT *EphValuesCache = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
-        CandidateCall(Call) {}
+        CandidateCall(Call), EphValuesCache(EphValuesCache) {}
 
   InlineResult analyze();
 
@@ -1126,9 +1136,9 @@ public:
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
-      bool IgnoreThreshold = false)
+      bool IgnoreThreshold = false, EphValuesCacheT *EphValuesCache = nullptr)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
-                     ORE),
+                     ORE, EphValuesCache),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
@@ -2781,11 +2791,27 @@ InlineResult CallAnalyzer::analyze() {
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
   NumAllocaArgs = SROAArgValues.size();
 
-  // FIXME: If a caller has multiple calls to a callee, we end up recomputing
-  // the ephemeral values multiple times (and they're completely determined by
-  // the callee, so this is purely duplicate work).
-  SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F), EphValues);
+  // Collecting the ephemeral values of `F` can be expensive, so collect them
+  // once per function and cache them for future reuse.
+  SmallPtrSet<const Value *, 32> EphValuesSet;
+  SmallPtrSet<const Value *, 32> *EphValues;
+  auto &AC = GetAssumptionCache(F);
+  if (EphValuesCache == nullptr) {
+    // No cache is being used, so collect the values every time.
+    CodeMetrics::collectEphemeralValues(&F, &AC, EphValuesSet);
+    EphValues = &EphValuesSet;
+  } else {
+    // If the ephemeral values for `F` are in the cache, then reuse them. Else
+    // collect them from scratch.
+    if (EphValuesCache->size() >= EphValuesCacheSizeLimit)
+      // If the cache grows larger than a limit remove the first element.
+      // NOTE: This is a linear-time operation so keep the cache size small!
+      EphValuesCache->erase(EphValuesCache->begin()->first);
+    auto Pair = EphValuesCache->insert({&F, {}});
+    if (Pair.second)
+      CodeMetrics::collectEphemeralValues(&F, &AC, Pair.first->second);
+    EphValues = &Pair.first->second;
+  }
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -2824,7 +2850,7 @@ InlineResult CallAnalyzer::analyze() {
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
-    InlineResult IR = analyzeBlock(BB, EphValues);
+    InlineResult IR = analyzeBlock(BB, *EphValues);
     if (!IR.isSuccess())
       return IR;
 
@@ -2967,9 +2993,11 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
+    EphValuesCacheT *EphValuesCache) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE);
+                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
+                       EphValuesCache);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3089,7 +3117,8 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
+    EphValuesCacheT *EphValuesCache) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3105,7 +3134,9 @@ InlineCost llvm::getInlineCost(
                           << ")\n");
 
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
+                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
+                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
+                            EphValuesCache);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
