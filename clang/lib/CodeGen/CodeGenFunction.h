@@ -1183,12 +1183,6 @@ public:
       QualType VarTy = LocalVD->getType();
       if (VarTy->isReferenceType()) {
         Address Temp = CGF.CreateMemTemp(VarTy);
-        if (Temp.getElementType() != TempAddr.emitRawPointer(CGF)->getType())
-          Temp = Address(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                             Temp.emitRawPointer(CGF),
-                             llvm::PointerType::get(CGF.getLLVMContext(),
-                                                    /*AddressSpace=*/0)),
-                         CGF.Int8Ty, TempAddr.getAlignment());
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
