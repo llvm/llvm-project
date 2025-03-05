@@ -1384,32 +1384,32 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    switch (SRE->getKind()) {
-    case MCSymbolRefExpr::VK_PPC_LO:
+    switch ((PPCMCExpr::VariantKind)SRE->getKind()) {
+    case PPCMCExpr::VK_PPC_LO:
       Variant = PPCMCExpr::VK_PPC_LO;
       break;
-    case MCSymbolRefExpr::VK_PPC_HI:
+    case PPCMCExpr::VK_PPC_HI:
       Variant = PPCMCExpr::VK_PPC_HI;
       break;
-    case MCSymbolRefExpr::VK_PPC_HA:
+    case PPCMCExpr::VK_PPC_HA:
       Variant = PPCMCExpr::VK_PPC_HA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGH:
+    case PPCMCExpr::VK_PPC_HIGH:
       Variant = PPCMCExpr::VK_PPC_HIGH;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHA:
+    case PPCMCExpr::VK_PPC_HIGHA:
       Variant = PPCMCExpr::VK_PPC_HIGHA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHER:
+    case PPCMCExpr::VK_PPC_HIGHER:
       Variant = PPCMCExpr::VK_PPC_HIGHER;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHERA:
+    case PPCMCExpr::VK_PPC_HIGHERA:
       Variant = PPCMCExpr::VK_PPC_HIGHERA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHEST:
+    case PPCMCExpr::VK_PPC_HIGHEST:
       Variant = PPCMCExpr::VK_PPC_HIGHEST;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHESTA:
+    case PPCMCExpr::VK_PPC_HIGHESTA:
       Variant = PPCMCExpr::VK_PPC_HIGHESTA;
       break;
     default:
@@ -1852,26 +1852,22 @@ const MCExpr *
 PPCAsmParser::applyModifierToExpr(const MCExpr *E,
                                   MCSymbolRefExpr::VariantKind Variant,
                                   MCContext &Ctx) {
-  switch (Variant) {
-  case MCSymbolRefExpr::VK_PPC_LO:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HI:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGH:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHER:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHERA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHEST:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHESTA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, Ctx);
-  default:
-    return nullptr;
+  if (isa<MCConstantExpr>(E)) {
+    switch (PPCMCExpr::VariantKind(Variant)) {
+    case PPCMCExpr::VariantKind::VK_PPC_LO:
+    case PPCMCExpr::VariantKind::VK_PPC_HI:
+    case PPCMCExpr::VariantKind::VK_PPC_HA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGH:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHER:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHERA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHEST:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHESTA:
+      break;
+    default:
+      return nullptr;
+    }
   }
+
+  return PPCMCExpr::create(PPCMCExpr::VariantKind(Variant), E, Ctx);
 }

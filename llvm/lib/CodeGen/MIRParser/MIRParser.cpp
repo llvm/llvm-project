@@ -767,7 +767,7 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
 
   bool Error = false;
   // Create VRegs
-  auto populateVRegInfo = [&](const VRegInfo &Info, Twine Name) {
+  auto populateVRegInfo = [&](const VRegInfo &Info, const Twine &Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
@@ -803,7 +803,7 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
 
   for (auto P : PFS.VRegInfos) {
     const VRegInfo &Info = *P.second;
-    populateVRegInfo(Info, Twine(P.first));
+    populateVRegInfo(Info, Twine(P.first.id()));
   }
 
   // Compute MachineRegisterInfo::UsedPhysRegMask
