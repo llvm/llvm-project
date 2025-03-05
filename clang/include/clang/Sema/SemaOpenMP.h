@@ -1142,6 +1142,7 @@ public:
     DeclarationNameInfo ReductionOrMapperId;
     int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
                             ///< lastprivate clause.
+    int OriginalSharingModifier = 0; // Default is shared
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
@@ -1151,6 +1152,7 @@ public:
     SmallVector<SourceLocation, NumberOfOMPMotionModifiers> MotionModifiersLoc;
     bool IsMapTypeImplicit = false;
     SourceLocation ExtraModifierLoc;
+    SourceLocation OriginalSharingModifierLoc;
     SourceLocation OmpAllMemoryLoc;
     SourceLocation
         StepModifierLoc; /// 'step' modifier location for linear clause
@@ -1213,7 +1215,9 @@ public:
       SourceLocation ModifierLoc, SourceLocation ColonLoc,
       SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
-      ArrayRef<Expr *> UnresolvedReductions = {});
+      ArrayRef<Expr *> UnresolvedReductions = {},
+      OpenMPOriginalSharingModifier OriginalShareModifier =
+          OMPC_ORIGINAL_SHARING_default);
   /// Called on well-formed 'task_reduction' clause.
   OMPClause *ActOnOpenMPTaskReductionClause(
       ArrayRef<Expr *> VarList, SourceLocation StartLoc,

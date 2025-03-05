@@ -3678,6 +3678,9 @@ class OMPReductionClause final
   /// Name of custom operator.
   DeclarationNameInfo NameInfo;
 
+  /// Private variable reduction flag
+  llvm::SmallVector<bool, 8> IsPrivateVarReductionFlags;
+
   /// Build clause with number of variables \a N.
   ///
   /// \param StartLoc Starting location of the clause.
@@ -3854,6 +3857,7 @@ public:
   /// region with this clause.
   /// \param PostUpdate Expression that must be executed after exit from the
   /// OpenMP region with this clause.
+  /// \pram IsPrivateVarReduction array for private variable reduction flags
   static OMPReductionClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation ModifierLoc, SourceLocation ColonLoc,
@@ -3863,7 +3867,7 @@ public:
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
          ArrayRef<Expr *> ReductionOps, ArrayRef<Expr *> CopyOps,
          ArrayRef<Expr *> CopyArrayTemps, ArrayRef<Expr *> CopyArrayElems,
-         Stmt *PreInit, Expr *PostUpdate);
+         Stmt *PreInit, Expr *PostUpdate, ArrayRef<bool> IsPrivateVarReduction);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -3888,6 +3892,16 @@ public:
 
   /// Gets the nested name specifier.
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+
+  /// Get all private variable reduction flags
+  ArrayRef<bool> getPrivateVariableReductionFlags() const {
+    return IsPrivateVarReductionFlags;
+  }
+
+  //// Set private variable reduction flags
+  void setPrivateVariableReductionFlags(ArrayRef<bool> Flags) {
+    std::copy(Flags.begin(), Flags.end(), IsPrivateVarReductionFlags.begin());
+  }
 
   using helper_expr_iterator = MutableArrayRef<Expr *>::iterator;
   using helper_expr_const_iterator = ArrayRef<const Expr *>::iterator;

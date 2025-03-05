@@ -89,10 +89,12 @@ class S5 {
 public:
   S5(int v) : a(v) {}
   void foo() {
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(a) // expected-note {{defined as private}}
 #pragma omp for reduction(+:a) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     ::foo();
+#endif
 #pragma omp parallel for reduction(inscan, +:a)
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan inclusive(a)
@@ -226,7 +228,12 @@ T tmain(T argc) {
 #pragma omp parallel for reduction(+ : fl)
   for (int i = 0; i < 10; ++i)
     foo();
-
+#if defined(_OPENMP) && (_OPENMP >= 202411)
+#pragma omp parallel private(fl)
+#pragma omp for reduction(original(abcxx),+:fl) // expected-error {{private or shared or default}} expected-warning {{extra tokens at the end of '#pragma omp for'}} 
+for (int i = 1; i <= 10; i++) 
+  foo();
+#endif
   return T();
 }
 
