@@ -120,6 +120,6 @@ llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
 // CHECK-LABEL: intrinsic_element_type
 llvm.func @intrinsic_element_type(%arg0: !llvm.ptr) {
   // CHECK: call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i8) %{{.*}})
-  %0 = llvm.call_intrinsic "llvm.aarch64.ldxr.p0"(%arg0) : (!llvm.ptr {llvm.element_type = i8}) -> i64
+  %0 = llvm.call_intrinsic "llvm.aarch64.ldxr.p0"(%arg0) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
   llvm.return
 }
