@@ -1886,11 +1886,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
-  telemetry::ScopedDispatcher<
-      telemetry::CommandInfo>
-      helper(&m_debugger);
-  telemetry::TelemetryManager *ins =
-      telemetry::TelemetryManager::GetInstance();
+  telemetry::ScopedDispatcher<telemetry::CommandInfo> helper(&m_debugger);
+  telemetry::TelemetryManager *ins = telemetry::TelemetryManager::GetInstance();
   const int command_id = telemetry::CommandInfo::GetNextId();
 
   std::string command_string(command_line);
