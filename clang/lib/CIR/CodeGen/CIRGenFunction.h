@@ -49,6 +49,8 @@ private:
 
 public:
   clang::QualType fnRetTy;
+  clang::QualType fnRetQualTy;
+  std::optional<mlir::Type> fnRetCIRTy;
 
   /// This is the current function or global initializer that is generated code
   /// for.
@@ -100,6 +102,9 @@ private:
   mlir::LogicalResult declare(mlir::Value addrVal, const clang::Decl *var,
                               clang::QualType ty, mlir::Location loc,
                               clang::CharUnits alignment, bool isParam = false);
+
+  void emitAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
+                              clang::CharUnits alignment);
 
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,

@@ -195,7 +195,16 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     mlir::Location fnBodyBegin = getLoc(fd->getBody()->getBeginLoc());
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
+
   assert(builder.getInsertionBlock() && "Should be valid");
+
+  auto fnEndLoc = getLoc(fd->getBody()->getEndLoc());
+
+  // When the current function is not void, create an address to store the
+  // result value.
+  if (fnRetCIRTy.has_value())
+    emitAndUpdateRetAlloca(fnRetQualTy, fnEndLoc,
+                           getContext().getTypeAlignInChars(fnRetQualTy));
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}
@@ -213,6 +222,11 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
   const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
+  fnRetQualTy = funcDecl->getReturnType();
+  if (!fnRetQualTy->isVoidType()) {
+    fnRetCIRTy = convertType(fnRetQualTy);
+  }
+
   SourceLocation loc = funcDecl->getLocation();
   Stmt *body = funcDecl->getBody();
   SourceRange bodyRange =
@@ -312,4 +326,12 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   }
 }
 
+void CIRGenFunction::emitAndUpdateRetAlloca(QualType ty, mlir::Location loc,
+                                            CharUnits alignment) {
+  if (ty->isVoidType()) {
+    return;
+  }
+
+  emitAlloca("__retval", convertType(ty), loc, alignment);
+}
 } // namespace clang::CIRGen
