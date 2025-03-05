@@ -28,7 +28,6 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an immediate value into a register.
 static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
-  // 0 <= Value.getZExtValue() < 2**16
   assert(Value.getZExtValue() < (1 << 16) &&
          "Value must be in the range of the immediate opcode");
   return MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
@@ -38,7 +37,6 @@ static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
                                const APInt &Value) {
-  // -127 <= Value.getZExtValue() < 128
   assert(Value.getZExtValue() < (1 << 7) &&
          "Value must be in the range of the immediate opcode");
   return MCInstBuilder(AArch64::DUP_ZI_D)
@@ -69,12 +67,8 @@ static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an FP immediate value into a register.
 static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
                               const APInt &Value) {
-  // 0 <= Value.getZExtValue() < 2**8 (int Value)
-  // -31.0 <= Value.getZExtValue() < 31.0 (frac Value)
   assert(Value.getZExtValue() == 0 &&
-         "Value should be zero, temporary fix for now");
-  assert(Value.getZExtValue() < (1 << 8) &&
-         "Value must be in the range of the immediate opcode");
+         "Expected initialisation value 0");
   return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
