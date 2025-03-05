@@ -1122,10 +1122,9 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's leaf location in that map, and if the rest of the
       // instruction's locations match the prefix Frame locations on an
       // allocation context with the same leaf.
-      if (AllocInfoIter != LocHashToAllocInfo.end()) {
-        // Only consider allocations which support hinting.
-        if (!isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
-          continue;
+      if (AllocInfoIter != LocHashToAllocInfo.end() &&
+          // Only consider allocations which support hinting.
+          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI)) {
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to
         // the minimal needed to disambiguate contexts with unique behavior.
@@ -1189,10 +1188,12 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         continue;
       }
 
+      if (CallSitesIter == LocHashToCallSites.end())
+        continue;
+
       // Otherwise, add callsite metadata. If we reach here then we found the
       // instruction's leaf location in the callsites map and not the allocation
       // map.
-      assert(CallSitesIter != LocHashToCallSites.end());
       for (auto CallStackIdx : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.
