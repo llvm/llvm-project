@@ -38,7 +38,7 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
 
   explicit LLDBConfig(bool enable_telemetry, bool detailed_command_telemetry)
       : ::llvm::telemetry::Config(enable_telemetry),
-        m_detailed_command_telemetry(detailed_command_telemetry) {}
+        detailed_command_telemetry(detailed_command_telemetry) {}
 };
 
 // We expect each (direct) subclass of LLDBTelemetryInfo to
