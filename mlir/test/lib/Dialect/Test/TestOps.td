@@ -3040,7 +3040,7 @@ def TestVersionedOpD : TEST_Op<"versionedD"> {
 }
 
 def TestBytecodeFallbackOp : TEST_Op<"bytecode.fallback", [
-  DeclareOpInterfaceMethods<FallbackBytecodeOpInterface, ["setOriginalOperationName", "readPropertiesBlob", "getPropertiesBlob"]>
+  DeclareOpInterfaceMethods<FallbackBytecodeOpInterface, ["setOriginalOperationName"]>
 ]> {
   let arguments = (ins 
     StrAttr:$opname,
