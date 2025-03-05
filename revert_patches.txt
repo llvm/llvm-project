@@ -15,7 +15,7 @@ Ron, Maneesh
 ---
 Revert: breaks build of rocFFT
 854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
-Ron and Vigneshwar
+Brendon and Vigneshwar
 ---
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
@@ -24,17 +24,14 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-build/run issues: Scott Linder
-1083ec647f16 [reland][DebugInfo] Update DIBuilder insertion to take 
----
 revert : breaks build of 5 spec-accel codes
 25f29ee377b1 - [flang][OpenMP] Update all `lastprivate` symbols, not just in clauses (#125628)
 Kareem, Ron
 ---
 a3165398db07 AMDGPU: Fix overly conservative immediate operand check
+Matt
 ---
-Flang team looking:
-a8db1fb9b5da [flang] update fir.coordinate_of to carry the fields (#127231
-9805854699d6 [flang][NFC] clean-up fir.field_index legacy usages in tests (#129219)
-AkashB
+breaks rocRAND build
+Revert "DAG: Use phi to create vregs instead of the constant input
+Matt
 ---
