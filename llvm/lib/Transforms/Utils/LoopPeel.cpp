@@ -13,7 +13,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -204,8 +203,8 @@ protected:
   // becomes an invariant.
   PeelCounter calculate(const Value &);
 
-  // Returns true if the \p Phi is an induction in the target loop. This
-  // function is a wrapper of `InductionDescriptor::isInductionPHI`.
+  // Returns true if the \p Phi is an induction in the target loop. This is a
+  // lightweight check and possible to detect an IV in some cases.
   bool isInductionPHI(const PHINode *Phi) const;
 
   const Loop &L;
@@ -225,20 +224,12 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
 /// SCEV, but it's expensive to calculate it here. Instead, we perform the
 /// cheaper checks, which cannot detect complex one but enough for some cases.
 bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
-  // Currently, we only support loops that consist of one basic block. In this
-  // case, the phi can become an IV if it has an incoming value from the basic
-  // block that this phi is also included.
-  int LoopIdx = -1;
-  for (unsigned I = 0; I != Phi->getNumIncomingValues(); I++) {
-    if (Phi->getIncomingBlock(I) == Phi->getParent()) {
-      LoopIdx = I;
-      break;
-    }
-  }
-  if (LoopIdx == -1)
+  // Currently we only support a loop that has single latch.
+  auto *Latch = L.getLoopLatch();
+  if (Latch == nullptr)
     return false;
 
-  Value *Cur = Phi->getIncomingValue(LoopIdx);
+  Value *Cur = Phi->getIncomingValueForBlock(Latch);
   SmallPtrSet<Value *, 4> Visited;
   bool VisitBinOp = false;
 
@@ -254,7 +245,7 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
       return false;
 
     auto *I = dyn_cast<Instruction>(Cur);
-    if (!I || I->getParent() != Phi->getParent())
+    if (!I || !L.contains(I))
       return false;
 
     Visited.insert(Cur);

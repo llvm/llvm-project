@@ -230,8 +230,8 @@ define void @binary_induction() {
 ; CHECK:       for.body.peel.begin:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
 ; CHECK:       for.body.peel:
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 0)
 ; CHECK-NEXT:    [[ADD_PEEL:%.*]] = add nuw nsw i32 0, 2
 ; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw nsw i32 0, 1
 ; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp ne i32 [[INC_PEEL]], 100000
@@ -239,8 +239,8 @@ define void @binary_induction() {
 ; CHECK:       for.body.peel.next:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[ADD_PEEL]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 [[ADD_PEEL]])
 ; CHECK-NEXT:    [[ADD_PEEL3:%.*]] = add nuw nsw i32 [[INC_PEEL]], 2
 ; CHECK-NEXT:    [[INC_PEEL4:%.*]] = add nuw nsw i32 [[INC_PEEL]], 1
 ; CHECK-NEXT:    [[EXITCOND_PEEL5:%.*]] = icmp ne i32 [[INC_PEEL4]], 100000
@@ -248,8 +248,8 @@ define void @binary_induction() {
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL7:%.*]]
 ; CHECK:       for.body.peel7:
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext 0)
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[ADD_PEEL3]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 0)
+; CHECK-NEXT:    tail call void @_Z1gi(i32 [[ADD_PEEL3]])
 ; CHECK-NEXT:    [[ADD_PEEL8:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 2
 ; CHECK-NEXT:    [[INC_PEEL9:%.*]] = add nuw nsw i32 [[INC_PEEL4]], 1
 ; CHECK-NEXT:    [[EXITCOND_PEEL10:%.*]] = icmp ne i32 [[INC_PEEL9]], 100000
@@ -269,8 +269,8 @@ define void @binary_induction() {
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[ADD_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[Y:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[ADD_PEEL8]], [[ENTRY_PEEL_NEWPH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[Y]] = phi i32 [ [[ADD_PEEL3]], [[ENTRY_PEEL_NEWPH]] ], [ [[A]], [[FOR_BODY]] ]
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[X]])
-; CHECK-NEXT:    tail call void @_Z1gi(i32 signext [[A]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 [[X]])
+; CHECK-NEXT:    tail call void @_Z1gi(i32 [[A]])
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 100000
@@ -296,9 +296,8 @@ for.body:
 }
 
 ; Check that phi analysis can handle an assignment from an induction.
-define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b) {
-; The phis become induction through the assignment from an induction. Check
-; that the phi im becomes a loop ; induction because i is a loop induction.
+; The im becomes a loop induction by peeling the loop once, because i is a loop
+; induction.
 ; This test is based on TSVC s291.
 ;
 ; #define N 100
@@ -309,9 +308,10 @@ define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b
 ;     im = i;
 ;   }
 ; }
+define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b) {
 ; CHECK-LABEL: @induction_assignment(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body.peel.begin:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
 ; CHECK:       for.body.peel:
@@ -332,10 +332,10 @@ define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
 ; CHECK:       entry.peel.newph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[IM_010:%.*]] = phi i32 [ [[TMP2]], [[ENTRY_PEEL_NEWPH]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[IM_010:%.*]] = phi i32 [ [[TMP2]], [[ENTRY_PEEL_NEWPH]] ], [ [[TMP5:%.*]], [[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext nneg i32 [[IM_010]] to i64
@@ -347,7 +347,7 @@ define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP5]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY1]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -376,28 +376,42 @@ for.cond.cleanup:
   ret void
 }
 
-; Check that phi analysis can handle cast operations with induction variable.
-define void @induction_with_cast(ptr noundef %a, i64 noundef %size) {
-; The original code is like as follows. We don't need peel the loop to make
-; phis loop induction.
+; Check that the unnecessary peeling occurs in the following case. The cause is
+; that the analyzer determines a casted IV as a non-IV.
 ;
-; void f(unsigned int *a, unsigned long N) {
-;   for (unsigned int i=0; i<N; i++)
-;     a[i] = 10;
-; }
+; for (unsigned int i=0; i<10000; i++)
+;   a[(unsigned long)j] = 10;
 ;
-; CHECK-LABEL: @induction_with_cast(
+define void @induction_undesirable_peel1(ptr noundef %a) {
+; CHECK-LABEL: @induction_undesirable_peel1(
 ; CHECK-NEXT:  for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[ARRAYIDX_PEEL:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    store i32 10, ptr [[ARRAYIDX_PEEL]], align 4
+; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add nuw nsw i32 0, 1
+; CHECK-NEXT:    [[CONV_NEXT_PEEL:%.*]] = zext i32 [[IV_NEXT_PEEL]] to i64
+; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp ugt i64 10000, [[CONV_NEXT_PEEL]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[CONV6:%.*]] = phi i64 [ [[CONV:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[CONV6]]
+; CHECK-NEXT:    [[CONV:%.*]] = phi i64 [ [[CONV_NEXT:%.*]], [[FOR_BODY]] ], [ [[CONV_NEXT_PEEL]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[IV_NEXT_PEEL]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[CONV]]
 ; CHECK-NEXT:    store i32 10, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD]] = add i32 [[I_05]], 1
-; CHECK-NEXT:    [[CONV]] = zext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SIZE:%.*]], [[CONV]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[CONV_NEXT]] = zext i32 [[IV_NEXT]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 10000, [[CONV_NEXT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
@@ -405,15 +419,70 @@ for.body.preheader:
   br label %for.body
 
 for.body:
-  %conv6 = phi i64 [ %conv, %for.body ], [ 0, %for.body.preheader ]
-  %i.05 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %conv6
+  %conv = phi i64 [ %conv.next, %for.body ], [ 0, %for.body.preheader ]
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %conv
   store i32 10, ptr %arrayidx, align 4
-  %add = add i32 %i.05, 1
-  %conv = zext i32 %add to i64
-  %cmp = icmp ugt i64 %size, %conv
+  %iv.next = add nsw nuw i32 %iv, 1
+  %conv.next = zext i32 %iv.next to i64
+  %cmp = icmp ugt i64 10000, %conv.next
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
+  ret void
+}
+
+; Check that the unnecessary peeling occurs in the following case. The analyzer
+; cannot detect that the difference between the initial value of %i and %j is
+; equal to the increment of the %i.
+;
+; int j = 0;
+; for (unsigned int i=1; i<N; i++)
+;   a[j] = 10;
+;
+define void @induction_undesirable_peel2(ptr noundef %a) {
+; CHECK-LABEL: @induction_undesirable_peel2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[ARRAYIDX_PEEL:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 0
+; CHECK-NEXT:    store i32 10, ptr [[ARRAYIDX_PEEL]], align 4
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add nuw nsw i64 1, 1
+; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp slt i64 1, 10000
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
+; CHECK:       entry.peel.newph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[I_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 1, [[ENTRY_PEEL_NEWPH]] ], [ [[I]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[J]]
+; CHECK-NEXT:    store i32 10, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I]], 10000
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 1, %entry ], [ %i.next, %for.body ]
+  %j = phi i64 [ 0, %entry ], [ %i, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %j
+  store i32 10, ptr %arrayidx, align 4
+  %i.next = add nsw nuw i64 %i, 1
+  %cmp = icmp slt i64 %i, 10000
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
   ret void
 }
