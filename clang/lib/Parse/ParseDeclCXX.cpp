@@ -1730,6 +1730,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     TagType = DeclSpec::TST_coroutine;
   else if (TagTokKind == tok::kw__Task)
       TagType = DeclSpec::TST_task;
+  else if (TagTokKind == tok::kw__Exception)
+      TagType = DeclSpec::TST_exception;
   else if (TagTokKind == tok::kw__Monitor)
       TagType = DeclSpec::TST_monitor;
     
@@ -3765,9 +3767,9 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   assert((TagType == DeclSpec::TST_struct ||
           TagType == DeclSpec::TST_interface ||
           TagType == DeclSpec::TST_union || TagType == DeclSpec::TST_class ||
-          TagType == DeclSpec::TST_coroutine || TagType == DeclSpec::TST_task || 
-          TagType == DeclSpec::TST_monitor) &&
-         "Invalid TagType!");
+          TagType == DeclSpec::TST_coroutine || TagType == DeclSpec::TST_task
+          TagType == DeclSpec::TST_exception || TagType == DeclSpec::TST_monitor)
+          && "Invalid TagType!");
 
   llvm::TimeTraceScope TimeScope("ParseClass", [&]() {
     if (auto *TD = dyn_cast_or_null<NamedDecl>(TagDecl))
@@ -3943,7 +3945,11 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   // are public by default.
   // HLSL: In HLSL members of a class are public by default.
   AccessSpecifier CurAS;
-  if ((TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_coroutine || TagType == DeclSpec::TST_task || TagType == DeclSpec::TST_monitor) && !getLangOpts().HLSL)
+  if ((
+    TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_coroutine || 
+    TagType == DeclSpec::TST_task || TagType == DeclSpec::TST_exception || 
+    TagType == DeclSpec::TST_monitor) && !getLangOpts().HLSL
+  )
     CurAS = AS_private;
   else
     CurAS = AS_public;

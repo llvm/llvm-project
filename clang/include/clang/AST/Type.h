@@ -6868,6 +6868,9 @@ enum class ElaboratedTypeKeyword {
   /// The "Monitor" keyword also introduces elaborated-type specifier
   Monitor,
 
+  /// The "Exception" keyword also introduces elaborated-type specifier
+  Exception,
+
   /// No keyword precedes the qualified type name.
   None
 };
@@ -6894,6 +6897,9 @@ enum class TagTypeKind {
 
   /// The "Task" keyword.
   Task,
+
+  /// The "Exception" keyword.
+  Exception,
 
   /// The "_Monitor" keyword
   Monitor

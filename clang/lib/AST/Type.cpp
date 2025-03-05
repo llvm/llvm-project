@@ -3163,6 +3163,8 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
     return ElaboratedTypeKeyword::Coroutine;
   case TST_task:
     return ElaboratedTypeKeyword::Task;
+  case TST_exception:
+    return ElaboratedTypeKeyword::Exception;
   case TST_monitor:
     return ElaboratedTypeKeyword::Monitor;
   case TST_class:
@@ -3185,6 +3187,8 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
     return TagTypeKind::Coroutine;
   case TST_task: 
     return TagTypeKind::Task;
+  case TST_exception: 
+    return TagTypeKind::Exception;
   case TST_monitor:
     return TagTypeKind::Monitor;
   case TST_class:
@@ -3211,6 +3215,8 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
     return ElaboratedTypeKeyword::Coroutine;
   case TagTypeKind::Task:
     return ElaboratedTypeKeyword::Task;
+  case TagTypeKind::Exception:
+    return ElaboratedTypeKeyword::Exception;
   case TagTypeKind::Monitor:
     return ElaboratedTypeKeyword::Monitor;
   case TagTypeKind::Struct:
@@ -3234,6 +3240,8 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
     return TagTypeKind::Coroutine;
   case ElaboratedTypeKeyword::Task:
     return TagTypeKind::Task;
+  case ElaboratedTypeKeyword::Exception:
+    return TagTypeKind::Exception;
   case ElaboratedTypeKeyword::Monitor:
     return TagTypeKind::Monitor;
   case ElaboratedTypeKeyword::Struct:
@@ -3259,6 +3267,7 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
     return false;
   case ElaboratedTypeKeyword::Class:
   case ElaboratedTypeKeyword::Coroutine:
+  case ElaboratedTypeKeyword::Exception:
   case ElaboratedTypeKeyword::Task:
   case ElaboratedTypeKeyword::Monitor:
   case ElaboratedTypeKeyword::Struct:
@@ -3290,6 +3299,8 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
     return "_Coroutine";
   case ElaboratedTypeKeyword::Task:
     return "_Task";
+  case ElaboratedTypeKeyword::Exception:
+    return "_Exception";
   case ElaboratedTypeKeyword::Monitor:
     return "_Monitor";
   }

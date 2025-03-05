@@ -1198,6 +1198,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_coroutine:
   case DeclSpec::TST_task:
   case DeclSpec::TST_monitor:
+  case DeclSpec::TST_exception:
   case DeclSpec::TST_enum:
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:
@@ -3249,6 +3250,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         case TagTypeKind::Coroutine:
         case TagTypeKind::Task:
         case TagTypeKind::Monitor:
+        case TagTypeKind::Exception:
           Error = 5; /* Class member */
           break;
         case TagTypeKind::Interface:

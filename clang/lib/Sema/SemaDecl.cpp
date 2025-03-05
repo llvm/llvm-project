@@ -662,6 +662,8 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
         return DeclSpec::TST_task;
       case TagTypeKind::Monitor:
         return DeclSpec::TST_monitor;
+      case TagTypeKind::Exception:
+        return DeclSpec::TST_exception;
       case TagTypeKind::Enum:
         return DeclSpec::TST_enum;
       }
@@ -829,6 +831,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
     case TagTypeKind::Task:
     case TagTypeKind::Monitor:
     case TagTypeKind::Class:
+    case TagTypeKind::Exception:
       FixItTagName = "class ";
       break;
 
@@ -4999,6 +5002,7 @@ static unsigned GetDiagnosticTypeSpecifierID(const DeclSpec &DS) {
   switch (T) {
   case DeclSpec::TST_class:
   case DeclSpec::TST_coroutine:
+  case DeclSpec::TST_exception:
   case DeclSpec::TST_task:
   case DeclSpec::TST_monitor:
     return 0;
@@ -5035,6 +5039,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       DS.getTypeSpecType() == DeclSpec::TST_task ||
       DS.getTypeSpecType() == DeclSpec::TST_monitor ||
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
+      DS.getTypeSpecType() == DeclSpec::TST_exception ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
       DS.getTypeSpecType() == DeclSpec::TST_enum) {
@@ -5262,6 +5267,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         TypeSpecType == DeclSpec::TST_task ||
         TypeSpecType == DeclSpec::TST_monitor ||
         TypeSpecType == DeclSpec::TST_struct ||
+        TypeSpecType == DeclSpec::TST_exception ||
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
@@ -16820,6 +16826,7 @@ TypedefDecl *Sema::ParseTypedefDecl(Scope *S, Declarator &D, QualType T,
   case TST_coroutine:
   case TST_task:
   case TST_monitor:
+  case TST_exception:
   case TST_class: {
     TagDecl *tagFromDeclSpec = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
     setTagNameForLinkagePurposes(tagFromDeclSpec, NewTD);
@@ -16925,6 +16932,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
   case TagTypeKind::Class:
+  case TagTypeKind::Exception:
   case TagTypeKind::Coroutine:
   case TagTypeKind::Task:
   case TagTypeKind::Monitor:

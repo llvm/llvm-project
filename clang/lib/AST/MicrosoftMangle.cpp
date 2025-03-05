@@ -3246,6 +3246,7 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
   case TagTypeKind::Class:
   case TagTypeKind::Coroutine:
   case TagTypeKind::Task:
+  case TagTypeKind::Exception:
   case TagTypeKind::Monitor:
     Out << 'V';
     break;

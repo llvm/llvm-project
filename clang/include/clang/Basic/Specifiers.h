@@ -79,6 +79,7 @@ namespace clang {
     TST_enum,
     TST_union,
     TST_struct,
+    TST_exception,         // uC++ Exception type
     TST_task,              // uC++ Task type
     TST_coroutine,         // uC++ Coroutine type
     TST_monitor,           // uC++ Monitor type
