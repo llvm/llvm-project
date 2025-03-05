@@ -11,7 +11,6 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Support/TargetSelect.h"
 
 using namespace clang;
 using namespace tooling;
@@ -35,10 +34,4 @@ DependencyScanningService::DependencyScanningService(
   // we're not doing unneeded work.
   if (Format == ScanningOutputFormat::FullIncludeTree)
     this->OptimizeArgs &= ~ScanningOptimizations::FullIncludeTreeIrrelevant;
-
-  // Initialize targets for object file support.
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
-  llvm::InitializeAllAsmParsers();
 }
