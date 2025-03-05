@@ -31,8 +31,6 @@ using size_t = decltype(sizeof(char));
 
 #undef __OPENMP_AMDGCN__
 
-extern "C" {
-
 #endif // __AMDGPU__
 
 #ifdef __NVPTX__
