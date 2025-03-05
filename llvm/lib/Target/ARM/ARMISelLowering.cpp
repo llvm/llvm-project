@@ -15879,8 +15879,9 @@ static bool isValidBaseUpdate(SDNode *N, SDNode *User) {
   SmallVector<const SDNode *, 16> Worklist;
   Worklist.push_back(N);
   Worklist.push_back(User);
-  if (SDNode::hasPredecessorHelper(N, Visited, Worklist, 1024) ||
-      SDNode::hasPredecessorHelper(User, Visited, Worklist, 1024))
+  const unsigned MaxSteps = 1024;
+  if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+      SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
     return false;
   return true;
 }
@@ -16270,7 +16271,7 @@ static SDValue CombineBaseUpdate(SDNode *N,
 
     if (ConstInc || User->getOpcode() == ISD::ADD) {
       BaseUpdates.push_back({User, Inc, ConstInc});
-      if (BaseUpdates.size() > MaxBaseUpdates)
+      if (BaseUpdates.size() >= MaxBaseUpdates)
         break;
     }
   }
@@ -16299,7 +16300,7 @@ static SDValue CombineBaseUpdate(SDNode *N,
       unsigned NewConstInc = UserOffset - Offset;
       SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
       BaseUpdates.push_back({User, NewInc, NewConstInc});
-      if (BaseUpdates.size() > MaxBaseUpdates)
+      if (BaseUpdates.size() >= MaxBaseUpdates)
         break;
     }
   }
@@ -16367,8 +16368,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     Visited.insert(Addr.getNode());
     Worklist.push_back(N);
     Worklist.push_back(User);
-    if (SDNode::hasPredecessorHelper(N, Visited, Worklist, 1024) ||
-        SDNode::hasPredecessorHelper(User, Visited, Worklist, 1024))
+    const unsigned MaxSteps = 1024;
+    if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
       continue;
 
     // Find the new opcode for the updating load/store.
