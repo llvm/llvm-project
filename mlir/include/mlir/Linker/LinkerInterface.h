@@ -28,6 +28,26 @@ struct DenseMapOperationKey {
   Operation *op;
 };
 
+class LinkerSummaryState {
+public:
+  LinkerSummaryState() : type(TypeID::get<LinkerSummaryState>()) {}
+
+  virtual ~LinkerSummaryState() = default;
+
+  LinkerSummaryState(const LinkerSummaryState &) = delete;
+  LinkerSummaryState &operator=(const LinkerSummaryState &) = delete;
+
+  static bool classof(const LinkerSummaryState *base) { return true; }
+
+  TypeID getType() const { return type; }
+
+protected:
+  explicit LinkerSummaryState(TypeID type) : type(type) {}
+
+private:
+  TypeID type;
+};
+
 class LinkerInterface : public DialectInterface::Base<LinkerInterface> {
 public:
   LinkerInterface(Dialect *dialect) : Base(dialect) {}
@@ -40,6 +60,16 @@ public:
     if (op.hasAvailableExternallyLinkage())
       return true;
     return isDeclaration(op);
+  }
+
+  virtual std::unique_ptr<LinkerSummaryState>
+  summarize(std::vector<ModuleOp> &modules) const {
+    return nullptr;
+  }
+
+  virtual LogicalResult link(ModuleOp dst, ModuleOp src,
+                             const LinkerSummaryState *state) const {
+    return failure();
   }
 };
 
