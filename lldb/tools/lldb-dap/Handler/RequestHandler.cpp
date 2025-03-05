@@ -33,11 +33,12 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
 
 static uint32_t SetLaunchFlag(uint32_t flags, const llvm::json::Object *obj,
                               llvm::StringRef key, lldb::LaunchFlags mask) {
-  if (const auto opt_value = GetBoolean(obj, key))
-    if (opt_value.value())
+  if (const auto opt_value = GetBoolean(obj, key)) {
+    if (*opt_value)
       flags |= mask;
     else
       flags &= ~mask;
+  }
 
   return flags;
 }
