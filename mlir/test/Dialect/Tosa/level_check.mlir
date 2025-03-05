@@ -370,9 +370,10 @@ func.func @test_concat_rank_invalid(%arg0: tensor<1x1x1x13x21x3x8xf32>, %arg1: t
 // -----
 
 func.func @test_pad_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
+  %pad_const = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   %padding = tosa.const_shape {value = dense<0> : tensor<14xindex>} : () -> !tosa.shape<14>
   // expected-error@+1 {{'tosa.pad' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = tosa.pad %arg0, %padding : (tensor<1x1x1x1x13x21x3xf32>, !tosa.shape<14>) -> tensor<1x1x1x1x13x21x3xf32>
+  %0 = tosa.pad %arg0, %padding, %pad_const : (tensor<1x1x1x1x13x21x3xf32>, !tosa.shape<14>, tensor<1xf32>) -> tensor<1x1x1x1x13x21x3xf32>
   return %0 : tensor<1x1x1x1x13x21x3xf32>
 }
 
