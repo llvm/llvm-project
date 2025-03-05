@@ -193,7 +193,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     };
 
     const SPIRVType *VoidTy =
-        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
     const auto EmitDIInstruction =
         [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
@@ -217,7 +218,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         };
 
     const SPIRVType *I32Ty =
-        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
+        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
 
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);

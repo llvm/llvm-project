@@ -405,7 +405,8 @@ bool SPIRVLegalizerInfo::legalizeCustom(
       LLT ConvT = LLT::scalar(ST->getPointerSize());
       Type *LLVMTy = IntegerType::get(MI.getMF()->getFunction().getContext(),
                                       ST->getPointerSize());
-      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(LLVMTy, Helper.MIRBuilder);
+      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(
+          LLVMTy, Helper.MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
       Op0.setReg(convertPtrToInt(Reg0, ConvT, SpirvTy, Helper, MRI, GR));
       Op1.setReg(convertPtrToInt(Reg1, ConvT, SpirvTy, Helper, MRI, GR));
     }

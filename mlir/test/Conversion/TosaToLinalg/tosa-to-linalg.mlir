@@ -951,7 +951,7 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.mulf
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  %2 = tosa.reduce_product %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant 3.40282347E+38 : f32
   // CHECK: linalg.fill
@@ -1027,7 +1027,7 @@ func.func @reduce_float_dyn_nonzero_batch(%arg0: tensor<5x?x4xf32>) -> () {
   // CHECK: %[[DIM_1:.+]] = tensor.dim %[[REDUCE]], %[[C1_0]] : tensor<5x?xf32>
   // CHECK: %[[C1_2:.+]] = arith.constant 1 : index
   // CHECK: tensor.expand_shape %[[REDUCE]] {{\[}}[0], [1, 2]] output_shape [5, %[[DIM_1]], 1] : tensor<5x?xf32> into tensor<5x?x1xf32>
-  %0 = tosa.reduce_prod %arg0 {axis = 2 : i32} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
+  %0 = tosa.reduce_product %arg0 {axis = 2 : i32} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
   return
 }
 
@@ -1085,7 +1085,7 @@ func.func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.muli
-  %2 = tosa.reduce_prod %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
+  %2 = tosa.reduce_product %arg0 {axis = 0 : i32} : (tensor<5x4xi32>) -> tensor<1x4xi32>
 
   // CHECK: arith.constant 2147483647 : i32
   // CHECK: linalg.fill
@@ -1991,4 +1991,291 @@ func.func @test_dynamic_fft2d(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>
 func.func @test_cast_fp32_i64(%arg0: tensor<1xf32>) -> (tensor<1xi64>) {
   %0 = tosa.cast %arg0 : (tensor<1xf32>) -> tensor<1xi64>
   return %0: tensor<1xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_min_nan_propagate
+func.func @reduce_min_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: linalg.fill
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: select
+  // CHECK: return
+  %3 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_nan_propagate
+func.func @reduce_max_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: linalg.fill
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: select
+  // CHECK: return
+  %4 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_min_nan_ignore_int
+func.func @reduce_min_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.minsi
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: linalg.fill
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: select
+  // CHECK: return
+  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<1x4xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_nan_ignore_int
+func.func @reduce_max_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.maxsi
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  // CHECK-NOT: arith.constant 0x7FC00000
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: linalg.fill
+  // CHECK-NOT: tensor.empty()
+  // CHECK-NOT: select
+  // CHECK: return
+  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<1x4xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_min_nan_ignore
+func.func @reduce_min_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  // CHECK: arith.constant 0x7FC00000
+  // CHECK: tensor.empty()
+  // CHECK: linalg.fill
+  // CHECK: tensor.empty()
+  // CHECK: select
+  %5 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_nan_ignore
+func.func @reduce_max_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  // CHECK: arith.constant 0x7FC00000
+  // CHECK: tensor.empty()
+  // CHECK: linalg.fill
+  // CHECK: tensor.empty()
+  // CHECK: select
+  %6 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minimum_nan_propagate
+func.func @minimum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.minimumf
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %7 = tosa.minimum %arg0, %arg1 {nan_mode = "PROPAGATE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @maximum_nan_propagate
+func.func @maximum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.maximumf
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %8 = tosa.maximum %arg0, %arg1 {nan_mode = "PROPAGATE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minimum_nan_ignore_int
+func.func @minimum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.minsi
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %9 = tosa.minimum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @maximum_nan_ignore_int
+func.func @maximum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.maxsi
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %10 = tosa.maximum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xi8>, tensor<5x4xi8>) -> tensor<5x4xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minimum_nan_ignore
+func.func @minimum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.minimumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  %9 = tosa.minimum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @maximum_nan_ignore
+func.func @maximum_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.maximumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  %10 = tosa.maximum %arg0, %arg1 {nan_mode = "IGNORE"} : (tensor<5x4xf32>, tensor<5x4xf32>) -> tensor<5x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmax_nan_propagate
+func.func @argmax_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpf ogt
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %11 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmax_nan_ignore_int
+func.func @argmax_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpi sgt
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+ %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xi8>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmax_nan_ignore
+func.func @argmax_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpf ogt
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  %12 = tosa.argmax %arg0 {axis = 0 : i32, nan_mode = "IGNORE"} : (tensor<5x4xf32>)  -> tensor<4xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @clamp_nan_propagate
+func.func @clamp_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.minimumf
+  // CHECK: arith.maximumf
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %13 = tosa.clamp %arg0 {min_val =  1.0 : f32, max_val = 5.0 : f32, nan_mode = "PROPAGATE"} : (tensor<5x4xf32>) -> tensor<5x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @clamp_nan_ignore_int
+func.func @clamp_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.maxsi
+  // CHECK: arith.minsi
+  // CHECK-NOT: arith.cmpf uno
+  // CHECK-NOT: arith.select
+  // CHECK: linalg.yield
+  %14 = tosa.clamp %arg0 {min_val = 1 : i8, max_val = 5 : i8, nan_mode = "IGNORE"} : (tensor<5x4xi8>) -> tensor<5x4xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @clamp_nan_ignore
+func.func @clamp_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: arith.minimumf
+  // CHECK: arith.maximumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: linalg.yield
+  %14 = tosa.clamp %arg0 {min_val = 1.0 : f32, max_val = 5.0 : f32, nan_mode = "IGNORE"} : (tensor<5x4xf32>) -> tensor<5x4xf32>
+
+  return
 }

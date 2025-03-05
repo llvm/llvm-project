@@ -120,6 +120,33 @@ define void @trig_test(float %0, <8 x float> %1) {
 
   ret void
 }
+; CHECK-LABEL:  llvm.func @inv_trig_test
+define void @inv_trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.asin.f32(float %0)
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.asin.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (f32) -> f32
+  %5 = call float @llvm.acos.f32(float %0)
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.acos.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.atan.f32(float %0)
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.atan.v8f32(<8 x float> %1)
+
+  ret void
+}
+; CHECK-LABEL:  llvm.func @atan2_test
+define void @atan2_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
+  ; CHECK:  llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %5 = call float @llvm.atan2.f32(float %0, float %1)
+  ; CHECK:  llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.atan2.v8f32(<8 x float> %2, <8 x float> %3)
+  ret void
+}
 ; CHECK-LABEL:  llvm.func @hyperbolic_trig_test
 define void @hyperbolic_trig_test(float %0, <8 x float> %1) {
   ; CHECK: llvm.intr.sinh(%{{.*}}) : (f32) -> f32

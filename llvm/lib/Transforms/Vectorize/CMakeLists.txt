@@ -9,7 +9,9 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Legality.cpp
   SandboxVectorizer/Passes/BottomUpVec.cpp
   SandboxVectorizer/Passes/RegionsFromMetadata.cpp
+  SandboxVectorizer/Passes/SeedCollection.cpp
   SandboxVectorizer/Passes/TransactionAcceptOrRevert.cpp
+  SandboxVectorizer/Passes/TransactionSave.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
   SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
   SandboxVectorizer/Scheduler.cpp

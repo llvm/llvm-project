@@ -537,10 +537,6 @@ struct StaticLibcallNameMap {
         Map[NameLibcall.first] = NameLibcall.second;
       }
     }
-    // Override the __gnu_f2h_ieee/__gnu_h2f_ieee names so that the f32 name is
-    // consistent with the f64 and f128 names.
-    Map["__extendhfsf2"] = RTLIB::FPEXT_F16_F32;
-    Map["__truncsfhf2"] = RTLIB::FPROUND_F32_F16;
 
     Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }

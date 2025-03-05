@@ -203,7 +203,6 @@ public:
     return formatters::ExtractIndexFromString(name.GetCString());
   }
 
-  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;

@@ -111,9 +111,11 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
+#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -127,7 +129,10 @@
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "llvm/CodeGen/RegAllocFast.h"
+#include "llvm/CodeGen/RegAllocGreedyPass.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
@@ -1330,9 +1335,9 @@ Expected<SmallVector<std::string, 0>> parseInternalizeGVs(StringRef Params) {
   return Expected<SmallVector<std::string, 0>>(std::move(PreservedGVs));
 }
 
-Expected<RegAllocFastPassOptions>
+Expected<RegAllocFastPass::Options>
 parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
-  RegAllocFastPassOptions Opts;
+  RegAllocFastPass::Options Opts;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
@@ -1409,6 +1414,20 @@ parseBoundsCheckingOptions(StringRef Params) {
     }
   }
   return Options;
+}
+
+Expected<RAGreedyPass::Options>
+parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
+  if (Params.empty() || Params == "all")
+    return RAGreedyPass::Options();
+
+  std::optional<RegAllocFilterFunc> Filter = PB.parseRegAllocFilter(Params);
+  if (Filter)
+    return RAGreedyPass::Options{*Filter, Params};
+
+  return make_error<StringError>(
+      formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 } // namespace

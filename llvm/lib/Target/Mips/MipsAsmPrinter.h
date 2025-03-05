@@ -85,6 +85,10 @@ private:
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                         const MCSubtargetInfo *EndInfo) const override;
 
+  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                          const MachineBasicBlock *MBB,
+                          unsigned uid) const override;
+
   void EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol);
 
   void EmitInstrReg(const MCSubtargetInfo &STI, unsigned Opcode, unsigned Reg);
