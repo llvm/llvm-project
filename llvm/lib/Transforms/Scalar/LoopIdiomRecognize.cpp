@@ -402,6 +402,11 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   if (Size > 16)
     return nullptr;
 
+  // For now, don't handle types that aren't int, floats, or pointers.
+  if (!isa<ConstantInt>(C) && !isa<ConstantFP>(C) &&
+      !isa<PointerType>(C->getType()))
+    return nullptr;
+
   return C;
 }
 
@@ -1144,20 +1149,14 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     // If the pattern value can be casted directly to an integer argument, use
     // that. Otherwise (e.g. if the value is a global pointer), create a
     // GlobalVariable and load from it.
-    if (isa<ConstantInt>(PatternValue)) {
+    if (isa<ConstantInt>(PatternValue))
       PatternArg = PatternValue;
-    } else if (isa<ConstantFP>(PatternValue)) {
+    else if (isa<ConstantFP>(PatternValue))
       PatternArg = Builder.CreateBitCast(PatternValue, PatternArgTy);
-    } else {
-      GlobalVariable *GV = new GlobalVariable(*M, PatternValue->getType(), true,
-                                              GlobalValue::PrivateLinkage,
-                                              PatternValue, ".memset_pattern");
-      GV->setUnnamedAddr(
-          GlobalValue::UnnamedAddr::Global); // Ok to merge these.
-      GV->setAlignment(Align(PatternArgTy->getPrimitiveSizeInBits() / 8));
-      PatternArg = Builder.CreateLoad(PatternArgTy, GV);
-    }
-    assert(PatternArg);
+    else if (isa<PointerType>(PatternValue->getType()))
+      PatternArg = Builder.CreatePtrToInt(PatternValue, PatternArgTy);
+    else
+      report_fatal_error("Unexpected PatternValue type");
 
     NewCall = Builder.CreateIntrinsic(Intrinsic::experimental_memset_pattern,
                                       {DestInt8PtrTy, PatternArgTy, IntIdxTy},
