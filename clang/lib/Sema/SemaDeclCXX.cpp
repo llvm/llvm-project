@@ -5289,6 +5289,102 @@ Sema::SetDelegatingInitializer(CXXConstructorDecl *Constructor,
   return false;
 }
 
+static void MarkFieldDestructorReferenced(Sema &S, SourceLocation Location,
+                                          FieldDecl *Field) {
+  if (Field->isInvalidDecl())
+    return;
+
+  // Don't destroy incomplete or zero-length arrays.
+  if (isIncompleteOrZeroLengthArrayType(S.Context, Field->getType()))
+    return;
+
+  QualType FieldType = S.Context.getBaseElementType(Field->getType());
+
+  const RecordType *RT = FieldType->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+  if (FieldClassDecl->isInvalidDecl())
+    return;
+  if (FieldClassDecl->hasIrrelevantDestructor())
+    return;
+  // The destructor for an implicit anonymous union member is never invoked.
+  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
+    return;
+
+  CXXDestructorDecl *Dtor = S.LookupDestructor(FieldClassDecl);
+  // Dtor might still be missing, e.g because it's invalid.
+  if (!Dtor)
+    return;
+  S.CheckDestructorAccess(Field->getLocation(), Dtor,
+                          S.PDiag(diag::err_access_dtor_field)
+                              << Field->getDeclName() << FieldType);
+
+  S.MarkFunctionReferenced(Location, Dtor);
+  S.DiagnoseUseOfDecl(Dtor, Location);
+}
+
+static void MarkBaseDestructorsReferenced(Sema &S, SourceLocation Location,
+                                          CXXRecordDecl *ClassDecl) {
+  if (ClassDecl->isDependentContext())
+    return;
+
+  // We only potentially invoke the destructors of potentially constructed
+  // subobjects.
+  bool VisitVirtualBases = !ClassDecl->isAbstract();
+
+  // If the destructor exists and has already been marked used in the MS ABI,
+  // then virtual base destructors have already been checked and marked used.
+  // Skip checking them again to avoid duplicate diagnostics.
+  if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    CXXDestructorDecl *Dtor = ClassDecl->getDestructor();
+    if (Dtor && Dtor->isUsed())
+      VisitVirtualBases = false;
+  }
+
+  llvm::SmallPtrSet<const RecordType *, 8> DirectVirtualBases;
+
+  // Bases.
+  for (const auto &Base : ClassDecl->bases()) {
+    const RecordType *RT = Base.getType()->getAs<RecordType>();
+    if (!RT)
+      continue;
+
+    // Remember direct virtual bases.
+    if (Base.isVirtual()) {
+      if (!VisitVirtualBases)
+        continue;
+      DirectVirtualBases.insert(RT);
+    }
+
+    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+    // If our base class is invalid, we probably can't get its dtor anyway.
+    if (BaseClassDecl->isInvalidDecl())
+      continue;
+    if (BaseClassDecl->hasIrrelevantDestructor())
+      continue;
+
+    CXXDestructorDecl *Dtor = S.LookupDestructor(BaseClassDecl);
+    // Dtor might still be missing, e.g because it's invalid.
+    if (!Dtor)
+      continue;
+
+    // FIXME: caret should be on the start of the class name
+    S.CheckDestructorAccess(Base.getBeginLoc(), Dtor,
+                            S.PDiag(diag::err_access_dtor_base)
+                                << Base.getType() << Base.getSourceRange(),
+                            S.Context.getTypeDeclType(ClassDecl));
+
+    S.MarkFunctionReferenced(Location, Dtor);
+    S.DiagnoseUseOfDecl(Dtor, Location);
+  }
+
+  if (VisitVirtualBases)
+    S.MarkVirtualBaseDestructorsReferenced(Location, ClassDecl,
+                                           &DirectVirtualBases);
+}
+
 bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
                                ArrayRef<CXXCtorInitializer *> Initializers) {
   if (Constructor->isDependentContext()) {
@@ -5471,10 +5567,10 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
       //   potentially constructed subobject of class type is potentially
       //   invoked
       //   ([class.dtor]).
-      MarkFieldDestructorReferenced(Location, Field);
+      MarkFieldDestructorReferenced(*this, Location, Field);
     }
 
-    MarkBaseDestructorsReferenced(Location, Constructor->getParent());
+    MarkBaseDestructorsReferenced(*this, Location, Constructor->getParent());
   }
 
   return HadError;
@@ -5779,102 +5875,6 @@ void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
   DiagnoseUninitializedFields(*this, Constructor);
 }
 
-void Sema::MarkFieldDestructorReferenced(SourceLocation Location,
-                                         FieldDecl *Field) {
-  if (Field->isInvalidDecl())
-    return;
-
-  // Don't destroy incomplete or zero-length arrays.
-  if (isIncompleteOrZeroLengthArrayType(Context, Field->getType()))
-    return;
-
-  QualType FieldType = Context.getBaseElementType(Field->getType());
-
-  const RecordType *RT = FieldType->getAs<RecordType>();
-  if (!RT)
-    return;
-
-  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-  if (FieldClassDecl->isInvalidDecl())
-    return;
-  if (FieldClassDecl->hasIrrelevantDestructor())
-    return;
-  // The destructor for an implicit anonymous union member is never invoked.
-  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
-    return;
-
-  CXXDestructorDecl *Dtor = LookupDestructor(FieldClassDecl);
-  // Dtor might still be missing, e.g because it's invalid.
-  if (!Dtor)
-    return;
-  CheckDestructorAccess(Field->getLocation(), Dtor,
-                        PDiag(diag::err_access_dtor_field)
-                            << Field->getDeclName() << FieldType);
-
-  MarkFunctionReferenced(Location, Dtor);
-  DiagnoseUseOfDecl(Dtor, Location);
-}
-
-void Sema::MarkBaseDestructorsReferenced(SourceLocation Location,
-                                         CXXRecordDecl *ClassDecl) {
-  if (ClassDecl->isDependentContext())
-    return;
-
-  // We only potentially invoke the destructors of potentially constructed
-  // subobjects.
-  bool VisitVirtualBases = !ClassDecl->isAbstract();
-
-  // If the destructor exists and has already been marked used in the MS ABI,
-  // then virtual base destructors have already been checked and marked used.
-  // Skip checking them again to avoid duplicate diagnostics.
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    CXXDestructorDecl *Dtor = ClassDecl->getDestructor();
-    if (Dtor && Dtor->isUsed())
-      VisitVirtualBases = false;
-  }
-
-  llvm::SmallPtrSet<const RecordType *, 8> DirectVirtualBases;
-
-  // Bases.
-  for (const auto &Base : ClassDecl->bases()) {
-    const RecordType *RT = Base.getType()->getAs<RecordType>();
-    if (!RT)
-      continue;
-
-    // Remember direct virtual bases.
-    if (Base.isVirtual()) {
-      if (!VisitVirtualBases)
-        continue;
-      DirectVirtualBases.insert(RT);
-    }
-
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    // If our base class is invalid, we probably can't get its dtor anyway.
-    if (BaseClassDecl->isInvalidDecl())
-      continue;
-    if (BaseClassDecl->hasIrrelevantDestructor())
-      continue;
-
-    CXXDestructorDecl *Dtor = LookupDestructor(BaseClassDecl);
-    // Dtor might still be missing, e.g because it's invalid.
-    if (!Dtor)
-      continue;
-
-    // FIXME: caret should be on the start of the class name
-    CheckDestructorAccess(Base.getBeginLoc(), Dtor,
-                          PDiag(diag::err_access_dtor_base)
-                              << Base.getType() << Base.getSourceRange(),
-                          Context.getTypeDeclType(ClassDecl));
-
-    MarkFunctionReferenced(Location, Dtor);
-    DiagnoseUseOfDecl(Dtor, Location);
-  }
-
-  if (VisitVirtualBases)
-    MarkVirtualBaseDestructorsReferenced(Location, ClassDecl,
-                                         &DirectVirtualBases);
-}
-
 void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
                                                   CXXRecordDecl *ClassDecl) {
   // Ignore dependent contexts. Also ignore unions, since their members never
@@ -5889,10 +5889,10 @@ void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
   // Non-static data members.
   for (auto *Field : ClassDecl->fields()) {
-    MarkFieldDestructorReferenced(Location, Field);
+    MarkFieldDestructorReferenced(*this, Location, Field);
   }
 
-  MarkBaseDestructorsReferenced(Location, ClassDecl);
+  MarkBaseDestructorsReferenced(*this, Location, ClassDecl);
 }
 
 void Sema::MarkVirtualBaseDestructorsReferenced(

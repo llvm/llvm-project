@@ -5445,9 +5445,6 @@ public:
   void MarkBaseAndMemberDestructorsReferenced(SourceLocation Loc,
                                               CXXRecordDecl *Record);
 
-  void MarkBaseDestructorsReferenced(SourceLocation Loc, CXXRecordDecl *Record);
-  void MarkFieldDestructorReferenced(SourceLocation Loc, FieldDecl *Field);
-
   /// Mark destructors of virtual bases of this class referenced. In the Itanium
   /// C++ ABI, this is done when emitting a destructor for any non-abstract
   /// class. In the Microsoft C++ ABI, this is done any time a class's
