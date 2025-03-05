@@ -62,7 +62,7 @@ __attribute__((availability(domain:feature1, AVAIL), // expected-note {{is incom
 @end
 
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is incompatible with __attribute__((availability(domain:feature1, 0)))}} expected-note 2 {{feature attribute __attribute__((availability(domain:feature1, 0)))}}
-@interface Derived0 : Base0 {
+@interface Derived0 : Base0 { // expected-note {{receiver is instance of class declared here}}
   struct S1 *ivar4;
 }
 @property struct S1 *p0;
@@ -81,6 +81,7 @@ __attribute__((availability(domain:feature1, AVAIL))) // expected-note {{is inco
 }
 -(void)m1 {
   self.p1 = 1;
+  [self nonexistentMethod]; // expected-warning {{instance method '-nonexistentMethod' not found (return type defaults to 'id')}}
 }
 @end
 

@@ -78,7 +78,8 @@ public:
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *OME) {
-    diagnoseDeclFeatureAvailability(OME->getMethodDecl(), OME->getBeginLoc());
+    if (auto *MD = OME->getMethodDecl())
+      diagnoseDeclFeatureAvailability(MD, OME->getBeginLoc());
     return true;
   }
 
