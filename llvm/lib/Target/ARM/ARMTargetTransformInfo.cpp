@@ -2633,8 +2633,7 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
@@ -2647,8 +2646,8 @@ bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
+                                                 Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;

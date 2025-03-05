@@ -252,15 +252,6 @@ public:
     VK_AVR_DIFF32,
     VK_AVR_PM,
 
-    VK_PPC_LO,              // symbol@l
-    VK_PPC_HI,              // symbol@h
-    VK_PPC_HA,              // symbol@ha
-    VK_PPC_HIGH,            // symbol@high
-    VK_PPC_HIGHA,           // symbol@higha
-    VK_PPC_HIGHER,          // symbol@higher
-    VK_PPC_HIGHERA,         // symbol@highera
-    VK_PPC_HIGHEST,         // symbol@highest
-    VK_PPC_HIGHESTA,        // symbol@highesta
     VK_PPC_GOT_LO,          // symbol@got@l
     VK_PPC_GOT_HI,          // symbol@got@h
     VK_PPC_GOT_HA,          // symbol@got@ha
