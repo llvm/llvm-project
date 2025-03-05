@@ -25,6 +25,14 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class MachineBlockPlacementStatsPass
+    : public PassInfoMixin<MachineBlockPlacementStatsPass> {
+
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEBLOCKPLACEMENT_H
