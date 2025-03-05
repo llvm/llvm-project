@@ -191,30 +191,6 @@ void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
     emitCOFFSecRel32(Sym, /*Offset=*/0);
 }
 
-void MCStreamer::emitDTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitDTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitTPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel64Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
-void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
-  report_fatal_error("unsupported directive in streamer");
-}
-
 /// Emit NumBytes bytes worth of the value specified by FillValue.
 /// This implements directives such as '.space'.
 void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {

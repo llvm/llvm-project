@@ -856,7 +856,11 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 }
 
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  auto cleanup = llvm::make_scope_exit([this]() {
+    if (output.descriptor)
+      output.descriptor->Close();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
