@@ -2,9 +2,9 @@
 
 # When we enable symbol preload and dump stats there should be a non-zero
 # time for parsing symbol tables for the main module.
-# RUN: %lldb %t-main.exe \
-# RUN:       -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN: %lldb -O "settings set plugin.jit-loader.gdb.enable off" \
 # RUN:       -O "settings set target.preload-symbols true" \
+# RUN:       -o 'target create --no-dependents "%t-main.exe"' \
 # RUN:       -o "statistics dump" \
 # RUN:       -o "q" \
 # RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_TRUE
@@ -21,9 +21,9 @@
 
 # When we disable symbol preload and dump stats the symbol table
 # for main should not be parsed and have a time of 0.
-# RUN: %lldb %t-main.exe \
-# RUN:       -O "settings set plugin.jit-loader.gdb.enable off" \
+# RUN: %lldb -O "settings set plugin.jit-loader.gdb.enable off" \
 # RUN:       -O "settings set target.preload-symbols false" \
+# RUN:       -o 'target create --no-dependents "%t-main.exe"' \
 # RUN:       -o "statistics dump" \
 # RUN:       -o "q" \
 # RUN:       | FileCheck %s -check-prefixes=CHECK,PRELOAD_FALSE
