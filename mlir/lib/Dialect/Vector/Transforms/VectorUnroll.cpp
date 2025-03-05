@@ -356,9 +356,9 @@ struct UnrollMultiReductionPattern
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
     auto resultType = reductionOp->getResult(0).getType();
-    if (mlir::isa<mlir::FloatType>(resultType) ||
-        mlir::isa<mlir::IntegerType>(resultType)) {
-      return failure();
+    if (resultType.isIntOrFloat()) {
+      return rewriter.notifyMatchFailure(reductionOp,
+                                         "Unrolling scalars is not supported");
     }
     std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
