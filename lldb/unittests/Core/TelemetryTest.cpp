@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "lldb/Core/Telemetry.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Telemetry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
@@ -77,8 +78,13 @@ public:
 
 using namespace lldb_private::telemetry;
 
+class TelemetryTest : public testing::Test {
+public:
+  lldb_private::SubsystemRAII<lldb_private::FakePlugin> subsystems;
+};
+
 #if LLVM_ENABLE_TELEMETRY
-#define TELEMETRY_TEST(suite, test) TEST(suite, test)
+#define TELEMETRY_TEST(suite, test) TEST_F(suite, test)
 #else
 #define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
 #endif
