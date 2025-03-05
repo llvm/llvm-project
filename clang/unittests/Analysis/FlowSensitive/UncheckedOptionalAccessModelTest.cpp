@@ -3771,6 +3771,30 @@ TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessorWithModInBetween) {
                        /*IgnoreSmartPointerDereference=*/false);
 }
 
+TEST_P(UncheckedOptionalAccessTest, ConstPointerRefAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct PtrWrapper {
+      A*& getPtrRef() const;
+      void reset(A*);
+    };
+
+    void target(PtrWrapper p) {
+      if (p.getPtrRef()->x) {
+        *p.getPtrRef()->x;
+        p.reset(nullptr);
+        *p.getPtrRef()->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
 TEST_P(UncheckedOptionalAccessTest, SmartPointerAccessorMixed) {
   ExpectDiagnosticsFor(R"cc(
      #include "unchecked_optional_access_test.h"
