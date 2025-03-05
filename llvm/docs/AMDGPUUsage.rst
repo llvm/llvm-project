@@ -1707,11 +1707,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       as hidden. Hidden arguments are managed by the compiler and are not part of
                                                       the explicit arguments supplied by the user.
 
-     "amdgpu-num-agpr"="min(,max)"                    Indicates a minimum and maximum range for the number of AGPRs to make
+     "amdgpu-agpr-alloc"="min(,max)"                  Indicates a minimum and maximum range for the number of AGPRs to make
                                                       available to allocate. The values will be rounded up to the next multiple
                                                       of the allocation granularity (4). The minimum value is interpreted as the
-                                                      minimum number of AGPRs the function will require to allocate. If only one
-                                                      value is specified, it is interpreted as the minimum register budget.
+                                                      minimum required number of AGPRs for the function to allocate (that is, the
+                                                      function requires no more than min registers). If only one value is specified,
+                                                      it is interpreted as the minimum register budget. The maximum will restrict
+                                                      allocation to use no more than max AGPRs.
 
                                                       The values may be ignored if satisfying it would violate other allocation
                                                       constraints.

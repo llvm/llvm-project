@@ -3,7 +3,7 @@
 ; RUN: FileCheck -check-prefix=ERR < %t.err %s
 
 ; Test undefined behavior where a function ends up needing AGPRs that
-; was marked with "amdgpu-num-agpr="="0". There should be no asserts.
+; was marked with "amdgpu-agpr-alloc="="0". There should be no asserts.
 
 ; TODO: Should this be an error, or let UB happen?
 
@@ -46,4 +46,4 @@ define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %ou
   ret void
 }
 
-attributes #0 = { "amdgpu-num-agpr"="0" }
+attributes #0 = { "amdgpu-agpr-alloc"="0" }

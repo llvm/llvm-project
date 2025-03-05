@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck --implicit-check-not=warning -check-prefix=WARN %s
 
-; Check the effect that amdgpu-num-agpr has on register reservations.
+; Check the effect that amdgpu-agpr-alloc has on register reservations.
 ;
 ; Asm clobbers will print a warning when they clobber reserved
 ; registers, and should be uniquely identified in the message from the
@@ -15,7 +15,7 @@ define amdgpu_kernel void @min_num_agpr_0_0__amdgpu_no_agpr() #0 {
   ret void
 }
 
-attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0,0" "amdgpu-no-agpr" }
+attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-agpr" }
 
 ; Check parse of single entry 0
 
@@ -26,7 +26,7 @@ define amdgpu_kernel void @min_num_agpr_0__amdgpu_no_agpr() #1 {
   ret void
 }
 
-attributes #1 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0" "amdgpu-no-agpr" }
+attributes #1 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0" "amdgpu-no-agpr" }
 
 
 ; Undefined use
@@ -35,7 +35,7 @@ define amdgpu_kernel void @min_num_agpr_1_1__amdgpu_no_agpr() #2 {
   ret void
 }
 
-attributes #2 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="1,1" "amdgpu-no-agpr" }
+attributes #2 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,1" "amdgpu-no-agpr" }
 
 ; Check parse of single entry 4, interpreted as the minimum. Total budget is 64.
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_4__amdgpu_no_agpr': desired occupancy was 8, final occupancy is 7
@@ -48,7 +48,7 @@ define amdgpu_kernel void @min_num_agpr_4__amdgpu_no_agpr() #3 {
   ret void
 }
 
-attributes #3 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="4" "amdgpu-no-agpr" }
+attributes #3 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="4" "amdgpu-no-agpr" }
 
 
 ; Allocation granularity requires rounding this to use 4 AGPRs, so the
@@ -68,7 +68,7 @@ define amdgpu_kernel void @min_num_agpr_occ8_1_1() #4 {
   ret void
 }
 
-attributes #4 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="1,1" }
+attributes #4 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,1" }
 
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_64_64__amdgpu_no_agpr': desired occupancy was 8, final occupancy is 7
@@ -79,7 +79,7 @@ define amdgpu_kernel void @min_num_agpr_64_64__amdgpu_no_agpr() #5 {
   ret void
 }
 
-attributes #5 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="64,64" "amdgpu-no-agpr" }
+attributes #5 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="64,64" "amdgpu-no-agpr" }
 
 ; No free VGPRs
 ; WARN: warning: inline asm clobber list contains reserved registers: v0 at line 7
@@ -89,7 +89,7 @@ define amdgpu_kernel void @min_num_agpr_64_64() #6 {
   ret void
 }
 
-attributes #6 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="64,64" }
+attributes #6 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="64,64" }
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_63_64': desired occupancy was 8, final occupancy is 7
 ; WARN: warning: inline asm clobber list contains reserved registers: v0 at line 8
@@ -103,7 +103,7 @@ define amdgpu_kernel void @min_num_agpr_63_64() #7 {
   ret void
 }
 
-attributes #7 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="63,64" }
+attributes #7 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="63,64" }
 
 
 ; No-op value.
@@ -113,7 +113,7 @@ define amdgpu_kernel void @min_num_agpr_occ8_0_64() #8 {
   ret void
 }
 
-attributes #8 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0,64" }
+attributes #8 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,64" }
 
 
 ; Register budget 64
@@ -128,7 +128,7 @@ define amdgpu_kernel void @min_num_agpr_occ8_11_59() #9 {
   ret void
 }
 
-attributes #9 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="11,59" }
+attributes #9 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="11,59" }
 
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ8_12_59': desired occupancy was 8, final occupancy is 7
@@ -142,7 +142,7 @@ define amdgpu_kernel void @min_num_agpr_occ8_12_59() #10 {
   ret void
 }
 
-attributes #10 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="12,59" }
+attributes #10 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="12,59" }
 
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ8_12_20': desired occupancy was 8, final occupancy is 7
@@ -156,7 +156,7 @@ define amdgpu_kernel void @min_num_agpr_occ8_12_20() #11 {
   ret void
 }
 
-attributes #11 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="12,20" }
+attributes #11 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="12,20" }
 
 
 ; WARN: warning: inline asm clobber list contains reserved registers: a20 at line 13
@@ -170,7 +170,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_12_20() #12 {
   ret void
 }
 
-attributes #12 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="12,20" }
+attributes #12 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="12,20" }
 
 ; WARN: warning: inline asm clobber list contains reserved registers: a20 at line 14
 define amdgpu_kernel void @min_num_agpr_occ1_13_20() #13 {
@@ -185,7 +185,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_13_20() #13 {
   ret void
 }
 
-attributes #13 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="13,20" }
+attributes #13 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="13,20" }
 
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ2_13_20': desired occupancy was 2, final occupancy is 1
@@ -203,7 +203,7 @@ define amdgpu_kernel void @min_num_agpr_occ2_13_20() #14 {
   ret void
 }
 
-attributes #14 = { "amdgpu-waves-per-eu"="2,2" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="13,20" }
+attributes #14 = { "amdgpu-waves-per-eu"="2,2" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="13,20" }
 
 
 ; Test maximum exceeds the hardware limit.
@@ -213,7 +213,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_13_257() #15 {
   ret void
 }
 
-attributes #15 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="13,257" }
+attributes #15 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="13,257" }
 
 
 ; Test min and max exceeds the hardware limit.
@@ -223,7 +223,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_257_257() #16 {
   ret void
 }
 
-attributes #16 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="257,257" }
+attributes #16 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="257,257" }
 
 
 ; Test round up hits the hardware limit
@@ -233,7 +233,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_255_255() #17 {
   ret void
 }
 
-attributes #17 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="255,255" }
+attributes #17 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="255,255" }
 
 
 ; Test round up hits the hardware limit
@@ -243,7 +243,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_253_259() #18 {
   ret void
 }
 
-attributes #18 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="253,259" }
+attributes #18 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="253,259" }
 
 ; With a minimum of 0, we are not required to allocate any AGPRs
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ4_0_64': desired occupancy was 4, final occupancy is 2
@@ -262,7 +262,7 @@ define amdgpu_kernel void @min_num_agpr_occ4_0_64() #19 {
   ret void
 }
 
-attributes #19 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0,64" }
+attributes #19 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,64" }
 
 
 ; With a non-0 minimum, we must allocate at least 4 AGPRs. The rest of
@@ -285,7 +285,7 @@ define amdgpu_kernel void @min_num_agpr_occ4_1_64() #20 {
   ret void
 }
 
-attributes #20 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="1,64" }
+attributes #20 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,64" }
 
 ; 128 vector registers
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ4_32_64': desired occupancy was 4, final occupancy is 3
@@ -299,7 +299,7 @@ define amdgpu_kernel void @min_num_agpr_occ4_32_64() #21 {
   ret void
 }
 
-attributes #21 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="32,64" }
+attributes #21 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="32,64" }
 
 ; Evenly partition the 128 vector registers
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ4_64_64': desired occupancy was 4, final occupancy is 3
@@ -313,7 +313,7 @@ define amdgpu_kernel void @min_num_agpr_occ4_64_64() #22 {
   ret void
 }
 
-attributes #22 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="64,64" }
+attributes #22 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="64,64" }
 
 ; We are not required to allocate any AGPRs, but they are available
 ; with a budget of 512 vector registers. We are artificially limiting
@@ -327,7 +327,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_0_64() #23 {
   ret void
 }
 
-attributes #23 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0,64" }
+attributes #23 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,64" }
 
 ; WARN: warning: inline asm clobber list contains reserved registers: a68 at line 25
 define amdgpu_kernel void @min_num_agpr_occ1_0_68() #24 {
@@ -337,7 +337,7 @@ define amdgpu_kernel void @min_num_agpr_occ1_0_68() #24 {
   ret void
 }
 
-attributes #24 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-num-agpr"="0,68" }
+attributes #24 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,68" }
 
 
 ; The total vector register budget is 128, claim more than that for
@@ -352,7 +352,7 @@ define amdgpu_kernel void @min_num_agpr_occ10__min_agpr_129() #25 {
   ret void
 }
 
-attributes #25 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="129" }
+attributes #25 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="129" }
 
 ; Check for another assertion, request beyond the budget.
 
@@ -366,7 +366,7 @@ define amdgpu_kernel void @min_num_agpr_occ10__min_agpr_129_129() #26 {
   ret void
 }
 
-attributes #26 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="129,129" }
+attributes #26 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="129,129" }
 
 ; The total vector register budget is 128, claim all of it for AGPRs.
 
@@ -381,7 +381,7 @@ define amdgpu_kernel void @min_num_agpr_occ10__min_agpr_128() #27 {
   ret void
 }
 
-attributes #27 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="128" }
+attributes #27 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="128" }
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ10__min_agpr_257': desired occupancy was 8, final occupancy is 3
 ; WARN: warning: inline asm clobber list contains reserved registers: a128 at line 29
@@ -393,7 +393,7 @@ define amdgpu_kernel void @min_num_agpr_occ10__min_agpr_257() #28 {
   ret void
 }
 
-attributes #28 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="257" }
+attributes #28 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="257" }
 
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ10__min_agpr_257_257': desired occupancy was 8, final occupancy is 3
 ; WARN: warning: inline asm clobber list contains reserved registers: a128 at line 30
@@ -405,7 +405,7 @@ define amdgpu_kernel void @min_num_agpr_occ10__min_agpr_257_257() #29 {
   ret void
 }
 
-attributes #29 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="257,257" }
+attributes #29 = { "amdgpu-waves-per-eu"="8,10" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="257,257" }
 
 
 ; The total vector register budget is 96
@@ -421,7 +421,7 @@ define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8_256() #30 {
   ret void
 }
 
-attributes #30 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="8,256" }
+attributes #30 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="8,256" }
 
 ; The total vector register budget is 96
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_occ5__min_agpr_8': desired occupancy was 5, final occupancy is 4
@@ -443,7 +443,7 @@ define amdgpu_kernel void @min_num_agpr_occ5__min_agpr_8_no_agpr_references() #3
   ret void
 }
 
-attributes #31 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-num-agpr"="8" }
+attributes #31 = { "amdgpu-waves-per-eu"="5,5" "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="8" }
 
 
 ; register budget 256
@@ -458,7 +458,7 @@ define amdgpu_kernel void @min_num_agpr_occ2__min_agpr_93() #33 {
   ret void
 }
 
-attributes #33 = { "amdgpu-waves-per-eu"="2,2" "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-agpr"="93" }
+attributes #33 = { "amdgpu-waves-per-eu"="2,2" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="93" }
 
 ; register budget 512, no warnings and fully allocated
 define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_93() #34 {
@@ -467,7 +467,7 @@ define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_93() #34 {
   ret void
 }
 
-attributes #34 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-agpr"="93" }
+attributes #34 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="93" }
 
 ; register budget 256
 ; WARN: warning: inline asm clobber list contains reserved registers: a96 at line 36
@@ -478,7 +478,7 @@ define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_93_93() #35 {
   ret void
 }
 
-attributes #35 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-agpr"="93,93" }
+attributes #35 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="93,93" }
 
 ; register budget 512, fully allocated and no warnings.
 define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_256() #36 {
@@ -487,7 +487,7 @@ define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_256() #36 {
   ret void
 }
 
-attributes #36 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-agpr"="256" }
+attributes #36 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="256" }
 
 ; register budget 512, fully allocated and no warnings.
 define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_256_256() #37 {
@@ -496,7 +496,7 @@ define amdgpu_kernel void @min_num_agpr_occ1__min_agpr_256_256() #37 {
   ret void
 }
 
-attributes #37 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-num-agpr"="256,256" }
+attributes #37 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="256,256" }
 
 ; register budget 512, fully allocated and no warnings.
 define amdgpu_kernel void @occ1_min_agpr_no_attr() #38 {

@@ -592,13 +592,13 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
 
-    // TODO: Replace amdgpu-no-agpr with amdgpu-num-agpr=0
+    // TODO: Replace amdgpu-no-agpr with amdgpu-agpr-alloc=0
     // TODO: Move this logic into subtarget on IR function
     //
     // TODO: The lower bound should probably force the number of required
     // registers up, overriding amdgpu-waves-per-eu.
     std::tie(MinNumAGPRs, MaxNumAGPRs) = AMDGPU::getIntegerPairAttribute(
-        MF.getFunction(), "amdgpu-num-agpr", DefaultNumAGPR,
+        MF.getFunction(), "amdgpu-agpr-alloc", DefaultNumAGPR,
         /*OnlyFirstRequired=*/true);
 
     if (MinNumAGPRs == DefaultNumAGPR.first) {
