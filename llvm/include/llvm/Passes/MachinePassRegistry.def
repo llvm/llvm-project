@@ -196,16 +196,11 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "block-placement", "MachineBlockPlacementPass",
-    [](bool NoTailMerge) {
-      // Tail merging is enabled by default, so this option
-      // is to disable it.
-      return MachineBlockPlacementPass(!NoTailMerge);
+    [](bool AllowTailMerge) {
+      // Default is true.
+      return MachineBlockPlacementPass(AllowTailMerge);
     },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "no-tail-merge",
-                                   "MachineBlockPlacementPass");
-    },
-    "no-tail-merge")
+    parseMachineBlockPlacementPassOptions, "no-tail-merge;enable-tail-merge")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",

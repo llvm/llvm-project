@@ -1440,6 +1440,19 @@ Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
                                             "MachineSinkingPass");
 }
 
+Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
+  bool AllowTailMerge = true;
+  if (Params == "no-tail-merge")
+    AllowTailMerge = false;
+  else if (!Params.empty() && Params != "enable-tail-merge")
+    return make_error<StringError>(
+        formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
+            .str(),
+        inconvertibleErrorCode());
+
+  return AllowTailMerge;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
