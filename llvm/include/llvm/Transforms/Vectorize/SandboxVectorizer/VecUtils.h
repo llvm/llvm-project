@@ -17,7 +17,25 @@
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Utils.h"
 
-namespace llvm::sandboxir {
+namespace llvm {
+/// Traits for DenseMap.
+template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
+  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
+  }
+  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
+  }
+  static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
+    return hash_combine_range(Vec.begin(), Vec.end());
+  }
+  static bool isEqual(const SmallVector<sandboxir::Value *> &Vec1,
+                      const SmallVector<sandboxir::Value *> &Vec2) {
+    return Vec1 == Vec2;
+  }
+};
+
+namespace sandboxir {
 
 class VecUtils {
 public:
@@ -179,6 +197,52 @@ public:
   /// \Returns the first integer power of 2 that is <= Num.
   static unsigned getFloorPowerOf2(unsigned Num);
 
+  /// If \p I is the last instruction of a pack pattern, then this function
+  /// returns the instructions in the pack and the operands in the pack, else
+  /// returns nullopt.
+  static std::optional<
+      std::pair<SmallVector<Instruction *>, SmallVector<Value *>>>
+  matchPack(Instruction *I) {
+    // TODO: Support vector pack patterns.
+    // TODO: Support out-of-order inserts.
+
+    // Early return if `I` is not an Insert.
+    if (!isa<InsertElementInst>(I))
+      return std::nullopt;
+    auto *BB0 = I->getParent();
+    // The pack contains as many instrs as the lanes of the bottom-most Insert
+    unsigned ExpectedNumInserts = VecUtils::getNumLanes(I);
+    assert(ExpectedNumInserts >= 2 && "Expected at least 2 inserts!");
+    SmallVector<Instruction *> PackInstrs;
+    SmallVector<Value *> PackOperands;
+    PackOperands.resize(ExpectedNumInserts);
+    // Collect the inserts by walking up the use-def chain.
+    Instruction *InsertI = I;
+    for ([[maybe_unused]] auto Cnt : seq<unsigned>(ExpectedNumInserts)) {
+      if (InsertI == nullptr)
+        return std::nullopt;
+      if (InsertI->getParent() != BB0)
+        return std::nullopt;
+      // Check the lane.
+      auto *LaneC = dyn_cast<ConstantInt>(InsertI->getOperand(2));
+      unsigned ExpectedLane = ExpectedNumInserts - Cnt - 1;
+      if (LaneC == nullptr || LaneC->getSExtValue() != ExpectedLane)
+        return std::nullopt;
+      PackInstrs.push_back(InsertI);
+      PackOperands[ExpectedLane] = InsertI->getOperand(1);
+
+      Value *Op = InsertI->getOperand(0);
+      if (Cnt == ExpectedNumInserts - 1) {
+        if (!isa<PoisonValue>(Op))
+          return std::nullopt;
+      } else {
+        InsertI = dyn_cast<InsertElementInst>(Op);
+      }
+    }
+    // Check the topmost insert. The operand should be a Poison.
+    return std::make_pair(PackInstrs, PackOperands);
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
@@ -186,6 +250,8 @@ public:
 #endif // NDEBUG
 };
 
-} // namespace llvm::sandboxir
+} // namespace sandboxir
+
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
