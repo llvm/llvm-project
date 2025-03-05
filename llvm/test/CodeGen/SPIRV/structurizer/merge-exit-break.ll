@@ -6,17 +6,18 @@ target triple = "spirv-unknown-vulkan-compute"
 
 define internal spir_func void @main() #0 {
 
-; CHECK-DAG:                   OpName %[[#idx:]] "idx"
+; CHECK-DAG:                   OpName %[[#idx:]] "main.local.1"
 ; CHECK-DAG:                   OpDecorate %[[#builtin:]] BuiltIn SubgroupLocalInvocationId
 ; CHECK-DAG:   %[[#int_ty:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#int_ipty:]] = OpTypePointer Input %[[#int_ty]]
+; CHECK-DAG: %[[#int_ppty:]] = OpTypePointer Private %[[#int_ty]]
 ; CHECK-DAG:  %[[#bool_ty:]] = OpTypeBool
 ; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#int_ty]] 0
 ; CHECK-DAG:   %[[#int_10:]] = OpConstant %[[#int_ty]] 10
 ; CHECK-DAG:   %[[#builtin]] = OpVariable %[[#int_ipty]] Input
+; CHECK-DAG:       %[[#idx]] = OpVariable %[[#int_ppty]] Private %[[#int_0]]
 
 ; CHECK:   %[[#entry:]] = OpLabel
-; CHECK:      %[[#idx]] = OpVariable %[[#]] Function
 ; ACHECK:                 OpStore %[[#idx]] %[[#int_0]] Aligned 4
 ; CHECK:                  OpBranch %[[#while_cond:]]
 entry:

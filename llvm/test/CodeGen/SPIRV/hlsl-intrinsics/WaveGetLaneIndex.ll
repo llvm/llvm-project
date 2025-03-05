@@ -14,8 +14,9 @@
 ; CHECK-DAG:                         OpDecorate %[[#var:]] BuiltIn SubgroupLocalInvocationId
 ; CHECK-DAG:            %[[#int:]] = OpTypeInt 32 0
 ; CHECK-DAG:           %[[#ptri:]] = OpTypePointer Input %[[#int]]
-; CHECK-DAG:           %[[#ptrf:]] = OpTypePointer Function %[[#int]]
+; CHECK-DAG:           %[[#ptrp:]] = OpTypePointer Private %[[#int]]
 ; CHECK-DAG:             %[[#var]] = OpVariable %[[#ptri]] Input
+; CHECK-DAG:            %[[#idx:]] = OpVariable %[[#ptrp]] Private
 
 ; CHECK-NOT:                         OpDecorate %[[#var]] LinkageAttributes
 
@@ -30,7 +31,6 @@ define internal spir_func void @main() #0 {
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
   %idx = alloca i32, align 4
-; CHECK:     %[[#idx:]] = OpVariable %[[#ptrf]] Function
 
   %1 = call i32 @__hlsl_wave_get_lane_index() [ "convergencectrl"(token %0) ]
 ; CHECK:    %[[#tmp:]] = OpLoad %[[#int]] %[[#var]]
