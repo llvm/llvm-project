@@ -74,7 +74,8 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
-  int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
+                         bool CountVALUOnly = false);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
 
@@ -106,6 +107,7 @@ private:
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
