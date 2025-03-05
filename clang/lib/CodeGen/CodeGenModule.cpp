@@ -5596,7 +5596,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         T = D->getType();
 
       if (getLangOpts().HLSL &&
-          getHLSLRuntime().isResourceRecordType(D->getType().getTypePtr())) {
+          D->getType().getTypePtr()->isHLSLResourceRecord()) {
         Init = llvm::PoisonValue::get(getTypes().ConvertType(ASTTy));
         NeedsGlobalCtor = true;
       } else if (getLangOpts().CPlusPlus) {

@@ -5114,7 +5114,7 @@ bool Type::hasSizedVLAType() const {
   return false;
 }
 
-bool Type::isHLSLResourceClass() const {
+bool Type::isHLSLResourceRecord() const {
   return HLSLAttributedResourceType::findHandleTypeOnResource(this) != nullptr;
 }
 
