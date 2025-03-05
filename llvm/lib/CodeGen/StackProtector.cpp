@@ -136,7 +136,8 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   bool Changed = InsertStackProtectors(TM, &F, DT ? &DTU : nullptr,
                                        Info.HasPrologue, Info.HasIRCheck);
 #ifdef EXPENSIVE_CHECKS
-  assert((!DT || DT->verify(DominatorTree::VerificationLevel::Full)) &&
+  assert((!DT ||
+          DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full)) &&
          "Failed to maintain validity of domtree!");
 #endif
 
