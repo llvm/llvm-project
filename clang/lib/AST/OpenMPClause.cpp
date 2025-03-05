@@ -797,7 +797,8 @@ OMPReductionClause *OMPReductionClause::Create(
     ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
     ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps,
     ArrayRef<Expr *> CopyOps, ArrayRef<Expr *> CopyArrayTemps,
-    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate,ArrayRef<bool> IsPrivateVarReduction) {
+    ArrayRef<Expr *> CopyArrayElems, Stmt *PreInit, Expr *PostUpdate,
+    ArrayRef<bool> IsPrivateVarReduction) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(
       (Modifier == OMPC_REDUCTION_inscan ? 8 : 5) * VL.size()));
   auto *Clause = new (Mem)

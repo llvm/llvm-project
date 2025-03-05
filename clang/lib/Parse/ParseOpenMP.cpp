@@ -4680,8 +4680,9 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_private;
         Data.OriginalSharingModifierLoc = Tok.getLocation();
         ConsumeToken();
-      } else if (Tok.is(tok::identifier) && (PP.getSpelling(Tok) == "shared" 
-           || PP.getSpelling(Tok) == "default")) {
+      } else if (Tok.is(tok::identifier) &&
+                 (PP.getSpelling(Tok) == "shared" ||
+                  PP.getSpelling(Tok) == "default")) {
         Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_shared;
         Data.OriginalSharingModifierLoc = Tok.getLocation();
         ConsumeToken();
