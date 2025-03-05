@@ -3547,7 +3547,8 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3555,14 +3556,16 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::Type resultType, mlir::StringAttr intrin,
                             mlir::ValueRange args) {
   build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3570,7 +3573,101 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
+}
+
+ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
+                                   OperationState &result) {
+  StringAttr intrinAttr;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+  SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
+  SmallVector<SmallVector<Type>> opBundleOperandTypes;
+  ArrayAttr opBundleTags;
+
+  // Parse intrinsic name.
+  if (parser.parseCustomAttributeWithFallback(
+          intrinAttr, parser.getBuilder().getType<NoneType>()))
+    return failure();
+  result.addAttribute(CallIntrinsicOp::getIntrinAttrName(result.name),
+                      intrinAttr);
+
+  if (parser.parseLParen())
+    return failure();
+
+  // Parse the function arguments.
+  if (parser.parseOperandList(operands))
+    return mlir::failure();
+
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  // Handle bundles.
+  SMLoc opBundlesLoc = parser.getCurrentLocation();
+  if (std::optional<ParseResult> result = parseOpBundles(
+          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
+      result && failed(*result))
+    return failure();
+  if (opBundleTags && !opBundleTags.empty())
+    result.addAttribute(
+        CallIntrinsicOp::getOpBundleTagsAttrName(result.name).getValue(),
+        opBundleTags);
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
+  SmallVector<DictionaryAttr> argAttrs;
+  SmallVector<DictionaryAttr> resultAttrs;
+  if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
+                                      operands, argAttrs, resultAttrs))
+    return failure();
+  call_interface_impl::addArgAndResultAttrs(
+      parser.getBuilder(), result, argAttrs, resultAttrs,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+
+  if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
+                              opBundleOperandTypes,
+                              getOpBundleSizesAttrName(result.name)))
+    return failure();
+
+  int32_t numOpBundleOperands = 0;
+  for (const auto &operands : opBundleOperands)
+    numOpBundleOperands += operands.size();
+
+  result.addAttribute(
+      CallIntrinsicOp::getOperandSegmentSizeAttr(),
+      parser.getBuilder().getDenseI32ArrayAttr(
+          {static_cast<int32_t>(operands.size()), numOpBundleOperands}));
+
+  return mlir::success();
+}
+
+void CallIntrinsicOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p.printAttributeWithoutType(getIntrinAttr());
+
+  OperandRange args = getArgs();
+  p << "(" << args << ")";
+
+  // Operand bundles.
+  if (!getOpBundleOperands().empty()) {
+    p << ' ';
+    printOpBundles(p, *this, getOpBundleOperands(),
+                   getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
+  }
+
+  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+                          {getOperandSegmentSizesAttrName(),
+                           getOpBundleSizesAttrName(), getIntrinAttrName(),
+                           getOpBundleTagsAttrName(), getArgAttrsAttrName(),
+                           getResAttrsAttrName()});
+
+  p << " : ";
+
+  // Reconstruct the MLIR function type from operand and result types.
+  call_interface_impl::printFunctionSignature(
+      p, args.getTypes(), getArgAttrsAttr(),
+      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
 }
 
 //===----------------------------------------------------------------------===//

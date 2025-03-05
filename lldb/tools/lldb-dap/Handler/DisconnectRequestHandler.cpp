@@ -64,8 +64,8 @@ void DisconnectRequestHandler::operator()(
   const auto *arguments = request.getObject("arguments");
 
   bool defaultTerminateDebuggee = dap.is_attach ? false : true;
-  bool terminateDebuggee =
-      GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
+  bool terminateDebuggee = GetBoolean(arguments, "terminateDebuggee")
+                               .value_or(defaultTerminateDebuggee);
 
   lldb::SBError error = dap.Disconnect(terminateDebuggee);
   if (error.Fail())

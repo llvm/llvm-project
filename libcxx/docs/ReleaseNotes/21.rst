@@ -50,6 +50,9 @@ Improvements and New Features
 - The ``std::ranges::equal`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a performance
   improvement of up to 188x.
 
+- The ``std::ranges::swap_ranges`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a
+  performance improvement of up to 611x.
+
 - Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals

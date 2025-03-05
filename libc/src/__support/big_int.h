@@ -272,15 +272,15 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   if (LIBC_UNLIKELY(offset == 0))
     return array;
   const bool is_neg = is_signed && is_negative(array);
-  constexpr auto at = [](size_t index) -> size_t {
+  constexpr auto at = [](size_t index) -> int {
     // reverse iteration when direction == LEFT.
     if constexpr (direction == LEFT)
-      return N - index - 1;
-    return index;
+      return int(N) - int(index) - 1;
+    return int(index);
   };
   const auto safe_get_at = [&](size_t index) -> word {
     // return appropriate value when accessing out of bound elements.
-    const size_t i = at(index);
+    const int i = at(index);
     if (i < 0)
       return 0;
     if (i >= int(N))
@@ -465,8 +465,7 @@ public:
   }
 
   // Initialize the first word to |v| and the rest to 0.
-  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T> &&
-                                                    !cpp::is_same_v<T, bool>>>
+  template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
   LIBC_INLINE constexpr BigInt(T v) {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = v < 0;
