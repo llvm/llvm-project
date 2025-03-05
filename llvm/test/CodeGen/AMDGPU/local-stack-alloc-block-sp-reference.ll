@@ -228,58 +228,35 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_cbranch_scc1 .LBB2_1
 ; MUBUF-NEXT:  ; %bb.2: ; %split
+; MUBUF-NEXT:    s_movk_i32 s5, 0x12d4
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
-<<<<<<< HEAD
-; MUBUF-NEXT:    s_movk_i32 s4, 0x12d4
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
-; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12c0, v1
-; MUBUF-NEXT:    v_or_b32_e32 v1, s4, v2
-; MUBUF-NEXT:    s_movk_i32 s4, 0x12d0
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v5, v1, s[0:3], 0 offen glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v1, s4, v2
-; MUBUF-NEXT:    s_movk_i32 s4, 0x12c4
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
-; MUBUF-NEXT:    buffer_load_dword v4, v1, s[0:3], 0 offen glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v1, s4, v2
-; MUBUF-NEXT:    buffer_load_dword v6, v1, s[0:3], 0 offen glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v7, v0, s[0:3], 0 offen glc
-; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_movk_i32 s4, 0x12cc
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
-; MUBUF-NEXT:    v_or_b32_e32 v0, s4, v1
-; MUBUF-NEXT:    s_movk_i32 s4, 0x12c8
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
-; MUBUF-NEXT:    v_or_b32_e32 v1, s4, v2
-; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x4000
-=======
-; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12d4, v1
+; MUBUF-NEXT:    v_or_b32_e32 v0, s5, v1
+; MUBUF-NEXT:    s_movk_i32 s5, 0x12d0
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
 ; MUBUF-NEXT:    s_movk_i32 s4, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12d0, v1
+; MUBUF-NEXT:    v_or_b32_e32 v0, s5, v1
+; MUBUF-NEXT:    s_movk_i32 s5, 0x12c4
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x4000
 ; MUBUF-NEXT:    s_or_b32 s4, s4, 0x12c0
 ; MUBUF-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v0, 0x12c4, v1
-; MUBUF-NEXT:    v_mov_b32_e32 v3, 0x4000
+; MUBUF-NEXT:    v_or_b32_e32 v0, s5, v1
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, s4
-; MUBUF-NEXT:    v_or_b32_e32 v2, 0x12cc, v3
+; MUBUF-NEXT:    s_movk_i32 s4, 0x12cc
+; MUBUF-NEXT:    v_mov_b32_e32 v3, 0x4000
+; MUBUF-NEXT:    v_or_b32_e32 v2, s4, v3
+; MUBUF-NEXT:    s_movk_i32 s4, 0x12c8
 ; MUBUF-NEXT:    v_mov_b32_e32 v6, 0x4000
->>>>>>> a614f2b489caa19001b2f44784514a6226f79cb7
 ; MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_mov_b32_e32 v7, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v3, v2, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_or_b32_e32 v2, 0x12c8, v6
+; MUBUF-NEXT:    v_or_b32_e32 v2, s4, v6
 ; MUBUF-NEXT:    v_mov_b32_e32 v8, 0x4000
 ; MUBUF-NEXT:    v_mov_b32_e32 v9, 0x4000
 ; MUBUF-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen glc
