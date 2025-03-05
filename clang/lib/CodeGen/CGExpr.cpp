@@ -22,6 +22,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "MitigationTagging.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -6091,6 +6092,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   // function pointer is a member of the bit set for the function type.
   if (SanOpts.has(SanitizerKind::CFIICall) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+    AttachMitigationMetadataToFunction(
+        *this, MitigationKey::CFI_ICALL,
+        SanOpts.has(clang::SanitizerKind::CFIICall));
+
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 

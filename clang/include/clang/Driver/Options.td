@@ -3891,6 +3891,12 @@ defm split_stack : BoolFOption<"split-stack",
   CodeGenOpts<"EnableSegmentedStacks">, DefaultFalse,
   NegFlag<SetFalse, [], [ClangOption], "Wouldn't use segmented stack">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use segmented stack">>;
+defm mitigation_analysis : BoolFOption<"mitigation-analysis",
+  CodeGenOpts<"MitigationAnalysis">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " mitigation analysis">>,
+  DocBrief<"Instrument mitigations (CFI, Stack Protectors, Auto-Var-Init, StackClashProtection) to analyze their coverage">;
 def fstack_protector_all : Flag<["-"], "fstack-protector-all">, Group<f_Group>,
   HelpText<"Enable stack protectors for all functions">;
 defm stack_clash_protection : BoolFOption<"stack-clash-protection",
