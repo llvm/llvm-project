@@ -89,9 +89,9 @@ class TestObjectFileJSON(TestBase):
                             "size": TEXT_size,
                             "read": True,
                             "write": False,
-                            "execute": True
+                            "execute": True,
                         }
-                    ]
+                    ],
                 },
                 {
                     "name": "__DATA",
@@ -100,8 +100,8 @@ class TestObjectFileJSON(TestBase):
                     "size": DATA_size,
                     "read": True,
                     "write": True,
-                    "execute": False
-                }
+                    "execute": False,
+                },
             ],
             "symbols": [
                 {
@@ -130,8 +130,7 @@ class TestObjectFileJSON(TestBase):
         self.assertEqual(TEXT_section.GetName(), "__TEXT")
         self.assertEqual(TEXT_section.file_addr, TEXT_file_addr)
         self.assertEqual(TEXT_section.size, TEXT_size)
-        self.assertEqual(TEXT_section.GetSectionType(),
-                         lldb.eSectionTypeContainer)
+        self.assertEqual(TEXT_section.GetSectionType(), lldb.eSectionTypeContainer)
         self.assertEqual(TEXT_section.GetNumSubSections(), 1)
         text_permissions = TEXT_section.GetPermissions()
         self.assertTrue((text_permissions & lldb.ePermissionsReadable) != 0)
@@ -143,8 +142,7 @@ class TestObjectFileJSON(TestBase):
         self.assertEqual(text_section.GetName(), "__text")
         self.assertEqual(text_section.file_addr, TEXT_file_addr)
         self.assertEqual(text_section.size, TEXT_size)
-        self.assertEqual(text_section.GetSectionType(),
-                         lldb.eSectionTypeCode)
+        self.assertEqual(text_section.GetSectionType(), lldb.eSectionTypeCode)
         self.assertEqual(text_section.GetNumSubSections(), 0)
         text_permissions = text_section.GetPermissions()
         self.assertTrue((text_permissions & lldb.ePermissionsReadable) != 0)
@@ -156,8 +154,7 @@ class TestObjectFileJSON(TestBase):
         self.assertEqual(DATA_section.GetName(), "__DATA")
         self.assertEqual(DATA_section.file_addr, DATA_file_addr)
         self.assertEqual(DATA_section.size, DATA_size)
-        self.assertEqual(DATA_section.GetSectionType(),
-                         lldb.eSectionTypeData)
+        self.assertEqual(DATA_section.GetSectionType(), lldb.eSectionTypeData)
         data_permissions = DATA_section.GetPermissions()
         self.assertTrue((data_permissions & lldb.ePermissionsReadable) != 0)
         self.assertTrue((data_permissions & lldb.ePermissionsWritable) != 0)
