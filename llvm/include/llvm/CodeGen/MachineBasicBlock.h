@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBASICBLOCK_H
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SparseBitVector.h"
@@ -158,6 +159,7 @@ private:
 
   MachineFunction *xParent;
   Instructions Insts;
+  const TargetRegisterInfo *TRI;
 
   /// Keep track of the predecessor / successor basic blocks.
   SmallVector<MachineBasicBlock *, 4> Predecessors;
@@ -176,6 +178,10 @@ private:
   /// Keep track of the physical registers that are livein of the basicblock.
   using LiveInVector = std::vector<RegisterMaskPair>;
   LiveInVector LiveIns;
+
+  /// Keeps track of live register units for those physical registers which
+  /// are livein of the basicblock.
+  BitVector LiveInRegUnits;
 
   /// Alignment of the basic block. One if the basic block does not need to be
   /// aligned.
@@ -467,10 +473,16 @@ public:
   void addLiveIn(MCRegister PhysReg,
                  LaneBitmask LaneMask = LaneBitmask::getAll()) {
     LiveIns.push_back(RegisterMaskPair(PhysReg, LaneMask));
+    addLiveInRegUnit(PhysReg, LaneMask);
   }
   void addLiveIn(const RegisterMaskPair &RegMaskPair) {
     LiveIns.push_back(RegMaskPair);
+    addLiveInRegUnit(RegMaskPair.PhysReg, RegMaskPair.LaneMask);
   }
+
+  // Sets the register units for Reg based on the LaneMask in the
+  // LiveInRegUnits.
+  void addLiveInRegUnit(MCRegister Reg, LaneBitmask LaneMask);
 
   /// Sorts and uniques the LiveIns vector. It can be significantly faster to do
   /// this than repeatedly calling isLiveIn before calling addLiveIn for every
@@ -492,6 +504,9 @@ public:
   /// Remove the specified register from the live in set.
   void removeLiveIn(MCRegister Reg,
                     LaneBitmask LaneMask = LaneBitmask::getAll());
+
+  /// Resets the register units from LiveInRegUnits for the specified regsiters.
+  void removeLiveInRegUnit(MCRegister Reg);
 
   /// Return true if the specified register is in the live in set.
   bool isLiveIn(MCRegister Reg,

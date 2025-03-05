@@ -68,8 +68,8 @@ define arm_aapcs_vfpcc void @aese_via_call2(half %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    push {r4, lr}
 ; CHECK-FIX-NEXT:    mov r4, r0
 ; CHECK-FIX-NEXT:    bl get_inputf16
-; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
@@ -89,8 +89,8 @@ define arm_aapcs_vfpcc void @aese_via_call3(float %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    push {r4, lr}
 ; CHECK-FIX-NEXT:    mov r4, r0
 ; CHECK-FIX-NEXT:    bl get_inputf32
-; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
@@ -2222,8 +2222,8 @@ define arm_aapcs_vfpcc void @aesd_via_call2(half %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    push {r4, lr}
 ; CHECK-FIX-NEXT:    mov r4, r0
 ; CHECK-FIX-NEXT:    bl get_inputf16
-; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
@@ -2243,8 +2243,8 @@ define arm_aapcs_vfpcc void @aesd_via_call3(float %0, ptr %1) nounwind {
 ; CHECK-FIX-NEXT:    push {r4, lr}
 ; CHECK-FIX-NEXT:    mov r4, r0
 ; CHECK-FIX-NEXT:    bl get_inputf32
-; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    vld1.64 {d16, d17}, [r4]
+; CHECK-FIX-NEXT:    vorr q0, q0, q0
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r4]
