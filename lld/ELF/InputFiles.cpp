@@ -1010,7 +1010,8 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
     const uint8_t *base = sec.content().data();
-    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data, sec.name);
+    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data,
+                               sec.name);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
