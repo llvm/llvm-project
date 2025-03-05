@@ -337,13 +337,9 @@ using __unsigned_integer_of_size_t _LIBCPP_NODEBUG = typename __unsigned_integer
 template <class _Sc>
 using __unsigned_representation_for_t _LIBCPP_NODEBUG = __unsigned_integer_of_size_t<sizeof(_Sc)>;
 
-// Represent a scalar type as an ordered integer
-
-// The function is defined for ordered scalar types: integers, floating-point numbers, pointers, and enums.
+// The function `__to_ordered_integral` is defined for integers and IEEE 754 floating-point numbers.
 // Returns an integer representation such that for any `x` and `y` such that `x < y`, the expression
-// `__to_ordered_integral(x) < __to_ordered_integral(y)` is true, where `x`, `y` are values of the `Scalar` type.
-// __unsigned_representation_for_t<_Scalar> __to_ordered_integral(_Scalar);
-
+// `__to_ordered_integral(x) < __to_ordered_integral(y)` is true, where `x`, `y` are integers or IEEE 754 floats.
 template <class _Integral, enable_if_t< is_integral<_Integral>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Integral __n) {
   return __n;
