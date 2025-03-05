@@ -568,10 +568,9 @@ void createMemprofHistogramFlagVar(Module &M) {
 void createMemprofDefaultOptionsVar(Module &M) {
   Constant *OptionsConst = ConstantDataArray::getString(
       M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
-  GlobalVariable *OptionsVar =
-      new GlobalVariable(M, OptionsConst->getType(), /*isConstant=*/true,
-                         GlobalValue::WeakAnyLinkage, OptionsConst,
-                         "__memprof_default_options_str");
+  GlobalVariable *OptionsVar = new GlobalVariable(
+      M, OptionsConst->getType(), /*isConstant=*/true,
+      GlobalValue::WeakAnyLinkage, OptionsConst, getMemprofOptionsSymbolName());
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     OptionsVar->setLinkage(GlobalValue::ExternalLinkage);
@@ -771,23 +770,15 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
 
 // Helper to compare the InlinedCallStack computed from an instruction's debug
 // info to a list of Frames from profile data (either the allocation data or a
-// callsite). For callsites, the StartIndex to use in the Frame array may be
-// non-zero.
+// callsite).
 static bool
 stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
                                    ArrayRef<uint64_t> InlinedCallStack) {
-  auto StackFrame = ProfileCallStack.begin();
-  auto InlCallStackIter = InlinedCallStack.begin();
-  for (; StackFrame != ProfileCallStack.end() &&
-         InlCallStackIter != InlinedCallStack.end();
-       ++StackFrame, ++InlCallStackIter) {
-    uint64_t StackId = computeStackId(*StackFrame);
-    if (StackId != *InlCallStackIter)
-      return false;
-  }
-  // Return true if we found and matched all stack ids from the call
-  // instruction.
-  return InlCallStackIter == InlinedCallStack.end();
+  return ProfileCallStack.size() >= InlinedCallStack.size() &&
+         llvm::equal(ProfileCallStack.take_front(InlinedCallStack.size()),
+                     InlinedCallStack, [](const Frame &F, uint64_t StackId) {
+                       return computeStackId(F) == StackId;
+                     });
 }
 
 static bool isAllocationWithHotColdVariant(const Function *Callee,
@@ -929,11 +920,11 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
     longestCommonSequence<LineLocation, GlobalValue::GUID>(
         ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
         [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
-    bool Inserted = UndriftMaps.try_emplace(CallerGUID, Matchings).second;
+    [[maybe_unused]] bool Inserted =
+        UndriftMaps.try_emplace(CallerGUID, std::move(Matchings)).second;
 
     // The insertion must succeed because we visit each GUID exactly once.
     assert(Inserted);
-    (void)Inserted;
   }
 
   return UndriftMaps;
@@ -1131,10 +1122,9 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
       // instruction's leaf location in that map, and if the rest of the
       // instruction's locations match the prefix Frame locations on an
       // allocation context with the same leaf.
-      if (AllocInfoIter != LocHashToAllocInfo.end()) {
-        // Only consider allocations which support hinting.
-        if (!isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI))
-          continue;
+      if (AllocInfoIter != LocHashToAllocInfo.end() &&
+          // Only consider allocations which support hinting.
+          isAllocationWithHotColdVariant(CI->getCalledFunction(), TLI)) {
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to
         // the minimal needed to disambiguate contexts with unique behavior.
@@ -1198,10 +1188,12 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
         continue;
       }
 
+      if (CallSitesIter == LocHashToCallSites.end())
+        continue;
+
       // Otherwise, add callsite metadata. If we reach here then we found the
       // instruction's leaf location in the callsites map and not the allocation
       // map.
-      assert(CallSitesIter != LocHashToCallSites.end());
       for (auto CallStackIdx : CallSitesIter->second) {
         // If we found and thus matched all frames on the call, create and
         // attach call stack metadata.

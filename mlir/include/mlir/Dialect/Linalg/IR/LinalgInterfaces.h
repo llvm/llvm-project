@@ -221,4 +221,7 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 /// Include the generated interface declarations.
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h.inc"
 
+/// Include the generated relayout interface declarations.
+#include "mlir/Dialect/Linalg/IR/RelayoutOpInterface.h.inc"
+
 #endif // MLIR_DIALECT_LINALG_IR_LINALGINTERFACES_H_

@@ -217,10 +217,11 @@ std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   return (Inst.getOpcode() == PPC::PLDpc);
 }
 
-MCELFStreamer *llvm::createPPCELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW,
-    std::unique_ptr<MCCodeEmitter> Emitter) {
-  return new PPCELFStreamer(Context, std::move(MAB), std::move(OW),
+MCStreamer *
+llvm::createPPCELFStreamer(const Triple &T, MCContext &C,
+                           std::unique_ptr<MCAsmBackend> &&MAB,
+                           std::unique_ptr<MCObjectWriter> &&OW,
+                           std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new PPCELFStreamer(C, std::move(MAB), std::move(OW),
                             std::move(Emitter));
 }

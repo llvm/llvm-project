@@ -20,26 +20,26 @@
  * THE SOFTWARE.
  */
 
-#include "math/clc_ldexp.h"
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/math/math.h>
+#include <clc/math/clc_ldexp.h>
 
-_CLC_DEFINE_BINARY_BUILTIN(float, ldexp, __clc_ldexp, float, int)
+_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(float, ldexp, __clc_ldexp, float, int)
 
 #ifdef cl_khr_fp64
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-_CLC_DEFINE_BINARY_BUILTIN(double, ldexp, __clc_ldexp, double, int)
+_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(double, ldexp, __clc_ldexp, double, int)
+
 #endif
 
 #ifdef cl_khr_fp16
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-_CLC_DEFINE_BINARY_BUILTIN(half, ldexp, __clc_ldexp, half, int)
+_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(half, ldexp, __clc_ldexp, half, int)
+
 #endif
 
 // This defines all the ldexp(GENTYPE, int) variants
