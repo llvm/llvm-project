@@ -14,8 +14,8 @@ namespace direct {
 
 class CIRToLLVMTBAAAttrLowering {
 public:
-  CIRToLLVMTBAAAttrLowering(mlir::MLIRContext *mlirContext)
-      : mlirContext(mlirContext) {}
+  CIRToLLVMTBAAAttrLowering(mlir::MLIRContext *mlirContext, bool isCPlusPlus)
+      : mlirContext(mlirContext), isCPlusPlus(isCPlusPlus) {}
 
   mlir::LLVM::TBAATypeDescriptorAttr
   lowerCIRTBAAAttrToLLVMTBAAAttr(mlir::Attribute tbaa) {
@@ -44,6 +44,9 @@ public:
 
 private:
   mlir::LLVM::TBAARootAttr getRoot() {
+    if (isCPlusPlus)
+      return createTBAARoot("Simple C++ TBAA");
+
     return createTBAARoot("Simple C/C++ TBAA");
   }
 
@@ -67,13 +70,16 @@ private:
   }
 
   mlir::MLIRContext *mlirContext;
+  bool isCPlusPlus;
 };
 
 mlir::ArrayAttr lowerCIRTBAAAttr(mlir::Attribute tbaa,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  cir::LowerModule *lowerMod) {
   auto *ctx = rewriter.getContext();
-  CIRToLLVMTBAAAttrLowering lower(ctx);
+  auto langAttr = mlir::cast<cir::LangAttr>(
+      lowerMod->getModule()->getAttr(cir::CIRDialect::getLangAttrName()));
+  CIRToLLVMTBAAAttrLowering lower(ctx, langAttr.isCXX());
   if (auto tbaaTag = mlir::dyn_cast<cir::TBAATagAttr>(tbaa)) {
     mlir::LLVM::TBAATypeDescriptorAttr accessType =
         lower.lowerCIRTBAAAttrToLLVMTBAAAttr(tbaaTag.getAccess());

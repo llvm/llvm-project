@@ -4742,8 +4742,6 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // Allow operations that will be lowered directly to LLVM IR.
   target.addLegalOp<mlir::LLVM::ZeroOp>();
 
-  processCIRAttrs(module);
-
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);
   collect_unreachable(module, ops);
@@ -4770,6 +4768,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                             dtorAttr.getPriority());
                     });
   buildGlobalAnnotationsVar(stringGlobalsMap, argStringGlobalsMap, argsVarMap);
+
+  processCIRAttrs(module);
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {

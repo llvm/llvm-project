@@ -380,7 +380,7 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // OLD-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT]], i64 0}
 // OLD-PATH: [[TYPE_INT]] = !{!"int", [[TYPE_CHAR:!.*]], i64 0}
 // OLD-PATH: [[TYPE_CHAR]] = !{!"omnipotent char", [[TAG_cxx_tbaa:!.*]],
-// OLD-PATH: [[TAG_cxx_tbaa]] = !{!"Simple C/C++ TBAA"}
+// OLD-PATH: [[TAG_cxx_tbaa]] = !{!"Simple C++ TBAA"}
 // OLD-PATH: [[TAG_A_f32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TYPE_A]] = !{!"_ZTS7StructA", [[TYPE_SHORT:!.*]], i64 0, [[TYPE_INT]], i64 4, [[TYPE_SHORT]], i64 8, [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_SHORT:!.*]] = !{!"short", [[TYPE_CHAR]]
