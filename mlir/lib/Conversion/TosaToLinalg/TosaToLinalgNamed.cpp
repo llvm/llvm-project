@@ -260,18 +260,26 @@ public:
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
 
     // Get and verify zero points.
-    int64_t inputZpVal;
-    int64_t weightZpVal;
-
-    if (op.getInputZeroPoint(inputZpVal).failed() ||
-        op.getWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
       return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
+          op, "input zero point cannot be statically determined");
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
-        op.verifyWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
       return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
+          op, "weight zero point cannot be statically determined");
+
+    int64_t inputZpVal = *maybeIZp;
+    int64_t weightZpVal = *maybeWZp;
+
+    if (op.verifyInputZeroPoint(inputZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+
+    if (op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
 
     bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
 
@@ -448,18 +456,26 @@ public:
         /*kernelSizeDims=*/{0, 1}, rewriter);
 
     // Get and verify zero points.
-    int64_t inputZpVal;
-    int64_t weightZpVal;
 
-    if (op.getInputZeroPoint(inputZpVal).failed() ||
-        op.getWeightZeroPoint(weightZpVal).failed())
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeIZp))
       return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
+          op, "input zero point cannot be statically determined");
+    if (failed(maybeWZp))
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point cannot be statically determined");
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed() ||
-        op.verifyWeightZeroPoint(weightZpVal).failed())
+    int64_t inputZpVal = *maybeIZp;
+    int64_t weightZpVal = *maybeWZp;
+
+    if (op.verifyInputZeroPoint(inputZpVal).failed())
       return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
+          op, "input zero point must be zero for non-int8 integer types");
+
+    if (op.verifyWeightZeroPoint(weightZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
 
     bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
     auto weightShape = weightTy.getShape();
@@ -809,6 +825,18 @@ public:
       return failure();
     SmallVector<Value> dynamicDims = *dynamicDimsOr;
 
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+    if (failed(maybeIZp))
+      return rewriter.notifyMatchFailure(
+          op, "input zero point could not be statically determined");
+    if (failed(maybeOZp))
+      return rewriter.notifyMatchFailure(
+          op, "output zero point could not be statically determined");
+
+    int64_t inputZpVal = *maybeIZp;
+    int64_t outputZpVal = *maybeOZp;
+
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
@@ -928,9 +956,9 @@ public:
 
             // If we have quantization information we need to apply an offset
             // for the input zp value.
-            if (op.getInputZp()) {
-              auto inputZp =
-                  rewriter.create<arith::ConstantOp>(loc, op.getInputZpAttr());
+            if (inputZpVal != 0) {
+              auto inputZp = rewriter.create<arith::ConstantOp>(
+                  loc, b.getIntegerAttr(accETy, inputZpVal));
               Value offset =
                   rewriter.create<arith::MulIOp>(loc, accETy, count, inputZp);
               poolVal =
@@ -982,9 +1010,9 @@ public:
 
             // If we have quantization information we need to apply output
             // zeropoint.
-            if (op.getOutputZp()) {
-              auto outputZp =
-                  rewriter.create<arith::ConstantOp>(loc, op.getOutputZpAttr());
+            if (outputZpVal != 0) {
+              auto outputZp = rewriter.create<arith::ConstantOp>(
+                  loc, b.getIntegerAttr(scaled.getType(), outputZpVal));
               scaled = rewriter.create<arith::AddIOp>(loc, scaled, outputZp)
                            .getResult();
             }

@@ -173,19 +173,20 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   auto flags = launch_info.GetLaunchFlags();
 
-  if (GetBoolean(arguments, "disableASLR", true))
+  if (GetBoolean(arguments, "disableASLR").value_or(true))
     flags |= lldb::eLaunchFlagDisableASLR;
-  if (GetBoolean(arguments, "disableSTDIO", false))
+  if (GetBoolean(arguments, "disableSTDIO").value_or(false))
     flags |= lldb::eLaunchFlagDisableSTDIO;
-  if (GetBoolean(arguments, "shellExpandArguments", false))
+  if (GetBoolean(arguments, "shellExpandArguments").value_or(false))
     flags |= lldb::eLaunchFlagShellExpandArguments;
-  const bool detachOnError = GetBoolean(arguments, "detachOnError", false);
+  const bool detachOnError =
+      GetBoolean(arguments, "detachOnError").value_or(false);
   launch_info.SetDetachOnError(detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
-  if (GetBoolean(arguments, "runInTerminal", false)) {
+  if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {

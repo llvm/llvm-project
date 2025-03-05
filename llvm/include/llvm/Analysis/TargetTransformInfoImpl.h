@@ -1006,13 +1006,9 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
-  }
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;
   }
 
