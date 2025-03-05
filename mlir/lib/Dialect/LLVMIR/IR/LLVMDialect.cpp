@@ -3587,7 +3587,7 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
 
   // Parse intrinsic name.
   if (parser.parseCustomAttributeWithFallback(
-          intrinAttr, parser.getBuilder().getType<NoneType>())) 
+          intrinAttr, parser.getBuilder().getType<NoneType>()))
     return failure();
   result.addAttribute(CallIntrinsicOp::getIntrinAttrName(result.name),
                       intrinAttr);

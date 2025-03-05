@@ -988,3 +988,10 @@ llvm.func @test_invoke_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 a
 ^bb2:
   llvm.return %0 : i16
 }
+
+// CHECK-LABEL: intrinsic_call_arg_attrs
+llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
