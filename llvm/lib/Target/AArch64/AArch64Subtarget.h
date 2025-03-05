@@ -410,8 +410,7 @@ public:
   unsigned getSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
-    if (MaxSVEVectorSizeInBits &&
-        MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
+    if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
       return MaxSVEVectorSizeInBits;
     return 0;
   }

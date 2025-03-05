@@ -7395,9 +7395,6 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
   } else
     return false;
 
-  assert(MulImm != std::numeric_limits<int64_t>::max() &&
-         "Uninitialized MulImm.");
-
   TypeSize TS = MemVT.getSizeInBits();
   int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
 
