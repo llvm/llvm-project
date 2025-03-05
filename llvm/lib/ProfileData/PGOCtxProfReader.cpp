@@ -168,14 +168,13 @@ Error PGOCtxProfileReader::readMetadata() {
   return Error::success();
 }
 
-Expected<std::map<GlobalValue::GUID, PGOCtxProfContext>>
-PGOCtxProfileReader::loadContexts() {
-  std::map<GlobalValue::GUID, PGOCtxProfContext> Ret;
+Expected<PGOCtxProfile> PGOCtxProfileReader::loadProfiles() {
+  PGOCtxProfile Ret;
   RET_ON_ERR(readMetadata());
   while (canReadContext()) {
     EXPECT_OR_RET(E, readContext(false));
     auto Key = E->second.guid();
-    if (!Ret.insert({Key, std::move(E->second)}).second)
+    if (!Ret.Contexts.insert({Key, std::move(E->second)}).second)
       return wrongValue("Duplicate roots");
   }
   return std::move(Ret);

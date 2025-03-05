@@ -371,14 +371,14 @@ private:
       }
     }
     if (auto condIf = dyn_cast<tosa::IfOp>(op)) {
-      if (!levelCheckListSize(op, condIf.getInputs().size(), "inputs") ||
-          !levelCheckListSize(op, condIf.getOutput().size(), "outputs")) {
+      if (!levelCheckListSize(op, condIf.getInputList().size(), "inputs") ||
+          !levelCheckListSize(op, condIf.getOutputList().size(), "outputs")) {
         return false;
       }
     }
     if (auto w = dyn_cast<tosa::WhileOp>(op)) {
-      if (!levelCheckListSize(op, w.getInputs().size(), "inputs") ||
-          !levelCheckListSize(op, w.getOutput().size(), "outputs")) {
+      if (!levelCheckListSize(op, w.getInputList().size(), "inputs") ||
+          !levelCheckListSize(op, w.getOutputList().size(), "outputs")) {
         return false;
       }
     }
@@ -450,7 +450,7 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   auto op = tosaOp.getOperation();
 
   // Only the condition input has rank limitation.
-  if (!levelCheckRank(op, tosaOp.getCond(), "operand", tosaLevel.MAX_RANK))
+  if (!levelCheckRank(op, tosaOp.getCondition(), "operand", tosaLevel.MAX_RANK))
     return false;
 
   return true;
