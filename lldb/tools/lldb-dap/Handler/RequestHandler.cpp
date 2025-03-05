@@ -184,7 +184,8 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   launch_info.SetDetachOnError(detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
+  const auto timeout_seconds =
+      GetInteger<uint64_t>(arguments, "timeout").value_or(30);
 
   if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
