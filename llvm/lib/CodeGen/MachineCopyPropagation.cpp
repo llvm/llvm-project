@@ -975,7 +975,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     // register move (i.e. one where source and destination registers are the
     // same). If so, delete it.
     CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands && CopyOperands->Source->getReg() == CopyOperands->Destination->getReg()) {
+    if (CopyOperands &&
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg()) {
       MI.eraseFromParent();
       NumDeletes++;
       Changed = true;
