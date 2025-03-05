@@ -7727,6 +7727,17 @@ void Sema::ProcessDeclAttributeList(
     D->setInvalidDecl();
   }
 
+  // Warn on global constructors and destructors created by attributes.
+  if (D->hasAttr<ConstructorAttr>() &&
+      !getDiagnostics().isIgnored(diag::warn_global_constructor,
+                                  D->getLocation()))
+    Diag(D->getLocation(), diag::warn_global_constructor)
+        << D->getSourceRange();
+  if (D->hasAttr<DestructorAttr>() &&
+      !getDiagnostics().isIgnored(diag::warn_global_destructor,
+                                  D->getLocation()))
+    Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
+
   // Do this check after processing D's attributes because the attribute
   // objc_method_family can change whether the given method is in the init
   // family, and it can be applied after objc_designated_initializer. This is a
