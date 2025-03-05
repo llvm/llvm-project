@@ -9423,11 +9423,9 @@ bool LLParser::addGlobalValueToIndex(
 
       VI = Index->getOrInsertValueInfo(GV);
     } else {
-      assert(
-          (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&
-          "Need a source_filename to compute GUID for local");
-      GUID = GlobalValue::getGUID(
-          GlobalValue::getGlobalIdentifier(Name, Linkage, SourceFileName));
+      assert(GlobalValue::isExternalLinkage(Linkage) &&
+             "Cannot compute GUID for local");
+      GUID = GlobalValue::getGUIDAssumingExternalLinkage(Name);
       VI = Index->getOrInsertValueInfo(GUID, Index->saveString(Name));
     }
   }
