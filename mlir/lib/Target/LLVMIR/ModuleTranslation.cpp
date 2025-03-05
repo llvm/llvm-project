@@ -1701,10 +1701,9 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
 }
 
 FailureOr<llvm::AttrBuilder>
-ModuleTranslation::convertParameterAttrs(CallOpInterface callOp,
+ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
-  Location loc = callOp.getLoc();
   auto attrNameToKindMapping = getAttrNameToKindMapping();
 
   for (auto namedAttr : paramAttrs) {
