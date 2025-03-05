@@ -3,6 +3,7 @@
 import gc
 import io
 import itertools
+from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import arith
@@ -617,6 +618,12 @@ def testOperationPrint():
     module.operation.write_bytecode(bytecode_stream, desired_version=1)
     bytecode = bytecode_stream.getvalue()
     assert bytecode.startswith(b"ML\xefR"), "Expected bytecode to start with MLïR"
+    with NamedTemporaryFile() as tmpfile:
+        module.operation.write_bytecode(str(tmpfile.name), desired_version=1)
+        tmpfile.seek(0)
+        assert tmpfile.read().startswith(
+            b"ML\xefR"
+        ), "Expected bytecode to start with MLïR"
     ctx2 = Context()
     module_roundtrip = Module.parse(bytecode, ctx2)
     f = io.StringIO()
@@ -636,6 +643,8 @@ def testOperationPrint():
     # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
     # Test printing using state.
     state = AsmState(module.operation)

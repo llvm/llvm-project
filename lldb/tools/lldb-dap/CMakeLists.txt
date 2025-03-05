@@ -23,6 +23,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
   FunctionBreakpoint.cpp
@@ -36,6 +37,43 @@ add_lldb_tool(lldb-dap
   SourceBreakpoint.cpp
   Watchpoint.cpp
 
+  Handler/ResponseHandler.cpp
+  Handler/AttachRequestHandler.cpp
+  Handler/BreakpointLocationsHandler.cpp
+  Handler/CompileUnitsRequestHandler.cpp
+  Handler/CompletionsHandler.cpp
+  Handler/ConfigurationDoneRequestHandler.cpp
+  Handler/ContinueRequestHandler.cpp
+  Handler/DataBreakpointInfoRequestHandler.cpp
+  Handler/DisassembleRequestHandler.cpp
+  Handler/DisconnectRequestHandler.cpp
+  Handler/EvaluateRequestHandler.cpp
+  Handler/ExceptionInfoRequestHandler.cpp
+  Handler/InitializeRequestHandler.cpp
+  Handler/LaunchRequestHandler.cpp
+  Handler/LocationsRequestHandler.cpp
+  Handler/ModulesRequestHandler.cpp
+  Handler/NextRequestHandler.cpp
+  Handler/PauseRequestHandler.cpp
+  Handler/ReadMemoryRequestHandler.cpp
+  Handler/RequestHandler.cpp
+  Handler/RestartRequestHandler.cpp
+  Handler/ScopesRequestHandler.cpp
+  Handler/SetBreakpointsRequestHandler.cpp
+  Handler/SetDataBreakpointsRequestHandler.cpp
+  Handler/SetExceptionBreakpointsRequestHandler.cpp
+  Handler/SetFunctionBreakpointsRequestHandler.cpp
+  Handler/SetInstructionBreakpointsRequestHandler.cpp
+  Handler/SetVariableRequestHandler.cpp
+  Handler/SourceRequestHandler.cpp
+  Handler/StackTraceRequestHandler.cpp
+  Handler/StepInRequestHandler.cpp
+  Handler/StepInTargetsRequestHandler.cpp
+  Handler/StepOutRequestHandler.cpp
+  Handler/TestGetTargetBreakpointsRequestHandler.cpp
+  Handler/ThreadsRequestHandler.cpp
+  Handler/VariablesRequestHandler.cpp
+
   LINK_LIBS
     liblldb
     lldbHost
@@ -45,6 +83,8 @@ add_lldb_tool(lldb-dap
     Option
     Support
   )
+
+target_include_directories(lldb-dap PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(LLDB_DAP_WELCOME_MESSAGE)
   target_compile_definitions(lldb-dap

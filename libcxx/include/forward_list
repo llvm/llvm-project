@@ -1557,7 +1557,7 @@ erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI typename forward_list<_Tp, _Allocator>::size_type
 erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
+  return std::erase_if(__c, [&](const auto& __elem) -> bool { return __elem == __v; });
 }
 #  endif
 

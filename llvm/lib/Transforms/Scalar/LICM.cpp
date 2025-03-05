@@ -140,7 +140,7 @@ static cl::opt<unsigned> FPAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
-cl::opt<unsigned> IntAssociationUpperLimit(
+static cl::opt<unsigned> IntAssociationUpperLimit(
     "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
     cl::desc(
         "Set upper limit for the number of transformations performed "
@@ -1935,7 +1935,6 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
   return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     /* StoreCaptures */ true,
                                      L->getHeader()->getTerminator(), DT);
 }
 

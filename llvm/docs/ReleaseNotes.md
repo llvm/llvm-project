@@ -107,6 +107,12 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
+  extension.
+* Adds experimental assembler support for the Qualcomm 'Xqccmp' extension, which
+  is a frame-pointer convention compatible version of Zcmp.
+* Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -146,6 +152,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
+
 Changes to LLDB
 ---------------------------------
 
@@ -161,6 +169,7 @@ Changes to LLDB
 ### Changes to lldb-dap
 
 * Breakpoints can now be set for specific columns within a line.
+* Function return value is now displayed on step-out.
 
 Changes to BOLT
 ---------------------------------

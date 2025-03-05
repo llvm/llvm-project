@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 #define MLIR_DIALECT_TOSA_TRANSFORMS_TOSAPROFILECOMPILANCE_H
 
+#include <unordered_map>
+
 #include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
@@ -141,10 +143,12 @@ public:
     case Extension::fft:
       return {Profile::pro_fp};
     case Extension::variable:
+    case Extension::controlflow:
       return {Profile::pro_fp, Profile::pro_int};
     case Extension::none:
       return {};
     };
+    llvm_unreachable("bad Extension type");
   }
 
   // Debug utilites.

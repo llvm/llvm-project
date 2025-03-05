@@ -566,20 +566,20 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
     Example:
 
     Defining a unary linalg.elemwise with default indexing-map:
-      ```mlir
-      %exp = linalg.elemwise
-             kind=#linalg.elemwise_kind<exp>
-             ins(%x : tensor<4x16x8xf32>)
-             outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
-      ```
+    ```mlir
+    %exp = linalg.elemwise
+        kind=#linalg.elemwise_kind<exp>
+        ins(%x : tensor<4x16x8xf32>)
+        outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
+    ```
 
     Defining a binary linalg.elemwise with user-defined indexing-map:
     ```mlir
     %add = linalg.elemwise
-            kind=#linalg.elemwise_kind<add>
-            indexing_maps = [#transpose, #broadcast, #identity]
-            ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
-            outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+        kind=#linalg.elemwise_kind<add>
+        indexing_maps = [#transpose, #broadcast, #identity]
+        ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
+        outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
     ```
   }];
 

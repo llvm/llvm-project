@@ -56,14 +56,14 @@ define amdgpu_kernel void @v6i16_arg(<6 x i16> %in) nounwind {
 }
 
 ; FUNC-LABEL: {{^}}v5i32_arg:
-; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+; GCN: s_load_dwordx4 s[0:3], s[8:9], 0x0
 define amdgpu_kernel void @v5i32_arg(<5 x i32> %in) nounwind {
   store <5 x i32> %in, ptr addrspace(1) null
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v6i32_arg:
-; GCN: s_load_dwordx8 s[0:7], s[8:9], 0x0
+; GCN: s_load_dwordx4 s[0:3], s[8:9], 0x0
 define amdgpu_kernel void @v6i32_arg(<6 x i32> %in) nounwind {
   store <6 x i32> %in, ptr addrspace(1) null
   ret void

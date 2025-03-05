@@ -1657,10 +1657,6 @@ def err_omp_expected_colon : Error<"missing ':' in %0">;
 def err_omp_missing_comma : Error< "missing ',' after %0">;
 def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
-def err_omp_unknown_clause
-    : Error<"unknown clause '%0' in %1">;
-def warn_omp_default_deprecated : Warning<"'default' clause for"
-  " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;
