@@ -258,7 +258,8 @@ void InitializeRequestHandler::operator()(
   // sourceInitFile option is not from formal DAP specification. It is only
   // used by unit tests to prevent sourcing .lldbinit files from environment
   // which may affect the outcome of tests.
-  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+  bool source_init_file =
+      GetBoolean(arguments, "sourceInitFile").value_or(true);
 
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
@@ -300,7 +301,7 @@ void InitializeRequestHandler::operator()(
   dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
-  if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
+  if (GetBoolean(arguments, "supportsStartDebuggingRequest").value_or(false)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "

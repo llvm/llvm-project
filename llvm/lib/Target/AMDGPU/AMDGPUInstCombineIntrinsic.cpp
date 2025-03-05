@@ -1599,11 +1599,10 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
   // TODO: Preserve callsite attributes?
   CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
 
-  Value *Result = IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()),
-                                                 NewCall, FirstElt);
-  IC.replaceInstUsesWith(II, Result);
-  IC.eraseInstFromFunction(II);
-  return Result;
+  // FIXME: If the call has a convergence bundle, we end up leaving the dead
+  // call behind.
+  return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()), NewCall,
+                                        FirstElt);
 }
 
 std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(

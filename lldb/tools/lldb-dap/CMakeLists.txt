@@ -39,6 +39,7 @@ add_lldb_tool(lldb-dap
   ProgressEvent.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
+  Protocol.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
