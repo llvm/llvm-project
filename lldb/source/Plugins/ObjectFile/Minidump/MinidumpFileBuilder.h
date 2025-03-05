@@ -145,9 +145,9 @@ private:
 
   // Read a memory region from the process and write it to the file
   // in fixed size chunks.
-  lldb_private::Status
-  ReadWriteMemoryInChunks(const lldb_private::CoreFileMemoryRange &range,
-                          uint64_t *bytes_read);
+  lldb_private::Status ReadWriteMemoryInChunks(
+      const std::unique_ptr<lldb_private::DataBufferHeap> &data_up,
+      const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read);
 
   // Stores directories to fill in later
   std::vector<llvm::minidump::Directory> m_directories;
