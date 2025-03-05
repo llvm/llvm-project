@@ -176,7 +176,7 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
-  if (auto m = GetPreferredSanitizerModule(process_sp->GetTarget())) {
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
     SymbolContextList sc_list;
     sc_list.Append(SymbolContext(std::move(m)));
     options.SetPreferredSymbolContexts(std::move(sc_list));

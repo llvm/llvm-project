@@ -20,7 +20,7 @@ class Target;
 ///< when running InstrumentationRuntime utility expressions that use symbols
 ///< from the sanitizer libraries. This helper searches the target for such a
 ///< dylib. Returns nullptr if no such dylib was found.
-lldb::ModuleSP GetPreferredSanitizerModule(const Target &target);
+lldb::ModuleSP GetPreferredAsanModule(const Target &target);
 
 } // namespace lldb_private
 

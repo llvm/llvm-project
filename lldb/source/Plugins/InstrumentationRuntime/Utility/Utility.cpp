@@ -17,9 +17,9 @@ namespace lldb_private {
 ///< compiler-rt, and we should prefer it in favour of the system sanitizers.
 ///< This helper searches the target for such a dylib. Returns nullptr if no
 ///< such dylib was found.
-lldb::ModuleSP GetPreferredSanitizerModule(const Target &target) {
+lldb::ModuleSP GetPreferredAsanModule(const Target &target) {
   lldb::ModuleSP module;
-  llvm::Regex pattern(R"(libclang_rt\.(asan|tsan|ubsan)_.*_dynamic\.dylib)");
+  llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
   target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
     if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
       module = m;
