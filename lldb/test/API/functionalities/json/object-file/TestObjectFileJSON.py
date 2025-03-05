@@ -59,7 +59,15 @@ class TestObjectFileJSON(TestBase):
 
         module = target.AddModule(self.toModuleSpec(json_object_file_b))
         self.assertFalse(module.IsValid())
-
+        TEXT_file_addr = 0x100000000
+        DATA_file_addr = 0x100001000
+        foo_file_addr = TEXT_file_addr + 0x100
+        bar_file_addr = DATA_file_addr + 0x10
+        TEXT_size = 0x222
+        DATA_size = 0x333
+        foo_size = 0x11
+        bar_size = 0x22
+        slide = 0x100000000
         data = {
             "triple": target.GetTriple(),
             "uuid": str(uuid.uuid4()),
@@ -68,16 +76,29 @@ class TestObjectFileJSON(TestBase):
                 {
                     "name": "__TEXT",
                     "type": "code",
-                    "address": 0,
-                    "size": 0x222,
+                    "address": TEXT_file_addr,
+                    "size": TEXT_size,
+                },
+                {
+                    "name": "__DATA",
+                    "type": "code",
+                    "address": DATA_file_addr,
+                    "size": DATA_size,
                 }
             ],
             "symbols": [
                 {
                     "name": "foo",
-                    "address": 0x100,
-                    "size": 0x11,
-                }
+                    "type": "code",
+                    "address": foo_file_addr,
+                    "size": foo_size,
+                },
+                {
+                    "name": "bar",
+                    "type": "data",
+                    "address": bar_file_addr,
+                    "size": bar_size,
+                },
             ],
         }
 
@@ -87,17 +108,31 @@ class TestObjectFileJSON(TestBase):
         module = target.AddModule(self.toModuleSpec(json_object_file_c))
         self.assertTrue(module.IsValid())
 
-        section = module.GetSectionAtIndex(0)
-        self.assertTrue(section.IsValid())
-        self.assertEqual(section.GetName(), "__TEXT")
-        self.assertEqual(section.file_addr, 0x0)
-        self.assertEqual(section.size, 0x222)
+        text_section = module.GetSectionAtIndex(0)
+        self.assertTrue(text_section.IsValid())
+        self.assertEqual(text_section.GetName(), "__TEXT")
+        self.assertEqual(text_section.file_addr, TEXT_file_addr)
+        self.assertEqual(text_section.size, TEXT_size)
 
-        symbol = module.FindSymbol("foo")
-        self.assertTrue(symbol.IsValid())
-        self.assertEqual(symbol.addr.GetFileAddress(), 0x100)
-        self.assertEqual(symbol.GetSize(), 0x11)
+        data_section = module.GetSectionAtIndex(1)
+        self.assertTrue(data_section.IsValid())
+        self.assertEqual(data_section.GetName(), "__DATA")
+        self.assertEqual(data_section.file_addr, DATA_file_addr)
+        self.assertEqual(data_section.size, DATA_size)
 
-        error = target.SetSectionLoadAddress(section, 0x1000)
+        foo_symbol = module.FindSymbol("foo")
+        self.assertTrue(foo_symbol.IsValid())
+        self.assertEqual(foo_symbol.addr.GetFileAddress(), foo_file_addr)
+        self.assertEqual(foo_symbol.GetSize(), foo_size)
+
+        bar_symbol = module.FindSymbol("bar")
+        self.assertTrue(bar_symbol.IsValid())
+        self.assertEqual(bar_symbol.addr.GetFileAddress(), bar_file_addr)
+        self.assertEqual(bar_symbol.GetSize(), bar_size)
+
+        error = target.SetSectionLoadAddress(text_section, TEXT_file_addr + slide)
         self.assertSuccess(error)
-        self.assertEqual(symbol.addr.GetLoadAddress(target), 0x1100)
+        error = target.SetSectionLoadAddress(data_section, DATA_file_addr + slide)
+        self.assertSuccess(error)
+        self.assertEqual(foo_symbol.addr.GetLoadAddress(target), foo_file_addr + slide)
+        self.assertEqual(bar_symbol.addr.GetLoadAddress(target), bar_file_addr + slide)
