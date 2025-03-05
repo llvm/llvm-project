@@ -491,6 +491,7 @@ public:
   NODE(OmpWhenClause, Modifier)
   NODE(parser, OmpDirectiveName)
   NODE(parser, OmpDirectiveSpecification)
+  NODE_ENUM(OmpDirectiveSpecification, Flags)
   NODE(parser, OmpTraitPropertyName)
   NODE(parser, OmpTraitScore)
   NODE(parser, OmpTraitPropertyExtension)
