@@ -8,7 +8,6 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
-#include <iostream>
 
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
