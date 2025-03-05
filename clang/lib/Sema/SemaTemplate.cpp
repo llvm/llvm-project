@@ -7993,8 +7993,7 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   if (Ctx && Ctx->isExternCContext()) {
     SourceRange Range =
         TemplateParams->getTemplateLoc().isInvalid() && TemplateParams->size()
-            ? TemplateParams->getParam(TemplateParams->size() - 1)
-                  ->getSourceRange()
+            ? TemplateParams->getParam(0)->getSourceRange()
             : TemplateParams->getSourceRange();
     Diag(Range.getBegin(), diag::err_template_linkage) << Range;
     if (const LinkageSpecDecl *LSD = Ctx->getExternCContext())
