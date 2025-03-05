@@ -30,7 +30,7 @@ subroutine omp_do_lastprivate(a)
   ! CHECK:      %[[GT_UB:.*]] = arith.cmpi sgt, %[[NEXT_ARG1]], %[[UB]] : i32
   ! CHECK:      %[[SEL:.*]] = arith.select %[[STEP_DIR]], %[[LT_UB]], %[[GT_UB]] : i1
   ! CHECK:      fir.if %[[SEL]] {
-  ! CHECK:        fir.store %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
   ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
@@ -74,7 +74,7 @@ subroutine omp_do_lastprivate2(a, n)
   ! CHECK: %[[GT_UB:.*]] = arith.cmpi sgt, %[[NEXT_ARG2]], %[[UB]] : i32
   ! CHECK: %[[SEL:.*]] = arith.select %[[STEP_DIR]], %[[LT_UB]], %[[GT_UB]] : i1
   ! CHECK: fir.if %[[SEL]] {
-  ! CHECK:   fir.store %[[NEXT_ARG2]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK:   hlfir.assign %[[NEXT_ARG2]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK:   %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
   ! CHECK:   hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:   %[[N_PVT_LOAD:.*]] = fir.load %[[N_PVT_DECL]]#0 : !fir.ref<i32>
@@ -126,8 +126,8 @@ subroutine omp_do_lastprivate_collapse2(a)
   ! CHECK:      %[[SEL2:.*]] = arith.select %[[STEP2_END]], %[[LT_UB2]], %[[GT_UB2]] : i1
   ! CHECK:      %[[AND:.*]] = arith.andi %[[SEL1]], %[[SEL2]] : i1
   ! CHECK:      fir.if %[[AND]] {
-  ! CHECK:        fir.store %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK:        fir.store %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
   ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
@@ -194,9 +194,9 @@ subroutine omp_do_lastprivate_collapse3(a)
   ! CHECK:      %[[SEL3:.*]] = arith.select %[[STEP3_END]], %[[LT_UB3]], %[[GT_UB3]] : i1
   ! CHECK:      %[[AND2:.*]] = arith.andi %[[AND1]], %[[SEL3]] : i1
   ! CHECK:      fir.if %[[AND2]] {
-  ! CHECK:        fir.store %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK:        fir.store %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : !fir.ref<i32>
-  ! CHECK:        fir.store %[[NEXT_ARG3]] to %[[K_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG2]] to %[[J_PVT_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:        hlfir.assign %[[NEXT_ARG3]] to %[[K_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK:        %[[A_PVT_LOAD:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>
   ! CHECK:        hlfir.assign %[[A_PVT_LOAD]] to %[[ARG0_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      }
