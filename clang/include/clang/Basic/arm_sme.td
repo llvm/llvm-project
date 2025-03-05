@@ -297,7 +297,6 @@ multiclass MOP4<string mode, string za, string t, string i, list<ImmCheck> check
 }
 
 let SMETargetGuard = "sme2,sme-mop4" in {
-
   defm SVFMOP4A_HtoS  : MOP4<"a", "za32", "hb", "aarch64_sme_mop4a_wide", [ImmCheck<0, ImmCheck0_3>]>;
   defm SVFMOP4S_HtoS  : MOP4<"s", "za32", "hb", "aarch64_sme_mop4s_wide", [ImmCheck<0, ImmCheck0_3>]>;
   defm SVFMOP4A_S     : MOP4<"a", "za32", "f", "aarch64_sme_mop4a", [ImmCheck<0, ImmCheck0_3>]>;
