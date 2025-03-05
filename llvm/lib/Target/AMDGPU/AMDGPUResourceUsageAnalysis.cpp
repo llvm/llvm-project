@@ -142,13 +142,15 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   Info.UsesVCC =
       MRI.isPhysRegUsed(AMDGPU::VCC_LO) || MRI.isPhysRegUsed(AMDGPU::VCC_HI);
 
-  // If there are no calls, MachineRegisterInfo can tell us the used register
-  // count easily.
+  // If there are no calls and no laneshared, MachineRegisterInfo can tell us
+  // the used register count easily.
+  //
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
-  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
-    Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
-                       ? MFI->MaxPerWaveVGPR.value() + 1
-                       : TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
+  //
+  // When some operands use laneshared vgprs, we need to exclude those operands
+  // with a special mask, MachineRegisterInfo does not understand that.
+  if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall() && !MFI->getLaneSharedVGPRSize()) {
+    Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass);
     Info.NumExplicitSGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::SGPR_32RegClass);
     if (ST.hasMAIInsts())
       Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass);
@@ -162,8 +164,27 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      // TODO: Check regmasks? Do they occur anywhere except calls?
+      // Look for the Metadata for indexing and access-type
+      uint32_t AccessTypeMask = 0;
       for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isMetadata())
+          continue;
+        const MDNode *Tuple = MO.getMetadata();
+        if (Tuple->getNumOperands() != 3)
+          continue;
+        const MDOperand &NameOp = Tuple->getOperand(0);
+        if (NameOp.equalsStr("vgpr_indexing_extra")) {
+          const MDOperand &MaskOp2 = Tuple->getOperand(2);
+          assert(isa<ConstantAsMetadata>(MaskOp2));
+          AccessTypeMask =
+              cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp2)->getValue())
+                  ->getZExtValue();
+          break;
+        }
+      }
+      // TODO: Check regmasks? Do they occur anywhere except calls?
+      for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+        const MachineOperand &MO = MI.getOperand(i);
         unsigned Width = 0;
         bool IsSGPR = false;
         bool IsAGPR = false;
@@ -250,6 +271,16 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
         default:
           break;
+        }
+
+        // Skip the laneshared access and dynamic vgpr indexing access
+        if (!MO.isImplicit()) {
+          const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+          if (i <= 15 && RC && TRI.isVGPRClass(RC)) {
+            auto AccessType = (AccessTypeMask >> (i * 2)) & 0x3;
+            if (AccessType != AMDGPU::IDX_PRIVATE_BASE)
+              continue;
+          }
         }
 
         if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
@@ -488,9 +519,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   }
 
   Info.NumExplicitSGPR = MaxSGPR + 1;
-  Info.NumVGPR = MFI->MaxPerWaveVGPR.has_value()
-                     ? MFI->MaxPerWaveVGPR.value() + 1
-                     : MaxVGPR + 1;
+  Info.NumVGPR = MaxVGPR + 1;
   Info.NumAGPR = MaxAGPR + 1;
 
   return Info;

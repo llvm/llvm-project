@@ -1142,6 +1142,21 @@ enum Register_Flag : uint8_t {
 
 } // namespace VirtRegFlag
 
+// On GFX13+, after we remove v_load/store_idx in LowerVGPREncoding,
+// it is hard to derive the following information on individual instruction.
+// - The idx-register that is used by each explicit MachineOperand.
+// - Also for those operands, does it represent a regular wave-private VGPR
+//   access based upon wave-vgpr-base-idx (implicit idx0)? or a dynamically
+//   indexed access to a vgpr-array? or a laneshared access?
+// The following enum is used for recording the info about the 2nd item above.
+// No special enum for the 1st item. During LowerVGPREncoding, we pack those
+// information per instruction into two 32-bit integers in a Metadata operand.
+enum IndexingAccessTypes : unsigned {
+  IDX_PRIVATE_BASE = 0,
+  IDX_PRIVATE_ARRAY = 1,
+  IDX_LANESHARED = 2
+};
+
 } // namespace AMDGPU
 
 namespace AMDGPU {

@@ -1221,11 +1221,6 @@ public:
   std::optional<std::array<unsigned, 3>> getClusterDims() const {
     return ClusterDims;
   }
-
-  /// This number is computed in LowerVGPREncoding pass, and gets used by
-  /// ResourceAnalsysis because it is difficult to derive this number from
-  /// MIR after LowerVGPREncoding.
-  std::optional<int> MaxPerWaveVGPR;
 };
 
 } // end namespace llvm

@@ -4810,6 +4810,8 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
 static Register findImplicitSGPRRead(const MachineInstr &MI) {
   for (const MachineOperand &MO : MI.implicit_operands()) {
     // We only care about reads.
+    if (!MO.isReg())
+      continue;
     if (MO.isDef())
       continue;
 
