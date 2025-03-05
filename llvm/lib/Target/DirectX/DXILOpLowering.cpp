@@ -649,16 +649,13 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Mask =
+          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
 
       // TODO: check that we only have vector or scalar...
-      if (!IsRaw && NumElements != 4)
+      if (NumElements > 4)
         return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
-            inconvertibleErrorCode());
-      else if (NumElements > 4)
-        return make_error<StringError>(
-            "rawBufferStore data must have at most 4 elements",
+            "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
@@ -687,10 +684,13 @@ public:
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
-      // For any elements beyond the length of the vector, fill up with undef.
+
+      // For any elements beyond the length of the vector, we should fill it up
+      // with undef - however, for typed buffers we repeat the first element to
+      // match DXC.
       for (int I = NumElements, E = 4; I < E; ++I)
         if (DataElements[I] == nullptr)
-          DataElements[I] = UndefValue::get(ScalarTy);
+          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
 
       dxil::OpCode Op = OpCode::BufferStore;
       SmallVector<Value *, 9> Args{
