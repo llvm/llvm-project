@@ -11,7 +11,7 @@
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefix=SAFE %s
 
 // RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx940 -fnative-half-type \
+// RUN:   -fcuda-is-device -target-cpu gfx942 -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics \
 // RUN:   | FileCheck -check-prefix=UNSAFE %s
 

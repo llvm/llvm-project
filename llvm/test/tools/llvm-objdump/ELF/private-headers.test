@@ -30,6 +30,7 @@ Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Flags:   [ SHF_ALLOC ]
+    Link:    1
     Entries:
      - Tag:   DT_NEEDED
        Value: 0x1

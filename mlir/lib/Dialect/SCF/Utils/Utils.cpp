@@ -498,6 +498,20 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   return resultLoops;
 }
 
+/// Unrolls this loop completely.
+LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
+  IRRewriter rewriter(forOp.getContext());
+  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  if (!mayBeConstantTripCount.has_value())
+    return failure();
+  uint64_t tripCount = *mayBeConstantTripCount;
+  if (tripCount == 0)
+    return success();
+  if (tripCount == 1)
+    return forOp.promoteIfSingleIteration(rewriter);
+  return loopUnrollByFactor(forOp, tripCount);
+}
+
 /// Check if bounds of all inner loops are defined outside of `forOp`
 /// and return false if not.
 static bool areInnerBoundsInvariant(scf::ForOp forOp) {

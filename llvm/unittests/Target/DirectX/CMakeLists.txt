@@ -8,10 +8,12 @@ set(LLVM_LINK_COMPONENTS
   Core
   DirectXCodeGen
   DirectXPointerTypeAnalysis
+  Passes
   Support
   )
 
 add_llvm_target_unittest(DirectXTests
   CBufferDataLayoutTests.cpp
   PointerTypeAnalysisTests.cpp
+  UniqueResourceFromUseTests.cpp
   )

@@ -17,12 +17,13 @@ def: Flag<["-"], "g">,
   Alias<wait_for_debugger>,
   HelpText<"Alias for --wait-for-debugger">;
 
-def port: S<"port">,
-  MetaVarName<"<port>">,
-  HelpText<"Communicate with the lldb-dap tool over the defined port.">;
-def: Separate<["-"], "p">,
-  Alias<port>,
-  HelpText<"Alias for --port">;
+def connection
+    : S<"connection">,
+      MetaVarName<"<connection>">,
+      HelpText<
+          "Communicate with the lldb-dap tool over the specified connection. "
+          "Connections are specified like 'tcp://[host]:port' or "
+          "'unix:///path'.">;
 
 def launch_target: S<"launch-target">,
   MetaVarName<"<target>">,
@@ -40,9 +41,12 @@ def debugger_pid: S<"debugger-pid">,
   HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
     "request when using --launch-target.">;
 
-def repl_mode: S<"repl-mode">,
-  MetaVarName<"<mode>">,
-  HelpText<"The mode for handling repl evaluation requests, supported modes: variable, command, auto.">;
+def repl_mode
+    : S<"repl-mode">,
+      MetaVarName<"<mode>">,
+      HelpText<
+          "The mode for handling repl evaluation requests, supported modes: "
+          "variable, command, auto.">;
 
 def pre_init_command: S<"pre-init-command">,
   MetaVarName<"<command>">,

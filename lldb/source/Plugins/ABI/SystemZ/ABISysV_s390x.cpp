@@ -617,10 +617,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value + 160
@@ -630,16 +627,17 @@ bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
 
   // All other registers are the same.
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("s390x at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("s390x at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+UnwindPlanSP ABISysV_s390x::CreateDefaultUnwindPlan() {
   // There's really no default way to unwind on s390x. Trust the .eh_frame CFI,
   // which should always be good.
-  return false;
+  return nullptr;
 }
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(

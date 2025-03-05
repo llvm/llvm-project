@@ -508,6 +508,8 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
   lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
+  hlfir::Entity entity{hsb.getAddr()};
+  bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
@@ -528,7 +530,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   // an alloca for a fir.array type there. Get around this by boxing all
   // arrays.
   if (mlir::isa<fir::SequenceType>(allocType)) {
-    hlfir::Entity entity{hsb.getAddr()};
     entity = genVariableBox(symLoc, firOpBuilder, entity);
     privVal = entity.getBase();
     allocType = privVal.getType();
@@ -590,7 +591,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           result.getDeallocRegion(),
           isFirstPrivate ? DeclOperationKind::FirstPrivate
                          : DeclOperationKind::Private,
-          sym);
+          sym, cannotHaveNonDefaultLowerBounds);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
       if (!result.getInitMoldArg().getUses().empty())

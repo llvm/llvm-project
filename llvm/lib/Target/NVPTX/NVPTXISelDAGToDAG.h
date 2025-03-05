@@ -107,18 +107,14 @@ private:
   // Match direct address complex pattern.
   bool SelectDirectAddr(SDValue N, SDValue &Address);
 
-  bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
+  void SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
                         SDValue &Offset, MVT VT);
   bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
-  bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT VT);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
-  bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                      SDValue &Offset);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

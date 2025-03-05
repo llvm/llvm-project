@@ -74,6 +74,23 @@ Function Attributes
     This attribute indicates the maximum number of registers to be used for the
     kernel function.
 
+``"nvvm.maxntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the maximum number of threads in the thread block
+    (CTA). The maximum number of threads is the product of the maximum extent in
+    each dimension. Exceeding the maximum number of threads results in a runtime
+    error or kernel launch failure.
+
+``"nvvm.reqntid"="<x>[,<y>[,<z>]]"``
+    This attribute declares the exact number of threads in the thread block
+    (CTA). The number of threads is the product of the value in each dimension.
+    Specifying a different CTA dimension at launch will result in a runtime 
+    error or kernel launch failure.
+
+``"nvvm.cluster_dim"="<x>[,<y>[,<z>]]"``
+    This attribute declares the number of thread blocks (CTAs) in the cluster.
+    The total number of CTAs is the product of the number of CTAs in each 
+    dimension. Specifying a different cluster dimension at launch will result in
+    a runtime error or kernel launch failure. Only supported for Hopper+.
 
 .. _address_spaces:
 
@@ -1183,6 +1200,93 @@ operations.
 For more information, refer to the PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
 
+'``llvm.nvvm.tcgen05.shift``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.shift.down.cg1(ptr addrspace(6) %tmem_addr)
+  declare void @llvm.nvvm.tcgen05.shift.down.cg2(ptr addrspace(6) %tmem_addr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.shift.{cg1/cg2}``' intrinsics correspond to
+the ``tcgen05.shift.{cg1/cg2}`` PTX instructions. The ``tcgen05.shift``
+is an asynchronous instruction which initiates the shifting of 32-byte
+elements downwards across all the rows, except the last, by one row.
+The address operand ``%tmem_addr`` specifies the base address of the
+matrix in the Tensor Memory whose rows must be down shifted.
+
+For more information, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`_.
+
+'``llvm.nvvm.tcgen05.cp``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.cp.4x256b.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x256b.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x128b.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.32x128b_warpx4.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_02_13.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_01_23.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+
+  declare void @llvm.nvvm.tcgen05.cp.4x256b.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x256b.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x128b.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.32x128b_warpx4.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_02_13.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_01_23.b6x16_p32.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+
+  declare void @llvm.nvvm.tcgen05.cp.4x256b.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x256b.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.128x128b.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.32x128b_warpx4.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_02_13.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+  declare void @llvm.nvvm.tcgen05.cp.64x128b_warpx2_01_23.b4x16_p64.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i64 %sdesc)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tcgen05.cp.{shape}.{src_fmt}.{cg1/cg2}``' intrinsics
+correspond to the ``tcgen05.cp.*`` family of PTX instructions.
+The ``tcgen05.cp`` instruction initiates an asynchronous copy operation from
+shared memory to the location specified by ``%tmem_addr`` in Tensor Memory.
+The 64-bit register operand ``%sdesc`` is the matrix descriptor representing
+the source matrix in shared memory that needs to be copied.
+
+The valid shapes for the copy operation are:
+{128x256b, 4x256b, 128x128b, 64x128b_warpx2_02_13, 64x128b_warpx2_01_23, 32x128b_warpx4}.
+
+Shapes ``64x128b`` and ``32x128b`` require dedicated multicast qualifiers,
+which are appended to the corresponding intrinsic names.
+
+Optionally, the data can be decompressed from the source format in the shared memory
+to the destination format in Tensor Memory during the copy operation. Currently,
+only ``.b8x16`` is supported as destination format. The valid source formats are
+``.b6x16_p32`` and ``.b4x16_p64``.
+
+When the source format is ``.b6x16_p32``, a contiguous set of 16 elements of 6-bits
+each followed by four bytes of padding (``_p32``) in shared memory is decompressed
+into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
+
+When the source format is ``.b4x16_p64``, a contiguous set of 16 elements of 4-bits
+each followed by eight bytes of padding (``_p64``) in shared memory is decompressed
+into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
+
+For more information on the decompression schemes, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`_.
+
+For more information on the tcgen05.cp instruction, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`_.
 
 Other Intrinsics
 ----------------

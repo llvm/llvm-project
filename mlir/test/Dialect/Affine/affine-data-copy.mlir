@@ -300,14 +300,15 @@ func.func @affine_parallel(%85:memref<2x5x4x2xi64>) {
       }
     }
   }
-  // CHECK:     affine.for
-  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 5
-  // CHECK-NEXT:    affine.for %{{.*}} = 0 to 4
-  // CHECK-NEXT:      affine.for %{{.*}} = 0 to 2
-
+  // Lower and upper bounds for the region can't be determined for the outermost
+  // dimension. No fast buffer generation.
   // CHECK:     affine.for
   // CHECK-NEXT:  affine.parallel
   // CHECK-NEXT:    affine.parallel
+  // CHECK-NEXT:      affine.for
+  // CHECK-NOT:      affine.for
+
+
   return
 }
 

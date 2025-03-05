@@ -713,13 +713,14 @@ def err_thread_non_global : Error<
 def err_thread_unsupported : Error<
   "thread-local storage is not supported for the current target">;
 
-// FIXME: Combine fallout warnings to just one warning.
-def warn_maybe_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value in all control paths">,
+def warn_falloff_nonvoid : Warning<
+  "non-void "
+  "%enum_select<FalloffFunctionKind>{%Function{function}|%Block{block}|%Lambda{lambda}|%Coroutine{coroutine}}0"
+  " does not return a value%select{| in all control paths}1">,
   InGroup<ReturnType>;
-def warn_falloff_nonvoid_function : Warning<
-  "non-void function does not return a value">,
-  InGroup<ReturnType>;
+def err_falloff_nonvoid : Error<
+  "non-void %select{function|block|lambda|coroutine}0 "
+  "does not return a value%select{| in all control paths}1">;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -727,16 +728,6 @@ def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
 
-def err_maybe_falloff_nonvoid_block : Error<
-  "non-void block does not return a value in all control paths">;
-def err_falloff_nonvoid_block : Error<
-  "non-void block does not return a value">;
-def warn_maybe_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value in all control paths">,
-  InGroup<ReturnType>;
-def warn_falloff_nonvoid_coroutine : Warning<
-  "non-void coroutine does not return a value">,
-  InGroup<ReturnType>;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -4135,6 +4126,24 @@ def warn_pt_guarded_return_by_reference : Warning<
   "%select{'%2'|'%2' exclusively}3">,
   InGroup<ThreadSafetyReferenceReturn>, DefaultIgnore;
 
+// Thread safety warnings on pointer passing
+def warn_guarded_pass_pointer : Warning<
+  "passing pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_pass_pointer : Warning<
+  "passing pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_guarded_return_pointer : Warning<
+  "returning pointer to variable %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+def warn_pt_guarded_return_pointer : Warning<
+  "returning pointer %1 requires holding %0 "
+  "%select{'%2'|'%2' exclusively}3">,
+  InGroup<ThreadSafetyPointer>, DefaultIgnore;
+
 // Imprecise thread safety warnings
 def warn_variable_requires_lock : Warning<
   "%select{reading|writing}3 variable %1 requires holding %0 "
@@ -7135,7 +7144,7 @@ def note_precedence_conditional_first : Note<
 
 def warn_consecutive_comparison : Warning<
   "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
-  InGroup<Parentheses>;
+  InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
@@ -7773,6 +7782,7 @@ def warn_format_nonliteral_noargs : Warning<
 def warn_format_nonliteral : Warning<
   "format string is not a string literal">,
   InGroup<FormatNonLiteral>, DefaultIgnore;
+def err_format_nonliteral : Error<"format string is not a string literal">;
 
 def err_unexpected_interface : Error<
   "unexpected interface name %0: expected expression">;
@@ -8406,14 +8416,6 @@ let CategoryName = "Lambda Issue" in {
     "lambda expression in default argument cannot capture any entity">;
   def err_lambda_incomplete_result : Error<
     "incomplete result type %0 in lambda expression">;
-  def err_noreturn_lambda_has_return_expr : Error<
-    "lambda declared 'noreturn' should not return">;
-  def warn_maybe_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value in all control paths">,
-    InGroup<ReturnType>;
-  def warn_falloff_nonvoid_lambda : Warning<
-    "non-void lambda does not return a value">,
-    InGroup<ReturnType>;
   def err_access_lambda_capture : Error<
     // The ERRORs represent other special members that aren't constructors, in
     // hopes that someone will bother noticing and reporting if they appear
@@ -10083,6 +10085,8 @@ def note_previous_declaration_as : Note<
 
 def warn_printf_insufficient_data_args : Warning<
   "more '%%' conversions than data arguments">, InGroup<FormatInsufficientArgs>;
+def warn_format_cmp_specifier_arity : Warning<
+  "%select{fewer|more}0 specifiers in format string than expected">, InGroup<FormatInsufficientArgs>;
 def warn_printf_data_arg_not_used : Warning<
   "data argument not used by format string">, InGroup<FormatExtraArgs>;
 def warn_format_invalid_conversion : Warning<
@@ -10200,6 +10204,27 @@ def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
 def note_format_security_fixit: Note<
   "treat the string as an argument to avoid this">;
+def warn_format_string_type_incompatible : Warning<
+  "passing '%0' format string where '%1' format string is expected">,
+  InGroup<Format>;
+def warn_format_cmp_role_mismatch : Warning<
+  "format argument is %select{a value|an indirect field width|an indirect "
+  "precision|an auxiliary value}0, but it should be %select{a value|an indirect "
+  "field width|an indirect precision|an auxiliary value}1">, InGroup<Format>;
+def warn_format_cmp_modifierfor_mismatch : Warning<
+  "format argument modifies specifier at position %0, but it should modify "
+  "specifier at position %1">, InGroup<Format>;
+def warn_format_cmp_sensitivity_mismatch : Warning<
+  "argument sensitivity is %select{unspecified|private|public|sensitive}0, but "
+  "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch : Warning<
+  "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch : Warning<
+  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_mismatch_pedantic : Extension<
+  warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
+def note_format_cmp_with : Note<
+  "comparing with this %select{specifier|format string}0">;
 
 def warn_null_arg : Warning<
   "null passed to a callee that requires a non-null argument">,
@@ -10603,11 +10628,16 @@ def err_ctor_dtor_returns_void : Error<
 def warn_noreturn_function_has_return_expr : Warning<
   "function %0 declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def warn_falloff_noreturn_function : Warning<
-  "function declared 'noreturn' should not return">,
+def warn_noreturn_has_return_expr : Warning<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">,
   InGroup<InvalidNoreturn>;
-def err_noreturn_block_has_return_expr : Error<
-  "block declared 'noreturn' should not return">;
+def err_noreturn_has_return_expr : Error<
+  "%select{function|block|lambda|coroutine}0 "
+  "declared 'noreturn' should not return">;
+def warn_noreturn_coroutine : Warning<
+  "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
+  InGroup<InvalidNoreturn>;
 def err_carries_dependency_missing_on_first_decl : Error<
   "%select{function|parameter}0 declared '[[carries_dependency]]' "
   "after its first declaration">;

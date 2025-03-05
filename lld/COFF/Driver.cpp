@@ -490,7 +490,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       parseAligncomm(arg->getValue());
       break;
     case OPT_alternatename:
-      parseAlternateName(arg->getValue());
+      file->symtab.parseAlternateName(arg->getValue());
       break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
@@ -1896,7 +1896,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /alternatename
   for (auto *arg : args.filtered(OPT_alternatename))
-    parseAlternateName(arg->getValue());
+    mainSymtab.parseAlternateName(arg->getValue());
 
   // Handle /include
   for (auto *arg : args.filtered(OPT_incl))
@@ -2515,32 +2515,30 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           if (e.source != ExportSource::Directives)
             e.symbolName = symtab.mangleMaybe(e.sym);
         }
-      });
 
-      // Add weak aliases. Weak aliases is a mechanism to give remaining
-      // undefined symbols final chance to be resolved successfully.
-      for (auto pair : config->alternateNames) {
-        StringRef from = pair.first;
-        StringRef to = pair.second;
-        Symbol *sym = ctx.symtab.find(from);
-        if (!sym)
-          continue;
-        if (auto *u = dyn_cast<Undefined>(sym)) {
-          if (u->weakAlias) {
-            // On ARM64EC, anti-dependency aliases are treated as undefined
-            // symbols unless a demangled symbol aliases a defined one, which is
-            // part of the implementation.
-            if (!isArm64EC(ctx.config.machine) || !u->isAntiDep)
-              continue;
-            if (!isa<Undefined>(u->weakAlias) &&
-                !isArm64ECMangledFunctionName(u->getName()))
-              continue;
+        // Add weak aliases. Weak aliases is a mechanism to give remaining
+        // undefined symbols final chance to be resolved successfully.
+        for (auto pair : symtab.alternateNames) {
+          StringRef from = pair.first;
+          StringRef to = pair.second;
+          Symbol *sym = symtab.find(from);
+          if (!sym)
+            continue;
+          if (auto *u = dyn_cast<Undefined>(sym)) {
+            if (u->weakAlias) {
+              // On ARM64EC, anti-dependency aliases are treated as undefined
+              // symbols unless a demangled symbol aliases a defined one, which
+              // is part of the implementation.
+              if (!symtab.isEC() || !u->isAntiDep)
+                continue;
+              if (!isa<Undefined>(u->weakAlias) &&
+                  !isArm64ECMangledFunctionName(u->getName()))
+                continue;
+            }
+            u->setWeakAlias(symtab.addUndefined(to));
           }
-          u->setWeakAlias(ctx.symtab.addUndefined(to));
         }
-      }
 
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
         // If any inputs are bitcode files, the LTO code generator may create
         // references to library functions that are not explicit in the bitcode
         // file's symbol table. If any of those library functions are defined in

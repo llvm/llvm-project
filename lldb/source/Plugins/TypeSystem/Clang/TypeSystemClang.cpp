@@ -1311,10 +1311,18 @@ CompilerType TypeSystemClang::CreateRecordType(
 }
 
 namespace {
-/// Returns true iff the given TemplateArgument should be represented as an
-/// NonTypeTemplateParmDecl in the AST.
-bool IsValueParam(const clang::TemplateArgument &argument) {
-  return argument.getKind() == TemplateArgument::Integral;
+/// Returns the type of the template argument iff the given TemplateArgument
+/// should be represented as an NonTypeTemplateParmDecl in the AST. Returns
+/// a null QualType otherwise.
+QualType GetValueParamType(const clang::TemplateArgument &argument) {
+  switch (argument.getKind()) {
+  case TemplateArgument::Integral:
+    return argument.getIntegralType();
+  case TemplateArgument::StructuralValue:
+    return argument.getStructuralValueType();
+  default:
+    return {};
+  }
 }
 
 void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
@@ -1361,8 +1369,8 @@ static TemplateParameterList *CreateTemplateParameterList(
     if (name && name[0])
       identifier_info = &ast.Idents.get(name);
     TemplateArgument const &targ = args[i];
-    if (IsValueParam(targ)) {
-      QualType template_param_type = targ.getIntegralType();
+    QualType template_param_type = GetValueParamType(targ);
+    if (!template_param_type.isNull()) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
           identifier_info, template_param_type, parameter_pack,
@@ -1380,10 +1388,11 @@ static TemplateParameterList *CreateTemplateParameterList(
       identifier_info = &ast.Idents.get(template_param_infos.GetPackName());
     const bool parameter_pack_true = true;
 
-    if (!template_param_infos.GetParameterPack().IsEmpty() &&
-        IsValueParam(template_param_infos.GetParameterPack().Front())) {
-      QualType template_param_type =
-          template_param_infos.GetParameterPack().Front().getIntegralType();
+    QualType template_param_type =
+        !template_param_infos.GetParameterPack().IsEmpty()
+            ? GetValueParamType(template_param_infos.GetParameterPack().Front())
+            : QualType();
+    if (!template_param_type.isNull()) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info, template_param_type,
@@ -1458,10 +1467,12 @@ static bool TemplateParameterAllowsValue(NamedDecl *param,
   } else if (auto *type_param =
                  llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
     // Compare the argument kind, i.e. ensure that <typename> != <int>.
-    if (!IsValueParam(value))
+    QualType value_param_type = GetValueParamType(value);
+    if (value_param_type.isNull())
       return false;
+
     // Compare the integral type, i.e. ensure that <int> != <char>.
-    if (type_param->getType() != value.getIntegralType())
+    if (type_param->getType() != value_param_type)
       return false;
   } else {
     // There is no way to create other parameter decls at the moment, so we
@@ -7351,10 +7362,27 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
     return std::nullopt;
 
   const auto *arg = GetNthTemplateArgument(template_decl, idx, expand_pack);
-  if (!arg || arg->getKind() != clang::TemplateArgument::Integral)
+  if (!arg)
     return std::nullopt;
 
-  return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
+  switch (arg->getKind()) {
+  case clang::TemplateArgument::Integral:
+    return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
+  case clang::TemplateArgument::StructuralValue: {
+    clang::APValue value = arg->getAsStructuralValue();
+    CompilerType type = GetType(arg->getStructuralValueType());
+
+    if (value.isFloat())
+      return {{value.getFloat(), type}};
+
+    if (value.isInt())
+      return {{value.getInt(), type}};
+
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {

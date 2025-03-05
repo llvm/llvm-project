@@ -623,8 +623,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true,
-                                 /* StoreCaptures */ true, I, DT,
+  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true, I, DT,
                                  /* include Object */ true))
     return ModRefInfo::ModRef;
 
@@ -835,15 +834,9 @@ bool llvm::isBaseOfObject(const Value *V) {
 }
 
 bool llvm::isEscapeSource(const Value *V) {
-  if (auto *CB = dyn_cast<CallBase>(V)) {
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
-      return false;
-
-    // The return value of a function with a captures(ret: address, provenance)
-    // attribute is not necessarily an escape source. The return value may
-    // alias with a non-escaping object.
-    return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
-  }
+  if (auto *CB = dyn_cast<CallBase>(V))
+    return !isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB,
+                                                                        true);
 
   // The load case works because isNonEscapingLocalObject considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
@@ -857,6 +850,12 @@ bool llvm::isEscapeSource(const Value *V) {
   // escaping, and objects located at well-known addresses via platform-specific
   // means cannot be considered non-escaping local objects.
   if (isa<IntToPtrInst>(V))
+    return true;
+
+  // Capture tracking considers insertions into aggregates and vectors as
+  // captures. As such, extractions from aggregates and vectors are escape
+  // sources.
+  if (isa<ExtractValueInst, ExtractElementInst>(V))
     return true;
 
   // Same for inttoptr constant expressions.

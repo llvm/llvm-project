@@ -177,8 +177,10 @@ public:
   void addILPOpts(AddMachinePass &) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
   Error addInstSelector(AddMachinePass &) const;
+  void addPreRewrite(AddMachinePass &) const;
   void addMachineSSAOptimization(AddMachinePass &) const;
   void addPostRegAlloc(AddMachinePass &) const;
+  void addPreEmitPass(AddMachinePass &) const;
 
   /// Check if a pass is enabled given \p Opt option. The option always
   /// overrides defaults if explicitly used. Otherwise its default will be used

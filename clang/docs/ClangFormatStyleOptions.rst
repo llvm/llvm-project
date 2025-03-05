@@ -4782,15 +4782,24 @@ the configuration (without a prefix: ``Auto``).
 .. _Language:
 
 **Language** (``LanguageKind``) :versionbadge:`clang-format 3.5` :ref:`¶ <Language>`
-  Language, this format style is targeted at.
+  The language that this format style targets.
+
+  .. note::
+
+   You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+   files by adding a ``// clang-format Language:`` line before the first
+   non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
 
   Possible values:
 
   * ``LK_None`` (in configuration: ``None``)
     Do not use.
 
+  * ``LK_C`` (in configuration: ``C``)
+    Should be used for C.
+
   * ``LK_Cpp`` (in configuration: ``Cpp``)
-    Should be used for C, C++.
+    Should be used for C++.
 
   * ``LK_CSharp`` (in configuration: ``CSharp``)
     Should be used for C#.

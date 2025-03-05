@@ -75,11 +75,16 @@
 // Thread-related command line tests.
 
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
-// RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -pthread 2>&1 \
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
-// PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
+// PTHREAD: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+//
+// '-pthread' with '-nostdlib' should still set '--shared-memory' but not include '-lpthread'
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread -nostdlib 2>&1 \
+// RUN:  | FileCheck -check-prefix=PTHREAD-NOSTDLIB %s
+// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD-NOSTDLIB: wasm-ld{{.*}}" "--shared-memory" "-o" "a.out"
 
 // '-pthread' not allowed with '-mno-atomics'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \

@@ -1232,13 +1232,6 @@ public:
     return nullptr;
   }
 
-  /// Returns the physical register number of sub-register "Index"
-  /// for physical register RegNo. Return zero if the sub-register does not
-  /// exist.
-  inline MCRegister getSubReg(MCRegister Reg, unsigned Idx) const {
-    return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
-  }
-
   /// Some targets have non-allocatable registers that aren't technically part
   /// of the explicit callee saved register list, but should be handled as such
   /// in certain cases.

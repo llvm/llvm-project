@@ -2158,6 +2158,53 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
+LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+  // Create a copy, so we can modify keys in the original.
+  BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
+  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
+       it != e; ++it) {
+    auto &[block, mergeInfo] = *it;
+
+    // Skip processing loop regions. For loop regions continueBlock is non-null.
+    if (mergeInfo.continueBlock)
+      continue;
+
+    if (!block->mightHaveTerminator())
+      continue;
+
+    Operation *terminator = block->getTerminator();
+    assert(terminator);
+
+    if (!isa<spirv::BranchConditionalOp>(terminator))
+      continue;
+
+    // Do not split blocks that only contain a conditional branch, i.e., block
+    // size is <= 1.
+    if (block->begin() != block->end() &&
+        std::next(block->begin()) != block->end()) {
+      Block *newBlock = block->splitBlock(terminator);
+      OpBuilder builder(block, block->end());
+      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+
+      // If the split block was a merge block of another region we need to
+      // update the map.
+      for (auto it = blockMergeInfo.begin(); it != blockMergeInfo.end(); ++it) {
+        auto &[ignore, mergeInfo] = *it;
+        if (mergeInfo.mergeBlock == block) {
+          mergeInfo.mergeBlock = newBlock;
+        }
+      }
+
+      // After splitting we need to update the map to use the new block as a
+      // header.
+      blockMergeInfo.erase(block);
+      blockMergeInfo.try_emplace(newBlock, mergeInfo);
+    }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
   LLVM_DEBUG({
     logger.startLine()
@@ -2165,6 +2212,18 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.indent();
   });
 
+  LLVM_DEBUG({
+    logger.startLine() << "[cf] split conditional blocks\n";
+    logger.startLine() << "\n";
+  });
+
+  if (failed(splitConditionalBlocks())) {
+    return failure();
+  }
+
+  // TODO: This loop is non-deterministic. Iteration order may vary between runs
+  // for the same shader as the key to the map is a pointer. See:
+  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;

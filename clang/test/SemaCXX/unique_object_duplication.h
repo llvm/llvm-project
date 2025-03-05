@@ -99,6 +99,9 @@ inline void has_thread_local() {
   thread_local int disallowedThreadLocal = 0; // hidden-warning {{'disallowedThreadLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
 }
 
+// Functions themselves are always immutable, so referencing them is okay
+inline auto& allowedFunctionReference = has_static_locals_external;
+
 } // namespace StaticLocalTest
 
 /******************************************************************************

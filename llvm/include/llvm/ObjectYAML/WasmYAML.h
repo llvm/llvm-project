@@ -230,6 +230,7 @@ struct DylinkSection : CustomSection {
   std::vector<StringRef> Needed;
   std::vector<DylinkImportInfo> ImportInfo;
   std::vector<DylinkExportInfo> ExportInfo;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct NameSection : CustomSection {

@@ -114,6 +114,7 @@ private:
   bool scalarizeBinopOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
+  bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
@@ -1239,6 +1240,121 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Value *NewExt = Builder.CreateExtractElement(VecLogic, CheapIndex);
   replaceValue(I, *NewExt);
   ++NumVecCmpBO;
+  return true;
+}
+
+static void analyzeCostOfVecReduction(const IntrinsicInst &II,
+                                      TTI::TargetCostKind CostKind,
+                                      const TargetTransformInfo &TTI,
+                                      InstructionCost &CostBeforeReduction,
+                                      InstructionCost &CostAfterReduction) {
+  Instruction *Op0, *Op1;
+  auto *RedOp = dyn_cast<Instruction>(II.getOperand(0));
+  auto *VecRedTy = cast<VectorType>(II.getOperand(0)->getType());
+  unsigned ReductionOpc =
+      getArithmeticReductionInstruction(II.getIntrinsicID());
+  if (RedOp && match(RedOp, m_ZExtOrSExt(m_Value()))) {
+    bool IsUnsigned = isa<ZExtInst>(RedOp);
+    auto *ExtType = cast<VectorType>(RedOp->getOperand(0)->getType());
+
+    CostBeforeReduction =
+        TTI.getCastInstrCost(RedOp->getOpcode(), VecRedTy, ExtType,
+                             TTI::CastContextHint::None, CostKind, RedOp);
+    CostAfterReduction =
+        TTI.getExtendedReductionCost(ReductionOpc, IsUnsigned, II.getType(),
+                                     ExtType, FastMathFlags(), CostKind);
+    return;
+  }
+  if (RedOp && II.getIntrinsicID() == Intrinsic::vector_reduce_add &&
+      match(RedOp,
+            m_ZExtOrSExt(m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) &&
+      match(Op0, m_ZExtOrSExt(m_Value())) &&
+      Op0->getOpcode() == Op1->getOpcode() &&
+      Op0->getOperand(0)->getType() == Op1->getOperand(0)->getType() &&
+      (Op0->getOpcode() == RedOp->getOpcode() || Op0 == Op1)) {
+    // Matched reduce.add(ext(mul(ext(A), ext(B)))
+    bool IsUnsigned = isa<ZExtInst>(Op0);
+    auto *ExtType = cast<VectorType>(Op0->getOperand(0)->getType());
+    VectorType *MulType = VectorType::get(Op0->getType(), VecRedTy);
+
+    InstructionCost ExtCost =
+        TTI.getCastInstrCost(Op0->getOpcode(), MulType, ExtType,
+                             TTI::CastContextHint::None, CostKind, Op0);
+    InstructionCost MulCost =
+        TTI.getArithmeticInstrCost(Instruction::Mul, MulType, CostKind);
+    InstructionCost Ext2Cost =
+        TTI.getCastInstrCost(RedOp->getOpcode(), VecRedTy, MulType,
+                             TTI::CastContextHint::None, CostKind, RedOp);
+
+    CostBeforeReduction = ExtCost * 2 + MulCost + Ext2Cost;
+    CostAfterReduction =
+        TTI.getMulAccReductionCost(IsUnsigned, II.getType(), ExtType, CostKind);
+    return;
+  }
+  CostAfterReduction = TTI.getArithmeticReductionCost(ReductionOpc, VecRedTy,
+                                                      std::nullopt, CostKind);
+  return;
+}
+
+bool VectorCombine::foldBinopOfReductions(Instruction &I) {
+  Instruction::BinaryOps BinOpOpc = cast<BinaryOperator>(&I)->getOpcode();
+  Intrinsic::ID ReductionIID = getReductionForBinop(BinOpOpc);
+  if (BinOpOpc == Instruction::Sub)
+    ReductionIID = Intrinsic::vector_reduce_add;
+  if (ReductionIID == Intrinsic::not_intrinsic)
+    return false;
+
+  auto checkIntrinsicAndGetItsArgument = [](Value *V,
+                                            Intrinsic::ID IID) -> Value * {
+    auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II)
+      return nullptr;
+    if (II->getIntrinsicID() == IID && II->hasOneUse())
+      return II->getArgOperand(0);
+    return nullptr;
+  };
+
+  Value *V0 = checkIntrinsicAndGetItsArgument(I.getOperand(0), ReductionIID);
+  if (!V0)
+    return false;
+  Value *V1 = checkIntrinsicAndGetItsArgument(I.getOperand(1), ReductionIID);
+  if (!V1)
+    return false;
+
+  auto *VTy = cast<VectorType>(V0->getType());
+  if (V1->getType() != VTy)
+    return false;
+  const auto &II0 = *cast<IntrinsicInst>(I.getOperand(0));
+  const auto &II1 = *cast<IntrinsicInst>(I.getOperand(1));
+  unsigned ReductionOpc =
+      getArithmeticReductionInstruction(II0.getIntrinsicID());
+
+  InstructionCost OldCost = 0;
+  InstructionCost NewCost = 0;
+  InstructionCost CostOfRedOperand0 = 0;
+  InstructionCost CostOfRed0 = 0;
+  InstructionCost CostOfRedOperand1 = 0;
+  InstructionCost CostOfRed1 = 0;
+  analyzeCostOfVecReduction(II0, CostKind, TTI, CostOfRedOperand0, CostOfRed0);
+  analyzeCostOfVecReduction(II1, CostKind, TTI, CostOfRedOperand1, CostOfRed1);
+  OldCost = CostOfRed0 + CostOfRed1 + TTI.getInstructionCost(&I, CostKind);
+  NewCost =
+      CostOfRedOperand0 + CostOfRedOperand1 +
+      TTI.getArithmeticInstrCost(BinOpOpc, VTy, CostKind) +
+      TTI.getArithmeticReductionCost(ReductionOpc, VTy, std::nullopt, CostKind);
+  if (NewCost >= OldCost || !NewCost.isValid())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Found two mergeable reductions: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  Value *VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
+  if (auto *PDInst = dyn_cast<PossiblyDisjointInst>(&I))
+    if (auto *PDVectorBO = dyn_cast<PossiblyDisjointInst>(VectorBO))
+      PDVectorBO->setIsDisjoint(PDInst->isDisjoint());
+
+  Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
+  replaceValue(I, *Rdx);
   return true;
 }
 
@@ -3036,8 +3152,6 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   Worklist.pushValue(NSV0B);
   Worklist.pushValue(NSV1A);
   Worklist.pushValue(NSV1B);
-  for (auto *S : Shuffles)
-    Worklist.add(S);
   return true;
 }
 
@@ -3382,6 +3496,7 @@ bool VectorCombine::run() {
         if (Instruction::isBinaryOp(Opcode)) {
           MadeChange |= foldExtractExtract(I);
           MadeChange |= foldExtractedCmps(I);
+          MadeChange |= foldBinopOfReductions(I);
         }
         break;
       }

@@ -473,9 +473,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
-      (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
-      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
-       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
+      ((!Current.isTrailingComment() && Style.ColumnLimit > 0) ||
+       Current.NewlinesBefore > 0)) {
     return true;
   }
 

@@ -257,11 +257,13 @@ def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
 def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
 def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
 def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
 
 /// Enum attribute of the different kinds.
 def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
   [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -273,9 +275,24 @@ def NVVM_ReduxOp :
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$val,
                  ReduxKindAttr:$kind,
-                 I32:$mask_and_clamp)> {
+                 I32:$mask_and_clamp,
+                 DefaultValuedAttr<BoolAttr, "false">:$abs,
+                 DefaultValuedAttr<BoolAttr, "false">:$nan)> {
+  let summary = "Redux Sync Op";
+  let description = [{
+    `redux.sync` performs a reduction operation `kind` of the 32 bit source 
+    register across all non-exited threads in the membermask.
+
+    The `abs` and `nan` attributes can be used in the case of f32 input type, 
+    where the `abs` attribute causes the absolute value of the input to be used 
+    in the reduction operation, and the `nan` attribute causes the reduction 
+    operation to return NaN if any of the inputs to participating threads are 
+    NaN.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
+  }];
   string llvmBuilder = [{
-      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
@@ -2648,8 +2665,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
     the amount specified by `nCols` and writes the destination
     address to the `addr` argument. The `nCols` operand specifies the
     number of columns to be allocated and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2679,8 +2695,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
     specified by `tmemAddr`, which must be from a previous tensor
     memory allocation. The `nCols` operand specifies the number
     of columns to be de-allocated, and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins LLVM_PointerTensor:$taddr, I32:$nCols,
@@ -2708,8 +2723,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
     of the executing thread is relinquishing the right to allocate
     Tensor Memory. So, it is illegal for a CTA to perform `tcgen05.alloc`
     after any of its constituent threads execute `tcgen05.relinquish_alloc_permit`.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2733,8 +2747,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
     The `tcgen05.fence<after>` orders all subsequent async tcgen05 operations
     with respect to the prior tcgen05 and execution ordering operations.
 
-    [For more information refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
   }];
 
   let arguments = (ins Tcgen05FenceKindAttr:$kind);
@@ -2756,8 +2769,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
     have completed. Similarly, the `tcgen05.wait<store>` causes the executing
     thread to block until all prior `tcgen05.st` operations issued by the
     executing thread have completed.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
   }];
 
   let arguments = (ins Tcgen05WaitKindAttr:$kind);
@@ -2782,8 +2794,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
     when present, specifies the destination CTAs in the cluster such
     that each bit position in the 16-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
@@ -2807,6 +2818,114 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
     auto id = NVVM::Tcgen05CommitOp::getIntrinsicIDAndArgs(
       *op, moduleTranslation, args);
     createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift"> {
+  let summary = "Tcgen05 shift operation";
+  let description = [{
+    The `tcgen05.shift` is an asynchronous instruction which initiates
+    the shifting of 32-byte elements downwards across all the rows,
+    except the last, by one row. The operand `taddr` specifies the base
+    address of the matrix in Tensor Memory whose rows must be down shifted.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift)
+  }];
+
+  let arguments = (ins LLVM_PointerTensor:$taddr,
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+
+  let assemblyFormat = "$taddr attr-dict `:` type(operands)";
+
+  string llvmBuilder = [{
+    auto id = ($group == NVVM::Tcgen05GroupKind::CTA_1) ?
+      llvm::Intrinsic::nvvm_tcgen05_shift_down_cg1 :
+      llvm::Intrinsic::nvvm_tcgen05_shift_down_cg2;
+    createIntrinsicCall(builder, id, {$taddr});
+  }];
+}
+
+def Shape128x256b : I32EnumAttrCase<"SHAPE_128x256b", 0, "shape_128x256b">;
+def Shape4x256b   : I32EnumAttrCase<"SHAPE_4x256b",   1, "shape_4x256b">;
+def Shape128x128b : I32EnumAttrCase<"SHAPE_128x128b", 2, "shape_128x128b">;
+def Shape64x128b  : I32EnumAttrCase<"SHAPE_64x128b",  3, "shape_64x128b">;
+def Shape32x128b  : I32EnumAttrCase<"SHAPE_32x128b",  4, "shape_32x128b">;
+
+def Tcgen05CpShape : I32EnumAttr<"Tcgen05CpShape", "tcgen05 cp shapes",
+  [Shape128x256b, Shape4x256b, Shape128x128b, Shape64x128b, Shape32x128b]> {
+    let cppNamespace = "::mlir::NVVM";
+    let genSpecializedAttr = 0;
+}
+def Tcgen05CpShapeAttr : EnumAttr<NVVM_Dialect, Tcgen05CpShape, "tcgen05_cp_shape"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def Tcgen05CpMulticastNone: I32EnumAttrCase<"NONE", 0, "none">;
+def Tcgen05CpMulticastWarpx2_02_13: I32EnumAttrCase<"WARPX2_02_13", 1, "warpx2_02_13">;
+def Tcgen05CpMulticastWarpx2_01_23: I32EnumAttrCase<"WARPX2_01_23", 2, "warpx2_01_23">;
+def Tcgen05CpMulticastWarpx4: I32EnumAttrCase<"WARPX4", 3, "warpx4">;
+
+def Tcgen05CpMulticast : I32EnumAttr<"Tcgen05CpMulticast", "tcgen05 cp multicast",
+  [Tcgen05CpMulticastNone, Tcgen05CpMulticastWarpx2_02_13,
+   Tcgen05CpMulticastWarpx2_01_23, Tcgen05CpMulticastWarpx4]> {
+    let cppNamespace = "::mlir::NVVM";
+    let genSpecializedAttr = 0;
+}
+def Tcgen05CpMulticastAttr : EnumAttr<NVVM_Dialect, Tcgen05CpMulticast, "tcgen05_cp_multicast"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def FormatB6x16_P32: I32EnumAttrCase<"B6x16_P32", 0, "b6x16_p32">;
+def FormatB4x16_P64: I32EnumAttrCase<"B4x16_P64", 1, "b4x16_p64">;
+
+def Tcgen05CpSrcFormat : I32EnumAttr<"Tcgen05CpSrcFormat", "tcgen05 cp source format",
+  [FormatB6x16_P32, FormatB4x16_P64]> {
+    let cppNamespace = "::mlir::NVVM";
+    let genSpecializedAttr = 0;
+}
+def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05_cp_src_fmt"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp"> {
+  let summary = "Tcgen05 copy operation";
+  let description = [{
+    Instruction tcgen05.cp initiates an asynchronous copy operation from
+    shared memory to the location specified by the address operand `taddr`
+    in the Tensor Memory. The 64-bit register operand `smem_desc` specifies
+    the matrix descriptor representing the source matrix in the shared memory
+    that needs to be copied.
+
+    Example:
+    ```mlir
+      nvvm.tcgen05.cp %taddr, %smem_desc {
+        group = #nvvm.tcgen05_group<cta_2>,
+        shape = #nvvm.tcgen05_cp_shape<shape_64x128b>,
+        multicast = #nvvm.tcgen05_cp_multicast<warpx2_01_23>,
+        srcFormat = #nvvm.tcgen05_cp_src_fmt<b6x16_p32>
+      }
+    ```
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-cp)
+  }];
+
+  let arguments = (ins
+    Tcgen05CpShapeAttr:$shape,
+    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group,
+    DefaultValuedAttr<Tcgen05CpMulticastAttr, "Tcgen05CpMulticast::NONE">:$multicast,
+    OptionalAttr<Tcgen05CpSrcFormatAttr>:$srcFormat,
+    LLVM_PointerTensor:$taddr,
+    I64:$smem_desc);
+
+  let assemblyFormat = "$taddr`,` $smem_desc attr-dict";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(Operation &op);
+  }];
+
+  string llvmBuilder = [{
+    auto id = NVVM::Tcgen05CpOp::getIntrinsicID(*op);
+    createIntrinsicCall(builder, id, {$taddr, $smem_desc});
   }];
 }
 

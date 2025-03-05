@@ -276,7 +276,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
   if (lowersToCopies(DefMI)) {
     // Start optimisatically with no used or defined lanes for copy
     // instructions. The following dataflow analysis will add more bits.
-    unsigned RegIdx = Register::virtReg2Index(Reg);
+    unsigned RegIdx = Register(Reg).virtRegIndex();
     DefinedByCopy.set(RegIdx);
     PutInWorklist(RegIdx);
 

@@ -1656,12 +1656,28 @@ namespace ExprWithCleanups {
   static_assert(F == 1i, "");
 }
 
-namespace NullptrUpcast {
+namespace NullptrCast {
   struct A {};
   struct B : A { int n; };
+  constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
                          // both-note {{cannot access base class of null pointer}}
+  constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
+                             // both-note {{cannot access derived class of null pointer}}
+  constexpr bool test() {
+    auto a = (A*)(B*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test(), "");
+
+  constexpr bool test2() {
+    auto a = (B*)(A*)nullptr;
+
+    return a == nullptr;
+  }
+  static_assert(test2(), "");
 }
 
 namespace NonConst {
@@ -1698,4 +1714,36 @@ namespace IgnoredMemberExpr {
     }
   };
   static_assert(B{}.foo() == 0, "");
+}
+
+#if __cplusplus >= 202002L
+namespace DeadUpcast {
+  struct A {};
+  struct B : A{};
+  constexpr bool foo() {
+
+    B *pb;
+    {
+      B b;
+      pb = &b;
+    }
+    A *pa = pb;
+
+    return true;
+  }
+  static_assert(foo(), "");
+}
+#endif
+
+namespace CtorOfInvalidClass {
+  constexpr struct { Unknown U; } InvalidCtor; // both-error {{unknown type name 'Unknown'}} \
+                                               // both-error {{must be initialized by a constant expression}}
+
+#if __cplusplus >= 202002L
+  template <typename T, auto Q>
+  concept ReferenceOf = Q;
+  /// This calls a valid and constexpr copy constructor of InvalidCtor, 
+  /// but should still be rejected.
+  template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
+#endif
 }

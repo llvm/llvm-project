@@ -874,7 +874,6 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_PACK_EXPANSION);
   RECORD(EXPR_SIZEOF_PACK);
   RECORD(EXPR_PACK_INDEXING);
-  RECORD(EXPR_RESOLVED_UNEXPANDED_PACK);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM);
   RECORD(EXPR_SUBST_NON_TYPE_TEMPLATE_PARM_PACK);
   RECORD(EXPR_FUNCTION_PARM_PACK);
@@ -5540,15 +5539,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
-  RegisterPredefDecl(Context.MakeIntegerSeqDecl,
-                     PREDEF_DECL_MAKE_INTEGER_SEQ_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
   RegisterPredefDecl(Context.CFConstantStringTagDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID);
-  RegisterPredefDecl(Context.TypePackElementDecl,
-                     PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
-  RegisterPredefDecl(Context.BuiltinCommonTypeDecl, PREDEF_DECL_COMMON_TYPE_ID);
+#define BuiltinTemplate(BTName)                                                \
+  RegisterPredefDecl(Context.Decl##BTName, PREDEF_DECL##BTName##_ID);
+#include "clang/Basic/BuiltinTemplates.inc"
 
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 

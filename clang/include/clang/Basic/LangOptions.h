@@ -816,6 +816,8 @@ public:
            VisibilityForcedKinds::ForceHidden;
   }
 
+  bool allowArrayReturnTypes() const { return HLSL; }
+
   /// Remap path prefix according to -fmacro-prefix-path option.
   void remapPathPrefix(SmallVectorImpl<char> &Path) const;
 

@@ -9,8 +9,11 @@
 #ifndef AMDGPU
 #define AMDGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/Properties.td"
 include "mlir/IR/OpBase.td"
 
 def AMDGPU_Dialect : Dialect {
@@ -30,6 +33,45 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU general attribute definitions
+//===----------------------------------------------------------------------===//
+
+def AMDGPU_AddressSpace : I32EnumAttr<"AddressSpace",
+    "AMDGPU-specific address spaces",
+    [
+      I32EnumAttrCase<"FatRawBuffer",        0, "fat_raw_buffer">,
+      I32EnumAttrCase<"BufferRsrc",          1, "buffer_rsrc">,
+      I32EnumAttrCase<"FatStructuredBuffer", 2, "fat_structured_buffer">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
+    "address_space"> {
+  let description = [{
+    AMDGPU-specific memory spaces that may not have exact analogues on other
+    GPU targets or backends.
+
+    - `fat_raw_buffer` is the memory space used when a memref is stored as
+    as a "buffer fat pointer" - that is, a buffer resource (that is set up to
+    use raw byte-level indexing) along with its offset. The AMDGPU backend
+    implements `ptr addrspace(7)` to represent these fat pointers so that
+    buffer resources (which allow advanced features like bounds checking or
+    cache swizzling) can be used like ordinary LLVM pointers or memrefs.
+    See also the `fat_raw_buffer_cast` operation
+    - `buffer_rsrc` is the memory space for `ptr addrspace(8)`, representing a
+    buffer resource. It should not be used for memrefs, since it does not support
+    indexing
+    - `fat_structured_buffer` represents `ptr addrspace(9)`, a buffer resource
+    that carries both an index and offset field, which are used for complex
+    structured indexing that is primarily seen in graphics applications. This
+    is also incompatible with the simple indexing model supported by memref.
+  }];
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -115,6 +157,69 @@ def AMDGPU_PackedStochRoundFp8Op :
     `into` ($existing^):(`undef`)? `[` $storeIndex `]`
     `:` type($source) `to` type($res) (`into` type($existing)^)?
   }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_FatRawBufferCastOp :
+    AMDGPU_Op<"fat_raw_buffer_cast",
+      [Pure,
+       DeclareOpInterfaceMethods<InferTypeOpInterface>,
+       ViewLikeOpInterface, AttrSizedOperandSegments]>,
+    Arguments<(ins AnyMemRef:$source,
+      Optional<I32>:$validBytes,
+      Optional<I<14>>:$cacheSwizzleStride,
+      DefaultValuedProp<BoolProp, "true">:$boundsCheck,
+      UnitProp:$resetOffset)>,
+    Results<(outs AnyMemRef:$result)> {
+  let summary = "Create a raw buffer fat pointer that matches `memref`";
+  let description = [{
+    Wraps the memory pointed to by `source` as a raw buffer fat pointer, or,
+    in LLVM terms, a `ptr addrspace(7)`, returning a memref that has the same
+    sizes and layout but the `#amdgpu.address_space<fat_raw_buffer>`
+    address space.
+
+    This memref can be used with standard memref operations like `memref.load`,
+    `memref.store`, and `memref.atomicrmw`, which will be lowered to the relevant
+    buffer intrinsics. (`vector.masked_load/store` will work once there's backend
+    support for lowering them, and then this document will be updated)
+
+    If `validBytes` is given, it is the number of bytes that will be valid as
+    an offset to `out`. If it is not provided, this will be inferred from
+    the size of the memref during lowering. This size is
+    max_{d = 0 upto rank(source)} (sizes[d] * strides[d]) * sizeof(element type).
+
+    The flags of the buffer descriptor will be set up to enable raw usage -
+    for example, stride = 0, add_tid = 0, and so on. The `boundsCheck`
+    property determines if bounds checking is enabled or not (on architectures
+    where this can be controlled - that is, on RDNA chips).
+
+    If `cacheSwizzleStride` is provided, L1 cache swizzling will be enabled
+    on architectures that support it. This swizzling, unlike the main swizzling
+    mode (whose usage makes a buffer non-raw) does not affect index calculation,
+    but does affect cache behavior. Mixing access between cache-swizzled raw
+    buffers and other forms of memory access, like ordinary pointer loads or
+    unswizzled buffer pointers can cause incorrect behavior and must be avoided.
+
+    This operation preserves the sizes, strides, and offset of the input
+    memref - they'll be added in by `memref.load` later. However, if
+    `resetOffset` is set, that offset will be added to the base pointer.
+    If the value of the memref's offset is not uniform (independent of the lane/thread ID),
+    this will lead to substantially decreased performance due to the need for
+    a waterfall loop on the base address of the buffer resource.
+  }];
+
+  let extraClassDeclaration = [{
+    Value getViewSource() { return getSource(); }
+  }];
+
+  let assemblyFormat = [{
+    $source oilist (`validBytes` `(` $validBytes `)`
+      | `cacheSwizzleStride` `(` $cacheSwizzleStride `)`
+      | `boundsCheck` `(` $boundsCheck `)`
+      | `resetOffset` $resetOffset )
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -602,7 +707,7 @@ def AMDGPU_MFMAOp :
     order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
 
     The negateA, negateB, and negateC flags are only supported for double-precision
-    operations on gfx940+.
+    operations on gfx94x.
   }];
   let assemblyFormat = [{
     $sourceA `*` $sourceB `+` $destC
