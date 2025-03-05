@@ -626,6 +626,12 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   auto _ = llvm::make_scope_exit([&]() {
+    while (Tok.isNot(tok::eof))
+      ConsumeAnyToken();
+
+    if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
+      ConsumeAnyToken();
+
     if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
       if (isa<CXXMethodDecl>(FD) ||
           FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
@@ -634,12 +640,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   if (Tok.is(tok::kw_try)) {
     ParseFunctionTryBlock(LM.D, FnScope);
-
-    while (Tok.isNot(tok::eof))
-      ConsumeAnyToken();
-
-    if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-      ConsumeAnyToken();
     return;
   }
   if (Tok.is(tok::colon)) {
@@ -649,12 +649,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
     if (!Tok.is(tok::l_brace)) {
       FnScope.Exit();
       Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-
-      while (Tok.isNot(tok::eof))
-        ConsumeAnyToken();
-
-      if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-        ConsumeAnyToken();
       return;
     }
   } else
@@ -668,12 +662,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "current template being instantiated!");
 
   ParseFunctionStatementBody(LM.D, FnScope);
-
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-    ConsumeAnyToken();
 }
 
 /// ParseLexedMemberInitializers - We finished parsing the member specification
