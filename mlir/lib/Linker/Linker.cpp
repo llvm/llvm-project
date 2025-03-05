@@ -33,14 +33,6 @@ class ModuleLinker {
   /// For symbol clashes, prefer those from src.
   unsigned flags;
 
-  /// List of global value names that should be internalized.
-  StringSet<> internalize;
-
-  /// Function that will perform the actual internalization. The reason for a
-  /// callback is that the linker cannot call internalizeModule without
-  /// creating a circular dependency between IPO and the linker.
-  InternalizeCallbackFn internalizeCallback;
-
   ModuleOp getSourceModule() { return cast<ModuleOp>(src.get()); }
 
   bool shouldOverrideFromSrc() const { return flags & Linker::OverrideFromSrc; }
@@ -85,8 +77,7 @@ class ModuleLinker {
 public:
   ModuleLinker(IRMover &mover, OwningOpRef<Operation *> src, unsigned flags,
                InternalizeCallbackFn internalizeCallback = {})
-      : mover(mover), src(std::move(src)), flags(flags),
-        internalizeCallback(std::move(internalizeCallback)) {}
+      : mover(mover), src(std::move(src)), flags(flags) {}
   LogicalResult run();
 };
 
@@ -235,7 +226,6 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
 
 LogicalResult ModuleLinker::run() {
   LLVM_DEBUG(llvm::dbgs() << "ModuleLinker::run" << "\n");
-  auto dst = mover.getComposite();
   auto src = getSourceModule();
 
   std::vector<Operation *> gvToClone;
@@ -263,14 +253,6 @@ LogicalResult ModuleLinker::run() {
   //   llvm_unreachable("unimplemented");
   // }
 
-  if (internalizeCallback) {
-    for (GlobalValue gvl : valuesToLink) {
-      StringRef name = gvl.getLinkedName();
-      LLVM_DEBUG(llvm::dbgs() << "Internalizing: " << name << "\n");
-      internalize.insert(name);
-    }
-  }
-
   bool hasErrors = false;
   // TODO: We are moving whatever the local src points to here (this->src), so
   // it can't be touched past this point.
@@ -284,20 +266,20 @@ LogicalResult ModuleLinker::run() {
   if (hasErrors)
     return failure();
 
-  if (internalizeCallback) {
-    internalizeCallback(dst, internalize);
-  }
-
   return success();
 }
 
-Linker::Linker(ModuleOp composite, const LinkerConfig &cfg)
-    : config(cfg), mover(composite) {}
+LogicalResult Linker::linkInModule(OwningOpRef<ModuleOp> src, unsigned flags) {
+  if (!composite) {
+    auto interface =
+        dyn_cast_or_null<LinkerInterface>(src->getOperation()->getDialect());
+    if (!interface)
+      return emitError("Module does not have a linker interface");
+    composite = interface->createCompositeModule(src.get());
+  }
 
-LogicalResult Linker::linkInModule(OwningOpRef<Operation *> src, unsigned flags,
-                                   InternalizeCallbackFn internalizeCallback) {
-  ModuleLinker modLinker(mover, std::move(src), flags,
-                         std::move(internalizeCallback));
+  IRMover mover(composite.get());
+  ModuleLinker modLinker(mover, std::move(src), flags);
   return modLinker.run();
 }
 

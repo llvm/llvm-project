@@ -19,7 +19,7 @@ namespace mlir::link {
 
 class IRMover {
 public:
-  IRMover(Operation *composite);
+  IRMover(mlir::ModuleOp composite) : composite(composite) {}
 
   ModuleOp getComposite() { return composite; }
   MLIRContext *getContext() { return composite->getContext(); }
@@ -27,7 +27,7 @@ public:
   Error move(OwningOpRef<Operation *> src, ArrayRef<GlobalValue> valuesToLink);
 
 private:
-  ModuleOp composite;
+  mlir::ModuleOp composite;
 };
 
 } // namespace mlir::link

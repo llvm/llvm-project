@@ -189,11 +189,11 @@ private:
     std::string errorMessage;
     auto input = openInputFile(fileName, &errorMessage);
     if (!input)
-      return emitFileError(fileName, errorMessage);
+      return linker.emitFileError(fileName, errorMessage);
 
     // Process each file chunk
     if (failed(processFile(std::move(input), config)))
-      return emitFileError(fileName, "Failed to process input file");
+      return linker.emitFileError(fileName, "Failed to process input file");
 
     return success();
   }
@@ -220,26 +220,20 @@ private:
     // Parse the source file
     OwningOpRef<Operation *> op =
         parseSourceFileForTool(sourceMgr, ctx, true /*insertImplicitModule*/);
-
     ctx->enableMultithreading(wasThreadingEnabled);
 
     if (!op)
-      return emitError("Failed to parse source file");
+      return linker.emitError("Failed to parse source file");
+
+    if (!isa<ModuleOp>(op.get()))
+      return op->emitError("Expected a ModuleOp");
 
     // TBD: symbol promotion
 
     // TBD: internalization
-
+    OwningOpRef<ModuleOp> mod = cast<ModuleOp>(op.release());
     // Link the parsed operation
-    return linker.linkInModule(std::move(op), config.flags);
-  }
-
-  LogicalResult emitFileError(const Twine &fileName, const Twine &message) {
-    return emitError("Error processing file '" + fileName + "': " + message);
-  }
-
-  LogicalResult emitError(const Twine &message) {
-    return mlir::emitError(mlir::UnknownLoc::get(linker.getContext()), message);
+    return linker.linkInModule(std::move(mod), config.flags);
   }
 
   Linker &linker;
@@ -269,22 +263,14 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   MLIRContext context(registry);
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
 
-  // Create composite module
-  OwningOpRef<ModuleOp> composite = [&context]() {
-    OpBuilder builder(&context);
-    return OwningOpRef<ModuleOp>(builder.create<ModuleOp>(
-        FileLineColLoc::get(&context, "mlir-link", 0, 0)));
-  }();
-
-  Linker linker(composite.get(), config);
+  Linker linker(config, &context);
 
   // Prepare output file
   std::string errorMessage;
   auto out = openOutputFile(config.outputFile, &errorMessage);
 
   if (!out) {
-    errs() << errorMessage;
-    return failure();
+    return linker.emitError("Failed to open output file: " + errorMessage);
   }
 
   StringRef inMarker = config.inputSplitMarker();
@@ -296,10 +282,11 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   if (failed(proc.linkFiles(config.inputFiles)))
     return failure();
 
-  // TODO: Remove
+  OwningOpRef<ModuleOp> composite = linker.takeModule();
   if (failed(verify(composite.get(), true))) {
-    llvm::outs() << "Verify failed\n";
+    return composite->emitError("verification after linking failed");
   }
+
   composite->print(out->os());
   out->keep();
 

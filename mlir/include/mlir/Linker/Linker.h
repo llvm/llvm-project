@@ -75,13 +75,12 @@ public:
     bool internalize = false;
   };
 
-  Linker(ModuleOp composite, const LinkerConfig &config);
+  Linker(const LinkerConfig &config, MLIRContext *context)
+      : config(config), context(context) {}
 
-  MLIRContext *getContext() { return mover.getContext(); }
+  MLIRContext *getContext() { return context; }
 
-  LogicalResult linkInModule(OwningOpRef<Operation *> src,
-                             unsigned flags = None,
-                             InternalizeCallbackFn internalizeCallback = {});
+  LogicalResult linkInModule(OwningOpRef<ModuleOp> src, unsigned flags = None);
 
   unsigned getFlags() const;
 
@@ -92,9 +91,20 @@ public:
   /// OverrideFromSrc flag set
   LinkFileConfig firstFileConfig(unsigned fileFlags = None) const;
 
+  OwningOpRef<ModuleOp> takeModule() { return std::move(composite); }
+
+  LogicalResult emitFileError(const Twine &fileName, const Twine &message) {
+    return emitError("Error processing file '" + fileName + "': " + message);
+  }
+
+  LogicalResult emitError(const Twine &message) {
+    return mlir::emitError(UnknownLoc::get(context), message);
+  }
+
 private:
   const LinkerConfig &config;
-  IRMover mover;
+  MLIRContext *context;
+  OwningOpRef<ModuleOp> composite;
 };
 
 } // namespace mlir::link

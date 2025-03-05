@@ -74,6 +74,11 @@ public:
                              const LinkerSummaryState *state) const {
     return failure();
   }
+
+  virtual OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) const {
+    return ModuleOp::create(
+        FileLineColLoc::get(src.getContext(), "composite", 0, 0));
+  }
 };
 
 struct LinkableOp {

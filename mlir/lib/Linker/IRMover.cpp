@@ -617,11 +617,8 @@ Error MLIRLinker::run() {
 }
 } // namespace
 
-IRMover::IRMover(Operation *composite) : composite(composite) {}
-
 Error IRMover::move(OwningOpRef<Operation *> src,
                     ArrayRef<GlobalValue> valuesToLink) {
-
   MLIRLinker linker(composite, std::move(src), valuesToLink);
   return linker.run();
 }
