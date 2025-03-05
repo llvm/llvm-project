@@ -4,22 +4,14 @@
 #include "clang/Serialization/ModuleCacheLock.h"
 #include "llvm/ADT/StringMap.h"
 
-#include <condition_variable>
+#include <shared_mutex>
 
 namespace clang {
 namespace tooling {
 namespace dependencies {
-struct ModuleCacheMutexWrapper {
-  std::mutex Mutex;
-  std::condition_variable CondVar;
-  bool Done = false;
-
-  ModuleCacheMutexWrapper() = default;
-};
-
 struct ModuleCacheMutexes {
   std::mutex Mutex;
-  llvm::StringMap<std::shared_ptr<ModuleCacheMutexWrapper>> Map;
+  llvm::StringMap<std::unique_ptr<std::shared_mutex>> Map;
 };
 
 std::shared_ptr<ModuleCacheLock>
