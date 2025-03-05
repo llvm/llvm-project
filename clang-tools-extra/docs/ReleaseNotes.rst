@@ -129,8 +129,9 @@ Changes in existing checks
   examples and fixing some macro related false positives.
 
 - Improved :doc:`modernize-use-starts-ends-with
-  <clang-tidy/checks/modernize/use-starts-ends-with>` check by fixing false
-  positives on methods ``find`` and ``rfind`` called with three arguments.
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
 
 - Improved :doc:`performance/unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
