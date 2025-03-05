@@ -629,22 +629,19 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 
   int64_t PGRM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
-#if LLPC_BUILD_NPI
       CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGRM_Rsrc3);
-#else /* LLPC_BUILD_NPI */
-      CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(PGRM_Rsrc3);
-#endif /* LLPC_BUILD_NPI */
   (void)PGRM_Rsrc3;
   (void)EvaluatableRsrc3;
 #if LLPC_BUILD_NPI
-  assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
+  assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+         STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
          !EvaluatableRsrc3 || static_cast<uint64_t>(PGRM_Rsrc3) == 0);
-  KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 #else /* LLPC_BUILD_NPI */
-  assert(STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
+  assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+         STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
          static_cast<uint64_t>(PGRM_Rsrc3) == 0);
-  KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3GFX90A;
 #endif /* LLPC_BUILD_NPI */
+  KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
       AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
@@ -875,35 +872,28 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
     [[maybe_unused]] int64_t PGMRSrc3;
 #if LLPC_BUILD_NPI
-    assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
+    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+           STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
 #else /* LLPC_BUILD_NPI */
-    assert(STM.hasGFX90AInsts() ||
-           (CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(
-                PGMRSrc3) &&
+    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
+           STM.hasGFX90AInsts() ||
+           (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
             static_cast<uint64_t>(PGMRSrc3) == 0));
 #endif /* LLPC_BUILD_NPI */
     if (STM.hasGFX90AInsts()) {
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
               getMCExprStr(MCKernelDescriptor::bits_get(
-#if LLPC_BUILD_NPI
                   CurrentProgramInfo.ComputePGMRSrc3,
-#else /* LLPC_BUILD_NPI */
-                  CurrentProgramInfo.ComputePGMRSrc3GFX90A,
-#endif /* LLPC_BUILD_NPI */
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET, Ctx)),
           false);
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:TG_SPLIT: " +
               getMCExprStr(MCKernelDescriptor::bits_get(
-#if LLPC_BUILD_NPI
                   CurrentProgramInfo.ComputePGMRSrc3,
-#else /* LLPC_BUILD_NPI */
-                  CurrentProgramInfo.ComputePGMRSrc3GFX90A,
-#endif /* LLPC_BUILD_NPI */
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT,
                   amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT, Ctx)),
           false);
@@ -1366,48 +1356,24 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
   ProgInfo.EXCPEnable = 0;
 
-#if LLPC_BUILD_NPI
   // return ((Dst & ~Mask) | (Value << Shift))
   auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
                         uint32_t Shift) {
     const auto *Shft = MCConstantExpr::create(Shift, Ctx);
     const auto *Msk = MCConstantExpr::create(Mask, Ctx);
     Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-    Dst = MCBinaryExpr::createOr(
-        Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
+    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                                 Ctx);
     return Dst;
   };
-#else /* LLPC_BUILD_NPI */
-  if (STM.hasGFX90AInsts()) {
-    // return ((Dst & ~Mask) | (Value << Shift))
-    auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
-                          uint32_t Shift) {
-      const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-      const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-      Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-      Dst = MCBinaryExpr::createOr(
-          Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
-      return Dst;
-    };
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   if (STM.hasGFX90AInsts()) {
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
-#else /* LLPC_BUILD_NPI */
-    ProgInfo.ComputePGMRSrc3GFX90A =
-        SetBits(ProgInfo.ComputePGMRSrc3GFX90A, ProgInfo.AccumOffset,
-#endif /* LLPC_BUILD_NPI */
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET_SHIFT);
-#if LLPC_BUILD_NPI
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, CreateExpr(ProgInfo.TgSplit),
-#else /* LLPC_BUILD_NPI */
-    ProgInfo.ComputePGMRSrc3GFX90A =
-        SetBits(ProgInfo.ComputePGMRSrc3GFX90A, CreateExpr(ProgInfo.TgSplit),
-#endif /* LLPC_BUILD_NPI */
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
@@ -1435,6 +1401,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             F.getName() + "': desired occupancy was " + Twine(MinWEU) +
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
+  }
+
+  if (isGFX11Plus(STM)) {
+    uint32_t CodeSizeInBytes = (uint32_t)std::min(
+        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
+        (uint64_t)std::numeric_limits<uint32_t>::max());
+    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
+    uint32_t Field, Shift, Width;
+    if (isGFX11(STM)) {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
+    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
+                                       CreateExpr(InstPrefSize), Field, Shift);
   }
 }
 
@@ -1565,10 +1551,6 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
     if (ST.isDynamicVGPREnabled())
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
-
-    MD->setHwStage(CC, ".lds_size",
-                   (unsigned)(CurrentProgramInfo.LdsSize *
-                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
   }
 
   MD->setHwStage(CC, ".lds_size",

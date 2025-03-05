@@ -141,15 +141,14 @@ std::optional<uint64_t>
 ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
     return std::nullopt;
-  auto iter = ThresholdCache.find(PercentileCutoff);
-  if (iter != ThresholdCache.end()) {
-    return iter->second;
-  }
+  auto [Iter, Inserted] = ThresholdCache.try_emplace(PercentileCutoff);
+  if (!Inserted)
+    return Iter->second;
   auto &DetailedSummary = Summary->getDetailedSummary();
   auto &Entry = ProfileSummaryBuilder::getEntryForPercentile(DetailedSummary,
                                                              PercentileCutoff);
   uint64_t CountThreshold = Entry.MinCount;
-  ThresholdCache[PercentileCutoff] = CountThreshold;
+  Iter->second = CountThreshold;
   return CountThreshold;
 }
 

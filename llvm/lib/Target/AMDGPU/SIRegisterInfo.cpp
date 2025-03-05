@@ -37,9 +37,9 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::init(true));
 
 #if LLPC_BUILD_NPI
-std::array<std::vector<int16_t>, 18> SIRegisterInfo::RegSplitParts;
+std::array<std::vector<int16_t>, 36> SIRegisterInfo::RegSplitParts;
 #else /* LLPC_BUILD_NPI */
-std::array<std::vector<int16_t>, 16> SIRegisterInfo::RegSplitParts;
+std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 #endif /* LLPC_BUILD_NPI */
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -361,12 +361,12 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
   static auto InitializeRegSplitPartsOnce = [this]() {
     for (unsigned Idx = 1, E = getNumSubRegIndices() - 1; Idx < E; ++Idx) {
       unsigned Size = getSubRegIdxSize(Idx);
-      if (Size & 31)
+      if (Size & 15)
         continue;
 #if LLPC_BUILD_NPI
-      assert(Size / 32 - 1 < RegSplitParts.size());
+      assert(Size / 16 - 1 < RegSplitParts.size());
 #endif /* LLPC_BUILD_NPI */
-      std::vector<int16_t> &Vec = RegSplitParts[Size / 32 - 1];
+      std::vector<int16_t> &Vec = RegSplitParts[Size / 16 - 1];
       unsigned Pos = getSubRegIdxOffset(Idx);
       if (Pos % Size)
         continue;
@@ -615,7 +615,7 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->usesAGPRs(MF)) {
+    if (MFI->mayNeedAGPRs()) {
       MaxNumVGPRs /= 2;
       MaxNumAGPRs = MaxNumVGPRs;
     } else {
@@ -1344,6 +1344,8 @@ static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
   case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
   case AMDGPU::SI_SPILL_WWM_AV32_SAVE:
   case AMDGPU::SI_SPILL_WWM_AV32_RESTORE:
+  case AMDGPU::SI_SPILL_V16_SAVE:
+  case AMDGPU::SI_SPILL_V16_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -2384,6 +2386,8 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
     // Don't need to write VGPR out.
   }
 
+  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+
   // Restore clobbered registers in the specified restore block.
   MI = RestoreMBB.end();
   SB.setMI(&RestoreMBB, MI);
@@ -2398,6 +2402,7 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       bool LastSubReg = (i + 1 == e);
       auto MIB = BuildMI(*SB.MBB, MI, SB.DL, SB.TII.get(AMDGPU::V_READLANE_B32),
                          SubReg)
@@ -2550,7 +2555,12 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V128_SAVE:
     case AMDGPU::SI_SPILL_V96_SAVE:
     case AMDGPU::SI_SPILL_V64_SAVE:
+#if LLPC_BUILD_NPI
+    case AMDGPU::SI_SPILL_V32_SAVE:
+    case AMDGPU::SI_SPILL_V16_SAVE: {
+#else /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_V32_SAVE: {
+#endif /* LLPC_BUILD_NPI */
       if (MFI->getLdsSpill().TotalSize > 0) {
 
         const MachineOperand *VData =
@@ -2572,6 +2582,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
       LLVM_FALLTHROUGH;
     }
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+    case AMDGPU::SI_SPILL_V16_SAVE:
+#endif /* LLPC_BUILD_NPI */
     case AMDGPU::SI_SPILL_A1024_SAVE:
 #if LLPC_BUILD_NPI
     case AMDGPU::SI_SPILL_A576_SAVE:
@@ -2618,11 +2632,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
-                         ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
-                     : ST.enableFlatScratch()
-                         ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
-                         : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+      unsigned Opc;
+      if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_SAVE) {
+        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        Opc = AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16;
+      } else {
+        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
+                       ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
+                   : ST.enableFlatScratch()
+                       ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
+                       : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
+      }
+
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -2647,6 +2668,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
       LLVM_FALLTHROUGH;
     }
+    case AMDGPU::SI_SPILL_V16_RESTORE:
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
     case AMDGPU::SI_SPILL_V96_RESTORE:
@@ -2722,11 +2744,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-      unsigned Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
-                         ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
-                     : ST.enableFlatScratch()
-                         ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
-                         : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+      unsigned Opc;
+      if (MI->getOpcode() == AMDGPU::SI_SPILL_V16_RESTORE) {
+        assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
+        Opc = AMDGPU::SCRATCH_LOAD_SHORT_D16_SADDR_t16;
+      } else {
+        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE
+                       ? AMDGPU::SCRATCH_LOAD_BLOCK_SADDR
+                   : ST.enableFlatScratch()
+                       ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
+                       : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
+      }
       auto *MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
@@ -2963,7 +2991,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       return true;
     }
-    case AMDGPU::S_ADD_I32: {
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_ADD_U32: {
       // TODO: Handle s_or_b32, s_and_b32.
       unsigned OtherOpIdx = FIOperandNum == 1 ? 2 : 1;
       MachineOperand &OtherOp = MI->getOperand(OtherOpIdx);
@@ -3023,7 +3052,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           DstReg = TmpReg;
         }
 
-        auto AddI32 = BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_ADD_I32))
+        auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
                           .addDef(DstReg, RegState::Renamable)
                           .addReg(MaterializedReg, RegState::Kill)
                           .add(OtherOp);
@@ -3264,10 +3293,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (IsSALU && !LiveSCC)
           Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
         if (IsSALU && LiveSCC) {
-          Register NewDest =
-              IsCopy ? ResultReg
-                     : RS->scavengeRegisterBackwards(AMDGPU::SReg_32RegClass,
-                                                     Shift, false, 0);
+          Register NewDest;
+          if (IsCopy) {
+            MF->getRegInfo().constrainRegClass(ResultReg,
+                                               &AMDGPU::SReg_32_XM0RegClass);
+            NewDest = ResultReg;
+          } else {
+            NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                    Shift, false, 0);
+          }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
               .addReg(TmpResultReg);
           ResultReg = NewDest;
@@ -3390,10 +3424,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   .addReg(TmpResultReg);
             }
 
-            Register NewDest = IsCopy ? ResultReg
-                                      : RS->scavengeRegisterBackwards(
-                                            AMDGPU::SReg_32RegClass, *Add,
-                                            false, 0, /*AllowSpill=*/true);
+            Register NewDest;
+            if (IsCopy) {
+              MF->getRegInfo().constrainRegClass(ResultReg,
+                                                 &AMDGPU::SReg_32_XM0RegClass);
+              NewDest = ResultReg;
+            } else {
+              NewDest = RS->scavengeRegisterBackwards(
+                  AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
+                  /*AllowSpill=*/true);
+            }
+
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                     NewDest)
                 .addReg(TmpResultReg);
@@ -3972,7 +4013,7 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
     RC = MRI.getRegClass(Reg);
   else
     RC = getPhysRegBaseClass(Reg);
-  return RC ? isSGPRClass(RC) : false;
+  return RC && isSGPRClass(RC);
 }
 
 const TargetRegisterClass *
@@ -4072,14 +4113,14 @@ bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
 ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC,
                                                    unsigned EltSize) const {
   const unsigned RegBitWidth = AMDGPU::getRegBitWidth(*RC);
-  assert(RegBitWidth >= 32 && RegBitWidth <= 1024);
+  assert(RegBitWidth >= 32 && RegBitWidth <= 1024 && EltSize >= 2);
 
-  const unsigned RegDWORDs = RegBitWidth / 32;
-  const unsigned EltDWORDs = EltSize / 4;
-  assert(RegSplitParts.size() + 1 >= EltDWORDs);
+  const unsigned RegHalves = RegBitWidth / 16;
+  const unsigned EltHalves = EltSize / 2;
+  assert(RegSplitParts.size() + 1 >= EltHalves);
 
-  const std::vector<int16_t> &Parts = RegSplitParts[EltDWORDs - 1];
-  const unsigned NumParts = RegDWORDs / EltDWORDs;
+  const std::vector<int16_t> &Parts = RegSplitParts[EltHalves - 1];
+  const unsigned NumParts = RegHalves / EltHalves;
 
   return ArrayRef(Parts.data(), NumParts);
 }

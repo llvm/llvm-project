@@ -562,6 +562,20 @@ def spirvbuiltin : ValueType<0, 249>; // SPIR-V's builtin type
               : ValueType<16,  232>;  // AArch64 predicate-as-counter
 def spirvbuiltin : ValueType<0, 233>; // SPIR-V's builtin type
 #endif /* LLPC_BUILD_NPI */
+// AMDGPU buffer fat pointer, buffer rsrc + offset, rewritten before MIR translation.
+// FIXME: Remove this and the getPointerType() override if MVT::i160 is added.
+#ifdef LLPC_BUILD_NPI
+def amdgpuBufferFatPointer : ValueType<160, 250>;
+#else /* LLPC_BUILD_NPI */
+def amdgpuBufferFatPointer : ValueType<160, 234>;
+#endif /* LLPC_BUILD_NPI */
+// AMDGPU buffer strided pointer, buffer rsrc + index + offset, doesn't reach MIR.
+// FIXME: Remove this and the getPointerType() override if MVT::i82 is added.
+#ifdef LLPC_BUILD_NPI
+def amdgpuBufferStridedPointer : ValueType<192, 251>;
+#else /* LLPC_BUILD_NPI */
+def amdgpuBufferStridedPointer : ValueType<192, 235>;
+#endif /* LLPC_BUILD_NPI */
 
 let isNormalValueType = false in {
 def token      : ValueType<0, 504>;  // TokenTy

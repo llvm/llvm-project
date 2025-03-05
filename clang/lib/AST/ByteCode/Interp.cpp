@@ -139,16 +139,18 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   Pointer U = Ptr.getBase();
   Pointer C = Ptr;
-  while (!U.isRoot() && U.inUnion() && !U.isActive()) {
-    if (U.getField())
-      C = U;
+  while (!U.isRoot() && !U.isActive()) {
+    // A little arbitrary, but this is what the current interpreter does.
+    // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
+    // GCC's output is more similar to what we would get without
+    // this condition.
+    if (U.getRecord() && U.getRecord()->isAnonymousUnion())
+      break;
+
+    C = U;
     U = U.getBase();
   }
   assert(C.isField());
-
-  // Get the inactive field descriptor.
-  const FieldDecl *InactiveField = C.getField();
-  assert(InactiveField);
 
   // Consider:
   // union U {
@@ -164,6 +166,11 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   // handle this.
   if (!U.getFieldDesc()->isUnion())
     return true;
+
+  // Get the inactive field descriptor.
+  assert(!C.isActive());
+  const FieldDecl *InactiveField = C.getField();
+  assert(InactiveField);
 
   // Find the active field of the union.
   const Record *R = U.getRecord();
@@ -544,8 +551,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (VD->getAnyInitializer()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
       S.Note(VD->getLocation(), diag::note_declared_at);
     } else {
@@ -707,6 +714,9 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
   if (F->isConstexpr() && F->hasBody() &&
       (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
     return true;
@@ -715,7 +725,6 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (F->isLambdaStaticInvoker())
     return true;
 
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
   if (S.getLangOpts().CPlusPlus11) {
     const FunctionDecl *DiagDecl = F->getDecl();
 
@@ -732,11 +741,17 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         DiagDecl = CD = Inherited;
     }
 
+    // Silently reject constructors of invalid classes. The invalid class
+    // has been rejected elsewhere before.
+    if (CD && CD->getParent()->isInvalidDecl())
+      return false;
+
     // FIXME: If DiagDecl is an implicitly-declared special member function
     // or an inheriting constructor, we should be much more explicit about why
     // it's not constexpr.
     if (CD && CD->isInheritingConstructor()) {
-      S.FFDiag(Loc, diag::note_constexpr_invalid_inhctor, 1)
+      S.FFDiag(S.Current->getLocation(OpPC),
+               diag::note_constexpr_invalid_inhctor, 1)
           << CD->getInheritedConstructor().getConstructor()->getParent();
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     } else {
@@ -754,7 +769,8 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
           DiagDecl->hasBody())
         return false;
 
-      S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)
+      S.FFDiag(S.Current->getLocation(OpPC),
+               diag::note_constexpr_invalid_function, 1)
           << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
       if (DiagDecl->getDefinition())
@@ -764,7 +780,8 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         S.Note(DiagDecl->getLocation(), diag::note_declared_at);
     }
   } else {
-    S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_invalid_subexpr_in_const_expr);
   }
 
   return false;
@@ -968,11 +985,6 @@ bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
   return true;
 }
 
-// FIXME: This is similar to code we already have in Compiler.cpp.
-// I think it makes sense to instead add the field and base destruction stuff
-// to the destructor Function itself. Then destroying a record would really
-// _just_ be calling its destructor. That would also help with the diagnostic
-// difference when the destructor or a field/base fails.
 static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
                                 const Pointer &BasePtr,
                                 const Descriptor *Desc) {
@@ -980,7 +992,8 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
   const Record *R = Desc->ElemRecord;
   assert(R);
 
-  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis())) {
+  if (Pointer::pointToSameBlock(BasePtr, S.Current->getThis()) &&
+      S.Current->getFunction()->isDestructor()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_destroy);
     return false;
@@ -1010,11 +1023,14 @@ static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(Desc->isRecord() || Desc->isCompositeArray());
 
   if (Desc->isCompositeArray()) {
+    unsigned N = Desc->getNumElems();
+    if (N == 0)
+      return true;
     const Descriptor *ElemDesc = Desc->ElemDesc;
     assert(ElemDesc->isRecord());
 
     Pointer RP(const_cast<Block *>(B));
-    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+    for (int I = static_cast<int>(N) - 1; I >= 0; --I) {
       if (!runRecordDestructor(S, OpPC, RP.atIndex(I).narrow(), ElemDesc))
         return false;
     }
@@ -1079,8 +1095,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
     // For a class type with a virtual destructor, the selected operator delete
     // is the one looked up when building the destructor.
-    QualType AllocType = Ptr.getType();
     if (!DeleteIsArrayForm && !IsGlobalDelete) {
+      QualType AllocType = Ptr.getType();
       auto getVirtualOperatorDelete = [](QualType T) -> const FunctionDecl * {
         if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
           if (const CXXDestructorDecl *DD = RD->getDestructor())
@@ -1233,8 +1249,10 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
                              const Pointer &ThisPtr) {
   assert(Func->isConstructor());
 
-  const Descriptor *D = ThisPtr.getFieldDesc();
+  if (Func->getParentDecl()->isInvalidDecl())
+    return false;
 
+  const Descriptor *D = ThisPtr.getFieldDesc();
   // FIXME: I think this case is not 100% correct. E.g. a pointer into a
   // subobject of a composite array.
   if (!D->ElemRecord)
@@ -1326,6 +1344,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
+      if (!Func->isConstructor() &&
+          !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
+        return false;
     }
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
@@ -1372,6 +1393,18 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ArgSize = Func->getArgSize() + VarArgSize;
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
+  const FunctionDecl *Callee = Func->getDecl();
+
+  // C++2a [class.abstract]p6:
+  //   the effect of making a virtual call to a pure virtual function [...] is
+  //   undefined
+  if (Callee->isPureVirtual()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
+             1)
+        << Callee;
+    S.Note(Callee->getLocation(), diag::note_declared_at);
+    return false;
+  }
 
   const CXXRecordDecl *DynamicDecl = nullptr;
   {
@@ -1388,7 +1421,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   assert(DynamicDecl);
 
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
-  const auto *InitialFunction = cast<CXXMethodDecl>(Func->getDecl());
+  const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(
       DynamicDecl, StaticDecl, InitialFunction);
 
@@ -1485,7 +1518,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // This happens when the call expression has been cast to
   // something else, but we don't support that.
   if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
-      S.Ctx.classify(CE->getType()))
+      S.Ctx.classify(CE->getCallReturnType(S.getASTContext())))
     return false;
 
   // Check argument nullability state.

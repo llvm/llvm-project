@@ -104,6 +104,9 @@ private:
   bool fixLdsDirectVMEMHazard(MachineInstr *MI);
   bool fixVALUPartialForwardingHazard(MachineInstr *MI);
   bool fixVALUTransUseHazard(MachineInstr *MI);
+#if LLPC_BUILD_NPI
+  bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
+#endif /* LLPC_BUILD_NPI */
   bool fixWMMAHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);

@@ -63,11 +63,7 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   uint32_t LdsSize = 0;
   uint32_t EXCPEnable = 0;
 
-#if LLPC_BUILD_NPI
   const MCExpr *ComputePGMRSrc3 = nullptr;
-#else /* LLPC_BUILD_NPI */
-  const MCExpr *ComputePGMRSrc3GFX90A = nullptr;
-#endif /* LLPC_BUILD_NPI */
 
   const MCExpr *NumVGPR = nullptr;
   const MCExpr *NumArchVGPR = nullptr;
@@ -115,7 +111,10 @@ struct LLVM_EXTERNAL_VISIBILITY SIProgramInfo {
   void reset(const MachineFunction &MF);
 
   // Get function code size and cache the value.
-  uint64_t getFunctionCodeSize(const MachineFunction &MF);
+  // If \p IsLowerBound is set it returns a minimal code size which is safe
+  // to address.
+  uint64_t getFunctionCodeSize(const MachineFunction &MF,
+                               bool IsLowerBound = false);
 
   /// Compute the value of the ComputePGMRsrc1 register.
   const MCExpr *getComputePGMRSrc1(const GCNSubtarget &ST,

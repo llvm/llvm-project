@@ -398,6 +398,12 @@ DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
 }
 
 StringAttr
+DataLayoutSpecAttr::getManglingModeIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutManglingModeKey);
+}
+
+StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutStackAlignmentKey);
@@ -571,7 +577,8 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
     return failure();
 
   MLIRContext *ctx = op->getContext();
-  SmallVector<DataLayoutEntryKey> entryKeys(keys.size());
+  SmallVector<DataLayoutEntryKey> entryKeys;
+  entryKeys.reserve(keys.size());
   for (StringRef key : keys)
     entryKeys.push_back(StringAttr::get(ctx, key));
 
@@ -605,7 +612,8 @@ public:
     if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
-        entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
+        entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutManglingModeKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;
   }

@@ -2044,7 +2044,6 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         1                  : VSrc_b32);
 }
 
-#ifdef LLPC_BUILD_NPI
 // VGPR only VOP3 src with 9 bit encoding
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
@@ -2057,33 +2056,22 @@ class getVOP3VRegSrcForVT<ValueType VT> {
                               1 : VRegSrc_32);
 }
 
-// VGPR only src, such as VOP3DPP src0.
-class getVGPRSrcForVT<ValueType VT> {
-  RegisterOperand ret = !cond(!eq(VT.Size, 96) : VGPRSrc_96,
-                              !eq(VT.Size, 64) : VGPRSrc_64,
-                              1 : VGPRSrc_32);
-}
-
-#endif /* LLPC_BUILD_NPI */
-// Returns the vreg register class to use for sources of VOP3 instructions for the
-// given VT.
 #ifdef LLPC_BUILD_NPI
-class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
-#else /* LLPC_BUILD_NPI */
-class getVOP3VRegSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
-#endif /* LLPC_BUILD_NPI */
-   RegisterOperand ret =
-   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
-         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
-         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
-         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+// VGPR only VOP3 src with 8 bit encoding e.g. VOP3DPP src0.
+class getVGPRSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+  RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : VGPRSrc_128,
+         !eq(VT.Size, 96)  : VGPRSrc_96,
+         !eq(VT.Size, 64)  : VGPRSrc_64,
+         !eq(VT.Size, 48)  : VGPRSrc_64,
          !eq(VT.Size, 16)  : !if(IsTrue16,
-                                 !if(IsFake16, RegisterOperand<VGPR_32>,
-                                               RegisterOperand<VGPR_16>),
-                                 RegisterOperand<VGPR_32>),
-         1                 : RegisterOperand<VGPR_32>);
+                                 !if(IsFake16, VGPRSrc_32,
+                                               VGPRSrc_16),
+                                 VGPRSrc_32),
+         1                 : VGPRSrc_32);
 }
 
+#endif /* LLPC_BUILD_NPI */
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
   RegisterOperand ret =
@@ -2863,16 +2851,23 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
 // In case of a SGPR register class, just return the register operand.
 #endif /* LLPC_BUILD_NPI */
 class getLdStRegisterOperand<RegisterClass RC> {
+  // This type of operands is only used in pseudo instructions helping
+  // code generation and thus doesn't need encoding and decoding methods.
+  // It also doesn't need to support AGPRs, because GFX908/A/40 do not
+  // support True16.
+  defvar VLdSt_16 = RegisterOperand<VGPR_16>;
+
 #ifdef LLPC_BUILD_NPI
   SIRegisterClass SIRC = !cast<SIRegisterClass>(RC);
 #endif /* LLPC_BUILD_NPI */
   RegisterOperand ret =
 #ifdef LLPC_BUILD_NPI
     !cond(SIRC.HasSGPR       : RegisterOperand<RC>,
-          !eq(RC.Size, 32)   : AVLdSt_32,
+          !eq(RC.Size, 16)   : VLdSt_16,
 #else /* LLPC_BUILD_NPI */
-    !cond(!eq(RC.Size, 32)   : AVLdSt_32,
+    !cond(!eq(RC.Size, 16)   : VLdSt_16,
 #endif /* LLPC_BUILD_NPI */
+          !eq(RC.Size, 32)   : AVLdSt_32,
           !eq(RC.Size, 64)   : AVLdSt_64,
           !eq(RC.Size, 96)   : AVLdSt_96,
           !eq(RC.Size, 128)  : AVLdSt_128,
@@ -2917,6 +2912,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
+#ifdef LLPC_BUILD_NPI
+  field bit IsInvalidSingleUseConsumer = 0;
+  field bit IsInvalidSingleUseProducer = 0;
+#endif /* LLPC_BUILD_NPI */
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -3337,6 +3336,7 @@ def VOP_V8F32_I32_I32 : VOPProfile<[v8f32, i32, i32, untyped]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
 #ifdef LLPC_BUILD_NPI
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
 def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
 def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
 def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
@@ -3365,9 +3365,7 @@ def VOP_V2I16_F32_F32_F32 : VOPProfile<[v2i16, f32, f32, f32]>;
 def VOP_V2I16_V2F16_F32 : VOPProfile<[v2i16, v2f16, f32, untyped]>;
 def VOP_V2I16_V2BF16_F32 : VOPProfile<[v2i16, v2bf16, f32, untyped]>;
 def VOP_I32_F32_F32_F32 : VOPProfile<[i32, f32, f32, f32]>;
-#ifdef LLPC_BUILD_NPI
 def VOP_I32_V2F32_I32_F32 : VOPProfile<[i32, v2f32, i32, f32]>;
-#endif /* LLPC_BUILD_NPI */
 def VOP_I32_V2F16_F32_F32 : VOPProfile<[i32, v2f16, f32, f32]>;
 def VOP_I32_V2BF16_F32_F32: VOPProfile<[i32, v2bf16, f32, f32]>;
 def VOP_BF16_F32_I32 : VOPProfile<[bf16, f32, i32, untyped]>;

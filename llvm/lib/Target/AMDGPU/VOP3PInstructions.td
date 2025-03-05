@@ -177,13 +177,11 @@ defm V_PK_MAX3_NUM_F16 : VOP3PInst<"v_pk_max3_num_f16", VOP3P_Profile<VOP_V2F16_
 }
 
 let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
-defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
-defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 #else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
-defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
-defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
 #endif /* LLPC_BUILD_NPI */
+defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
+defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
 #ifdef LLPC_BUILD_NPI
 } // End isCommutable = 1, FPDPRounding = 1
@@ -653,15 +651,29 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
 
 let OtherPredicates = [HasDot7Insts] in {
+#ifdef LLPC_BUILD_NPI
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
+}
+#else /* LLPC_BUILD_NPI */
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
+#endif /* LLPC_BUILD_NPI */
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
 let OtherPredicates = [HasDot1Insts] in {
+#ifdef LLPC_BUILD_NPI
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
+    VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
+}
+#else /* LLPC_BUILD_NPI */
 defm V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot4, 1>;
+#endif /* LLPC_BUILD_NPI */
 defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_sdot8, 1>;
 } // End OtherPredicates = [HasDot1Insts]
@@ -930,6 +942,7 @@ def VOPProfileMAI_F32_V8BF16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V1
 def VOPProfileMAI_F32_V8BF16_X4     : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8BF16_X4_VCD : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     VISrc_128_f32,  VDst_128, AVSrc_128>;
 
+
 #ifdef LLPC_BUILD_NPI
 // For i32_16x16x64_i8
 def VOPProfileMAI_I32_V4I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
@@ -938,8 +951,8 @@ def VOPProfileMAI_I32_V4I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32
 // For i32_32x32x32_i8
 def VOPProfileMAI_I32_V4I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 let HasAbid = false in {
 // For f32_16x16x128_f8f6f4 - f8 x f8 case
 def VOPProfileMAI_F32_V8I32_V8I32_X128     : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    AISrc_128_f32,  ADst_128, AVSrc_256>;
@@ -1026,10 +1039,7 @@ def VOPProfileMAI_I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32
 def VOPProfileMAI_I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
 def VOPProfileMAI_I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
 
-#ifdef LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
 
-#endif /* LLPC_BUILD_NPI */
 class MFMATable <bit is_mac, string Kind, string Name,
                  string AGPROpName = NAME> {
   bit IsMac = is_mac;
@@ -1387,7 +1397,7 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
   } // End SubtargetPredicate = HasPackedFP32Ops
 
-  let SubtargetPredicate = HasPkMovB32 in
+  let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
 #ifdef LLPC_BUILD_NPI
 
@@ -1896,13 +1906,13 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 #else /* LLPC_BUILD_NPI */
   dag Src2InlineInPat = (ins (Src2VT (WMMAVISrc Src2VT:$src2)));
   dag Src2InlineOutPat = !con(!if(IsIU, (ins), (ins (i32 8))), (ins Src2VT:$src2));
-
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat, MatrixScaleOutModPat, ClampPat);
 #else /* LLPC_BUILD_NPI */
+
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, ClampPat);
   dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, ClampPat);
 #endif /* LLPC_BUILD_NPI */
@@ -1924,6 +1934,11 @@ def WMMAInstInfoTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getWMMAInstInfoHelper";
+}
+
+class WMMAInstInfo {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bit is_wmma_xdl = 0;
 #else /* LLPC_BUILD_NPI */
   dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat,  ClampPat);
   dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, ClampPat);
@@ -1931,11 +1946,6 @@ def WMMAInstInfoTable : GenericTable {
 }
 
 #ifdef LLPC_BUILD_NPI
-class WMMAInstInfo {
-  Instruction Opcode = !cast<Instruction>(NAME);
-  bit is_wmma_xdl = 0;
-}
-
 multiclass WMMAInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string PseudoInstrSuffix, bit DiffVdstSrc2 = 0> {
 
   defvar WMMAConstraints2Addr = !if(DiffVdstSrc2, "@earlyclobber $vdst", "@earlyclobber $vdst,$vdst = $src2");
@@ -2979,9 +2989,7 @@ defm V_PK_MUL_F16 : VOP3P_Real_vi <0x10>;
 defm V_PK_MIN_F16 : VOP3P_Real_vi <0x11>;
 defm V_PK_MAX_F16 : VOP3P_Real_vi <0x12>;
 
-#ifdef LLPC_BUILD_NPI
 defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
-#endif /* LLPC_BUILD_NPI */
 defm V_PK_MINIMUM3_F16 : VOP3P_Real_vi <0x1b>;
 defm V_PK_MAXIMUM3_F16 : VOP3P_Real_vi <0x1c>;
 
@@ -3053,10 +3061,6 @@ defm V_MFMA_F32_16X16X128_F8F6F4 : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2d, "v_mf
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2d>;
 defm V_MFMA_F32_32X32X64_F8F6F4  : VOP3P_Real_MFMA_F8F6F4_gfx950_mc <0x2e, "v_mfma_f32_32x32x64_f8f6f4">;
 defm V_MFMA_SCALE_F32_32X32X64_F8F6F4 : VOP3PX_Real_ScaledMFMA_F8F6F4_mc <0x2e>;
-#ifdef LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
-#endif /* LLPC_BUILD_NPI */
 
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
 defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;

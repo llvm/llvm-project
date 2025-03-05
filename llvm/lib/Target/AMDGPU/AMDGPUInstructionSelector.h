@@ -159,7 +159,9 @@ private:
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
+#if LLPC_BUILD_NPI
   bool selectSBarrierLeave(MachineInstr &I) const;
+#endif /* LLPC_BUILD_NPI */
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,

@@ -2163,6 +2163,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
+        ":PluginObjectFilePlaceholder",
         "//lldb:Core",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",

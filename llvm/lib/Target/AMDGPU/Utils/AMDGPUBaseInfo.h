@@ -116,6 +116,12 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+struct True16D16Info {
+  unsigned T16Op;
+  unsigned HiOp;
+  unsigned LoOp;
+};
+
 #if LLPC_BUILD_NPI
 struct WMMAInstInfo {
   uint16_t Opcode;
@@ -130,12 +136,9 @@ struct WMMAInstInfo {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-#define GET_MAIInstInfoTable_DECL
-#endif /* LLPC_BUILD_NPI */
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#define GET_True16D16Table_DECL
 #if LLPC_BUILD_NPI
 #define GET_WMMAInstInfoTable_DECL
 #endif /* LLPC_BUILD_NPI */
@@ -444,6 +447,7 @@ struct MIMGBaseOpcodeInfo {
   bool BVH;
   bool A16;
   bool NoReturn;
+  bool PointSampleAccel;
 };
 
 LLVM_READONLY

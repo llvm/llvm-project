@@ -270,7 +270,7 @@ defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
-  let DstRC = RegisterOperand<SReg_32>;
+  let DstRC = RegisterOperand<SReg_32_XM0>;
   let Src0RC32 = VRegOrLdsSrc_32;
   let Asm32 = " $vdst, $src0";
 }
@@ -280,6 +280,9 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
                                        [], 1> {
   let isConvergent = 1;
+#ifdef LLPC_BUILD_NPI
+  let IsInvalidSingleUseConsumer = 1;
+#endif /* LLPC_BUILD_NPI */
 }
 
 foreach vt = Reg32Types.types in {
@@ -419,6 +422,9 @@ defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
+#ifdef LLPC_BUILD_NPI
+  let IsInvalidSingleUseConsumer = 1;
+#endif /* LLPC_BUILD_NPI */
 }
 
 def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
@@ -480,8 +486,17 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let EmitDst = 1; // force vdst emission
 }
 
+#ifdef LLPC_BUILD_NPI
+let IsInvalidSingleUseProducer = 1 in {
+  def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
+  def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32> {
+    let IsInvalidSingleUseConsumer = 1;
+  }
+}
+#else /* LLPC_BUILD_NPI */
 def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
 def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
+#endif /* LLPC_BUILD_NPI */
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // v_movreld_b32 is a special case because the destination output
@@ -625,6 +640,9 @@ let SubtargetPredicate = isGFX9Plus in {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let DisableEncoding = "$vdst1,$src1";
     let SchedRW = [Write64Bit, Write64Bit];
+#ifdef LLPC_BUILD_NPI
+    let IsInvalidSingleUseConsumer = 1;
+#endif /* LLPC_BUILD_NPI */
   }
 
   let isReMaterializable = 1 in
@@ -879,6 +897,10 @@ let SubtargetPredicate = isGFX10Plus in {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
       let DisableEncoding = "$vdst1,$src1";
       let SchedRW = [Write64Bit, Write64Bit];
+#ifdef LLPC_BUILD_NPI
+      let IsInvalidSingleUseConsumer = 1;
+      let IsInvalidSingleUseProducer = 1;
+#endif /* LLPC_BUILD_NPI */
     }
   } // End Uses = [M0]
 } // End SubtargetPredicate = isGFX10Plus
@@ -912,14 +934,24 @@ let SubtargetPredicate = isGFX11Plus in {
   }
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
+#ifdef LLPC_BUILD_NPI
+                                      [], /*VOP1Only=*/ 1> {
+    let IsInvalidSingleUseConsumer = 1;
+    let IsInvalidSingleUseProducer = 1;
+  }
+#else /* LLPC_BUILD_NPI */
                                       [], /*VOP1Only=*/ 1>;
+#endif /* LLPC_BUILD_NPI */
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasPrngInst in
+#endif /* LLPC_BUILD_NPI */
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
@@ -1277,11 +1309,7 @@ defm V_CVT_PK_F32_BF8_t16    : VOP3_Real_with_name_gfx12_gfx13<0x1ef, "V_CVT_PK_
 #else /* LLPC_BUILD_NPI */
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_BF8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
-defm V_CVT_NEAREST_I32_F32 : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x00c,
-#else /* LLPC_BUILD_NPI */
 defm V_CVT_PK_F32_FP8_fake16 : VOP1_Real_e32_with_name<GFX12Gen, 0x06e, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_t16    : VOP1_Real_e32_with_name<GFX12Gen, 0x06e, "V_CVT_PK_F32_FP8_t16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_fake16 : VOP3_Real_with_name<GFX12Gen, 0x1ee, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
@@ -1290,7 +1318,11 @@ defm V_CVT_PK_F32_BF8_fake16 : VOP1_Real_e32_with_name<GFX12Gen, 0x06f, "V_CVT_P
 defm V_CVT_PK_F32_BF8_t16    : VOP1_Real_e32_with_name<GFX12Gen, 0x06f, "V_CVT_PK_F32_BF8_t16", "v_cvt_pk_f32_bf8">;
 defm V_CVT_PK_F32_BF8_fake16 : VOP3_Real_with_name<GFX12Gen, 0x1ef, "V_CVT_PK_F32_BF8_fake16", "v_cvt_pk_f32_bf8">;
 defm V_CVT_PK_F32_BF8_t16    : VOP3_Real_with_name<GFX12Gen, 0x1ef, "V_CVT_PK_F32_BF8_t16", "v_cvt_pk_f32_bf8">;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
+defm V_CVT_NEAREST_I32_F32 : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x00c,
+#else /* LLPC_BUILD_NPI */
 defm V_CVT_NEAREST_I32_F32 : VOP1_Real_FULL_with_name_gfx11_gfx12<0x00c,
 #endif /* LLPC_BUILD_NPI */
   "V_CVT_RPI_I32_F32", "v_cvt_nearest_i32_f32">;

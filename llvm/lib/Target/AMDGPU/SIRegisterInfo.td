@@ -1538,7 +1538,7 @@ def VGPR_IDX_DATA_OP_RC
 
 // Only used for the index operand of V_LOAD/STORE_IDX.
 def VGPR_IDX_IDX_OP_RC : SIRegisterClass<"AMDGPU", [i32], 32,
-                            (add SReg_32_XEXEC_HI, IDX_REG_32)> {
+                            (add SReg_32, IDX_REG_32)> {
   let isAllocatable = 0;
   let HasSGPR = 1;
 #else /* LLPC_BUILD_NPI */
@@ -1836,6 +1836,10 @@ def VGPRSrc_96 : RegisterOperand<VReg_96> {
 }
 
 #ifdef LLPC_BUILD_NPI
+def VGPRSrc_128 : RegisterOperand<VReg_128_STAGING> {
+  let DecoderMethod = "DecodeVReg_128RegisterClass";
+}
+
 def VGPRSrc_192 : RegisterOperand<VReg_192_STAGING> {
   let DecoderMethod = "DecodeVReg_192RegisterClass";
 }

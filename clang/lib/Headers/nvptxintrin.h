@@ -131,7 +131,8 @@ __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
                                              __gpu_num_lanes() - 1)
           << 32ull) |
          ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __id,
-                                             __gpu_num_lanes() - 1));
+                                             __gpu_num_lanes() - 1) &
+          0xFFFFFFFF);
 }
 
 // Returns a bitmask of threads in the current lane for which \p x is true.
@@ -155,8 +156,11 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_lane(uint64_t __lane_mask) {
 _DEFAULT_FN_ATTRS static __inline__ uint32_t
 __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
                       uint32_t __width) {
+  // Mask out inactive lanes to match AMDGPU behavior.
   uint32_t __mask = (uint32_t)__lane_mask;
-  return __nvvm_shfl_sync_idx_i32(__mask, __x, __idx,
+  bool __bitmask = (1ull << __idx) & __lane_mask;
+  return -__bitmask &
+         __nvvm_shfl_sync_idx_i32(__mask, __x, __idx,
                                   ((__gpu_num_lanes() - __width) << 8u) | 0x1f);
 }
 

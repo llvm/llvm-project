@@ -135,7 +135,7 @@ unsigned getKmcntBitWidth(unsigned VersionMajor) {
 #if LLPC_BUILD_NPI
 /// \returns Xcnt bit width.
 unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
-  return VersionMajor == 12 && VersionMinor == 1 ? 5 : 0;
+  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
 }
 
 /// \returns Swccnt bit width.
@@ -432,6 +432,14 @@ struct DPMACCInstructionInfo {
   bool IsDPMACCInstruction;
 };
 
+#if LLPC_BUILD_NPI
+struct SingleUseExceptionInfo {
+  uint16_t Opcode;
+  bool IsInvalidSingleUseConsumer;
+  bool IsInvalidSingleUseProducer;
+};
+
+#endif /* LLPC_BUILD_NPI */
 struct FP4FP8DstByteSelInfo {
   uint16_t Opcode;
   bool HasFP8DstByteSel;
@@ -440,14 +448,14 @@ struct FP4FP8DstByteSelInfo {
 
 #define GET_DPMACCInstructionTable_DECL
 #define GET_DPMACCInstructionTable_IMPL
-#if LLPC_BUILD_NPI
-#define GET_FP8DstByteSelTable_DECL
-#define GET_FP8DstByteSelTable_IMPL
-#endif /* LLPC_BUILD_NPI */
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#if LLPC_BUILD_NPI
+#define GET_SingleUseExceptionTable_DECL
+#define GET_SingleUseExceptionTable_IMPL
+#endif /* LLPC_BUILD_NPI */
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -476,6 +484,7 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDPairs_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
@@ -504,17 +513,17 @@ int getMTBUFElements(unsigned Opc) {
 
 bool getMTBUFHasVAddr(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMTBUFHasSrsrc(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMTBUFHasSoffset(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 int getMUBUFBaseOpcode(unsigned Opc) {
@@ -534,47 +543,47 @@ int getMUBUFElements(unsigned Opc) {
 
 bool getMUBUFHasVAddr(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMUBUFHasSrsrc(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->IsBufferInv : false;
+  return Info && Info->IsBufferInv;
 }
 
 bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->tfe : false;
+  return Info && Info->tfe;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info ? Info->IsBuffer : false;
+  return Info && Info->IsBuffer;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -591,12 +600,12 @@ bool isVOPMPseudo(unsigned Opc) { return isVOPMPseudoOpcodeHelper(Opc); }
 #endif /* LLPC_BUILD_NPI */
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_dgemm : false;
+  return Info && Info->is_dgemm;
 }
 
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_gfx940_xdl : false;
+  return Info && Info->is_gfx940_xdl;
 }
 
 #if LLPC_BUILD_NPI
@@ -817,7 +826,7 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
 #endif /* LLPC_BUILD_NPI */
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info ? Info->IsTrue16 : false;
+  return Info && Info->IsTrue16;
 }
 
 FPType getFPDstSelType(unsigned Opc) {
@@ -837,6 +846,18 @@ bool isDPMACCInstruction(unsigned Opc) {
   return Info && Info->IsDPMACCInstruction;
 }
 
+#if LLPC_BUILD_NPI
+bool isInvalidSingleUseConsumerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseConsumer;
+}
+
+bool isInvalidSingleUseProducerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseProducer;
+}
+
+#endif /* LLPC_BUILD_NPI */
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
@@ -1261,6 +1282,14 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+#if LLPC_BUILD_NPI
+  // For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
+  // to multiple values based on the split ratio. For now we will use default
+  // value set by HW after the reset.
+  if (STI->getFeatureBits().test(FeatureDefaultLocalMemorySize131072))
+    return 131072;
+
+#endif /* LLPC_BUILD_NPI */
   unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a
@@ -2978,6 +3007,8 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 // (move from MC* level to Target* level). Return size in bits.
 unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
+  case AMDGPU::VGPR_16RegClassID:
+  case AMDGPU::VGPR_16_Lo128RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
   case AMDGPU::AGPR_LO16RegClassID:
     return 16;

@@ -155,6 +155,9 @@ defm int_amdgcn_cluster_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                              <"__builtin_amdgcn_cluster_id">;
 defm int_amdgcn_cluster_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                        <"__builtin_amdgcn_cluster_workgroup_id">;
+def int_amdgcn_cluster_workgroup_flat_id:
+  ClangBuiltin<"__builtin_amdgcn_cluster_workgroup_flat_id">,
+  Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 defm int_amdgcn_cluster_workgroup_max_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                            <"__builtin_amdgcn_cluster_workgroup_max_id">;
 def int_amdgcn_cluster_workgroup_max_flat_id:
@@ -284,6 +287,7 @@ def int_amdgcn_s_barrier_signal_isfirst : ClangBuiltin<"__builtin_amdgcn_s_barri
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+#ifdef LLPC_BUILD_NPI
 // void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %barrier, i32 %memberCnt)
 // The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_init : ClangBuiltin<"__builtin_amdgcn_s_barrier_init">,
@@ -296,7 +300,6 @@ def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
   Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
-#ifdef LLPC_BUILD_NPI
 // void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
 // The %barrier argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
@@ -309,11 +312,13 @@ def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+#ifdef LLPC_BUILD_NPI
 // void @llvm.amdgcn.s.barrier.leave(i16 %barrierType)
 def int_amdgcn_s_barrier_leave : ClangBuiltin<"__builtin_amdgcn_s_barrier_leave">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+#endif /* LLPC_BUILD_NPI */
 // uint32_t @llvm.amdgcn.s.get.barrier.state(i32 %barrierId)
 // The %barrierType argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_get_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_barrier_state">,
@@ -1224,7 +1229,7 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
                                                //                bit 0 = glc, bit 1 = slc,
                                                //                bit 2 = dlc (gfx10/gfx11),
                                                //                bit 4 = scc (gfx90a)
-                                               //        gfx940: bit 0 = sc0, bit 1 = nt, bit 4 = sc1
+                                               //        gfx942: bit 0 = sc0, bit 1 = nt, bit 4 = sc1
                                                //        gfx12+: bits [0-2] = th, bits [3-4] = scope
      !listconcat(props, [IntrNoCallback, IntrNoFree, IntrWillReturn],
           !if(P_.IsAtomic, [], [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.DmaskArgIndex>>]),
@@ -1434,11 +1439,24 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
 // Data type for buffer resources (V#). Maybe, in the future, we can create a
 // similar one for textures (T#).
 def AMDGPUBufferRsrcTy : LLVMQualPointerType<8>;
+// Data type for buffer fat pointers, which are a buffer resource (V#) followed by
+// a 32-bit offset. These don't exist in hardware and are a compiler-internal
+// convenience.
+def AMDGPUBufferFatPointerTy : LLVMQualPointerType<7>;
 
 let TargetPrefix = "amdgcn" in {
 
+// Create a buffer resource wrapping `base` with the specified `stride`
+// `numrecords`, and `flags`. All of these values will need to be
+// wave-uniform when the buffer instructions are invoked, so non-uniform
+// inputs to this intrinsic will trigger waterfall loops.
+//
+// In addition to creating ptr addrspace(8), whe representation of buffer
+// resources, it can create the fat pointers ptr addrspace(7) and ptr addrspace(9),
+// which carry additional offset bits. When this intrinsic is used to create
+// these fat pointers, their offset and index fields (if applicable) are zero.
 def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
-  [AMDGPUBufferRsrcTy],
+  [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
    llvm_i32_ty,    // NumRecords / extent
@@ -1458,7 +1476,7 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      // Note: volatile bit is **not** permitted here.
@@ -1492,7 +1510,7 @@ class AMDGPURawBufferLoad : DefaultAttrsIntrinsic <
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1526,7 +1544,7 @@ class AMDGPURawPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntri
    llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
-                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
@@ -1562,7 +1580,7 @@ class AMDGPUStructBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntri
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1584,7 +1602,7 @@ class AMDGPUStructAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1601,7 +1619,7 @@ class AMDGPUStructPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIn
    llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
-                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
@@ -1620,7 +1638,7 @@ class AMDGPUStructPtrAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsi
    llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
-                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
@@ -1642,7 +1660,7 @@ class AMDGPURawBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrins
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1660,7 +1678,7 @@ class AMDGPURawPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntr
    llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
-                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
@@ -1684,7 +1702,7 @@ class AMDGPUStructBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntr
    llvm_i32_ty],     // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1703,7 +1721,7 @@ class AMDGPUStructPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsI
    llvm_i32_ty],          // auxiliary/cachepolicy(imm):
                           //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                           //                bit 3 = swz, bit 4 = scc (gfx90a)
-                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                           //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                           //                bit 6 = swz
                           //           all: volatile op (bit 31, stripped at lowering)
@@ -1797,7 +1815,7 @@ def int_amdgcn_raw_ptr_buffer_atomic_cmpswap : Intrinsic<
 // gfx908 intrinsic
 def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty>;
 
-// Supports float and <2 x half> on gfx908. Supports v2bf16 on gfx90a, gfx940, gfx950, gfx12+.
+// Supports float and <2 x half> on gfx908. Supports v2bf16 on gfx90a, gfx942, gfx950, gfx12+.
 def int_amdgcn_raw_ptr_buffer_atomic_fadd : AMDGPURawPtrBufferAtomic<llvm_anyfloat_ty>;
 
 class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
@@ -1908,7 +1926,7 @@ def int_amdgcn_raw_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty],    // auxiliary/cachepolicy(imm):
                       //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                       //                bit 3 = swz, bit 4 = scc (gfx90a)
-                      //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                      //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                       //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                       //                bit 6 = swz
     [IntrReadMem,
@@ -1924,7 +1942,7 @@ def int_amdgcn_raw_ptr_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty],      // auxiliary/cachepolicy(imm):
                         //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                         //                bit 3 = swz, bit 4 = scc (gfx90a)
-                        //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                        //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                         //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                         //                bit 6 = swz
                         //           all: volatile op (bit 31, stripped at lowering)
@@ -1946,7 +1964,7 @@ def int_amdgcn_raw_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty],   // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1964,7 +1982,7 @@ def int_amdgcn_raw_ptr_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty],   // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -1986,7 +2004,7 @@ def int_amdgcn_struct_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty],    // auxiliary/cachepolicy(imm):
                       //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                       //                bit 3 = swz, bit 4 = scc (gfx90a)
-                      //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                      //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                       //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                       //                bit 6 = swz
                       //           all: volatile op (bit 31, stripped at lowering)
@@ -2004,7 +2022,7 @@ def int_amdgcn_struct_ptr_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty],       // auxiliary/cachepolicy(imm):
                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                          //                bit 3 = swz, bit 4 = scc (gfx90a)
-                         //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                         //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                          //                bit 6 = swz
                          //           all: volatile op (bit 31, stripped at lowering)
@@ -2023,7 +2041,7 @@ def int_amdgcn_struct_ptr_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty],       // auxiliary/cachepolicy(imm):
                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                          //                bit 3 = swz, bit 4 = scc (gfx90a)
-                         //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                         //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                          //                bit 6 = swz
                          //           all: volatile op (bit 31, stripped at lowering)
@@ -2046,7 +2064,7 @@ def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty],   // auxiliary/cachepolicy(imm):
                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                      //                bit 3 = swz, bit 4 = scc (gfx90a)
-                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                      //                bit 6 = swz
                      //           all: volatile op (bit 31, stripped at lowering)
@@ -2069,7 +2087,7 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
    llvm_i32_ty],              // auxiliary/cachepolicy(imm):
                               //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                               //                bit 3 = swz, bit 4 = scc (gfx90a)
-                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
@@ -2088,7 +2106,7 @@ class AMDGPURawPtrBufferLoadLDS : Intrinsic <
    llvm_i32_ty],              // auxiliary/cachepolicy(imm):
                               //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                               //                bit 3 = swz, bit 4 = scc (gfx90a)
-                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
@@ -2115,7 +2133,7 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
    llvm_i32_ty],              // auxiliary/cachepolicy(imm):
                               //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                               //                bit 3 = swz, bit 4 = scc (gfx90a)
-                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
@@ -2135,7 +2153,7 @@ class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
    llvm_i32_ty],              // auxiliary/cachepolicy(imm):
                               //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
                               //                bit 3 = swz, bit 4 = scc (gfx90a)
-                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
                               //                bit 6 = swz
                               //           all: volatile op (bit 31, stripped at lowering)
@@ -2769,13 +2787,13 @@ def int_amdgcn_set_inactive_chain_arg :
 // Return if the given flat pointer points to a local memory address.
 def int_amdgcn_is_shared : ClangBuiltin<"__builtin_amdgcn_is_shared">,
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
-  [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
+  [IntrNoMem, IntrSpeculatable] // FIXME: This should be captures(ret: address)
 >;
 
 // Return if the given flat pointer points to a prvate memory address.
 def int_amdgcn_is_private : ClangBuiltin<"__builtin_amdgcn_is_private">,
   DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty],
-  [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>]
+  [IntrNoMem, IntrSpeculatable] // FIXME: This should be captures(ret: address)
 >;
 
 // A uniform tail call to a function with the `amdgpu_cs_chain` or
@@ -3413,6 +3431,12 @@ def int_amdgcn_pdep_b32 :
 def int_amdgcn_pext_b32 :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_pext_b32">;
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
 
 // void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) %sem, i32 %state)
 // Sets the SEMA*_STATE wave state register for a semaphore owned by the current
@@ -4225,7 +4249,7 @@ def int_amdgcn_fdot2_f32_bf16 :
 // f32 %r = llvm.amdgcn.fdot2c.f32.bf16(v2bf16 %a, v2bf16 %b, f32 %c, i1 %clamp)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + c
 // TODO: This actually is similar to llvm.amdgcn.fdot2 intrinsics which produces
-// v_dot2c_f32_f16 on gfx940. Maybe we can consolidate these.
+// v_dot2c_f32_f16 on gfx942. Maybe we can consolidate these.
 
 def int_amdgcn_fdot2c_f32_bf16 :
   ClangBuiltin<"__builtin_amdgcn_fdot2c_f32_bf16">,
@@ -4468,7 +4492,7 @@ def int_amdgcn_mfma_f32_4x4x4bf16_1k    : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  ll
 def int_amdgcn_mfma_f32_32x32x8bf16_1k  : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v4i16_ty>;
 def int_amdgcn_mfma_f32_16x16x16bf16_1k : AMDGPUMfmaIntrinsic<llvm_v4f32_ty,  llvm_v4i16_ty>;
 
-// Note: in gfx940 BLGP argument is replaced by NEG bitfield in the DGEMM MFMA.
+// Note: in gfx942 BLGP argument is replaced by NEG bitfield in the DGEMM MFMA.
 //       Three bits corresponding to the neg modifier applied to the respective
 //       source operand.
 def int_amdgcn_mfma_f64_16x16x4f64      : AMDGPUMfmaIntrinsic<llvm_v4f64_ty,  llvm_double_ty>;
@@ -4476,7 +4500,7 @@ def int_amdgcn_mfma_f64_4x4x4f64        : AMDGPUMfmaIntrinsic<llvm_double_ty, ll
 }
 
 //===----------------------------------------------------------------------===//
-// gfx940 intrinsics
+// gfx942 intrinsics
 // ===----------------------------------------------------------------------===//
 
 class AMDGPUMFp8MfmaIntrinsic<LLVMType DestTy> :
@@ -4595,9 +4619,6 @@ def int_amdgcn_smfmac_f32_16x16x64_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, 
 def int_amdgcn_smfmac_f32_32x32x32_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;
 def int_amdgcn_smfmac_i32_16x16x128_i8 : AMDGPUMSmfmacIntrinsic<llvm_v4i32_ty,  llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_smfmac_i32_32x32x64_i8 : AMDGPUMSmfmacIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
-#ifdef LLPC_BUILD_NPI
-
-#endif /* LLPC_BUILD_NPI */
 def int_amdgcn_smfmac_f32_16x16x128_bf8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_smfmac_f32_16x16x128_bf8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
 def int_amdgcn_smfmac_f32_16x16x128_fp8_bf8 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
@@ -5043,4 +5064,11 @@ def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
   [llvm_anyptr_ty], [llvm_anyptr_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+/// Make it clear to the backend that this value is really dead. For instance,
+/// when used as an input to a phi node, it will make it possible for the
+/// backend to allocate the dead lanes for operations within the corresponding
+/// incoming block.
+def int_amdgcn_dead: DefaultAttrsIntrinsic<[llvm_any_ty], [],
+    [IntrNoMem, IntrWillReturn, IntrNoCallback]>;
 }

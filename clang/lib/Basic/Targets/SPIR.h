@@ -405,6 +405,8 @@ public:
     HasLegalHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
+
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
   bool hasBFloat16Type() const override { return true; }

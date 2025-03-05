@@ -648,7 +648,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_WAVE_GROUP_INFO = 27,
 
 #endif /* LLPC_BUILD_NPI */
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
@@ -1214,6 +1214,23 @@ enum Register_Flag : uint8_t {
 
 } // namespace VirtRegFlag
 
+#if LLPC_BUILD_NPI
+// On GFX13+, after we remove v_load/store_idx in LowerVGPREncoding,
+// it is hard to derive the following information on individual instruction.
+// - The idx-register that is used by each explicit MachineOperand.
+// - Also for those operands, does it represent a regular wave-private VGPR
+//   access based upon wave-vgpr-base-idx (implicit idx0)? or a dynamically
+//   indexed access to a vgpr-array? or a laneshared access?
+// The following enum is used for recording the info about the 2nd item above.
+// No special enum for the 1st item. During LowerVGPREncoding, we pack those
+// information per instruction into two 32-bit integers in a Metadata operand.
+enum IndexingAccessTypes : unsigned {
+  IDX_PRIVATE_BASE = 0,
+  IDX_PRIVATE_ARRAY = 1,
+  IDX_LANESHARED = 2
+};
+
+#endif /* LLPC_BUILD_NPI */
 } // namespace AMDGPU
 
 namespace AMDGPU {

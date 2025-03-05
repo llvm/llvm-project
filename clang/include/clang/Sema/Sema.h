@@ -1908,7 +1908,23 @@ public:
   /// '\#pragma clang attribute push' directives to the given declaration.
   void AddPragmaAttributes(Scope *S, Decl *D);
 
-  void PrintPragmaAttributeInstantiationPoint();
+  using InstantiationContextDiagFuncRef =
+      llvm::function_ref<void(SourceLocation, PartialDiagnostic)>;
+  auto getDefaultDiagFunc() {
+    return [this](SourceLocation Loc, PartialDiagnostic PD) {
+      // This bypasses a lot of the filters in the diag engine, as it's
+      // to be used to attach notes to diagnostics which have already
+      // been filtered through.
+      DiagnosticBuilder Builder(Diags.Report(Loc, PD.getDiagID()));
+      PD.Emit(Builder);
+    };
+  }
+
+  void PrintPragmaAttributeInstantiationPoint(
+      InstantiationContextDiagFuncRef DiagFunc);
+  void PrintPragmaAttributeInstantiationPoint() {
+    PrintPragmaAttributeInstantiationPoint(getDefaultDiagFunc());
+  }
 
   void DiagnoseUnterminatedPragmaAttribute();
 
@@ -2161,6 +2177,7 @@ public:
     FAPK_Fixed,    // values to format are fixed (no C-style variadic arguments)
     FAPK_Variadic, // values to format are passed as variadic arguments
     FAPK_VAList,   // values to format are passed in a va_list
+    FAPK_Elsewhere, // values to format are not passed to this function
   };
 
   // Used to grab the relevant information from a FormatAttr and a
@@ -2171,12 +2188,15 @@ public:
     FormatArgumentPassingKind ArgPassingKind;
   };
 
-  /// Given a FunctionDecl's FormatAttr, attempts to populate the
-  /// FomatStringInfo parameter with the FormatAttr's correct format_idx and
-  /// firstDataArg. Returns true when the format fits the function and the
-  /// FormatStringInfo has been populated.
-  static bool getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
-                                  bool IsVariadic, FormatStringInfo *FSI);
+  /// Given a function and its FormatAttr or FormatMatchesAttr info, attempts to
+  /// populate the FomatStringInfo parameter with the attribute's correct
+  /// format_idx and firstDataArg. Returns true when the format fits the
+  /// function and the FormatStringInfo has been populated.
+  static bool getFormatStringInfo(const Decl *Function, unsigned FormatIdx,
+                                  unsigned FirstArg, FormatStringInfo *FSI);
+  static bool getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
+                                  bool IsCXXMember, bool IsVariadic,
+                                  FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
   ExprResult BuiltinShuffleVector(CallExpr *TheCall);
@@ -2199,7 +2219,10 @@ public:
     FST_Syslog,
     FST_Unknown
   };
+  static StringRef GetFormatStringTypeName(FormatStringType FST);
+  static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
+  static FormatStringType GetFormatStringType(const FormatMatchesAttr *Format);
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
@@ -2345,6 +2368,25 @@ public:
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
+
+  /// Verify that two format strings (as understood by attribute(format) and
+  /// attribute(format_matches) are compatible. If they are incompatible,
+  /// diagnostics are emitted with the assumption that \c
+  /// AuthoritativeFormatString is correct and
+  /// \c TestedFormatString is wrong. If \c FunctionCallArg is provided,
+  /// diagnostics will point to it and a note will refer to \c
+  /// TestedFormatString or \c AuthoritativeFormatString as appropriate.
+  bool
+  CheckFormatStringsCompatible(FormatStringType FST,
+                               const StringLiteral *AuthoritativeFormatString,
+                               const StringLiteral *TestedFormatString,
+                               const Expr *FunctionCallArg = nullptr);
+
+  /// Verify that one format string (as understood by attribute(format)) is
+  /// self-consistent; for instance, that it doesn't have multiple positional
+  /// arguments referring to the same argument in incompatible ways. Diagnose
+  /// if it isn't.
+  bool ValidateFormatString(FormatStringType FST, const StringLiteral *Str);
 
   /// \brief Enforce the bounds of a TCB
   /// CheckTCBEnforcement - Enforces that every function in a named TCB only
@@ -2561,11 +2603,17 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange Range,
                             llvm::SmallBitVector &CheckedVarArgs);
+  bool CheckFormatString(const FormatMatchesAttr *Format,
+                         ArrayRef<const Expr *> Args, bool IsCXXMember,
+                         VariadicCallType CallType, SourceLocation Loc,
+                         SourceRange Range,
+                         llvm::SmallBitVector &CheckedVarArgs);
   bool CheckFormatArguments(ArrayRef<const Expr *> Args,
-                            FormatArgumentPassingKind FAPK, unsigned format_idx,
-                            unsigned firstDataArg, FormatStringType Type,
-                            VariadicCallType CallType, SourceLocation Loc,
-                            SourceRange range,
+                            FormatArgumentPassingKind FAPK,
+                            const StringLiteral *ReferenceFormatString,
+                            unsigned format_idx, unsigned firstDataArg,
+                            FormatStringType Type, VariadicCallType CallType,
+                            SourceLocation Loc, SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
 
   void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
@@ -3119,6 +3167,13 @@ public:
   }
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
+
+  enum class DiagCtorKind { None, Implicit, Typename };
+  /// Returns the TypeDeclType for the given type declaration,
+  /// as ASTContext::getTypeDeclType would, but
+  /// performs the required semantic checks for name lookup of said entity.
+  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                           TypeDecl *TD, SourceLocation NameLoc);
 
   /// If the identifier refers to a type name within this scope,
   /// return the declaration of that type.
@@ -4344,11 +4399,11 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
-private:
   /// Function or variable declarations to be checked for whether the deferred
   /// diagnostics should be emitted.
   llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
+private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
@@ -4560,6 +4615,11 @@ public:
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
                               IdentifierInfo *Format, int FormatIdx,
                               int FirstArg);
+  FormatMatchesAttr *mergeFormatMatchesAttr(Decl *D,
+                                            const AttributeCommonInfo &CI,
+                                            IdentifierInfo *Format,
+                                            int FormatIdx,
+                                            StringLiteral *FormatStr);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -10474,7 +10534,8 @@ public:
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
       OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
-      TemplateSpecCandidateSet *FailedTSC = nullptr);
+      TemplateSpecCandidateSet *FailedTSC = nullptr,
+      bool ForTypeDeduction = false);
 
   // Resolve and fix an overloaded expression that can be resolved
   // because it identifies a single function template specialization.
@@ -12571,7 +12632,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false,
+      bool PartialOverloading = false);
 
   /// Retrieve the most specialized of the given function template
   /// specializations.
@@ -13271,18 +13333,22 @@ public:
   void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();
 
-  void PrintContextStack() {
+  void PrintContextStack(InstantiationContextDiagFuncRef DiagFunc) {
     if (!CodeSynthesisContexts.empty() &&
         CodeSynthesisContexts.size() != LastEmittedCodeSynthesisContextDepth) {
-      PrintInstantiationStack();
+      PrintInstantiationStack(DiagFunc);
       LastEmittedCodeSynthesisContextDepth = CodeSynthesisContexts.size();
     }
     if (PragmaAttributeCurrentTargetDecl)
-      PrintPragmaAttributeInstantiationPoint();
+      PrintPragmaAttributeInstantiationPoint(DiagFunc);
   }
+  void PrintContextStack() { PrintContextStack(getDefaultDiagFunc()); }
   /// Prints the current instantiation stack through a series of
   /// notes.
-  void PrintInstantiationStack();
+  void PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc);
+  void PrintInstantiationStack() {
+    PrintInstantiationStack(getDefaultDiagFunc());
+  }
 
   /// Determines whether we are currently in a context where
   /// template argument substitution failures are not considered
@@ -13599,12 +13665,16 @@ public:
 
   class LocalEagerInstantiationScope {
   public:
-    LocalEagerInstantiationScope(Sema &S) : S(S) {
+    LocalEagerInstantiationScope(Sema &S, bool AtEndOfTU)
+        : S(S), AtEndOfTU(AtEndOfTU) {
       SavedPendingLocalImplicitInstantiations.swap(
           S.PendingLocalImplicitInstantiations);
     }
 
-    void perform() { S.PerformPendingInstantiations(/*LocalOnly=*/true); }
+    void perform() {
+      S.PerformPendingInstantiations(/*LocalOnly=*/true,
+                                     /*AtEndOfTU=*/AtEndOfTU);
+    }
 
     ~LocalEagerInstantiationScope() {
       assert(S.PendingLocalImplicitInstantiations.empty() &&
@@ -13615,6 +13685,7 @@ public:
 
   private:
     Sema &S;
+    bool AtEndOfTU;
     std::deque<PendingImplicitInstantiation>
         SavedPendingLocalImplicitInstantiations;
   };
@@ -13637,8 +13708,8 @@ public:
 
   class GlobalEagerInstantiationScope {
   public:
-    GlobalEagerInstantiationScope(Sema &S, bool Enabled)
-        : S(S), Enabled(Enabled) {
+    GlobalEagerInstantiationScope(Sema &S, bool Enabled, bool AtEndOfTU)
+        : S(S), Enabled(Enabled), AtEndOfTU(AtEndOfTU) {
       if (!Enabled)
         return;
 
@@ -13652,7 +13723,8 @@ public:
     void perform() {
       if (Enabled) {
         S.DefineUsedVTables();
-        S.PerformPendingInstantiations();
+        S.PerformPendingInstantiations(/*LocalOnly=*/false,
+                                       /*AtEndOfTU=*/AtEndOfTU);
       }
     }
 
@@ -13667,7 +13739,8 @@ public:
       S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
-      if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
+      if ((S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) &&
+          AtEndOfTU) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
         S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
@@ -13686,6 +13759,7 @@ public:
   private:
     Sema &S;
     bool Enabled;
+    bool AtEndOfTU;
   };
 
   ExplicitSpecifier instantiateExplicitSpecifier(
@@ -13871,7 +13945,8 @@ public:
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.
-  void PerformPendingInstantiations(bool LocalOnly = false);
+  void PerformPendingInstantiations(bool LocalOnly = false,
+                                    bool AtEndOfTU = true);
 
   TemplateParameterList *
   SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,

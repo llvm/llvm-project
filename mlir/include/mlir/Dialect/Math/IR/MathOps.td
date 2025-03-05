@@ -736,6 +736,7 @@ def Math_IsFiniteOp : Math_FloatClassificationOp<"isfinite"> {
     %f = math.isfinite %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -754,6 +755,7 @@ def Math_IsInfOp : Math_FloatClassificationOp<"isinf"> {
     %f = math.isinf %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -772,6 +774,7 @@ def Math_IsNaNOp : Math_FloatClassificationOp<"isnan"> {
     %f = math.isnan %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 
@@ -791,6 +794,7 @@ def Math_IsNormalOp : Math_FloatClassificationOp<"isnormal"> {
     %f = math.isnormal %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

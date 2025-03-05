@@ -439,6 +439,8 @@ define amdgpu_kernel void @call(ptr addrspace(8) inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-O3-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:4
 ; GFX9-O3-NEXT:    s_endpgm
+
+
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
   %tmp134 = call i32 @called(i32 %tmp107)
   %tmp136 = add i32 %tmp134, %tmp107
@@ -704,6 +706,9 @@ define amdgpu_kernel void @call_i64(ptr addrspace(8) inreg %tmp14, i64 inreg %ar
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-O3-NEXT:    buffer_store_dwordx2 v[0:1], off, s[16:19], 0 offset:4
 ; GFX9-O3-NEXT:    s_endpgm
+
+
+
   %tmp107 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %arg, i64 0)
   %tmp134 = call i64 @called_i64(i64 %tmp107)
   %tmp136 = add i64 %tmp134, %tmp107
@@ -1286,6 +1291,8 @@ define amdgpu_kernel void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 in
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-O3-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:4
 ; GFX9-O3-NEXT:    s_endpgm
+
+
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %arg, i32 0)
   %tmp134 = call i32 @strict_wwm_called(i32 %tmp107)
   %tmp136 = add i32 %tmp134, %tmp107
@@ -1551,6 +1558,9 @@ define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i6
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-O3-NEXT:    buffer_store_dwordx2 v[0:1], off, s[16:19], 0 offset:4
 ; GFX9-O3-NEXT:    s_endpgm
+
+
+
   %tmp107 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %arg, i64 0)
   %tmp134 = call i64 @strict_wwm_called_i64(i64 %tmp107)
   %tmp136 = add i64 %tmp134, %tmp107

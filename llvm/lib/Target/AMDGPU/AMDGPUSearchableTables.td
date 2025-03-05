@@ -464,6 +464,8 @@ def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
 
+def : SourceOfDivergence<int_amdgcn_dead>;
+
 class AlwaysUniform<Intrinsic intr> {
   Intrinsic Intr = intr;
 }
@@ -492,6 +494,7 @@ def : AlwaysUniform<int_amdgcn_waterfall_last_use>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_flat_id>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_x>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_y>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_z>;

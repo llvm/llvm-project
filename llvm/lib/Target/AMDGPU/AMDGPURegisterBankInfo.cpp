@@ -733,7 +733,7 @@ Register AMDGPURegisterBankInfo::buildReadFirstLane(MachineIRBuilder &B,
 
   for (unsigned i = 0; i < NumParts; ++i) {
     Register SrcPart = SrcParts[i];
-    Register DstPart = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register DstPart = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     MRI.setType(DstPart, NumParts == 1 ? Ty : S32);
 
     const TargetRegisterClass *Constrained =
@@ -3393,13 +3393,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       assert(OpdMapper.getVRegs(1).empty());
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
-    case Intrinsic::amdgcn_s_barrier_join:
 #if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_wakeup_barrier:
-#endif /* LLPC_BUILD_NPI */
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_init:
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_barrier_signal_var:
       constrainOpWithReadfirstlane(B, MI, 1);
       constrainOpWithReadfirstlane(B, MI, 2);
@@ -4990,6 +4990,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_convolve_i32_iu8_3x3:
     case Intrinsic::amdgcn_pdep_b32:
     case Intrinsic::amdgcn_pext_b32:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_bf6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_pk32_fp6_f32:
 #endif /* LLPC_BUILD_NPI */
       return getDefaultMappingVOP(MI);
 #if LLPC_BUILD_NPI
@@ -5034,6 +5036,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_set_inactive_chain_arg:
     case Intrinsic::amdgcn_permlane64:
     case Intrinsic::amdgcn_ds_bpermute_fi_b32:
+    case Intrinsic::amdgcn_dead:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_cvt_pkrtz:
       if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
@@ -5825,13 +5828,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_s_sleep_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
-    case Intrinsic::amdgcn_s_barrier_join:
 #if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_wakeup_barrier:
-#endif /* LLPC_BUILD_NPI */
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_init:
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_barrier_signal_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);

@@ -38,18 +38,14 @@ private:
   BitVector RegPressureIgnoredUnits;
 
   /// Sub reg indexes for getRegSplitParts.
-#if LLPC_BUILD_NPI
-  /// First index represents subreg size from 1 to 18 DWORDs.
-#else /* LLPC_BUILD_NPI */
-  /// First index represents subreg size from 1 to 16 DWORDs.
-#endif /* LLPC_BUILD_NPI */
+  /// First index represents subreg size from 1 to 32 Half DWORDS.
   /// The inner vector is sorted by bit offset.
   /// Provided a register can be fully split with given subregs,
   /// all elements of the inner vector combined give a full lane mask.
 #if LLPC_BUILD_NPI
-  static std::array<std::vector<int16_t>, 18> RegSplitParts;
+  static std::array<std::vector<int16_t>, 36> RegSplitParts;
 #else /* LLPC_BUILD_NPI */
-  static std::array<std::vector<int16_t>, 16> RegSplitParts;
+  static std::array<std::vector<int16_t>, 32> RegSplitParts;
 #endif /* LLPC_BUILD_NPI */
 
   // Table representing sub reg of given width and offset.

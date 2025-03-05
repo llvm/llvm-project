@@ -243,6 +243,9 @@ protected:
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
+#if LLPC_BUILD_NPI
+  bool HasVGPRSingleUseHintInsts = false;
+#endif /* LLPC_BUILD_NPI */
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
 #if LLPC_BUILD_NPI
@@ -284,7 +287,6 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
 #if LLPC_BUILD_NPI
@@ -307,6 +309,7 @@ protected:
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
 #endif /* LLPC_BUILD_NPI */
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1273,13 +1276,13 @@ public:
 
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX1250Insts; }
+
+  bool hasFlatGVSMode() const { return FlatGVSMode; }
 #else /* LLPC_BUILD_NPI */
   bool hasMovB64() const { return GFX940Insts; }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  bool hasFlatGVSMode() const { return FlatGVSMode; }
-
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
 #else /* LLPC_BUILD_NPI */
@@ -1416,8 +1419,6 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
-
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
@@ -1469,11 +1470,11 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
   // hasGFX940Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
@@ -1486,6 +1487,10 @@ public:
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
+#if LLPC_BUILD_NPI
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+
+#endif /* LLPC_BUILD_NPI */
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   bool hasRestrictedSOffset() const { return HasRestrictedSOffset; }
@@ -1563,6 +1568,8 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

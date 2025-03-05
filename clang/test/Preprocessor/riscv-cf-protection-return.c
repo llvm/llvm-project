@@ -40,5 +40,7 @@
 // RUN: -menable-experimental-extensions -fcf-protection=full -E -dM %s -o - \
 // RUN: | FileCheck --check-prefixes=SHSTK-MACRO %s
 
+// SHSTK-MACRO-NOT: __CET__
 // SHSTK-MACRO: __riscv_shadow_stack 1{{$}}
+// SHSTK-MACRO-NOT: __CET__
 // NO-MACRO-NOT: __riscv_shadow_stack

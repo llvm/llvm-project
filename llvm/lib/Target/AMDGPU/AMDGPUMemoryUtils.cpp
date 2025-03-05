@@ -414,10 +414,14 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+#if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_s_barrier_init:
     case Intrinsic::amdgcn_s_barrier_join:
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_barrier_wait:
+#if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_s_barrier_leave:
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_get_barrier_state:
 #if LLPC_BUILD_NPI
     case Intrinsic::amdgcn_s_wakeup_barrier:

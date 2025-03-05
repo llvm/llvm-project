@@ -917,7 +917,10 @@ module std [system] {
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
     module to_chars_floating_point    { header "__charconv/to_chars_floating_point.h" }
-    module to_chars_integral          { header "__charconv/to_chars_integral.h" }
+    module to_chars_integral          {
+      header "__charconv/to_chars_integral.h"
+      export std.charconv.to_chars_result
+    }
     module to_chars_result            { header "__charconv/to_chars_result.h" }
     module traits                     { header "__charconv/traits.h" }
 
@@ -935,6 +938,10 @@ module std [system] {
     module exception                  { header "__chrono/exception.h" }
     module file_clock                 { header "__chrono/file_clock.h" }
     module formatter                  { header "__chrono/formatter.h" }
+    module gps_clock {
+      header "__chrono/gps_clock.h"
+      export std.chrono.time_point
+    }
     module hh_mm_ss                   { header "__chrono/hh_mm_ss.h" }
     module high_resolution_clock {
       header "__chrono/high_resolution_clock.h"
@@ -1506,6 +1513,7 @@ module std [system] {
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
+      textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"

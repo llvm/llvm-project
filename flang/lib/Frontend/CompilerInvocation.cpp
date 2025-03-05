@@ -23,6 +23,7 @@
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
@@ -241,6 +242,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_fstack_arrays,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
+    opts.VectorizeLoop = 1;
 
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
@@ -956,6 +960,32 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
+
+  // -fd-lines-as-code
+  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_code)) {
+    if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
+      const unsigned fdLinesAsWarning = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "‘-fd-lines-as-code’ has no effect in free form.");
+      diags.Report(fdLinesAsWarning);
+    } else {
+      res.getFrontendOpts().features.Enable(
+          Fortran::common::LanguageFeature::OldDebugLines, true);
+    }
+  }
+
+  // -fd-lines-as-comments
+  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_comments)) {
+    if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
+      const unsigned fdLinesAsWarning = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "‘-fd-lines-as-comments’ has no effect in free form.");
+      diags.Report(fdLinesAsWarning);
+    } else {
+      res.getFrontendOpts().features.Enable(
+          Fortran::common::LanguageFeature::OldDebugLines, false);
+    }
+  }
 
   // -fdefault* family
   if (args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {

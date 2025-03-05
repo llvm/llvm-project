@@ -88,6 +88,9 @@ protected:
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+#if LLPC_BUILD_NPI
+  unsigned DefaultLocalMemorySize = 0;
+#endif /* LLPC_BUILD_NPI */
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -253,11 +256,11 @@ public:
   bool hasVOP3PInsts() const {
     return HasVOP3PInsts;
   }
+
 #if LLPC_BUILD_NPI
-
   bool hasExclusiveScanInsts() const { return HasExclusiveScanInsts; }
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   bool hasMulI24() const {
     return HasMulI24;
   }
@@ -302,7 +305,17 @@ public:
   /// running on the same WGP or CU.
   /// For GFX10-GFX12 in WGP mode this is 128k even though each workgroup is
   /// limited to 64k.
+#if LLPC_BUILD_NPI
+  //  For GFX13+ memory is shared between LDS and VectorCache. LDS can be set
+  //  to multiple values based on the split ratio. For now we will use default
+  //  value set by HW after the reset.
+#endif /* LLPC_BUILD_NPI */
   unsigned getLocalMemorySize() const {
+#if LLPC_BUILD_NPI
+    if (DefaultLocalMemorySize != 0)
+      return DefaultLocalMemorySize;
+
+#endif /* LLPC_BUILD_NPI */
     return LocalMemorySize;
   }
 
