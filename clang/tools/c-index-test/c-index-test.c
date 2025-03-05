@@ -3559,7 +3559,8 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   node = (IndexDataStringList *)malloc(len);
   assert(node);
   newStr = node->data;
-  snprintf(newStr, len - sizeof(IndexDataStringList) , "%s:%d:%d", name, line, column);
+  snprintf(newStr, len - sizeof(IndexDataStringList), "%s:%d:%d", name, line,
+           column);
 
   /* Remember string so it can be freed later. */
   index_data = (IndexData *)client_data;
