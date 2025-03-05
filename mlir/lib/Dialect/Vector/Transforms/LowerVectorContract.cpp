@@ -758,12 +758,20 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   Value res = rewriter.create<arith::ConstantOp>(loc, dstType,
                                                  rewriter.getZeroAttr(dstType));
   bool isInt = isa<IntegerType>(dstType.getElementType());
+  llvm::SmallVector<Value> extractedCols;
+  extractedCols.reserve(dstColumns);
   for (unsigned r = 0; r < dstRows; ++r) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
-      Value b = rank == 1
-                    ? rhs
-                    : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
+      if (r == 0) {
+        // We only need to extract the rows of the RHS once
+        // and then re-use them later.
+        Value b = rank == 1
+                      ? rhs
+                      : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
+        extractedCols.push_back(b);
+      }
+      Value b = extractedCols[c];
       Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
           op.getLoc(), vector::CombiningKind::ADD, m);
