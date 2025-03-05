@@ -13,40 +13,40 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    csrr a6, vlenb
-; CHECK-NEXT:    sub sp, sp, a6
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
+; CHECK-NEXT:    .cfi_offset s3, -40
+; CHECK-NEXT:    .cfi_offset s4, -48
 ; CHECK-NEXT:    mv s0, a5
 ; CHECK-NEXT:    mv s1, a4
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    vle64.v v8, (a2)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    ld s3, 0(a2)
+; CHECK-NEXT:    ld s4, 8(a2)
 ; CHECK-NEXT:    mv s2, a3
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    sd s3, 0(s2)
+; CHECK-NEXT:    sd s4, 8(s2)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (s2)
 ; CHECK-NEXT:    vle64.v v8, (s1)
 ; CHECK-NEXT:    vse64.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    .cfi_restore s2
+; CHECK-NEXT:    .cfi_restore s3
+; CHECK-NEXT:    .cfi_restore s4
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
