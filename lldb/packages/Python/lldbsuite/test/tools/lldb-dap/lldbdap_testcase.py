@@ -515,8 +515,25 @@ class DAPTestCaseBase(TestBase):
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
-                self.dap_server.request_disconnect(terminateDebuggee=True)
-            self.dap_server.terminate()
+                try:
+                    self.dap_server.request_disconnect(terminateDebuggee=True)
+                except (
+                    ValueError,
+                    TimeoutError,
+                    BrokenPipeError,
+                    ConnectionError,
+                    Exception,
+                ) as e:
+                    # DAP server might not be responsive, skip disconnect and terminate directly
+                    print(
+                        f"Warning: disconnect failed ({e}), skipping and terminating directly"
+                    )
+            try:
+                self.dap_server.terminate()
+            except Exception as e:
+                print(
+                    f"Warning: terminate failed ({e}), DAP server may have already died"
+                )
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)

@@ -22,6 +22,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "Protocol/ProtocolRequests.h"
 #include <chrono>
 #include <string>
 
@@ -248,6 +249,31 @@ llvm::Error ToError(const lldb::SBError &error);
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);
 
+/// Get the vscode session id from the request arguments.
+/// If exists, insert the fetched session id into dap init_commands.
+///
+/// \param[in] arguments
+///     The LaunchRequestArguments 
+///
+/// \param[in] dap
+///     The DAP session
+///
+/// \return
+///     void
+void UpdateVSCodeSessionID(const protocol::LaunchRequestArguments arguments, DAP &dap);
+
+/// Get the vscode session id from the request arguments.
+/// If exists, insert the fetched session id into dap init_commands.
+///
+/// \param[in] arguments
+///     The AttachRequestArguments
+///
+/// \param[in] dap
+///     The DAP session
+///
+/// \return
+///     void
+void UpdateVSCodeSessionID(const protocol::AttachRequestArguments arguments, DAP &dap);
 } // namespace lldb_dap
 
 #endif

@@ -811,6 +811,7 @@ class DebugCommunication(object):
         sourceMap: Optional[Union[list[tuple[str, str]], dict[str, str]]] = None,
         gdbRemotePort: Optional[int] = None,
         gdbRemoteHostname: Optional[str] = None,
+        vscode_session_id=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -844,6 +845,9 @@ class DebugCommunication(object):
             args_dict["gdb-remote-port"] = gdbRemotePort
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
+        if vscode_session_id: 
+            args_dict["__sessionId"] = vscode_session_id
+            
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self._send_recv(command_dict)
 
@@ -1074,6 +1078,7 @@ class DebugCommunication(object):
         commandEscapePrefix: Optional[str] = None,
         customFrameFormat: Optional[str] = None,
         customThreadFormat: Optional[str] = None,
+        vscode_session_id=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -1117,6 +1122,8 @@ class DebugCommunication(object):
             args_dict["customFrameFormat"] = customFrameFormat
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
+        if vscode_session_id: 
+            args_dict["__sessionId"] = vscode_session_id
 
         args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries

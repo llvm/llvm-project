@@ -31,6 +31,12 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
 
+  // When lldb-dap is reused, the ID of each session is passed in by a request
+  // argument, rather than through the environment variable. Set it into the
+  // environment variable, so that the downstream code can pick it up from there.
+  // See T215634007 for more details.
+  UpdateVSCodeSessionID(arguments, dap);
+
   PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files

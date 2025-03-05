@@ -638,3 +638,28 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             self.assertIn(
                 program, lines[0], "make sure program path is in first argument"
             )
+
+    def test_session_id_update(self):
+        program = self.getBuildArtifact("a.out")
+        postRunCommands = ["script print('Actual_Session_ID: ' + str(os.getenv('VSCODE_DEBUG_SESSION_ID')))"]
+        self.build_and_launch(
+            program, 
+            vscode_session_id="test_session_id", 
+            postRunCommands=postRunCommands,
+        )  
+        output = self.get_console() 
+        self.continue_to_exit()
+        lines = filter(lambda x: 'Actual_Session_ID' in x, output.splitlines())  
+        self.assertTrue(
+            any("test_session_id" in l for l in lines), "expect session id in console output"
+        )
+    
+    def test_session_id_update_empty(self): 
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)  
+        output = self.get_console() 
+        self.continue_to_exit()
+        self.assertTrue(
+            all("VSCODE_DEBUG_SESSION_ID" not in l for l in output.splitlines()), 
+            "expect NO session id update command"
+        )

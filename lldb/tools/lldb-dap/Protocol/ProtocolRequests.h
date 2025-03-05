@@ -308,6 +308,9 @@ struct LaunchRequestArguments {
 
   std::vector<std::optional<std::string>> stdio;
 
+  /// VSCode session ID for debugging session tracking.
+  std::optional<std::string> __sessionId;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
@@ -354,6 +357,9 @@ struct AttachRequestArguments {
 
   /// Path to the core file to debug.
   std::string coreFile;
+
+  /// VSCode session ID for debugging session tracking.
+  std::optional<std::string> __sessionId;
 
   /// @}
 };

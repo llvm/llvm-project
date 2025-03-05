@@ -48,6 +48,12 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   if (!args.coreFile.empty())
     dap.stop_at_entry = true;
 
+  // When lldb-dap is reused, the ID of each session is passed in by a request
+  // argument, rather than through the environment variable. Set it into the
+  // environment variable, so that the downstream code can pick it up from there.
+  // See T215634007 for more details.
+  UpdateVSCodeSessionID(args, dap);
+
   PrintWelcomeMessage();
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
+#include "DAP.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -19,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include "Protocol/ProtocolRequests.h"
 
 #include <cstring>
 #include <mutex>
@@ -257,6 +259,22 @@ lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
   lldb::SBSymbolContext sc = target.ResolveSymbolContextForAddress(
       address, lldb::eSymbolContextLineEntry);
   return sc.GetLineEntry();
+}
+
+void UpdateVSCodeSessionID(const protocol::LaunchRequestArguments arguments, DAP &dap) {
+  if (!arguments.__sessionId.has_value() || arguments.__sessionId->empty())
+    return; // No session ID provided.
+  dap.configuration.initCommands.insert(
+      dap.configuration.initCommands.begin(),
+      "script os.environ['VSCODE_DEBUG_SESSION_ID'] = '" + *arguments.__sessionId + "'");
+}
+
+void UpdateVSCodeSessionID(const protocol::AttachRequestArguments arguments, DAP &dap) {
+  if (!arguments.__sessionId.has_value() || arguments.__sessionId->empty())
+    return; // No session ID provided.
+  dap.configuration.initCommands.insert(
+      dap.configuration.initCommands.begin(),
+      "script os.environ['VSCODE_DEBUG_SESSION_ID'] = '" + *arguments.__sessionId + "'");
 }
 
 } // namespace lldb_dap

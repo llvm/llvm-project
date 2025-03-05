@@ -305,6 +305,7 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("runInTerminal", LRA.console) &&
          O.mapOptional("console", LRA.console) &&
+         O.mapOptional("__sessionId", LRA.__sessionId) &&
          O.mapOptional("stdio", LRA.stdio) && parseEnv(Params, LRA.env, P);
 }
 
@@ -317,7 +318,8 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
          O.mapOptional("waitFor", ARA.waitFor) &&
          O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
          O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile);
+         O.mapOptional("coreFile", ARA.coreFile) &&
+         O.mapOptional("__sessionId", ARA.__sessionId);
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
