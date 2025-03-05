@@ -15,9 +15,7 @@
 #include <iostream>
 
 using namespace llvm::ctx_profile;
-extern "C" bool __llvm_ctx_profile_fetch(void *Data,
-                                         bool (*Writer)(void *,
-                                                        const ContextNode &));
+extern "C" bool __llvm_ctx_profile_fetch(ProfileWriter &);
 
 // avoid name mangling
 extern "C" {
@@ -46,22 +44,29 @@ __attribute__((noinline)) void theRoot() {
 // CHECK-NEXT: check even
 // CHECK-NEXT: check odd
 
-void printProfile(const ContextNode &Node, const std::string &Indent,
-                  const std::string &Increment) {
-  std::cout << Indent << "Guid: " << Node.guid() << std::endl;
-  std::cout << Indent << "Entries: " << Node.entrycount() << std::endl;
-  std::cout << Indent << Node.counters_size() << " counters and "
-            << Node.callsites_size() << " callsites" << std::endl;
-  std::cout << Indent << "Counter values: ";
-  for (uint32_t I = 0U; I < Node.counters_size(); ++I)
-    std::cout << Node.counters()[I] << " ";
-  std::cout << std::endl;
-  for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
-    for (const auto *N = Node.subContexts()[I]; N; N = N->next()) {
-      std::cout << Indent << "At Index " << I << ":" << std::endl;
-      printProfile(*N, Indent + Increment, Increment);
-    }
-}
+class TestProfileWriter : public ProfileWriter {
+  void printProfile(const ContextNode &Node, const std::string &Indent,
+                    const std::string &Increment) {
+    std::cout << Indent << "Guid: " << Node.guid() << std::endl;
+    std::cout << Indent << "Entries: " << Node.entrycount() << std::endl;
+    std::cout << Indent << Node.counters_size() << " counters and "
+              << Node.callsites_size() << " callsites" << std::endl;
+    std::cout << Indent << "Counter values: ";
+    for (uint32_t I = 0U; I < Node.counters_size(); ++I)
+      std::cout << Node.counters()[I] << " ";
+    std::cout << std::endl;
+    for (uint32_t I = 0U; I < Node.callsites_size(); ++I)
+      for (const auto *N = Node.subContexts()[I]; N; N = N->next()) {
+        std::cout << Indent << "At Index " << I << ":" << std::endl;
+        printProfile(*N, Indent + Increment, Increment);
+      }
+  }
+
+public:
+  void writeContextual(const ContextNode &RootNode) override {
+    printProfile(RootNode, "", "");
+  }
+};
 
 // 8657661246551306189 is theRoot. We expect 2 callsites and 2 counters - one
 // for the entry basic block and one for the loop.
@@ -88,11 +93,8 @@ void printProfile(const ContextNode &Node, const std::string &Indent,
 // CHECK-NEXT:   Counter values: 2 1
 
 bool profileWriter() {
-  return __llvm_ctx_profile_fetch(
-      nullptr, +[](void *, const ContextNode &Node) {
-        printProfile(Node, "", "  ");
-        return true;
-      });
+  TestProfileWriter W;
+  return __llvm_ctx_profile_fetch(W);
 }
 
 int main(int argc, char **argv) {

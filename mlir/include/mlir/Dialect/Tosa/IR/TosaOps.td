@@ -74,7 +74,9 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
   let description = [{
     This performs an average pooling over the given input tensor. A sliding
     window of size given by <kernel size> is passed over the input tensor, with
-    the mean value being placed in the output tensor.
+    the mean value being placed in the output tensor. When calculating the
+    average, only the number of valid input tensor values, but not padding, are
+    used to calculate the divisor.
   }];
 
   let arguments = (ins
@@ -372,8 +374,10 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
     the input tensor consists of real values producing complex valued output. The
     complex output values will be split into the output_real and output_imag
     tensor arguments. RFFT2D takes advantage of Hermitian symmetry to only
-    calculate the first half of the final output axis. Imaginary values with
-    locations (0,0), (0,W/2), (H/2,0) and (H/2,W/2) are zero.
+    calculate the first half of the final output axis. Implementations may choose
+    to skip calculation of the imaginary values at (0,0), (0,W/2), (H/2,0), and
+    (H/2, W/2). If the calculation is skipped, the result at that location must be
+    zero.
 
     Example:
 
@@ -2471,12 +2475,12 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   }];
 
   let arguments = (ins
-    Tosa_I1Tensor:$cond,
-    Variadic<Tosa_Tensor>:$inputs
+    Tosa_I1Tensor:$condition,
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$output
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   list<Availability> availability = [
@@ -2485,8 +2489,8 @@ def Tosa_IfOp : Tosa_Op<"cond_if",
   ];
 
   let regions = (region
-    SizedRegion<1>:$then_branch,
-    SizedRegion<1>:$else_branch
+    SizedRegion<1>:$then_graph,
+    SizedRegion<1>:$else_graph
   );
 
   let hasCustomAssemblyFormat = 1;
@@ -2513,11 +2517,11 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   }];
 
   let arguments = (ins
-    Variadic<Tosa_Tensor>:$inputs
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$output
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   list<Availability> availability = [
@@ -2526,8 +2530,8 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   ];
 
   let regions = (region
-    SizedRegion<1>:$cond,
-    SizedRegion<1>:$body
+    SizedRegion<1>:$cond_graph,
+    SizedRegion<1>:$body_graph
   );
 
   let hasCustomAssemblyFormat = 1;

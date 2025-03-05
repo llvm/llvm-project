@@ -99,7 +99,7 @@ void VariablesRequestHandler::operator()(
   bool hex = false;
   const auto *format = arguments->getObject("format");
   if (format)
-    hex = GetBoolean(format, "hex", false);
+    hex = GetBoolean(format, "hex").value_or(false);
 
   if (lldb::SBValueList *top_scope =
           dap.variables.GetTopLevelScope(variablesReference)) {

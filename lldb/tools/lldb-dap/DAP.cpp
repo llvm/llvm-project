@@ -787,7 +787,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       response_handler = std::make_unique<UnknownResponseHandler>("", id);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
+    if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
