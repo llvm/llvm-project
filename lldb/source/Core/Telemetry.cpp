@@ -68,8 +68,10 @@ void CommandInfo::serialize(Serializer &serializer) const {
   serializer.write("command_name", command_name);
   serializer.write("original_command", original_command);
   serializer.write("args", args);
-  serializer.write("ret_status", ret_status);
-  serializer.write("error_data", error_data);
+  if (ret_status.has_value())
+    serializer.write("ret_status", ret_status.value());
+  if (error_data.has_value())
+    serializer.write("error_data", error_data.value());
 }
 
 void DebuggerInfo::serialize(Serializer &serializer) const {

@@ -98,8 +98,8 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   std::string original_command;
   std::string args;
   // Return status of a command and any error description in case of error.
-  lldb::ReturnStatus ret_status;
-  std::string error_data;
+  std::optional<lldb::ReturnStatus> ret_status;
+  std::optional<std::string> error_data;
 
   CommandInfo() = default;
 

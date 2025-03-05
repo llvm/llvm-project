@@ -1887,7 +1887,10 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   telemetry::ScopedDispatcher<telemetry::CommandInfo> helper(&m_debugger);
-  telemetry::TelemetryManager *ins = telemetry::TelemetryManager::GetInstance();
+  const bool detailed_command_telemetry =
+      telemetry::TelemetryManager::GetInstance()
+          ->GetConfig()
+          ->m_detailed_command_telemetry;
   const int command_id = telemetry::CommandInfo::GetNextId();
 
   std::string command_string(command_line);
@@ -1904,7 +1907,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                               ? target->GetExecutableModule()->GetUUID()
                               : UUID();
     }
-    if (ins->GetConfig()->m_detailed_command_telemetry)
+    if (detailed_command_telemetry)
       info->original_command = original_command_string;
     // The rest (eg., command_name, args, etc) hasn't been parsed yet;
     // Those will be collected by the on-exit-callback.
@@ -1922,7 +1925,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     if (std::string error_str = result.GetErrorString(); !error_str.empty())
       info->error_data = std::move(error_str);
 
-    if (ins->GetConfig()->m_detailed_command_telemetry)
+    if (detailed_command_telemetry)
       info->args = parsed_command_args;
   });
 
