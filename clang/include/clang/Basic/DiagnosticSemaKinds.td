@@ -3343,6 +3343,9 @@ def err_attribute_argument_out_of_range : Error<
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;
+def warn_init_priority_reserved : Warning<
+  "requested 'init_priority' %0 is reserved for internal use">,
+  InGroup<DiagGroup<"init-priority-reserved">>, DefaultError;
 def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
 def err_attribute_only_once_per_parameter : Error<
@@ -12848,6 +12851,9 @@ def err_acc_not_a_var_ref
 def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
+def err_acc_not_a_var_ref_cache
+    : Error<"OpenACC variable in cache directive is not a valid sub-array or "
+            "array element">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type

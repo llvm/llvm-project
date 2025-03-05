@@ -6832,6 +6832,11 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "                  param3) {\n"
                "  f();\n"
                "}");
+
+  verifyFormat("#ifdef __cplusplus\n"
+               "extern \"C\"\n"
+               "#endif\n"
+               "    void f();");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -8539,6 +8544,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator<<(\n"
       "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1);");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaa\n"
@@ -8551,6 +8557,9 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                      "aaaaaaaaaaaaaaaaaaaaaaa<T>::aaaaaaaaaaaaa(\n"
                      "    aaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa);");
+
+  verifyFormat("extern \"C\" //\n"
+               "    void f();");
 
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -12091,6 +12100,7 @@ TEST_F(FormatTest, PointerAlignmentFallback) {
 }
 
 TEST_F(FormatTest, UnderstandsNewAndDelete) {
+  verifyFormat("A(void *p) : a(new (p) int) {}");
   verifyFormat("void f() {\n"
                "  A *a = new A;\n"
                "  A *a = new (placement) A;\n"
@@ -12113,7 +12123,8 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
   verifyFormat("void new(link p);\n"
                "void delete(link p);",
                "void new (link p);\n"
-               "void delete (link p);");
+               "void delete (link p);",
+               getLLVMStyle(FormatStyle::LK_C));
 
   verifyFormat("{\n"
                "  p->new();\n"
