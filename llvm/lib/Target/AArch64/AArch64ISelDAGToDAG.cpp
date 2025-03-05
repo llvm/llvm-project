@@ -7385,14 +7385,13 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
   } else if (auto C = dyn_cast<ConstantSDNode>(VScale)) {
     int64_t ByteOffset = C->getSExtValue();
-    constexpr auto SVEBitsPerBlock = AArch64::SVEBitsPerBlock;
-    auto MinVScale = Subtarget->getMinSVEVectorSizeInBits() / SVEBitsPerBlock;
-    auto MaxVScale = Subtarget->getMaxSVEVectorSizeInBits() / SVEBitsPerBlock;
+    const auto KnownVScale =
+        Subtarget->getSVEVectorSizeInBits() / AArch64::SVEBitsPerBlock;
 
-    if (!MaxVScale || MinVScale != MaxVScale || ByteOffset % MaxVScale != 0)
+    if (!KnownVScale || ByteOffset % KnownVScale != 0)
       return false;
 
-    MulImm = ByteOffset / MaxVScale;
+    MulImm = ByteOffset / KnownVScale;
   } else
     return false;
 
