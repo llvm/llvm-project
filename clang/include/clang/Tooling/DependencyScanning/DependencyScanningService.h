@@ -67,6 +67,10 @@ enum class ScanningOptimizations {
   IgnoreCWD = (1 << 4),
 
   DSS_LAST_BITMASK_ENUM(IgnoreCWD),
+
+  // The build system needs to be aware that the current working
+  // directory is ignored. Without a good way of notifying the build
+  // system, it is less risky to default to off.
   Default = All & (~IgnoreCWD)
 };
 
