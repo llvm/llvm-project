@@ -444,12 +444,12 @@ public:
 } // namespace
 
 reverse_children::reverse_children(Stmt *S, ASTContext &Ctx) {
-  switch (S->getStmtClass()) {
-  case Stmt::CallExprClass: {
-    children = cast<CallExpr>(S)->getRawSubExprs();
+  if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
+    children = CE->getRawSubExprs();
     return;
   }
 
+  switch (S->getStmtClass()) {
   // Note: Fill in this switch with more cases we want to optimize.
   case Stmt::InitListExprClass: {
     InitListExpr *IE = cast<InitListExpr>(S);
