@@ -909,7 +909,8 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     Constant *IdentData[] = {I32Null,
                              ConstantInt::get(Int32, uint32_t(LocFlags)),
                              ConstantInt::get(Int32, Reserve2Flags),
-                             ConstantInt::get(Int32, SrcLocStrSize), SrcLocStr};
+                             ConstantInt::get(Int32, SrcLocStrSize),
+                             ConstantExpr::getPointerBitCastOrAddrSpaceCast(SrcLocStr,Int8Ptr)};
     Constant *Initializer =
         ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
 
@@ -6299,6 +6300,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
   Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
+
   CallInst *ThreadKind =
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
@@ -9293,20 +9295,25 @@ OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
 // the llvm::PointerTypes of them for easy access later.
 void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
-  StructType *T;
+  StructType *ST;
+
+  // spirv uses 4 for generic pointer which seems to be the right thing for the runtime functions
+  const unsigned RuntimePointerAddressSpace = T.isSPIRV() ? 4 : 0;
+  
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(Ctx);
+  VarName##PtrTy = PointerType::get(Ctx,RuntimePointerAddressSpace);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(Ctx);
+  VarName##Ptr = PointerType::get(Ctx,RuntimePointerAddressSpace);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
-  T = StructType::getTypeByName(Ctx, StructName);                              \
-  if (!T)                                                                      \
-    T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
-  VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(Ctx);
+  ST = StructType::getTypeByName(Ctx, StructName);                              \
+  if (!ST)                                                                      \
+    ST = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
+  VarName = ST;                                                                 \
+  VarName##Ptr = PointerType::get(Ctx, RuntimePointerAddressSpace);
+
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 

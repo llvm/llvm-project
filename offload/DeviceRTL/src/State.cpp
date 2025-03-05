@@ -75,19 +75,19 @@ extern "C" {
 ///
 struct SharedMemorySmartStackTy {
   /// Initialize the stack. Must be called by all threads.
-  void init(bool IsSPMD);
+  static void init(bool IsSPMD);
 
   /// Allocate \p Bytes on the stack for the encountering thread. Each thread
   /// can call this function.
-  void *push(uint64_t Bytes);
+  static void *push(uint64_t Bytes);
 
   /// Deallocate the last allocation made by the encountering thread and pointed
   /// to by \p Ptr from the stack. Each thread can call this function.
-  void pop(void *Ptr, uint64_t Bytes);
+  static void pop(void *Ptr, uint64_t Bytes);
 
 private:
   /// Compute the size of the storage space reserved for a thread.
-  uint32_t computeThreadStorageTotal() {
+  static uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
     return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
                             allocator::ALIGNMENT);
@@ -95,24 +95,34 @@ private:
 
   /// Return the top address of the warp data stack, that is the first address
   /// this warp will allocate memory at next.
-  void *getThreadDataTop(uint32_t TId) {
-    return &Data[computeThreadStorageTotal() * TId + Usage[TId]];
+  static void *getThreadDataTop(uint32_t TId) {
+    return (void*)&Data[computeThreadStorageTotal() * TId + Usage[TId]];
   }
 
+
   /// The actual storage, shared among all warps.
+
   [[gnu::aligned(
-      allocator::ALIGNMENT)]] unsigned char Data[state::SharedScratchpadSize];
+      allocator::ALIGNMENT)]]
+  [[clang::loader_uninitialized]]
+  static
+  Local<unsigned char> Data[state::SharedScratchpadSize];
   [[gnu::aligned(
-      allocator::ALIGNMENT)]] unsigned char Usage[mapping::MaxThreadsPerTeam];
+      allocator::ALIGNMENT)]]
+  [[clang::loader_uninitialized]]
+  static
+  Local<unsigned char> Usage[mapping::MaxThreadsPerTeam];
 };
 
+Local<unsigned char>  SharedMemorySmartStackTy::Data[state::SharedScratchpadSize];
+Local<unsigned char>  SharedMemorySmartStackTy::Usage[mapping::MaxThreadsPerTeam];
+  
 static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
               "Shared scratchpad of this size not supported yet.");
 
-/// The allocation of a single shared memory scratchpad.
-[[clang::loader_uninitialized]] static Local<SharedMemorySmartStackTy>
-    SharedMemorySmartStack;
-
+/// The single shared memory scratchpad.
+using SharedMemorySmartStack = SharedMemorySmartStackTy;
+  
 void SharedMemorySmartStackTy::init(bool IsSPMD) {
   Usage[mapping::getThreadIdInBlock()] = 0;
 }
@@ -160,14 +170,14 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
 
 } // namespace
 
-void *memory::getDynamicBuffer() { return DynamicSharedBuffer; }
+void *memory::getDynamicBuffer() { return (void *)DynamicSharedBuffer; }
 
 void *memory::allocShared(uint64_t Bytes, const char *Reason) {
-  return SharedMemorySmartStack.push(Bytes);
+  return SharedMemorySmartStack::push(Bytes);
 }
 
 void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
-  SharedMemorySmartStack.pop(Ptr, Bytes);
+  SharedMemorySmartStack::pop(Ptr, Bytes);
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
@@ -219,6 +229,7 @@ bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
 
 void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
+  // Other.ICVState.assertEqual(ICVState);
   ASSERT(ParallelTeamSize == Other.ParallelTeamSize, nullptr);
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
@@ -247,9 +258,9 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
                  KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
-  SharedMemorySmartStack.init(IsSPMD);
+  SharedMemorySmartStack::init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
-    TeamState.init(IsSPMD);
+    ((TeamStateTy*)(&TeamState))->init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
     KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
@@ -273,7 +284,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState = static_cast<ThreadStateTy *>(
       memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
-  uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
+  uintptr_t *ThreadStatesBitsPtr = (uintptr_t *)(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
     uint32_t Bytes =
         sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
@@ -313,18 +324,22 @@ void state::resetStateForThread(uint32_t TId) {
 }
 
 void state::runAndCheckState(void(Func(void))) {
-  TeamStateTy OldTeamState = TeamState;
-  OldTeamState.assertEqual(TeamState);
+  // TeamStateTy OldTeamState = TeamState;
+  TeamStateTy OldTeamState;
+  __builtin_memcpy(&OldTeamState,
+                   &TeamState,
+                   sizeof(TeamStateTy));
+  OldTeamState.assertEqual((TeamStateTy&)TeamState);
 
   Func();
 
-  OldTeamState.assertEqual(TeamState);
+  OldTeamState.assertEqual((TeamStateTy&)TeamState);
 }
 
 void state::assumeInitialState(bool IsSPMD) {
   TeamStateTy InitialTeamState;
   InitialTeamState.init(IsSPMD);
-  InitialTeamState.assertEqual(TeamState);
+  InitialTeamState.assertEqual((TeamStateTy&)TeamState);
   ASSERT(mapping::isSPMDMode() == IsSPMD, nullptr);
 }
 
@@ -461,7 +476,7 @@ constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
-    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+    SharedMemVariableSharingSpacePtr = (void**)&SharedMemVariableSharingSpace[0];
   } else {
     SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
         nArgs * sizeof(void *), "new extended args");
@@ -472,7 +487,7 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
 }
 
 void __kmpc_end_sharing_variables() {
-  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+  if ((void*)SharedMemVariableSharingSpacePtr != (void*)&SharedMemVariableSharingSpace[0])
     memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 

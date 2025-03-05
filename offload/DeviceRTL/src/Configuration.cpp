@@ -28,8 +28,7 @@ using namespace ompx;
 // This variable should be visible to the plugin so we override the default
 // hidden visibility.
 [[gnu::used, gnu::retain, gnu::weak,
-  gnu::visibility(
-      "protected")]] Constant<DeviceEnvironmentTy> __omp_rtl_device_environment;
+  gnu::visibility("protected")]] Constant<DeviceEnvironmentTy> __omp_rtl_device_environment = {0};
 
 uint32_t config::getAssumeTeamsOversubscription() {
   return __omp_rtl_assume_teams_oversubscription;

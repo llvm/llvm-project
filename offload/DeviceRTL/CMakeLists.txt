@@ -98,6 +98,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 set(bc_flags -c -flto -std=c++17 -fvisibility=hidden
              ${clang_opt_flags} -nogpulib -nostdlibinc
              -fno-rtti -fno-exceptions -fconvergent-functions
+             -Wno-atomic-alignment # spir-v complains about 4 byte atomics then Werror :(
              -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
@@ -256,6 +257,10 @@ endfunction()
 
 add_custom_target(omptarget.devicertl.amdgpu)
 compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
+
+add_custom_target(omptarget.devicertl.amdgpu-spirv)
+compileDeviceRTLLibrary(amdgpu-spirv spirv64-amd-amdhsa -Xclang -mcode-object-version=none)
+
 
 add_custom_target(omptarget.devicertl.nvptx)
 compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)

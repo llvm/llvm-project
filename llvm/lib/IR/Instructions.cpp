@@ -727,9 +727,24 @@ void CallInst::init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
          "Calling a function with bad signature!");
 
   for (unsigned i = 0; i != Args.size(); ++i)
+    {
+      if (!
+          (i >= FTy->getNumParams() ||
+            FTy->getParamType(i) == Args[i]->getType())
+          )
+        {
+          printf("Calling with bad sig! %u\n", i);
+          FTy->getParamType(i)->dump();
+          printf(" - \n");
+          Args[i]->getType()->dump();
+          printf("\n");
+          fflush(stdout);
+        }
+      
     assert((i >= FTy->getNumParams() ||
             FTy->getParamType(i) == Args[i]->getType()) &&
            "Calling a function with a bad signature!");
+    }
 #endif
 
   // Set operands in order of their index to match use-list-order

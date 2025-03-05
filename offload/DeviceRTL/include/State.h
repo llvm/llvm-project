@@ -102,12 +102,21 @@ struct ThreadStateTy {
   ThreadStateTy *PreviousThreadState;
 
   void init() {
-    ICVState = TeamState.ICVState;
+    // assignment relies on implicit conversion between address spaces
+    // ICVState = TeamState.ICVState;
+    __builtin_memcpy(&ICVState,
+                     &TeamState.ICVState,
+                     sizeof(ICVState));
     PreviousThreadState = nullptr;
   }
 
   void init(ThreadStateTy *PreviousTS) {
-    ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
+    __builtin_memcpy(&ICVState,
+                     PreviousTS ?
+                     (state::ICVStateTy*) & PreviousTS->ICVState
+                     : (state::ICVStateTy*) &TeamState.ICVState,
+                     sizeof(ICVState));
+    
     PreviousThreadState = PreviousTS;
   }
 };
@@ -159,7 +168,7 @@ void resetStateForThread(uint32_t TId);
   {                                                                            \
     if (OMP_LIKELY(ForceTeamState || !config::mayUseThreadStates() ||          \
                    !TeamState.HasThreadState))                                 \
-      return TeamState.ICVState.Member;                                        \
+      return (uint32_t &)TeamState.ICVState.Member;                            \
     uint32_t TId = mapping::getThreadIdInBlock();                              \
     if (OMP_UNLIKELY(!ThreadStates[TId])) {                                    \
       ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(                   \
@@ -169,7 +178,7 @@ void resetStateForThread(uint32_t TId);
       TeamState.HasThreadState = true;                                         \
       ThreadStates[TId]->init();                                               \
     }                                                                          \
-    return ThreadStates[TId]->ICVState.Member;                                 \
+    return (uint32_t &)ThreadStates[TId]->ICVState.Member;              \
   }
 
 // FIXME: https://github.com/llvm/llvm-project/issues/123241.
@@ -178,8 +187,8 @@ void resetStateForThread(uint32_t TId);
     auto TId = mapping::getThreadIdInBlock();                                  \
     if (OMP_UNLIKELY(!ForceTeamState && config::mayUseThreadStates() &&        \
                      TeamState.HasThreadState && ThreadStates[TId]))           \
-      return ThreadStates[TId]->ICVState.Member;                               \
-    return TeamState.ICVState.Member;                                          \
+      return (uint32_t &)ThreadStates[TId]->ICVState.Member;            \
+    return (uint32_t &)TeamState.ICVState.Member;                       \
   }
 
 [[gnu::always_inline, gnu::flatten]] inline uint32_t &
@@ -210,9 +219,9 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
       lookupImpl(RunSchedChunkVar, ForceTeamState);
     lookupForModify32Impl(RunSchedChunkVar, Ident, ForceTeamState);
   case state::VK_ParallelTeamSize:
-    return TeamState.ParallelTeamSize;
+    return (uint32_t &)TeamState.ParallelTeamSize;
   case state::VK_HasThreadState:
-    return TeamState.HasThreadState;
+    return (uint32_t &)TeamState.HasThreadState;
   default:
     break;
   }
@@ -223,7 +232,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
 lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:
-    return TeamState.ParallelRegionFnVar;
+    return (void *&)TeamState.ParallelRegionFnVar;
   default:
     break;
   }
