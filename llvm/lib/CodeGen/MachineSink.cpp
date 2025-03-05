@@ -2390,7 +2390,5 @@ PostRAMachineSinkingPass::run(MachineFunction &MF,
   if (!PostRAMachineSinkingImpl().run(MF))
     return PreservedAnalyses::all();
 
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
