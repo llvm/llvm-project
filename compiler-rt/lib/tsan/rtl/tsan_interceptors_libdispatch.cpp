@@ -17,6 +17,7 @@
 #include "tsan_rtl.h"
 
 #include "BlocksRuntime/Block.h"
+#include "BlocksRuntime/Block_private.h"
 #include "tsan_dispatch_defs.h"
 
 #if SANITIZER_APPLE
@@ -57,6 +58,20 @@ extern "C" struct dispatch_queue_offsets_s {
   const uint16_t dqo_priority;
   const uint16_t dqo_priority_size;
 } dispatch_queue_offsets;
+
+static bool IsBarrierBlock(dispatch_block_t  block) {
+  struct BarrierBlock_layout : Block_layout {
+    // declared in queue_internal.h
+    struct dispatch_block_private_data_s {
+      u64 dbpd_magic;
+      dispatch_block_flags_t dbpd_flags;
+    } dbpds;
+  } *closure = (struct BarrierBlock_layout *)block;
+  if (closure->isa != _NSConcreteMallocBlock) return false;
+  if (Block_size(block) <= sizeof(BarrierBlock_layout)) return false;
+  if (closure->dbpds.dbpd_magic != DISPATCH_BLOCK_PRIVATE_DATA_MAGIC) return false;
+  return !!(closure->dbpds.dbpd_flags & dispatch_block_flags_t::DISPATCH_BLOCK_BARRIER);
+}
 
 static bool IsQueueSerial(dispatch_queue_t q) {
   CHECK_EQ(dispatch_queue_offsets.dqo_width_size, 2);
@@ -156,7 +171,7 @@ static void invoke_and_release_block(void *param) {
   Block_release(block);
 }
 
-#define DISPATCH_INTERCEPT_ASYNC_B(name, barrier)                            \
+#define DISPATCH_INTERCEPT_ASYNC_B(name, barrier, barrier_name)              \
   TSAN_INTERCEPTOR(void, name, dispatch_queue_t q, dispatch_block_t block) { \
     SCOPED_TSAN_INTERCEPTOR(name, q, block);                                 \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();                           \
@@ -164,22 +179,31 @@ static void invoke_and_release_block(void *param) {
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();                             \
     block_context_t *new_context =                                           \
         AllocContext(thr, pc, q, heap_block, &invoke_and_release_block);     \
-    new_context->is_barrier_block = barrier;                                 \
+    new_context->is_barrier_block = barrier || IsBarrierBlock(block);        \
     Release(thr, pc, (uptr)new_context);                                     \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();                           \
-    REAL(name##_f)(q, new_context, dispatch_callback_wrap);                  \
+    if (new_context->is_barrier_block) {                                     \
+       REAL(barrier_name##_f)(q, new_context, dispatch_callback_wrap);       \
+    } else {                                                                 \
+       REAL(name##_f)(q, new_context, dispatch_callback_wrap);               \
+    }                                                                        \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();                             \
   }
 
-#define DISPATCH_INTERCEPT_SYNC_B(name, barrier)                             \
+#define DISPATCH_INTERCEPT_SYNC_B(name, barrier, barrier_name)               \
   TSAN_INTERCEPTOR(void, name, dispatch_queue_t q,                           \
                    DISPATCH_NOESCAPE dispatch_block_t block) {               \
     SCOPED_TSAN_INTERCEPTOR(name, q, block);                                 \
+    bool is_barrier_block = barrier || IsBarrierBlock(block);                \
     block_context_t new_context = {                                          \
-        q, block, &invoke_block, false, true, barrier, 0};                   \
+        q, block, &invoke_block, false, true, is_barrier_block, 0};          \
     Release(thr, pc, (uptr)&new_context);                                    \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();                           \
-    REAL(name##_f)(q, &new_context, dispatch_callback_wrap);                 \
+    if (new_context.is_barrier_block) {                                      \
+      REAL(barrier_name##_f)(q, &new_context, dispatch_callback_wrap);       \
+    } else {                                                                 \
+      REAL(name##_f)(q, &new_context, dispatch_callback_wrap);               \
+    }                                                                        \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();                             \
     Acquire(thr, pc, (uptr)&new_context);                                    \
   }
@@ -212,16 +236,16 @@ static void invoke_and_release_block(void *param) {
 
 #define DISPATCH_INTERCEPT(name, barrier)             \
   DISPATCH_INTERCEPT_ASYNC_F(name##_async_f, barrier) \
-  DISPATCH_INTERCEPT_ASYNC_B(name##_async, barrier)   \
+  DISPATCH_INTERCEPT_ASYNC_B(name##_async, barrier, dispatch_barrier_async) \
   DISPATCH_INTERCEPT_SYNC_F(name##_sync_f, barrier)   \
-  DISPATCH_INTERCEPT_SYNC_B(name##_sync, barrier)
+  DISPATCH_INTERCEPT_SYNC_B(name##_sync, barrier, dispatch_barrier_sync)
 
 // We wrap dispatch_async, dispatch_sync and friends where we allocate a new
 // context, which is used to synchronize (we release the context before
 // submitting, and the callback acquires it before executing the original
 // callback).
-DISPATCH_INTERCEPT(dispatch, false)
 DISPATCH_INTERCEPT(dispatch_barrier, true)
+DISPATCH_INTERCEPT(dispatch, false)
 
 // dispatch_async_and_wait() and friends were introduced in macOS 10.14.
 // Linking of these interceptors fails when using an older SDK.
@@ -241,9 +265,9 @@ SANITIZER_WEAK_IMPORT void dispatch_barrier_async_and_wait_f(
     dispatch_queue_t queue, void *context, dispatch_function_t work);
 
 DISPATCH_INTERCEPT_SYNC_F(dispatch_async_and_wait_f, false)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false)
+DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false, dispatch_barrier_async_and_wait)
 DISPATCH_INTERCEPT_SYNC_F(dispatch_barrier_async_and_wait_f, true)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_async_and_wait, true)
+DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_async_and_wait, true, dispatch_barrier_async_and_wait)
 #endif
 
 

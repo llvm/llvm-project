@@ -46,6 +46,12 @@ extern const dispatch_block_t _dispatch_data_destructor_free;
 extern const dispatch_block_t _dispatch_data_destructor_munmap;
 } // extern "C"
 
+enum dispatch_block_flags_t : __asan::u64 {
+  DISPATCH_BLOCK_BARRIER = 0x1
+};
+
+#define DISPATCH_BLOCK_PRIVATE_DATA_MAGIC 0xD159B10C // 0xDISPatch_BLOCk
+
 #define DISPATCH_DATA_DESTRUCTOR_DEFAULT nullptr
 #define DISPATCH_DATA_DESTRUCTOR_FREE    _dispatch_data_destructor_free
 #define DISPATCH_DATA_DESTRUCTOR_MUNMAP  _dispatch_data_destructor_munmap
