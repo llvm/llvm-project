@@ -53,7 +53,8 @@ bool RootSignatureParser::Parse() {
   while (!ParseRootElement()) {
     if (Lexer.EndOfBuffer())
       return false;
-    if (ConsumeExpectedToken(TokenKind::pu_comma))
+    if (ConsumeExpectedToken(TokenKind::pu_comma, diag::err_expected_either,
+                             "end of root signature string"))
       return true;
   }
 
@@ -61,7 +62,8 @@ bool RootSignatureParser::Parse() {
 }
 
 bool RootSignatureParser::ParseRootElement() {
-  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable))
+  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable,
+                           diag::err_hlsl_expected, "root element"))
     return true;
 
   // Dispatch onto the correct parse method
@@ -77,7 +79,8 @@ bool RootSignatureParser::ParseRootElement() {
 bool RootSignatureParser::ParseDescriptorTable() {
   DescriptorTable Table;
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren))
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           "DescriptorTable"))
     return true;
 
   // Empty case:
@@ -108,7 +111,8 @@ bool RootSignatureParser::ParseDescriptorTable() {
     Table.NumClauses++;
   } while (TryConsumeExpectedToken(TokenKind::pu_comma));
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren))
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+                           "descriptor table clauses"))
     return true;
 
   Elements.push_back(Table);
@@ -117,7 +121,8 @@ bool RootSignatureParser::ParseDescriptorTable() {
 
 bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
-                            TokenKind::kw_UAV, TokenKind::kw_Sampler}))
+                            TokenKind::kw_UAV, TokenKind::kw_Sampler},
+                           diag::err_hlsl_expected, "descriptor table clause"))
     return true;
 
   DescriptorTableClause Clause;
@@ -139,7 +144,8 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   }
   Clause.SetDefaultFlags();
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren))
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           FormatTokenKinds({CurToken.Kind})))
     return true;
 
   // Consume mandatory Register paramater
@@ -156,7 +162,8 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ParseOptionalParams({RefMap}))
     return true;
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren))
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+                           "clause parameters"))
     return true;
 
   Elements.push_back(Clause);
@@ -168,7 +175,8 @@ template <class... Ts> struct ParseMethods : Ts... { using Ts::operator()...; };
 template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
 
 bool RootSignatureParser::ParseParam(ParamType Ref) {
-  if (ConsumeExpectedToken(TokenKind::pu_equal))
+  if (ConsumeExpectedToken(TokenKind::pu_equal, diag::err_expected_after,
+                           FormatTokenKinds(CurToken.Kind)))
     return true;
 
   bool Error;
@@ -198,7 +206,8 @@ bool RootSignatureParser::ParseOptionalParams(
   llvm::SmallDenseSet<TokenKind> Seen;
 
   while (TryConsumeExpectedToken(TokenKind::pu_comma)) {
-    if (ConsumeExpectedToken(ParamKeywords))
+    if (ConsumeExpectedToken(ParamKeywords, diag::err_hlsl_expected,
+                             "optional parameter"))
       return true;
 
     TokenKind ParamKind = CurToken.Kind;
@@ -241,7 +250,8 @@ bool RootSignatureParser::HandleUIntLiteral(uint32_t &X) {
 
 bool RootSignatureParser::ParseRegister(Register *Register) {
   if (ConsumeExpectedToken(
-          {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg}))
+          {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg},
+          diag::err_hlsl_expected, "a register"))
     return true;
 
   switch (CurToken.Kind) {
@@ -270,7 +280,8 @@ bool RootSignatureParser::ParseRegister(Register *Register) {
 bool RootSignatureParser::ParseUInt(uint32_t *X) {
   // Treat a postively signed integer as though it is unsigned to match DXC
   TryConsumeExpectedToken(TokenKind::pu_plus);
-  if (ConsumeExpectedToken(TokenKind::int_literal))
+  if (ConsumeExpectedToken(TokenKind::int_literal, diag::err_hlsl_expected,
+                           "unsigned integer"))
     return true;
 
   if (HandleUIntLiteral(*X))
@@ -281,7 +292,8 @@ bool RootSignatureParser::ParseUInt(uint32_t *X) {
 
 bool RootSignatureParser::ParseDescriptorRangeOffset(DescriptorRangeOffset *X) {
   if (ConsumeExpectedToken(
-          {TokenKind::int_literal, TokenKind::en_DescriptorRangeOffsetAppend}))
+          {TokenKind::int_literal, TokenKind::en_DescriptorRangeOffsetAppend},
+          diag::err_hlsl_expected, "descriptor range offset"))
     return true;
 
   // Edge case for the offset enum -> static value
@@ -307,7 +319,8 @@ bool RootSignatureParser::ParseEnum(
     EnumToks.push_back(EnumPair.first);
 
   // If invoked we expect to have an enum
-  if (ConsumeExpectedToken(EnumToks))
+  if (ConsumeExpectedToken(EnumToks, diag::err_hlsl_expected,
+                           "parameter value"))
     return true;
 
   // Handle the edge case when '0' is used to specify None
@@ -391,20 +404,33 @@ bool RootSignatureParser::PeekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
   return IsExpectedToken(Result.Kind, AnyExpected);
 }
 
-bool RootSignatureParser::ConsumeExpectedToken(TokenKind Expected) {
-  return ConsumeExpectedToken(ArrayRef{Expected});
+bool RootSignatureParser::ConsumeExpectedToken(TokenKind Expected,
+                                               unsigned DiagID,
+                                               StringRef DiagMsg) {
+  return ConsumeExpectedToken(ArrayRef{Expected}, DiagID, DiagMsg);
 }
 
-bool RootSignatureParser::ConsumeExpectedToken(
-    ArrayRef<TokenKind> AnyExpected) {
-  ConsumeNextToken();
-  if (IsExpectedToken(CurToken.Kind, AnyExpected))
+bool RootSignatureParser::ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
+                                               unsigned DiagID,
+                                               StringRef DiagMsg) {
+  if (TryConsumeExpectedToken(AnyExpected))
     return false;
 
   // Report unexpected token kind error
-  Diags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_unexpected_token_kind)
-      << (unsigned)(AnyExpected.size() != 1)
-      << FormatTokenKinds({CurToken.Kind}) << FormatTokenKinds(AnyExpected);
+  DiagnosticBuilder DB = Diags().Report(CurToken.TokLoc, DiagID);
+  switch (DiagID) {
+  case diag::err_expected:
+    DB << FormatTokenKinds(AnyExpected);
+    break;
+  case diag::err_hlsl_expected:
+  case diag::err_expected_either:
+  case diag::err_expected_after:
+    DB << FormatTokenKinds(AnyExpected) << DiagMsg;
+    break;
+  default:
+    DB << DiagMsg;
+    break;
+  }
   return true;
 }
 
