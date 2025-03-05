@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 
-//===----------------------------------------------------------------------===//
-// NVGPU Type Definitions
-//===----------------------------------------------------------------------===//
+#ifndef MLIR_DIALECT_NVGPU_IR_NVGPUTYPES_TD
+#define MLIR_DIALECT_NVGPU_IR_NVGPUTYPES_TD
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/NVGPU/IR/NVGPU.td"
+
+//===----------------------------------------------------------------------===//
+// NVGPU Type Definitions
+//===----------------------------------------------------------------------===//
 
 class NVGPU_Type<string name, string typeMnemonic,
         list<Trait> traits = []> : TypeDef<NVGPU_Dialect, name, traits> {
@@ -110,3 +113,5 @@ def NVGPU_WarpgroupAccumulator : NVGPU_Type<"WarpgroupAccumulator", "warpgroup.a
     (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
   }];
 }
+
+#endif //MLIR_DIALECT_NVGPU_IR_NVGPUTYPES_TD

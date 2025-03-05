@@ -17,6 +17,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
+#define MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
+
 include "mlir/Dialect/NVGPU/IR/NVGPU.td"
 include "mlir/Dialect/NVGPU/IR/NVGPUTypes.td"
 
@@ -631,3 +634,5 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
   }];
   let hasVerifier = 1;
 }
+
+#endif // MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD

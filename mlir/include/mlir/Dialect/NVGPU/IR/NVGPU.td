@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef NVGPU
-#define NVGPU
+#ifndef MLIR_DIALECT_NVGPU_IR_NVGPU_TD
+#define MLIR_DIALECT_NVGPU_IR_NVGPU_TD
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -116,4 +116,4 @@ def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
 def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
 def RcpRoundingModeAttr : EnumAttr<NVGPU_Dialect, RcpRoundingMode, "rcp_rounding_mode">;
 
-#endif // NVGPU
+#endif // MLIR_DIALECT_NVGPU_IR_NVGPU_TD
