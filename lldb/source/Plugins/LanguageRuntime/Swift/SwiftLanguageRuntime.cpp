@@ -2260,21 +2260,41 @@ class CommandObjectLanguageSwiftTaskInfo final : public CommandObjectParsed {
 public:
   CommandObjectLanguageSwiftTaskInfo(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "info",
-                            "Print the Task being run on the current thread.") {
+                            "Print info about the Task being run on the "
+                            "current thread or the Task at the given address."
+                            "language swift task info [<address>]") {
+    AddSimpleArgumentList(eArgTypeAddress, eArgRepeatOptional);
   }
 
 private:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!m_exe_ctx.GetThreadPtr()) {
-      result.AppendError("must be run from a running process and valid thread");
-      return;
+    addr_t task_addr = LLDB_INVALID_ADDRESS;
+    StringRef task_name = "current_task";
+
+    if (command.GetArgumentCount() == 1) {
+      StringRef addr_arg = command.GetArgumentAtIndex(0);
+      if (addr_arg.getAsInteger(0, task_addr)) {
+        result.AppendErrorWithFormatv("invalid address format: {0}", addr_arg);
+        return;
+      }
+      task_name = "task";
     }
 
-    auto task_addr_or_err =
-        GetTaskAddrFromThreadLocalStorage(m_exe_ctx.GetThreadRef());
-    if (auto error = task_addr_or_err.takeError()) {
-      result.AppendError(toString(std::move(error)));
-      return;
+    if (task_addr == LLDB_INVALID_ADDRESS) {
+      if (!m_exe_ctx.GetThreadPtr()) {
+        result.AppendError(
+            "must be run from a running process and valid thread");
+        return;
+      }
+
+      auto task_addr_or_err =
+          GetTaskAddrFromThreadLocalStorage(m_exe_ctx.GetThreadRef());
+      if (auto error = task_addr_or_err.takeError()) {
+        result.AppendError(toString(std::move(error)));
+        return;
+      }
+
+      task_addr = task_addr_or_err.get();
     }
 
     auto ts_or_err = m_exe_ctx.GetTargetRef().GetScratchTypeSystemForLanguage(
@@ -2291,12 +2311,11 @@ private:
       return;
     }
 
-    addr_t task_addr = task_addr_or_err.get();
     // TypeMangling for "Swift.UnsafeCurrentTask"
     CompilerType task_type =
         ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
     auto task_sp = ValueObject::CreateValueObjectFromAddress(
-        "current_task", task_addr, m_exe_ctx, task_type, false);
+        task_name, task_addr, m_exe_ctx, task_type, false);
     if (auto synthetic_sp = task_sp->GetSyntheticValue())
       task_sp = synthetic_sp;
 
