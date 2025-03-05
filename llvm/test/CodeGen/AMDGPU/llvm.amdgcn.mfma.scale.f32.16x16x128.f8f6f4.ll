@@ -1493,8 +1493,6 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v17, s17
 ; SDAG-NEXT:    v_mov_b32_e32 v18, s18
 ; SDAG-NEXT:    v_mov_b32_e32 v19, s19
-; SDAG-NEXT:    v_mov_b32_e32 v20, s28
-; SDAG-NEXT:    v_mov_b32_e32 v21, s29
 ; SDAG-NEXT:    v_mov_b32_e32 v4, s20
 ; SDAG-NEXT:    v_mov_b32_e32 v5, s21
 ; SDAG-NEXT:    v_mov_b32_e32 v6, s22
@@ -1503,8 +1501,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v9, s25
 ; SDAG-NEXT:    v_mov_b32_e32 v10, s26
 ; SDAG-NEXT:    v_mov_b32_e32 v11, s27
-; SDAG-NEXT:    v_accvgpr_write_b32 a0, v20
-; SDAG-NEXT:    v_accvgpr_write_b32 a1, v21
+; SDAG-NEXT:    v_accvgpr_write_b32 a0, s28
+; SDAG-NEXT:    v_accvgpr_write_b32 a1, s29
 ; SDAG-NEXT:    v_accvgpr_write_b32 a2, v0
 ; SDAG-NEXT:    v_accvgpr_write_b32 a3, v1
 ; SDAG-NEXT:    s_nop 1
@@ -1528,14 +1526,12 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
-; GISEL-NEXT:    v_mov_b32_e32 v20, s28
-; GISEL-NEXT:    v_mov_b32_e32 v21, s29
 ; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
+; GISEL-NEXT:    v_accvgpr_write_b32 a0, s28
+; GISEL-NEXT:    v_accvgpr_write_b32 a1, s29
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[24:25]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[26:27]
-; GISEL-NEXT:    v_accvgpr_write_b32 a0, v20
-; GISEL-NEXT:    v_accvgpr_write_b32 a1, v21
 ; GISEL-NEXT:    v_accvgpr_write_b32 a2, v0
 ; GISEL-NEXT:    v_accvgpr_write_b32 a3, v1
 ; GISEL-NEXT:    s_nop 1

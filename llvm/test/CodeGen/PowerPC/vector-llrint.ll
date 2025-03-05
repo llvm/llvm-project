@@ -4508,15 +4508,15 @@ define <2 x i64> @llrint_v2i64_v2f64(<2 x double> %x) {
 ;
 ; FAST-LABEL: llrint_v2i64_v2f64:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    xxlor f1, v2, v2
-; FAST-NEXT:    xxswapd vs0, v2
-; FAST-NEXT:    fctid f1, f1
+; FAST-NEXT:    xxlor vs0, v2, v2
+; FAST-NEXT:    xxswapd vs1, v2
 ; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    mffprd r3, f1
-; FAST-NEXT:    mtfprd f1, r3
+; FAST-NEXT:    fctid f1, f1
 ; FAST-NEXT:    mffprd r3, f0
 ; FAST-NEXT:    mtfprd f0, r3
-; FAST-NEXT:    xxmrghd v2, vs1, vs0
+; FAST-NEXT:    mffprd r3, f1
+; FAST-NEXT:    mtfprd f1, r3
+; FAST-NEXT:    xxmrghd v2, vs0, vs1
 ; FAST-NEXT:    blr
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> %x)
   ret <2 x i64> %a
@@ -4613,23 +4613,23 @@ define <4 x i64> @llrint_v4i64_v4f64(<4 x double> %x) {
 ;
 ; FAST-LABEL: llrint_v4i64_v4f64:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    xxswapd vs0, v2
-; FAST-NEXT:    xxlor f2, v2, v2
-; FAST-NEXT:    xxswapd vs1, v3
-; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    fctid f2, f2
+; FAST-NEXT:    xxlor vs1, v2, v2
+; FAST-NEXT:    xxswapd vs2, v2
+; FAST-NEXT:    xxlor vs0, v3, v3
+; FAST-NEXT:    xxswapd vs3, v3
 ; FAST-NEXT:    fctid f1, f1
-; FAST-NEXT:    mffprd r4, f0
-; FAST-NEXT:    xxlor f0, v3, v3
-; FAST-NEXT:    mffprd r3, f2
+; FAST-NEXT:    fctid f2, f2
 ; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    mtfprd f2, r4
-; FAST-NEXT:    mffprd r5, f0
-; FAST-NEXT:    mtfprd f0, r3
 ; FAST-NEXT:    mffprd r3, f1
 ; FAST-NEXT:    mtfprd f1, r3
-; FAST-NEXT:    xxmrghd v2, vs0, vs2
-; FAST-NEXT:    mtfprd f0, r5
+; FAST-NEXT:    mffprd r3, f2
+; FAST-NEXT:    mtfprd f2, r3
+; FAST-NEXT:    mffprd r3, f0
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    xxmrghd v2, vs1, vs2
+; FAST-NEXT:    fctid f1, f3
+; FAST-NEXT:    mffprd r3, f1
+; FAST-NEXT:    mtfprd f1, r3
 ; FAST-NEXT:    xxmrghd v3, vs0, vs1
 ; FAST-NEXT:    blr
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> %x)
@@ -4791,39 +4791,39 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
 ;
 ; FAST-LABEL: llrint_v8i64_v8f64:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    xxswapd vs0, v2
-; FAST-NEXT:    xxswapd vs1, v3
-; FAST-NEXT:    xxlor f4, v2, v2
-; FAST-NEXT:    xxswapd vs2, v4
-; FAST-NEXT:    xxswapd vs3, v5
+; FAST-NEXT:    xxlor vs2, v3, v3
+; FAST-NEXT:    xxlor vs3, v2, v2
+; FAST-NEXT:    xxswapd vs4, v2
+; FAST-NEXT:    xxswapd vs5, v3
+; FAST-NEXT:    xxlor vs1, v4, v4
+; FAST-NEXT:    xxswapd vs6, v4
+; FAST-NEXT:    xxlor vs0, v5, v5
+; FAST-NEXT:    xxswapd vs7, v5
+; FAST-NEXT:    fctid f2, f2
+; FAST-NEXT:    fctid f3, f3
+; FAST-NEXT:    fctid f1, f1
 ; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    fctid f4, f4
-; FAST-NEXT:    mffprd r4, f0
-; FAST-NEXT:    xxlor f0, v3, v3
-; FAST-NEXT:    mffprd r3, f4
-; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    mffprd r5, f0
-; FAST-NEXT:    fctid f0, f1
-; FAST-NEXT:    mtfprd f1, r4
-; FAST-NEXT:    mffprd r6, f0
-; FAST-NEXT:    xxlor f0, v4, v4
-; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    mtfprd f4, r6
-; FAST-NEXT:    mffprd r7, f0
-; FAST-NEXT:    fctid f0, f2
-; FAST-NEXT:    mtfprd f2, r5
-; FAST-NEXT:    mtfprd f5, r7
-; FAST-NEXT:    mffprd r8, f0
-; FAST-NEXT:    xxlor f0, v5, v5
-; FAST-NEXT:    fctid f0, f0
-; FAST-NEXT:    mtfprd f6, r8
-; FAST-NEXT:    mffprd r9, f0
+; FAST-NEXT:    mffprd r4, f2
+; FAST-NEXT:    fctid f2, f4
+; FAST-NEXT:    mffprd r3, f3
+; FAST-NEXT:    mffprd r5, f2
+; FAST-NEXT:    mtfprd f2, r3
+; FAST-NEXT:    mtfprd f3, r5
+; FAST-NEXT:    xxmrghd v2, vs2, vs3
+; FAST-NEXT:    fctid f3, f5
+; FAST-NEXT:    mtfprd f2, r4
+; FAST-NEXT:    mffprd r3, f3
+; FAST-NEXT:    mtfprd f3, r3
+; FAST-NEXT:    mffprd r3, f1
+; FAST-NEXT:    mtfprd f1, r3
+; FAST-NEXT:    xxmrghd v3, vs2, vs3
+; FAST-NEXT:    fctid f2, f6
+; FAST-NEXT:    mffprd r3, f2
+; FAST-NEXT:    mtfprd f2, r3
+; FAST-NEXT:    mffprd r3, f0
 ; FAST-NEXT:    mtfprd f0, r3
-; FAST-NEXT:    xxmrghd v3, vs2, vs4
-; FAST-NEXT:    xxmrghd v4, vs5, vs6
-; FAST-NEXT:    xxmrghd v2, vs0, vs1
-; FAST-NEXT:    fctid f1, f3
-; FAST-NEXT:    mtfprd f0, r9
+; FAST-NEXT:    xxmrghd v4, vs1, vs2
+; FAST-NEXT:    fctid f1, f7
 ; FAST-NEXT:    mffprd r3, f1
 ; FAST-NEXT:    mtfprd f1, r3
 ; FAST-NEXT:    xxmrghd v5, vs0, vs1
