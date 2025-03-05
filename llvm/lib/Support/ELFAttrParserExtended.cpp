@@ -22,6 +22,14 @@ using namespace llvm;
 using namespace ELFAttrs;
 
 std::optional<unsigned>
+ELFExtendedAttrParser::getAttributeValue(unsigned Tag) const {
+  assert(
+      0 &&
+      "use getAttributeValue overloaded version accepting Stringref, unsigned");
+  return std::nullopt;
+}
+
+std::optional<unsigned>
 ELFExtendedAttrParser::getAttributeValue(StringRef BuildAttrSubsectionName,
                                          unsigned Tag) const {
   for (auto SubSection : SubSectionVec) {
@@ -31,6 +39,14 @@ ELFExtendedAttrParser::getAttributeValue(StringRef BuildAttrSubsectionName,
           return std::optional<unsigned>(BAItem.IntValue);
       }
   }
+  return std::nullopt;
+}
+
+std::optional<StringRef>
+ELFExtendedAttrParser::getAttributeString(unsigned Tag) const {
+  assert(
+      0 &&
+      "use getAttributeValue overloaded version accepting Stringref, unsigned");
   return std::nullopt;
 }
 

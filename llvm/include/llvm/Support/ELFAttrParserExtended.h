@@ -37,8 +37,10 @@ protected:
 public:
   Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
 
+  std::optional<unsigned> getAttributeValue(unsigned Tag) const override;
   std::optional<unsigned> getAttributeValue(StringRef BuildAttrSubsectionName,
                                             unsigned Tag) const override;
+  std::optional<StringRef> getAttributeString(unsigned Tag) const override;
   std::optional<StringRef> getAttributeString(StringRef BuildAttrSubsectionName,
                                               unsigned Tag) const override;
 
