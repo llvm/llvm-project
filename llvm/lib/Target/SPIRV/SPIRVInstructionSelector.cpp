@@ -273,10 +273,8 @@ private:
   bool selectPhi(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
-  [[maybe_unused]] bool selectExtInst(Register ResVReg,
-                                      const SPIRVType *RestType,
-                                      MachineInstr &I,
-                                      GL::GLSLExtInst GLInst) const;
+  bool selectExtInst(Register ResVReg, const SPIRVType *RestType,
+                     MachineInstr &I, GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, CL::OpenCLExtInst CLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
@@ -905,6 +903,14 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              const SPIRVType *ResType,
                                              MachineInstr &I,
                                              GL::GLSLExtInst GLInst) const {
+  if (!STI.canUseExtInstSet(
+          SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported with the GLSL extended instruction set.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
@@ -3090,6 +3096,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
+  case Intrinsic::spv_reflect:
+    return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
@@ -3420,9 +3428,10 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
   SPIRVType *I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVType *I64x2Type = GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder);
+  SPIRVType *I64x2Type =
+      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
   SPIRVType *Vec2ResType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder);
+      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
 
   std::vector<Register> PartialRegs;
 
@@ -3505,8 +3514,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
 
   // 1. Split int64 into 2 pieces using a bitcast
   MachineIRBuilder MIRBuilder(I);
-  SPIRVType *PostCastType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2 * ComponentCount, MIRBuilder);
+  SPIRVType *PostCastType = GR.getOrCreateSPIRVVectorType(
+      BaseType, 2 * ComponentCount, MIRBuilder, false);
   Register BitcastReg =
       MRI->createVirtualRegister(GR.getRegClass(PostCastType));
 
@@ -3583,8 +3592,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     SelectOp = SPIRV::OpSelectSISCond;
     AddOp = SPIRV::OpIAddS;
   } else {
-    BoolType =
-        GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount, MIRBuilder);
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount,
+                                             MIRBuilder, false);
     NegOneReg =
         GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII, ZeroAsNull);
     Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
@@ -3951,7 +3960,7 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   MachineIRBuilder MIRBuilder(I);
   const SPIRVType *U32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   const SPIRVType *Vec3Ty =
-      GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder);
+      GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder, false);
   const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
       Vec3Ty, MIRBuilder, SPIRV::StorageClass::Input);
 
@@ -4000,7 +4009,7 @@ SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
                                                      MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
   if (Type->getOpcode() != SPIRV::OpTypeVector)
-    return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder);
+    return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder, false);
 
   uint64_t VectorSize = Type->getOperand(2).getImm();
   if (VectorSize == 4)
@@ -4008,7 +4017,7 @@ SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
 
   Register ScalarTypeReg = Type->getOperand(1).getReg();
   const SPIRVType *ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
-  return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder);
+  return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder, false);
 }
 
 bool SPIRVInstructionSelector::loadHandleBeforePosition(

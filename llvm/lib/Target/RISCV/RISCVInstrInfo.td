@@ -2033,6 +2033,12 @@ def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
+
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
@@ -2147,6 +2153,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 
