@@ -1105,9 +1105,9 @@ auto buildTransferMatchSwitch() {
 
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
-                                        transferValue_ConstMemberCall)
+                                        transferConstMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
-                                          transferValue_ConstMemberOperatorCall)
+                                          transferConstMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferValue_NonConstMemberCall)
