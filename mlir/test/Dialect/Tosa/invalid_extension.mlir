@@ -69,4 +69,3 @@ func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
   }
   return
 }
-
