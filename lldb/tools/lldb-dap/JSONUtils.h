@@ -102,13 +102,15 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The boolean value for the specified \a key, or \a fail_value
+///     The boolean value for the specified \a key, or std::nullopt
 ///     if there is no key that matches or if the value is not a
 ///     boolean value of an integer.
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value);
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value);
+/// @{
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key);
+/// @}
 
 /// Extract the signed integer for the specified key from the
 /// specified object.
