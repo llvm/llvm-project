@@ -464,9 +464,13 @@ struct ExtractCoindexedObjectHelper {
   }
 };
 
+static inline std::optional<CoarrayRef> ExtractCoarrayRef(const DataRef &x) {
+  return ExtractCoindexedObjectHelper{}(x);
+}
+
 template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
-    return ExtractCoindexedObjectHelper{}(*dataRef);
+    return ExtractCoarrayRef(*dataRef);
   } else {
     return ExtractCoindexedObjectHelper{}(x);
   }

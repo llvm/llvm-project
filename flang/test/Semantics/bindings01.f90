@@ -293,6 +293,48 @@ module m11
   end
 end
 
+module m12
+  type t
+    procedure(sub), pointer, nopass :: pp
+   contains
+    procedure, non_overridable, nopass :: tbp1 => sub
+    procedure, nopass :: tbp2 => sub
+    generic :: gen1 => tbp1
+    generic :: gen2 => tbp2
+  end type
+ contains
+  subroutine sub
+  end
+  subroutine test(x, y)
+    class(t) :: x[*]
+    type(t) :: y[*]
+    call x%pp ! ok
+    call y%pp ! ok
+    !ERROR: Base of procedure component reference may not be coindexed
+    call x[1]%pp
+    !ERROR: Base of procedure component reference may not be coindexed
+    call y[1]%pp
+    call x%tbp1 ! ok
+    call y%tbp1 ! ok
+    call x[1]%tbp1 ! ok
+    call y[1]%tbp1 ! ok
+    call x%tbp2 ! ok
+    call y%tbp2 ! ok
+    !ERROR: A procedure binding may not be coindexed unless it can be resolved at compilation time
+    call x[1]%tbp2
+    call y[1]%tbp2 ! ok
+    call x%gen1 ! ok
+    call y%gen1 ! ok
+    call x[1]%gen1 ! ok
+    call y[1]%gen1 ! ok
+    call x%gen2 ! ok
+    call y%gen2 ! ok
+    !ERROR: A procedure binding may not be coindexed unless it can be resolved at compilation time
+    call x[1]%gen2
+    call y[1]%gen2 ! ok
+  end
+end
+
 program test
   use m1
   type,extends(t) :: t2
