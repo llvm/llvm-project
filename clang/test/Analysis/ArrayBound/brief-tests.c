@@ -1,5 +1,10 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
 
+// Miscellaneous tests for `security.ArrayBound` where we only test the
+// presence or absence of a bug report. If a test doesn't fit in a more
+// specific file and doesn't need to verify the details of 'note' diagnostics,
+// then it should be placed here.
+
 void clang_analyzer_value(int);
 
 // Tests doing an out-of-bounds access after the end of an array using:
