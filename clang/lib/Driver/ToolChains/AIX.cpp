@@ -20,6 +20,7 @@
 #include <set>
 
 using AIX = clang::driver::toolchains::AIX;
+using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -232,6 +233,44 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
+  // Add sanitizer libraries.
+  const SanitizerArgs &Sanitize = ToolChain.getSanitizerArgs(Args);
+  const char *sanitizer = nullptr;
+  bool NeedsSanitizerDeps = false;
+  // For now, only support address sanitizer.
+  if (Sanitize.needsAsanRt())
+    sanitizer = "AddressSanitizer";
+
+  if (sanitizer) {
+    if (Sanitize.needsSharedRt()) {
+      ToolChain.getDriver().Diag(diag::err_drv_unsupported_shared_sanitizer_aix) << sanitizer;
+      return;
+    }
+    NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  }
+
+  // Add sanitizer runtime dependencies.
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_shared, options::OPT_r)) {
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
+  }
+
+  // We won't add the static sanitizer libraries to the DSO, but we will
+  // introduce the undefined sanitizer symbols like __asan_init to the DSO. On
+  // AIX, this undefined sanitizer symbol cannot pass final link. Add the
+  // import file to make these undefined symbols be resolved at runtime.
+  if (Args.hasArg(options::OPT_shared) &&
+      ToolChain.getSanitizerArgs(Args).needsAsanRt()) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-bI:") + ToolChain.getCompilerRTPath() +
+                           "/asan.link_with_main_exec.txt"));
+    if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes())
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-bI:") + ToolChain.getCompilerRTPath() +
+                             "/asan_cxx.link_with_main_exec.txt"));
+  }
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
@@ -588,6 +627,12 @@ ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {
 
 ToolChain::RuntimeLibType AIX::GetDefaultRuntimeLibType() const {
   return ToolChain::RLT_CompilerRT;
+}
+
+SanitizerMask AIX::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::Address;
+  return Res;
 }
 
 auto AIX::buildAssembler() const -> Tool * { return new aix::Assembler(*this); }
