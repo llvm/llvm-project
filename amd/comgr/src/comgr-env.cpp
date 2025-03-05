@@ -297,7 +297,7 @@ StringRef getCacheDirectory() {
     return Result;
 
   if (sys::path::cache_directory(Result)) {
-    sys::path::append(Result, Twine("comgr_cache"));
+    sys::path::append(Result, "comgr");
     return Result;
   }
 
