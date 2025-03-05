@@ -418,7 +418,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     ConstOp constOp, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
-  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValue());
+  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValues());
   if (!denseAttr)
     return std::nullopt;
   auto maybeNewDenseAttr = transposeDenseAttribute(denseAttr, hoistedPerms);

@@ -882,7 +882,7 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
 OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 

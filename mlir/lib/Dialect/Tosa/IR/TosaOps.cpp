@@ -352,7 +352,7 @@ static LogicalResult verifyConvOp(T op) {
 
 LogicalResult tosa::ConstOp::verify() {
 
-  auto attrType = llvm::dyn_cast<TensorType>(getValueAttr().getType());
+  auto attrType = llvm::dyn_cast<TensorType>(getValuesAttr().getType());
   auto outputType = llvm::dyn_cast<TensorType>(getOutput().getType());
 
   if (!attrType || !outputType) {
@@ -3054,7 +3054,7 @@ LogicalResult tosa::ConstShapeOp::verify() {
   auto valuesRank = getValue().getType().getRank();
   if (valuesRank != 1)
     return emitOpError("expect elements in attribute value with rank 1");
-  // check that number of elements in value attr equal to rank of result shape
+  // check that number of elements in values attr equal to rank of result shape
   auto count = getValue().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
   if (!(count == rank || (count == 1 && rank == 0))) {

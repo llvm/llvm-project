@@ -114,7 +114,7 @@ func.func @test_binary_scalar_f32(%arg0 : tensor<4xf32>, %arg1 : tensor<1xf32>) 
   // CHECK: tosa.minimum %arg0, %arg1 : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
   %2 = tosa.minimum %arg0, %arg1 : (tensor<4xf32>, tensor<1xf32>) -> tensor<*xf32>
 
-  %3 = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %3 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   // CHECK: tosa.mul %arg0, %arg1, %3 : (tensor<4xf32>, tensor<1xf32>, tensor<1xi8>) -> tensor<4xf32>
   %4 = tosa.mul %arg0, %arg1, %3 : (tensor<4xf32>, tensor<1xf32>, tensor<1xi8>) -> tensor<*xf32>
 
@@ -149,7 +149,7 @@ func.func @test_binary_broadcast_f32(%arg0 : tensor<4xf32>, %arg1 : tensor<1xf32
   // CHECK: tosa.minimum %arg0, %arg1 : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
   %2 = tosa.minimum %arg0, %arg1 : (tensor<4xf32>, tensor<1xf32>) -> tensor<*xf32>
 
-  %3 = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %3 = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   // CHECK: tosa.mul %arg0, %arg1, %3 : (tensor<4xf32>, tensor<1xf32>, tensor<1xi8>) -> tensor<4xf32>
   %4 = tosa.mul %arg0, %arg1, %3 : (tensor<4xf32>, tensor<1xf32>, tensor<1xi8>) -> tensor<*xf32>
 
@@ -209,7 +209,7 @@ func.func @test_binary_i32(%arg0 : tensor<4xi32>, %arg1 : tensor<1xi32>) -> () {
   %10 = tosa.minimum %arg0, %arg1 : (tensor<4xi32>, tensor<1xi32>) -> tensor<*xi32>
 
   // CHECK: tosa.mul %arg0, %arg1, %{{.*}} : (tensor<4xi32>, tensor<1xi32>, tensor<1xi8>) -> tensor<4xi32>
-  %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %11 = tosa.mul %arg0, %arg1, %shift : (tensor<4xi32>, tensor<1xi32>, tensor<1xi8>) -> tensor<*xi32>
 
   // CHECK: tosa.pow %arg0, %arg1 : (tensor<4xi32>, tensor<1xi32>) -> tensor<4xi32>
@@ -469,7 +469,7 @@ func.func @test_concat_axis_1(%arg0 : tensor<2x1xf32>, %arg1 : tensor<2x2xf32>) 
 // CHECK-LABEL:@test_padding_dynamic_input
 func.func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
   %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %1 = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  %1 = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // CHECK: tosa.pad %arg0, %0, %1  : (tensor<1x?xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x?xf32>
   %2 = tosa.pad %arg0, %0, %1  : (tensor<1x?xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
   return
@@ -480,7 +480,7 @@ func.func @test_padding_dynamic_input(%arg0 : tensor<1x?xf32>) -> () {
 // CHECK-LABEL: @test_padding_simple
 func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
   %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %1 = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  %1 = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // CHECK: tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<4x9xf32>
   %2 = tosa.pad %arg0, %0, %1  : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<?x?xf32>
   return
@@ -671,8 +671,8 @@ func.func @scatter_minimum_static(%arg0 : tensor<?x4x?xi32>, %arg1 : tensor<3x?x
 
 // CHECK-LABEL: @test_pool_static
 func.func @test_pool_static(%arg0: tensor<3x5x6x7xf32>) {
-  %input_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %output_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 
   // CHECK: -> tensor<3x2x4x7xf32>
   %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 4, 3>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<3x5x6x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
@@ -704,8 +704,8 @@ func.func @conv2d_dynamic_input(%input: tensor<?x?x?x?xf32>, %weights: tensor<5x
 
 // CHECK-LABEL: @test_pool_dynamic_input
 func.func @test_pool_dynamic_input(%arg0: tensor<?x?x?x?xf32>) {
-  %input_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %output_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 
   // CHECK: -> tensor<?x?x?x?xf32>
   %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 4, 3>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<?x?x?x?xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
@@ -719,8 +719,8 @@ func.func @test_pool_dynamic_input(%arg0: tensor<?x?x?x?xf32>) {
 
 // CHECK-LABEL: @test_pool_padded
 func.func @test_pool_padded(%arg0: tensor<3x5x6x7xf32>) {
-  %input_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %output_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 
   // CHECK: -> tensor<3x5x11x7xf32>
   %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 4, 3>, pad = array<i64: 1, 2, 3, 4>, stride = array<i64: 1, 1>} : (tensor<3x5x6x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
@@ -752,8 +752,8 @@ func.func @conv2d_dynamic_bias(%input: tensor<2x8x9x3xf32>, %weights: tensor<5x3
 
 // CHECK-LABEL: @test_pool_stride
 func.func @test_pool_stride(%arg0: tensor<3x11x12x7xf32>) {
-  %input_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %output_zp = "tosa.const"() <{value = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
 
   // CHECK: -> tensor<3x4x4x7xf32>
   %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 4, 3>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 3>} : (tensor<3x11x12x7xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x?x?x?xf32>
@@ -1152,7 +1152,7 @@ func.func @while_test(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>) -> tensor<i32>
   %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
-    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    %2 = "tosa.const"() <{values = dense<3> : tensor<i32>}> : () -> tensor<i32>
 
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -1167,7 +1167,7 @@ func.func @while_test(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   // CHECK:      ^bb0
   // CHECK-SAME: tensor<i32>
   ^bb0(%arg1: tensor<*xi32>):
-    %2 = "tosa.const"() <{value = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    %2 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
 
     // CHECK:     tosa.add
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
@@ -1189,7 +1189,7 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>, tensor<1xi32>) -> (tensor<i32>, tensor<?xi32>)
   %0:2 = tosa.while_loop (%arg2 = %arg0, %arg3 = %arg1) : (tensor<i32>, tensor<1xi32>) -> (tensor<i32>, tensor<?xi32>) {
-    %1 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    %1 = "tosa.const"() <{values = dense<3> : tensor<i32>}> : () -> tensor<i32>
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
     %2 = tosa.greater_equal %1, %arg2 : (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -1203,7 +1203,7 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
   // CHECK-SAME: tensor<i32>
   // CHECK-SAME: tensor<?xi32>
   ^bb0(%arg2: tensor<i32>, %arg3: tensor<?xi32>):
-    %1 = "tosa.const"() <{value = dense<1> : tensor<i32>}> : () -> tensor<i32>
+    %1 = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
 
     // CHECK:     tosa.add
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
@@ -1235,7 +1235,7 @@ func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>) -> tensor<i32>
   %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
-    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    %2 = "tosa.const"() <{values = dense<3> : tensor<i32>}> : () -> tensor<i32>
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
@@ -1268,7 +1268,7 @@ func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   // CHECK:      tosa.while_loop
   // CHECK-SAME: (tensor<i32>) -> tensor<i32>
   %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
-    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    %2 = "tosa.const"() <{values = dense<3> : tensor<i32>}> : () -> tensor<i32>
     // CHECK:       tosa.greater_equal
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
@@ -1282,7 +1282,7 @@ func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
     // CHECK:      tosa.while_loop
     // CHECK-SAME: (tensor<i32>) -> tensor<i32>
     %1 = tosa.while_loop (%arg2 = %arg1) : (tensor<*xi32>) -> tensor<*xi32> {
-      %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+      %2 = "tosa.const"() <{values = dense<3> : tensor<i32>}> : () -> tensor<i32>
       // CHECK:       tosa.greater_equal
       // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
       %4 = tosa.greater_equal %2, %arg2 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
@@ -1478,9 +1478,9 @@ func.func @test_multiple_non_inferrable_consumers(%arg0: tensor<1x2x8xf32>) {
 // -----
 // CHECK-LABEL: test_mul_scalar
 func.func @test_mul_scalar(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<*xf32> {
-  // CHECK: %[[SHIFT:.*]] = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK: %[[SHIFT:.*]] = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   // CHECK: tosa.mul %arg0, %arg1, %[[SHIFT]] : (tensor<f32>, tensor<f32>, tensor<1xi8>) -> tensor<f32>
-  %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<f32>, tensor<f32>, tensor<1xi8>) -> tensor<*xf32>
   return %0 : tensor<*xf32>
 }

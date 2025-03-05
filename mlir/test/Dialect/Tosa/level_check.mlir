@@ -145,7 +145,7 @@ func.func @test_min_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>, %arg1: tens
 // -----
 
 func.func @test_mul_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>, %arg1: tensor<1x1x1x1x13x1x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
-  %shift = "tosa.const"() <{value = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
   // expected-error@+1 {{'tosa.mul' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<1x1x1x1x13x21x3xf32>, tensor<1x1x1x1x13x1x3xf32>, tensor<1xi8>) -> tensor<1x1x1x1x13x21x3xf32>
   return %0 : tensor<1x1x1x1x13x21x3xf32>
@@ -370,7 +370,7 @@ func.func @test_concat_rank_invalid(%arg0: tensor<1x1x1x13x21x3x8xf32>, %arg1: t
 // -----
 
 func.func @test_pad_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xf32>) -> tensor<1x1x1x1x13x21x3xf32> {
-  %pad_const = "tosa.const"() {value = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+  %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   %padding = tosa.const_shape {value = dense<0> : tensor<14xindex>} : () -> !tosa.shape<14>
   // expected-error@+1 {{'tosa.pad' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.pad %arg0, %padding, %pad_const : (tensor<1x1x1x1x13x21x3xf32>, !tosa.shape<14>, tensor<1xf32>) -> tensor<1x1x1x1x13x21x3xf32>
@@ -440,7 +440,7 @@ func.func @test_rescale_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xi8>) -> tenso
 // -----
 func.func @test_const(%arg0 : tensor<1x1xi32>) -> tensor<1x1x1x1x1x1x1xi32> {
   // expected-error@+1 {{'tosa.const' op failed level check: attribute rank(shape) <= MAX_RANK}}
-  %0 = "tosa.const"() {value = dense<0> : tensor<1x1x1x1x1x1x1xi32>} : () -> tensor<1x1x1x1x1x1x1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1x1x1x1x1x1x1xi32>} : () -> tensor<1x1x1x1x1x1x1xi32>
   return %0: tensor<1x1x1x1x1x1x1xi32>
 }
 
@@ -454,7 +454,7 @@ func.func @test_add_rank_valid(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor
 // -----
 
 func.func @test_const_rank_valid(%arg0 : tensor<i32>) -> tensor<i32> {
-  %0 = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
   return %0: tensor<i32>
 }
 
@@ -462,7 +462,7 @@ func.func @test_const_rank_valid(%arg0 : tensor<i32>) -> tensor<i32> {
 
 func.func @test_const_i2(%arg0 : tensor<1xi2>) {
   // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'i2' is not legal}}
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi2>} : () -> tensor<1xi2>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi2>} : () -> tensor<1xi2>
   return
 }
 
@@ -470,7 +470,7 @@ func.func @test_const_i2(%arg0 : tensor<1xi2>) {
 
 func.func @test_const_ui32(%arg0 : tensor<1xui32>) {
   // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'ui32' is not legal}}
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xui32>} : () -> tensor<1xui32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xui32>} : () -> tensor<1xui32>
   return
 }
 
@@ -478,7 +478,7 @@ func.func @test_const_ui32(%arg0 : tensor<1xui32>) {
 
 func.func @test_const_f64(%arg0 : tensor<1xf64>) {
   // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'f64' is not legal}}
-  %0 = "tosa.const"() {value = dense<0.0> : tensor<1xf64>} : () -> tensor<1xf64>
+  %0 = "tosa.const"() {values = dense<0.0> : tensor<1xf64>} : () -> tensor<1xf64>
   return
 }
 
@@ -486,7 +486,7 @@ func.func @test_const_f64(%arg0 : tensor<1xf64>) {
 
 func.func @test_const_ui8(%arg0 : tensor<1xui8>) {
   // expected-error@+1 {{'tosa.const' op is not profile-aligned: element type 'ui8' is not legal}}
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xui8>} : () -> tensor<1xui8>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xui8>} : () -> tensor<1xui8>
   return
 }
 
@@ -1159,7 +1159,7 @@ func.func @test_variable_read_write_tensor_size_invalid() -> () {
 // -----
 
 func.func @test_while_loop_tensor_size_invalid(%arg0: tensor<536870912xi32>, %arg1: tensor<i32>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %1:3 = tosa.while_loop (%arg2 = %0, %arg3 = %0, %arg4 = %arg0) : (tensor<i32>, tensor<i32>, tensor<536870912xi32>) -> (tensor<i32>, tensor<i32>, tensor<536870912xi32>) {
     %2 = tosa.greater_equal %arg3, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -1167,8 +1167,8 @@ func.func @test_while_loop_tensor_size_invalid(%arg0: tensor<536870912xi32>, %ar
     tosa.yield %2 : tensor<i1>
   } do {
   ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>, %arg4: tensor<536870912xi32>):
-    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
-    %3 = "tosa.const"() {value = dense<4> : tensor<1xi32>} : () -> tensor<1xi32>
+    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
+    %3 = "tosa.const"() {values = dense<4> : tensor<1xi32>} : () -> tensor<1xi32>
     %4 = tosa.add %arg3, %2 : (tensor<i32>, tensor<i32>) -> tensor<i32>
     // expected-error@+1 {{'tosa.add' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
     %5 = tosa.add %arg4, %3 : (tensor<536870912xi32>, tensor<1xi32>) -> tensor<536870912xi32>
@@ -1181,7 +1181,7 @@ func.func @test_while_loop_tensor_size_invalid(%arg0: tensor<536870912xi32>, %ar
 // -----
 
 func.func @test_const_shape() -> !tosa.shape<4> {
-  %cst = tosa.const_shape { value = dense<[1, 1, 536870912, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %cst = tosa.const_shape {value = dense<[1, 1, 536870912, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   return %cst : !tosa.shape<4>
 }
 
@@ -1228,7 +1228,7 @@ func.func @test_variable_read_write_rank_invalid() -> () {
 
 // CHECK-LABEL: @test_while_loop
 func.func @test_while_loop(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<i32>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
   %1:2 = "tosa.while_loop"(%0, %arg0) ({
   ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
     %2 = "tosa.greater_equal"(%arg3, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i1>
@@ -1236,7 +1236,7 @@ func.func @test_while_loop(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<i32>)
     "tosa.yield"(%3) : (tensor<i1>) -> ()
   },  {
   ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
   }) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>)
@@ -1268,7 +1268,7 @@ func.func @test_unranked_tensor(%arg0: tensor<*xf32>) {
 
 // CHECK-LABEL: test_concat_tensor_list_size
 func.func @test_concat_tensor_list_size() {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.concat' op failed level check for MAX_TENSOR_LIST_SIZE: input1}}
   %1= tosa.concat %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1297,7 +1297,7 @@ func.func @test_concat_tensor_list_size() {
 
 // CHECK-LABEL: test_custom_tensor_list_size
 func.func @test_custom_tensor_list_size() {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.custom' op failed level check for MAX_TENSOR_LIST_SIZE: input_list}}
   %1= tosa.custom %0, %0, %0, %0, %0, %0, %0, %0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1326,7 +1326,7 @@ func.func @test_custom_tensor_list_size() {
 
 // CHECK-LABEL: test_custom_tensor_list_size_results
 func.func @test_custom_tensor_list_size_results() {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
 
   // expected-error@+1 {{'tosa.custom' op failed level check for MAX_TENSOR_LIST_SIZE: output_list}}
   %r:65 = tosa.custom %0 { domain_name = "tosa_mlir_test", operator_name = "custom_test", implementation_attrs = "" }:
@@ -1349,7 +1349,7 @@ func.func @test_custom_tensor_list_size_results() {
 
 // CHECK-LABEL: test_if_tensor_list_size
 func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
   %1 = "tosa.cond_if"(%arg0,   // condition
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1386,7 +1386,7 @@ func.func @test_if_tensor_list_size(%arg0 : tensor<i1>) {
 
 // CHECK-LABEL: test_if_tensor_list_size_outputs
 func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
 
   // expected-error@+1 {{'tosa.cond_if' op failed level check for MAX_TENSOR_LIST_SIZE: outputs}}
   %r:65 = "tosa.cond_if"(%arg0) ({
@@ -1414,7 +1414,7 @@ func.func @test_if_tensor_list_size_outputs(%arg0 : tensor<i1>) {
 
 // CHECK-LABEL: test_while_tensor_list_size
 func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<1xi32>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check for MAX_TENSOR_LIST_SIZE: inputs}}
   %1:2 = "tosa.while_loop"(%0, %arg0,
                   %0, %0, %0, %0, %0, %0, %0, %0,
@@ -1432,7 +1432,7 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
     "tosa.yield"(%3) : (tensor<1xi1>) -> ()
   },  {
   ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
   }) : (tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>,
@@ -1453,7 +1453,7 @@ func.func @test_while_tensor_list_size(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: 
 
 // CHECK-LABEL: test_while_tensor_list_size_outputs
 func.func @test_while_tensor_list_size_outputs(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<1xi32>) {
-  %0 = "tosa.const"() {value = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.while_loop' op failed level check for MAX_TENSOR_LIST_SIZE: outputs}}
   %1:65 = "tosa.while_loop"(%0, %arg0) ({
   ^bb0(%arg3: tensor<1xi32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
@@ -1462,7 +1462,7 @@ func.func @test_while_tensor_list_size_outputs(%arg0: tensor<1x1x1x1x1x1x1xf32>,
     "tosa.yield"(%3) : (tensor<1xi1>) -> ()
   },  {
   ^bb0(%arg3: tensor<i32>, %arg4: tensor<1x1x1x1x1x1x1xf32>):
-    %2 = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
+    %2 = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
     %3 = "tosa.add"(%arg3, %2) : (tensor<i32>, tensor<i32>) -> tensor<i32>
     "tosa.yield"(%3, %arg4) : (tensor<i32>, tensor<1x1x1x1x1x1x1xf32>) -> ()
   }) : (tensor<1xi32>, tensor<1x1x1x1x1x1x1xf32>) -> ( tensor<i32>, tensor<1x1x1x1x1x1x1xf32>,
