@@ -153,9 +153,6 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-  /// Returns the next unique ID to assign to a command entry.
-  int MakeNextCommandId();
-
   const LLDBConfig *GetConfig() { return m_config.get(); }
 
   virtual llvm::StringRef GetInstanceName() const = 0;
