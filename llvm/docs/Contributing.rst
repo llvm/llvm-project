@@ -143,7 +143,7 @@ For developers to commit changes from Git
 -----------------------------------------
 
 .. note::
-   See also :doc:`github-reviews` for more details on merging your changes
+   See also :ref:`GitHub <github-reviews>` for more details on merging your changes
    into LLVM project monorepo.
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
