@@ -25,8 +25,7 @@
 #endif
 
 #if defined(_WIN32)
-#include <memoryapi.h>
-#include <synchapi.h>
+#include <windows.h>
 #endif
 
 using namespace lldb_private;
