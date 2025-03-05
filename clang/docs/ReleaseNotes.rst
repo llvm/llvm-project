@@ -243,6 +243,8 @@ Bug Fixes in This Version
   when it can affect template argument deduction (#GH122306).
 - Fix crash on code completion of function calls involving partial order of function templates
   (#GH125500).
+- Fixed clang crash when #embed data does not fit into an array
+  (#GH128987).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
