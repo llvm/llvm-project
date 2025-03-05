@@ -254,19 +254,14 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
     return nullptr;
 
-  // If V is a load instruction that loads from a constant global then attempt
-  // to use that constant to produce the pattern.
-  Constant *C = nullptr;
-  if (auto *LI = dyn_cast<LoadInst>(V)) {
-    if (auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand())) {
-      if (GV->isConstant() && GV->hasInitializer()) {
-        C = GV->getInitializer();
-      }
-    }
-  }
+  // Look through a ptrtoint cast for a candidate constant. This could be
+  // extended to look through other casts, but the assumption is earlier
+  // passes that introduced memset.pattern intrinsic would have just emitted
+  // the integer argument directly for CosntantFP or ConstantInt cases.
+  if (auto *PI = dyn_cast<PtrToIntInst>(V))
+    V = PI->getPointerOperand();
 
-  if (!C)
-    C = dyn_cast<Constant>(V);
+  Constant *C = dyn_cast<Constant>(V);
 
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
