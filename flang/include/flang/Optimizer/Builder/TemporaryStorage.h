@@ -179,6 +179,8 @@ private:
 /// type. Fetching variable N will return a variable with the same address,
 /// dynamic type, bounds, and type parameters as the Nth variable that was
 /// pushed. It is implemented using runtime.
+/// Note that this is not meant to save POINTER or ALLOCATABLE descriptor
+/// addresses, use AnyDescriptorAddressStack instead.
 class AnyVariableStack {
 public:
   AnyVariableStack(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -201,6 +203,21 @@ private:
   Counter counter;
   /// Pointer box passed to the runtime when fetching the values.
   mlir::Value retValueBox;
+};
+
+/// Data structure to stack descriptor addresses. It stores the descriptor
+/// addresses as int_ptr values under the hood.
+class AnyDescriptorAddressStack : public AnyValueStack {
+public:
+  AnyDescriptorAddressStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                            mlir::Type descriptorAddressType);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value);
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
+
+private:
+  mlir::Type descriptorAddressType;
 };
 
 class TemporaryStorage;
@@ -264,7 +281,8 @@ public:
 
 private:
   std::variant<HomogeneousScalarStack, SimpleCopy, SSARegister, AnyValueStack,
-               AnyVariableStack, AnyVectorSubscriptStack>
+               AnyVariableStack, AnyVectorSubscriptStack,
+               AnyDescriptorAddressStack>
       impl;
 };
 } // namespace fir::factory

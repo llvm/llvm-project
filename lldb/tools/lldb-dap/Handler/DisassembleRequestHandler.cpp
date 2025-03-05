@@ -123,7 +123,8 @@ void DisassembleRequestHandler::operator()(
     return;
   }
 
-  const bool resolveSymbols = GetBoolean(arguments, "resolveSymbols", false);
+  const bool resolveSymbols =
+      GetBoolean(arguments, "resolveSymbols").value_or(false);
   llvm::json::Array instructions;
   const auto num_insts = insts.GetSize();
   for (size_t i = 0; i < num_insts; ++i) {

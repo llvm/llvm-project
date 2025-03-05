@@ -5498,8 +5498,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16: {
       Register Src3 = MI.getOperand(5).getReg();
-      Register Src4 = MI.getOperand(6).getImm();
-      Register Src5 = MI.getOperand(7).getImm();
+      int64_t Src4 = MI.getOperand(6).getImm();
+      int64_t Src5 = MI.getOperand(7).getImm();
       return LaneOp.addUse(Src1)
           .addUse(Src2)
           .addUse(Src3)

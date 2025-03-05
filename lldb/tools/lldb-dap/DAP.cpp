@@ -787,7 +787,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       response_handler = std::make_unique<UnknownResponseHandler>("", id);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
+    if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
@@ -856,7 +856,11 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 }
 
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  auto cleanup = llvm::make_scope_exit([this]() {
+    if (output.descriptor)
+      output.descriptor->Close();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);
