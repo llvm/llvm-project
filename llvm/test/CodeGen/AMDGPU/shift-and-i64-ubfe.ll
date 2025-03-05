@@ -156,8 +156,8 @@ define amdgpu_kernel void @v_uextract_bit_1_31_i64(ptr addrspace(1) %out, ptr ad
 ; Truncated after the shift, so only low shift result is used.
 ; GCN-LABEL: {{^}}v_uextract_bit_31_32_i64:
 ; GCN: buffer_load_dwordx2 v[[[VALLO:[0-9]+]]:[[VALHI:[0-9]+]]]
-; GCN: v_alignbit_b32 v[[SHRLO:[0-9]+]], v[[VALHI]], v[[VALLO]], 31
-; GCN-DAG: v_and_b32_e32 v[[AND:[0-9]+]], 3, v[[SHRLO]]{{$}}
+; GCN: s_mov_b64
+; GCN-DAG: v_and_b32_e32 v[[AND:[0-9]+]], 3, v[[SHRLO:[0-9]+]]{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v[[[AND]]:[[ZERO]]]
 define amdgpu_kernel void @v_uextract_bit_31_32_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
