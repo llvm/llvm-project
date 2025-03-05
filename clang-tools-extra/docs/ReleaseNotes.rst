@@ -133,7 +133,7 @@ Changes in existing checks
   matched scenarios of ``find`` and ``rfind`` methods and fixing false
   positives when those methods were called with 3 arguments.
 
-- Improved :doc:`performance/unnecessary-value-param
+- Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers 
   to avoid matching usage of functions within the current compilation unit.
