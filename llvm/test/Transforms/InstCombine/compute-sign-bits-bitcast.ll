@@ -47,7 +47,7 @@ define <8 x i8> @test_multiple_shifts(i1 %cond) {
   ret <8 x i8> %sra2
 }
 
-; Case 4: Test with non-sign-extended source
+; (Negative) Case 4: Test with non-sign-extended source
 define <4 x i8> @test_non_sign_extended(i32 %val) {
 ; CHECK-LABEL: define <4 x i8> @test_non_sign_extended(
 ; CHECK-SAME: i32 [[VAL:%.*]]) {

@@ -3926,27 +3926,24 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       Value *Src = U->getOperand(0);
       Type *SrcTy = Src->getType();
 
+      // Skip if the source type is not an integer or integer vector type
+      // This ensures we only process integer-like types
       if (!SrcTy->isIntOrIntVectorTy())
         break;
 
       unsigned SrcBits = SrcTy->getScalarSizeInBits();
 
+      // Bitcast 'large element' scalar/vector to 'small element' vector.
       if ((SrcBits % TyBits) != 0)
         break;
 
+      // Only proceed if the destination type is a fixed-size vector
       if (isa<FixedVectorType>(Ty)) {
-        if (auto *SrcVTy = dyn_cast<FixedVectorType>(SrcTy)) {
-          APInt SrcDemandedElts =
-              APInt::getSplat(SrcVTy->getNumElements(), APInt(1, 1));
-
-          Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Depth + 1, Q);
-          if (Tmp == SrcBits)
-            return TyBits;
-        } else {
-          Tmp = ComputeNumSignBits(Src, APInt(1, 1), Depth + 1, Q);
-          if (Tmp == SrcBits)
-            return TyBits;
-        }
+        // Fast case - sign splat can be simply split across the small elements.
+        // This works for both vector and scalar sources
+        Tmp = ComputeNumSignBits(Src, Depth + 1, Q);
+        if (Tmp == SrcBits)
+          return TyBits;
       }
       break;
     }
