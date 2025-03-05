@@ -144,5 +144,5 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeVirtRegRewriterPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
-  initializeXRayInstrumentationPass(Registry);
+  initializeXRayInstrumentationLegacyPass(Registry);
 }
