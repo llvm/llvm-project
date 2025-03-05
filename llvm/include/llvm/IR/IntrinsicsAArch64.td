@@ -3068,36 +3068,21 @@ let TargetPrefix = "aarch64" in {
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_anyvector_ty,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
+  // 2-way and 4-way multi-vector signed/unsigned Quater Tile Quarter Product A/S
+  foreach mode = ["s", "a"] in {
+    foreach za = ["", "_za64"] in {
+      foreach ty = ["s", "u", "su", "us"] in {
+        def int_aarch64_sme_ # ty # "mop4" # mode # za # "_wide_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
+      }
+    }
+  }
 
   def int_aarch64_sme_mop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
   def int_aarch64_sme_mop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
   def int_aarch64_sme_mop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
   def int_aarch64_sme_mop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4a_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4s_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4a_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4s_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_smop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_umop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_sumop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4a_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
-  def int_aarch64_sme_usmop4s_za64_wide_1x1 : SME_OuterProduct_QuarterTile_Single_Single;
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
