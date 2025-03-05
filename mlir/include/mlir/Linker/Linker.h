@@ -16,7 +16,7 @@
 namespace mlir::link {
 
 using InternalizeCallbackFn =
-    std::function<void(LinkableModuleOpInterface, const StringSet<> &)>;
+    std::function<void(ModuleOp, const StringSet<> &)>;
 
 /// These are gathered alphabetically sorted linker options
 class LinkerConfig {
@@ -75,7 +75,7 @@ public:
     bool internalize = false;
   };
 
-  Linker(LinkableModuleOpInterface composite, const LinkerConfig &config);
+  Linker(ModuleOp composite, const LinkerConfig &config);
 
   MLIRContext *getContext() { return mover.getContext(); }
 

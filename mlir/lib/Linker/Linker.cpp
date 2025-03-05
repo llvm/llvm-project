@@ -24,18 +24,6 @@ using llvm::Error;
 
 enum class LinkFrom { Dst, Src, Both };
 
-using ComdatHandle = const ComdatEntry *;
-using ComdatChoice = std::pair<ComdatSelectionKind, LinkFrom>;
-
-// TODO remove this once Comdat is part LinkerInterface
-static std::optional<ComdatHandle>
-getComdatHandle(const ComdatSymbolTable &table, GlobalValue gv) {
-  if (std::optional<StringRef> comdatName = gv.getComdatName())
-    if (auto it = table.find(*comdatName); it != table.end())
-      return &it->second;
-  return std::nullopt;
-}
-
 class ModuleLinker {
   IRMover &mover;
   OwningOpRef<Operation *> src;
@@ -53,29 +41,13 @@ class ModuleLinker {
   /// creating a circular dependency between IPO and the linker.
   InternalizeCallbackFn internalizeCallback;
 
-  LinkableModuleOpInterface getSourceModule() {
-    return cast<LinkableModuleOpInterface>(src.get());
-  }
+  ModuleOp getSourceModule() { return cast<ModuleOp>(src.get()); }
 
   bool shouldOverrideFromSrc() const { return flags & Linker::OverrideFromSrc; }
   bool shouldLinkOnlyNeeded() const { return flags & Linker::LinkOnlyNeeded; }
 
   bool shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
                             GlobalValue src);
-
-  DenseMap<ComdatHandle, ComdatChoice> comdatsChosen;
-
-  FailureOr<ComdatChoice> getComdatResult(ComdatHandle comdat);
-
-  // Keep track of the lazy linked global members of each comdat in source.
-  DenseMap<ComdatHandle, std::vector<GlobalValue>> lazyComdatMembers;
-
-  FailureOr<ComdatChoice>
-  computeResultingSelectionChoice(ComdatHandle src, ComdatSelectionKind dst);
-
-  /// Drop GV if it is a member of a comdat that we are dropping.
-  /// This can happen with COFF's largest selection kind.
-  void dropReplacedComdat(GlobalValue gv, ComdatHandle comdat);
 
   bool linkIfNeeded(GlobalValue gv, std::vector<Operation *> &gvToClone);
 
@@ -192,76 +164,6 @@ bool ModuleLinker::shouldLinkFromSource(bool &linkFromSrc, GlobalValue dst,
   //                  "': symbol multiply defined!");
 }
 
-FailureOr<ComdatChoice> ModuleLinker::getComdatResult(ComdatHandle src) {
-  auto dst = mover.getComposite();
-  // TODO: Compute once and pass reference along.
-  auto dstComdatSymTab = dst.getComdatSymbolTable();
-
-  auto it = dstComdatSymTab.find(src->getName());
-  if (it == dstComdatSymTab.end())
-    // Use the comdat if it is only available in one of the modules.
-    return ComdatChoice(src->getSelectionKind(), LinkFrom::Src);
-
-  return computeResultingSelectionChoice(src, (it->second).getSelectionKind());
-}
-
-static bool isAnyOrLargest(ComdatSelectionKind kind) {
-  return kind == ComdatSelectionKind::Any ||
-         kind == ComdatSelectionKind::Largest;
-}
-
-static bool isLargest(ComdatSelectionKind kind) {
-  return kind == ComdatSelectionKind::Largest;
-}
-
-static FailureOr<ComdatSelectionKind>
-computeResultingSelectionKind(ComdatSelectionKind src,
-                              ComdatSelectionKind dst) {
-  // The ability to mix Comdat::SelectionKind::Any with
-  // Comdat::SelectionKind::Largest is a behavior that comes from COFF.
-  const bool dstAnyOrLargest = isAnyOrLargest(dst);
-  const bool srcAnyOrLargest = isAnyOrLargest(src);
-
-  if (dstAnyOrLargest && srcAnyOrLargest) {
-    if (isLargest(dst) || isLargest(src))
-      return ComdatSelectionKind::Largest;
-    else
-      return ComdatSelectionKind::Any;
-  } else if (src == dst) {
-    return dst;
-  } else {
-    return failure();
-  }
-}
-
-FailureOr<ComdatChoice>
-ModuleLinker::computeResultingSelectionChoice(ComdatHandle src,
-                                              ComdatSelectionKind dstKind) {
-  FailureOr<ComdatSelectionKind> resultKind =
-      computeResultingSelectionKind(src->getSelectionKind(), dstKind);
-
-  if (failed(resultKind))
-    return emitError("Linking COMDATs named '" + src->getName() +
-                     "': invalid selection kinds!");
-
-  switch (*resultKind) {
-  case ComdatSelectionKind::Any:
-    return ComdatChoice(*resultKind, LinkFrom::Dst);
-  case ComdatSelectionKind::NoDeduplicate:
-    return ComdatChoice(*resultKind, LinkFrom::Both);
-  case ComdatSelectionKind::ExactMatch:
-  case ComdatSelectionKind::Largest:
-  case ComdatSelectionKind::SameSize:
-    llvm_unreachable("unimplemented");
-  }
-
-  return failure();
-}
-
-void ModuleLinker::dropReplacedComdat(GlobalValue gv, ComdatHandle comdat) {
-  llvm_unreachable("unimplemented");
-}
-
 // Returns true if no linking is needed
 bool ModuleLinker::linkIfNeeded(GlobalValue gv,
                                 std::vector<Operation *> &gvToClone) {
@@ -320,11 +222,6 @@ bool ModuleLinker::linkIfNeeded(GlobalValue gv,
     return false;
 
   LinkFrom comdatFrom = LinkFrom::Dst;
-  // if (gv.getComdatPair()) {
-  //   comdatFrom = comdatsChosen[dgv.getLinkedName()].second;
-  //   if (comdatFrom == LinkFrom::Dst)
-  //     return false;
-  // }
 
   bool linkFromSrc = true;
   if (dgv && shouldLinkFromSource(linkFromSrc, dgv, gv))
@@ -340,64 +237,6 @@ LogicalResult ModuleLinker::run() {
   LLVM_DEBUG(llvm::dbgs() << "ModuleLinker::run" << "\n");
   auto dst = mover.getComposite();
   auto src = getSourceModule();
-  DenseSet<ComdatHandle> replacedDstComdats;
-  DenseSet<ComdatHandle> nonPrevailingComdats;
-
-  ComdatSymbolTable srcComdatSymTab = src.getComdatSymbolTable();
-  ComdatSymbolTable dstComdatSymTab = dst.getComdatSymbolTable();
-
-  for (const auto &[_, comdat] : src.getComdatSymbolTable()) {
-    if (comdatsChosen.count(&comdat))
-      continue;
-
-    FailureOr<ComdatChoice> choice = getComdatResult(&comdat);
-    if (failed(choice))
-      return failure();
-
-    comdatsChosen.insert_or_assign(&comdat, *choice);
-
-    auto [sk, from] = *choice;
-    if (from == LinkFrom::Dst)
-      nonPrevailingComdats.insert(&comdat);
-
-    if (from != LinkFrom::Src)
-      continue;
-
-    auto dstComdatIt = dstComdatSymTab.find(comdat.getName());
-    if (dstComdatIt == dstComdatSymTab.end())
-      continue;
-
-    // The source comdat is replacing the dst one.
-    replacedDstComdats.insert(&dstComdatIt->second);
-  }
-
-  // TODO add `globals` and other values to LinkableModuleOpInterface
-  dst->walk([&](GlobalValue gv) {
-    auto comdat = getComdatHandle(dstComdatSymTab, gv);
-    if (!comdat)
-      return WalkResult::skip();
-    if (!replacedDstComdats.count(*comdat))
-      return WalkResult::skip();
-
-    dropReplacedComdat(gv, *comdat);
-    // do not recurse into global values
-    return WalkResult::skip();
-  });
-
-  if (!nonPrevailingComdats.empty()) {
-    llvm_unreachable("unimplemented");
-  }
-
-  // TODO add `globals` and other values to LinkableModuleOpInterface
-  src->walk([&](GlobalValue gv) {
-    if (gv.hasLinkOnceLinkage()) {
-      if (auto comdat = getComdatHandle(srcComdatSymTab, gv)) {
-        lazyComdatMembers[*comdat].push_back(gv);
-      }
-    }
-    // do not recurse into global values
-    return WalkResult::skip();
-  });
 
   std::vector<Operation *> gvToClone;
   bool nothingToLink = true;
@@ -452,7 +291,7 @@ LogicalResult ModuleLinker::run() {
   return success();
 }
 
-Linker::Linker(LinkableModuleOpInterface composite, const LinkerConfig &cfg)
+Linker::Linker(ModuleOp composite, const LinkerConfig &cfg)
     : config(cfg), mover(composite) {}
 
 LogicalResult Linker::linkInModule(OwningOpRef<Operation *> src, unsigned flags,

@@ -24,8 +24,6 @@ namespace mlir::link {
 // LinkerInterface
 //===----------------------------------------------------------------------===//
 
-using ComdatPair = std::pair<StringRef, ::mlir::link::ComdatSelectionKind>;
-
 struct DenseMapOperationKey {
   Operation *op;
 };
@@ -154,14 +152,6 @@ struct GlobalValueBase : OpInterface<Interface> {
   StringRef getLinkedName() const { return interface().getLinkedName(); }
 
   void setLinkedName(StringRef name) { llvm_unreachable("Not implemented"); }
-
-  std::optional<StringRef> getComdatName() const {
-    return interface().getComdatName();
-  }
-
-  std::optional<::mlir::link::ComdatPair> getComdatPair() const {
-    return interface().getComdatPair();
-  }
 };
 
 template <typename Interface>

@@ -19,7 +19,6 @@
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/LinkageInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 

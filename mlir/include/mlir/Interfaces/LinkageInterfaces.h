@@ -16,7 +16,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/StringMap.h"
 
-#include "mlir/Linker/Comdat.h"
 #include "mlir/Linker/Linkage.h"
 
 #include "mlir/IR/SymbolTable.h"

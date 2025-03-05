@@ -21,13 +21,13 @@ class IRMover {
 public:
   IRMover(Operation *composite);
 
-  LinkableModuleOpInterface getComposite() { return composite; }
+  ModuleOp getComposite() { return composite; }
   MLIRContext *getContext() { return composite->getContext(); }
 
   Error move(OwningOpRef<Operation *> src, ArrayRef<GlobalValue> valuesToLink);
 
 private:
-  LinkableModuleOpInterface composite;
+  ModuleOp composite;
 };
 
 } // namespace mlir::link

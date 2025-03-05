@@ -276,13 +276,7 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
         FileLineColLoc::get(&context, "mlir-link", 0, 0)));
   }();
 
-  auto dst = dyn_cast<LinkableModuleOpInterface>(composite->getOperation());
-  if (!dst)
-    return composite->emitError(
-        "Target module does not support linking. Expected a "
-        "LinkableModuleOpInterface.");
-
-  Linker linker(dst, config);
+  Linker linker(composite.get(), config);
 
   // Prepare output file
   std::string errorMessage;
@@ -306,7 +300,7 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   if (failed(verify(composite.get(), true))) {
     llvm::outs() << "Verify failed\n";
   }
-  composite.get()->print(out->os());
+  composite->print(out->os());
   out->keep();
 
   return success();

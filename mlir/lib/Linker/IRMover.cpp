@@ -279,7 +279,7 @@ static void forceRenaming(GlobalValue gv, StringRef name) {
     return;
 
   Operation *op = gv.getOperation();
-  SymbolTable symbols(op->getParentOfType<LinkableModuleOpInterface>());
+  SymbolTable symbols(op->getParentOfType<ModuleOp>());
 
   // If there is a conflict, rename the conflict.
   if (Operation *conflict = symbols.lookup(name)) {
@@ -404,12 +404,6 @@ Expected<Operation *> MLIRLinker::linkGlobalValueProto(GlobalValue sgv,
 
   if (needsRenaming) {
     forceRenaming(newgv, sgv.getLinkedName());
-  }
-
-  if (shouldLinkOps || forIndirectSymbol) {
-    if (auto sc = sgv.getComdatPair()) {
-      llvm_unreachable("Not implemented");
-    }
   }
 
   if (!shouldLinkOps && forIndirectSymbol)

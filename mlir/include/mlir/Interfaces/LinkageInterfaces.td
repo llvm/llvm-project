@@ -15,23 +15,6 @@
 
 include "mlir/IR/OpBase.td"
 
-//===----------------------------------------------------------------------===//
-// LinkableModuleOpInterface
-//===----------------------------------------------------------------------===//
-
-// Module-like ops that can be linked into other modules.
-def LinkableModuleOpInterface : OpInterface<"LinkableModuleOpInterface"> {
-  let description = [{ WIP }];
-  let cppNamespace = "::mlir";
-
-  let extraClassDeclaration = [{
-    ::mlir::link::ComdatSymbolTable getComdatSymbolTable();
-
-    ::mlir::link::ComdatEntry *
-    getOrInsertComdat(::mlir::link::ComdatSymbolTable &table, StringRef name);
-  }];
-}
-
 def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface"> {
   let description = [{ WIP }];
   let cppNamespace = "::mlir";
@@ -189,46 +172,6 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*methodBody=*/ [{}],
       /*defaultImplementation=*/[{
         return ::mlir::link::isCommonLinkage($_op.getLinkage());
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/        "Returns true if the operation has a comdat",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "hasComdat",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImplementation=*/[{
-        return $_op.getComdatPair().has_value();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/        "Returns comdat name and selection kind of the operation",
-      /*returnType=*/  "std::optional<::mlir::link::ComdatPair>",
-      /*methodName=*/  "getComdatPair",
-      /*args=*/        (ins)
-    >,
-    InterfaceMethod<
-      /*desc=*/        "Returns comdat name for the operation",
-      /*returnType=*/  "std::optional<StringRef>",
-      /*methodName=*/  "getComdatName",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImplementation=*/[{
-        if (auto comdatPair = $_op.getComdatPair())
-          return comdatPair->first;
-        return std::nullopt;
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/        "Returns comdat selection kind for the operation",
-      /*returnType=*/  "std::optional<::mlir::link::ComdatSelectionKind>",
-      /*methodName=*/  "getComdatSelectionKind",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImplementation=*/[{
-        if (auto comdatPair = $_op.getComdatPair())
-          return comdatPair->second;
-        return std::nullopt;
       }]
     >,
     InterfaceMethod<
