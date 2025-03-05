@@ -54,9 +54,9 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   const int invalid_port = 0;
   const auto *arguments = request.getObject("arguments");
   const lldb::pid_t pid =
-      GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
+      GetInteger<uint64_t>(arguments, "pid").value_or(LLDB_INVALID_PROCESS_ID);
   const auto gdb_remote_port =
-      GetUnsigned(arguments, "gdb-remote-port", invalid_port);
+      GetInteger<uint64_t>(arguments, "gdb-remote-port").value_or(invalid_port);
   const auto gdb_remote_hostname =
       GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
@@ -70,7 +70,8 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
   llvm::StringRef core_file = GetString(arguments, "coreFile");
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
+  const auto timeout_seconds =
+      GetInteger<uint64_t>(arguments, "timeout").value_or(30);
   dap.stop_at_entry = core_file.empty()
                           ? GetBoolean(arguments, "stopOnEntry").value_or(false)
                           : true;
