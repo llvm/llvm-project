@@ -2462,6 +2462,25 @@ convertOrderKind(std::optional<omp::ClauseOrderKind> o) {
   llvm_unreachable("Unknown ClauseOrderKind kind");
 }
 
+static void
+appendNontemporalVars(llvm::BasicBlock *Block,
+                      SmallVectorImpl<llvm::Value *> &NontemporalVars) {
+  for (llvm::Instruction &I : *Block) {
+    if (const llvm::CallInst *CI = dyn_cast<llvm::CallInst>(&I)) {
+      if (CI->getIntrinsicID() == llvm::Intrinsic::memcpy) {
+        llvm::Value *DestPtr = CI->getArgOperand(0);
+        llvm::Value *SrcPtr = CI->getArgOperand(1);
+        for (const llvm::Value *Var : NontemporalVars) {
+          if (Var == SrcPtr) {
+            NontemporalVars.push_back(DestPtr);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
 /// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -2523,12 +2542,70 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
 
-  llvm::SmallVector<llvm::Value *> nontemporalVars;
+  llvm::SmallVector<llvm::Value *> nontemporalOrigVars;
   mlir::OperandRange nontemporals = simdOp.getNontemporalVars();
   for (mlir::Value nontemporal : nontemporals) {
     llvm::Value *nt = moduleTranslation.lookupValue(nontemporal);
-    nontemporalVars.push_back(nt);
+    nontemporalOrigVars.push_back(nt);
   }
+
+  /** Call back function to attach nontemporal metadata to the load/store
+   * instructions of nontemporal variables of Block.
+   * Nontemporal variables may be a scalar, fixed size or allocatable
+   * or pointer array
+   *
+   * Example scenarios for nontemporal variables:
+   * Case 1: Scalar variable
+   *    If the nontemporal variable is a scalar, it is allocated on stack.Load
+   * and store instructions directly access the alloca pointer of the scalar
+   * variable for fetching information about scalar variable or  writing
+   * into the scalar variable. Mark those load and store instructions as
+   * non-temporal.
+   *
+   * Case 2: Fixed Size array
+   *    If the nontemporal variable is a fixed-size array, it is allocated
+   * as a contiguous block of memory. It uses one GEP instruction, to compute
+   * the address of each individual array elements and perform load or store
+   * operation on it. Mark those load and store instructions as non-temporal.
+   *
+   * Case 3: Allocatable array
+   *     For an allocatable array, which might involve runtime type descriptor,
+   * needs to navigate through descriptors using two or more GEP and load
+   * instructions to compute the address of each individual element in an array.
+   * Mark those load or store which access the individual array elements as
+   * non-temporal.
+   */
+  auto addNonTemporalMetadataCB = [&](llvm::BasicBlock *Block,
+                                      llvm::MDNode *Nontemporal) {
+    SmallVector<llvm::Value *> NontemporalVars{nontemporalOrigVars};
+    appendNontemporalVars(Block, NontemporalVars);
+    for (llvm::Instruction &I : *Block) {
+      llvm::Value *mem_ptr = nullptr;
+      bool MetadataFlag = true;
+      if (llvm::LoadInst *li = dyn_cast<llvm::LoadInst>(&I)) {
+        if (!(li->getType()->isPointerTy()))
+          mem_ptr = li->getPointerOperand();
+      } else if (llvm::StoreInst *si = dyn_cast<llvm::StoreInst>(&I))
+        mem_ptr = si->getPointerOperand();
+      if (mem_ptr) {
+        while (mem_ptr && !(isa<llvm::AllocaInst>(mem_ptr))) {
+          if (llvm::GetElementPtrInst *gep =
+                  dyn_cast<llvm::GetElementPtrInst>(mem_ptr)) {
+            llvm::Type *sourceType = gep->getSourceElementType();
+            if (sourceType->isStructTy() && gep->getNumIndices() >= 2 &&
+                !(gep->hasAllZeroIndices())) {
+              MetadataFlag = false;
+              break;
+            }
+            mem_ptr = gep->getPointerOperand();
+          } else if (llvm::LoadInst *li = dyn_cast<llvm::LoadInst>(mem_ptr))
+            mem_ptr = li->getPointerOperand();
+        }
+        if (MetadataFlag && is_contained(NontemporalVars, mem_ptr))
+          I.setMetadata(llvm::LLVMContext::MD_nontemporal, Nontemporal);
+      }
+    }
+  };
 
   llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   std::optional<ArrayAttr> alignmentValues = simdOp.getAlignments();
@@ -2557,11 +2634,11 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
-  ompBuilder->applySimd(loopInfo, alignedVars,
-                        simdOp.getIfExpr()
-                            ? moduleTranslation.lookupValue(simdOp.getIfExpr())
-                            : nullptr,
-                        order, simdlen, safelen, nontemporalVars);
+  ompBuilder->applySimd(
+      loopInfo, alignedVars,
+      simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
+                         : nullptr,
+      order, simdlen, safelen, addNonTemporalMetadataCB, nontemporalOrigVars);
 
   return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
                             llvmPrivateVars, privateDecls);

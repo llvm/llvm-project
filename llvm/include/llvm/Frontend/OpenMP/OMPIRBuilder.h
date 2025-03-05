@@ -1229,6 +1229,9 @@ public:
   void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop, int32_t Factor,
                          CanonicalLoopInfo **UnrolledCLI);
 
+  using NonTemporalBodyGenCallbackTy =
+      function_ref<void(llvm::BasicBlock *BB, MDNode *NontemporalNode)>;
+
   /// Add metadata to simd-ize a loop. If IfCond is not nullptr, the loop
   /// is cloned. The metadata which prevents vectorization is added to
   /// to the cloned loop. The cloned loop is executed when ifCond is evaluated
@@ -1242,10 +1245,15 @@ public:
   /// \param Order       The enum to map order clause.
   /// \param Simdlen     The Simdlen length to apply to the simd loop.
   /// \param Safelen     The Safelen length to apply to the simd loop.
-  void applySimd(CanonicalLoopInfo *Loop,
-                 MapVector<Value *, Value *> AlignedVars, Value *IfCond,
-                 omp::OrderKind Order, ConstantInt *Simdlen,
-                 ConstantInt *Safelen, ArrayRef<Value *> NontempralVars = {});
+  /// \param NontemporalCBFunc    Call back function for nontemporal.
+  /// \param NontemporalVars      Array of nontemporal vars.
+  void applySimd(
+      CanonicalLoopInfo *Loop, MapVector<Value *, Value *> AlignedVars,
+      Value *IfCond, omp::OrderKind Order, ConstantInt *Simdlen,
+      ConstantInt *Safelen,
+      NonTemporalBodyGenCallbackTy NontemporalCBFunc = [](BasicBlock *,
+                                                          MDNode *) {},
+      ArrayRef<Value *> NontempralVars = {});
 
   /// Generator for '#omp flush'
   ///
