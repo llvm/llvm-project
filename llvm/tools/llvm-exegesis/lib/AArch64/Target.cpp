@@ -8,6 +8,7 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include <iostream>
 
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
@@ -38,13 +39,13 @@ static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
 
 static MCInst loadZPRImmediate(MCRegister Reg, unsigned RegBitWidth,
                                const APInt &Value) {
-  // 0 <= Value.getZExtValue() < 2**13
-  assert(Value.getZExtValue() < (1 << 13) &&
+  // -127 <= Value.getZExtValue() < 128
+  assert(Value.getZExtValue() < (1 << 7) &&
          "Value must be in the range of the immediate opcode");
-  // For ZPR, we typically use DUPM instruction to load immediate values
-  return MCInstBuilder(AArch64::DUPM_ZI)
+  return MCInstBuilder(AArch64::DUP_ZI_D)
       .addReg(Reg)
-      .addImm(Value.getZExtValue());
+      .addImm(Value.getZExtValue())
+      .addImm(0);
 }
 
 static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
@@ -59,7 +60,7 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
 static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
   case 64:
-    return AArch64::FMOVDi; 
+    return AArch64::MOVID; //FMOVDi;
   case 128:
     return AArch64::MOVIv2d_ns;
   }
@@ -69,18 +70,10 @@ static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an FP immediate value into a register.
 static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
                               const APInt &Value) {
-  // -31 <= Value.getZExtValue() <= 31
-  assert(Value.getZExtValue() <= 31 &&
-         "Value must be in the range of the immediate opcode");
-  return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
-      .addReg(Reg)
-      .addImm(Value.getZExtValue());
-}
-
-// Generates instruction to load an FP128 immediate value into a register.
-static MCInst loadFP128Immediate(MCRegister Reg, unsigned RegBitWidth,
-                                 const APInt &Value) {
-  // 0 <= Value.getZExtValue() < 2**8
+  // 0 <= Value.getZExtValue() < 2**8 (int Value)
+  // -31.0 <= Value.getZExtValue() < 31.0 (frac Value)
+  assert(Value.getZExtValue() == 0 &&
+         "Value should be zero, temporary fix for now");
   assert(Value.getZExtValue() < (1 << 8) &&
          "Value must be in the range of the immediate opcode");
   return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
@@ -109,7 +102,7 @@ private:
     if (AArch64::FPR64RegClass.contains(Reg))
       return {loadFPImmediate(Reg, 64, Value)};
     if (AArch64::FPR128RegClass.contains(Reg))
-      return {loadFP128Immediate(Reg, 128, Value)};
+      return {loadFPImmediate(Reg, 128, Value)};
     if (AArch64::ZPRRegClass.contains(Reg))
       return {loadZPRImmediate(Reg, 128, Value)};
 
