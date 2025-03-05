@@ -10686,6 +10686,25 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     return convertFromScalableVector(DAG, VT, Res);
   }
 
+  // With SVE, but without Neon, extend the scalars to scalable vectors and use
+  // a SVE FCOPYSIGN.
+  if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
+      Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+      return SDValue();
+    EVT SVT = getPackedSVEVectorVT(VT);
+
+    SDValue Ins1 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In1,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue Ins2 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In2,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue FCS = DAG.getNode(ISD::FCOPYSIGN, DL, SVT, Ins1, Ins2);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, FCS,
+                       DAG.getConstant(0, DL, MVT::i64));
+  }
+
   auto BitCast = [this](EVT VT, SDValue Op, SelectionDAG &DAG) {
     if (VT.isScalableVector())
       return getSVESafeBitCast(VT, Op, DAG);
