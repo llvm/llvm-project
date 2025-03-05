@@ -2534,6 +2534,8 @@ void OMPClauseEnqueue::VisitOMPDynamicAllocatorsClause(
 void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
     const OMPAtomicDefaultMemOrderClause *) {}
 
+void OMPClauseEnqueue::VisitOMPSelfMapsClause(const OMPSelfMapsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeverityClause(const OMPSeverityClause *) {}

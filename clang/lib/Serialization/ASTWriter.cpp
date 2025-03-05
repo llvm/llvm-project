@@ -8439,6 +8439,8 @@ void OMPClauseWriter::VisitOMPAtomicDefaultMemOrderClause(
   Record.AddSourceLocation(C->getAtomicDefaultMemOrderKindKwLoc());
 }
 
+void OMPClauseWriter::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {}
+
 void OMPClauseWriter::VisitOMPAtClause(OMPAtClause *C) {
   Record.push_back(C->getAtKind());
   Record.AddSourceLocation(C->getLParenLoc());

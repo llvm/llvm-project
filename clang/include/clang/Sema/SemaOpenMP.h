@@ -1109,6 +1109,10 @@ public:
       OpenMPAtomicDefaultMemOrderClauseKind Kind, SourceLocation KindLoc,
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
 
+  /// Called on well-formed 'self_maps' clause.
+  OMPClause *ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
+
   /// Called on well-formed 'at' clause.
   OMPClause *ActOnOpenMPAtClause(OpenMPAtClauseKind Kind,
                                  SourceLocation KindLoc,
