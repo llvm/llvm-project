@@ -121,9 +121,9 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
     EXPECT_TRUE(AnalyzerDump.find("<CalleeIndex codeid") != std::string::npos);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     ASSERT_TRUE(!!Expected);
-    auto &Ctxes = *Expected;
+    auto &Ctxes = Expected->Contexts;
     EXPECT_EQ(Ctxes.size(), roots().size());
     EXPECT_EQ(Ctxes.size(), 2U);
     for (auto &[G, R] : roots())
@@ -157,7 +157,7 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -165,14 +165,14 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
 
 TEST_F(PGOCtxProfRWTest, Empty) {
   PGOCtxProfileReader Reader("");
-  auto Expected = Reader.loadContexts();
+  auto Expected = Reader.loadProfiles();
   EXPECT_FALSE(Expected);
   consumeError(Expected.takeError());
 }
 
 TEST_F(PGOCtxProfRWTest, Invalid) {
   PGOCtxProfileReader Reader("Surely this is not valid");
-  auto Expected = Reader.loadContexts();
+  auto Expected = Reader.loadProfiles();
   EXPECT_FALSE(Expected);
   consumeError(Expected.takeError());
 }
@@ -194,9 +194,9 @@ TEST_F(PGOCtxProfRWTest, ValidButEmpty) {
     ASSERT_NE(*MB, nullptr);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_TRUE(!!Expected);
-    EXPECT_TRUE(Expected->empty());
+    EXPECT_TRUE(Expected->Contexts.empty());
   }
 }
 
@@ -216,7 +216,7 @@ TEST_F(PGOCtxProfRWTest, WrongVersion) {
     ASSERT_NE(*MB, nullptr);
 
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -239,7 +239,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }
@@ -265,7 +265,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
     ASSERT_TRUE(!!MB);
     ASSERT_NE(*MB, nullptr);
     PGOCtxProfileReader Reader((*MB)->getBuffer());
-    auto Expected = Reader.loadContexts();
+    auto Expected = Reader.loadProfiles();
     EXPECT_FALSE(Expected);
     consumeError(Expected.takeError());
   }

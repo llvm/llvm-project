@@ -125,6 +125,7 @@ void test_s_barrier_signal_isfirst(int* a, int* b, int *c)
   __builtin_amdgcn_s_barrier_wait(1);
 }
 
+<<<<<<< HEAD
 // CHECK-LABEL: @test_s_barrier_init(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[BAR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -166,6 +167,8 @@ void test_s_barrier_leave()
   __builtin_amdgcn_s_barrier_leave(1);
 }
 
+=======
+>>>>>>> a614f2b489caa19001b2f44784514a6226f79cb7
 // CHECK-LABEL: @test_s_get_barrier_state(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
