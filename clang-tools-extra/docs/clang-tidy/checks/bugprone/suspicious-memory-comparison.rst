@@ -29,3 +29,5 @@ This check is also related to and partially overlaps the CERT C++ Coding Standar
 and
 `EXP62-CPP. Do not access the bits of an object representation that are not part of the object's value representation
 <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP62-CPP.+Do+not+access+the+bits+of+an+object+representation+that+are+not+part+of+the+object%27s+value+representation>`_
+
+`cert-exp42-c` redirects here as an alias of this check.

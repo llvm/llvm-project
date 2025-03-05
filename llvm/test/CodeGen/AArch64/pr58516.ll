@@ -40,7 +40,8 @@ define void @osfx(ptr %this) comdat personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  // %bb.1: // %invoke.cont12
 ; CHECK-NEXT:    str wzr, [x20]
 ; CHECK-NEXT:    str wzr, [x21]
-; CHECK-NEXT:  .LBB0_2: // %try.cont
+; CHECK-NEXT:  .LBB0_2: // Block address taken
+; CHECK-NEXT:    // %try.cont
 ; CHECK-NEXT:  $ehgcr_0_2:
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    sub sp, x29, #24

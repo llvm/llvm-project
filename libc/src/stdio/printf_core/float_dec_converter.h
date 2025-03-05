@@ -12,9 +12,12 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/big_int.h" // is_big_int_v
+#include "src/__support/ctype_utils.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -23,7 +26,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 using StorageType = fputil::FPBits<long double>::StorageType;
@@ -33,7 +36,8 @@ using ExponentString =
 
 // Returns true if value is divisible by 2^p.
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 multiple_of_power_of_2(T value, uint32_t p) {
   return (value & ((T(1) << p) - 1)) == 0;
 }
@@ -45,11 +49,8 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 // constexpr uint32_t MAX_BLOCK = 999999999999999999;
 constexpr char DECIMAL_POINT = '.';
 
-// This is used to represent which direction the number should be rounded.
-enum class RoundDirection { Up, Down, Even };
-
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
-                                               fputil::Sign sign) {
+                                               Sign sign) {
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.
@@ -79,7 +80,8 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
 }
 
 template <typename T>
-LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T> || is_big_int_v<T>,
+                                       bool>
 zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa,
                   const int32_t mant_width) {
   const int32_t required_twos = -base_2_exp - digits_after_point - 1;
@@ -502,25 +504,22 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
 
   const size_t positive_blocks = float_converter.get_positive_blocks();
 
-  if (positive_blocks >= 0) {
-    // This loop iterates through the number a block at a time until it finds a
-    // block that is not zero or it hits the decimal point. This is because all
-    // zero blocks before the first nonzero digit or the decimal point are
-    // ignored (no leading zeroes, at least at this stage).
-    int32_t i = static_cast<int32_t>(positive_blocks) - 1;
-    for (; i >= 0; --i) {
-      BlockInt digits = float_converter.get_positive_block(i);
-      if (nonzero) {
-        RET_IF_RESULT_NEGATIVE(float_writer.write_middle_block(digits));
-      } else if (digits != 0) {
-        size_t blocks_before_decimal = i;
-        float_writer.init((blocks_before_decimal * BLOCK_SIZE) +
-                              (has_decimal_point ? 1 : 0) + precision,
-                          blocks_before_decimal * BLOCK_SIZE);
-        float_writer.write_first_block(digits);
+  // This loop iterates through the number a block at a time until it finds a
+  // block that is not zero or it hits the decimal point. This is because all
+  // zero blocks before the first nonzero digit or the decimal point are
+  // ignored (no leading zeroes, at least at this stage).
+  for (int32_t i = static_cast<int32_t>(positive_blocks) - 1; i >= 0; --i) {
+    BlockInt digits = float_converter.get_positive_block(i);
+    if (nonzero) {
+      RET_IF_RESULT_NEGATIVE(float_writer.write_middle_block(digits));
+    } else if (digits != 0) {
+      size_t blocks_before_decimal = i;
+      float_writer.init((blocks_before_decimal * BLOCK_SIZE) +
+                            (has_decimal_point ? 1 : 0) + precision,
+                        blocks_before_decimal * BLOCK_SIZE);
+      float_writer.write_first_block(digits);
 
-        nonzero = true;
-      }
+      nonzero = true;
     }
   }
 
@@ -588,8 +587,6 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   int exponent = float_bits.get_explicit_exponent();
   StorageType mantissa = float_bits.get_explicit_mantissa();
-
-  const char a = (to_conv.conv_name & 32) | 'A';
 
   char sign_char = 0;
 
@@ -736,7 +733,8 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   round = get_round_direction(last_digit, truncated, float_bits.sign());
 
   RET_IF_RESULT_NEGATIVE(float_writer.write_last_block(
-      digits, maximum, round, final_exponent, a + 'E' - 'A'));
+      digits, maximum, round, final_exponent,
+      internal::islower(to_conv.conv_name) ? 'e' : 'E'));
 
   RET_IF_RESULT_NEGATIVE(float_writer.right_pad());
   return WRITE_OK;
@@ -1173,6 +1171,6 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H

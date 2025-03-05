@@ -879,6 +879,7 @@ private:
   ///
   /// Optimization Note: This bit could be profitably folded with Terminator's
   /// storage if the memory usage of CFGBlock becomes an issue.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoReturnElement : 1;
 
   /// The parent CFG that owns this CFGBlock.
@@ -1007,7 +1008,9 @@ public:
 
   class FilterOptions {
   public:
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreNullPredecessors : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IgnoreDefaultsWithCoveredEnums : 1;
 
     FilterOptions()

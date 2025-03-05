@@ -6,7 +6,7 @@
 # RUN: cat %tlog.txt | FileCheck --check-prefix=CHECKBOLT %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=CHECK %s
 
-# Tests BOLT does not assert when DIE reference is invalid.
+## Tests BOLT does not assert when DIE reference is invalid.
 
 # CHECKBOLT: BOLT-WARNING: [internal-dwarf-error]: could not parse referenced DIE at offset:
 # CHECKBOLT-NOT: Referenced DIE offsets not in .debug_info

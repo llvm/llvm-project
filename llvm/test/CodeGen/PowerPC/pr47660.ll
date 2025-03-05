@@ -3,7 +3,7 @@
 ; RUN:   -mtriple=powerpc64le-linux-gnu < %s | FileCheck \
 ; RUN:   -check-prefix=CHECK-LE %s
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs \
-; RUN:   -mtriple=powerpc64-linux-gnu < %s | FileCheck \
+; RUN:  -mcpu=ppc -mtriple=powerpc64-linux-gnu < %s | FileCheck \
 ; RUN:   -check-prefix=CHECK-BE %s
 
 define i8 @_Z1f1c(i24 %x) #0 {

@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.Errno \
-// RUN:   -analyzer-checker=alpha.unix.Stream \
+// RUN:   -analyzer-checker=unix.Stream \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.ExprInspection
@@ -264,6 +264,16 @@ void test_clearerr(FILE *F) {
   clearerr(F);
   clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
   if (errno) {} // no-warning
+  clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
+}
+
+void test_fileno(FILE *F) {
+  errno = 0;
+  int A = fileno(F);
+  clang_analyzer_eval(F != NULL);  // expected-warning{{TRUE}}
+  clang_analyzer_eval(A >= 0);     // expected-warning{{TRUE}}
+  if (errno) {}                    // no-warning
   clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
                                    // expected-warning@-1{{FALSE}}
 }

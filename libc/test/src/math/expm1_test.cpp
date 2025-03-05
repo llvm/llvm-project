@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -23,34 +22,24 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcExpm1Test, TrickyInputs) {
-  constexpr int N = 21;
-  constexpr uint64_t INPUTS[N] = {
-      0x3FD79289C6E6A5C0, // x=0x1.79289c6e6a5cp-2
-      0x3FD05DE80A173EA0, // x=0x1.05de80a173eap-2
-      0xbf1eb7a4cb841fcc, // x=-0x1.eb7a4cb841fccp-14
-      0xbf19a61fb925970d, // x=-0x1.9a61fb925970dp-14
-      0x3fda7b764e2cf47a, // x=0x1.a7b764e2cf47ap-2
-      0xc04757852a4b93aa, // x=-0x1.757852a4b93aap+5
-      0x4044c19e5712e377, // x=0x1.4c19e5712e377p+5
-      0xbf19a61fb925970d, // x=-0x1.9a61fb925970dp-14
-      0xc039a74cdab36c28, // x=-0x1.9a74cdab36c28p+4
-      0xc085b3e4e2e3bba9, // x=-0x1.5b3e4e2e3bba9p+9
-      0xc086960d591aec34, // x=-0x1.6960d591aec34p+9
-      0xc086232c09d58d91, // x=-0x1.6232c09d58d91p+9
-      0xc0874910d52d3051, // x=-0x1.74910d52d3051p9
-      0xc0867a172ceb0990, // x=-0x1.67a172ceb099p+9
-      0xc08ff80000000000, // x=-0x1.ff8p+9
-      0xbc971547652b82fe, // x=-0x1.71547652b82fep-54
-      0xbce465655f122ff6, // x=-0x1.465655f122ff6p-49
-      0x3d1bc8ee6b28659a, // x=0x1.bc8ee6b28659ap-46
-      0x3f18442b169f672d, // x=0x1.8442b169f672dp-14
-      0xc02b4f0cfb15ca0f, // x=-0x1.b4f0cfb15ca0fp+3
-      0xc042b708872320dd, // x=-0x1.2b708872320ddp+5
+  constexpr double INPUTS[] = {
+      0x1.71547652b82fep-54, 0x1.465655f122ff6p-49, 0x1.bc8ee6b28659ap-46,
+      0x1.8442b169f672dp-14, 0x1.9a61fb925970dp-14, 0x1.eb7a4cb841fccp-14,
+      0x1.05de80a173eap-2,   0x1.79289c6e6a5cp-2,   0x1.a7b764e2cf47ap-2,
+      0x1.b4f0cfb15ca0fp+3,  0x1.9a74cdab36c28p+4,  0x1.2b708872320ddp+5,
+      0x1.4c19e5712e377p+5,  0x1.757852a4b93aap+5,  0x1.77f74111e0894p+6,
+      0x1.a6c3780bbf824p+6,  0x1.e3d57e4c557f6p+6,  0x1.f07560077985ap+6,
+      0x1.1f0da93354198p+7,  0x1.71018579c0758p+7,  0x1.204684c1167e9p+8,
+      0x1.5b3e4e2e3bba9p+9,  0x1.6232c09d58d91p+9,  0x1.67a172ceb099p+9,
+      0x1.6960d591aec34p+9,  0x1.74910d52d3051p+9,  0x1.ff8p+9,
   };
+  constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
   for (int i = 0; i < N; ++i) {
-    double x = FPBits(INPUTS[i]).get_val();
+    double x = INPUTS[i];
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                    LIBC_NAMESPACE::expm1(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, -x,
+                                   LIBC_NAMESPACE::expm1(-x), 0.5);
   }
 }
 
@@ -73,12 +62,12 @@ TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
       LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::expm1(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;
@@ -98,10 +87,10 @@ TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Expm1 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Expm1 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Expm1, mx, mr, 0.5, rounding_mode);
     }
   };

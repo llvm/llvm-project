@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___CHRONO_FILE_CLOCK_H
 #define _LIBCPP___CHRONO_FILE_CLOCK_H
 
-#include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
@@ -48,7 +47,7 @@ _LIBCPP_END_NAMESPACE_STD
 #ifndef _LIBCPP_CXX03_LANG
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 struct _FilesystemClock {
-#  if !defined(_LIBCPP_HAS_NO_INT128)
+#  if _LIBCPP_HAS_INT128
   typedef __int128_t rep;
   typedef nano period;
 #  else

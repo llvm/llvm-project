@@ -8,23 +8,26 @@
 
 #include "src/stdio/fseek.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_FSEEK>();
+  rpc::Client::Port port = rpc::client.open<LIBC_FSEEK>();
   port.send_and_recv(
-      [=](rpc::Buffer *buffer) {
+      [=](rpc::Buffer *buffer, uint32_t) {
         buffer->data[0] = file::from_stream(stream);
         buffer->data[1] = static_cast<uint64_t>(offset);
         buffer->data[2] = static_cast<uint64_t>(whence);
       },
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+      [&](rpc::Buffer *buffer, uint32_t) {
+        ret = static_cast<int>(buffer->data[0]);
+      });
   port.close();
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

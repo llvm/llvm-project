@@ -83,7 +83,8 @@ fir::factory::HomogeneousScalarStack::HomogeneousScalarStack(
   mlir::Value shape = builder.genShape(loc, extents);
   temp = builder
              .create<hlfir::DeclareOp>(loc, tempStorage, tempName, shape,
-                                       lengths, fir::FortranVariableFlagsAttr{})
+                                       lengths, /*dummy_scope=*/nullptr,
+                                       fir::FortranVariableFlagsAttr{})
              .getBase();
 }
 
@@ -304,8 +305,7 @@ fir::factory::AnyVectorSubscriptStack::AnyVectorSubscriptStack(
     mlir::Type variableStaticType, bool shapeCanBeSavedAsRegister, int rank)
     : AnyVariableStack{loc, builder, variableStaticType} {
   if (shapeCanBeSavedAsRegister) {
-    shapeTemp =
-        std::unique_ptr<TemporaryStorage>(new TemporaryStorage{SSARegister{}});
+    shapeTemp = std::make_unique<TemporaryStorage>(SSARegister{});
     return;
   }
   // The shape will be tracked as the dimension inside a descriptor because
@@ -314,8 +314,8 @@ fir::factory::AnyVectorSubscriptStack::AnyVectorSubscriptStack(
   mlir::Type type =
       fir::BoxType::get(builder.getVarLenSeqTy(builder.getI32Type(), rank));
   boxType = type;
-  shapeTemp = std::unique_ptr<TemporaryStorage>(
-      new TemporaryStorage{AnyVariableStack{loc, builder, type}});
+  shapeTemp =
+      std::make_unique<TemporaryStorage>(AnyVariableStack{loc, builder, type});
 }
 
 void fir::factory::AnyVectorSubscriptStack::pushShape(
@@ -354,4 +354,28 @@ void fir::factory::AnyVectorSubscriptStack::destroy(
     mlir::Location loc, fir::FirOpBuilder &builder) {
   static_cast<AnyVariableStack *>(this)->destroy(loc, builder);
   shapeTemp->destroy(loc, builder);
+}
+
+//===----------------------------------------------------------------------===//
+// fir::factory::AnyDescriptorAddressStack implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::AnyDescriptorAddressStack::AnyDescriptorAddressStack(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    mlir::Type descriptorAddressType)
+    : AnyValueStack(loc, builder, builder.getIntPtrType()),
+      descriptorAddressType{descriptorAddressType} {}
+
+void fir::factory::AnyDescriptorAddressStack::pushValue(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value variable) {
+  mlir::Value cast =
+      builder.createConvert(loc, builder.getIntPtrType(), variable);
+  static_cast<AnyValueStack *>(this)->pushValue(loc, builder, cast);
+}
+
+mlir::Value
+fir::factory::AnyDescriptorAddressStack::fetch(mlir::Location loc,
+                                               fir::FirOpBuilder &builder) {
+  mlir::Value addr = static_cast<AnyValueStack *>(this)->fetch(loc, builder);
+  return builder.createConvert(loc, descriptorAddressType, addr);
 }

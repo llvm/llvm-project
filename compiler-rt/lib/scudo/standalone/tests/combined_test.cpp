@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memtag.h"
+#include "stack_depot.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -53,16 +54,18 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Size = scudo::roundUp(Size, MinAlignment);
-  if (Allocator->useMemoryTaggingTestOnly())
+  if (Allocator->useMemoryTaggingTestOnly()) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
           reinterpret_cast<char *>(P)[-1] = 'A';
         },
         "");
+  }
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
           ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment) {
+          : Alignment == MinAlignment &&
+                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
@@ -189,7 +192,6 @@ struct TestConditionVariableConfig {
 #endif
     static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
     static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
-    static const bool UseConditionVariable = true;
 #if SCUDO_LINUX
     using ConditionVariableT = scudo::ConditionVariableLinux;
 #else
@@ -447,19 +449,32 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   // returns the same chunk. This requires that all the sizes we iterate on use
   // the same block size, but that should be the case for MaxSize - 64 with our
   // default class size maps.
-  constexpr scudo::uptr ReallocSize =
+  constexpr scudo::uptr InitialSize =
       TypeParam::Primary::SizeClassMap::MaxSize - 64;
-  void *P = Allocator->allocate(ReallocSize, Origin);
   const char Marker = 'A';
-  memset(P, Marker, ReallocSize);
+  Allocator->setFillContents(scudo::PatternOrZeroFill);
+
+  void *P = Allocator->allocate(InitialSize, Origin);
+  scudo::uptr CurrentSize = InitialSize;
   for (scudo::sptr Delta = -32; Delta < 32; Delta += 8) {
+    memset(P, Marker, CurrentSize);
     const scudo::uptr NewSize =
-        static_cast<scudo::uptr>(static_cast<scudo::sptr>(ReallocSize) + Delta);
+        static_cast<scudo::uptr>(static_cast<scudo::sptr>(InitialSize) + Delta);
     void *NewP = Allocator->reallocate(P, NewSize);
     EXPECT_EQ(NewP, P);
-    for (scudo::uptr I = 0; I < ReallocSize - 32; I++)
+
+    // Verify that existing contents have been preserved.
+    for (scudo::uptr I = 0; I < scudo::Min(CurrentSize, NewSize); I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
+
+    // Verify that new bytes are set according to FillContentsMode.
+    for (scudo::uptr I = CurrentSize; I < NewSize; I++) {
+      unsigned char V = (reinterpret_cast<unsigned char *>(NewP))[I];
+      EXPECT_TRUE(V == scudo::PatternFillByte || V == 0);
+    }
+
     checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
+    CurrentSize = NewSize;
   }
   Allocator->deallocate(P, Origin);
 }
@@ -518,6 +533,27 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
           reinterpret_cast<char *>(P)[Size - 1] = 'A';
         },
         "");
+  }
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
+  auto *Allocator = this->Allocator.get();
+
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    const scudo::uptr Size = 1U << SizeLog;
+    if (!isPrimaryAllocation<TestAllocator<TypeParam>>(Size, 0))
+      break;
+
+    // Verify that a double free results in a chunk state error.
+    EXPECT_DEATH(
+        {
+          // Allocate from primary
+          void *P = Allocator->allocate(Size, Origin);
+          ASSERT_TRUE(P != nullptr);
+          Allocator->deallocate(P, Origin);
+          Allocator->deallocate(P, Origin);
+        },
+        "invalid chunk state");
   }
 }
 
@@ -867,18 +903,105 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
+  // The RingBuffer is not initialized until tracking is enabled for the
+  // first time.
+  auto *Allocator = this->Allocator.get();
+  EXPECT_EQ(0u, Allocator->getRingBufferSize());
+  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(nullptr, RingBufferAddress);
+
+  // Enable tracking again to verify that the initialization only happens once.
+  Allocator->setTrackAllocationStacks(true);
+  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
-  auto Size = Allocator->getRingBufferSize();
-  if (Size > 0)
-    EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  Allocator->setTrackAllocationStacks(true);
+
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
   auto *Allocator = this->Allocator.get();
-  auto *Addr = Allocator->getRingBufferAddress();
-  EXPECT_NE(Addr, nullptr);
-  EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+  Allocator->setTrackAllocationStacks(true);
+
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(RingBufferAddress, nullptr);
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
+  // The StackDepot is not initialized until tracking is enabled for the
+  // first time.
+  auto *Allocator = this->Allocator.get();
+  EXPECT_EQ(0u, Allocator->getStackDepotSize());
+  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(nullptr, StackDepotAddress);
+
+  // Enable tracking again to verify that the initialization only happens once.
+  Allocator->setTrackAllocationStacks(true);
+  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(StackDepotAddress, nullptr);
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+  ASSERT_TRUE(Depot->isValid(sizeof(Buf)));
+  ASSERT_FALSE(Depot->isValid(sizeof(Buf) - 1));
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Elem = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::uptr RingPosPtr = 0;
+  scudo::uptr SizePtr = 0;
+  ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
+  ASSERT_EQ(SizePtr, 3u);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64

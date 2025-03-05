@@ -69,7 +69,8 @@ struct PositiveConstValueConstructor {
 
 template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType S, T V) {
   // CHECK-MESSAGES: [[@LINE-1]]:90: warning: the const qualified parameter 'S'
-  // CHECK-FIXES-NOT: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, T V) {
+  // CHECK-MESSAGES: [[@LINE-2]]:95: warning: the parameter 'V'
+  // CHECK-FIXES: template <typename T> void templateWithNonTemplatizedParameter(const ExpensiveToCopyType& S, const T& V) {
 }
 
 void instantiated() {

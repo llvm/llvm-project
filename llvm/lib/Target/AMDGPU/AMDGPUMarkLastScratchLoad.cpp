@@ -42,9 +42,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<SlotIndexes>();
-    AU.addRequired<LiveIntervals>();
-    AU.addRequired<LiveStacks>();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<LiveStacksWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -64,9 +64,9 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
   if (ST.getGeneration() < AMDGPUSubtarget::GFX12)
     return false;
 
-  LS = &getAnalysis<LiveStacks>();
-  LIS = &getAnalysis<LiveIntervals>();
-  SI = &getAnalysis<SlotIndexes>();
+  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   SII = ST.getInstrInfo();
   SlotIndexes &Slots = *LIS->getSlotIndexes();
 
@@ -88,7 +88,7 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
       if (Segment.end.isBlock())
         continue;
 
-      const int FrameIndex = Register::stackSlot2Index(LI.reg());
+      const int FrameIndex = LI.reg().stackSlotIndex();
       MachineInstr *LastLoad = nullptr;
 
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
@@ -136,7 +136,7 @@ char &llvm::AMDGPUMarkLastScratchLoadID = AMDGPUMarkLastScratchLoad::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                       "AMDGPU Mark last scratch load", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(LiveStacks)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_END(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                     "AMDGPU Mark last scratch load", false, false)

@@ -72,7 +72,7 @@ public:
     return denominators;
   }
 
-  GeneratingFunction operator+(GeneratingFunction &gf) const {
+  GeneratingFunction operator+(const GeneratingFunction &gf) const {
     assert(numParam == gf.getNumParams() &&
            "two generating functions with different numbers of parameters "
            "cannot be added!");

@@ -1,4 +1,4 @@
-# Verifies that llvm-bolt prints correct loop information.
+## Verifies that llvm-bolt prints correct loop information.
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %p/Inputs/loop_nest.s -o %t.o

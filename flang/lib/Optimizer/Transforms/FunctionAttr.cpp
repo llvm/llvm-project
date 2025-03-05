@@ -10,12 +10,13 @@
 /// \file
 /// This is a generic pass for adding attributes to functions.
 //===----------------------------------------------------------------------===//
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
-#define GEN_PASS_DECL_FUNCTIONATTR
 #define GEN_PASS_DEF_FUNCTIONATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
@@ -46,6 +47,24 @@ void FunctionAttrPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
+  llvm::StringRef name = func.getSymName();
+  auto deconstructed = fir::NameUniquer::deconstruct(name);
+  bool isFromModule = !deconstructed.second.modules.empty();
+
+  if ((isFromModule || !func.isDeclaration()) &&
+      !fir::hasBindcAttr(func.getOperation())) {
+    llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
+    mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
+
+    for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
+      if (mlir::isa<fir::ReferenceType>(argType) &&
+          !func.getArgAttr(index, fir::getTargetAttrName()) &&
+          !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
+          !func.getArgAttr(index, fir::getVolatileAttrName()))
+        func.setArgAttr(index, nocapture, unitAttr);
+    }
+  }
+
   mlir::MLIRContext *context = &getContext();
   if (framePointerKind != mlir::LLVM::framePointerKind::FramePointerKind::None)
     func->setAttr("frame_pointer", mlir::LLVM::FramePointerKindAttr::get(
@@ -75,23 +94,4 @@ void FunctionAttrPass::runOnOperation() {
         mlir::BoolAttr::get(context, true));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass(
-    fir::FunctionAttrTypes &functionAttr, bool noInfsFPMath, bool noNaNsFPMath,
-    bool approxFuncFPMath, bool noSignedZerosFPMath, bool unsafeFPMath) {
-  FunctionAttrOptions opts;
-  // Frame pointer
-  opts.framePointerKind = functionAttr.framePointerKind;
-  opts.noInfsFPMath = noInfsFPMath;
-  opts.noNaNsFPMath = noNaNsFPMath;
-  opts.approxFuncFPMath = approxFuncFPMath;
-  opts.noSignedZerosFPMath = noSignedZerosFPMath;
-  opts.unsafeFPMath = unsafeFPMath;
-
-  return std::make_unique<FunctionAttrPass>(opts);
-}
-
-std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass() {
-  return std::make_unique<FunctionAttrPass>();
 }

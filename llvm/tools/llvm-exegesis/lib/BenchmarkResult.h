@@ -17,6 +17,7 @@
 
 #include "LlvmState.h"
 #include "RegisterValue.h"
+#include "ValidationEvent.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -31,16 +32,6 @@ namespace llvm {
 class Error;
 
 namespace exegesis {
-
-enum ValidationEvent {
-  InstructionRetired,
-  L1DCacheLoadMiss,
-  L1DCacheStoreMiss,
-  L1ICacheLoadMiss,
-  DataTLBLoadMiss,
-  DataTLBStoreMiss,
-  InstructionTLBLoadMiss
-};
 
 enum class BenchmarkPhaseSelectorE {
   PrepareSnippet,
@@ -62,7 +53,7 @@ struct MemoryValue {
 
 struct MemoryMapping {
   // The address to place the mapping at.
-  intptr_t Address;
+  uintptr_t Address;
   // The name of the value that should be mapped.
   std::string MemoryValueName;
 };
@@ -82,7 +73,9 @@ struct BenchmarkKey {
   std::string Config;
   // The address that the snippet should be loaded in at if the execution mode
   // being used supports it.
-  intptr_t SnippetAddress = 0;
+  uintptr_t SnippetAddress = 0;
+  // The register that should be used to hold the loop counter.
+  MCRegister LoopRegister;
 };
 
 struct BenchmarkMeasure {

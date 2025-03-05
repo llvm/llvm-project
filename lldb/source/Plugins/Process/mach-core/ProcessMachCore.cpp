@@ -114,6 +114,7 @@ ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
     : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
       m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
+      m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
 // Destructor
@@ -320,6 +321,9 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
     } else if (type == ObjectFile::eBinaryTypeUser) {
       m_dyld_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+    } else if (type == ObjectFile::eBinaryTypeUserAllImageInfos) {
+      m_dyld_all_image_infos_addr = objfile_binary_value;
+      m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
     } else {
       const bool force_symbol_search = true;
       const bool notify = true;
@@ -466,6 +470,7 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
   addr_t saved_user_dyld_addr = m_dyld_addr;
   m_mach_kernel_addr = LLDB_INVALID_ADDRESS;
   m_dyld_addr = LLDB_INVALID_ADDRESS;
+  m_dyld_all_image_infos_addr = LLDB_INVALID_ADDRESS;
 
   addr_t better_kernel_address =
       DynamicLoaderDarwinKernel::SearchForDarwinKernel(this);
@@ -507,6 +512,12 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
+        m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
       }
     } else {
       if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
@@ -515,6 +526,11 @@ void ProcessMachCore::LoadBinariesAndSetDYLD() {
                   "image at 0x%" PRIx64,
                   __FUNCTION__, m_dyld_addr);
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+      } else if (m_dyld_all_image_infos_addr != LLDB_INVALID_ADDRESS) {
+        LLDB_LOGF(log,
+                  "ProcessMachCore::%s: Using user process dyld "
+                  "dyld_all_image_infos at 0x%" PRIx64,
+                  __FUNCTION__, m_dyld_all_image_infos_addr);
       } else if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log,
                   "ProcessMachCore::%s: Using kernel "
@@ -550,22 +566,17 @@ void ProcessMachCore::CleanupMemoryRegionPermissions() {
 Status ProcessMachCore::DoLoadCore() {
   Status error;
   if (!m_core_module_sp) {
-    error.SetErrorString("invalid core module");
+    error = Status::FromErrorString("invalid core module");
     return error;
   }
 
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   if (core_objfile == nullptr) {
-    error.SetErrorString("invalid core object file");
+    error = Status::FromErrorString("invalid core object file");
     return error;
   }
 
   SetCanJIT(false);
-
-  // The corefile's architecture is our best starting point.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-  if (arch.IsValid())
-    GetTarget().SetArchitecture(arch);
 
   CreateMemoryRegions();
 
@@ -573,8 +584,18 @@ Status ProcessMachCore::DoLoadCore() {
 
   CleanupMemoryRegionPermissions();
 
+  ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
+  if (exe_module_sp && exe_module_sp->GetArchitecture().IsValid()) {
+    GetTarget().SetArchitecture(exe_module_sp->GetArchitecture());
+  } else {
+    // The corefile's architecture is our best starting point.
+    ArchSpec arch(m_core_module_sp->GetArchitecture());
+    if (arch.IsValid())
+      GetTarget().SetArchitecture(arch);
+  }
+
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   return error;
 }
@@ -593,19 +614,19 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<tid_t> used_tids;
+      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
-      std::vector<tid_t> tids;
+      std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
         assert(tids.size() == num_threads);
 
         // Find highest tid value.
-        tid_t highest_tid = 0;
+        lldb::tid_t highest_tid = 0;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] != LLDB_INVALID_THREAD_ID && tids[i] > highest_tid)
             highest_tid = tids[i];
         }
-        tid_t current_unused_tid = highest_tid + 1;
+        lldb::tid_t current_unused_tid = highest_tid + 1;
         for (uint32_t i = 0; i < num_threads; i++) {
           if (tids[i] == LLDB_INVALID_THREAD_ID) {
             tids[i] = current_unused_tid++;
@@ -652,7 +673,7 @@ size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
                                    Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+  return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
 size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
@@ -696,7 +717,7 @@ size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
       } else {
         // Only set the error if we didn't read any bytes
         if (bytes_read == 0)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "core file does not contain 0x%" PRIx64, curr_addr);
         break;
       }
@@ -758,19 +779,32 @@ void ProcessMachCore::Initialize() {
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {
-  // If we found both a user-process dyld and a kernel binary, we need to
-  // decide which to prefer.
+  // The DynamicLoader plugin will call back in to this Process
+  // method to find the virtual address of one of these:
+  //   1. The xnu mach kernel binary Mach-O header
+  //   2. The dyld binary Mach-O header
+  //   3. dyld's dyld_all_image_infos object
+  //
+  //  DynamicLoaderMacOSX will accept either the dyld Mach-O header
+  //  address or the dyld_all_image_infos interchangably, no need
+  //  to distinguish between them.  It disambiguates by the Mach-O
+  //  file magic number at the start.
   if (GetCorefilePreference() == eKernelCorefile) {
-    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS) {
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
       return m_mach_kernel_addr;
-    }
-    return m_dyld_addr;
-  } else {
-    if (m_dyld_addr != LLDB_INVALID_ADDRESS) {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
       return m_dyld_addr;
-    }
-    return m_mach_kernel_addr;
+  } else {
+    if (m_dyld_addr != LLDB_INVALID_ADDRESS)
+      return m_dyld_addr;
+    if (m_mach_kernel_addr != LLDB_INVALID_ADDRESS)
+      return m_mach_kernel_addr;
   }
+
+  // m_dyld_addr and m_mach_kernel_addr both
+  // invalid, return m_dyld_all_image_infos_addr
+  // in case it has a useful value.
+  return m_dyld_all_image_infos_addr;
 }
 
 lldb_private::ObjectFile *ProcessMachCore::GetCoreObjectFile() {

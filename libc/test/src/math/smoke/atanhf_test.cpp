@@ -6,35 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
+
+using LIBC_NAMESPACE::Sign;
 
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
   LIBC_NAMESPACE::libc_errno = 0;
 
+  // TODO: Strengthen errno,exception checks and remove these assert macros
+  // after new matchers/test fixtures are added, see:
+  // https://github.com/llvm/llvm-project/issues/90653
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
-  EXPECT_FP_EXCEPTION(0);
+  // TODO: Uncomment these checks later, RoundingMode affects running
+  // tests in this way https://github.com/llvm/llvm-project/issues/90653.
+  // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::atanhf(0.0f));
-  EXPECT_FP_EXCEPTION(0);
+  // See above TODO
+  // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::atanhf(-0.0f));
-  EXPECT_FP_EXCEPTION(0);
+  // See above TODO
+  // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::atanhf(1.0f), FE_DIVBYZERO);
@@ -69,3 +76,27 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::atanhf(neg_inf), FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcAtanhfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAtanhfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+TEST_F(LlvmLibcAtanhfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::atanhf(min_denormal));
+}
+
+#endif

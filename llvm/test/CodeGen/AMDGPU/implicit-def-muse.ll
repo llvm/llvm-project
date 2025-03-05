@@ -1,9 +1,10 @@
 ; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -enable-new-pm -o - %s | FileCheck %s
 
 ; CHECK-LABEL: vcopy_i1_undef
-; CHECK: [[IMPDEF0:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+; CHECK: [[IMPDEF0:%[0-9]+]]:vreg_1 = IMPLICIT_DEF
 ; CHECK-NOT: COPY
-; CHECK: [[IMPDEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+; CHECK: [[IMPDEF1:%[0-9]+]]:vreg_1 = IMPLICIT_DEF
 ; CHECK-NOT: COPY [[IMPDEF0]]
 ; CHECK-NOT: COPY [[IMPDEF1]]
 ; CHECK: .false:

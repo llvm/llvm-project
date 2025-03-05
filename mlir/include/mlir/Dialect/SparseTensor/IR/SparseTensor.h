@@ -17,8 +17,12 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#include "llvm/ADT/bit.h"
 
 //===----------------------------------------------------------------------===//
 //
@@ -40,6 +44,88 @@ using Level = uint64_t;
 /// The type for individual components of a compile-time shape,
 /// including the value `ShapedType::kDynamic` (for shapes).
 using Size = int64_t;
+
+/// A simple structure that encodes a range of levels in the sparse tensors
+/// that forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
+/// A simple wrapper to encode a bitset of (at most 64) levels, currently used
+/// by `sparse_tensor.iterate` operation for the set of levels on which the
+/// coordinates should be loaded.
+class I64BitSet {
+  uint64_t storage = 0;
+
+public:
+  using const_set_bits_iterator = llvm::const_set_bits_iterator_impl<I64BitSet>;
+  const_set_bits_iterator begin() const {
+    return const_set_bits_iterator(*this);
+  }
+  const_set_bits_iterator end() const {
+    return const_set_bits_iterator(*this, -1);
+  }
+  iterator_range<const_set_bits_iterator> bits() const {
+    return make_range(begin(), end());
+  }
+
+  I64BitSet() = default;
+  explicit I64BitSet(uint64_t bits) : storage(bits) {}
+  operator uint64_t() const { return storage; }
+
+  I64BitSet &set(unsigned i) {
+    assert(i < 64);
+    storage |= static_cast<uint64_t>(0x01u) << i;
+    return *this;
+  }
+
+  I64BitSet &operator|=(I64BitSet lhs) {
+    storage |= static_cast<uint64_t>(lhs);
+    return *this;
+  }
+
+  I64BitSet &lshift(unsigned offset) {
+    storage = storage << offset;
+    return *this;
+  }
+
+  bool isSubSetOf(const I64BitSet p) const {
+    I64BitSet tmp = *this;
+    tmp |= p;
+    return tmp == p;
+  }
+
+  // Needed by `llvm::const_set_bits_iterator_impl`.
+  int find_first() const { return min(); }
+  int find_next(unsigned prev) const {
+    if (prev >= max() - 1)
+      return -1;
+
+    uint64_t b = storage >> (prev + static_cast<int64_t>(1));
+    assert(b != 0);
+
+    return llvm::countr_zero(b) + prev + static_cast<int64_t>(1);
+  }
+
+  bool operator[](unsigned i) const {
+    assert(i < 64);
+    return (storage & (static_cast<int64_t>(1) << i)) != 0;
+  }
+  unsigned min() const {
+    unsigned m = llvm::countr_zero(storage);
+    return m == 64 ? -1 : m;
+  }
+  unsigned max() const { return 64 - llvm::countl_zero(storage); }
+  unsigned count() const { return llvm::popcount(storage); }
+  bool empty() const { return storage == 0; }
+};
 
 } // namespace sparse_tensor
 } // namespace mlir
@@ -89,18 +175,21 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the type range has any sparse tensor type.
+inline bool hasAnySparseType(TypeRange types) {
+  return llvm::any_of(types, [](Type type) {
+    return getSparseTensorEncoding(type) != nullptr;
+  });
+}
+
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
-  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getOperands().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse result.
 inline bool hasAnySparseResult(Operation *op) {
-  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getResults().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse operand or result.

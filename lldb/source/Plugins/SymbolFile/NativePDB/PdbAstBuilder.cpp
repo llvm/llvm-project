@@ -618,7 +618,7 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
-      lldb::eLanguageTypeC_plus_plus, &metadata);
+      lldb::eLanguageTypeC_plus_plus, metadata);
 
   lldbassert(ct.IsValid());
 
@@ -1137,7 +1137,7 @@ void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
   }
 
   if (!params.empty() && params.size() == param_count)
-    m_clang.SetFunctionParameters(&function_decl, params);
+    function_decl.setParams(params);
 }
 
 clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,

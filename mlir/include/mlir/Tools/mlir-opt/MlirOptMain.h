@@ -14,7 +14,7 @@
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
 #include "mlir/Debug/CLOptionsSetup.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
@@ -30,6 +30,13 @@ namespace mlir {
 class DialectRegistry;
 class PassPipelineCLParser;
 class PassManager;
+
+/// enum class to indicate the verbosity level of the diagnostic filter.
+enum class VerbosityLevel {
+  ErrorsOnly = 0,
+  ErrorsAndWarnings,
+  ErrorsWarningsAndRemarks
+};
 
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
@@ -74,6 +81,11 @@ public:
     dumpPassPipelineFlag = dump;
     return *this;
   }
+
+  VerbosityLevel getDiagnosticVerbosityLevel() const {
+    return diagnosticVerbosityLevelFlag;
+  }
+
   bool shouldDumpPassPipeline() const { return dumpPassPipelineFlag; }
 
   /// Set the output format to bytecode instead of textual IR.
@@ -82,9 +94,12 @@ public:
     return *this;
   }
   bool shouldEmitBytecode() const { return emitBytecodeFlag; }
+
   bool shouldElideResourceDataFromBytecode() const {
     return elideResourceDataFromBytecodeFlag;
   }
+
+  bool shouldShowNotes() const { return !disableDiagnosticNotesFlag; }
 
   /// Set the IRDL file to load before processing the input.
   MlirOptMainConfig &setIrdlFile(StringRef file) {
@@ -119,6 +134,13 @@ public:
     return success();
   }
 
+  /// List the registered passes and return.
+  MlirOptMainConfig &listPasses(bool list) {
+    listPassesFlag = list;
+    return *this;
+  }
+  bool shouldListPasses() const { return listPassesFlag; }
+
   /// Enable running the reproducer information stored in resources (if
   /// present).
   MlirOptMainConfig &runReproducer(bool enableReproducer) {
@@ -136,13 +158,23 @@ public:
   }
   bool shouldShowDialects() const { return showDialectsFlag; }
 
-  /// Set whether to split the input file based on the `// -----` marker into
-  /// pieces and process each chunk independently.
-  MlirOptMainConfig &splitInputFile(bool split = true) {
-    splitInputFileFlag = split;
+  /// Set the marker on which to split the input into chunks and process each
+  /// chunk independently. Input is not split if empty.
+  MlirOptMainConfig &
+  splitInputFile(std::string splitMarker = kDefaultSplitMarker) {
+    splitInputFileFlag = std::move(splitMarker);
     return *this;
   }
-  bool shouldSplitInputFile() const { return splitInputFileFlag; }
+  StringRef inputSplitMarker() const { return splitInputFileFlag; }
+
+  /// Set whether to merge the output chunks into one file using the given
+  /// marker.
+  MlirOptMainConfig &
+  outputSplitMarker(std::string splitMarker = kDefaultSplitMarker) {
+    outputSplitMarkerFlag = std::move(splitMarker);
+    return *this;
+  }
+  StringRef outputSplitMarker() const { return outputSplitMarkerFlag; }
 
   /// Disable implicit addition of a top-level module op during parsing.
   MlirOptMainConfig &useExplicitModule(bool useExplicitModule) {
@@ -166,6 +198,13 @@ public:
   }
   bool shouldVerifyPasses() const { return verifyPassesFlag; }
 
+  /// Set whether to run the verifier on parsing.
+  MlirOptMainConfig &verifyOnParsing(bool verify) {
+    disableVerifierOnParsingFlag = !verify;
+    return *this;
+  }
+  bool shouldVerifyOnParsing() const { return !disableVerifierOnParsingFlag; }
+
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyRoundtrip(bool verify) {
     verifyRoundtripFlag = verify;
@@ -184,6 +223,11 @@ protected:
 
   /// Configuration for the debugging hooks.
   tracing::DebugConfig debugConfig;
+
+  /// Verbosity level of diagnostic information. 0: Errors only,
+  /// 1: Errors and warnings, 2: Errors, warnings and remarks.
+  VerbosityLevel diagnosticVerbosityLevelFlag =
+      VerbosityLevel::ErrorsWarningsAndRemarks;
 
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
@@ -209,15 +253,26 @@ protected:
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
 
+  /// List the registered passes and return.
+  bool listPassesFlag = false;
+
   /// Enable running the reproducer.
   bool runReproducerFlag = false;
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
 
-  /// Split the input file based on the `// -----` marker into pieces and
-  /// process each chunk independently.
-  bool splitInputFileFlag = false;
+  /// Show the notes in diagnostic information. Notes can be included in
+  /// any diagnostic information, so it is not specified in the verbosity
+  /// level.
+  bool disableDiagnosticNotesFlag = true;
+
+  /// Split the input file based on the given marker into chunks and process
+  /// each chunk independently. Input is not split if empty.
+  std::string splitInputFileFlag = "";
+
+  /// Merge output chunks into one file using the given marker.
+  std::string outputSplitMarkerFlag = "";
 
   /// Use an explicit top-level module op during parsing.
   bool useExplicitModuleFlag = false;
@@ -228,6 +283,9 @@ protected:
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;
+
+  /// Disable the verifier on parsing.
+  bool disableVerifierOnParsingFlag = false;
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
@@ -267,7 +325,7 @@ LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry);
 
 /// Implementation for tools like `mlir-opt`.
-/// This function can be used with registrationAndParseCLIOptions so that
+/// This function can be used with registerAndParseCLIOptions so that
 /// CLI options can be accessed before running MlirOptMain.
 /// - inputFilename is the name of the input mlir file.
 /// - outputFilename is the name of the output file.

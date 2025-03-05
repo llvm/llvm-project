@@ -11,7 +11,7 @@
 // CHECK000-NOT:  {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK000:      "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK000:      "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK000:      "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK000:      "-lc" "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl --shared
 // -----------------------------------------------------------------------------
@@ -21,7 +21,7 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -shared %s 2>&1 | FileCheck -check-prefix=CHECK001 %s
 // CHECK001-NOT:    -dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1
 // CHECK001:        "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o"
-// CHECK001:        "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK001:        "-lc" "-lclang_rt.builtins-hexagon"
 // CHECK001-NOT:    {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
 // -----------------------------------------------------------------------------
 // Passing --musl -nostdlib
@@ -33,8 +33,8 @@
 // CHECK002:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
 // CHECK002-NOT:   "-lc"
+// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nostartfiles
 // -----------------------------------------------------------------------------
@@ -45,7 +45,7 @@
 // CHECK003:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}Scrt1.o
 // CHECK003-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK003:       "-lclang_rt.builtins-hexagon" "-lc"
+// CHECK003:       "-lc" "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nodefaultlibs
 // -----------------------------------------------------------------------------
@@ -55,8 +55,8 @@
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree -nodefaultlibs %s 2>&1 | FileCheck -check-prefix=CHECK004 %s
 // CHECK004:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK004:       "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
 // CHECK004-NOT:   "-lc"
+// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
 // -----------------------------------------------------------------------------
 // Passing --musl -nolibc
 // -----------------------------------------------------------------------------
@@ -119,3 +119,36 @@
 // CHECK010:   crt1.o
 // CHECK010:   "-L/tmp"
 // CHECK010-NOT:  "-lstandalone"
+
+// -----------------------------------------------------------------------------
+// unwindlib
+// -----------------------------------------------------------------------------
+// RUN: %clangxx --unwindlib=none \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK011 %s
+// CHECK011:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK011:   crt1.o
+// CHECK011-NOT:  "-lunwind"
+// CHECK011-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+
+// RUN: %clangxx --rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// RUN: %clangxx \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK012 %s
+// CHECK012:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK012:   crt1.o
+// CHECK012:  "-lunwind"
+// CHECK012-NOT:  "-lgcc_eh"
+// CHECK012-NOT:  "-lgcc_s"
+
+// RUN: not %clangxx --rtlib=compiler-rt --unwindlib=libgcc \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK013 %s
+// CHECK013:  error: unsupported unwind library 'libgcc' for platform 'hexagon-unknown-linux-musl'
+// CHECK013-NOT:  "-lgcc_eh"
+// CHECK013-NOT:  "-lgcc_s"
+// CHECK013-NOT:  "-lunwind"

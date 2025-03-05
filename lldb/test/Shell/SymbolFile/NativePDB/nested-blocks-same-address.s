@@ -4,7 +4,7 @@
 # Test when nested S_BLOCK32 have same address range, ResolveSymbolContext should return the innnermost block.
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %s > %t.obj
 # RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe /base:0x140000000
-# RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -o "image lookup -a 0x14000103c -v" -o "exit" | FileCheck %s
+# RUN: %lldb -f %t.exe -o "image lookup -a 0x14000103c -v" -o "exit" | FileCheck %s
 
 # This file is compiled from following source file:
 # $ clang-cl /Z7 /GS- /c /O2 test.cpp /Fatest.s

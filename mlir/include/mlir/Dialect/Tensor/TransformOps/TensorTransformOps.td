@@ -10,7 +10,7 @@
 #define TENSOR_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -51,16 +51,6 @@ def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
-  let assemblyFormat = "attr-dict";
-}
-def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.tensor.fold_into_pack_and_unpack",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that operations like tensor.pad and tensor.extract_slice should
-    be folded into tensor.pack and tensor.unpack operations, respectively.
-  }];
-
   let assemblyFormat = "attr-dict";
 }
 
@@ -111,15 +101,28 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyBubbleUpExtractSlicePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.bubble_up_extract_slice",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that producers of tensor.extract_slice should swap and operate on 
+    the result of the slice.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let arguments = (ins UnitAttr:$aggressive);
   let description = [{
     Indicates that tensor ops (such as tensor.generate) should be replaced with
     constants (arith.constant) when possible.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat =
+      "(`aggressive` $aggressive^)? attr-dict";
 }
 
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;

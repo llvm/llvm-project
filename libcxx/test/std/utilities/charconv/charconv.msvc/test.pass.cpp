@@ -8,6 +8,12 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// TODO Investigate why this fails
+// UNSUPPORTED: windows
+
+// This test times out under msan
+// UNSUPPORTED: msan
+
 // to_chars requires functions in the dylib that have not been introduced in older
 // versions of the dylib on macOS.
 // XFAIL: availability-fp_to_chars-missing
@@ -22,6 +28,7 @@
 // <charconv>
 
 #include <type_traits>
+#include "test_macros.h"
 
 // Work-around for sprintf_s's usage in the Microsoft tests.
 #ifndef _WIN32

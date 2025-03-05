@@ -82,7 +82,7 @@ subroutine cannot_compute_len_yet()
     end function
   end interface
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QPbar4) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
-! CHECK:  %[[VAL_1:.*]] = arith.constant -1 : index
+! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>) -> !fir.boxproc<() -> ()>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
 ! CHECK:  %[[VAL_4:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
@@ -97,7 +97,7 @@ subroutine cannot_compute_len_yet_2()
   character(*) :: bar5
   external :: bar5
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QPbar5) : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:  %[[VAL_1:.*]] = arith.constant -1 : index
+! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.emboxproc %[[VAL_0]] : ((!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>) -> !fir.boxproc<() -> ()>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (index) -> i64
 ! CHECK:  %[[VAL_4:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
@@ -195,7 +195,7 @@ subroutine call_explicit_length_with_iface(bar10)
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[COMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[C0]] : index
 ! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %[[C0]] : index
-! CHECK:  %[[VAL_6:.*]] = fir.call @llvm.stacksave.p0() {{.*}}: () -> !fir.ref<i8>
+! CHECK:  %[[VAL_6:.*]] = llvm.intr.stacksave : !llvm.ptr
 ! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>)
 ! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[SELECT]], %[[VAL_1]]) {{.*}}: (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>
@@ -213,7 +213,7 @@ subroutine host(f)
   ! CHECK: fir.call @_QFhostPintern(%[[VAL_1]])
   call intern()
 contains
-! CHECK-LABEL: func @_QFhostPintern(
+! CHECK-LABEL: func private @_QFhostPintern(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc})
   subroutine intern()
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -242,7 +242,7 @@ subroutine host2(f)
   ! CHECK: fir.call @_QFhost2Pintern(%[[VAL_1]])
   call intern()
 contains
-! CHECK-LABEL: func @_QFhost2Pintern(
+! CHECK-LABEL: func private @_QFhost2Pintern(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc})
   subroutine intern()
     ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.char<1,42> {bindc_name = ".result"}

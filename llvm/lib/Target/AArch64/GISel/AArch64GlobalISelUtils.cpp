@@ -9,11 +9,9 @@
 /// GlobalISel pipeline.
 //===----------------------------------------------------------------------===//
 #include "AArch64GlobalISelUtils.h"
-#include "AArch64InstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -96,6 +94,35 @@ bool AArch64GISelUtils::tryEmitBZero(MachineInstr &MI,
   return true;
 }
 
+std::tuple<uint16_t, Register>
+AArch64GISelUtils::extractPtrauthBlendDiscriminators(Register Disc,
+                                                     MachineRegisterInfo &MRI) {
+  Register AddrDisc = Disc;
+  uint16_t ConstDisc = 0;
+
+  if (auto ConstDiscVal = getIConstantVRegVal(Disc, MRI)) {
+    if (isUInt<16>(ConstDiscVal->getZExtValue())) {
+      ConstDisc = ConstDiscVal->getZExtValue();
+      AddrDisc = AArch64::NoRegister;
+    }
+    return std::make_tuple(ConstDisc, AddrDisc);
+  }
+
+  const MachineInstr *DiscMI = MRI.getVRegDef(Disc);
+  if (!DiscMI || DiscMI->getOpcode() != TargetOpcode::G_INTRINSIC ||
+      DiscMI->getOperand(1).getIntrinsicID() != Intrinsic::ptrauth_blend)
+    return std::make_tuple(ConstDisc, AddrDisc);
+
+  if (auto ConstDiscVal =
+          getIConstantVRegVal(DiscMI->getOperand(3).getReg(), MRI)) {
+    if (isUInt<16>(ConstDiscVal->getZExtValue())) {
+      ConstDisc = ConstDiscVal->getZExtValue();
+      AddrDisc = DiscMI->getOperand(2).getReg();
+    }
+  }
+  return std::make_tuple(ConstDisc, AddrDisc);
+}
+
 void AArch64GISelUtils::changeFCMPPredToAArch64CC(
     const CmpInst::Predicate P, AArch64CC::CondCode &CondCode,
     AArch64CC::CondCode &CondCode2) {
@@ -146,6 +173,12 @@ void AArch64GISelUtils::changeFCMPPredToAArch64CC(
     break;
   case CmpInst::FCMP_UNE:
     CondCode = AArch64CC::NE;
+    break;
+  case CmpInst::FCMP_TRUE:
+    CondCode = AArch64CC::AL;
+    break;
+  case CmpInst::FCMP_FALSE:
+    CondCode = AArch64CC::NV;
     break;
   }
 }

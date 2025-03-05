@@ -27,12 +27,12 @@ main:
 # for position independent code, first, as there may be future use-cases
 # where we would want to disable the optimization.
 # 
-# jitlink-check: decode_operand(test_call_extern_plt, 0) = external_func - next_pc(test_call_extern_plt)
+# jitlink-check: decode_operand(test_call_extern_plt, 0) = external_func - next_pc(test_call_extern_plt) + 53
 # jitlink-check: *{4}(got_addr(elf_sm_pic_reloc_plt.o, external_func))= external_func
         .globl  test_call_extern_plt
         .p2align       4, 0x90
         .type   test_call_extern_plt,@function
 test_call_extern_plt:
-        call   external_func@plt
+        call   external_func@plt + 53
 
         .size   test_call_extern_plt, .-test_call_extern_plt

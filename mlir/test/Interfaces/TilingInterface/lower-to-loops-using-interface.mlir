@@ -11,7 +11,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %matmul : !transform.any_op
+    %0 = transform.structured.convert_to_loops %matmul
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -33,6 +34,58 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
 //       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
 //       CHECK:         memref.store %[[ADDF]], %[[ARG2]][%[[IV0]], %[[IV1]]]
+//   CHECK-NOT:   linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+
+// -----
+
+func.func @gemm(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
+  %arg2 : memref<?x?xf32>, %arg3 : memref<?xf32>, %arg4 : memref<?xf32>) {
+  linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
+      outs(%arg2 : memref<?x?xf32>)
+  linalg.matvec ins(%arg0, %arg3 : memref<?x?xf32>, memref<?xf32>)
+      outs(%arg4 : memref<?xf32>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %linalg_ops = transform.structured.match interface{TilingInterface} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %linalg_ops
+      : (!transform.any_op) -> (!transform.any_op)
+    %1:5 = transform.split_handle %0
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @gemm
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: memref<?xf32>
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: memref<?xf32>
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
+//   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[K:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//   CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
+//       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C1]]
+//       CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] = %[[C0]] to %[[N]] step %[[C1]]
+//       CHECK:       scf.for %[[IV2:[a-zA-Z0-9]+]] = %[[C0]] to %[[K]] step %[[C1]]
+//   CHECK-DAG:         %[[LHS:.+]] = memref.load %[[ARG0]][%[[IV0]], %[[IV2]]]
+//   CHECK-DAG:         %[[RHS:.+]] = memref.load %[[ARG1]][%[[IV2]], %[[IV1]]]
+//   CHECK-DAG:         %[[OUT:.+]] = memref.load %[[ARG2]][%[[IV0]], %[[IV1]]]
+//       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
+//       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
+//       CHECK:         memref.store %[[ADDF]], %[[ARG2]][%[[IV0]], %[[IV1]]]
+//       CHECK:   scf.for %[[IV3:[a-zA-Z0-9]+]] = %[[C0]] to %[[M]] step %[[C1]]
+//       CHECK:     scf.for %[[IV4:[a-zA-Z0-9]+]] = %[[C0]] to %[[K]] step %[[C1]]
+//   CHECK-DAG:         %[[LHS:.+]] = memref.load %[[ARG0]][%[[IV3]], %[[IV4]]]
+//   CHECK-DAG:         %[[RHS:.+]] = memref.load %[[ARG3]][%[[IV4]]]
+//   CHECK-DAG:         %[[OUT:.+]] = memref.load %[[ARG4]][%[[IV3]]]
+//       CHECK:         %[[MULF:.+]] = arith.mulf %[[LHS]], %[[RHS]]
+//       CHECK:         %[[ADDF:.+]] = arith.addf %[[OUT]], %[[MULF]]
+//       CHECK:         memref.store %[[ADDF]], %[[ARG4]][%[[IV3]]]
 
 // -----
 
@@ -65,7 +118,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %generic : !transform.any_op
+    %0 = transform.structured.convert_to_loops %generic
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -110,7 +164,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %conv = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %conv : !transform.any_op
+    %0 = transform.structured.convert_to_loops %conv
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -164,7 +219,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pool = transform.structured.match ops{["linalg.pooling_nhwc_max"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %pool : !transform.any_op
+    %0 = transform.structured.convert_to_loops %pool
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -215,7 +271,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %map = transform.structured.match ops{["linalg.map"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %map : !transform.any_op
+    %0 = transform.structured.convert_to_loops %map
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -247,7 +304,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %transpose = transform.structured.match ops{["linalg.transpose"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %transpose : !transform.any_op
+    %0 = transform.structured.convert_to_loops %transpose
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -284,7 +342,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %reduce = transform.structured.match ops{["linalg.reduce"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %reduce : !transform.any_op
+    %0 = transform.structured.convert_to_loops %reduce
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }
@@ -321,7 +380,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %broadcast = transform.structured.match ops{["linalg.broadcast"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    transform.structured.convert_to_loops %broadcast : !transform.any_op
+    %0 = transform.structured.convert_to_loops %broadcast
+      : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
 }

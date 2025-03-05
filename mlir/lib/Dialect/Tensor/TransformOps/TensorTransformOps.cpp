@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -100,11 +100,6 @@ void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
   tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
-void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-}
-
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
@@ -125,9 +120,27 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
 }
 
+void transform::ApplyBubbleUpExtractSlicePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
+}
+
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  tensor::populateRewriteAsConstantPatterns(patterns);
+  ControlFoldFn defaultControlFn = [](OpOperand *fusedOperand) {
+    Operation *producer = fusedOperand->get().getDefiningOp();
+    return producer && producer->hasOneUse();
+  };
+
+  ControlFoldFn aggressiveControlFn = [](OpOperand *fusedOperand) {
+    return true;
+  };
+
+  // Add folding with reshape by expansion patterns.
+  if (getAggressive())
+    tensor::populateRewriteAsConstantPatterns(patterns, aggressiveControlFn);
+  else
+    tensor::populateRewriteAsConstantPatterns(patterns, defaultControlFn);
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,29 +153,29 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
   converter.addSourceMaterialization([ignoreDynamicInfo](
                                          OpBuilder &builder, Type resultType,
                                          ValueRange inputs,
-                                         Location loc) -> std::optional<Value> {
+                                         Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!ignoreDynamicInfo &&
         !tensor::preservesStaticInformation(resultType, input.getType())) {
-      return std::nullopt;
+      return Value();
     }
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
-                                        Location loc) -> std::optional<Value> {
+                                        Location loc) -> Value {
     if (inputs.size() != 1) {
-      return std::nullopt;
+      return Value();
     }
     Value input = inputs[0];
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
-      return std::nullopt;
+      return Value();
     }
     return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
   });
@@ -223,6 +236,8 @@ class TensorTransformDialectExtension
     : public transform::TransformDialectExtension<
           TensorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TensorTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

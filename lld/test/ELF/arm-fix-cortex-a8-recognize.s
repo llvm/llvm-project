@@ -13,13 +13,13 @@
 // RUN: ld.lld --fix-cortex-a8 -verbose -r %t.o -o %t3 2>&1 | FileCheck --check-prefix=CHECK-RELOCATABLE-LLD %s
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
 
-// CHECK:      ld.lld: detected cortex-a8-657419 erratum sequence starting at 22FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 23FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 24FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 25FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 26FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 27FFE in unpatched output.
-// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 28FFE in unpatched output.
+// CHECK:      ld.lld: detected cortex-a8-657419 erratum sequence starting at 22FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 23FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 24FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 25FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 26FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 27FFE in unpatched output
+// CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 28FFE in unpatched output
 
 /// We do not detect errors when doing a relocatable link as we don't know what
 /// the final addresses are.

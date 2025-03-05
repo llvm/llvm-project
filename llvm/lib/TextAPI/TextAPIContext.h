@@ -13,12 +13,11 @@
 #ifndef LLVM_TEXTAPI_MACHO_CONTEXT_H
 #define LLVM_TEXTAPI_MACHO_CONTEXT_H
 
+#include "llvm/TextAPI/FileTypes.h"
 #include <string>
 
 namespace llvm {
 namespace MachO {
-
-enum FileType : unsigned;
 
 struct TextAPIContext {
   std::string ErrorMessage;

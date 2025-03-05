@@ -13,10 +13,10 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: pnr_to_ppr
-    ; CHECK: renamable $pn8 = PTRUE_C_D
+    ; CHECK: renamable $pn8 = PTRUE_C_D implicit $vg
     ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8
     ; CHECK-NEXT: RET_ReallyLR implicit killed $p0
-    renamable $pn8 = PTRUE_C_D
+    renamable $pn8 = PTRUE_C_D implicit $vg
     $p0 = COPY killed renamable $pn8
     RET_ReallyLR implicit killed $p0
 
@@ -34,10 +34,10 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ppr_to_pnr
-    ; CHECK: renamable $p8 = PTRUE_H 31
+    ; CHECK: renamable $p8 = PTRUE_H 31, implicit $vg
     ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8, implicit-def $pn0
     ; CHECK-NEXT: RET_ReallyLR implicit killed $pn0
-    renamable $p8 = PTRUE_H 31
+    renamable $p8 = PTRUE_H 31, implicit $vg
     $pn0 = COPY killed renamable $p8
     RET_ReallyLR implicit killed $pn0
 
@@ -55,10 +55,10 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: pnr_to_pnr
-    ; CHECK: renamable $pn8 = PTRUE_C_H
+    ; CHECK: renamable $pn8 = PTRUE_C_H implicit $vg
     ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8, implicit-def $pn0
     ; CHECK-NEXT: RET_ReallyLR implicit killed $pn0
-    renamable $pn8 = PTRUE_C_H
+    renamable $pn8 = PTRUE_C_H implicit $vg
     $pn0 = COPY killed renamable $pn8
     RET_ReallyLR implicit killed $pn0
 

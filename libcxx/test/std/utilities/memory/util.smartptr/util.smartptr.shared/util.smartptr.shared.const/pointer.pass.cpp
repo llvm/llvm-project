@@ -27,12 +27,12 @@ struct A
 
 int A::count = 0;
 
-struct Derived : A {};
+struct derived : A {};
 
 // https://llvm.org/PR60258
 // Invalid constructor SFINAE for std::shared_ptr's array ctors
 static_assert( std::is_constructible<std::shared_ptr<int>,  int*>::value, "");
-static_assert( std::is_constructible<std::shared_ptr<A>,  Derived*>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<A>,  derived*>::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<A>,  int*>::value, "");
 
 #if TEST_STD_VER >= 17
@@ -99,7 +99,7 @@ int main(int, char**)
 
     {
         assert(A::count == 0);
-        std::shared_ptr<A> pA(new Derived);
+        std::shared_ptr<A> pA(new derived);
         assert(pA.use_count() == 1);
         assert(A::count == 1);
     }

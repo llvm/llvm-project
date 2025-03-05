@@ -93,7 +93,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
@@ -109,7 +108,6 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <utility>
 
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"
@@ -557,7 +555,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
   BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
@@ -725,7 +723,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
   Instruction *PtrInc = nullptr;
   Instruction *NewBasePtr = nullptr;
   if (CanPreInc) {
-    Instruction *InsPoint = &*Header->getFirstInsertionPt();
+    BasicBlock::iterator InsPoint = Header->getFirstInsertionPt();
     PtrInc = GetElementPtrInst::Create(
         I8Ty, NewPHI, IncNode, getInstrName(BaseMemI, GEPNodeIncNameSuffix),
         InsPoint);
@@ -752,7 +750,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
       // For the latch predecessor, we need to insert a GEP just before the
       // terminator to increase the address.
       BasicBlock *BB = PI;
-      Instruction *InsPoint = BB->getTerminator();
+      BasicBlock::iterator InsPoint = BB->getTerminator()->getIterator();
       PtrInc = GetElementPtrInst::Create(
           I8Ty, NewPHI, IncNode, getInstrName(BaseMemI, GEPNodeIncNameSuffix),
           InsPoint);
@@ -764,7 +762,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
     if (NewPHI->getType() != BasePtr->getType())
       NewBasePtr = new BitCastInst(NewPHI, BasePtr->getType(),
                                    getInstrName(NewPHI, CastNodeNameSuffix),
-                                   &*Header->getFirstInsertionPt());
+                                   Header->getFirstInsertionPt());
     else
       NewBasePtr = NewPHI;
   }
@@ -794,20 +792,25 @@ Instruction *PPCLoopInstrFormPrep::rewriteForBucketElement(
        cast<SCEVConstant>(Element.Offset)->getValue()->isZero())) {
     RealNewPtr = NewBasePtr;
   } else {
-    Instruction *PtrIP = dyn_cast<Instruction>(Ptr);
+    std::optional<BasicBlock::iterator> PtrIP = std::nullopt;
+    if (Instruction *I = dyn_cast<Instruction>(Ptr))
+      PtrIP = I->getIterator();
+
     if (PtrIP && isa<Instruction>(NewBasePtr) &&
-        cast<Instruction>(NewBasePtr)->getParent() == PtrIP->getParent())
-      PtrIP = nullptr;
-    else if (PtrIP && isa<PHINode>(PtrIP))
-      PtrIP = &*PtrIP->getParent()->getFirstInsertionPt();
+        cast<Instruction>(NewBasePtr)->getParent() == (*PtrIP)->getParent())
+      PtrIP = std::nullopt;
+    else if (PtrIP && isa<PHINode>(*PtrIP))
+      PtrIP = (*PtrIP)->getParent()->getFirstInsertionPt();
     else if (!PtrIP)
-      PtrIP = Element.Instr;
+      PtrIP = Element.Instr->getIterator();
 
     assert(OffToBase && "There should be an offset for non base element!\n");
     GetElementPtrInst *NewPtr = GetElementPtrInst::Create(
         I8Ty, PtrInc, OffToBase,
-        getInstrName(Element.Instr, GEPNodeOffNameSuffix), PtrIP);
-    if (!PtrIP)
+        getInstrName(Element.Instr, GEPNodeOffNameSuffix));
+    if (PtrIP)
+      NewPtr->insertBefore(*(*PtrIP)->getParent(), *PtrIP);
+    else
       NewPtr->insertAfter(cast<Instruction>(PtrInc));
     NewPtr->setIsInBounds(IsPtrInBounds(Ptr));
     RealNewPtr = NewPtr;
@@ -1020,7 +1023,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
     return MadeChange;
 
   BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getModule()->getDataLayout(),
+  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
                      "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;

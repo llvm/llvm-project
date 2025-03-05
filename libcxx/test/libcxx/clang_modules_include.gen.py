@@ -1,77 +1,97 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # Test that we can include each header in a TU while using modules.
 # This is important notably because the LLDB data formatters use
 # libc++ headers with modules enabled.
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
+
+# block Lit from interpreting a RUN/XFAIL/etc inside the generation script
+# END.
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
-
-BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
-// RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
-// UNSUPPORTED{BLOCKLIT}: gcc
+// UNSUPPORTED: gcc
 
 // The Windows headers don't appear to be compatible with modules
-// UNSUPPORTED{BLOCKLIT}: windows
-// UNSUPPORTED{BLOCKLIT}: buildhost=windows
-
-// The AIX headers don't appear to be compatible with modules
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
+// UNSUPPORTED: windows
+// UNSUPPORTED: buildhost=windows
 
 // The Android headers don't appear to be compatible with modules yet
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // TODO: Investigate this failure
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+// UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
-// TODO: Investigate this failure
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-PICOLIBC-FIXME
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
-""")
+"""
+    )
 
-# TODO: Remove the UNSUPPORTED{BLOCKLIT}: clang-modules-build once issues with this test have been figured out.
-print(f"""\
-//--- __std_clang_module.compile.pass.mm
-// UNSUPPORTED{BLOCKLIT}: clang-modules-build
+print(
+    f"""\
+//--- import_std.compile.pass.mm
+// RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
-// RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+// REQUIRES: clang-modules-build
 
-// REQUIRES{BLOCKLIT}: clang-modules-build
+// Older macOS SDKs were not properly modularized, which causes issues with localization.
+// This feature should instead be based on the SDK version.
+// UNSUPPORTED: stdlib=system && target={{{{.+}}}}-apple-macosx13{{{{.*}}}}
 
 // GCC doesn't support -fcxx-modules
-// UNSUPPORTED{BLOCKLIT}: gcc
+// UNSUPPORTED: gcc
 
 // The Windows headers don't appear to be compatible with modules
-// UNSUPPORTED{BLOCKLIT}: windows
-// UNSUPPORTED{BLOCKLIT}: buildhost=windows
-
-// The AIX headers don't appear to be compatible with modules
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
+// UNSUPPORTED: windows
+// UNSUPPORTED: buildhost=windows
 
 // The Android headers don't appear to be compatible with modules yet
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-ANDROID-FIXME
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // TODO: Investigate this failure
-// UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+// UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
+// TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
+// UNSUPPORTED: LIBCXX-AIX-FIXME
 
 @import std;
 
-""")
+"""
+)

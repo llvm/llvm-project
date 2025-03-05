@@ -60,3 +60,12 @@ double Str::foo1(double, invalid_type)
 // CHECK-NEXT:     `-ReturnStmt {{.*}} <col:3, col:10>
 // CHECK-NEXT:       `-ImplicitCastExpr {{.*}} <col:10> 'double' <IntegralToFloating>
 // CHECK-NEXT:         `-IntegerLiteral {{.*}} <col:10> 'int' 45
+
+namespace TestAliasTemplateDecl {
+template<typename T> class A;
+
+template<typename T>
+template<typename U> using InvalidAlias = A<U>;
+// CHECK:      TypeAliasTemplateDecl {{.*}} invalid InvalidAlias
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 T
+}

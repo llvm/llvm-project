@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; M0: @global = local_unnamed_addr global
 ; M1-NOT: @global
-@global = local_unnamed_addr global %struct.hoge { %struct.widget { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @global.1, i32 0, inrange i32 0, i32 2) } }, align 8
+@global = local_unnamed_addr global %struct.hoge { %struct.widget { ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @global.1, i32 0, i32 0, i32 2) } }, align 8
 
 ; M0: @global.1 = external unnamed_addr constant
 ; M1: @global.1 = linkonce_odr unnamed_addr constant

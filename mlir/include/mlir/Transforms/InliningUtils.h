@@ -176,6 +176,13 @@ public:
   /// is invoked before inlined terminator operations have been processed.
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const {}
+
+  /// Returns true if the inliner can assume a fast path of not creating a new
+  /// block, if there is only one block.
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const {
+    return true;
+  }
 };
 
 /// This interface provides the hooks into the inlining interface.
@@ -223,6 +230,9 @@ public:
 
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const;
+
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const;
 };
 
 //===----------------------------------------------------------------------===//

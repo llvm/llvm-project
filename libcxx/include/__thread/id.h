@@ -12,7 +12,7 @@
 
 #include <__compare/ordering.h>
 #include <__config>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__fwd/ostream.h>
 #include <__thread/support.h>
 
@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 class _LIBCPP_EXPORTED_FROM_ABI __thread_id;
 
 namespace this_thread {
@@ -114,7 +114,7 @@ inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_th
 
 } // namespace this_thread
 
-#endif // !_LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

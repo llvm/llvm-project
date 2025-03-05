@@ -6,15 +6,18 @@ static_library("TargetProcess") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DefaultHostBootstrapValues.cpp",
     "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
     "JITLoaderPerf.cpp",
+    "JITLoaderVTune.cpp",
     "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",
     "SimpleExecutorDylibManager.cpp",
     "SimpleExecutorMemoryManager.cpp",
     "SimpleRemoteEPCServer.cpp",
     "TargetExecutionUtils.cpp",
+    "UnwindInfoManager.cpp",
   ]
   if (current_os == "linux") {
     libs = [ "rt" ]

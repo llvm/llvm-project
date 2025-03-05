@@ -1,5 +1,5 @@
-; RUN: llc -march=mips < %s -debug 2>&1 | FileCheck %s --check-prefix=MIPS
-; RUN: llc -march=mips -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefix=MM
+; RUN: llc -mtriple=mips < %s -debug 2>&1 | FileCheck %s --check-prefix=MIPS
+; RUN: llc -mtriple=mips -mattr=+micromips < %s -debug 2>&1 | FileCheck %s --check-prefix=MM
 
 ; REQUIRES: asserts
 

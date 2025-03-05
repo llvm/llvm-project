@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-linux-gnu -std=c++11 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-linux-gnu -std=c++11 -emit-llvm -o - %s | FileCheck %s
 //
 // Regression test for the issue reported at
 // https://reviews.llvm.org/D78162#1986104

@@ -22,6 +22,10 @@ func.func @ptr_types() {
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<i32>]} : () -> ()
   // CHECK-NEXT: f<int64_t*>();
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<i64>]} : () -> ()
+  // CHECK-NEXT: f<_Float16*>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ptr<f16>]} : () -> ()
+  // CHECK-NEXT: f<__bf16*>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ptr<bf16>]} : () -> ()
   // CHECK-NEXT: f<float*>();
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<f32>]} : () -> ()
   // CHECK-NEXT: f<double*>();
@@ -32,6 +36,18 @@ func.func @ptr_types() {
   %1 = emitc.call_opaque "f"(%0) : (!emitc.ptr<i32>) -> (!emitc.ptr<!emitc.ptr<i32>>)
   // CHECK-NEXT: f<int*>();
   emitc.call_opaque "f"() {template_args = [!emitc.ptr<!emitc.opaque<"int">>]} : () -> ()
+
+  return
+}
+
+// CHECK-LABEL: void size_types() {
+func.func @size_types() {
+  // CHECK-NEXT: f<ssize_t>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ssize_t]} : () -> ()
+  // CHECK-NEXT: f<size_t>();
+  emitc.call_opaque "f"() {template_args = [!emitc.size_t]} : () -> ()
+  // CHECK-NEXT: f<ptrdiff_t>();
+  emitc.call_opaque "f"() {template_args = [!emitc.ptrdiff_t]} : () -> ()
 
   return
 }

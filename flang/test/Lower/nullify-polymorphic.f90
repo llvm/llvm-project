@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 module poly
   type p1
@@ -50,4 +50,4 @@ end
 ! CHECK: %[[TYPE_DESC_CAST:.*]] = fir.convert %[[DECLARED_TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.ref<none>
 ! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
 ! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
-! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[C_DESC_CAST]], %[[TYPE_DESC_CAST]], %[[RANK]], %[[CORANK]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: fir.call @_FortranAPointerNullifyDerived(%[[C_DESC_CAST]], %[[TYPE_DESC_CAST]], %[[RANK]], %[[CORANK]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> ()

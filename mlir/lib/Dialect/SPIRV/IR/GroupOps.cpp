@@ -20,70 +20,21 @@ using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
 
-static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
-                                                    OperationState &state) {
-  spirv::Scope executionScope;
-  GroupOperation groupOperation;
-  OpAsmParser::UnresolvedOperand valueInfo;
-  if (spirv::parseEnumStrAttr<spirv::ScopeAttr>(executionScope, parser, state,
-                                                kExecutionScopeAttrName) ||
-      spirv::parseEnumStrAttr<GroupOperationAttr>(groupOperation, parser, state,
-                                                  kGroupOperationAttrName) ||
-      parser.parseOperand(valueInfo))
-    return failure();
-
-  std::optional<OpAsmParser::UnresolvedOperand> clusterSizeInfo;
-  if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
-    clusterSizeInfo = OpAsmParser::UnresolvedOperand();
-    if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
-        parser.parseRParen())
-      return failure();
-  }
-
-  Type resultType;
-  if (parser.parseColonType(resultType))
-    return failure();
-
-  if (parser.resolveOperand(valueInfo, resultType, state.operands))
-    return failure();
-
-  if (clusterSizeInfo) {
-    Type i32Type = parser.getBuilder().getIntegerType(32);
-    if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
-      return failure();
-  }
-
-  return parser.addTypeToList(resultType, state.types);
-}
-
-static void printGroupNonUniformArithmeticOp(Operation *groupOp,
-                                             OpAsmPrinter &printer) {
-  printer
-      << " \""
-      << stringifyScope(
-             groupOp->getAttrOfType<spirv::ScopeAttr>(kExecutionScopeAttrName)
-                 .getValue())
-      << "\" \""
-      << stringifyGroupOperation(
-             groupOp->getAttrOfType<GroupOperationAttr>(kGroupOperationAttrName)
-                 .getValue())
-      << "\" " << groupOp->getOperand(0);
-
-  if (groupOp->getNumOperands() > 1)
-    printer << " " << kClusterSize << '(' << groupOp->getOperand(1) << ')';
-  printer << " : " << groupOp->getResult(0).getType();
-}
-
+template <typename OpTy>
 static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
   spirv::Scope scope =
-      groupOp->getAttrOfType<spirv::ScopeAttr>(kExecutionScopeAttrName)
+      groupOp
+          ->getAttrOfType<spirv::ScopeAttr>(
+              OpTy::getExecutionScopeAttrName(groupOp->getName()))
           .getValue();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return groupOp->emitOpError(
         "execution scope must be 'Workgroup' or 'Subgroup'");
 
   GroupOperation operation =
-      groupOp->getAttrOfType<GroupOperationAttr>(kGroupOperationAttrName)
+      groupOp
+          ->getAttrOfType<GroupOperationAttr>(
+              OpTy::getGroupOperationAttrName(groupOp->getName()))
           .getValue();
   if (operation == GroupOperation::ClusteredReduce &&
       groupOp->getNumOperands() == 1)
@@ -128,6 +79,30 @@ LogicalResult GroupBroadcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformBallotOp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSBOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformBallotFindLSBOp::verify() {
+  spirv::Scope scope = getExecutionScope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformBallotFindLSBOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GroupNonUniformBallotFindMSBOp::verify() {
   spirv::Scope scope = getExecutionScope();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
@@ -206,16 +181,7 @@ LogicalResult GroupNonUniformElectOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformFAddOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformFAddOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformFAddOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformFAddOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -223,16 +189,7 @@ void GroupNonUniformFAddOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformFMaxOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformFMaxOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformFMaxOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformFMaxOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -240,16 +197,7 @@ void GroupNonUniformFMaxOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformFMinOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformFMinOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformFMinOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformFMinOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -257,16 +205,7 @@ void GroupNonUniformFMinOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformFMulOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformFMulOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformFMulOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformFMulOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -274,16 +213,7 @@ void GroupNonUniformFMulOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformIAddOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformIAddOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformIAddOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformIAddOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -291,16 +221,7 @@ void GroupNonUniformIAddOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformIMulOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformIMulOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformIMulOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformIMulOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,16 +229,7 @@ void GroupNonUniformIMulOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformSMaxOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformSMaxOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformSMaxOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformSMaxOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -325,16 +237,7 @@ void GroupNonUniformSMaxOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformSMinOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformSMinOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformSMinOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformSMinOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -342,16 +245,7 @@ void GroupNonUniformSMinOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformUMaxOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformUMaxOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformUMaxOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformUMaxOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -359,16 +253,7 @@ void GroupNonUniformUMaxOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformUMinOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformUMinOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformUMinOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformUMinOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -376,16 +261,7 @@ void GroupNonUniformUMinOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformBitwiseAndOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformBitwiseAndOp::parse(OpAsmParser &parser,
-                                               OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformBitwiseAndOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformBitwiseAndOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -393,16 +269,7 @@ void GroupNonUniformBitwiseAndOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformBitwiseOrOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformBitwiseOrOp::parse(OpAsmParser &parser,
-                                              OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformBitwiseOrOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformBitwiseOrOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -410,16 +277,7 @@ void GroupNonUniformBitwiseOrOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformBitwiseXorOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformBitwiseXorOp::parse(OpAsmParser &parser,
-                                               OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformBitwiseXorOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformBitwiseXorOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -427,16 +285,7 @@ void GroupNonUniformBitwiseXorOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformLogicalAndOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformLogicalAndOp::parse(OpAsmParser &parser,
-                                               OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformLogicalAndOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalAndOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -444,16 +293,7 @@ void GroupNonUniformLogicalAndOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformLogicalOrOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformLogicalOrOp::parse(OpAsmParser &parser,
-                                              OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformLogicalOrOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalOrOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -461,16 +301,7 @@ void GroupNonUniformLogicalOrOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult GroupNonUniformLogicalXorOp::verify() {
-  return verifyGroupNonUniformArithmeticOp(*this);
-}
-
-ParseResult GroupNonUniformLogicalXorOp::parse(OpAsmParser &parser,
-                                               OperationState &result) {
-  return parseGroupNonUniformArithmeticOp(parser, result);
-}
-
-void GroupNonUniformLogicalXorOp::print(OpAsmPrinter &p) {
-  printGroupNonUniformArithmeticOp(*this, p);
+  return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalXorOp>(*this);
 }
 
 //===----------------------------------------------------------------------===//

@@ -55,7 +55,7 @@ class IOHandlerCompletionTest(PExpectTest):
         self.child.expect(
             re.compile(
                 b"TestIOHandler(\r"
-                + self.cursor_forward_escape_seq("\d+")
+                + self.cursor_forward_escape_seq(r"\d+")
                 + b")?Completion.py"
             )
         )

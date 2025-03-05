@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCEXPR_H
 #define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCEXPR_H
 
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCValue.h"
+#include <optional>
 
 namespace llvm {
 
@@ -19,7 +19,9 @@ class PPCMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
     VK_PPC_None,
-    VK_PPC_LO,
+    // We currently use both MCSymbolRefExpr::VariantKind and
+    // PPCMCExpr::VariantKind. Start at a larger number to avoid conflicts.
+    VK_PPC_LO = 200,
     VK_PPC_HI,
     VK_PPC_HA,
     VK_PPC_HIGH,
@@ -34,7 +36,7 @@ private:
   const VariantKind Kind;
   const MCExpr *Expr;
 
-  int64_t evaluateAsInt64(int64_t Value) const;
+  std::optional<int64_t> evaluateAsInt64(int64_t Value) const;
 
   explicit PPCMCExpr(VariantKind Kind, const MCExpr *Expr)
       : Kind(Kind), Expr(Expr) {}
@@ -71,8 +73,7 @@ public:
   /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {

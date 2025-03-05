@@ -144,7 +144,7 @@ int TreeView::run(unsigned int argc, char **argv, llvm::raw_ostream &out) {
   bool Internal = false;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--internal")) {
+    if (FirstArg == "--internal") {
       Internal = true;
       --argc;
       ++argv;

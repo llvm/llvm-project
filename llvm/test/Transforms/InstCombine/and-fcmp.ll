@@ -39,11 +39,24 @@ define i1 @PR1738_logical_noundef(double %x, double noundef %y) {
 
 define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @PR1738_vec_undef(
-; CHECK-NEXT:    [[OR:%.*]] = fcmp ord <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord <2 x double> [[X:%.*]], <double 0.000000e+00, double undef>
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ord <2 x double> [[Y:%.*]], <double undef, double 0.000000e+00>
+; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %cmp1 = fcmp ord <2 x double> %x, <double 0.0, double undef>
   %cmp2 = fcmp ord <2 x double> %y, <double undef, double 0.0>
+  %or = and <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @PR1738_vec_poison(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @PR1738_vec_poison(
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ord <2 x double> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %cmp1 = fcmp ord <2 x double> %x, <double 0.0, double poison>
+  %cmp2 = fcmp ord <2 x double> %y, <double poison, double 0.0>
   %or = and <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %or
 }
@@ -111,8 +124,10 @@ define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
 define <2 x i1> @PR41069_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
 ; CHECK-LABEL: @PR41069_vec(
 ; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <2 x double> [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[ORD1]]
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp ord <2 x double> [[C:%.*]], <double 0.000000e+00, double undef>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[ORD1]], [[ORD2]]
+; CHECK-NEXT:    [[ORD3:%.*]] = fcmp ord <2 x double> [[D:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[AND]], [[ORD3]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ord1 = fcmp ord <2 x double> %a, %b
@@ -126,8 +141,10 @@ define <2 x i1> @PR41069_vec(<2 x double> %a, <2 x double> %b, <2 x double> %c, 
 define <2 x i1> @PR41069_vec_commute(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x double> %d) {
 ; CHECK-LABEL: @PR41069_vec_commute(
 ; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ord <2 x double> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <2 x double> [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP1]], [[ORD1]]
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp ord <2 x double> [[C:%.*]], <double 0.000000e+00, double undef>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[ORD1]], [[ORD2]]
+; CHECK-NEXT:    [[ORD3:%.*]] = fcmp ord <2 x double> [[D:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[ORD3]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %ord1 = fcmp ord <2 x double> %a, %b
@@ -4627,7 +4644,7 @@ define i1 @clang_builtin_isnormal_inf_check(half %x) {
 define <2 x i1> @clang_builtin_isnormal_inf_check_vector(<2 x half> %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_vector(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq <2 x half> [[FABS_X]], splat (half 0xH7C00)
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %fabs.x = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -5023,6 +5040,58 @@ define i1 @isnormal_logical_select_0_fmf1(half %x) {
   %cmp.inf = fcmp nsz arcp reassoc uge half %fabs.x, 0xH7C00
   %and = select i1 %ord, i1 %cmp.inf, i1 false
   ret i1 %and
+}
+
+define i1 @and_fcmp_reassoc1(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc2(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %and, %cmp1
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc3(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %cmp, %x
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
+}
+
+define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @and_fcmp_reassoc4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = and i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %and = and i1 %x, %cmp
+  %retval = and i1 %cmp1, %and
+  ret i1 %retval
 }
 
 declare half @llvm.fabs.f16(half)

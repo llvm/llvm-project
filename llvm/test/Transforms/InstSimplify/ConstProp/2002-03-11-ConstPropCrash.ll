@@ -1,4 +1,4 @@
-; When constant propogating terminator instructions, the basic block iterator
+; When constant propagating terminator instructions, the basic block iterator
 ; was not updated to refer to the final position of the new terminator.  This
 ; can be bad, f.e. because constproping a terminator can lead to the
 ; destruction of PHI nodes, which invalidates the iterator!

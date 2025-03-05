@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=ppc32-- %s -run-pass=phi-node-elimination \
 # RUN:   -verify-machineinstrs -o /dev/null 2>&1
+# RUN: llc -mtriple=ppc32-- %s --passes=phi-node-elimination -o /dev/null 2>&1
 # RUN: llc -mtriple=ppc32-- %s -start-before=phi-node-elimination \
 # RUN:   -verify-machineinstrs -o /dev/null 2>&1
 

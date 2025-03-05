@@ -44,7 +44,17 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
                unless(isInTemplateInstantiation()))
           .bind("call-move");
 
-  Finder->addMatcher(MoveCallMatcher, this);
+  // Match ternary expressions where either branch contains std::move
+  auto TernaryWithMoveMatcher =
+      conditionalOperator(hasDescendant(MoveCallMatcher));
+
+  Finder->addMatcher(
+      expr(anyOf(
+          castExpr(hasSourceExpression(MoveCallMatcher)),
+          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(anyOf(
+                               isCopyConstructor(), isMoveConstructor()))),
+                           hasArgument(0, MoveCallMatcher)))),
+      this);
 
   auto ConstTypeParmMatcher =
       qualType(references(isConstQualified())).bind("invocation-parm-type");
@@ -52,13 +62,15 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       qualType(rValueReferenceType()).bind("invocation-parm-type");
   // Matches respective ParmVarDecl for a CallExpr or CXXConstructExpr.
   auto ArgumentWithParamMatcher = forEachArgumentWithParam(
-      MoveCallMatcher, parmVarDecl(anyOf(hasType(ConstTypeParmMatcher),
-                                         hasType(RValueTypeParmMatcher)))
-                           .bind("invocation-parm"));
+      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
+      parmVarDecl(
+          anyOf(hasType(ConstTypeParmMatcher), hasType(RValueTypeParmMatcher)))
+          .bind("invocation-parm"));
   // Matches respective types of arguments for a CallExpr or CXXConstructExpr
   // and it works on calls through function pointers as well.
   auto ArgumentWithParamTypeMatcher = forEachArgumentWithParamType(
-      MoveCallMatcher, anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
+      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
+      anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
 
   Finder->addMatcher(
       invocation(anyOf(ArgumentWithParamMatcher, ArgumentWithParamTypeMatcher))
@@ -203,8 +215,9 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (const CXXRecordDecl *RecordDecl = ArgType->getAsCXXRecordDecl();
-        RecordDecl && !(RecordDecl->hasMoveConstructor() &&
-                        RecordDecl->hasMoveAssignment())) {
+        RecordDecl && RecordDecl->hasDefinition() &&
+        !(RecordDecl->hasMoveConstructor() &&
+          RecordDecl->hasMoveAssignment())) {
       const bool MissingMoveAssignment = !RecordDecl->hasMoveAssignment();
       const bool MissingMoveConstructor = !RecordDecl->hasMoveConstructor();
       const bool MissingBoth = MissingMoveAssignment && MissingMoveConstructor;

@@ -13,10 +13,12 @@
 #define LLVM_IR_ANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
+
+class Function;
+class Module;
+
 /// A special type used by analysis passes to provide an address that
 /// identifies that particular analysis pass type.
 ///
@@ -126,11 +128,14 @@ public:
   }
 
   /// Mark an analysis as preserved.
-  template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
+  template <typename AnalysisT> PreservedAnalyses &preserve() {
+    preserve(AnalysisT::ID());
+    return *this;
+  }
 
   /// Given an analysis's ID, mark the analysis as preserved, adding it
   /// to the set.
-  void preserve(AnalysisKey *ID) {
+  PreservedAnalyses &preserve(AnalysisKey *ID) {
     // Clear this ID from the explicit not-preserved set if present.
     NotPreservedAnalysisIDs.erase(ID);
 
@@ -138,18 +143,21 @@ public:
     // NotPreservedAnalysisIDs).
     if (!areAllPreserved())
       PreservedIDs.insert(ID);
+    return *this;
   }
 
   /// Mark an analysis set as preserved.
-  template <typename AnalysisSetT> void preserveSet() {
+  template <typename AnalysisSetT> PreservedAnalyses &preserveSet() {
     preserveSet(AnalysisSetT::ID());
+    return *this;
   }
 
   /// Mark an analysis set as preserved using its ID.
-  void preserveSet(AnalysisSetKey *ID) {
+  PreservedAnalyses &preserveSet(AnalysisSetKey *ID) {
     // If we're not already in the saturated 'all' state, add this set.
     if (!areAllPreserved())
       PreservedIDs.insert(ID);
+    return *this;
   }
 
   /// Mark an analysis as abandoned.
@@ -159,7 +167,10 @@ public:
   ///
   /// Note that you can only abandon a specific analysis, not a *set* of
   /// analyses.
-  template <typename AnalysisT> void abandon() { abandon(AnalysisT::ID()); }
+  template <typename AnalysisT> PreservedAnalyses &abandon() {
+    abandon(AnalysisT::ID());
+    return *this;
+  }
 
   /// Mark an analysis as abandoned using its ID.
   ///
@@ -168,9 +179,10 @@ public:
   ///
   /// Note that you can only abandon a specific analysis, not a *set* of
   /// analyses.
-  void abandon(AnalysisKey *ID) {
+  PreservedAnalyses &abandon(AnalysisKey *ID) {
     PreservedIDs.erase(ID);
     NotPreservedAnalysisIDs.insert(ID);
+    return *this;
   }
 
   /// Intersect this set with another in place.
@@ -190,9 +202,8 @@ public:
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
+    PreservedIDs.remove_if(
+        [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
   }
 
   /// Intersect this set with a temporary other set in place.
@@ -212,9 +223,8 @@ public:
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
+    PreservedIDs.remove_if(
+        [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
   }
 
   /// A checker object that makes it easy to query for whether an analysis or

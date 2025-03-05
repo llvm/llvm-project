@@ -1,14 +1,9 @@
 // RUN: mlir-opt %s \
-// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops"  \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-arm-sme-to-llvm -convert-vector-to-llvm=enable-arm-sve -cse \
-// RUN:   -canonicalize -test-lower-to-llvm -verify-diagnostics | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm -verify-diagnostics | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
-// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%arm_sme_abi_shlib | \
+// RUN:   -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib | \
 // RUN: FileCheck %s
 
 /// This function uses too many tiles! There's only two i16 tiles (ZA0.H and
@@ -18,34 +13,37 @@
 /// performance (hence the warning).
 func.func @use_too_many_tiles(%a: memref<?x?xi16>, %b:  memref<?x?xi16>, %c: memref<?x?xi16>) {
   %c0 = arith.constant 0 : index
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_a = arith.constant dense<0> : vector<[8]x[8]xi16>
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_b = arith.constant dense<1> : vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   %tile_c = arm_sme.tile_load %a[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile_d = arm_sme.tile_load %b[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
-  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %tile_e = arm_sme.tile_load %c[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
 
   // CHECK-LABEL: tile_a:
   // CHECK-COUNT-8: ( 0, 0, 0, 0, 0, 0, 0, 0
-  vector.print str "tile_a:"
+  vector.print str "tile_a:\n"
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_a : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_b:
   // CHECK-COUNT-8: ( 1, 1, 1, 1, 1, 1, 1, 1
-  vector.print str "tile_b:"
+  vector.print str "tile_b:\n"
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_b : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_c:
   // CHECK-COUNT-8: ( 2, 2, 2, 2, 2, 2, 2, 2
-  vector.print str "tile_c:"
+  vector.print str "tile_c:\n"
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, tile value will go through memory, expect degraded performance}}
   vector.print %tile_c : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_d:
   // CHECK-COUNT-8: ( 3, 3, 3, 3, 3, 3, 3, 3
-  vector.print str "tile_d:"
+  vector.print str "tile_d:\n"
   vector.print %tile_d : vector<[8]x[8]xi16>
   // CHECK-LABEL: tile_e:
   // CHECK-COUNT-8: ( 4, 4, 4, 4, 4, 4, 4, 4
-  vector.print str "tile_e:"
+  vector.print str "tile_e:\n"
   vector.print %tile_e : vector<[8]x[8]xi16>
   return
 }

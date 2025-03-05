@@ -59,12 +59,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +75,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class ReadobjOptTable : public opt::GenericOptTable {
 public:
-  ReadobjOptTable() : opt::GenericOptTable(InfoTable) {
+  ReadobjOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -95,8 +97,10 @@ static bool Addrsig;
 static bool All;
 static bool ArchSpecificInfo;
 static bool BBAddrMap;
+static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
 static bool CGProfile;
+static bool Decompress;
 bool Demangle;
 static bool DependentLibraries;
 static bool DynRelocs;
@@ -132,7 +136,6 @@ static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
-bool RawRelr;
 static bool SectionGroups;
 static bool VersionInfo;
 
@@ -211,7 +214,13 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::All = Args.hasArg(OPT_all);
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
+  opts::PrettyPGOAnalysisMap = Args.hasArg(OPT_pretty_pgo_analysis_map);
+  if (opts::PrettyPGOAnalysisMap && !opts::BBAddrMap)
+    WithColor::warning(errs(), ToolName)
+        << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
+           "have an effect\n";
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
+  opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
   opts::DependentLibraries = Args.hasArg(OPT_dependent_libraries);
   opts::DynRelocs = Args.hasArg(OPT_dyn_relocations);
@@ -265,7 +274,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
-  opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     std::string SortKeysString = A->getValue();
@@ -439,9 +447,9 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols,
                          opts::ExtraSymInfo, SymComp);
   if (!opts::StringDump.empty())
-    Dumper->printSectionsAsString(Obj, opts::StringDump);
+    Dumper->printSectionsAsString(Obj, opts::StringDump, opts::Decompress);
   if (!opts::HexDump.empty())
-    Dumper->printSectionsAsHex(Obj, opts::HexDump);
+    Dumper->printSectionsAsHex(Obj, opts::HexDump, opts::Decompress);
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
@@ -464,7 +472,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
     if (opts::BBAddrMap)
-      Dumper->printBBAddrMaps();
+      Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::Notes)
@@ -574,6 +582,22 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
   }
 }
 
+/// Dumps \a COFF file;
+static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
+  dumpObject(*Obj, Writer);
+
+  // Dump a hybrid object when available.
+  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
+  if (!HybridView)
+    return;
+  Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
+      COFFObjectFile::create(*HybridView);
+  if (!HybridObjOrErr)
+    reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
+  DictScope D(Writer, "HybridObject");
+  dumpObject(**HybridObjOrErr, Writer);
+}
+
 /// Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes,
                                     ScopedPrinter &Printer) {
@@ -611,6 +635,8 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (MachOUniversalBinary *UBinary =
                dyn_cast<MachOUniversalBinary>(Bin.get()))
     dumpMachOUniversalBinary(UBinary, Writer);
+  else if (COFFObjectFile *Obj = dyn_cast<COFFObjectFile>(Bin.get()))
+    dumpCOFFObject(Obj, Writer);
   else if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin.get()))
     dumpObject(*Obj, Writer);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(Bin.get()))
@@ -694,14 +720,14 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
   std::unique_ptr<ScopedPrinter> Writer = createWriter();
 
   for (const std::string &I : opts::InputFilenames)
-    dumpInput(I, *Writer.get());
+    dumpInput(I, *Writer);
 
   if (opts::CodeViewMergedTypes) {
     if (opts::CodeViewEnableGHash)
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.GlobalIDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.GlobalIDTable.records(),
                               CVTypes.GlobalTypeTable.records());
     else
-      dumpCodeViewMergedTypes(*Writer.get(), CVTypes.IDTable.records(),
+      dumpCodeViewMergedTypes(*Writer, CVTypes.IDTable.records(),
                               CVTypes.TypeTable.records());
   }
 

@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-linalg-pattern"
@@ -26,5 +25,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 void mlir::populateTensorToLinalgPatterns(RewritePatternSet &patterns) {
-  patterns.add<mlir::linalg::GeneralizePadOpPattern>(patterns.getContext());
+  // TODO: Add the remaining patterns, e.g. to decompose Pack/Unpack Ops.
+  // Alternatively, delete this file.
+  patterns.add<mlir::linalg::DecomposePadOpPattern>(patterns.getContext());
 }

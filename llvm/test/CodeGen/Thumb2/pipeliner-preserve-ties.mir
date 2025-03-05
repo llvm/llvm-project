@@ -222,8 +222,8 @@ body:             |
   ; CHECK-NEXT:   [[t2MLS1:%[0-9]+]]:rgpr = t2MLS [[t2SDIV1]], [[t2LDRSHi12_1]], [[t2LDRSH_PRE2]], 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[t2UXTH2:%[0-9]+]]:rgpr = t2UXTH [[t2SDIV1]], 0, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[t2LDRHi12_9:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE3]], 6, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.uglygep6, align 2, !tbaa !9)
-  ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_8]], [[t2UXTH2]], 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   [[t2UXTH3:%[0-9]+]]:rgpr = t2UXTH [[t2MLS1]], 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_8]], [[t2UXTH2]], 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   [[t2ADDri4:%[0-9]+]]:rgpr = t2ADDri [[PHI1]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[PHI1]](tied-def 0)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_9]], [[t2UXTH3]], 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   [[t2ADDri5:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri4]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri4]](tied-def 0)

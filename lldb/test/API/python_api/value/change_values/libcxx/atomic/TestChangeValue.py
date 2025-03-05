@@ -47,4 +47,4 @@ class LibcxxChangeValueTestCase(TestBase):
         result = inner_val.SetValueFromCString("42")
         self.assertTrue(result, "Setting val returned True.")
         result = inner_val.GetValueAsUnsigned()
-        self.assertTrue(result == 42, "Got correct value (42)")
+        self.assertEqual(result, 42, "Got correct value (42)")

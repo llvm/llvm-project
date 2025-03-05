@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-//
 // Check that --sysroot= also applies to header search paths.
 // RUN: %clang -target i386-unk-unk --sysroot=/FOO -### -E %s 2> %t1
 // RUN: FileCheck --check-prefix=CHECK-SYSROOTEQ < %t1 %s

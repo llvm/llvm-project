@@ -22,9 +22,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -34,6 +31,9 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 
 #define DEFINE_REG_NAME(reg_num)      ConstString(#reg_num).GetCString()
 #define DEFINE_REG_NAME_STR(reg_name) ConstString(reg_name).GetCString()
@@ -312,13 +312,13 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
                                          ValueObjectSP &new_value_sp) {
   Status result;
   if (!new_value_sp) {
-    result.SetErrorString("Empty value object for return value.");
+    result = Status::FromErrorString("Empty value object for return value.");
     return result;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    result.SetErrorString("Null clang type for return value.");
+    result = Status::FromErrorString("Null clang type for return value.");
     return result;
   }
 
@@ -327,7 +327,8 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
   bool is_signed = false;
   if (!compiler_type.IsIntegerOrEnumerationType(is_signed) &&
       !compiler_type.IsPointerType()) {
-    result.SetErrorString("We don't support returning other types at present");
+    result = Status::FromErrorString(
+        "We don't support returning other types at present");
     return result;
   }
 
@@ -335,7 +336,7 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
   size_t num_bytes = new_value_sp->GetData(data, result);
 
   if (result.Fail()) {
-    result.SetErrorStringWithFormat(
+    result = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s", result.AsCString());
     return result;
   }
@@ -347,8 +348,8 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
     auto reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
       return result;
     }
 
@@ -359,14 +360,14 @@ Status ABISysV_arc::SetReturnValueObject(StackFrameSP &frame_sp,
     reg_info =
         reg_ctx.GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
     if (!reg_ctx.WriteRegisterFromUnsigned(reg_info, raw_value)) {
-      result.SetErrorStringWithFormat("Couldn't write value to register %s",
-                                      reg_info->name);
+      result = Status::FromErrorStringWithFormat(
+          "Couldn't write value to register %s", reg_info->name);
     }
 
     return result;
   }
 
-  result.SetErrorString(
+  result = Status::FromErrorString(
       "We don't support returning large integer values at present.");
   return result;
 }
@@ -554,29 +555,23 @@ ValueObjectSP ABISysV_arc::GetReturnValueObjectImpl(Thread &thread,
                                         value, ConstString(""));
 }
 
-bool ABISysV_arc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_arc::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value.
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf::sp, 0);
 
-  // The previous PC is in the BLINK.
+  // The previous PC is in the BLINK, all other registers are the same.
   row->SetRegisterLocationToRegister(dwarf::pc, dwarf::blink, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-  unwind_plan.SetSourceName("arc at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("arc at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_arc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  return false;
-}
+UnwindPlanSP ABISysV_arc::CreateDefaultUnwindPlan() { return nullptr; }
 
 bool ABISysV_arc::RegisterIsVolatile(const RegisterInfo *reg_info) {
   if (nullptr == reg_info)

@@ -38,8 +38,9 @@ public:
   ArmUnwindInfo *GetArmUnwindInfo();
   SymbolFile *GetSymbolFile();
 
-  lldb::FuncUnwindersSP GetFuncUnwindersContainingAddress(const Address &addr,
-                                                          SymbolContext &sc);
+  lldb::FuncUnwindersSP
+  GetFuncUnwindersContainingAddress(const Address &addr,
+                                    const SymbolContext &sc);
 
   bool GetAllowAssemblyEmulationUnwindPlans();
 
@@ -57,6 +58,10 @@ public:
 
   ArchSpec GetArchitecture();
 
+  /// Called after an ObjectFile/SymbolFile has been added to a Module to add
+  /// any new unwind sections that may now be available.
+  void ModuleWasUpdated();
+
 private:
   void Dump(Stream &s);
 
@@ -71,7 +76,11 @@ private:
   Module &m_module;
   collection m_unwinds;
 
-  bool m_initialized; // delay some initialization until ObjectFile is set up
+  bool m_scanned_all_unwind_sources; // true when we have looked at the
+                                     // ObjectFile and SymbolFile for all
+                                     // sources of unwind information; false if
+                                     // we haven't done that yet, or one of the
+                                     // files has been updated in the Module.
   std::mutex m_mutex;
 
   std::unique_ptr<CallFrameInfo> m_object_file_unwind_up;

@@ -10,29 +10,29 @@ define void @zot() local_unnamed_addr align 2 personality ptr undef {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    invoke void @widget()
-; CHECK-NEXT:    to label [[BB14:%.*]] unwind label [[BB21:%.*]]
+; CHECK-NEXT:            to label [[BB14:%.*]] unwind label [[BB21:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i16 @baz()
-; CHECK-NEXT:    to label [[BB15:%.*]] unwind label [[BB21]]
+; CHECK-NEXT:            to label [[BB15:%.*]] unwind label [[BB21]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    switch i16 [[I0]], label [[BB19:%.*]] [
-; CHECK-NEXT:    i16 42, label [[BB23:%.*]]
-; CHECK-NEXT:    i16 21330, label [[BB23]]
+; CHECK-NEXT:      i16 42, label [[BB23:%.*]]
+; CHECK-NEXT:      i16 21330, label [[BB23]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb19:
 ; CHECK-NEXT:    invoke void @snork()
-; CHECK-NEXT:    to label [[BB20:%.*]] unwind label [[BB21]]
+; CHECK-NEXT:            to label [[BB20:%.*]] unwind label [[BB21]]
 ; CHECK:       bb20:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb21:
 ; CHECK-NEXT:    [[I22:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    invoke void @spam()
-; CHECK-NEXT:    to label [[COMMON_RET]] unwind label [[BB21]]
+; CHECK-NEXT:            to label [[COMMON_RET]] unwind label [[BB21]]
 ;
 bb:
   invoke void @widget()

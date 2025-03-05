@@ -6,7 +6,7 @@ define void @prefault(ptr noundef %range_start, ptr noundef readnone %range_end)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    jae .LBB0_3
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lock orb $0, (%rdi)

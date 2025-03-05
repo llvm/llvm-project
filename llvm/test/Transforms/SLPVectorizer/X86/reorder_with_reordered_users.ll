@@ -42,34 +42,34 @@
 ; comment out reorderTopToBottom() and remove the stores.
 
 
-define void @reorder_crash(ptr %ptr) {
+define void @reorder_crash(ptr %ptr, i1 %arg) {
 ; CHECK-LABEL: @reorder_crash(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[BB0:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB0:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[PTR]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x float> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP1]], [[BB0]] ], [ [[TMP4]], [[BB1]] ], [ [[SHUFFLE]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x float> [ [[TMP0]], [[BB0]] ], [ [[TMP1]], [[BB1]] ], [ [[TMP4]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %gep1 = getelementptr inbounds float, ptr %ptr, i64 1
   %gep2 = getelementptr inbounds float, ptr %ptr, i64 2
   %gep3 = getelementptr inbounds float, ptr %ptr, i64 3
-  br i1 undef, label %bb0, label %bb12
+  br i1 %arg, label %bb0, label %bb12
 
 bb0:
   ; Used by phi in this order: 1, 0, 2, 3
@@ -86,7 +86,7 @@ bb0:
   br label %bb3
 
 bb12:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:
   ; Used by phi in this order: 1, 0, 2, 3

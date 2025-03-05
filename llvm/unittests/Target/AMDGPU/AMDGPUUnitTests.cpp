@@ -92,9 +92,23 @@ static const std::pair<StringRef, StringRef>
   W32FS = {"+wavefrontsize32", "w32"},
   W64FS = {"+wavefrontsize64", "w64"};
 
-static void testGPRLimits(
-    const char *RegName, bool TestW32W64,
-    std::function<bool(std::stringstream &, unsigned, GCNSubtarget &)> test) {
+using TestFuncTy =
+    function_ref<bool(std::stringstream &, unsigned, const GCNSubtarget &)>;
+
+static bool testAndRecord(std::stringstream &Table, const GCNSubtarget &ST,
+                          TestFuncTy test) {
+  bool Success = true;
+  unsigned MaxOcc = ST.getMaxWavesPerEU();
+  for (unsigned Occ = MaxOcc; Occ > 0; --Occ) {
+    Table << std::right << std::setw(3) << Occ << "    ";
+    Success = test(Table, Occ, ST) && Success;
+    Table << '\n';
+  }
+  return Success;
+}
+
+static void testGPRLimits(const char *RegName, bool TestW32W64,
+                          TestFuncTy test) {
   SmallVector<StringRef> CPUs;
   AMDGPU::fillValidArchListAMDGCN(CPUs);
 
@@ -117,13 +131,7 @@ static void testGPRLimits(
         FS = &W32FS;
 
       std::stringstream Table;
-      bool Success = true;
-      unsigned MaxOcc = ST.getMaxWavesPerEU();
-      for (unsigned Occ = MaxOcc; Occ > 0; --Occ) {
-        Table << std::right << std::setw(3) << Occ << "    ";
-        Success = test(Table, Occ, ST) && Success;
-        Table << '\n';
-      }
+      bool Success = testAndRecord(Table, ST, test);
       if (!Success || PrintCpuRegLimits)
         TablePerCPUs[Table.str()].push_back((CanonCPUName + FS->second).str());
 
@@ -145,13 +153,94 @@ static void testGPRLimits(
 }
 
 TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
-  testGPRLimits("VGPR", true, [](std::stringstream &OS, unsigned Occ,
-                                 GCNSubtarget &ST) {
+  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST) {
     unsigned MaxVGPRNum = ST.getAddressableNumVGPRs();
     return checkMinMax(
         OS, Occ, ST.getOccupancyWithNumVGPRs(MaxVGPRNum), ST.getMaxWavesPerEU(),
         [&](unsigned NumGPRs) { return ST.getOccupancyWithNumVGPRs(NumGPRs); },
         [&](unsigned Occ) { return ST.getMinNumVGPRs(Occ); },
         [&](unsigned Occ) { return ST.getMaxNumVGPRs(Occ); });
-  });
+  };
+
+  testGPRLimits("VGPR", true, test);
+}
+
+static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
+  return SubReg ? TRI.getSubRegIndexName(SubReg) : "<none>";
+}
+
+TEST(AMDGPU, TestReverseComposeSubRegIndices) {
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  if (!TM)
+    return;
+  GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()), *TM);
+
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+#define EXPECT_SUBREG_EQ(A, B, Expect)                                         \
+  do {                                                                         \
+    unsigned Reversed = TRI->reverseComposeSubRegIndices(A, B);                \
+    EXPECT_EQ(Reversed, Expect)                                                \
+        << printSubReg(*TRI, A) << ", " << printSubReg(*TRI, B) << " => "      \
+        << printSubReg(*TRI, Reversed) << ", *" << printSubReg(*TRI, Expect);  \
+  } while (0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::NoSubRegister, AMDGPU::sub0, AMDGPU::sub0);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::NoSubRegister, AMDGPU::sub0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub0, AMDGPU::sub0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub1);
+  EXPECT_SUBREG_EQ(AMDGPU::sub1, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub0, AMDGPU::sub0);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub0_sub1, AMDGPU::sub0_sub1);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub0_sub1,
+                   AMDGPU::sub0_sub1);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::sub0_sub1_sub2_sub3);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub1_sub2,
+                   AMDGPU::sub1_sub2);
+  EXPECT_SUBREG_EQ(AMDGPU::sub1_sub2, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub1_sub2_sub3, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub1_sub2_sub3,
+                   AMDGPU::sub1_sub2_sub3);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub30, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub31, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub31, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub30, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30, AMDGPU::sub0_sub1, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub30_sub31,
+                   AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30_sub31, AMDGPU::sub0_sub1,
+                   AMDGPU::NoSubRegister);
+
+  for (unsigned SubIdx0 = 1, LastSubReg = TRI->getNumSubRegIndices();
+       SubIdx0 != LastSubReg; ++SubIdx0) {
+    for (unsigned SubIdx1 = 1; SubIdx1 != LastSubReg; ++SubIdx1) {
+      if (unsigned ForwardCompose =
+              TRI->composeSubRegIndices(SubIdx0, SubIdx1)) {
+        unsigned ReverseComposed =
+            TRI->reverseComposeSubRegIndices(SubIdx0, ForwardCompose);
+        EXPECT_EQ(ReverseComposed, SubIdx1);
+      }
+
+      if (unsigned ReverseCompose =
+              TRI->reverseComposeSubRegIndices(SubIdx0, SubIdx1)) {
+        unsigned Recompose = TRI->composeSubRegIndices(SubIdx0, ReverseCompose);
+        EXPECT_EQ(Recompose, SubIdx1);
+      }
+    }
+  }
 }

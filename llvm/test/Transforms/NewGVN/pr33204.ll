@@ -10,7 +10,7 @@ target triple = "x86_64-apple-darwin16.7.0"
 @global = external global i32 #0
 @global.1 = external global i32 #0
 
-define void @hoge(i32 %arg) {
+define void @hoge(i32 %arg, i1 %arg2) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
@@ -20,20 +20,20 @@ define void @hoge(i32 %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB1:%.*]] ], [ [[ARG:%.*]], [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @global, align 4, !h !0
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @global, align 4, !h [[META0:![0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb6:
-; CHECK-NEXT:    store i32 [[TMP]], ptr @global.1, align 4, !h !0
-; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB1]]
+; CHECK-NEXT:    store i32 [[TMP]], ptr @global.1, align 4, !h [[META0]]
+; CHECK-NEXT:    br i1 %arg2, label [[BB7:%.*]], label [[BB1]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB8:%.*]]
+; CHECK-NEXT:    br i1 %arg2, label [[BB10:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 false, label [[BB9:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    store i32 0, ptr @global, align 4, !h !0
+; CHECK-NEXT:    store i32 0, ptr @global, align 4, !h [[META0]]
 ; CHECK-NEXT:    br label [[BB7]]
 ;
 bb:
@@ -53,10 +53,10 @@ bb3:                                              ; preds = %bb9, %bb8
 
 bb6:                                              ; preds = %bb2
   store i32 %tmp, ptr @global.1, !h !0
-  br i1 undef, label %bb7, label %bb1
+  br i1 %arg2, label %bb7, label %bb1
 
 bb7:                                              ; preds = %bb10, %bb6
-  br i1 undef, label %bb10, label %bb8
+  br i1 %arg2, label %bb10, label %bb8
 
 bb8:                                              ; preds = %bb7
   br i1 false, label %bb9, label %bb3

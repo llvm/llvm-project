@@ -266,12 +266,8 @@ body:             |
     ; CHECK-LABEL: name: undef_elts_different_regbanks
     ; CHECK: liveins: $w0
     ; CHECK: %val:gpr32all = COPY $w0
-    ; CHECK: %undef:gpr32 = IMPLICIT_DEF
     ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
-    ; CHECK: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 1, %undef
-    ; CHECK: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSvi32gpr]], 2, %undef
-    ; CHECK: %bv:fpr128 = INSvi32gpr [[INSvi32gpr1]], 3, %undef
+    ; CHECK: %bv:fpr128 = INSERT_SUBREG [[DEF]], %val, %subreg.ssub
     ; CHECK: $q0 = COPY %bv
     ; CHECK: RET_ReallyLR implicit $q0
     %val:gpr(s32) = COPY $w0

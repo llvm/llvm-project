@@ -16,16 +16,21 @@ TEST(AnsiTerminal, Empty) { EXPECT_EQ("", ansi::FormatAnsiTerminalCodes("")); }
 
 TEST(AnsiTerminal, WhiteSpace) {
   EXPECT_EQ(" ", ansi::FormatAnsiTerminalCodes(" "));
+  EXPECT_EQ(" ", ansi::StripAnsiTerminalCodes(" "));
 }
 
 TEST(AnsiTerminal, AtEnd) {
   EXPECT_EQ("abc\x1B[30m",
             ansi::FormatAnsiTerminalCodes("abc${ansi.fg.black}"));
+
+  EXPECT_EQ("abc", ansi::StripAnsiTerminalCodes("abc\x1B[30m"));
 }
 
 TEST(AnsiTerminal, AtStart) {
   EXPECT_EQ("\x1B[30mabc",
             ansi::FormatAnsiTerminalCodes("${ansi.fg.black}abc"));
+
+  EXPECT_EQ("abc", ansi::StripAnsiTerminalCodes("\x1B[30mabc"));
 }
 
 TEST(AnsiTerminal, KnownPrefix) {
@@ -45,10 +50,20 @@ TEST(AnsiTerminal, Incomplete) {
 TEST(AnsiTerminal, Twice) {
   EXPECT_EQ("\x1B[30m\x1B[31mabc",
             ansi::FormatAnsiTerminalCodes("${ansi.fg.black}${ansi.fg.red}abc"));
+
+  EXPECT_EQ("abc", ansi::StripAnsiTerminalCodes("\x1B[30m\x1B[31mabc"));
 }
 
 TEST(AnsiTerminal, Basic) {
   EXPECT_EQ(
       "abc\x1B[31mabc\x1B[0mabc",
       ansi::FormatAnsiTerminalCodes("abc${ansi.fg.red}abc${ansi.normal}abc"));
+
+  EXPECT_EQ("abcabcabc",
+            ansi::StripAnsiTerminalCodes("abc\x1B[31mabc\x1B[0mabc"));
+}
+
+TEST(AnsiTerminal, InvalidEscapeCode) {
+  EXPECT_EQ("abc\x1B[31kabcabc",
+            ansi::StripAnsiTerminalCodes("abc\x1B[31kabc\x1B[0mabc"));
 }

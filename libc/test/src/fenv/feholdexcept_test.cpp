@@ -6,16 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/feholdexcept.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
+#include "excepts.h"
 
-TEST(LlvmLibcFEnvTest, RaiseAndCrash) {
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
+TEST_F(LlvmLibcFEnvTest, RaiseAndCrash) {
 #if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
     defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // Few Arm HW implementations do not trap exceptions. We skip this test

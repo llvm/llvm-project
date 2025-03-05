@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/errno/libc_errno.h"
 #include "src/math/exp2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -56,3 +55,30 @@ TEST_F(LlvmLibcExp2fTest, Overflow) {
       inf, LIBC_NAMESPACE::exp2f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExp2fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp2f(max_denormal));
+}
+
+#endif

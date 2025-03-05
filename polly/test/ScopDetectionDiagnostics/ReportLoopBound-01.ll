@@ -1,15 +1,15 @@
-; RUN: opt %loadPolly \
+; RUN: opt %loadNPMPolly \
 ; RUN:     -pass-remarks-missed="polly-detect" -polly-detect-track-failures \
-; RUN:     -polly-allow-nonaffine-loops=false -polly-print-detect -disable-output \
+; RUN:     -polly-allow-nonaffine-loops=false '-passes=print<polly-detect>' -disable-output \
 ; RUN:     < %s 2>&1| FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly \
+; RUN: opt %loadNPMPolly \
 ; RUN:     -pass-remarks-missed="polly-detect" -polly-detect-track-failures \
-; RUN:     -polly-allow-nonaffine-loops=true -polly-print-detect -disable-output \
+; RUN:     -polly-allow-nonaffine-loops=true '-passes=print<polly-detect>' -disable-output \
 ; RUN:     < %s 2>&1| FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" \
+; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" \
 ; RUN:     -polly-process-unprofitable=false \
 ; RUN:     -polly-detect-track-failures -polly-allow-nonaffine-loops=true \
-; RUN:     -polly-allow-nonaffine -polly-print-detect -disable-output < %s 2>&1 \
+; RUN:     -polly-allow-nonaffine '-passes=print<polly-detect>' -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALLOWNONAFFINEALL
 
 ; void f(int A[], int n) {
@@ -19,20 +19,20 @@
 
 ; If we reject non-affine loops the non-affine loop bound will be reported:
 ;
-; REJECTNONAFFINELOOPS: remark: ReportLoopBound-01.c:1:12: The following errors keep this region from being a Scop.
+; REJECTNONAFFINELOOPS: remark: ReportLoopBound-01.c:2:8: The following errors keep this region from being a Scop.
 ; REJECTNONAFFINELOOPS: remark: ReportLoopBound-01.c:2:8: Failed to derive an affine function from the loop bounds.
 ; REJECTNONAFFINELOOPS: remark: ReportLoopBound-01.c:3:5: Invalid Scop candidate ends here.
 
 ; If we allow non-affine loops the non-affine access will be reported:
 ;
-; ALLOWNONAFFINELOOPS: remark: ReportLoopBound-01.c:1:12: The following errors keep this region from being a Scop.
+; ALLOWNONAFFINELOOPS: remark: ReportLoopBound-01.c:2:8: The following errors keep this region from being a Scop.
 ; ALLOWNONAFFINELOOPS: remark: ReportLoopBound-01.c:3:5: The array subscript of "A" is not affine
 ; ALLOWNONAFFINELOOPS: remark: ReportLoopBound-01.c:3:5: Invalid Scop candidate ends here.
 
 ; If we allow non-affine loops and non-affine accesses the region will be reported as not profitable:
 ;
-; ALLOWNONAFFINEALL: remark: ReportLoopBound-01.c:1:12: The following errors keep this region from being a Scop.
-; ALLOWNONAFFINEALL: remark: ReportLoopBound-01.c:1:12: No profitable polyhedral optimization found
+; ALLOWNONAFFINEALL: remark: ReportLoopBound-01.c:2:8: The following errors keep this region from being a Scop.
+; ALLOWNONAFFINEALL: remark: ReportLoopBound-01.c:2:8: No profitable polyhedral optimization found
 ; ALLOWNONAFFINEALL: remark: ReportLoopBound-01.c:3:5: Invalid Scop candidate ends here.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

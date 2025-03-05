@@ -350,7 +350,7 @@ bool AggressiveDeadCodeElimination::isInstrumentsConstant(Instruction &I) {
   // TODO -- move this test into llvm::isInstructionTriviallyDead
   if (CallInst *CI = dyn_cast<CallInst>(&I))
     if (Function *Callee = CI->getCalledFunction())
-      if (Callee->getName().equals(getInstrProfValueProfFuncName()))
+      if (Callee->getName() == getInstrProfValueProfFuncName())
         if (isa<Constant>(CI->getArgOperand(0)))
           return true;
   return false;
@@ -544,19 +544,20 @@ ADCEChanged AggressiveDeadCodeElimination::removeDeadInstructions() {
   // value of the function, and may therefore be deleted safely.
   // NOTE: We reuse the Worklist vector here for memory efficiency.
   for (Instruction &I : llvm::reverse(instructions(F))) {
-    // With "RemoveDIs" debug-info stored in DPValue objects, debug-info
-    // attached to this instruction, and drop any for scopes that aren't alive,
-    // like the rest of this loop does. Extending support to assignment tracking
-    // is future work.
-    for (DPValue &DPV : make_early_inc_range(I.getDbgValueRange())) {
-      // Avoid removing a DPV that is linked to instructions because it holds
+    // With "RemoveDIs" debug-info stored in DbgVariableRecord objects,
+    // debug-info attached to this instruction, and drop any for scopes that
+    // aren't alive, like the rest of this loop does. Extending support to
+    // assignment tracking is future work.
+    for (DbgRecord &DR : make_early_inc_range(I.getDbgRecordRange())) {
+      // Avoid removing a DVR that is linked to instructions because it holds
       // information about an existing store.
-      if (DPV.isDbgAssign())
-        if (!at::getAssignmentInsts(&DPV).empty())
+      if (DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&DR);
+          DVR && DVR->isDbgAssign())
+        if (!at::getAssignmentInsts(DVR).empty())
           continue;
-      if (AliveScopes.count(DPV.getDebugLoc()->getScope()))
+      if (AliveScopes.count(DR.getDebugLoc()->getScope()))
         continue;
-      I.dropOneDbgValue(&DPV);
+      I.dropOneDbgRecord(&DR);
     }
 
     // Check if the instruction is alive.

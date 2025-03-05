@@ -9,6 +9,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -643,4 +644,199 @@ TEST(DWARFDie, getDeclFileSpecificationAcrossCUBoundary) {
   EXPECT_EQ(DeclFile, Ref);
 }
 
+TEST(DWARFDie, getNameFromTypeUnit) {
+  const char *yamldata = R"(
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_signature
+              Form:            DW_FORM_ref_sig8
+        - Code:            0x3
+          Tag:             DW_TAG_type_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x4
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AbbrevTableID:   0
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xdeadbeefbaadf00d
+        - AbbrCode:        0x0
+    - Version:         5
+      UnitType:        DW_UT_type
+      AbbrevTableID:   0
+      TypeSignature:   0xdeadbeefbaadf00d
+      TypeOffset:      25
+      Entries:
+        - AbbrCode:        0x3
+        - AbbrCode:        0x4
+          Values:
+            - CStr:        "STRUCT"
+        - AbbrCode:        0x0
+  )";
+
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata),
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
+  ASSERT_NE(nullptr, CU);
+  DWARFDie Die = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false).getFirstChild();
+  ASSERT_TRUE(Die.isValid());
+
+  ASSERT_STREQ(Die.getName(DINameKind::ShortName), "STRUCT");
+}
+
+void testAppendAndTerminateTemplateParameters(const DWARFDie &DIE,
+                                              const std::string &Expected) {
+  std::string TemplateName;
+  llvm::raw_string_ostream TemplateNameOS(TemplateName);
+  llvm::DWARFTypePrinter<DWARFDie> TemplateNamePrinter(TemplateNameOS);
+  TemplateNamePrinter.appendAndTerminateTemplateParameters(DIE);
+  EXPECT_THAT(TemplateName, Expected);
+}
+
+void testAppendQualifiedName(const DWARFDie &DIE, const std::string &Expected) {
+  std::string QualifiedName;
+  llvm::raw_string_ostream TemplateNameOS(QualifiedName);
+  llvm::DWARFTypePrinter<DWARFDie> TemplateNamePrinter(TemplateNameOS);
+  TemplateNamePrinter.appendQualifiedName(DIE);
+  EXPECT_THAT(QualifiedName, Expected);
+}
+
+TEST(DWARFDie, DWARFTypePrinterTest) {
+  // Make sure we can get template parameters and qualified names correctly with
+  // DWARFTypePrinter when using -gsimple-template-names.
+
+  // 0x0000000b: DW_TAG_compile_unit
+  // 0x0000000c:   DW_TAG_base_type
+  //                 DW_AT_name      ("int")
+  // 0x00000011:   DW_TAG_structure_type
+  //                 DW_AT_name      ("t1")
+  // 0x00000015:     DW_TAG_template_type_parameter
+  //                   DW_AT_type    (0x0000001f "t3<int>")
+  // 0x0000001a:     DW_TAG_structure_type
+  //                   DW_AT_name    ("t2")
+  // 0x0000001e:     NULL
+  // 0x0000001f:   DW_TAG_structure_type
+  //                 DW_AT_name      ("t3")
+  // 0x00000023:     DW_TAG_template_type_parameter
+  //                   DW_AT_type    (0x0000000c "int")
+  // 0x00000028:     NULL
+  // 0x00000029:   NULL
+  const char *yamldata = R"(
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x3
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x4
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x6
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+        - Code:            0x7
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x8
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            int
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t1
+        - AbbrCode:        0x4
+          Values:
+            - Value:            0x0000001f # update
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t2
+        - AbbrCode:        0x0
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            t3
+        - AbbrCode:        0x7
+          Values:
+            - Value:            0x0000000c # update
+        - AbbrCode:        0x8
+          Values:
+            - Value:            0x0000000c
+            - CStr:            my_int
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0)";
+  Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
+      DWARFYAML::emitDebugSections(StringRef(yamldata),
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/true);
+  ASSERT_THAT_EXPECTED(Sections, Succeeded());
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
+  testAppendAndTerminateTemplateParameters(Ctx->getDIEForOffset(0x11),
+                                           "<t3<int> >");
+  testAppendQualifiedName(Ctx->getDIEForOffset(0x1a), "t1<t3<int> >::t2");
+  testAppendQualifiedName(Ctx->getDIEForOffset(0x28), "t3<int>::my_int");
+}
 } // end anonymous namespace

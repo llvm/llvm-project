@@ -38,7 +38,7 @@ class ARCTTIImpl : public BasicTTIImplBase<ARCTTIImpl> {
 
 public:
   explicit ARCTTIImpl(const ARCTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
   // Provide value semantics. MSVC requires that we spell all of these out.

@@ -1,0 +1,8 @@
+header: sys/ioctl.h
+header_template: ioctl.h.def
+standards: POSIX
+macros: []
+types: []
+enums: []
+objects: []
+functions: []

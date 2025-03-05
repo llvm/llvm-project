@@ -9,616 +9,188 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
+#include "hlsl_detail.h"
+
 namespace hlsl {
 
-// Note: Functions in this file are sorted alphabetically, then grouped by base
-// element type, and the element types are sorted by size, then singed integer,
-// unsigned integer and floating point. Keeping this ordering consistent will
-// help keep this file manageable as it grows.
+//===----------------------------------------------------------------------===//
+// asfloat builtins
+//===----------------------------------------------------------------------===//
 
-#define _HLSL_BUILTIN_ALIAS(builtin)                                           \
-  __attribute__((clang_builtin_alias(builtin)))
-#define _HLSL_AVAILABILITY(environment, version)                               \
-  __attribute__((availability(environment, introduced = version)))
+/// \fn float asfloat(T Val)
+/// \brief Interprets the bit pattern of x as float point number.
+/// \param Val The input value.
+
+template <typename T, int N>
+constexpr vector<float, N> asfloat(vector<T, N> V) {
+  return __detail::bit_cast<float, T, N>(V);
+}
+
+template <typename T> constexpr float asfloat(T F) {
+  return __detail::bit_cast<float, T>(F);
+}
 
 //===----------------------------------------------------------------------===//
-// abs builtins
+// asint builtins
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int16_t abs(int16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int16_t2 abs(int16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int16_t3 abs(int16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int16_t4 abs(int16_t4);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 
-half abs(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-half2 abs(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-half3 abs(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-half4 abs(half4);
-#endif
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int abs(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int2 abs(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int3 abs(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int4 abs(int4);
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-float abs(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-float2 abs(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-float3 abs(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-float4 abs(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int64_t abs(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int64_t2 abs(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int64_t3 abs(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-int64_t4 abs(int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-double abs(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-double2 abs(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-double3 abs(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
-double4 abs(double4);
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
+}
 
 //===----------------------------------------------------------------------===//
-// ceil builtins
+// asuint builtins
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-half ceil(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-half2 ceil(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-half3 ceil(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-half4 ceil(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-float ceil(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-float2 ceil(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-float3 ceil(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-float4 ceil(float4);
+/// \fn uint asuint(T Val)
+/// \brief Interprets the bit pattern of x as an unsigned integer.
+/// \param Val The input value.
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double ceil(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double2 ceil(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double3 ceil(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double4 ceil(double4);
+template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
+  return __detail::bit_cast<uint, T, N>(V);
+}
+
+template <typename T> constexpr uint asuint(T F) {
+  return __detail::bit_cast<uint, T>(F);
+}
 
 //===----------------------------------------------------------------------===//
-// cos builtins
+// asuint splitdouble builtins
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-half cos(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-half2 cos(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-half3 cos(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-half4 cos(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-float cos(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-float2 cos(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-float3 cos(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-float4 cos(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double cos(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double2 cos(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double3 cos(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double4 cos(double4);
+/// \fn void asuint(double D, out uint lowbits, out int highbits)
+/// \brief Split and interprets the lowbits and highbits of double D into uints.
+/// \param D The input double.
+/// \param lowbits The output lowbits of D.
+/// \param highbits The output highbits of D.
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double, out uint, out uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double2, out uint2, out uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double3, out uint3, out uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
+void asuint(double4, out uint4, out uint4);
 
 //===----------------------------------------------------------------------===//
-// floor builtins
+// distance builtins
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half floor(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half2 floor(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half3 floor(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-half4 floor(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float floor(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float2 floor(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float3 floor(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-float4 floor(float4);
+/// \fn K distance(T X, T Y)
+/// \brief Returns a distance scalar between \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double floor(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double2 floor(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double3 floor(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double4 floor(double4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(half X, half Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+const inline float distance(float X, float Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(vector<half, N> X, vector<half, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+template <int N>
+const inline float distance(vector<float, N> X, vector<float, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
 
 //===----------------------------------------------------------------------===//
-// log builtins
+// length builtins
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-half log(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-half2 log(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-half3 log(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-half4 log(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-float log(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-float2 log(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-float3 log(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-float4 log(float4);
+/// \fn T length(T x)
+/// \brief Returns the length of the specified floating-point vector.
+/// \param x [in] The vector of floats, or a scalar float.
+///
+/// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double log(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double2 log(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double3 log(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double4 log(double4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half length(half X) { return __detail::length_impl(X); }
+const inline float length(float X) { return __detail::length_impl(X); }
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half length(vector<half, N> X) {
+  return __detail::length_vec_impl(X);
+}
+
+template <int N> const inline float length(vector<float, N> X) {
+  return __detail::length_vec_impl(X);
+}
 
 //===----------------------------------------------------------------------===//
-// log10 builtins
+// D3DCOLORtoUBYTE4 builtin
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-half log10(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-half2 log10(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-half3 log10(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-half4 log10(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-float log10(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-float2 log10(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-float3 log10(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-float4 log10(float4);
+/// \fn T D3DCOLORtoUBYTE4(T x)
+/// \brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+/// \param x [in] The floating-point vector4 to convert.
+///
+/// The return value is the UBYTE4 representation of the \a x parameter.
+///
+/// This function swizzles and scales components of the \a x parameter. Use this
+/// function to compensate for the lack of UBYTE4 support in some hardware.
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double log10(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double2 log10(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double3 log10(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double4 log10(double4);
+constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
+  return __detail::d3d_color_to_ubyte4_impl(V);
+}
 
 //===----------------------------------------------------------------------===//
-// log2 builtins
+// reflect builtin
 //===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half log2(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half2 log2(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half3 log2(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-half4 log2(half4);
-#endif
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float log2(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float2 log2(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float3 log2(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-float4 log2(float4);
+/// \fn T reflect(T I, T N)
+/// \brief Returns a reflection using an incident ray, \a I, and a surface
+/// normal, \a N.
+/// \param I The incident ray.
+/// \param N The surface normal.
+///
+/// The return value is a floating-point vector that represents the reflection
+/// of the incident ray, \a I, off a surface with the normal \a N.
+///
+/// This function calculates the reflection vector using the following formula:
+/// V = I - 2 * N * dot(I N) .
+///
+/// N must already be normalized in order to achieve the desired result.
+///
+/// The operands must all be a scalar or vector whose component type is
+/// floating-point.
+///
+/// Result type and the type of all operands must be the same type.
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double log2(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double2 log2(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double3 log2(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double4 log2(double4);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half reflect(half I, half N) {
+  return __detail::reflect_impl(I, N);
+}
 
-//===----------------------------------------------------------------------===//
-// max builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-half max(half, half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-half2 max(half2, half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-half3 max(half3, half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-half4 max(half4, half4);
+const inline float reflect(float I, float N) {
+  return __detail::reflect_impl(I, N);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int16_t max(int16_t, int16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int16_t2 max(int16_t2, int16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int16_t3 max(int16_t3, int16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int16_t4 max(int16_t4, int16_t4);
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, L> reflect(vector<half, L> I, vector<half, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint16_t max(uint16_t, uint16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint16_t2 max(uint16_t2, uint16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint16_t3 max(uint16_t3, uint16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint16_t4 max(uint16_t4, uint16_t4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int max(int, int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int2 max(int2, int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int3 max(int3, int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int4 max(int4, int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint max(uint, uint);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint2 max(uint2, uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint3 max(uint3, uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint4 max(uint4, uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int64_t max(int64_t, int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int64_t2 max(int64_t2, int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int64_t3 max(int64_t3, int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-int64_t4 max(int64_t4, int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint64_t max(uint64_t, uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint64_t2 max(uint64_t2, uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint64_t3 max(uint64_t3, uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-uint64_t4 max(uint64_t4, uint64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-float max(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-float2 max(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-float3 max(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-float4 max(float4, float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-double max(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-double2 max(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-double3 max(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
-double4 max(double4, double4);
-
-//===----------------------------------------------------------------------===//
-// min builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-half min(half, half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-half2 min(half2, half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-half3 min(half3, half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-half4 min(half4, half4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int16_t min(int16_t, int16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int16_t2 min(int16_t2, int16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int16_t3 min(int16_t3, int16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int16_t4 min(int16_t4, int16_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint16_t min(uint16_t, uint16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint16_t2 min(uint16_t2, uint16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint16_t3 min(uint16_t3, uint16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint16_t4 min(uint16_t4, uint16_t4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int min(int, int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int2 min(int2, int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int3 min(int3, int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int4 min(int4, int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint min(uint, uint);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint2 min(uint2, uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint3 min(uint3, uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint4 min(uint4, uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float min(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float2 min(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float3 min(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-float4 min(float4, float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int64_t min(int64_t, int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int64_t2 min(int64_t2, int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int64_t3 min(int64_t3, int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-int64_t4 min(int64_t4, int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint64_t min(uint64_t, uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint64_t2 min(uint64_t2, uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint64_t3 min(uint64_t3, uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-uint64_t4 min(uint64_t4, uint64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-double min(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-double2 min(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-double3 min(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
-double4 min(double4, double4);
-
-//===----------------------------------------------------------------------===//
-// pow builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half pow(half, half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half2 pow(half2, half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half3 pow(half3, half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-half4 pow(half4, half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float pow(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float2 pow(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float3 pow(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-float4 pow(float4, float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double pow(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double2 pow(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double3 pow(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double4 pow(double4, double4);
-
-//===----------------------------------------------------------------------===//
-// reversebits builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t reversebits(int16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t2 reversebits(int16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t3 reversebits(int16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t4 reversebits(int16_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint16_t reversebits(uint16_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint16_t2 reversebits(uint16_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint16_t3 reversebits(uint16_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint16_t4 reversebits(uint16_t4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int reversebits(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int2 reversebits(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int3 reversebits(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int4 reversebits(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint reversebits(uint);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint2 reversebits(uint2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint3 reversebits(uint3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint4 reversebits(uint4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t reversebits(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t2 reversebits(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t3 reversebits(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t4 reversebits(int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint64_t reversebits(uint64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint64_t2 reversebits(uint64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint64_t3 reversebits(uint64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-uint64_t4 reversebits(uint64_t4);
-
-//===----------------------------------------------------------------------===//
-// sin builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half sin(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half2 sin(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half3 sin(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-half4 sin(half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float sin(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float2 sin(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float3 sin(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-float4 sin(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double sin(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double2 sin(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double3 sin(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double4 sin(double4);
-
-//===----------------------------------------------------------------------===//
-// sqrt builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
-half sqrt(half In);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
-float sqrt(float In);
-
-_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
-double sqrt(double In);
-
-//===----------------------------------------------------------------------===//
-// trunc builtins
-//===----------------------------------------------------------------------===//
-#ifdef __HLSL_ENABLE_16_BIT
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half trunc(half);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half2 trunc(half2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half3 trunc(half3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-half4 trunc(half4);
-#endif
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float trunc(float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float2 trunc(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float3 trunc(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-float4 trunc(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double trunc(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double2 trunc(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double3 trunc(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double4 trunc(double4);
-
-//===----------------------------------------------------------------------===//
-// Wave* builtins
-//===----------------------------------------------------------------------===//
-_HLSL_AVAILABILITY(shadermodel, 6.0)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
-uint WaveActiveCountBits(bool bBit);
-
+template <int L>
+const inline vector<float, L> reflect(vector<float, L> I, vector<float, L> N) {
+  return __detail::reflect_vec_impl(I, N);
+}
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

@@ -104,7 +104,9 @@ class AdvDataFormatterTestCase(TestBase):
 
         self.runCmd("type summary clear")
 
-        self.runCmd('type summary add --summary-string "${var[0-1]}" -x "int\[[0-9]\]"')
+        self.runCmd(
+            r'type summary add --summary-string "${var[0-1]}" -x "int\[[0-9]\]"'
+        )
 
         self.expect("frame variable int_array", substrs=["1,2"])
 
@@ -119,7 +121,7 @@ class AdvDataFormatterTestCase(TestBase):
 
         self.runCmd("type summary clear")
 
-        self.runCmd('type summary add -c -x "i_am_cool\[[0-9]\]"')
+        self.runCmd(r'type summary add -c -x "i_am_cool\[[0-9]\]"')
         self.runCmd("type summary add -c i_am_cool")
 
         self.expect(
@@ -172,7 +174,7 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type summary clear")
 
         self.runCmd(
-            'type summary add --summary-string "${*var[].x[0-3]%hex} is a bitfield on a set of integers" -x "SimpleWithPointers\[[0-9]\]"'
+            r'type summary add --summary-string "${*var[].x[0-3]%hex} is a bitfield on a set of integers" -x "SimpleWithPointers\[[0-9]\]"'
         )
 
         self.expect(
@@ -299,11 +301,11 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("settings set target.max-string-summary-length 5")
         some_string = self.frame().FindVariable("some_string")
         some_string_summary = some_string.GetSummary()
-        if (re.match(r"^std::__\w+::", some_string.GetTypeName())):
-          self.assertEqual(some_string_summary, '"01234"...')
+        if re.match(r"^std::__\w+::", some_string.GetTypeName()):
+            self.assertEqual(some_string_summary, '"01234"...')
         else:
-          #libstdc++ string formatter suffers from the same problem as some_cstring below
-          pass
+            # libstdc++ string formatter suffers from the same problem as some_cstring below
+            pass
 
         some_carr = self.frame().FindVariable("some_carr")
         some_carr_summary = some_carr.GetSummary()

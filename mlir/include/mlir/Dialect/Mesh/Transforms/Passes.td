@@ -16,7 +16,7 @@ include "mlir/Pass/PassBase.td"
 // ShardingPropagation
 //===----------------------------------------------------------------------===//
 
-def ShardingPropagation : Pass<"sharding-propagation", "mlir::func::FuncOp"> {
+def ShardingPropagation : InterfacePass<"sharding-propagation", "mlir::FunctionOpInterface"> {
   let summary = "sharding propagation";
   let description = [{
     Propagates sharding information throughout the graph. After this pass, each
@@ -29,7 +29,7 @@ def ShardingPropagation : Pass<"sharding-propagation", "mlir::func::FuncOp"> {
   ];
 }
 
-def Spmdization : Pass<"mesh-spmdization", "mlir::func::FuncOp"> {
+def Spmdization : InterfacePass<"mesh-spmdization", "mlir::FunctionOpInterface"> {
   let summary = "Partition a function into SPMD form.";
   let description = [{
     This pass fits in right after a pass that annotates the function with

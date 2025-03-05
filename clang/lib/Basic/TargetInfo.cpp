@@ -70,6 +70,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasStrictFP = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
+  ShortWidth = ShortAlign = 16;
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
@@ -140,6 +141,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
+  LargestOverSizedBitfieldContainer = 64;
   MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();
@@ -153,10 +155,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
   HasBuiltinMSVaList = false;
-  IsRenderScriptTarget = false;
   HasAArch64SVETypes = false;
   HasRISCVVTypes = false;
   AllowAMDGPUUnsafeFPAtomics = false;
+  HasUnalignedAccess = false;
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
@@ -194,6 +196,22 @@ void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
 bool
 TargetInfo::checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const {
   Diags.Report(diag::err_opt_not_valid_on_target) << "cf-protection=branch";
+  return false;
+}
+
+CFBranchLabelSchemeKind TargetInfo::getDefaultCFBranchLabelScheme() const {
+  // if this hook is called, the target should override it to return a
+  // non-default scheme
+  llvm::report_fatal_error("not implemented");
+}
+
+bool TargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  if (Scheme != CFBranchLabelSchemeKind::Default)
+    Diags.Report(diag::err_opt_not_valid_on_target)
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(Scheme))
+               .str();
   return false;
 }
 
@@ -405,11 +423,23 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     LongDoubleAlign = 64;
   }
 
+  // HLSL explicitly defines the sizes and formats of some data types, and we
+  // need to conform to those regardless of what architecture you are targeting.
+  if (Opts.HLSL) {
+    BoolWidth = BoolAlign = 32;
+    LongWidth = LongAlign = 64;
+    if (!Opts.NativeHalfType) {
+      HalfFormat = &llvm::APFloat::IEEEsingle();
+      HalfWidth = HalfAlign = 32;
+    }
+  }
+
   if (Opts.OpenCL) {
     // OpenCL C requires specific widths for types, irrespective of
     // what these normally are for the target.
     // We also define long long and long double here, although the
     // OpenCL standard only mentions these as "reserved".
+    ShortWidth = ShortAlign = 16;
     IntWidth = IntAlign = 32;
     LongWidth = LongAlign = 64;
     LongLongWidth = LongLongAlign = 128;
@@ -923,6 +953,10 @@ bool TargetInfo::validateInputConstraint(
   }
 
   return true;
+}
+
+bool TargetInfo::validatePointerAuthKey(const llvm::APSInt &value) const {
+  return false;
 }
 
 void TargetInfo::CheckFixedPointBits() const {

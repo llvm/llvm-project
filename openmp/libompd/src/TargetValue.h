@@ -231,22 +231,27 @@ public:
 
 template <typename T> ompd_rc_t TBaseValue::getValue(T &buf) {
   assert(sizeof(T) >= baseTypeSize);
-  ompd_rc_t ret = getValue(&buf, 1);
-  if (sizeof(T) > baseTypeSize) {
-    switch (baseTypeSize) {
-    case 1:
-      buf = (T) * ((int8_t *)&buf);
-      break;
-    case 2:
-      buf = (T) * ((int16_t *)&buf);
-      break;
-    case 4:
-      buf = (T) * ((int32_t *)&buf);
-      break;
-    case 8:
-      buf = (T) * ((int64_t *)&buf);
-      break;
-    }
+  if (sizeof(T) == baseTypeSize)
+    return getValue(&buf, 1);
+
+  char tmp[sizeof(T)];
+  ompd_rc_t ret = getValue(tmp, 1);
+  switch (baseTypeSize) {
+  case 1:
+    buf = (T) * ((int8_t *)tmp);
+    break;
+  case 2:
+    buf = (T) * ((int16_t *)tmp);
+    break;
+  case 4:
+    buf = (T) * ((int32_t *)tmp);
+    break;
+  case 8:
+    buf = (T) * ((int64_t *)tmp);
+    break;
+  default:
+    assert(0 && "Invalid baseTypeSize");
+    break;
   }
   return ret;
 }

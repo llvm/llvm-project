@@ -25,7 +25,8 @@ define void @fn2() #0 align 4 {
 
 .lr.ph.split.split:                               ; preds = %.lr.ph.split.split, %.lr.ph.split
   %1 = phi i32 [ %2, %.lr.ph.split.split ], [ undef, %.lr.ph.split ]
-  %constexpr = select i1 icmp eq (ptr @c, ptr @b), i1 true, i1 false
+  %cmp = icmp eq ptr @c, @b
+  %constexpr = select i1 %cmp, i1 true, i1 false
   %constexpr1 = zext i1 %constexpr to i32
   %constexpr2 = and i32 %constexpr1, %constexpr1
   %constexpr3 = and i32 %constexpr2, %constexpr1

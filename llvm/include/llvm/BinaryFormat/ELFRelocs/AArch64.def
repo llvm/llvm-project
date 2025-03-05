@@ -1,18 +1,19 @@
-
 #ifndef ELF_RELOC
 #error "ELF_RELOC must be defined"
 #endif
 
-// Based on ABI release 1.1-beta, dated 6 November 2013. NB: The cover page of
-// this document, IHI0056C_beta_aaelf64.pdf, on infocenter.arm.com, still
-// labels this as release 1.0.
+// Based on released ABI: https://github.com/ARM-software/abi-aa, aaelf64.
+// ELF64
+// Null relocation: also 0x100 for ELF64
 ELF_RELOC(R_AARCH64_NONE,                                0)
+// Data relocations
 ELF_RELOC(R_AARCH64_ABS64,                           0x101)
 ELF_RELOC(R_AARCH64_ABS32,                           0x102)
 ELF_RELOC(R_AARCH64_ABS16,                           0x103)
 ELF_RELOC(R_AARCH64_PREL64,                          0x104)
 ELF_RELOC(R_AARCH64_PREL32,                          0x105)
 ELF_RELOC(R_AARCH64_PREL16,                          0x106)
+// Static AArch64 relocations
 ELF_RELOC(R_AARCH64_MOVW_UABS_G0,                    0x107)
 ELF_RELOC(R_AARCH64_MOVW_UABS_G0_NC,                 0x108)
 ELF_RELOC(R_AARCH64_MOVW_UABS_G1,                    0x109)
@@ -60,11 +61,13 @@ ELF_RELOC(R_AARCH64_LD64_GOT_LO12_NC,                0x138)
 ELF_RELOC(R_AARCH64_LD64_GOTPAGE_LO15,               0x139)
 ELF_RELOC(R_AARCH64_PLT32,                           0x13a)
 ELF_RELOC(R_AARCH64_GOTPCREL32,                      0x13b)
+// General dynamic TLS relocations
 ELF_RELOC(R_AARCH64_TLSGD_ADR_PREL21,                0x200)
 ELF_RELOC(R_AARCH64_TLSGD_ADR_PAGE21,                0x201)
 ELF_RELOC(R_AARCH64_TLSGD_ADD_LO12_NC,               0x202)
 ELF_RELOC(R_AARCH64_TLSGD_MOVW_G1,                   0x203)
 ELF_RELOC(R_AARCH64_TLSGD_MOVW_G0_NC,                0x204)
+// Local dynamic TLS relocations
 ELF_RELOC(R_AARCH64_TLSLD_ADR_PREL21,                0x205)
 ELF_RELOC(R_AARCH64_TLSLD_ADR_PAGE21,                0x206)
 ELF_RELOC(R_AARCH64_TLSLD_ADD_LO12_NC,               0x207)
@@ -92,6 +95,7 @@ ELF_RELOC(R_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC,       0x21c)
 ELF_RELOC(R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21,       0x21d)
 ELF_RELOC(R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC,     0x21e)
 ELF_RELOC(R_AARCH64_TLSIE_LD_GOTTPREL_PREL19,        0x21f)
+// Local exec TLS relocations
 ELF_RELOC(R_AARCH64_TLSLE_MOVW_TPREL_G2,             0x220)
 ELF_RELOC(R_AARCH64_TLSLE_MOVW_TPREL_G1,             0x221)
 ELF_RELOC(R_AARCH64_TLSLE_MOVW_TPREL_G1_NC,          0x222)
@@ -108,6 +112,7 @@ ELF_RELOC(R_AARCH64_TLSLE_LDST32_TPREL_LO12,         0x22c)
 ELF_RELOC(R_AARCH64_TLSLE_LDST32_TPREL_LO12_NC,      0x22d)
 ELF_RELOC(R_AARCH64_TLSLE_LDST64_TPREL_LO12,         0x22e)
 ELF_RELOC(R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC,      0x22f)
+// TLS descriptor relocations
 ELF_RELOC(R_AARCH64_TLSDESC_LD_PREL19,               0x230)
 ELF_RELOC(R_AARCH64_TLSDESC_ADR_PREL21,              0x231)
 ELF_RELOC(R_AARCH64_TLSDESC_ADR_PAGE21,              0x232)
@@ -122,8 +127,7 @@ ELF_RELOC(R_AARCH64_TLSLE_LDST128_TPREL_LO12,        0x23a)
 ELF_RELOC(R_AARCH64_TLSLE_LDST128_TPREL_LO12_NC,     0x23b)
 ELF_RELOC(R_AARCH64_TLSLD_LDST128_DTPREL_LO12,       0x23c)
 ELF_RELOC(R_AARCH64_TLSLD_LDST128_DTPREL_LO12_NC,    0x23d)
-ELF_RELOC(R_AARCH64_AUTH_ABS64,                      0x244)
-// Dynamic relocations start
+// Dynamic relocations
 ELF_RELOC(R_AARCH64_COPY,                            0x400)
 ELF_RELOC(R_AARCH64_GLOB_DAT,                        0x401)
 ELF_RELOC(R_AARCH64_JUMP_SLOT,                       0x402)
@@ -136,8 +140,32 @@ ELF_RELOC(R_AARCH64_TLS_DTPREL64,                    0x405)
 ELF_RELOC(R_AARCH64_TLS_TPREL64,                     0x406)
 ELF_RELOC(R_AARCH64_TLSDESC,                         0x407)
 ELF_RELOC(R_AARCH64_IRELATIVE,                       0x408)
+// PAuthABI static and dynamic relocations: defined in pauthabielf64,
+// https://github.com/ARM-software/abi-aa
+ELF_RELOC(R_AARCH64_AUTH_ABS64,                      0x244)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G0,             0x245)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G0_NC,          0x246)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G1,             0x247)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G1_NC,          0x248)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G2,             0x249)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G2_NC,          0x24a)
+ELF_RELOC(R_AARCH64_AUTH_MOVW_GOTOFF_G3,             0x24b)
+ELF_RELOC(R_AARCH64_AUTH_GOT_LD_PREL19,              0x24c)
+ELF_RELOC(R_AARCH64_AUTH_LD64_GOTOFF_LO15,           0x24d)
+ELF_RELOC(R_AARCH64_AUTH_ADR_GOT_PAGE,               0x24e)
+ELF_RELOC(R_AARCH64_AUTH_LD64_GOT_LO12_NC,           0x24f)
+ELF_RELOC(R_AARCH64_AUTH_LD64_GOTPAGE_LO15,          0x250)
+ELF_RELOC(R_AARCH64_AUTH_GOT_ADD_LO12_NC,            0x251)
+ELF_RELOC(R_AARCH64_AUTH_GOT_ADR_PREL_LO21,          0x252)
+ELF_RELOC(R_AARCH64_AUTH_TLSDESC_ADR_PAGE21,         0x253)
+ELF_RELOC(R_AARCH64_AUTH_TLSDESC_LD64_LO12,          0x254)
+ELF_RELOC(R_AARCH64_AUTH_TLSDESC_ADD_LO12,           0x255)
 ELF_RELOC(R_AARCH64_AUTH_RELATIVE,                   0x411)
+ELF_RELOC(R_AARCH64_AUTH_GLOB_DAT,                   0x412)
+ELF_RELOC(R_AARCH64_AUTH_TLSDESC,                    0x413)
+ELF_RELOC(R_AARCH64_AUTH_IRELATIVE,                  0x414)
 
+// ELF32
 // ELF_RELOC(R_AARCH64_P32_NONE,                         0)
 ELF_RELOC(R_AARCH64_P32_ABS32,                       0x001)
 ELF_RELOC(R_AARCH64_P32_ABS16,                       0x002)
@@ -216,7 +244,7 @@ ELF_RELOC(R_AARCH64_P32_TLSDESC_ADR_PAGE21,          0x07c)
 ELF_RELOC(R_AARCH64_P32_TLSDESC_LD32_LO12,           0x07d)
 ELF_RELOC(R_AARCH64_P32_TLSDESC_ADD_LO12,            0x07e)
 ELF_RELOC(R_AARCH64_P32_TLSDESC_CALL,                0x07f)
-// Dynamic relocations start
+// Dynamic relocations
 ELF_RELOC(R_AARCH64_P32_COPY,                        0x0b4)
 ELF_RELOC(R_AARCH64_P32_GLOB_DAT,                    0x0b5)
 ELF_RELOC(R_AARCH64_P32_JUMP_SLOT,                   0x0b6)

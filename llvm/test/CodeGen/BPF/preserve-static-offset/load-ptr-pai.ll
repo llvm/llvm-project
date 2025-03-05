@@ -41,7 +41,7 @@ entry:
 
 ; CHECK:      define dso_local void @foo(ptr noundef %[[p:.*]]) {{.*}} {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   call void @llvm.dbg.value
+; CHECK-NEXT:   #dbg_value
 ; CHECK-NEXT:   %[[v5:.*]] = call ptr (ptr, i1, i8, i8, i8, i1, ...)
 ; CHECK-SAME:     @llvm.bpf.getelementptr.and.load.p0
 ; CHECK-SAME:       (ptr readonly elementtype(%struct.buz) %[[p]],

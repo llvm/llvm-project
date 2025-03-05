@@ -1074,7 +1074,7 @@ void test_switch_with_compound_with_default() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
-int test_switch_with_compound_without_default() {
+void test_switch_with_compound_without_default() {
   char c = '1';
   switch (int i = getX()) {
     case 0:
@@ -1469,7 +1469,7 @@ void test_cleanup_functions2(int m) {
 // CHECK:       [B1]
 // CHECK-NEXT:    1: CFGScopeBegin(f)
 // CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], F)
-// CHECK-NEXT:    3: __attribute__((cleanup(cleanup_F))) F f;
+// CHECK-NEXT:    3: F f __attribute__((cleanup(cleanup_F)));
 // CHECK-NEXT:    4: CleanupFunction (cleanup_F)
 // CHECK-NEXT:    5: [B1.3].~F() (Implicit destructor)
 // CHECK-NEXT:    6: CFGScopeEnd(f)

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../lib/ExecutionEngine/IntelJITEvents/IntelJITEventsWrapper.h"
+#include "../../lib/ExecutionEngine/IntelJITProfiling/IntelJITEventsWrapper.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"

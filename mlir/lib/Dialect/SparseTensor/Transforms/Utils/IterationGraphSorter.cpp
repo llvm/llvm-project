@@ -157,8 +157,7 @@ IterationGraphSorter::IterationGraphSorter(
   // The number of results of the map should match the rank of the tensor.
   assert(llvm::all_of(llvm::zip(loop2InsLvl, ins), [](auto mvPair) {
     auto [m, v] = mvPair;
-    return m.getNumResults() ==
-           v.getType().template cast<ShapedType>().getRank();
+    return m.getNumResults() == cast<ShapedType>(v.getType()).getRank();
   }));
 
   itGraph.resize(getNumLoops(), std::vector<bool>(getNumLoops(), false));

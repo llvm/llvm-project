@@ -25,6 +25,7 @@ define i32 @icmp_glob(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @icmp_glob(i32 %x, i32 %y)
 ; CHECK-NEXT:   ret i32 %y
 ;
-  %sel = select i1 icmp eq (ptr @icmp_glob, ptr @b), i32 %x, i32 %y
+  %cmp = icmp eq ptr @icmp_glob, @b
+  %sel = select i1 %cmp, i32 %x, i32 %y
   ret i32 %sel
 }

@@ -14,11 +14,13 @@
 #define LLVM_CLANG_AST_ATTRITERATOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <type_traits>
 
 namespace clang {
 
@@ -113,13 +115,13 @@ inline bool hasSpecificAttr(const Container& container) {
           specific_attr_end<SpecificAttr>(container);
 }
 template <typename SpecificAttr, typename Container>
-inline SpecificAttr *getSpecificAttr(const Container& container) {
-  specific_attr_iterator<SpecificAttr, Container> i =
-      specific_attr_begin<SpecificAttr>(container);
-  if (i != specific_attr_end<SpecificAttr>(container))
-    return *i;
-  else
-    return nullptr;
+inline auto *getSpecificAttr(const Container &container) {
+  using ValueTy = llvm::detail::ValueOfRange<Container>;
+  using ValuePointeeTy = std::remove_pointer_t<ValueTy>;
+  using IterTy = std::conditional_t<std::is_const_v<ValuePointeeTy>,
+                                    const SpecificAttr, SpecificAttr>;
+  auto It = specific_attr_begin<IterTy>(container);
+  return It != specific_attr_end<IterTy>(container) ? *It : nullptr;
 }
 
 } // namespace clang

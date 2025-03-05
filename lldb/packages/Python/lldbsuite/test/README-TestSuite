@@ -91,20 +91,6 @@ to the Python test suite under the current 'test' directory.
   Contains platform specific plugin to build binaries with dsym/dwarf debugging
   info.  Other platform specific functionalities may be added in the future.
 
-- unittest2 directory
-
-  Many new features were added to unittest in Python 2.7, including test
-  discovery. unittest2 allows you to use these features with earlier versions of
-  Python.
-
-  It currently has unittest2 0.5.1 from http://pypi.python.org/pypi/unittest2.
-  Version 0.5.1 of unittest2 has feature parity with unittest in Python 2.7
-  final. If you want to ensure that your tests run identically under unittest2
-  and unittest in Python 2.7 you should use unittest2 0.5.1. 
-
-  Later versions of unittest2 include changes in unittest made in Python 3.2 and
-  onwards after the release of Python 2.7.
-
 - Profiling dotest.py runs
 
   I used the following command line thingy to do the profiling on a SnowLeopard

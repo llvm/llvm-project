@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -polly-allow-modref-calls \
-; RUN:     -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -polly-allow-modref-calls \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -passes=polly-codegen -disable-output \
 ; RUN:     -polly-allow-modref-calls < %s
 ;
 ; Check that the call to func will "read" not only the A array but also the

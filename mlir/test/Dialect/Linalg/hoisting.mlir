@@ -308,6 +308,134 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL:  func.func @no_hoisting_unknown_bound_loop
+func.func @no_hoisting_unknown_bound_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb and %ub are unbounded, so do not hoist.
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb to %ub step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @no_hoisting_possibly_zero_trip_loop
+func.func @no_hoisting_possibly_zero_trip_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [4, %ub].
+  // Since %lb_0 could be greater than %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 4)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub
+func.func @no_hoisting_possibly_zero_trip_loop_eq_lb_and_ub(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 8], and %ub_0 is in range [8, %ub].
+  // Since %lb_0 could be equal to %ub_0, do not hoist.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 8)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    vector.transfer_read
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @hoisting_non_zero_trip_loop
+func.func @hoisting_non_zero_trip_loop(%memref0: memref<20xi32>, %lb: index, %ub: index) {
+  %c0_i32 = arith.constant 0 : i32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // %lb_0 is in range [%lb, 4], and %ub_0 is in range [8, %ub].
+  // Since %lb_0 is guaranteed to be less than %ub_0, hoisting is possible.
+  %lb_0 = affine.min affine_map<(d0) -> (d0, 4)>(%lb)
+  %ub_0 = affine.max affine_map<(d0) -> (d0, 8)>(%ub)
+
+  // CHECK:       vector.transfer_read
+  // CHECK:       scf.for {{.*}} {
+  // CHECK-NEXT:    "test.some_use"
+  scf.for %arg2 = %lb_0 to %ub_0 step %c1 {
+    %read = vector.transfer_read %memref0[%c0], %c0_i32 {in_bounds = [true]} : memref<20xi32>, vector<4xi32>
+    "test.some_use"(%read) : (vector<4xi32>) ->()
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0 { verify_non_zero_trip }
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Regression test - `vector.transfer_read` below should not be hoisted.
 // Indeed, %collapse_shape (written to by `vector.transfer_write`) and %alloca
 // (read by `vector.transfer_read`) alias.
@@ -366,7 +494,7 @@ func.func @no_hoisting_collapse_shape_2(%vec: vector<1x12x1xi32>) {
     %collapse_shape = memref.collapse_shape %alloca [[0, 1, 2]] : memref<1x12x1xi32> into memref<12xi32>
     vector.transfer_write %vec, %alloca[%c0, %c0, %c0] {in_bounds = [true, true, true]} : vector<1x12x1xi32>, memref<1x12x1xi32>
     %read = vector.transfer_read %collapse_shape[%c0], %c0_i32 {in_bounds = [true]} : memref<12xi32>, vector<12xi32>
-    "prevent.dce"(%read) : (vector<12xi32>) ->()
+    "test.some_use"(%read) : (vector<12xi32>) ->()
   }
   return
 }
@@ -561,6 +689,115 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["func.func"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Test hoisting of vector.extract/vector.broadcast pairs
+
+// CHECK-LABEL:  func.func @hoist_vector_broadcasts
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>) -> vector<3x4xf32> {
+//       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][0] : vector<4xf32> from vector<3x4xf32>
+//       CHECK-NEXT:   %[[LOOP:.+]] = scf.for {{.*}} {
+//       CHECK-NEXT:     %[[USE:.+]] = "some_use"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
+//       CHECK-NEXT:     scf.yield %[[USE]] : vector<4xf32>
+//       CHECK-NEXT:   }
+//       CHECK-NEXT:   %[[BCAST:.+]] = vector.broadcast %[[LOOP]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK-NEXT:   return %[[BCAST]] : vector<3x4xf32>
+
+func.func @hoist_vector_broadcasts(%lb : index, %ub : index, %step : index, %vec : vector<3x4xf32>) -> vector<3x4xf32> {
+  %bcast_vec = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec) -> vector<3x4xf32> {
+    %extract = vector.extract %iarg[0] : vector<4xf32> from vector<3x4xf32>
+    %use = "some_use"(%extract) : (vector<4xf32>) -> vector<4xf32>
+    %broadcast = vector.broadcast %use : vector<4xf32> to vector<3x4xf32>
+    scf.yield %broadcast : vector<3x4xf32>
+  }
+  return %bcast_vec : vector<3x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_broadcasts %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Test hoisting of vector.extract/vector.broadcast pairs with dynamic position
+
+// CHECK-LABEL:  func.func @hoist_vector_broadcasts
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC:.+]]: vector<3x4xf32>, %[[POS:.+]]: index) -> vector<3x4xf32> {
+//       CHECK:        %[[EXTRACT:.+]] = vector.extract %[[VEC]][%[[POS]]] : vector<4xf32> from vector<3x4xf32>
+//       CHECK-NEXT:   %[[LOOP:.+]] = scf.for {{.*}} {
+//       CHECK-NEXT:     %[[USE:.+]] = "some_use"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
+//       CHECK-NEXT:     scf.yield %[[USE]] : vector<4xf32>
+//       CHECK-NEXT:   }
+//       CHECK-NEXT:   %[[BCAST:.+]] = vector.broadcast %[[LOOP]] : vector<4xf32> to vector<3x4xf32>
+//       CHECK-NEXT:   return %[[BCAST]] : vector<3x4xf32>
+
+func.func @hoist_vector_broadcasts_dynamic(%lb : index, %ub : index, %step : index, %vec : vector<3x4xf32>, %pos: index) -> vector<3x4xf32> {
+  %bcast_vec = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec) -> vector<3x4xf32> {
+    %extract = vector.extract %iarg[%pos] : vector<4xf32> from vector<3x4xf32>
+    %use = "some_use"(%extract) : (vector<4xf32>) -> vector<4xf32>
+    %broadcast = vector.broadcast %use : vector<4xf32> to vector<3x4xf32>
+    scf.yield %broadcast : vector<3x4xf32>
+  }
+  return %bcast_vec : vector<3x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_broadcasts %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Test hoisting of vector.extract/vector.broadcast pairs with multiple iter_args
+
+// CHECK-LABEL:  func.func @hoist_vector_broadcasts_multiple
+//       CHECK-SAME: (%{{.+}}: index, %{{.+}}: index, %{{.+}}: index, %[[VEC1:.+]]: vector<3x4xf32>,
+//       CHECK-SAME:  %[[VEC2:.+]]: vector<3x5xf32>) -> (vector<3x4xf32>, vector<3x5xf32>) {
+//       CHECK-DAG:     %[[EXTRACT1:.+]] = vector.extract %[[VEC1]][0] : vector<4xf32> from vector<3x4xf32>
+//       CHECK-DAG:     %[[EXTRACT2:.+]] = vector.extract %[[VEC2]][1] : vector<5xf32> from vector<3x5xf32>
+//       CHECK-NEXT:    %[[LOOP:.+]]:2 = scf.for {{.*}} {
+//       CHECK-DAG:       %[[USE1:.+]] = "some_use1"({{.*}}) : (vector<4xf32>) -> vector<4xf32>
+//       CHECK-DAG:       %[[USE2:.+]] = "some_use2"({{.*}}) : (vector<5xf32>) -> vector<5xf32>
+//       CHECK-NEXT:      scf.yield %[[USE1]], %[[USE2]]  : vector<4xf32>, vector<5xf32>
+//       CHECK-NEXT:    }
+//       CHECK-DAG:     %[[BCAST1:.+]] = vector.broadcast %[[LOOP]]#0 : vector<4xf32> to vector<3x4xf32>
+//       CHECK-DAG:     %[[BCAST2:.+]] = vector.broadcast %[[LOOP]]#1 : vector<5xf32> to vector<3x5xf32>
+//       CHECK-NEXT:    return %[[BCAST1]], %[[BCAST2]] : vector<3x4xf32>, vector<3x5xf32>
+
+func.func @hoist_vector_broadcasts_multiple(%lb : index, %ub : index, %step : index, %vec1 : vector<3x4xf32>, %vec2 : vector<3x5xf32>) ->  (vector<3x4xf32>, vector<3x5xf32>) {
+  %bcast_vec:2 = scf.for %arg0 = %lb to %ub step %step iter_args(%iarg = %vec1, %iarg2 = %vec2) -> (vector<3x4xf32>, vector<3x5xf32>) {
+    %extract1 = vector.extract %iarg[0] : vector<4xf32> from vector<3x4xf32>
+    %extract2 = vector.extract %iarg2[1] : vector<5xf32> from vector<3x5xf32>
+    %use1 = "some_use1"(%extract1) : (vector<4xf32>) -> vector<4xf32>
+    %use2 = "some_use2"(%extract2) : (vector<5xf32>) -> vector<5xf32>
+    %broadcast1 = vector.broadcast %use1 : vector<4xf32> to vector<3x4xf32>
+    %broadcast2 = vector.broadcast %use2 : vector<5xf32> to vector<3x5xf32>
+    scf.yield %broadcast1, %broadcast2 : vector<3x4xf32>,vector<3x5xf32>
+  }
+  return %bcast_vec#0, %bcast_vec#1 :  vector<3x4xf32>, vector<3x5xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_broadcasts %0
       : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

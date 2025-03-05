@@ -596,6 +596,7 @@ ELFDumper<ELFT>::dumpSections() {
       return [this](const Elf_Shdr *S) { return dumpSymtabShndxSection(S); };
     case ELF::SHT_REL:
     case ELF::SHT_RELA:
+    case ELF::SHT_CREL:
       return [this](const Elf_Shdr *S) { return dumpRelocSection(S); };
     case ELF::SHT_RELR:
       return [this](const Elf_Shdr *S) { return dumpRelrSection(S); };
@@ -889,6 +890,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
 
   std::vector<ELFYAML::BBAddrMapEntry> Entries;
+  bool HasAnyPGOAnalysisMapEntry = false;
+  std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
   uint8_t Feature = 0;
@@ -905,6 +908,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     }
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;
+    uint32_t TotalNumBlocks = 0;
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(Feature);
     if (!FeatureOrErr)
       return FeatureOrErr.takeError();
@@ -934,10 +938,42 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         uint64_t Metadata = Data.getULEB128(Cur);
         BBEntries.push_back({ID, Offset, Size, Metadata});
       }
+      TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});
     }
     Entries.push_back(
         {Version, Feature, /*NumBBRanges=*/{}, std::move(BBRanges)});
+
+    ELFYAML::PGOAnalysisMapEntry &PGOAnalysis = PGOAnalyses.emplace_back();
+    if (FeatureOrErr->hasPGOAnalysis()) {
+      HasAnyPGOAnalysisMapEntry = true;
+
+      if (FeatureOrErr->FuncEntryCount)
+        PGOAnalysis.FuncEntryCount = Data.getULEB128(Cur);
+
+      if (FeatureOrErr->hasPGOAnalysisBBData()) {
+        auto &PGOBBEntries = PGOAnalysis.PGOBBEntries.emplace();
+        for (uint64_t BlockIndex = 0; Cur && BlockIndex < TotalNumBlocks;
+             ++BlockIndex) {
+          auto &PGOBBEntry = PGOBBEntries.emplace_back();
+          if (FeatureOrErr->BBFreq) {
+            PGOBBEntry.BBFreq = Data.getULEB128(Cur);
+            if (!Cur)
+              break;
+          }
+
+          if (FeatureOrErr->BrProb) {
+            auto &SuccEntries = PGOBBEntry.Successors.emplace();
+            uint64_t SuccCount = Data.getULEB128(Cur);
+            for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
+              uint32_t ID = Data.getULEB128(Cur);
+              uint32_t BrProb = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb});
+            }
+          }
+        }
+      }
+    }
   }
 
   if (!Cur) {
@@ -946,6 +982,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     S->Content = yaml::BinaryRef(Content);
   } else {
     S->Entries = std::move(Entries);
+    if (HasAnyPGOAnalysisMapEntry)
+      S->PGOAnalyses = std::move(PGOAnalyses);
   }
 
   return S.release();
@@ -1128,27 +1166,41 @@ ELFDumper<ELFT>::dumpRelocSection(const Elf_Shdr *Shdr) {
   if (Shdr->sh_size != 0)
     S->Relocations.emplace();
 
-  if (Shdr->sh_type == ELF::SHT_REL) {
-    auto Rels = Obj.rels(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rel &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      S->Relocations->push_back(R);
-    }
+  std::vector<Elf_Rel> Rels;
+  std::vector<Elf_Rela> Relas;
+  if (Shdr->sh_type == ELF::SHT_CREL) {
+    Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(*Shdr);
+    if (!ContentOrErr)
+      return ContentOrErr.takeError();
+    auto Crel = Obj.decodeCrel(*ContentOrErr);
+    if (!Crel)
+      return Crel.takeError();
+    Rels = std::move(Crel->first);
+    Relas = std::move(Crel->second);
+  } else if (Shdr->sh_type == ELF::SHT_REL) {
+    auto R = Obj.rels(*Shdr);
+    if (!R)
+      return R.takeError();
+    Rels = std::move(*R);
   } else {
-    auto Rels = Obj.relas(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rela &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      R.Addend = Rel.r_addend;
-      S->Relocations->push_back(R);
-    }
+    auto R = Obj.relas(*Shdr);
+    if (!R)
+      return R.takeError();
+    Relas = std::move(*R);
+  }
+
+  for (const Elf_Rel &Rel : Rels) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    S->Relocations->push_back(R);
+  }
+  for (const Elf_Rela &Rel : Relas) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    R.Addend = Rel.r_addend;
+    S->Relocations->push_back(R);
   }
 
   return S.release();
@@ -1399,7 +1451,15 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
     if (Verdef->vd_hash != 0)
       Entry.Hash = Verdef->vd_hash;
 
+    if (Verdef->vd_aux != sizeof(Elf_Verdef))
+      Entry.VDAux = Verdef->vd_aux;
+
     const uint8_t *BufAux = Buf + Verdef->vd_aux;
+    if (BufAux > Data.end())
+      return createStringError(
+          errc::invalid_argument,
+          "corrupted section: vd_aux value " + Twine(Verdef->vd_aux) +
+              " in section verdef points past end of the section");
     while (BufAux) {
       const Elf_Verdaux *Verdaux =
           reinterpret_cast<const Elf_Verdaux *>(BufAux);

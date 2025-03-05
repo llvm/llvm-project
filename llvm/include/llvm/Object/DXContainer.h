@@ -116,6 +116,28 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
+
+class RootSignature {
+private:
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t RootParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplersOffset;
+  uint32_t Flags;
+
+public:
+  RootSignature() {}
+
+  Error parse(StringRef Data);
+  uint32_t getVersion() const { return Version; }
+  uint32_t getNumParameters() const { return NumParameters; }
+  uint32_t getRootParametersOffset() const { return RootParametersOffset; }
+  uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
+  uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  uint32_t getFlags() const { return Flags; }
+};
+
 class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
@@ -125,7 +147,8 @@ class PSVRuntimeInfo {
   uint32_t Size;
   using InfoStruct =
       std::variant<std::monostate, dxbc::PSV::v0::RuntimeInfo,
-                   dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
+                   dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo,
+                   dxbc::PSV::v3::RuntimeInfo>;
   InfoStruct BasicInfo;
   ResourceArray Resources;
   StringRef StringTable;
@@ -151,9 +174,11 @@ public:
   ResourceArray getResources() const { return Resources; }
 
   uint32_t getVersion() const {
-    return Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)
-               ? 2
-               : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo) ? 1 : 0);
+    return Size >= sizeof(dxbc::PSV::v3::RuntimeInfo)
+               ? 3
+               : (Size >= sizeof(dxbc::PSV::v2::RuntimeInfo)     ? 2
+                  : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo)) ? 1
+                                                                 : 0);
   }
 
   uint32_t getResourceStride() const { return Resources.Stride; }
@@ -161,6 +186,11 @@ public:
   const InfoStruct &getInfo() const { return BasicInfo; }
 
   template <typename T> const T *getInfoAs() const {
+    if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+      return static_cast<const T *>(P);
+    if (std::is_same<T, dxbc::PSV::v3::RuntimeInfo>::value)
+      return nullptr;
+
     if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
       return static_cast<const T *>(P);
     if (std::is_same<T, dxbc::PSV::v2::RuntimeInfo>::value)
@@ -276,9 +306,10 @@ private:
   dxbc::Header Header;
   SmallVector<uint32_t, 4> PartOffsets;
   std::optional<DXILData> DXIL;
-  std::optional<uint64_t> ShaderFlags;
+  std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
+  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -286,8 +317,9 @@ private:
   Error parseHeader();
   Error parsePartOffsets();
   Error parseDXILHeader(StringRef Part);
-  Error parseShaderFlags(StringRef Part);
+  Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
+  Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
@@ -368,9 +400,15 @@ public:
 
   const std::optional<DXILData> &getDXIL() const { return DXIL; }
 
-  std::optional<uint64_t> getShaderFlags() const { return ShaderFlags; }
+  std::optional<uint64_t> getShaderFeatureFlags() const {
+    return ShaderFeatureFlags;
+  }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
+
+  std::optional<DirectX::RootSignature> getRootSignature() const {
+    return RootSignature;
+  }
 
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;

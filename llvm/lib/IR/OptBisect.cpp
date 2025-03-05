@@ -32,6 +32,11 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    }),
                                    cl::desc("Maximum optimization to perform"));
 
+static cl::opt<bool> OptBisectVerbose(
+    "opt-bisect-verbose",
+    cl::desc("Show verbose output when opt-bisect-limit is set"), cl::Hidden,
+    cl::init(true), cl::Optional);
+
 static void printPassMessage(const StringRef &Name, int PassNum,
                              StringRef TargetDesc, bool Running) {
   StringRef Status = Running ? "" : "NOT ";
@@ -45,7 +50,8 @@ bool OptBisect::shouldRunPass(const StringRef PassName,
 
   int CurBisectNum = ++LastBisectNum;
   bool ShouldRun = (BisectLimit == -1 || CurBisectNum <= BisectLimit);
-  printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
+  if (OptBisectVerbose)
+    printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
 }
 

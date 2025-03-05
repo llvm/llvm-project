@@ -49,6 +49,10 @@ BUILTIN(__builtin_arm_wfe, "v", "")
 BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
+BUILTIN(__builtin_arm_chkfeat, "WUiWUi", "")
+
+// Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
+BUILTIN(__builtin_arm_trap, "vUIs", "nr")
 
 // CRC32
 TARGET_BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc", "crc")
@@ -69,7 +73,7 @@ TARGET_BUILTIN(__builtin_arm_stg, "vv*", "t", "mte")
 TARGET_BUILTIN(__builtin_arm_subp, "Uiv*v*", "t", "mte")
 
 // SME state function
-BUILTIN(__builtin_arm_get_sme_state, "vULi*ULi*", "n")
+BUILTIN(__builtin_arm_get_sme_state, "vWUi*WUi*", "n")
 
 // Memory Operations
 TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
@@ -133,12 +137,17 @@ TARGET_BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n", "ls64")
 TARGET_BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n", "ls64")
 
+// Armv9.3-A Guarded Control Stack
+TARGET_BUILTIN(__builtin_arm_gcspopm, "WUiWUi", "n", "gcs")
+TARGET_BUILTIN(__builtin_arm_gcsss, "vC*vC*", "n", "gcs")
+
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedAdd,           "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -173,6 +182,9 @@ TARGET_HEADER_BUILTIN(_InterlockedExchange_rel,   "NiNiD*Ni",    "nh", INTRIN_H,
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_acq, "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_nf,  "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64_rel, "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_acq, "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_nf,  "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedExchangePointer_rel, "v*v*D*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange8_acq,  "ccD*cc",         "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange8_nf,   "ccD*cc",         "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -186,6 +198,8 @@ TARGET_HEADER_BUILTIN(_InterlockedCompareExchange_rel,   "NiNiD*NiNi",     "nh",
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_acq, "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_nf,  "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_rel, "LLiLLiD*LLiLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchangePointer_acq, "v*v*D*v*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchangePointer_rel, "v*v*D*v*v*","nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128,    "UcLLiD*LLiLLiLLi*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128_acq,"UcLLiD*LLiLLiLLi*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -272,6 +286,16 @@ TARGET_HEADER_BUILTIN(__readx18word,  "UsUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES,
 TARGET_HEADER_BUILTIN(__readx18dword, "UNiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readx18qword, "ULLiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
+TARGET_HEADER_BUILTIN(__addx18byte,  "vUNiUc", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__addx18word,  "vUNiUs", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__addx18dword, "vUNiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__addx18qword, "vUNiULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__incx18byte,  "vUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__incx18word,  "vUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__incx18dword, "vUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__incx18qword, "vUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
 TARGET_HEADER_BUILTIN(_CopyDoubleFromInt64, "dSLLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CopyFloatFromInt32, "fSi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CopyInt32FromFloat, "Sif", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
@@ -286,7 +310,9 @@ TARGET_HEADER_BUILTIN(_CountLeadingZeros64, "UiULLi", "nh", INTRIN_H, ALL_MS_LAN
 TARGET_HEADER_BUILTIN(_CountOneBits, "UiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_CountOneBits64, "UiULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__prefetch, "vv*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__prefetch, "vvC*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__hlt, "UiUi.", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef LANGBUILTIN

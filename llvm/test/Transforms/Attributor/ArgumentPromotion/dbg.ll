@@ -6,7 +6,7 @@ declare void @sink(i32)
 
 define internal void @test(ptr %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    call void @sink(i32 [[TMP2]])
@@ -33,14 +33,14 @@ define internal void @test_byval(ptr byval(%struct.pair) %P) {
 
 define void @caller(ptr %Y, ptr %P) {
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (ptr nocapture nofree readonly [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
-; TUNIT-NEXT:    call void @test(ptr nocapture nofree noundef readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
+; TUNIT-SAME: (ptr nofree readonly captures(none) [[Y:%.*]], ptr nofree readnone captures(none) [[P:%.*]]) {
+; TUNIT-NEXT:    call void @test(ptr nofree noundef readonly align 8 captures(none) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; TUNIT-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
-; CGSCC-NEXT:    call void @test(ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[Y:%.*]], ptr nofree readnone captures(none) [[P:%.*]]) {
+; CGSCC-NEXT:    call void @test(ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; CGSCC-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
@@ -61,12 +61,21 @@ define void @caller(ptr %Y, ptr %P) {
 !5 = !DIFile(filename: "test.c", directory: "")
 !6 = !DILocation(line: 9, scope: !2)
 ;.
-; CHECK: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; CHECK: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
-; CHECK: [[META2:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
-; CHECK: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: !2, line: 3, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1)
-; CHECK: [[META4:![0-9]+]] = !DILocation(line: 8, scope: !3)
-; CHECK: [[META5:![0-9]+]] = !DILocation(line: 9, scope: !3)
+; CGSCC: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; TUNIT: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}} ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
+; TUNIT: [[META2]] = !DIFile(filename: "test.c", directory: "")
+; TUNIT: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
+; TUNIT: [[DBG4]] = !DILocation(line: 8, scope: [[DBG3]])
+; TUNIT: [[DBG5]] = !DILocation(line: 9, scope: [[DBG3]])
+;.
+; CGSCC: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; CGSCC: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}} ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
+; CGSCC: [[META2]] = !DIFile(filename: "test.c", directory: "")
+; CGSCC: [[DBG3]] = distinct !DISubprogram(name: "test", scope: null, file: [[META2]], line: 3, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META1]])
+; CGSCC: [[DBG4]] = !DILocation(line: 8, scope: [[DBG3]])
+; CGSCC: [[DBG5]] = !DILocation(line: 9, scope: [[DBG3]])
 ;.

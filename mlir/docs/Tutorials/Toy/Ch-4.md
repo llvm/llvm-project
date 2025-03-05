@@ -91,7 +91,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// previously returned by the call operation with the operands of the
   /// return.
   void handleTerminator(Operation *op,
-                        MutableArrayRef<Value> valuesToRepl) const final {
+                        ValueRange valuesToRepl) const final {
     // Only "toy.return" needs to be handled here.
     auto returnOp = cast<ReturnOp>(op);
 
@@ -147,7 +147,7 @@ and add it to the traits list of `GenericCallOp`:
 
 ```tablegen
 def FuncOp : Toy_Op<"func",
-    [DeclareOpInterfaceMethods<CallableOpInterface>]> {
+    [FunctionOpInterface, IsolatedFromAbove]> {
   ...
 }
 
@@ -159,7 +159,8 @@ def GenericCallOp : Toy_Op<"generic_call",
 
 In the above we also use the `DeclareOpInterfaceMethods` directive to
 auto-declare all of the interface methods in the class declaration of
-GenericCallOp. This means that we just need to provide a definition:
+GenericCallOp. We have already provided the definition in the `extraClassDeclaration`
+field of the `FuncOp` class:
 
 ```c++
 /// Returns the region on the function operation that is callable.
@@ -170,7 +171,7 @@ Region *FuncOp::getCallableRegion() { return &getBody(); }
 /// Return the callee of the generic call operation, this is required by the
 /// call interface.
 CallInterfaceCallable GenericCallOp::getCallableForCallee() {
-  return getAttrOfType<SymbolRefAttr>("callee");
+  return (*this)->getAttrOfType<SymbolRefAttr>("callee");
 }
 
 /// Set the callee for the generic call operation, this is required by the call
@@ -181,7 +182,13 @@ void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 
 /// Get the argument operands to the called function, this is required by the
 /// call interface.
-Operation::operand_range GenericCallOp::getArgOperands() { return inputs(); }
+Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
+
+/// Get the argument operands to the called function as a mutable range, this is
+/// required by the call interface.
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
 ```
 
 Now that the inliner has been informed about the Toy dialect, we can add the
@@ -255,8 +262,8 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
   // The inputs must be Tensors with the same element type.
-  TensorType input = inputs.front().dyn_cast<TensorType>();
-  TensorType output = outputs.front().dyn_cast<TensorType>();
+  TensorType input = llvm::dyn_cast<TensorType>(inputs.front());
+  TensorType output = llvm::dyn_cast<TensorType>(outputs.front());
   if (!input || !output || input.getElementType() != output.getElementType())
     return false;
   // The shape is required to match if both types are ranked.
@@ -383,7 +390,7 @@ void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 At this point, each of the necessary Toy operations provide a mechanism by which
 to infer their output shapes. The ShapeInferencePass will operate on functions:
 it will run on each function in isolation. MLIR also supports general
-[OperationPasses](../../PassManagement.md#operation-pass) that run on any
+[OperationPasses](../../PassManagement.md/#operation-pass) that run on any
 isolated operation, but here our module only contains functions, so there is no
 need to generalize to all operations.
 

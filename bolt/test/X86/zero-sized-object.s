@@ -1,5 +1,5 @@
-# Check that references to local (unnamed) objects below are not
-# treated as references relative to zero-sized A object.
+## Check that references to local (unnamed) objects below are not
+## treated as references relative to zero-sized A object.
 
 # REQUIRES: system-linux
 

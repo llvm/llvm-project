@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOLinkGraphBuilder.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 #define DEBUG_TYPE "jitlink"
@@ -47,13 +49,14 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 }
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
-    const object::MachOObjectFile &Obj, Triple TT, SubtargetFeatures Features,
+    const object::MachOObjectFile &Obj,
+    std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+    SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
-                                    std::move(TT), std::move(Features),
-                                    getPointerSize(Obj), getEndianness(Obj),
-                                    std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(
+          std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
+          std::move(Features), std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
@@ -99,17 +102,6 @@ bool MachOLinkGraphBuilder::isZeroFillSection(const NormalizedSection &NSec) {
   default:
     return false;
   }
-}
-
-unsigned
-MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
-  return Obj.is64Bit() ? 8 : 4;
-}
-
-llvm::endianness
-MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
@@ -317,9 +309,8 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
       }
     }
 
-    IndexToSymbol[SymbolIndex] =
-        &createNormalizedSymbol(*Name, Value, Type, Sect, Desc,
-                                getLinkage(Desc), getScope(*Name, Type));
+    IndexToSymbol[SymbolIndex] = &createNormalizedSymbol(
+        Name, Value, Type, Sect, Desc, getLinkage(Desc), getScope(*Name, Type));
   }
 
   return Error::success();
@@ -366,7 +357,7 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
                                    orc::ExecutorAddrDiff(NSym.Value),
                                    orc::ExecutorAddr(),
                                    1ull << MachO::GET_COMM_ALIGN(NSym.Desc), 0),
-            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Strong,
+            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Weak,
             NSym.S, false, NSym.Desc & MachO::N_NO_DEAD_STRIP);
       } else {
         if (!NSym.Name)
@@ -585,7 +576,7 @@ Symbol &MachOLinkGraphBuilder::createStandardGraphSymbol(NormalizedSymbol &NSym,
     if (!NSym.Name)
       dbgs() << "<anonymous symbol>";
     else
-      dbgs() << NSym.Name;
+      dbgs() << *NSym.Name;
     if (IsText)
       dbgs() << " [text]";
     if (IsNoDeadStrip)
@@ -724,7 +715,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
         LLVM_DEBUG({
           dbgs() << "      Adding symbol for c-string block " << B.getRange()
                  << ": "
-                 << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>")
+                 << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>")
                  << " at offset " << formatv("{0:x}", Sym.getOffset()) << "\n";
         });
 
@@ -739,120 +730,6 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
                       [](Block *B) { return isCStringBlock(*B); }) &&
          "All blocks in section should hold single c-strings");
 
-  return Error::success();
-}
-
-Error CompactUnwindSplitter::operator()(LinkGraph &G) {
-  auto *CUSec = G.findSectionByName(CompactUnwindSectionName);
-  if (!CUSec)
-    return Error::success();
-
-  if (!G.getTargetTriple().isOSBinFormatMachO())
-    return make_error<JITLinkError>(
-        "Error linking " + G.getName() +
-        ": compact unwind splitting not supported on non-macho target " +
-        G.getTargetTriple().str());
-
-  unsigned CURecordSize = 0;
-  unsigned PersonalityEdgeOffset = 0;
-  unsigned LSDAEdgeOffset = 0;
-  switch (G.getTargetTriple().getArch()) {
-  case Triple::aarch64:
-  case Triple::x86_64:
-    // 64-bit compact-unwind record format:
-    // Range start: 8 bytes.
-    // Range size:  4 bytes.
-    // CU encoding: 4 bytes.
-    // Personality: 8 bytes.
-    // LSDA:        8 bytes.
-    CURecordSize = 32;
-    PersonalityEdgeOffset = 16;
-    LSDAEdgeOffset = 24;
-    break;
-  default:
-    return make_error<JITLinkError>(
-        "Error linking " + G.getName() +
-        ": compact unwind splitting not supported on " +
-        G.getTargetTriple().getArchName());
-  }
-
-  std::vector<Block *> OriginalBlocks(CUSec->blocks().begin(),
-                                      CUSec->blocks().end());
-  LLVM_DEBUG({
-    dbgs() << "In " << G.getName() << " splitting compact unwind section "
-           << CompactUnwindSectionName << " containing "
-           << OriginalBlocks.size() << " initial blocks...\n";
-  });
-
-  while (!OriginalBlocks.empty()) {
-    auto *B = OriginalBlocks.back();
-    OriginalBlocks.pop_back();
-
-    if (B->getSize() == 0) {
-      LLVM_DEBUG({
-        dbgs() << "  Skipping empty block at "
-               << formatv("{0:x16}", B->getAddress()) << "\n";
-      });
-      continue;
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "  Splitting block at " << formatv("{0:x16}", B->getAddress())
-             << " into " << (B->getSize() / CURecordSize)
-             << " compact unwind record(s)\n";
-    });
-
-    if (B->getSize() % CURecordSize)
-      return make_error<JITLinkError>(
-          "Error splitting compact unwind record in " + G.getName() +
-          ": block at " + formatv("{0:x}", B->getAddress()) + " has size " +
-          formatv("{0:x}", B->getSize()) +
-          " (not a multiple of CU record size of " +
-          formatv("{0:x}", CURecordSize) + ")");
-
-    unsigned NumBlocks = B->getSize() / CURecordSize;
-    LinkGraph::SplitBlockCache C;
-
-    for (unsigned I = 0; I != NumBlocks; ++I) {
-      auto &CURec = G.splitBlock(*B, CURecordSize, &C);
-      bool AddedKeepAlive = false;
-
-      for (auto &E : CURec.edges()) {
-        if (E.getOffset() == 0) {
-          LLVM_DEBUG({
-            dbgs() << "    Updating compact unwind record at "
-                   << formatv("{0:x16}", CURec.getAddress()) << " to point to "
-                   << (E.getTarget().hasName() ? E.getTarget().getName()
-                                               : StringRef())
-                   << " (at " << formatv("{0:x16}", E.getTarget().getAddress())
-                   << ")\n";
-          });
-
-          if (E.getTarget().isExternal())
-            return make_error<JITLinkError>(
-                "Error adding keep-alive edge for compact unwind record at " +
-                formatv("{0:x}", CURec.getAddress()) + ": target " +
-                E.getTarget().getName() + " is an external symbol");
-          auto &TgtBlock = E.getTarget().getBlock();
-          auto &CURecSym =
-              G.addAnonymousSymbol(CURec, 0, CURecordSize, false, false);
-          TgtBlock.addEdge(Edge::KeepAlive, 0, CURecSym, 0);
-          AddedKeepAlive = true;
-        } else if (E.getOffset() != PersonalityEdgeOffset &&
-                   E.getOffset() != LSDAEdgeOffset)
-          return make_error<JITLinkError>("Unexpected edge at offset " +
-                                          formatv("{0:x}", E.getOffset()) +
-                                          " in compact unwind record at " +
-                                          formatv("{0:x}", CURec.getAddress()));
-      }
-
-      if (!AddedKeepAlive)
-        return make_error<JITLinkError>(
-            "Error adding keep-alive edge for compact unwind record at " +
-            formatv("{0:x}", CURec.getAddress()) +
-            ": no outgoing target edge at offset 0");
-    }
-  }
   return Error::success();
 }
 

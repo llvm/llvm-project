@@ -1,6 +1,7 @@
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 | FileCheck --check-prefixes=ALL,UNROLL %s
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=TTI -pass-remarks-analysis=TTI  < %s -S 2>&1 | FileCheck --check-prefixes=ALL,TTI %s
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver4 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 | FileCheck --check-prefixes=ALL,UNROLL %s
+; RUN: opt -passes=debugify,loop-unroll -mcpu=znver5 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 | FileCheck --check-prefixes=ALL,UNROLL %s
 
 ; RUN: opt -passes=debugify,loop-unroll -mcpu=znver3 -pass-remarks=loop-unroll -pass-remarks-analysis=loop-unroll < %s -S 2>&1 --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=ALL,UNROLL %s
 

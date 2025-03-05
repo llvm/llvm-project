@@ -65,7 +65,6 @@
 // CHECK: Matching formal operand class MCK_PCRelTLS32 against actual operand at index 2 (ImmTLS:fun): match success using generic matcher
 // CHECK: Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range
 // CHECK: Opcode result: complete match, selecting this opcode
-// CHECK: .text
 // CHECK: sllg	%r3, %r0, 3
 // CHECK: llill	%r0, 0
 // CHECK: lgr	%r1, %r0

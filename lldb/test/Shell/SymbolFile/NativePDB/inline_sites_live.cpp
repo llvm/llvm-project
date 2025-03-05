@@ -1,8 +1,8 @@
 // clang-format off
-// REQUIRES: system-windows
+// REQUIRES: target-windows
 
 // RUN: %build -o %t.exe -- %s
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/inline_sites_live.lldbinit 2>&1 | FileCheck %s
 
 void use(int) {}
@@ -22,11 +22,11 @@ int main(int argc, char** argv) {
   foo(argc);
 }
 
-// CHECK:      * thread #1, stop reason = breakpoint 1
+// CHECK:      * thread #1, {{.*}}stop reason = breakpoint 1
 // CHECK-NEXT:    frame #0: {{.*}}`main [inlined] bar(param=2)
 // CHECK:      (lldb) expression param
 // CHECK-NEXT: (int) $0 = 2
-// CHECK:      * thread #1, stop reason = breakpoint 2
+// CHECK:      * thread #1, {{.*}}stop reason = breakpoint 2
 // CHECK-NEXT:    frame #0: {{.*}}`main [inlined] foo(param=1)
 // CHECK:      (lldb) expression param
 // CHECK-NEXT: (int) $1 = 1

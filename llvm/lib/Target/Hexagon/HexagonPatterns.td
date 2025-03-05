@@ -108,6 +108,9 @@ def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
 def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
 def pnot:   PatFrag<(ops node:$Pu), (xor node:$Pu, ptrue)>;
 
+def: Pat<(v8i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v8i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+
 def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
 def valignaddr: PatFrag<(ops node:$Addr), (HexagonVALIGNADDR node:$Addr)>;
@@ -171,7 +174,7 @@ class IsUGT<int Width, int Arg>: PatLeaf<(i32 imm),
 
 def SDEC1: SDNodeXForm<imm, [{
   int32_t V = N->getSExtValue();
-  return CurDAG->getTargetConstant(V-1, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(V-1, SDLoc(N), MVT::i32);
 }]>;
 
 def UDEC1: SDNodeXForm<imm, [{
@@ -388,12 +391,12 @@ def Uitofp: pf1<uint_to_fp>;
 //
 
 def Imm64Lo: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getSExtValue()),
+                                         SDLoc(N), MVT::i32);
 }]>;
 def Imm64Hi: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()>>32),
-                                   SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getSExtValue()>>32),
+                                         SDLoc(N), MVT::i32);
 }]>;
 
 
@@ -406,7 +409,7 @@ def HexagonCONST32:     SDNode<"HexagonISD::CONST32",     SDTHexagonCONST32>;
 def HexagonCONST32_GP:  SDNode<"HexagonISD::CONST32_GP",  SDTHexagonCONST32>;
 
 def TruncI64ToI32: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
 def: Pat<(s32_0ImmPred:$s16), (A2_tfrsi imm:$s16)>;
@@ -525,11 +528,11 @@ def Vsplatpi: OutPatFrag<(ops node:$V),
                          (Combinew (A2_tfrsi $V), (A2_tfrsi $V))>;
 
 def: Pat<(v2i16 (azext V2I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
+         (A2_andir (S2_vtrunehb (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
 def: Pat<(v2i32 (azext V2I1:$Pu)),
          (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
 def: Pat<(v4i8 (azext V4I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
+         (A2_andir (S2_vtrunehb (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
 def: Pat<(v4i16 (azext V4I1:$Pu)),
          (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
 def: Pat<(v8i8 (azext V8I1:$Pu)),
@@ -2597,14 +2600,14 @@ def IMM_BYTE : SDNodeXForm<imm, [{
   // -1 can be represented as 255, etc.
   // assigning to a byte restores our desired signed value.
   int8_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def IMM_HALF : SDNodeXForm<imm, [{
   // -1 can be represented as 65535, etc.
   // assigning to a short restores our desired signed value.
   int16_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def IMM_WORD : SDNodeXForm<imm, [{
@@ -2613,7 +2616,7 @@ def IMM_WORD : SDNodeXForm<imm, [{
   // might convert -1 to a large +ve number.
   // assigning to a word restores our desired signed value.
   int32_t imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(imm, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(imm, SDLoc(N), MVT::i32);
 }]>;
 
 def ToImmByte : OutPatFrag<(ops node:$R), (IMM_BYTE $R)>;
@@ -2675,7 +2678,7 @@ def s30_2ProperPred  : PatLeaf<(i32 imm), [{
 }]>;
 def RoundTo8 : SDNodeXForm<imm, [{
   int32_t Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(Imm & -8, SDLoc(N), MVT::i32);
 }]>;
 
 let AddedComplexity = 150 in
@@ -3384,6 +3387,7 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
+def: Pat<(debugtrap), (Y2_break)>;
 
 // Read cycle counter.
 def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;
@@ -3391,6 +3395,12 @@ def HexagonREADCYCLE: SDNode<"HexagonISD::READCYCLE", SDTInt64Leaf,
   [SDNPHasChain]>;
 
 def: Pat<(HexagonREADCYCLE), (A4_tfrcpp UPCYCLE)>;
+
+// Read time counter.
+def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
+  [SDNPHasChain]>;
+
+def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
 
 // The declared return value of the store-locked intrinsics is i32, but
 // the instructions actually define i1. To avoid register copies from

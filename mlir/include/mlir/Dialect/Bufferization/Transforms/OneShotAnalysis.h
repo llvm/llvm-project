@@ -24,7 +24,12 @@ class OneShotAnalysisState;
 
 /// Options for analysis-enabled bufferization.
 struct OneShotBufferizationOptions : public BufferizationOptions {
-  enum class AnalysisHeuristic { BottomUp, TopDown };
+  enum class AnalysisHeuristic {
+    BottomUp,
+    TopDown,
+    BottomUpFromTerminators,
+    Fuzzer
+  };
 
   OneShotBufferizationOptions() = default;
 
@@ -42,6 +47,11 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
   /// Specify the functions that should not be analyzed. copyBeforeWrite will be
   /// set to true when bufferizing them.
   llvm::ArrayRef<std::string> noAnalysisFuncFilter;
+
+  /// Seed for the analysis fuzzer. Used only if the heuristic is set to
+  /// `AnalysisHeuristic::Fuzzer`. The fuzzer should be used only with
+  /// `testAnalysisOnly = true`.
+  unsigned analysisFuzzerSeed = 0;
 };
 
 /// State for analysis-enabled bufferization. This class keeps track of alias
@@ -117,9 +127,9 @@ public:
   /// Return true if the buffer of the given tensor value is writable.
   bool isWritable(Value value) const;
 
-  /// Find the definitions of the given tensor value or retrieve them from the
-  /// cache.
-  const SetVector<Value> &findDefinitionsCached(Value value);
+  /// Find the definitions of the given operand's value or
+  /// retrieve them from the cache.
+  const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
 
   /// Reset cached data structures.
   void resetCache() override;

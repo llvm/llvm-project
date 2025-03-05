@@ -6,7 +6,7 @@ target triple = "powerpc-ibm-aix7.2.0.0"
 ; Check IndexedReference::computeRefCost can handle type differences between
 ; CacheLineSize and Numerator
 
-; CHECK: Loop '_loop_1_do_' has cost = 2
+; CHECK: Loop '_loop_1_do_' has cost = 1
 
 %_elem_type_of_v = type <{ i32 }>
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-types.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -97,8 +98,8 @@ SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
 
 SBCommandInterpreter::~SBCommandInterpreter() = default;
 
-const SBCommandInterpreter &SBCommandInterpreter::
-operator=(const SBCommandInterpreter &rhs) {
+const SBCommandInterpreter &
+SBCommandInterpreter::operator=(const SBCommandInterpreter &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
@@ -150,7 +151,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
@@ -221,8 +222,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (override_context.get())
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec,
                                          override_context.get()->Lock(true),
-                                         options.ref(),
-                                         result.ref());
+                                         options.ref(), result.ref());
 
   else
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec, options.ref(), result.ref());
@@ -512,7 +512,8 @@ SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
 const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return CommandInterpreter::GetStaticBroadcasterClass().AsCString();
+  return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
+      .AsCString();
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
@@ -567,6 +568,21 @@ SBStructuredData SBCommandInterpreter::GetStatistics() {
   std::string json_str =
       llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+  return data;
+}
+
+SBStructuredData SBCommandInterpreter::GetTranscript() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData data;
+  if (IsValid())
+    // A deep copy is performed by `std::make_shared` on the
+    // `StructuredData::Array`, via its implicitly-declared copy constructor.
+    // This ensures thread-safety between the user changing the returned
+    // `SBStructuredData` and the `CommandInterpreter` changing its internal
+    // `m_transcript`.
+    data.m_impl_up->SetObjectSP(
+        std::make_shared<StructuredData::Array>(m_opaque_ptr->GetTranscript()));
   return data;
 }
 
@@ -632,7 +648,8 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString() : nullptr);
+  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString()
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
@@ -725,4 +742,16 @@ void SBCommand::SetFlags(uint32_t flags) {
 
   if (IsValid())
     m_opaque_sp->GetFlags().Set(flags);
+}
+
+void SBCommandInterpreter::SetPrintCallback(
+    lldb::SBCommandPrintCallback callback, void *baton) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+
+  if (m_opaque_ptr)
+    m_opaque_ptr->SetPrintCallback(
+        [callback, baton](lldb_private::CommandReturnObject &result) {
+          SBCommandReturnObject sb_result(result);
+          return callback(sb_result, baton);
+        });
 }

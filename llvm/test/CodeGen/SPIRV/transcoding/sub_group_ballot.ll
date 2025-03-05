@@ -155,7 +155,7 @@
 ;;     dst[4] = get_sub_group_lt_mask();
 ;; }
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG: OpCapability GroupNonUniformBallot
 
@@ -844,55 +844,77 @@ declare dso_local spir_func double @_Z25sub_group_broadcast_firstd(double) local
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#ballot:]] = OpGroupNonUniformBallot %[[#int4]] %[[#ScopeSubgroup]] %[[#false]]
+; CHECK-SPIRV: %[[#ballot2:]] = OpGroupNonUniformBallot %[[#int4]] %[[#ScopeSubgroup]] %[[#false]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformInverseBallot %[[#bool]] %[[#ScopeSubgroup]] %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformInverseBallot %[[#bool]] %[[#ScopeSubgroup]] %[[#ballot2]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitExtract %[[#bool]] %[[#ScopeSubgroup]] %[[#ballot]] %[[#int_0]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitExtract %[[#bool]] %[[#ScopeSubgroup]] %[[#ballot2]] %[[#int_0]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] Reduce %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] Reduce %[[#ballot2]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] InclusiveScan %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] InclusiveScan %[[#ballot2]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] ExclusiveScan %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotBitCount %[[#int]] %[[#ScopeSubgroup]] ExclusiveScan %[[#ballot2]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotFindLSB %[[#int]] %[[#ScopeSubgroup]] %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotFindLSB %[[#int]] %[[#ScopeSubgroup]] %[[#ballot2]]
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotFindMSB %[[#int]] %[[#ScopeSubgroup]] %[[#ballot]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBallotFindMSB %[[#int]] %[[#ScopeSubgroup]] %[[#ballot2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testBallotOperations(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func <4 x i32> @_Z16sub_group_balloti(i32 0)
+  %r2 = tail call spir_func <4 x i32> @__spirv_GroupNonUniformBallot(i32 3, i1 false)
   %3 = tail call spir_func i32 @_Z24sub_group_inverse_ballotDv4_j(<4 x i32> %2)
+  %r3 = tail call spir_func i1 @__spirv_GroupNonUniformInverseBallot(i32 3, <4 x i32> %r2)
   store i32 %3, i32 addrspace(1)* %0, align 4
   %4 = tail call spir_func i32 @_Z28sub_group_ballot_bit_extractDv4_jj(<4 x i32> %2, i32 0)
+  %r4 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitExtract(i32 3, <4 x i32> %r2, i32 0)
   %5 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
   store i32 %4, i32 addrspace(1)* %5, align 4
   %6 = tail call spir_func i32 @_Z26sub_group_ballot_bit_countDv4_j(<4 x i32> %2)
+  %r6 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 0, <4 x i32> %r2)
   %7 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
   store i32 %6, i32 addrspace(1)* %7, align 4
   %8 = tail call spir_func i32 @_Z31sub_group_ballot_inclusive_scanDv4_j(<4 x i32> %2)
+  %r8 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 1, <4 x i32> %r2)
   %9 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 3
   store i32 %8, i32 addrspace(1)* %9, align 4
   %10 = tail call spir_func i32 @_Z31sub_group_ballot_exclusive_scanDv4_j(<4 x i32> %2)
+  %r10 = tail call spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32 3, i32 2, <4 x i32> %r2)
   %11 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 4
   store i32 %10, i32 addrspace(1)* %11, align 4
   %12 = tail call spir_func i32 @_Z25sub_group_ballot_find_lsbDv4_j(<4 x i32> %2)
+  %r12 = tail call spir_func i32 @__spirv_GroupNonUniformBallotFindLSB(i32 3, <4 x i32> %r2)
   %13 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 5
   store i32 %12, i32 addrspace(1)* %13, align 4
   %14 = tail call spir_func i32 @_Z25sub_group_ballot_find_msbDv4_j(<4 x i32> %2)
+  %r14 = tail call spir_func i32 @__spirv_GroupNonUniformBallotFindMSB(i32 3, <4 x i32> %r2)
   %15 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 6
   store i32 %14, i32 addrspace(1)* %15, align 4
   ret void
 }
 
 declare dso_local spir_func <4 x i32> @_Z16sub_group_balloti(i32) local_unnamed_addr
+declare dso_local spir_func <4 x i32> @__spirv_GroupNonUniformBallot(i32, i1)
 
 declare dso_local spir_func i32 @_Z24sub_group_inverse_ballotDv4_j(<4 x i32>) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformInverseBallot(i32, <4 x i32>)
 
 declare dso_local spir_func i32 @_Z28sub_group_ballot_bit_extractDv4_jj(<4 x i32>, i32) local_unnamed_addr
+declare dso_local spir_func i1 @__spirv_GroupNonUniformBallotBitExtract(i32, <4 x i32>, i32) local_unnamed_addr
 
 declare dso_local spir_func i32 @_Z26sub_group_ballot_bit_countDv4_j(<4 x i32>) local_unnamed_addr
+declare dso_local spir_func i32 @__spirv_GroupNonUniformBallotBitCount(i32, i32, <4 x i32>)
 
 declare dso_local spir_func i32 @_Z31sub_group_ballot_inclusive_scanDv4_j(<4 x i32>) local_unnamed_addr
 
 declare dso_local spir_func i32 @_Z31sub_group_ballot_exclusive_scanDv4_j(<4 x i32>) local_unnamed_addr
 
 declare dso_local spir_func i32 @_Z25sub_group_ballot_find_lsbDv4_j(<4 x i32>) local_unnamed_addr
+declare dso_local spir_func i32 @__spirv_GroupNonUniformBallotFindLSB(i32, <4 x i32>)
 
 declare dso_local spir_func i32 @_Z25sub_group_ballot_find_msbDv4_j(<4 x i32>) local_unnamed_addr
+declare dso_local spir_func i32 @__spirv_GroupNonUniformBallotFindMSB(i32, <4 x i32>)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpLoad %[[#int4]] %[[#eqMask]]

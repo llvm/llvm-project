@@ -96,7 +96,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
   SValBuilder &SVB = C.getSValBuilder();
   CanQualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
-      SVB.getBasicValueFactory().getMaxValue(SizeTy).getZExtValue();
+      SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 
   // Get the element size.
   CharUnits EleSize = Ctx.getTypeSizeInChars(VLALast->getElementType());
@@ -164,12 +164,6 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
   if (SizeV.isUnknown())
     return nullptr;
 
-  // Check if the size is tainted.
-  if (isTainted(State, SizeV)) {
-    reportTaintBug(SizeE, State, C, SizeV);
-    return nullptr;
-  }
-
   // Check if the size is zero.
   DefinedSVal SizeD = SizeV.castAs<DefinedSVal>();
 
@@ -192,10 +186,10 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
 
   SVal LessThanZeroVal =
       SVB.evalBinOp(State, BO_LT, SizeD, Zero, SVB.getConditionType());
+  ProgramStateRef StatePos, StateNeg;
   if (std::optional<DefinedSVal> LessThanZeroDVal =
           LessThanZeroVal.getAs<DefinedSVal>()) {
     ConstraintManager &CM = C.getConstraintManager();
-    ProgramStateRef StatePos, StateNeg;
 
     std::tie(StateNeg, StatePos) = CM.assumeDual(State, *LessThanZeroDVal);
     if (StateNeg && !StatePos) {
@@ -203,6 +197,12 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
       return nullptr;
     }
     State = StatePos;
+  }
+
+  // Check if the size is tainted.
+  if ((StateNeg || StateZero) && isTainted(State, SizeV)) {
+    reportTaintBug(SizeE, State, C, SizeV);
+    return nullptr;
   }
 
   return State;
@@ -218,7 +218,7 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
   SmallString<256> buf;
   llvm::raw_svector_ostream os(buf);
   os << "Declared variable-length array (VLA) ";
-  os << "has tainted size";
+  os << "has tainted (attacker controlled) size that can be 0 or negative";
 
   auto report = std::make_unique<PathSensitiveBugReport>(TaintBT, os.str(), N);
   report->addRange(SizeE->getSourceRange());
@@ -266,7 +266,6 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     return;
 
   ASTContext &Ctx = C.getASTContext();
-  SValBuilder &SVB = C.getSValBuilder();
   ProgramStateRef State = C.getState();
   QualType TypeToCheck;
 
@@ -301,7 +300,7 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   if (VD) {
     State =
         setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>(), SVB);
+                         ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

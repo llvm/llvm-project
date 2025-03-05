@@ -17,12 +17,12 @@
 //                    OutputIterator result,
 //                    BinaryOperation binary_op); // C++17
 
-#include <numeric>
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <functional>
-#include <iterator>
+#include <numeric>
 
 #include "test_macros.h"
 #include "test_iterators.h"

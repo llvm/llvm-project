@@ -16,10 +16,11 @@ define void @phi_recurrence_start_first() {
 ; CHECK-NEXT:    br i1 [[COND_V]], label [[IF_THEN:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[START]] = add nuw nsw i32 [[CELL_0]], 1
-; CHECK-NEXT:    br i1 [[COND_V]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
+; CHECK-NEXT:    [[COND_V2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_V2]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
 ; CHECK:       for.cond11:
 ; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[START]], [[IF_THEN]] ], [ [[STEP:%.*]], [[FOR_COND11]] ]
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp ult i32 [[I_1]], 100
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp samesign ult i32 [[I_1]], 100
 ; CHECK-NEXT:    [[STEP]] = add nuw nsw i32 [[I_1]], 1
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[FOR_COND11]], label [[WHILE_END]]
 ; CHECK:       for.cond26:
@@ -37,7 +38,8 @@ while.cond:                                       ; preds = %entry, %for.cond26
 
 if.then:                                          ; preds = %while.cond
   %start = add nsw i32 %cell.0, 1
-  br i1 %cond.v, label %for.cond11, label %for.cond26
+  %cond.v2 = call i1 @cond()
+  br i1 %cond.v2, label %for.cond11, label %for.cond26
 
 for.cond11:                                       ; preds = %for.cond11, %if.then
   %i.1 = phi i32 [ %start, %if.then ], [ %step, %for.cond11 ]
@@ -62,10 +64,11 @@ define void @phi_recurrence_step_first() {
 ; CHECK-NEXT:    br i1 [[COND_V]], label [[IF_THEN:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[START]] = add nuw nsw i32 [[CELL_0]], 1
-; CHECK-NEXT:    br i1 [[COND_V]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
+; CHECK-NEXT:    [[COND_V2:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_V2]], label [[FOR_COND11:%.*]], label [[FOR_COND26]]
 ; CHECK:       for.cond11:
 ; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[STEP:%.*]], [[FOR_COND11]] ], [ [[START]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp ult i32 [[I_1]], 100
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp samesign ult i32 [[I_1]], 100
 ; CHECK-NEXT:    [[STEP]] = add nuw nsw i32 [[I_1]], 1
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[FOR_COND11]], label [[WHILE_END]]
 ; CHECK:       for.cond26:
@@ -83,7 +86,8 @@ while.cond:                                       ; preds = %entry, %for.cond26
 
 if.then:                                          ; preds = %while.cond
   %start = add nsw i32 %cell.0, 1
-  br i1 %cond.v, label %for.cond11, label %for.cond26
+  %cond.v2 = call i1 @cond()
+  br i1 %cond.v2, label %for.cond11, label %for.cond26
 
 for.cond11:                                       ; preds = %for.cond11, %if.then
   %i.1 = phi i32 [ %step, %for.cond11 ], [ %start, %if.then]

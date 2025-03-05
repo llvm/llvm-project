@@ -131,28 +131,24 @@
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // X86_64: "-cc1" "-triple" "x86_64-unknown-netbsd"
-// X86_64-NOT: "-fno-use-init-array"
 // X86_64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // X86_64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // X86_64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // X86_64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64: "-cc1" "-triple" "aarch64-unknown-netbsd"
-// AARCH64-NOT: "-fno-use-init-array"
 // AARCH64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64_BE: "-cc1" "-triple" "aarch64_be-unknown-netbsd"
-// AARCH64_BE-NOT: "-fno-use-init-array"
 // AARCH64_BE: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64_BE: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64_BE: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64_BE: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // ARM: "-cc1" "-triple" "armv5e-unknown-netbsd-eabi"
-// ARM-NOT: "-fno-use-init-array"
 // ARM: as{{.*}}" "-mcpu=arm926ej-s" "-o"
 // ARM: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARM: "-m" "armelf_nbsd_eabi"
@@ -162,7 +158,6 @@
 // ARM: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // ARMEB: "-cc1" "-triple" "armebv5e-unknown-netbsd-eabi"
-// ARMEB-NOT: "-fno-use-init-array"
 // ARMEB: as{{.*}}" "-mcpu=arm926ej-s" "-o"
 // ARMEB: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARMEB-NOT: "--be8"
@@ -215,7 +210,6 @@
 // THUMBEB: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // RISCV32: "-cc1" "-triple" "riscv32-unknown-netbsd"
-// RISCV32-NOT: "-fno-use-init-array"
 // RISCV32: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // RISCV32-SAME: "-m" "elf32lriscv" "-X"
 // RISCV32-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
@@ -223,7 +217,6 @@
 // RISCV32-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // RISCV64: "-cc1" "-triple" "riscv64-unknown-netbsd"
-// RISCV64-NOT: "-fno-use-init-array"
 // RISCV64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // RISCV64-SAME: "-m" "elf64lriscv" "-X"
 // RISCV64-SAME: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
@@ -231,7 +224,6 @@
 // RISCV64-SAME: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC: "-cc1" "-triple" "sparc-unknown-netbsd"
-// SPARC-NOT: "-fno-use-init-array"
 // SPARC: as{{.*}}" "-32" "-Av8" "-o"
 // SPARC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC: "-m" "elf32_sparc"
@@ -241,7 +233,6 @@
 // SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC64: "-cc1" "-triple" "sparc64-unknown-netbsd"
-// SPARC64-NOT: "-fno-use-init-array"
 // SPARC64: as{{.*}}" "-64" "-Av9" "-o"
 // SPARC64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC64: "-m" "elf64_sparc"
@@ -250,7 +241,6 @@
 // SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // POWERPC: "-cc1" "-triple" "powerpc-unknown-netbsd"
-// POWERPC-NOT: "-fno-use-init-array"
 // POWERPC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // POWERPC: "-m" "elf32ppc_nbsd"
 // POWERPC: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -259,7 +249,6 @@
 // POWERPC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // POWERPC64: "-cc1" "-triple" "powerpc64-unknown-netbsd"
-// POWERPC64-NOT: "-fno-use-init-array"
 // POWERPC64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // POWERPC64: "-m" "elf64ppc"
 // POWERPC64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -342,3 +331,10 @@
 // DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
 // DRIVER-PASS-INCLUDES-SAME: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // DRIVER-PASS-INCLUDES-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/usr/include"
+
+// Check that the -X and --no-relax flags are passed to the linker on riscv
+// RUN: %clang --target=riscv32-unknown-netbsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV-FLAGS %s
+// RUN: %clang --target=riscv64-unknown-netbsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV-FLAGS %s
+// RISCV-FLAGS: "-X" "--no-relax"

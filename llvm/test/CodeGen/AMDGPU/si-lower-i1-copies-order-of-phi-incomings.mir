@@ -68,7 +68,7 @@ body: |
   ; GCN-NEXT:   [[PHI4:%[0-9]+]]:sreg_32 = PHI [[S_OR_B32_]], %bb.1, [[S_OR_B32_1]], %bb.2
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4
-  ; GCN-NEXT:   [[V_ADD_U:%[0-9]+]]:vreg_64 = V_ADD_U64_PSEUDO [[PHI3]], killed [[S_MOV_B64_]], implicit-def dead $vcc, implicit $exec
+  ; GCN-NEXT:   [[V_ADD_U:%[0-9]+]]:vreg_64 = V_ADD_U64_PSEUDO [[PHI3]], killed [[S_MOV_B64_]], implicit-def dead $vcc_lo, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GCN-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = nsw S_ADD_I32 [[PHI2]], killed [[S_MOV_B32_3]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 9

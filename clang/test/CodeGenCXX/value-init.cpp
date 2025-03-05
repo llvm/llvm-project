@@ -205,11 +205,9 @@ namespace test6 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test64testEv()
   // CHECK:      [[ARR:%.*]] = alloca [10 x [20 x [[A:%.*]]]],
 
-  // CHECK-NEXT: [[INNER:%.*]] = getelementptr inbounds [10 x [20 x [[A]]]], ptr [[ARR]], i64 0, i64 0
-  // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[INNER]], i64 0, i64 0
-  // CHECK-NEXT: call void @_ZN5test61AC1Ei(ptr {{[^,]*}} [[T0]], i32 noundef 5)
-  // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [[A]], ptr [[T0]], i64 1
-  // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], ptr [[T0]], i64 20
+  // CHECK-NEXT: call void @_ZN5test61AC1Ei(ptr {{[^,]*}} [[ARR]], i32 noundef 5)
+  // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [[A]], ptr [[ARR]], i64 1
+  // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], ptr [[ARR]], i64 20
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi ptr [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
   // CHECK-NEXT: call void @_ZN5test61AC1Ev(ptr {{[^,]*}} [[CUR]])
@@ -217,13 +215,15 @@ namespace test6 {
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[NEXT]], [[END]]
   // CHECK-NEXT: br i1
 
-  // CHECK:      [[BEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[INNER]], i64 1
-  // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[INNER]], i64 10
+  // CHECK:      [[BEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[ARR]], i64 1
+  // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[ARR]], i64 10
   // CHECK-NEXT: br label
-  // CHECK:      [[CUR:%.*]] = phi ptr [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
-
   // Inner loop.
-  // CHECK-NEXT: [[IBEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[CUR]], i{{32|64}} 0, i{{32|64}} 0
+  // CHECK-CXX98: [[CUR:%.*]] = phi ptr [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
+
+  // CHECK-CXX98: [[IBEGIN:%.*]] = getelementptr inbounds [20 x [[A]]], ptr [[CUR]], i{{32|64}} 0, i{{32|64}} 0
+  // CHECK-CXX17: [[IBEGIN:%.*]] = phi ptr [ [[BEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
+
   // CHECK-NEXT: [[IEND:%.*]] = getelementptr inbounds [[A]], ptr [[IBEGIN]], i64 20
   // CHECK-NEXT: br label
   // CHECK:      [[ICUR:%.*]] = phi ptr [ [[IBEGIN]], {{%.*}} ], [ [[INEXT:%.*]], {{%.*}} ]
@@ -232,7 +232,8 @@ namespace test6 {
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[INEXT]], [[IEND]]
   // CHECK-NEXT: br i1 [[T0]],
 
-  // CHECK:      [[NEXT]] = getelementptr inbounds [20 x [[A]]], ptr [[CUR]], i64 1
+  // CHECK-CXX98: [[NEXT]] = getelementptr inbounds [20 x [[A]]], ptr [[CUR]], i64 1
+  // CHECK-CXX17: [[NEXT]] = getelementptr inbounds [20 x [[A]]], ptr [[IBEGIN]], i64 1
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[NEXT]], [[END]]
   // CHECK-NEXT: br i1 [[T0]]
   // CHECK:      ret void

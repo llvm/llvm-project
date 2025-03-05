@@ -135,3 +135,14 @@ subroutine forall7(x)
     end forall
   end select
 end subroutine
+
+subroutine forall8(x)
+  real :: x(10)
+  real, external :: foo
+  !ERROR: Impure procedure 'foo' may not be referenced in a FORALL
+  forall(i=1:10) x(i) = foo() + i
+  !OK
+  associate(y => foo())
+    forall (i=1:10) x(i) = y + i
+  end associate
+end subroutine

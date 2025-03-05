@@ -36,21 +36,16 @@ class AsanThread;
 class AsanThreadContext final : public ThreadContextBase {
  public:
   explicit AsanThreadContext(int tid)
-      : ThreadContextBase(tid), announced(false),
-        destructor_iterations(GetPthreadDestructorIterations()), stack_id(0),
+      : ThreadContextBase(tid),
+        announced(false),
+        destructor_iterations(GetPthreadDestructorIterations()),
         thread(nullptr) {}
   bool announced;
   u8 destructor_iterations;
-  u32 stack_id;
   AsanThread *thread;
 
   void OnCreated(void *arg) override;
   void OnFinished() override;
-
-  struct CreateThreadContextArgs {
-    AsanThread *thread;
-    StackTrace *stack;
-  };
 };
 
 // AsanThreadContext objects are never freed, so we need many of them.

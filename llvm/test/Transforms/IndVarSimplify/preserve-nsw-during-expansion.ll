@@ -6,7 +6,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 ; Based on TSVC s172.
 define void @test_s172(i32 noundef %xa, i32 noundef %xb, ptr nocapture noundef %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: define void @test_s172(
-; CHECK-SAME: i32 noundef [[XA:%.*]], i32 noundef [[XB:%.*]], ptr nocapture noundef [[A:%.*]], ptr nocapture noundef readonly [[B:%.*]]) {
+; CHECK-SAME: i32 noundef [[XA:%.*]], i32 noundef [[XB:%.*]], ptr noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[XA]], -1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[XA]], 32001
@@ -23,7 +23,7 @@ define void @test_s172(i32 noundef %xa, i32 noundef %xb, ptr nocapture noundef %
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], [[TMP1]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], 32000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end.loopexit:

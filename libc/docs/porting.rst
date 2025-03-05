@@ -30,7 +30,7 @@ If you are starting to bring up LLVM's libc on a new operating system, the first
 step is to add a directory for that OS in the ``libc/config`` directory. Both
 `Linux <https://github.com/llvm/llvm-project/tree/main/libc/config/linux>`_ and
 `Windows <https://github.com/llvm/llvm-project/tree/main/libc/config/windows>`_,
-the two operating systems on which LLVM's libc is being actively developed, 
+the two operating systems on which LLVM's libc is being actively developed,
 have their own config directory.
 
 .. note:: Windows development is not as active as the development on Linux.
@@ -42,21 +42,6 @@ have their own config directory.
    `Fuchsia <https://fuchsia.dev/>`_ operating system also. However, there is no
    config directory for Fuchsia as the bring up is being done in the Fuchsia
    source tree.
-
-The api.td file
----------------
-
-If the :ref:`fullbuild_mode` is to be supported on the new operating system,
-then a file named ``api.td`` should be added in its config directory. It is
-written in the
-`LLVM tablegen language <https://llvm.org/docs/TableGen/ProgRef.html>`_.
-It lists all the relevant macros and type definitions we want in the
-public libc header files. See the existing Linux
-`api.td <https://github.com/llvm/llvm-project/blob/main/libc/config/linux/api.td>`_
-file as an example to prepare the ``api.td`` file for the new operating system.
-
-.. note:: In future, LLVM tablegen will be replaced with a different DSL to list
-   config information.
 
 Architecture Subdirectory
 =========================
@@ -83,7 +68,7 @@ The entrypoints.txt file
 One of the important pieces of config information is listed in a file named
 ``entrypoints.txt``. This file lists the targets for the entrypoints (see
 :ref:`entrypoints`) you want to include in the static archive of the libc (for
-the :ref:`overlay_mode` and/or the :ref:`fullbuild_mode`.) If you are doing an
+the :ref:`overlay_mode` and/or the :ref:`full_host_build`.) If you are doing an
 architecture specific bring up, then an ``entrypoints.txt`` file should be
 created in the architecture subdirectory for each architecture. Else, having a
 single ``entrypoints.txt`` in the operating system directory is sufficient.
@@ -110,7 +95,7 @@ The headers.txt file
 Another important piece of config information is listed in a file named
 ``headers.txt``. It lists the targets for the set of public headers that are
 provided by the libc. This is relevant only if the libc is to be used in the
-:ref:`fullbuild_mode` on the target operating system and architecture. As with
+:ref:`full_host_build` on the target operating system and architecture. As with
 the ``entrypoints.txt`` file, one ``headers.txt`` file should be listed for
 each individual target architecture if you are doing an architecture specific
 bring up. The Linux config has ``headers.txt`` file listed separately for the

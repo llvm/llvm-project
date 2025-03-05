@@ -142,8 +142,9 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; GCN-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
-; GCN-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
+; SDAG-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GCN-NEXT:      '0x2e13 (COMPUTE_PGM_RSRC2)': 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x10{{$}}

@@ -15,12 +15,15 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Pass.h"
+#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
 static void insertCall(Function &CurFn, StringRef Func,
-                       Instruction *InsertionPt, DebugLoc DL) {
+                       BasicBlock::iterator InsertionPt, DebugLoc DL) {
   Module &M = *InsertionPt->getParent()->getParent()->getParent();
   LLVMContext &C = InsertionPt->getParent()->getContext();
 
@@ -45,6 +48,21 @@ static void insertCall(Function &CurFn, StringRef Func,
                                                   /*isVarArg=*/false)),
           {GV}, "", InsertionPt);
       Call->setDebugLoc(DL);
+    } else if (TargetTriple.isRISCV() || TargetTriple.isAArch64() ||
+               TargetTriple.isLoongArch()) {
+      // On RISC-V, AArch64, and LoongArch, the `_mcount` function takes
+      // `__builtin_return_address(0)` as an argument since
+      // `__builtin_return_address(1)` is not available on these platforms.
+      Instruction *RetAddr = CallInst::Create(
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
+          ConstantInt::get(Type::getInt32Ty(C), 0), "", InsertionPt);
+      RetAddr->setDebugLoc(DL);
+
+      FunctionCallee Fn = M.getOrInsertFunction(
+          Func, FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C),
+                                  false));
+      CallInst *Call = CallInst::Create(Fn, RetAddr, "", InsertionPt);
+      Call->setDebugLoc(DL);
     } else {
       FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
       CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
@@ -60,7 +78,7 @@ static void insertCall(Function &CurFn, StringRef Func,
         Func, FunctionType::get(Type::getVoidTy(C), ArgTypes, false));
 
     Instruction *RetAddr = CallInst::Create(
-        Intrinsic::getDeclaration(&M, Intrinsic::returnaddress),
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
         ArrayRef<Value *>(ConstantInt::get(Type::getInt32Ty(C), 0)), "",
         InsertionPt);
     RetAddr->setDebugLoc(DL);
@@ -85,6 +103,12 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   if (F.hasFnAttribute(Attribute::Naked))
     return false;
 
+  // available_externally functions may not have definitions external to the
+  // module (e.g. gnu::always_inline). Instrumenting them might lead to linker
+  // errors if they are optimized out. Skip them like GCC.
+  if (F.hasAvailableExternallyLinkage())
+    return false;
+
   StringRef EntryAttr = PostInlining ? "instrument-function-entry-inlined"
                                      : "instrument-function-entry";
 
@@ -105,7 +129,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
     if (auto SP = F.getSubprogram())
       DL = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
 
-    insertCall(F, EntryFunc, &*F.begin()->getFirstInsertionPt(), DL);
+    insertCall(F, EntryFunc, F.begin()->getFirstInsertionPt(), DL);
     Changed = true;
     F.removeFnAttr(EntryAttr);
   }
@@ -126,7 +150,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
       else if (auto SP = F.getSubprogram())
         DL = DILocation::get(SP->getContext(), 0, 0, SP);
 
-      insertCall(F, ExitFunc, T, DL);
+      insertCall(F, ExitFunc, T->getIterator(), DL);
       Changed = true;
     }
     F.removeFnAttr(ExitAttr);
@@ -135,9 +159,42 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   return Changed;
 }
 
+namespace {
+struct PostInlineEntryExitInstrumenter : public FunctionPass {
+  static char ID;
+  PostInlineEntryExitInstrumenter() : FunctionPass(ID) {
+    initializePostInlineEntryExitInstrumenterPass(
+        *PassRegistry::getPassRegistry());
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+  bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
+};
+char PostInlineEntryExitInstrumenter::ID = 0;
+}
+
+INITIALIZE_PASS_BEGIN(
+    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
+    "Instrument function entry/exit with calls to e.g. mcount() "
+    "(post inlining)",
+    false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(
+    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
+    "Instrument function entry/exit with calls to e.g. mcount() "
+    "(post inlining)",
+    false, false)
+
+FunctionPass *llvm::createPostInlineEntryExitInstrumenterPass() {
+  return new PostInlineEntryExitInstrumenter();
+}
+
 PreservedAnalyses
 llvm::EntryExitInstrumenterPass::run(Function &F, FunctionAnalysisManager &AM) {
-  runOnFunction(F, PostInlining);
+  if (!runOnFunction(F, PostInlining))
+    return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;

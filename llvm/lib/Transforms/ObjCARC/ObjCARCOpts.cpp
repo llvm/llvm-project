@@ -36,7 +36,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -584,7 +583,8 @@ class ObjCARCOpt {
       const ColorVector &CV = BlockEHColors.find(BB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *EHPadBB : CV)
-        if (auto *EHPad = dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHI())) {
+        if (auto *EHPad =
+                dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHIIt())) {
           OpBundles.emplace_back("funclet", EHPad);
           return;
         }
@@ -693,8 +693,9 @@ bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
   // AutoreleaseRV and RetainRV cancel out, replace UnsafeClaimRV with Release.
   assert(Class == ARCInstKind::UnsafeClaimRV);
   Value *CallArg = cast<CallInst>(Inst)->getArgOperand(0);
-  CallInst *Release = CallInst::Create(
-      EP.get(ARCRuntimeEntryPointKind::Release), CallArg, "", Inst);
+  CallInst *Release =
+      CallInst::Create(EP.get(ARCRuntimeEntryPointKind::Release), CallArg, "",
+                       Inst->getIterator());
   assert(IsAlwaysTail(ARCInstKind::UnsafeClaimRV) &&
          "Expected UnsafeClaimRV to be safe to tail call");
   Release->setTailCall();
@@ -808,7 +809,7 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
       if (objcarc::hasAttachedCallOpBundle(CI)) {
-        BundledInsts->insertRVCall(&*I, CI);
+        BundledInsts->insertRVCall(I->getIterator(), CI);
         Changed = true;
       }
 
@@ -934,7 +935,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       Changed = true;
       new StoreInst(ConstantInt::getTrue(CI->getContext()),
                     PoisonValue::get(PointerType::getUnqual(CI->getContext())),
-                    CI);
+                    CI->getIterator());
       Value *NewValue = PoisonValue::get(CI->getType());
       LLVM_DEBUG(
           dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
@@ -954,7 +955,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       Changed = true;
       new StoreInst(ConstantInt::getTrue(CI->getContext()),
                     PoisonValue::get(PointerType::getUnqual(CI->getContext())),
-                    CI);
+                    CI->getIterator());
 
       Value *NewValue = PoisonValue::get(CI->getType());
       LLVM_DEBUG(
@@ -990,10 +991,10 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       LLVMContext &C = Inst->getContext();
 
       Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
-      CallInst *NewCall =
-          CallInst::Create(Decl, Call->getArgOperand(0), "", Call);
+      CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
+                                           Call->getIterator());
       NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
-                           MDNode::get(C, std::nullopt));
+                           MDNode::get(C, {}));
 
       LLVM_DEBUG(dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
                            "since x is otherwise unused.\nOld: "
@@ -1143,7 +1144,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       if (IsNullOrUndef(Incoming))
         continue;
       Value *Op = PN->getIncomingValue(i);
-      Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
+      BasicBlock::iterator InsertPos =
+          PN->getIncomingBlock(i)->back().getIterator();
       SmallVector<OperandBundleDef, 1> OpBundles;
       cloneOpBundlesIf(CInst, OpBundles, [](const OperandBundleUse &B) {
         return B.getTagID() != LLVMContext::OB_funclet;
@@ -1153,7 +1155,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       if (Op->getType() != ParamTy)
         Op = new BitCastInst(Op, ParamTy, "", InsertPos);
       Clone->setArgOperand(0, Op);
-      Clone->insertBefore(InsertPos);
+      Clone->insertBefore(*InsertPos->getParent(), InsertPos);
 
       LLVM_DEBUG(dbgs() << "Cloning " << *CInst << "\n"
                                                    "And inserting clone at "
@@ -1761,19 +1763,15 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                            DenseMap<Value *, RRInfo> &Releases,
                            SmallVectorImpl<Instruction *> &DeadInsts,
                            Module *M) {
-  Type *ArgTy = Arg->getType();
-  Type *ParamTy = PointerType::getUnqual(Type::getInt8Ty(ArgTy->getContext()));
-
   LLVM_DEBUG(dbgs() << "== ObjCARCOpt::MoveCalls ==\n");
 
   // Insert the new retain and release calls.
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg :
-                   new BitCastInst(Arg, ParamTy, "", InsertPt);
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
-    CallInst *Call = CallInst::Create(Decl, MyArg, BundleList, "", InsertPt);
+    CallInst *Call =
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     Call->setDoesNotThrow();
     Call->setTailCall();
 
@@ -1783,12 +1781,11 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                       << *InsertPt << "\n");
   }
   for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg :
-                   new BitCastInst(Arg, ParamTy, "", InsertPt);
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
-    CallInst *Call = CallInst::Create(Decl, MyArg, BundleList, "", InsertPt);
+    CallInst *Call =
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     // Attach a clang.imprecise_release metadata tag, if appropriate.
     if (MDNode *M = ReleasesToMove.ReleaseMetadata)
       Call->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease), M);
@@ -2125,7 +2122,8 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
             Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
-            CallInst *CI = CallInst::Create(Decl, EarlierCall, "", Call);
+            CallInst *CI =
+                CallInst::Create(Decl, EarlierCall, "", Call->getIterator());
             CI->setTailCall();
           }
           // Zap the fully redundant load.
@@ -2154,7 +2152,8 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
           // If the load has a builtin retain, insert a plain retain for it.
           if (Class == ARCInstKind::LoadWeakRetained) {
             Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
-            CallInst *CI = CallInst::Create(Decl, EarlierCall, "", Call);
+            CallInst *CI =
+                CallInst::Create(Decl, EarlierCall, "", Call->getIterator());
             CI->setTailCall();
           }
           // Zap the fully redundant load.

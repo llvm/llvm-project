@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// "unable to find library from dependent library specifier: rt"
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
 // <chrono>
 
 // time_point

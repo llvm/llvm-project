@@ -17,20 +17,17 @@
 
 define void @s116_modified(ptr %a) {
 ; CHECK-LABEL: @s116_modified(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 1
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds float, ptr [[GEP1:%.*]], i64 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, ptr [[GEP1]], i64 3
 ; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[LD0]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 poison, i32 2, i32 4>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    store <4 x float> [[TMP12]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[LD0]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP2]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP6]], <4 x i32> <i32 1, i32 1, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr inbounds float, ptr %a, i64 1

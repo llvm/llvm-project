@@ -1,4 +1,4 @@
-; Testing that we print out INFO message when binary has split dwarf.
+;; Testing that we print out INFO message when binary has split dwarf.
 
 ; RUN: mkdir -p %t
 ; RUN: cd %t

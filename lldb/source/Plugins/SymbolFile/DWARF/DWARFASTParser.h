@@ -42,10 +42,10 @@ public:
 
   virtual Function *ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                            const DWARFDIE &die,
-                                           const AddressRange &range) = 0;
+                                           AddressRanges ranges) = 0;
 
   virtual bool CompleteTypeFromDWARF(const DWARFDIE &die, Type *type,
-                                     CompilerType &compiler_type) = 0;
+                                     const CompilerType &compiler_type) = 0;
 
   virtual CompilerDecl GetDeclForUIDFromDWARF(const DWARFDIE &die) = 0;
 
@@ -58,7 +58,7 @@ public:
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       CompilerDeclContext decl_context) = 0;
 
-  virtual ConstString GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
+  virtual std::string GetDIEClassTemplateParams(DWARFDIE die) = 0;
 
   static std::optional<SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,

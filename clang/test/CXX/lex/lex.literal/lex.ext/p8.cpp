@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
 
 using size_t = decltype(sizeof(int));
-constexpr const char *operator "" _id(const char *p, size_t) { return p; }
+constexpr const char *operator ""_id(const char *p, size_t) { return p; }
 constexpr const char *s = "foo"_id "bar" "baz"_id "quux";
 
 constexpr bool streq(const char *p, const char *q) {
@@ -9,8 +9,8 @@ constexpr bool streq(const char *p, const char *q) {
 }
 static_assert(streq(s, "foobarbazquux"), "");
 
-constexpr const char *operator "" _trim(const char *p, size_t n) {
-  return *p == ' ' ? operator "" _trim(p + 1, n - 1) : p;
+constexpr const char *operator ""_trim(const char *p, size_t n) {
+  return *p == ' ' ? operator ""_trim(p + 1, n - 1) : p;
 }
 constexpr const char *t = "   " " "_trim "  foo";
 static_assert(streq(t, "foo"), "");

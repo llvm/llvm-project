@@ -106,8 +106,6 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
   if (!EnablePatchPointLiveness)
     return false;
 
-  LLVM_DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: "
-                    << MF.getName() << " **********\n");
   TRI = MF.getSubtarget().getRegisterInfo();
   ++NumStackMapFuncVisited;
 
@@ -121,13 +119,14 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
 
 /// Performs the actual liveness calculation for the function.
 bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "********** COMPUTING STACKMAP LIVENESS: "
+                    << MF.getName() << " **********\n");
   bool HasChanged = false;
   // For all basic blocks in the function.
   for (auto &MBB : MF) {
     LLVM_DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
     LiveRegs.init(*TRI);
-    // FIXME: This should probably be addLiveOuts().
-    LiveRegs.addLiveOutsNoPristines(MBB);
+    LiveRegs.addLiveOuts(MBB);
     bool HasStackMap = false;
     // Reverse iterate over all instructions and add the current live register
     // set to an instruction if we encounter a patchpoint instruction.

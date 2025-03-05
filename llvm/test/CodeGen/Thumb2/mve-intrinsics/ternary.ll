@@ -461,8 +461,10 @@ define arm_aapcs_vfpcc <8 x half> @test_vfmasq_m_n_f16(<8 x half> %a, <8 x half>
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vdup.16 q2, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vfmast.f16 q0, q1, r1
+; CHECK-NEXT:    vfmat.f16 q2, q0, q1
+; CHECK-NEXT:    vmov q0, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast float %c.coerce to i32
@@ -476,8 +478,48 @@ entry:
   ret <8 x half> %4
 }
 
+define arm_aapcs_vfpcc <8 x half> @test_vfmasq_m_n_f16_select(<8 x half> %a, <8 x half> %b, float %c.coerce, i16 zeroext %p) {
+; CHECK-LABEL: test_vfmasq_m_n_f16_select:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmast.f16 q0, q1, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = bitcast float %c.coerce to i32
+  %tmp.0.extract.trunc = trunc i32 %0 to i16
+  %1 = bitcast i16 %tmp.0.extract.trunc to half
+  %.splatinsert = insertelement <8 x half> undef, half %1, i32 0
+  %.splat = shufflevector <8 x half> %.splatinsert, <8 x half> undef, <8 x i32> zeroinitializer
+  %2 = zext i16 %p to i32
+  %3 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %2)
+  %4 = tail call <8 x half> @llvm.fma.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %.splat)
+  %5 = select <8 x i1> %3, <8 x half> %4, <8 x half> %a
+  ret <8 x half> %5
+}
+
 define arm_aapcs_vfpcc <4 x float> @test_vfmasq_m_n_f32(<4 x float> %a, <4 x float> %b, float %c, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmasq_m_n_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vdup.32 q2, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vfmat.f32 q2, q0, q1
+; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <4 x float> undef, float %c, i32 0
+  %.splat = shufflevector <4 x float> %.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float> %a, <4 x float> %b, <4 x float> %.splat, <4 x i1> %1)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vfmasq_m_n_f32_select(<4 x float> %a, <4 x float> %b, float %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vfmasq_m_n_f32_select:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
@@ -489,8 +531,9 @@ entry:
   %.splat = shufflevector <4 x float> %.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   %0 = zext i16 %p to i32
   %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = tail call <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float> %a, <4 x float> %b, <4 x float> %.splat, <4 x i1> %1)
-  ret <4 x float> %2
+  %2 = tail call <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %.splat)
+  %3 = select <4 x i1> %1, <4 x float> %2, <4 x float> %a
+  ret <4 x float> %3
 }
 
 define arm_aapcs_vfpcc <8 x half> @test_vfmsq_m_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c, i16 zeroext %p) {

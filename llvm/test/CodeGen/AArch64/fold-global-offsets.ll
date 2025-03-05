@@ -131,7 +131,7 @@ define i32 @f7() {
 ; GISEL-NEXT:    ret
 
 entry:
-  %lshr = lshr i128 bitcast (<2 x i64> <i64 undef, i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @x3, i64 0, inrange i32 1, i64 2) to i64)> to i128), 64
+  %lshr = lshr i128 bitcast (<2 x i64> <i64 undef, i64 ptrtoint (ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @x3, i64 0, i32 1, i64 2) to i64)> to i128), 64
   %trunc = trunc i128 %lshr to i64
   %inttoptr = inttoptr i64 %trunc to ptr
   %gep = getelementptr i32, ptr %inttoptr, i64 5

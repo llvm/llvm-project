@@ -1,6 +1,6 @@
-# This checks that shrink wrapping correctly drops moving push/pops when
-# there is a MOV instruction loading the value of the stack pointer in
-# order to do pointer arithmetic with a stack address.
+## This checks that shrink wrapping correctly drops moving push/pops when
+## there is a MOV instruction loading the value of the stack pointer in
+## order to do pointer arithmetic with a stack address.
 
 
 # REQUIRES: system-linux

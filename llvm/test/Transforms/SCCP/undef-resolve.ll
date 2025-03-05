@@ -258,12 +258,14 @@ entry:
 define i32 @test11(i1 %tobool) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp eq (ptr @test11, ptr @GV) to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @test11, @GV
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, [[EXT]]
 ; CHECK-NEXT:    ret i32 [[SHR4]]
 ;
 entry:
-  %ext = zext i1 icmp eq (ptr @test11, ptr @GV) to i32
+  %cmp = icmp eq ptr @test11, @GV
+  %ext = zext i1 %cmp to i32
   %shr4 = ashr i32 undef, %ext
   ret i32 %shr4
 }

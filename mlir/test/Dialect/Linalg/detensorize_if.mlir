@@ -42,18 +42,15 @@ func.func @main() -> (tensor<i32>) attributes {} {
 }
 
 // CHECK-LABEL:  func @main()
-// CHECK-DAG:     arith.constant 0
-// CHECK-DAG:     arith.constant 10
-// CHECK:         cf.br ^[[bb1:.*]](%{{.*}}: i32)
-// CHECK-NEXT:   ^[[bb1]](%{{.*}}: i32):
-// CHECK-NEXT:     arith.cmpi slt, %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^bb3(%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb2]](%{{.*}}: i32)
-// CHECK-NEXT:     arith.addi %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.br ^[[bb3:.*]](%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb3]](%{{.*}}: i32)
-// CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<i32>
-// CHECK-NEXT:     return %{{.*}}
+// CHECK-DAG:     %[[cst:.*]] = arith.constant dense<0>
+// CHECK-DAG:     arith.constant true
+// CHECK:         cf.br
+// CHECK-NEXT:   ^[[bb1:.*]]:
+// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]], ^bb3
+// CHECK-NEXT:   ^[[bb2]]
+// CHECK-NEXT:     cf.br ^[[bb3:.*]]
+// CHECK-NEXT:   ^[[bb3]]
+// CHECK-NEXT:     return %[[cst]]
 // CHECK-NEXT:   }
 
 // -----
@@ -106,20 +103,17 @@ func.func @main() -> (tensor<i32>) attributes {} {
 }
 
 // CHECK-LABEL:  func @main()
-// CHECK-DAG:     arith.constant 0
-// CHECK-DAG:     arith.constant 10
-// CHECK:         cf.br ^[[bb1:.*]](%{{.*}}: i32)
-// CHECK-NEXT:   ^[[bb1]](%{{.*}}: i32):
-// CHECK-NEXT:     arith.cmpi slt, %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^bb3(%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb2]](%{{.*}}: i32)
-// CHECK-NEXT:     arith.addi %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.br ^[[bb3:.*]](%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb3]](%{{.*}}: i32)
-// CHECK-NEXT:     cf.br ^[[bb4:.*]](%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb4]](%{{.*}}: i32)
-// CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<i32>
-// CHECK-NEXT:     return %{{.*}}
+// CHECK-DAG:     %[[cst:.*]] = arith.constant dense<0>
+// CHECK-DAG:     arith.constant true
+// CHECK:         cf.br ^[[bb1:.*]]
+// CHECK-NEXT:   ^[[bb1:.*]]:
+// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]], ^bb3
+// CHECK-NEXT:   ^[[bb2]]:
+// CHECK-NEXT:     cf.br ^[[bb3:.*]]
+// CHECK-NEXT:   ^[[bb3]]:
+// CHECK-NEXT:     cf.br ^[[bb4:.*]]
+// CHECK-NEXT:   ^[[bb4]]:
+// CHECK-NEXT:     return %[[cst]]
 // CHECK-NEXT:   }
 
 // -----
@@ -171,16 +165,13 @@ func.func @main() -> (tensor<i32>) attributes {} {
 }
 
 // CHECK-LABEL:  func @main()
-// CHECK-DAG:     arith.constant 0
-// CHECK-DAG:     arith.constant 10
-// CHECK:         cf.br ^[[bb1:.*]](%{{.*}}: i32)
-// CHECK-NEXT:   ^[[bb1]](%{{.*}}: i32):
-// CHECK-NEXT:     arith.cmpi slt, %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^bb2(%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb2]](%{{.*}}: i32)
-// CHECK-NEXT:     arith.addi %{{.*}}, %{{.*}}
-// CHECK-NEXT:     cf.br ^[[bb3:.*]](%{{.*}} : i32)
-// CHECK-NEXT:   ^[[bb3]](%{{.*}}: i32)
-// CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<i32>
-// CHECK-NEXT:     return %{{.*}}
+// CHECK-DAG:     %[[cst:.*]] = arith.constant dense<10>
+// CHECK-DAG:     arith.constant true
+// CHECK:         cf.br ^[[bb1:.*]]
+// CHECK-NEXT:   ^[[bb1]]:
+// CHECK-NEXT:     cf.cond_br %{{.*}}, ^[[bb2:.*]], ^bb2
+// CHECK-NEXT:   ^[[bb2]]
+// CHECK-NEXT:     cf.br ^[[bb3:.*]]
+// CHECK-NEXT:   ^[[bb3]]
+// CHECK-NEXT:     return %[[cst]]
 // CHECK-NEXT:   }

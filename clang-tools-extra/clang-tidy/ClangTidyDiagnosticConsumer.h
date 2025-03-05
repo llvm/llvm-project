@@ -81,6 +81,9 @@ public:
 
   ~ClangTidyContext();
 
+  ClangTidyContext(const ClangTidyContext &) = delete;
+  ClangTidyContext &operator=(const ClangTidyContext &) = delete;
+
   /// Report any errors detected using this method.
   ///
   /// This is still under heavy development and will likely change towards using
@@ -313,6 +316,7 @@ private:
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
+  std::unique_ptr<llvm::Regex> ExcludeHeaderFilter;
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;

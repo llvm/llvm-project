@@ -288,6 +288,7 @@ define <2 x double> @test_mm_andnot_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; AVX512-LABEL: test_mm_andnot_pd:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x25,0xc0,0x0f]
+; AVX512-NEXT:    # xmm0 = ~xmm0
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x double> %a0 to <4 x i32>
@@ -316,6 +317,7 @@ define <2 x i64> @test_mm_andnot_si128(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-LABEL: test_mm_andnot_si128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x25,0xc0,0x0f]
+; AVX512-NEXT:    # xmm0 = ~xmm0
 ; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %not = xor <2 x i64> %a0, <i64 -1, i64 -1>

@@ -5,9 +5,9 @@ define internal i32 @foo(i1 %C) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ; CHECK:       F:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   br i1 %C, label %T, label %F
 
@@ -31,12 +31,12 @@ define i1 @caller(i1 %C) {
 define i1 @invokecaller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @invokecaller(
 ; CHECK-NEXT:    [[X:%.*]] = invoke i32 @foo(i1 [[C:%.*]])
-; CHECK-NEXT:    to label [[OK:%.*]] unwind label [[FAIL:%.*]]
+; CHECK-NEXT:            to label [[OK:%.*]] unwind label [[FAIL:%.*]]
 ; CHECK:       OK:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       FAIL:
 ; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret i1 false
 ;
   %X = invoke i32 @foo( i1 %C ) to label %OK unwind label %FAIL             ; <i32> [#uses=1]

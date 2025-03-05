@@ -2,17 +2,17 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mattr=+sse2 | FileCheck %s -check-prefixes=SSE
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -mcpu=corei7-avx -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s -check-prefixes=AVX
 
-define void @test() {
+define void @test(<9 x double> noundef %src) {
 ; SSE-LABEL: 'test'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %matins.2.2 = shufflevector <9 x double> undef, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX-LABEL: 'test'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %matins.2.2 = shufflevector <9 x double> undef, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 entry:
-  %matins.2.2 = shufflevector <9 x double> undef, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+  %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
   ret void
 }
 
@@ -22,7 +22,7 @@ define <12 x i64> @foo(<12 x i64> noundef %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <12 x i64> %shuffle
 ;
 ; AVX-LABEL: 'foo'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %shuffle = shufflevector <12 x i64> %src, <12 x i64> poison, <12 x i32> <i32 0, i32 3, i32 6, i32 9, i32 1, i32 4, i32 7, i32 10, i32 2, i32 5, i32 8, i32 11>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shuffle = shufflevector <12 x i64> %src, <12 x i64> poison, <12 x i32> <i32 0, i32 3, i32 6, i32 9, i32 1, i32 4, i32 7, i32 10, i32 2, i32 5, i32 8, i32 11>
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <12 x i64> %shuffle
 ;
 entry:

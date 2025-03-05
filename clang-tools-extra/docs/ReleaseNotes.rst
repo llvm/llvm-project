@@ -43,8 +43,6 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
-...
-
 Improvements to clangd
 ----------------------
 
@@ -87,24 +85,17 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-The improvements are...
-
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
-
 Improvements to clang-tidy
 --------------------------
 
 New checks
 ^^^^^^^^^^
 
-- New :doc:`readability-use-std-min-max
-  <clang-tidy/checks/readability/use-std-min-max>` check.
+- New :doc:`bugprone-unintended-char-ostream-output
+  <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
-  Replaces certain conditional statements with equivalent calls to
-  ``std::min`` or ``std::max``.
+  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
+  ``ostream``.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -112,62 +103,50 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-suspicious-include
-  <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
-  options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
-  global options of the same name.
+- Improved :doc:`bugprone-string-constructor
+  <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
+  calls of ``std::string`` constructor with char pointer, start position and
+  length parameters.
 
-- Cleaned up :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`
-  by removing enforcement of rule `C.48
-  <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
-  which was deprecated since :program:`clang-tidy` 17. This rule is now covered
-  by :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`.
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
+  positives from smart pointer accessors repeated in checking ``has_value``
+  and accessing ``value``. The option `IgnoreSmartPointerDereference` should
+  no longer be needed and will be removed. Also fixing false positive from 
+  const reference accessors to objects containing optional member.
 
-- Improved :doc:`google-build-namespaces
-  <clang-tidy/checks/google/build-namespaces>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
+  additional C++ member functions to match.
 
-- Improved :doc:`google-global-names-in-headers
-  <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by adding the option
+  `AllowedTypes`, that excludes specified types from const-correctness
+  checking and fixing false positives when modifying variant by ``operator[]``
+  with template in parameters.
 
-- Improved :doc:`llvm-header-guard
-  <clang-tidy/checks/llvm/header-guard>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by providing additional
+  examples and fixing some macro related false positives.
 
-- Improved :doc:`misc-definitions-in-headers
-  <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
-  Additionally, the option `UseHeaderFileExtensions` is removed, so that the
-  check uses the `HeaderFileExtensions` option unconditionally.
+- Improved :doc:`performance/unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
+  tolerating fix-it breaking compilation when functions is used as pointers 
+  to avoid matching usage of functions within the current compilation unit.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
+  on ternary operators calling ``std::move``.
 
 - Improved :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
-
-- Improved :doc:`misc-use-anonymous-namespace
-  <clang-tidy/checks/misc/use-anonymous-namespace>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
-
-- Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
-  `AllowStringArrays` option, enabling the exclusion of array types with deduced
-  length initialized from string literals.
+  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
+  on ``operator""`` with template parameters.
 
 Removed checks
 ^^^^^^^^^^^^^^
 
 Miscellaneous
 ^^^^^^^^^^^^^
-
-- Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
-  since the rule DCL21-CPP has been removed from the CERT guidelines.
-
-- Fixed incorrect formatting in ``clang-apply-repalcements`` when no ``--format``
-  option is specified. Now ``clang-apply-replacements`` applies formatting only with
-  the option.
 
 Improvements to include-fixer
 -----------------------------

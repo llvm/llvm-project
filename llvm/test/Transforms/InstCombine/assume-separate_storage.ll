@@ -24,7 +24,7 @@ define i64 @folds_removed_operands(ptr %a, ptr %b, i64 %n1, i64 %n2) {
 ; CHECK-LABEL: @folds_removed_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i64 [[N2:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add i64 [[REASS_ADD]], [[N1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = add i64 [[N1:%.*]], [[REASS_ADD]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[A:%.*]], ptr [[B:%.*]]) ]
 ; CHECK-NEXT:    ret i64 [[Y]]
 ;

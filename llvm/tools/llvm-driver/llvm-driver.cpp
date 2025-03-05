@@ -33,7 +33,7 @@ static void printHelpMessage() {
                << subcommands
                << "\n  Type \"llvm <subcommand> --help\" to get more help on a "
                   "specific subcommand\n\n"
-               << "OPTIONS:\n\n  --help - Display this message";
+               << "OPTIONS:\n\n  --help - Display this message\n";
 }
 
 static int findTool(int Argc, char **Argv, const char *Argv0) {

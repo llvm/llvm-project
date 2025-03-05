@@ -14,7 +14,6 @@
 #include "SplitKit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -184,8 +183,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
-  UseSlots.erase(std::unique(UseSlots.begin(), UseSlots.end(),
-                             SlotIndex::isSameInstr),
+  UseSlots.erase(llvm::unique(UseSlots, SlotIndex::isSameInstr),
                  UseSlots.end());
 
   // Compute per-live block info.
@@ -570,7 +568,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
   SmallVector<unsigned, 8> SubIndexes;
 
   // Abort if we cannot possibly implement the COPY with the given indexes.
-  if (!TRI.getCoveringSubRegIndexes(MRI, RC, LaneMask, SubIndexes))
+  if (!TRI.getCoveringSubRegIndexes(RC, LaneMask, SubIndexes))
     report_fatal_error("Impossible to implement partial COPY");
 
   SlotIndex Def;
@@ -588,6 +586,38 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
       Indexes, TRI);
 
   return Def;
+}
+
+bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
+                                               MachineBasicBlock &MBB,
+                                               SlotIndex UseIdx) const {
+  if (!DefMI)
+    return false;
+
+  const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
+  if (!UseMI)
+    return false;
+
+  Register Reg = Edit->getReg();
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+
+  // We want to find the register class that can be inflated to after the split
+  // occurs in recomputeRegClass
+  const TargetRegisterClass *SuperRC =
+      TRI.getLargestLegalSuperClass(RC, *MBB.getParent());
+
+  // We want to compute the static register class constraint for the instruction
+  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
+  // site, then rematerializing it will increase the constraints.
+  const TargetRegisterClass *DefConstrainRC =
+      DefMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
+                                                /*ExploreBundle=*/true);
+
+  const TargetRegisterClass *UseConstrainRC =
+      UseMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
+                                                /*ExploreBundle=*/true);
+
+  return UseConstrainRC->hasSubClass(DefConstrainRC);
 }
 
 VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
@@ -611,9 +641,16 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (Edit->canRematerializeAt(RM, OrigVNI, UseIdx, true)) {
-      Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
-      ++NumRemats;
-      DidRemat = true;
+      if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
+        Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
+        ++NumRemats;
+        DidRemat = true;
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "skipping rematerialize of " << printReg(Reg) << " at "
+                   << UseIdx
+                   << " since it will increase register class restrictions\n");
+      }
     }
   }
   if (!DidRemat) {
@@ -816,7 +853,7 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   return VNI->def;
 }
 
-static bool hasTiedUseOf(MachineInstr &MI, unsigned Reg) {
+static bool hasTiedUseOf(MachineInstr &MI, Register Reg) {
   return any_of(MI.defs(), [Reg](const MachineOperand &MO) {
     return MO.isReg() && MO.isTied() && MO.getReg() == Reg;
   });
@@ -1407,7 +1444,8 @@ void SplitEditor::rewriteAssigned(bool ExtendRanges) {
     assert(LI.hasSubRanges());
 
     LiveIntervalCalc SubLIC;
-    Register Reg = EP.MO.getReg(), Sub = EP.MO.getSubReg();
+    Register Reg = EP.MO.getReg();
+    unsigned Sub = EP.MO.getSubReg();
     LaneBitmask LM = Sub != 0 ? TRI.getSubRegIndexLaneMask(Sub)
                               : MRI.getMaxLaneMaskForVReg(Reg);
     for (LiveInterval::SubRange &S : LI.subranges()) {
@@ -1463,7 +1501,7 @@ void SplitEditor::deleteRematVictims() {
   if (Dead.empty())
     return;
 
-  Edit->eliminateDeadDefs(Dead, std::nullopt);
+  Edit->eliminateDeadDefs(Dead, {});
 }
 
 void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {

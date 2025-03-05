@@ -47,6 +47,7 @@ define void @func() {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    addiw a0, a0, 16
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: func:
@@ -92,6 +93,7 @@ define void @func() {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 16
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
   %space = alloca i32, align 4
   %stackspace = alloca[1024 x i32], align 4
@@ -180,6 +182,7 @@ define void @shrink_wrap(i1 %c) {
 ; RV64I-NEXT:    lui a0, 1
 ; RV64I-NEXT:    addiw a0, a0, 16
 ; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:  .LBB1_2: # %foo
 ; RV64I-NEXT:    ret
 ;
@@ -229,6 +232,7 @@ define void @shrink_wrap(i1 %c) {
 ; RV32I-NEXT:    lui a0, 1
 ; RV32I-NEXT:    addi a0, a0, 16
 ; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:  .LBB1_2: # %foo
 ; RV32I-NEXT:    ret
   %space = alloca i32, align 4

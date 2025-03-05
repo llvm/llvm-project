@@ -16,13 +16,16 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s64) on %ir.addr)
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s32), [[C]]
-    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[ATOMIC_CMPXCHG]], [[ICMP]]
-    ; CHECK: $w0 = COPY [[MUL]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s64) on %ir.addr)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s32), [[C]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ATOMIC_CMPXCHG]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY1]], [[ICMP]]
+    ; CHECK-NEXT: $w0 = COPY [[MUL]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(s32) = G_CONSTANT i32 1
@@ -40,14 +43,17 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: cmpxchg_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s64) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s64) on %ir.addr)
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s64), [[C]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ATOMIC_CMPXCHG]], [[ANYEXT]]
-    ; CHECK: $x0 = COPY [[MUL]](s64)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s64) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s64) on %ir.addr)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s64), [[C]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY [[ATOMIC_CMPXCHG]](s64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY1]], [[ANYEXT]]
+    ; CHECK-NEXT: $x0 = COPY [[MUL]](s64)
     %0:_(p0) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 0
     %2:_(s64) = G_CONSTANT i64 1

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -I %S/Inputs/use-using/
+// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -I %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -80,7 +80,7 @@ typedef Test<my_class *> another;
 
 typedef int* PInt;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using PInt = int *;
+// CHECK-FIXES: using PInt = int*;
 
 typedef int bla1, bla2, bla3;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -112,7 +112,7 @@ TYPEDEF Foo Bak;
 typedef FOO Bam;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: #define FOO Foo
-// CHECK-FIXES: using Bam = Foo;
+// CHECK-FIXES: using Bam = FOO;
 
 typedef struct Foo Bap;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -247,7 +247,7 @@ typedef Q<T{0 < 0}.b> Q3_t;
 
 typedef TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > > Nested_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b>>, S<(0 < 0), Q<b[0 < 0]>>>;
+// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > >;
 
 template <typename a>
 class TemplateKeyword {
@@ -265,12 +265,12 @@ class Variadic {};
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:103: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>;
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
 // CHECK-FIXES-NEXT: using Variadic_p = Variadic_t*;
 
 typedef struct { int a; } R_t, *R_p;
@@ -341,4 +341,99 @@ typedef int InExternCPP;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
 // CHECK-FIXES: using InExternCPP = int;
 
+}
+
+namespace ISSUE_72179
+{  
+  void foo()
+  {
+    typedef int a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using a = int;
+
+  }
+
+  void foo2()
+  {
+    typedef struct { int a; union { int b; }; } c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using c = struct { int a; union { int b; }; };
+  }
+
+  template <typename T>
+  void foo3()
+  {
+    typedef T b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'using' instead of 'typedef' [modernize-use-using]
+    // CHECK-FIXES: using b = T;
+  }
+
+  template <typename T>
+  class MyClass
+  {
+    void foo()
+    {
+      typedef MyClass c;
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use 'using' instead of 'typedef' [modernize-use-using]
+      // CHECK-FIXES: using c = MyClass;
+    }
+  };
+
+  const auto foo4 = [](int a){typedef int d;};
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: const auto foo4 = [](int a){using d = int;};
+}
+
+
+typedef int* int_ptr, *int_ptr_ptr;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-MESSAGES: :[[@LINE-2]]:21: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using int_ptr = int*;
+// CHECK-FIXES-NEXT: using int_ptr_ptr = int_ptr*;
+
+#ifndef SpecialMode
+#define SomeMacro(x) x
+#else
+#define SomeMacro(x) SpecialType
+#endif
+
+class SomeMacro(GH33760) { };
+
+typedef void(SomeMacro(GH33760)::* FunctionType)(float, int);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using FunctionType = void(SomeMacro(GH33760)::* )(float, int);
+
+#define CDECL __attribute((cdecl))
+
+// GH37846 & GH41685
+typedef void (CDECL *GH37846)(int);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using GH37846 = void (CDECL *)(int);
+
+typedef void (__attribute((cdecl)) *GH41685)(int);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using GH41685 = void (__attribute((cdecl)) *)(int);
+
+namespace GH83568 {
+  typedef int(*name)(int arg1, int arg2);
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using name = int(*)(int arg1, int arg2);
+}
+
+#ifdef FOO
+#define GH95716 float
+#else
+#define GH95716 double
+#endif
+
+typedef GH95716 foo;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using foo = GH95716;
+
+namespace GH97009 {
+  typedef double PointType[3];
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  typedef bool (*Function)(PointType, PointType);
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using Function = bool (*)(PointType, PointType);
 }

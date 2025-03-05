@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h"
 
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   using StorageType = typename fputil::FPBits<T>::StorageType;
@@ -30,7 +31,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     ASSERT_TRUE(result.has_value());
 
     actual_output_mantissa = result->mantissa;
-    actual_output_exp2 = result->exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result->exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
@@ -54,7 +55,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     ASSERT_TRUE(result.has_value());
 
     actual_output_mantissa = result->mantissa;
-    actual_output_exp2 = result->exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result->exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
@@ -71,7 +72,7 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
     auto result = internal::simple_decimal_conversion<T>(numStart);
 
     actual_output_mantissa = result.num.mantissa;
-    actual_output_exp2 = result.num.exponent;
+    actual_output_exp2 = static_cast<uint32_t>(result.num.exponent);
 
     EXPECT_EQ(actual_output_mantissa, expectedOutputMantissa);
     EXPECT_EQ(actual_output_exp2, expectedOutputExp2);
@@ -79,4 +80,4 @@ template <typename T> struct LlvmLibcStrToFloatTest : public testing::Test {
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

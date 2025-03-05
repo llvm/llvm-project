@@ -220,11 +220,10 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $30, %ecx
-; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; X86-NEXT:    sarl $30, %eax
+; X86-NEXT:    vpslld $2, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpsrlq $3, %xmm0, %xmm0
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)

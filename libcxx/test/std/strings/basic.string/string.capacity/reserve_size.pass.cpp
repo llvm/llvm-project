@@ -10,9 +10,9 @@
 
 // void reserve(size_type res_arg); // constexpr since C++20
 
-// This test relies on https://llvm.org/PR45368 being fixed, which isn't in
-// older Apple dylibs
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+// This test relies on https://llvm.org/PR45368 (841132e) being fixed, which isn't in
+// older Apple dylibs.
+// XFAIL: using-built-library-before-llvm-12
 
 #include <string>
 #include <stdexcept>
@@ -74,6 +74,15 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     test<S>(100, 50, 100);
     test<S>(100, 50, 1000);
     test<S>(100, 50, S::npos);
+  }
+
+  { // Check that growing twice works as expected
+    S str;
+    str.reserve(50);
+    assert(str.capacity() >= 50);
+    size_t old_cap = str.capacity();
+    str.reserve(str.capacity() + 1);
+    assert(str.capacity() > old_cap);
   }
 }
 

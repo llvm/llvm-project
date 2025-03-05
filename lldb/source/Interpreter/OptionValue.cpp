@@ -37,9 +37,7 @@ OptionValue& OptionValue::operator=(const OptionValue &other) {
 Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
                                 VarSetOperationType op, llvm::StringRef name,
                                 llvm::StringRef value) {
-  Status error;
-  error.SetErrorString("SetSubValue is not supported");
-  return error;
+  return Status::FromErrorString("SetSubValue is not supported");
 }
 
 OptionValueBoolean *OptionValue::GetAsBoolean() {
@@ -568,7 +566,7 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   if (value_sp)
     error = value_sp->SetValueFromString(value_cstr, eVarSetOperationAssign);
   else
-    error.SetErrorString("unsupported type mask");
+    error = Status::FromErrorString("unsupported type mask");
   return value_sp;
 }
 
@@ -604,39 +602,39 @@ Status OptionValue::SetValueFromString(llvm::StringRef value,
   Status error;
   switch (op) {
   case eVarSetOperationReplace:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'replace' operation",
         GetTypeAsCString());
     break;
   case eVarSetOperationInsertBefore:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'insert-before' operation",
         GetTypeAsCString());
     break;
   case eVarSetOperationInsertAfter:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'insert-after' operation",
         GetTypeAsCString());
     break;
   case eVarSetOperationRemove:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'remove' operation", GetTypeAsCString());
     break;
   case eVarSetOperationAppend:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'append' operation", GetTypeAsCString());
     break;
   case eVarSetOperationClear:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'clear' operation", GetTypeAsCString());
     break;
   case eVarSetOperationAssign:
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "%s objects do not support the 'assign' operation", GetTypeAsCString());
     break;
   case eVarSetOperationInvalid:
-    error.SetErrorStringWithFormat("invalid operation performed on a %s object",
-                                   GetTypeAsCString());
+    error = Status::FromErrorStringWithFormat(
+        "invalid operation performed on a %s object", GetTypeAsCString());
     break;
   }
   return error;

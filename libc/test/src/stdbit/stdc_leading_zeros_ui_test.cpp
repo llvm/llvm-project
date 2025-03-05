@@ -13,11 +13,14 @@
 
 TEST(LlvmLibcStdcLeadingZerosUiTest, Zero) {
   EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_ui(0U),
-            static_cast<unsigned>(INT_WIDTH));
+            static_cast<unsigned>(
+                LIBC_NAMESPACE::cpp::numeric_limits<unsigned int>::digits));
 }
 
 TEST(LlvmLibcStdcLeadingZerosUiTest, OneHot) {
-  for (unsigned i = 0U; i != INT_WIDTH; ++i)
+  for (unsigned i = 0U;
+       i != LIBC_NAMESPACE::cpp::numeric_limits<unsigned int>::digits; ++i)
     EXPECT_EQ(LIBC_NAMESPACE::stdc_leading_zeros_ui(1U << i),
-              INT_WIDTH - i - 1);
+              LIBC_NAMESPACE::cpp::numeric_limits<unsigned int>::digits - i -
+                  1);
 }

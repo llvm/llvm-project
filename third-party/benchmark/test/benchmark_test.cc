@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include <chrono>
+#include <complex>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
@@ -15,6 +16,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -26,7 +28,7 @@
 
 namespace {
 
-int BENCHMARK_NOINLINE Factorial(uint32_t n) {
+int BENCHMARK_NOINLINE Factorial(int n) {
   return (n == 1) ? 1 : n * Factorial(n - 1);
 }
 
@@ -74,7 +76,8 @@ BENCHMARK_RANGE(BM_CalculatePiRange, 1, 1024 * 1024);
 static void BM_CalculatePi(benchmark::State& state) {
   static const int depth = 1024;
   for (auto _ : state) {
-    benchmark::DoNotOptimize(CalculatePi(static_cast<int>(depth)));
+    double pi = CalculatePi(static_cast<int>(depth));
+    benchmark::DoNotOptimize(pi);
   }
 }
 BENCHMARK(BM_CalculatePi)->Threads(8);
@@ -90,7 +93,8 @@ static void BM_SetInsert(benchmark::State& state) {
     for (int j = 0; j < state.range(1); ++j) data.insert(rand());
   }
   state.SetItemsProcessed(state.iterations() * state.range(1));
-  state.SetBytesProcessed(state.iterations() * state.range(1) * sizeof(int));
+  state.SetBytesProcessed(state.iterations() * state.range(1) *
+                          static_cast<int64_t>(sizeof(int)));
 }
 
 // Test many inserts at once to reduce the total iterations needed. Otherwise,
@@ -108,7 +112,7 @@ static void BM_Sequential(benchmark::State& state) {
   }
   const int64_t items_processed = state.iterations() * state.range(0);
   state.SetItemsProcessed(items_processed);
-  state.SetBytesProcessed(items_processed * sizeof(v));
+  state.SetBytesProcessed(items_processed * static_cast<int64_t>(sizeof(v)));
 }
 BENCHMARK_TEMPLATE2(BM_Sequential, std::vector<int>, int)
     ->Range(1 << 0, 1 << 10);
@@ -122,7 +126,10 @@ static void BM_StringCompare(benchmark::State& state) {
   size_t len = static_cast<size_t>(state.range(0));
   std::string s1(len, '-');
   std::string s2(len, '-');
-  for (auto _ : state) benchmark::DoNotOptimize(s1.compare(s2));
+  for (auto _ : state) {
+    auto comp = s1.compare(s2);
+    benchmark::DoNotOptimize(comp);
+  }
 }
 BENCHMARK(BM_StringCompare)->Range(1, 1 << 20);
 
@@ -169,7 +176,7 @@ static void BM_ParallelMemset(benchmark::State& state) {
     for (int i = from; i < to; i++) {
       // No need to lock test_vector_mu as ranges
       // do not overlap between threads.
-      benchmark::DoNotOptimize(test_vector->at(i) = 1);
+      benchmark::DoNotOptimize(test_vector->at(static_cast<size_t>(i)) = 1);
     }
   }
 
@@ -220,6 +227,31 @@ void BM_non_template_args(benchmark::State& state, int, double) {
 }
 BENCHMARK_CAPTURE(BM_non_template_args, basic_test, 0, 0);
 
+template <class T, class U, class... ExtraArgs>
+void BM_template2_capture(benchmark::State& state, ExtraArgs&&... extra_args) {
+  static_assert(std::is_same<T, void>::value, "");
+  static_assert(std::is_same<U, char*>::value, "");
+  static_assert(std::is_same<ExtraArgs..., unsigned int>::value, "");
+  unsigned int dummy[sizeof...(ExtraArgs)] = {extra_args...};
+  assert(dummy[0] == 42);
+  for (auto _ : state) {
+  }
+}
+BENCHMARK_TEMPLATE2_CAPTURE(BM_template2_capture, void, char*, foo, 42U);
+BENCHMARK_CAPTURE((BM_template2_capture<void, char*>), foo, 42U);
+
+template <class T, class... ExtraArgs>
+void BM_template1_capture(benchmark::State& state, ExtraArgs&&... extra_args) {
+  static_assert(std::is_same<T, void>::value, "");
+  static_assert(std::is_same<ExtraArgs..., unsigned long>::value, "");
+  unsigned long dummy[sizeof...(ExtraArgs)] = {extra_args...};
+  assert(dummy[0] == 24);
+  for (auto _ : state) {
+  }
+}
+BENCHMARK_TEMPLATE1_CAPTURE(BM_template1_capture, void, foo, 24UL);
+BENCHMARK_CAPTURE(BM_template1_capture<void>, foo, 24UL);
+
 #endif  // BENCHMARK_HAS_CXX11
 
 static void BM_DenseThreadRanges(benchmark::State& st) {
@@ -243,5 +275,26 @@ static void BM_DenseThreadRanges(benchmark::State& st) {
 BENCHMARK(BM_DenseThreadRanges)->Arg(1)->DenseThreadRange(1, 3);
 BENCHMARK(BM_DenseThreadRanges)->Arg(2)->DenseThreadRange(1, 4, 2);
 BENCHMARK(BM_DenseThreadRanges)->Arg(3)->DenseThreadRange(5, 14, 3);
+
+static void BM_BenchmarkName(benchmark::State& state) {
+  for (auto _ : state) {
+  }
+
+  // Check that the benchmark name is passed correctly to `state`.
+  assert("BM_BenchmarkName" == state.name());
+}
+BENCHMARK(BM_BenchmarkName);
+
+// regression test for #1446
+template <typename type>
+static void BM_templated_test(benchmark::State& state) {
+  for (auto _ : state) {
+    type created_string;
+    benchmark::DoNotOptimize(created_string);
+  }
+}
+
+static auto BM_templated_test_double = BM_templated_test<std::complex<double>>;
+BENCHMARK(BM_templated_test_double);
 
 BENCHMARK_MAIN();

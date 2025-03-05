@@ -84,7 +84,7 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 // Note: This alloc is not needed, but it is inserted before the returned buffer
 // is promoted to an out param to reconcile mismatching layout maps on return
 // value and function signature.
-//       CHECK-NO-LAYOUT:   %[[alloc2:.*]] = memref.alloc() : memref<2x5xf32>
+//       CHECK-NO-LAYOUT:   %[[alloc2:.*]] = memref.alloc() {{.*}} : memref<2x5xf32>
 //       CHECK-NO-LAYOUT:   memref.copy %[[subview]], %[[alloc2]]
 //       CHECK-NO-LAYOUT:   memref.copy %[[alloc2]], %[[r]]
 

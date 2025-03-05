@@ -16,7 +16,6 @@
 namespace llvm {
 
 class MCAsmInfo;
-class MCAsmLayout;
 class MCAssembler;
 class MCContext;
 class MCFixup;
@@ -54,7 +53,6 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const MCAsmLayout *Layout,
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
@@ -65,7 +63,6 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCAsmLayout *Layout,
                                  const MCFixup *Fixup,
                                  const SectionAddrMap *Addrs, bool InSet) const;
 
@@ -89,6 +86,10 @@ public:
              bool InParens = false) const;
   void dump() const;
 
+  /// Returns whether the given symbol is used anywhere in the expression or
+  /// subexpressions.
+  bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
+
   /// @}
   /// \name Expression Evaluation
   /// @{
@@ -96,27 +97,26 @@ public:
   /// Try to evaluate the expression to an absolute value.
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating symbol
-  /// values. If not given, then only non-symbolic expressions will be
-  /// evaluated.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout,
+  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
                           const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
 
-  bool evaluateKnownAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
+  /// Aggressive variant of evaluateAsRelocatable when relocations are
+  /// unavailable (e.g. .fill). Expects callers to handle errors when true is
+  /// returned.
+  bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
   ///
   /// \param Res - The relocatable value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating values.
+  /// \param Asm - The assembler object to use for evaluating values.
   /// \param Fixup - The Fixup object if available.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                              const MCFixup *Fixup) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
@@ -124,7 +124,7 @@ public:
   ///
   /// This is a more aggressive variant of evaluateAsRelocatable. The intended
   /// use is for when relocations are not available, like the .size directive.
-  bool evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const;
+  bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
 
   /// Find the "associated section" for this expression, which is
   /// currently defined as the absolute section for constants, or
@@ -196,6 +196,7 @@ public:
     VK_Invalid,
 
     VK_GOT,
+    VK_GOTENT,
     VK_GOTOFF,
     VK_GOTREL,
     VK_PCREL,
@@ -223,6 +224,12 @@ public:
     VK_SECREL,
     VK_SIZE,    // symbol@SIZE
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
+    VK_FUNCDESC,
+    VK_GOTFUNCDESC,
+    VK_GOTOFFFUNCDESC,
+    VK_TLSGD_FDPIC,
+    VK_TLSLDM_FDPIC,
+    VK_GOTTPOFF_FDPIC,
 
     VK_X86_ABS8,
     VK_X86_PLTOFF,
@@ -245,15 +252,6 @@ public:
     VK_AVR_DIFF32,
     VK_AVR_PM,
 
-    VK_PPC_LO,              // symbol@l
-    VK_PPC_HI,              // symbol@h
-    VK_PPC_HA,              // symbol@ha
-    VK_PPC_HIGH,            // symbol@high
-    VK_PPC_HIGHA,           // symbol@higha
-    VK_PPC_HIGHER,          // symbol@higher
-    VK_PPC_HIGHERA,         // symbol@highera
-    VK_PPC_HIGHEST,         // symbol@highest
-    VK_PPC_HIGHESTA,        // symbol@highesta
     VK_PPC_GOT_LO,          // symbol@got@l
     VK_PPC_GOT_HI,          // symbol@got@h
     VK_PPC_GOT_HA,          // symbol@got@ha
@@ -296,11 +294,12 @@ public:
     VK_PPC_GOT_TLSGD_LO,    // symbol@got@tlsgd@l
     VK_PPC_GOT_TLSGD_HI,    // symbol@got@tlsgd@h
     VK_PPC_GOT_TLSGD_HA,    // symbol@got@tlsgd@ha
-    VK_PPC_TLSGD,           // symbol@tlsgd
     VK_PPC_AIX_TLSGD,       // symbol@gd
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
     VK_PPC_AIX_TLSLE,       // symbol@le
+    VK_PPC_AIX_TLSLD,       // symbol@ld
+    VK_PPC_AIX_TLSML,       // symbol@ml
     VK_PPC_GOT_TLSLD,       // symbol@got@tlsld
     VK_PPC_GOT_TLSLD_LO,    // symbol@got@tlsld@l
     VK_PPC_GOT_TLSLD_HI,    // symbol@got@tlsld@h
@@ -310,7 +309,6 @@ public:
     VK_PPC_GOT_TLSLD_PCREL, // symbol@got@tlsld@pcrel
     VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
     VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
-    VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc
     VK_PPC_PCREL_OPT,       // .reloc expr, R_PPC64_PCREL_OPT, expr
@@ -408,14 +406,6 @@ public:
   bool hasSubsectionsViaSymbols() const {
     return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
   }
-
-  /// @}
-  /// \name Static Utility Functions
-  /// @{
-
-  static StringRef getVariantKindName(VariantKind Kind);
-
-  static VariantKind getVariantKindForName(StringRef Name);
 
   /// @}
 
@@ -654,11 +644,13 @@ protected:
 
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAsmLayout *Layout,
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                          const MCFixup *Fixup) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
+  virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
+    return false;
+  }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }

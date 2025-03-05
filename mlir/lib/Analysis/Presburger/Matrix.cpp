@@ -8,9 +8,7 @@
 
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -27,6 +25,22 @@ Matrix<T>::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
       nReservedColumns(std::max(nColumns, reservedColumns)),
       data(nRows * nReservedColumns) {
   data.reserve(std::max(nRows, reservedRows) * nReservedColumns);
+}
+
+/// We cannot use the default implementation of operator== as it compares
+/// fields like `reservedColumns` etc., which are not part of the data.
+template <typename T>
+bool Matrix<T>::operator==(const Matrix<T> &m) const {
+  if (nRows != m.getNumRows())
+    return false;
+  if (nColumns != m.getNumColumns())
+    return false;
+
+  for (unsigned i = 0; i < nRows; i++)
+    if (getRow(i) != m.getRow(i))
+      return false;
+
+  return true;
 }
 
 template <typename T>
@@ -296,6 +310,12 @@ void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale) {
 }
 
 template <typename T>
+void Matrix<T>::scaleRow(unsigned row, const T &scale) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) *= scale;
+}
+
+template <typename T>
 void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
                             const T &scale) {
   if (scale == 0)
@@ -314,6 +334,12 @@ template <typename T>
 void Matrix<T>::negateRow(unsigned row) {
   for (unsigned column = 0, e = getNumColumns(); column < e; ++column)
     at(row, column) = -at(row, column);
+}
+
+template <typename T>
+void Matrix<T>::negateMatrix() {
+  for (unsigned row = 0; row < nRows; ++row)
+    negateRow(row);
 }
 
 template <typename T>
@@ -344,23 +370,60 @@ SmallVector<T, 8> Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
 /// sourceCol. This brings M(row, targetCol) to the range [0, M(row,
 /// sourceCol)). Apply the same column operation to otherMatrix, with the same
 /// integer multiple.
-static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row,
+static void modEntryColumnOperation(Matrix<DynamicAPInt> &m, unsigned row,
                                     unsigned sourceCol, unsigned targetCol,
-                                    Matrix<MPInt> &otherMatrix) {
+                                    Matrix<DynamicAPInt> &otherMatrix) {
   assert(m(row, sourceCol) != 0 && "Cannot divide by zero!");
   assert(m(row, sourceCol) > 0 && "Source must be positive!");
-  MPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
+  DynamicAPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
   m.addToColumn(sourceCol, targetCol, ratio);
   otherMatrix.addToColumn(sourceCol, targetCol, ratio);
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
+                                  unsigned fromColumn,
+                                  unsigned toColumn) const {
+  assert(fromRow <= toRow && "end of row range must be after beginning!");
+  assert(toRow < nRows && "end of row range out of bounds!");
+  assert(fromColumn <= toColumn &&
+         "end of column range must be after beginning!");
+  assert(toColumn < nColumns && "end of column range out of bounds!");
+  Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
+  for (unsigned i = fromRow; i <= toRow; ++i)
+    for (unsigned j = fromColumn; j <= toColumn; ++j)
+      subMatrix(i - fromRow, j - fromColumn) = at(i, j);
+  return subMatrix;
+}
+
+template <typename T>
 void Matrix<T>::print(raw_ostream &os) const {
-  for (unsigned row = 0; row < nRows; ++row) {
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned row = 0; row < nRows; ++row)
     for (unsigned column = 0; column < nColumns; ++column)
-      os << at(row, column) << ' ';
-    os << '\n';
+      updatePrintMetrics<T>(at(row, column), ptm);
+  unsigned MIN_SPACING = 1;
+  for (unsigned row = 0; row < nRows; ++row) {
+    for (unsigned column = 0; column < nColumns; ++column) {
+      printWithPrintMetrics<T>(os, at(row, column), MIN_SPACING, ptm);
+    }
+    os << "\n";
   }
+}
+
+/// We iterate over the `indicator` bitset, checking each bit. If a bit is 1,
+/// we append it to one matrix, and if it is zero, we append it to the other.
+template <typename T>
+std::pair<Matrix<T>, Matrix<T>>
+Matrix<T>::splitByBitset(ArrayRef<int> indicator) {
+  Matrix<T> rowsForOne(0, nColumns), rowsForZero(0, nColumns);
+  for (unsigned i = 0; i < nRows; i++) {
+    if (indicator[i] == 1)
+      rowsForOne.appendExtraRow(getRow(i));
+    else
+      rowsForZero.appendExtraRow(getRow(i));
+  }
+  return {rowsForOne, rowsForZero};
 }
 
 template <typename T>
@@ -385,7 +448,7 @@ bool Matrix<T>::hasConsistentState() const {
 
 namespace mlir {
 namespace presburger {
-template class Matrix<MPInt>;
+template class Matrix<DynamicAPInt>;
 template class Matrix<Fraction>;
 } // namespace presburger
 } // namespace mlir
@@ -483,25 +546,25 @@ std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
   return {h, u};
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
+DynamicAPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
   return normalizeRange(getRow(row).slice(0, cols));
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row) {
+DynamicAPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+DynamicAPInt IntMatrix::determinant(IntMatrix *inverse) const {
   assert(nRows == nColumns &&
          "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
 
   FracMatrix fracInverse(nRows, nColumns);
-  MPInt detM = m.determinant(&fracInverse).getAsInteger();
+  DynamicAPInt detM = m.determinant(&fracInverse).getAsInteger();
 
   if (detM == 0)
-    return MPInt(0);
+    return DynamicAPInt(0);
 
   if (!inverse)
     return detM;
@@ -659,7 +722,7 @@ FracMatrix FracMatrix::gramSchmidt() const {
 //
 // We repeat this until k = n and return.
 void FracMatrix::LLL(Fraction delta) {
-  MPInt nearest;
+  DynamicAPInt nearest;
   Fraction mu;
 
   // `gsOrth` holds the Gram-Schmidt orthogonalisation
@@ -696,4 +759,21 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
+}
+
+IntMatrix FracMatrix::normalizeRows() const {
+  unsigned numRows = getNumRows();
+  unsigned numColumns = getNumColumns();
+  IntMatrix normalized(numRows, numColumns);
+
+  DynamicAPInt lcmDenoms = DynamicAPInt(1);
+  for (unsigned i = 0; i < numRows; i++) {
+    // For a row, first compute the LCM of the denominators.
+    for (unsigned j = 0; j < numColumns; j++)
+      lcmDenoms = lcm(lcmDenoms, at(i, j).den);
+    // Then, multiply by it throughout and convert to integers.
+    for (unsigned j = 0; j < numColumns; j++)
+      normalized(i, j) = (at(i, j) * lcmDenoms).getAsInteger();
+  }
+  return normalized;
 }

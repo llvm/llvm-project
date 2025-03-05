@@ -27,7 +27,7 @@ define dso_local void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias
 ; PREDFLAG:  %wide.masked.load1 = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %{{.*}} = add nsw <4 x i32> %wide.masked.load1, %wide.masked.load
 ; PREDFLAG:  call void @llvm.masked.store.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
-; PREDFLAG:  %index.next = add i64 %index, 4
+; PREDFLAG:  %index.next = add nuw i64 %index, 4
 ; PREDFLAG:  %[[CMP:.*]] = icmp eq i64 %index.next, 432
 ; PREDFLAG:  br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !0
 entry:

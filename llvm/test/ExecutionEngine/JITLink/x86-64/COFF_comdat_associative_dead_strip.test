@@ -7,9 +7,9 @@
 # parent block is dead.
 #
 # CHECK: Link graph
-# CHECK-DAG: section parent:
-# CHECK-EMPTY:
 # CHECK-DAG: section child:
+# CHECK-EMPTY:
+# CHECK-DAG: section parent:
 # CHECK-EMPTY:
 
 --- !COFF

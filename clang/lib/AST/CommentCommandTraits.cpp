@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentCommandTraits.h"
-#include "llvm/ADT/STLExtras.h"
 #include <cassert>
 
 namespace clang {

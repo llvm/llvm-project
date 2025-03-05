@@ -10,16 +10,16 @@ define i32 @align_both_equal() local_unnamed_addr {
 ; CHECK-LABEL: @align_both_equal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([[STRUCT_COUNTERS:%.*]], ptr @counters, i64 0, i32 1), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @m, align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true
@@ -64,16 +64,16 @@ define i32 @align_not_equal() local_unnamed_addr {
 ; CHECK-LABEL: @align_not_equal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([[STRUCT_COUNTERS:%.*]], ptr @counters, i64 0, i32 1), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @m, align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true
@@ -118,16 +118,16 @@ define i32 @align_single_zero() local_unnamed_addr {
 ; CHECK-LABEL: @align_single_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([[STRUCT_COUNTERS:%.*]], ptr @counters, i64 0, i32 1), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @m, align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true
@@ -172,16 +172,16 @@ define i32 @align_single_zero_second_greater_default() local_unnamed_addr {
 ; CHECK-LABEL: @align_single_zero_second_greater_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([[STRUCT_COUNTERS:%.*]], ptr @counters, i64 0, i32 1), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @m, align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true
@@ -226,16 +226,16 @@ define i32 @align_both_zero() local_unnamed_addr {
 ; CHECK-LABEL: @align_both_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr getelementptr inbounds ([[STRUCT_COUNTERS:%.*]], ptr @counters, i64 0, i32 1), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr getelementptr inbounds ([[STRUCT_COUNTERS]], ptr @counters, i64 0, i32 1), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr @m, align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i64> [[TMP0]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TOBOOL]], <2 x i64> [[TMP1]], <2 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[AND4:%.*]] = and i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TOBOOL5:%.*]] = icmp eq i64 [[AND4]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[SIMPLIFYCFG_MERGE:%.*]] = select i1 [[TOBOOL5]], <2 x i64> [[TMP4]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TOBOOL]], true
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TOBOOL5]], true

@@ -42,9 +42,9 @@ define amdgpu_kernel void @uniform_opt_lshr_and_cmp(ptr addrspace(1) %out, i32 %
   ; GCN-LABEL: name: uniform_opt_lshr_and_cmp
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr2_sgpr3
+  ; GCN-NEXT:   liveins: $sgpr4_sgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr2_sgpr3
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 9, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 11, 0 :: (dereferenceable invariant load (s32) from %ir.x.kernarg.offset, addrspace 4)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
@@ -96,4 +96,4 @@ out.else:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

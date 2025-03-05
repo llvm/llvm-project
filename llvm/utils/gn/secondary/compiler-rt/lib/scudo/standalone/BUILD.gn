@@ -12,6 +12,7 @@ source_set("sources") {
   sources = [
     "allocator_common.h",
     "allocator_config.h",
+    "allocator_config_wrapper.h",
     "atomic_helpers.h",
     "bytemap.h",
     "checksum.cpp",
@@ -68,6 +69,7 @@ source_set("sources") {
     "tsd.h",
     "tsd_exclusive.h",
     "tsd_shared.h",
+    "type_traits.h",
     "vector.h",
     "wrappers_c.h",
     "wrappers_c_checks.h",

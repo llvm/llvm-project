@@ -95,7 +95,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 ; CHECK: LV: Checking a loop in 'gather_nxv4i32_stride2'
-; CHECK: LV: Found an estimated cost of 81 for VF vscale x 4 For instruction:   %0 = load float, ptr %arrayidx, align 4
+; CHECK: LV: Found an estimated cost of 2 for VF vscale x 4 For instruction:   %0 = load float, ptr %arrayidx, align 4
 define void @gather_nxv4i32_stride2(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i64 %n) #0 {
 entry:
   br label %for.body

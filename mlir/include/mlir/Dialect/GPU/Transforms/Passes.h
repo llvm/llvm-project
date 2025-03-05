@@ -13,8 +13,8 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
-#include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -66,14 +66,24 @@ void populateGpuAllReducePatterns(RewritePatternSet &patterns);
 /// Collect a set of patterns to break down subgroup_reduce ops into smaller
 /// ones supported by the target of `size <= maxShuffleBitwidth`, where `size`
 /// is the subgroup_reduce value bitwidth.
-void populateGpuBreakDownSubgrupReducePatterns(RewritePatternSet &patterns,
-                                               unsigned maxShuffleBitwidth = 32,
-                                               PatternBenefit benefit = 1);
+void populateGpuBreakDownSubgroupReducePatterns(
+    RewritePatternSet &patterns, unsigned maxShuffleBitwidth = 32,
+    PatternBenefit benefit = 1);
 
 /// Collect a set of patterns to lower `gpu.subgroup_reduce` into `gpu.shuffle`
 /// ops over `shuffleBitwidth` scalar types. Assumes that the subgroup has
 /// `subgroupSize` lanes. Uses the butterfly shuffle algorithm.
-void populateGpuLowerSubgroupReduceToShufflePattenrs(
+///
+/// The patterns populated by this function will ignore ops with the
+/// `cluster_size` attribute.
+/// `populateGpuLowerClusteredSubgroupReduceToShufflePatterns` is the opposite.
+void populateGpuLowerSubgroupReduceToShufflePatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
+
+/// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
+/// that only matches `gpu.subgroup_reduce` ops with a `cluster_size`.
+void populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
     RewritePatternSet &patterns, unsigned subgroupSize,
     unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 
@@ -91,88 +101,11 @@ namespace gpu {
 LogicalResult transformGpuModulesToBinaries(
     Operation *op, OffloadingLLVMTranslationAttrInterface handler = nullptr,
     const gpu::TargetOptions &options = {});
-
-/// Base pass class to serialize kernel functions through LLVM into
-/// user-specified IR and add the resulting blob as module attribute.
-class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
-public:
-  SerializeToBlobPass(TypeID passID);
-  SerializeToBlobPass(const SerializeToBlobPass &other);
-
-  void runOnOperation() final;
-
-protected:
-  /// Hook allowing the application of optimizations before codegen
-  /// By default, does nothing
-  virtual LogicalResult optimizeLlvm(llvm::Module &llvmModule,
-                                     llvm::TargetMachine &targetMachine);
-
-  /// Translates the 'getOperation()' result to an LLVM module.
-  virtual std::unique_ptr<llvm::Module>
-  translateToLLVMIR(llvm::LLVMContext &llvmContext);
-
-private:
-  /// Creates the LLVM target machine to generate the ISA.
-  std::unique_ptr<llvm::TargetMachine> createTargetMachine();
-
-  /// Translates the module to ISA
-  std::optional<std::string> translateToISA(llvm::Module &llvmModule,
-                                            llvm::TargetMachine &targetMachine);
-
-  /// Serializes the target ISA to binary form.
-  virtual std::unique_ptr<std::vector<char>>
-  serializeISA(const std::string &isa) = 0;
-
-protected:
-  Option<std::string> triple{*this, "triple",
-                             ::llvm::cl::desc("Target triple")};
-  Option<std::string> chip{*this, "chip",
-                           ::llvm::cl::desc("Target architecture")};
-  Option<std::string> features{*this, "features",
-                               ::llvm::cl::desc("Target features")};
-  Option<int> optLevel{*this, "opt-level",
-                       llvm::cl::desc("Optimization level for compilation"),
-                       llvm::cl::init(2)};
-  Option<std::string> gpuBinaryAnnotation{
-      *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary"),
-      llvm::cl::init(getDefaultGpuBinaryAnnotation())};
-  Option<bool> dumpPtx{*this, "dump-ptx",
-                       ::llvm::cl::desc("Dump generated PTX"),
-                       llvm::cl::init(false)};
-};
 } // namespace gpu
 
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
-
-/// Register pass to serialize GPU kernel functions to a CUBIN binary
-/// annotation.
-LLVM_DEPRECATED("use Target attributes instead", "")
-void registerGpuSerializeToCubinPass();
-
-/// Register pass to serialize GPU kernel functions to a HSAco binary
-/// annotation.
-LLVM_DEPRECATED("use Target attributes instead", "")
-void registerGpuSerializeToHsacoPass();
-
-/// Create an instance of the GPU kernel function to CUBIN binary serialization
-/// pass with optLevel (default level 2).
-LLVM_DEPRECATED("use Target attributes instead", "")
-std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
-                                                    StringRef chip,
-                                                    StringRef features,
-                                                    int optLevel = 2,
-                                                    bool dumpPtx = false);
-
-/// Create an instance of the GPU kernel function to HSAco binary serialization
-/// pass.
-LLVM_DEPRECATED("use Target attributes instead", "")
-std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
-                                                    StringRef arch,
-                                                    StringRef features,
-                                                    int optLevel);
 
 /// Collect a set of patterns to decompose memrefs ops.
 void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);

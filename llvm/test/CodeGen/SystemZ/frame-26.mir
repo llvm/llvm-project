@@ -1,6 +1,5 @@
 # RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -print-after=prologepilog \
 # RUN:  -verify-machineinstrs 2>&1 | FileCheck %s
-# REQUIRES: asserts
 #
 # Test that R6 when used for an argument is modelled as being live throughout
 # the function when not saved in the prologue..
@@ -15,21 +14,21 @@
 
 
 --- |
-  
+
   @g_181 = external dso_local global i32, align 4
   @g_1390 = external dso_local constant ptr, align 8
-  
+
   define internal i8 @fun0(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, ptr %arg4, float %F0, float %F1) #0 {
     ret i8 0
   }
-  
+
   ; Same function but in a single block which will make the verifier complain
   ; if R6 is killed by the original store before the point where the
   ; RegScavenger inserts its (killing) store of R6.
   define internal i8 @fun1(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, ptr %arg4) #0 {
     ret i8 0
   }
-  
+
   attributes #0 = { "frame-pointer"="all" }
 
 ...
@@ -74,21 +73,21 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $f0s, $f2s, $r6d
-  
+
     STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r0d = LARL @g_181
     nofpexcept CEBR renamable $f0s, renamable $f2s, implicit-def $cc, implicit $fpc
     STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     BRC 15, 4, %bb.2, implicit killed $cc
-  
+
   bb.1:
     liveins: $f2s, $r0d
-  
+
     renamable $f0s = COPY killed renamable $f2s
-  
+
   bb.2:
     liveins: $f0s, $r0d
-  
+
     STE killed renamable $f0s, undef renamable $r1d, 0, $noreg :: (volatile store (s32) into `ptr undef`)
     renamable $r1d = nuw LA %stack.0, 16, $noreg
     renamable $r2d = nuw LA %stack.0, 24, $noreg
@@ -161,7 +160,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $r6d
-  
+
     STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)
     renamable $r0d = LARL @g_181
     STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store (s64) into `ptr undef`)

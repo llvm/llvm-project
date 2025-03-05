@@ -1,11 +1,11 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -97,11 +97,11 @@ def OpI : NS_Op<"mix_variadic_and_normal_results_op", [SameVariadicResultSize]> 
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Variadic<AnyTensor>:$output3);
 }
 
-// CHECK-LABEL: ::mlir::Operation::result_range OpI::getOutput1
-// CHECK-NEXT:    return getODSResults(0);
+// DECL-LABEL: ::mlir::Operation::result_range getOutput1
+// DECL-NEXT:    return getODSResults(0);
 
-// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpI::getOutput2
-// CHECK-NEXT:    return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSResults(1).begin());
+// DECL-LABEL: ::mlir::TypedValue<::mlir::TensorType> getOutput2
+// DECL-NEXT:    return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSResults(1).begin());
 
 // CHECK-LABEL: OpI::build
 // CHECK-NEXT:    odsState.addTypes(output1);
@@ -129,6 +129,8 @@ def OpL1 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL1::inferReturnTypes
 // CHECK-NOT: }
+// CHECK: if (operands.size() <= 0)
+// CHECK-NEXT: return ::mlir::failure();
 // CHECK: ::mlir::Type odsInferredType0 = operands[0].getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
@@ -140,6 +142,9 @@ def OpL2 : NS_Op<"op_with_all_types_constraint",
 
 // CHECK-LABEL: LogicalResult OpL2::inferReturnTypes
 // CHECK-NOT: }
+// CHECK: if (operands.size() <= 2)
+// CHECK-NEXT: return ::mlir::failure();
+// CHECK-NOT: if (operands.size() <= 0)
 // CHECK: ::mlir::Type odsInferredType0 = operands[2].getType();
 // CHECK: ::mlir::Type odsInferredType1 = operands[0].getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
@@ -165,6 +170,8 @@ def OpL4 : NS_Op<"two_inference_edges", [
 }
 
 // CHECK-LABEL: LogicalResult OpL4::inferReturnTypes
+// CHECK: if (operands.size() <= 0)
+// CHECK-NEXT: return ::mlir::failure();
 // CHECK: odsInferredType0 = fromInput(operands[0].getType())
 // CHECK: odsInferredType1 = infer0(odsInferredType0)
 // CHECK: odsInferredType2 = infer1(odsInferredType1)
@@ -172,9 +179,30 @@ def OpL4 : NS_Op<"two_inference_edges", [
 // CHECK: inferredReturnTypes[1] = odsInferredType1
 // CHECK: inferredReturnTypes[2] = odsInferredType2
 
+def OpL5 : NS_Op<"op_with_same_but_unconstraint_results",
+    [AllTypesMatch<["result_a", "result_b"]>]> {
+  let results = (outs AnyType:$result_a, AnyType:$result_b);
+}
+
+// CHECK-NOT: LogicalResult OpL5::inferReturnTypes
+
+def OpL6 : NS_Op<"op_with_same_and_constraint_results",
+    [AllTypesMatch<["result_a", "result_b", "result_c"]>]> {
+  let results = (outs AnyType:$result_a, AnyType:$result_b, I32:$result_c);
+}
+
+// CHECK-LABEL: LogicalResult OpL6::inferReturnTypes
+// CHECK-NOT: }
+// CHECK: odsInferredType0 = odsBuilder.getIntegerType(32);
+// CHECK: odsInferredType1 = odsBuilder.getIntegerType(32);
+// CHECK: odsInferredType2 = odsBuilder.getIntegerType(32);
+// CHECK: inferredReturnTypes[0] = odsInferredType0;
+// CHECK: inferredReturnTypes[1] = odsInferredType1;
+// CHECK: inferredReturnTypes[2] = odsInferredType2;
+
 def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResultSegments]> {
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Optional<AnyTensor>:$output3);
 }
 
 // CHECK-LABEL: OpM::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange output1, ::mlir::Type output2, /*optional*/::mlir::Type output3)
-// CHECK: odsState.addAttribute(getResultSegmentSizesAttrName(odsState.name), odsBuilder.getDenseI32ArrayAttr({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}));
+// CHECK: ::llvm::copy(::llvm::ArrayRef<int32_t>({static_cast<int32_t>(output1.size()), 1, (output3 ? 1 : 0)}),  odsState.getOrAddProperties<Properties>().resultSegmentSizes.begin());

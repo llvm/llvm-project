@@ -9,34 +9,17 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
-#include "src/__support/GPU/utils.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-// Implement thread local storage on the GPU using local memory. Each thread
-// gets its slot in the local memory array and is private to the group.
-// TODO: We need to implement the 'thread_local' keyword on the GPU. This is an
-// inefficient and incomplete stand-in until that is done.
-template <typename T> class ThreadLocal {
-private:
-  static constexpr long MAX_THREADS = 1024;
-  [[clang::loader_uninitialized]] static inline gpu::Local<T>
-      storage[MAX_THREADS];
+// The ISO C standard does not explicitly require thread-safe behavior for the
+// generic `rand()` function. Some implementations expect it however, so we
+// provide it here.
+extern cpp::Atomic<unsigned long> rand_next;
 
-public:
-  LIBC_INLINE operator T() const { return storage[gpu::get_thread_id()]; }
-  LIBC_INLINE void operator=(const T &value) {
-    storage[gpu::get_thread_id()] = value;
-  }
-};
-
-extern ThreadLocal<unsigned long> rand_next;
-#else
-extern LIBC_THREAD_LOCAL unsigned long rand_next;
-#endif
-
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H

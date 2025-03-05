@@ -13,6 +13,7 @@ static_library("Debugging") {
     "DebuggerSupportPlugin.cpp",
     "LLJITUtilsCBindings.cpp",
     "PerfSupportPlugin.cpp",
+    "VTuneSupportPlugin.cpp",
   ]
   if (current_os == "linux") {
     libs = [ "rt" ]

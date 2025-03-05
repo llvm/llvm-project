@@ -227,12 +227,12 @@ TEST_F(FIRTypesTest, updateTypeForUnlimitedPolymorphic) {
   mlir::Type ptrArrNone = fir::PointerType::get(arrNone);
 
   mlir::Type i32Ty = mlir::IntegerType::get(&context, 32);
-  mlir::Type f32Ty = mlir::FloatType::getF32(&context);
+  mlir::Type f32Ty = mlir::Float32Type::get(&context);
   mlir::Type l1Ty = fir::LogicalType::get(&context, 1);
-  mlir::Type cplx4Ty = fir::ComplexType::get(&context, 4);
+  mlir::Type cplx32Ty = mlir::ComplexType::get(f32Ty);
   mlir::Type char1Ty = fir::CharacterType::get(&context, 1, 10);
   llvm::SmallVector<mlir::Type> intrinsicTypes = {
-      i32Ty, f32Ty, l1Ty, cplx4Ty, char1Ty};
+      i32Ty, f32Ty, l1Ty, cplx32Ty, char1Ty};
 
   for (mlir::Type ty : intrinsicTypes) {
     // `ty` -> none
@@ -268,12 +268,12 @@ TEST_F(FIRTypesTest, getTypeAsString) {
           fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)),
           *kindMap));
   EXPECT_EQ(
-      "f64", fir::getTypeAsString(mlir::FloatType::getF64(&context), *kindMap));
+      "f64", fir::getTypeAsString(mlir::Float64Type::get(&context), *kindMap));
   EXPECT_EQ(
       "l8", fir::getTypeAsString(fir::LogicalType::get(&context, 1), *kindMap));
   EXPECT_EQ("z32",
       fir::getTypeAsString(
-          mlir::ComplexType::get(mlir::FloatType::getF32(&context)), *kindMap));
+          mlir::ComplexType::get(mlir::Float32Type::get(&context)), *kindMap));
   EXPECT_EQ("c8",
       fir::getTypeAsString(fir::CharacterType::get(&context, 1, 1), *kindMap));
   EXPECT_EQ("c8x10",

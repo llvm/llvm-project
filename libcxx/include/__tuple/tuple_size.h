@@ -10,11 +10,13 @@
 #define _LIBCPP___TUPLE_TUPLE_SIZE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_types.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_volatile.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,7 +29,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size;
 
 #if !defined(_LIBCPP_CXX03_LANG)
 template <class _Tp, class...>
-using __enable_if_tuple_size_imp = _Tp;
+using __enable_if_tuple_size_imp _LIBCPP_NODEBUG = _Tp;
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_size<__enable_if_tuple_size_imp< const _Tp,
@@ -43,7 +45,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<__enable_if_tuple_size_imp< volatile _Tp,
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS
-    tuple_size<__enable_if_tuple_size_imp< const volatile _Tp, integral_constant<size_t, sizeof(tuple_size<_Tp>)>>>
+tuple_size<__enable_if_tuple_size_imp<const volatile _Tp, integral_constant<size_t, sizeof(tuple_size<_Tp>)>>>
     : public integral_constant<size_t, tuple_size<_Tp>::value> {};
 
 #else
@@ -62,6 +64,11 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<tuple<_Tp...> > : public integral_constan
 
 template <class... _Tp>
 struct _LIBCPP_TEMPLATE_VIS tuple_size<__tuple_types<_Tp...> > : public integral_constant<size_t, sizeof...(_Tp)> {};
+
+#  if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
+#  endif
 
 #endif // _LIBCPP_CXX03_LANG
 

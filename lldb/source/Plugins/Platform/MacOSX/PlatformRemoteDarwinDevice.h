@@ -40,10 +40,6 @@ public:
   ~PlatformRemoteDarwinDevice() override;
 
   // Platform functions
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   void GetStatus(Stream &strm) override;
 
   virtual Status GetSymbolFile(const FileSpec &platform_file,

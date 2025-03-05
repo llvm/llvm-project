@@ -35,8 +35,8 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_user_defined_elemental_array(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "i"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "l"}) {
-! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMuser_defFtest_user_defined_elemental_arrayEi"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_user_defined_elemental_arrayEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_arrayEi"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_arrayEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:    } to {
@@ -51,17 +51,17 @@ subroutine test_user_defined_elemental_array_value(z, l)
    z = l
 end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_user_defined_elemental_array_value(
-! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.complex<4>>> {fir.bindc_name = "z"},
+! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xcomplex<f32>>> {fir.bindc_name = "z"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "l"}) {
-! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEz"} : (!fir.box<!fir.array<?x!fir.complex<4>>>) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
+! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_elemental_array_valueEz"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      hlfir.yield %[[VAL_2]]#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:    } to {
-! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?x!fir.complex<4>>>
-! CHECK:    } user_defined_assign  (%[[VAL_4:.*]]: !fir.ref<!fir.logical<4>>) to (%[[VAL_5:.*]]: !fir.ref<!fir.complex<4>>) {
+! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?xcomplex<f32>>>
+! CHECK:    } user_defined_assign  (%[[VAL_4:.*]]: !fir.ref<!fir.logical<4>>) to (%[[VAL_5:.*]]: !fir.ref<complex<f32>>) {
 ! CHECK:      %[[VAL_6:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.logical<4>>
-! CHECK:      fir.call @_QPlogical_to_complex(%[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<!fir.complex<4>>, !fir.logical<4>) -> ()
+! CHECK:      fir.call @_QPlogical_to_complex(%[[VAL_5]], %[[VAL_6]]) {{.*}}: (!fir.ref<complex<f32>>, !fir.logical<4>) -> ()
 ! CHECK:    }
 
 subroutine test_user_defined_scalar(i, l)
@@ -72,8 +72,8 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_user_defined_scalar(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "i"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "l"}) {
-! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMuser_defFtest_user_defined_scalarEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_user_defined_scalarEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_scalarEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_user_defined_scalarEl"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:      hlfir.yield %[[VAL_4]] : !fir.logical<4>
@@ -91,7 +91,7 @@ subroutine test_non_elemental_array(x)
 end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_non_elemental_array(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
-! CHECK:    %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMuser_defFtest_non_elemental_arrayEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:    %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_non_elemental_arrayEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      %[[VAL_2:.*]] = arith.constant 4.200000e+01 : f32
 ! CHECK:      %[[VAL_3:.*]] = arith.constant 0 : index
@@ -126,9 +126,9 @@ end subroutine
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "i"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "l"},
 ! CHECK-SAME:    %[[VAL_2:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "l2"}) {
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEi"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK:    %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
-! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEl2"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEi"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:    %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEl"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_where_user_def_assignmentEl2"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
 ! CHECK:    hlfir.where {
 ! CHECK:      hlfir.yield %[[VAL_4]]#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:    } do {
@@ -171,11 +171,11 @@ end subroutine
 ! CHECK:    %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:    %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
-! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "_QMuser_defFtest_forall_user_def_assignmentEi"} : (!fir.ref<!fir.array<20x10xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<20x10xi32>>, !fir.ref<!fir.array<20x10xi32>>)
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_forall_user_def_assignmentEi"} : (!fir.ref<!fir.array<20x10xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<20x10xi32>>, !fir.ref<!fir.array<20x10xi32>>)
 ! CHECK:    %[[VAL_6:.*]] = arith.constant 20 : index
 ! CHECK:    %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:    %[[VAL_8:.*]] = fir.shape %[[VAL_6]], %[[VAL_7]] : (index, index) -> !fir.shape<2>
-! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_8]]) {uniq_name = "_QMuser_defFtest_forall_user_def_assignmentEl"} : (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.ref<!fir.array<20x10x!fir.logical<4>>>)
+! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_forall_user_def_assignmentEl"} : (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.ref<!fir.array<20x10x!fir.logical<4>>>)
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[VAL_11:.*]] = arith.constant 10 : i32
 ! CHECK:    hlfir.forall lb {
@@ -218,11 +218,11 @@ end subroutine
 ! CHECK:    %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:    %[[VAL_3:.*]] = arith.constant 10 : index
 ! CHECK:    %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
-! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_4]]) {uniq_name = "_QMuser_defFtest_forall_user_def_assignment_non_elemental_arrayEl"} : (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.shape<2>) -> (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.ref<!fir.array<20x10x!fir.logical<4>>>)
+! CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_forall_user_def_assignment_non_elemental_arrayEl"} : (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<20x10x!fir.logical<4>>>, !fir.ref<!fir.array<20x10x!fir.logical<4>>>)
 ! CHECK:    %[[VAL_6:.*]] = arith.constant 20 : index
 ! CHECK:    %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:    %[[VAL_8:.*]] = fir.shape %[[VAL_6]], %[[VAL_7]] : (index, index) -> !fir.shape<2>
-! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_8]]) {uniq_name = "_QMuser_defFtest_forall_user_def_assignment_non_elemental_arrayEx"} : (!fir.ref<!fir.array<20x10xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<20x10xf32>>, !fir.ref<!fir.array<20x10xf32>>)
+! CHECK:    %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_forall_user_def_assignment_non_elemental_arrayEx"} : (!fir.ref<!fir.array<20x10xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<20x10xf32>>, !fir.ref<!fir.array<20x10xf32>>)
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[VAL_11:.*]] = arith.constant 10 : i32
 ! CHECK:    hlfir.forall lb {
@@ -269,8 +269,8 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_pointer(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "p"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
-! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMuser_defFtest_pointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_pointerEx"} : (!fir.box<!fir.array<?x?xf32>>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMuser_defFtest_pointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_pointerEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?x?xf32>>
 ! CHECK:    } to {
@@ -287,8 +287,8 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QMuser_defPtest_allocatable(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {fir.bindc_name = "a"},
 ! CHECK-SAME:    %[[VAL_1:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
-! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMuser_defFtest_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
-! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMuser_defFtest_allocatableEx"} : (!fir.box<!fir.array<?xf32>>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMuser_defFtest_allocatableEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
+! CHECK:    %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMuser_defFtest_allocatableEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 ! CHECK:    hlfir.region_assign {
 ! CHECK:      hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?xf32>>
 ! CHECK:    } to {
@@ -313,7 +313,7 @@ end subroutine test_char_get_length
 ! CHECK-LABEL:   func.func @_QPtest_char_get_length(
 ! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "ch"}) {
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 {uniq_name = "_QFtest_char_get_lengthEch"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_char_get_lengthEch"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_char_get_lengthEx"}
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFtest_char_get_lengthEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           hlfir.region_assign {

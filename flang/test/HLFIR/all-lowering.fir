@@ -34,6 +34,7 @@ func.func @_QPall2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>
 // CHECK:           %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[ARG2:.*]]: !fir.ref<i32>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[DIM_VAR:.*]]:2 = hlfir.declare %[[ARG2]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
@@ -49,13 +50,12 @@ func.func @_QPall2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]]#1
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]#0
 // CHECK:         hlfir.destroy %[[EXPR]]
@@ -79,6 +79,7 @@ func.func @_QPall3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 }
 // CHECK-LABEL:  func.func @_QPall3(
 // CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<2x!fir.logical<4>>>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[RET_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 // CHECK-DAG:     %[[RET_ADDR:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.logical<4>>>
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -95,13 +96,12 @@ func.func @_QPall3(%arg0: !fir.ref<!fir.array<2x!fir.logical<4>>> {fir.bindc_nam
 
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.array<2x2x!fir.logical<4>>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]
 // CHECK:         hlfir.destroy %[[EXPR]]
@@ -125,6 +125,7 @@ func.func @_QPall4(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK:           %[[ARG0:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>
 // CHECK:           %[[ARG1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>
 // CHECK:           %[[ARG2:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>
+// CHECK-DAG:     %[[TRUE:.*]] = arith.constant true
 // CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG0]]
 // CHECK-DAG:     %[[DIM_ARG:.*]]:2 = hlfir.declare %[[ARG2]]
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
@@ -143,13 +144,12 @@ func.func @_QPall4(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]]#1
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAAllDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
 // CHECK-NEXT:    %[[SHIFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // CHECK-NEXT:    %[[TMP:.*]]:2 = hlfir.declare %[[ADDR]](%[[SHIFT]]) {uniq_name = ".tmp.intrinsic_result"}
-// CHECK:         %[[TRUE:.*]] = arith.constant true
 // CHECK:         %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move %[[TRUE]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, i1) -> !hlfir.expr<?x!fir.logical<4>>
 // CHECK:         hlfir.assign %[[EXPR]] to %[[RES]]
 // CHECK:         hlfir.destroy %[[EXPR]]

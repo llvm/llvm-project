@@ -50,31 +50,9 @@ function(collect_object_file_deps target result)
   endif()
 endfunction(collect_object_file_deps)
 
-# A rule to build a library from a collection of entrypoint objects.
-# Usage:
-#     add_entrypoint_library(
-#       DEPENDS <list of add_entrypoint_object targets>
-#     )
-#
-# NOTE: If one wants an entrypoint to be available in a library, then they will
-# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
-# entrypoint dependencies will not be added to the library.
-function(add_entrypoint_library target_name)
-  cmake_parse_arguments(
-    "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
-    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+function(get_all_object_file_deps result fq_deps_list)
   set(all_deps "")
-  foreach(dep IN LISTS fq_deps_list)
+  foreach(dep ${fq_deps_list})
     get_target_property(dep_type ${dep} "TARGET_TYPE")
     if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
             (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
@@ -102,6 +80,67 @@ function(add_entrypoint_library target_name)
     list(APPEND all_deps ${entrypoint_target})
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
+  set(${result} ${all_deps} PARENT_SCOPE)
+endfunction()
+
+# A rule to build a library from a collection of entrypoint objects and bundle
+# it in a single LLVM-IR bitcode file.
+# Usage:
+#     add_gpu_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
+  set(objects "")
+  foreach(dep IN LISTS all_deps)
+    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
+    list(APPEND objects ${object})
+  endforeach()
+
+  add_executable(${target_name} ${objects})
+  target_link_options(${target_name} PRIVATE
+                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
+endfunction(add_bitcode_entrypoint_library)
+
+# A rule to build a library from a collection of entrypoint objects.
+# Usage:
+#     add_entrypoint_library(
+#       DEPENDS <list of add_entrypoint_object targets>
+#     )
+#
+# NOTE: If one wants an entrypoint to be available in a library, then they will
+# have to list the entrypoint target explicitly in the DEPENDS list. Implicit
+# entrypoint dependencies will not be added to the library.
+function(add_entrypoint_library target_name)
+  cmake_parse_arguments(
+    "ENTRYPOINT_LIBRARY"
+    "" # No optional arguments
+    "" # No single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
+    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
+                        "of 'add_entrypoint_object' targets.")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
+  get_all_object_file_deps(all_deps "${fq_deps_list}")
+
   set(objects "")
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)

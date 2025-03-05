@@ -20,12 +20,11 @@ endif()
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestCommutativityUtils.cpp
+  TestCompositePass.cpp
   TestConstantFold.cpp
   TestControlFlowSink.cpp
   TestInlining.cpp
-  TestIntRangeInference.cpp
   TestMakeIsolatedFromAbove.cpp
-  TestTopologicalSort.cpp
   ${MLIRTestTransformsPDLSrc}
 
   EXCLUDE_FROM_LIBMLIR
@@ -37,10 +36,12 @@ add_mlir_library(MLIRTestTransforms
   ${MLIRTestTransformsPDLDep}
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestTransforms PUBLIC
   MLIRAnalysis
   MLIRFuncDialect
   MLIRInferIntRangeInterface
-  MLIRTestDialect
   MLIRTransforms
   )
 

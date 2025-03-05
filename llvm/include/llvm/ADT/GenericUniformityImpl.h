@@ -46,20 +46,16 @@
 
 #include "llvm/ADT/GenericUniformityInfo.h"
 
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <set>
-
 #define DEBUG_TYPE "uniformity"
 
 namespace llvm {
-
-template <typename Range> auto unique(Range &&R) {
-  return std::unique(adl_begin(R), adl_end(R));
-}
 
 /// Construct a specially modified post-order traversal of cycles.
 ///
@@ -416,7 +412,7 @@ protected:
   const TargetTransformInfo *TTI = nullptr;
 
   // Detected/marked divergent values.
-  std::set<ConstValueRefT> DivergentValues;
+  DenseSet<ConstValueRefT> DivergentValues;
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
   // Internal worklist for divergence propagation.

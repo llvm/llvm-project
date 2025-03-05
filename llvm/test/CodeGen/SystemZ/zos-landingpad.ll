@@ -19,9 +19,9 @@ done:
 lpad:
   %0 = landingpad { ptr, i32 } cleanup
 ; The Exception Pointer is %r1; the Exception Selector, %r2.
-; CHECK: @BB{{[^%]*}} %lpad
-; CHECK-DAG: stg 1, {{.*}}
-; CHECK-DAG: st 2, {{.*}}
+; CHECK: L#BB{{[^%]*}} %lpad
+; CHECK-DAG: stg 1,{{.*}}
+; CHECK-DAG: st 2,{{.*}}
   %1 = extractvalue { ptr, i32 } %0, 0
   %2 = extractvalue { ptr, i32 } %0, 1
   store ptr %1, ptr %ehptr, align 8

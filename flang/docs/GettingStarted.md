@@ -30,7 +30,7 @@ https://llvm.org/docs/GettingStarted.html.
 All of the examples below use GCC as the C/C++ compilers and ninja as the build
 tool.
 
-### Building flang in tree
+### Building flang in tree with bootstrapped Flang-RT
 Building flang in tree means building flang along with all of the projects on
 which it depends.  These projects include mlir, clang, flang, openmp, and
 compiler-rt.  Note that compiler-rt is only needed to access libraries that
@@ -82,7 +82,7 @@ cmake \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
   -DLLVM_ENABLE_PROJECTS="clang;mlir;flang;openmp" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
   ../llvm-project/llvm
 
 ninja
@@ -101,7 +101,7 @@ the cmake command above:
 To run the flang tests on this build, execute the command in the "build"
 directory:
 ```bash
-ninja check-flang
+ninja check-flang check-flang-rt
 ```
 
 To create the installed files:
@@ -109,34 +109,6 @@ To create the installed files:
 ninja install
 
 echo "latest" > $INSTALLDIR/bin/versionrc
-```
-
-To build compiler-rt:
-```bash
-cd $ROOTDIR
-rm -rf compiler-rt
-mkdir compiler-rt
-cd compiler-rt
-CC=$INSTALLDIR/bin/clang \
-CXX=$INSTALLDIR/bin/clang++ \
-cmake \
-  -G Ninja \
-  ../llvm-project/compiler-rt \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-  -DCMAKE_CXX_STANDARD=11 \
-  -DCMAKE_C_CFLAGS=-mlong-double-128 \
-  -DCMAKE_CXX_CFLAGS=-mlong-double-128 \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DCOMPILER_RT_BUILD_ORC=OFF \
-  -DCOMPILER_RT_BUILD_XRAY=OFF \
-  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
-  -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
-  -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
-  -DLLVM_CONFIG_PATH=$INSTALLDIR/bin/llvm-config
-
-ninja
-ninja install
 ```
 
 Note that these instructions specify flang as one of the projects to build in
@@ -192,7 +164,32 @@ directory:
 ninja check-flang
 ```
 
-### Building flang runtime for accelerators
+To build Flang-RT (required for linking executables):
+```bash
+cd $ROOTDIR
+rm -rf flang-rt
+mkdir flang-rt
+cd flang-rt
+CC=$INSTALLDIR/bin/clang \
+CXX=$INSTALLDIR/bin/clang++ \
+cmake \
+  -G Ninja \
+  ../llvm-project/runtimes \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DLLVM_BINARY_DIR=$ROOTDIR/build \
+  -DLLVM_Fortran_COMPILER=$INSTALLDIR/bin/flang \
+  -DLLVM_Fortran_COMPILER_WORKS=ON
+
+ninja
+ninja check-flang-rt
+ninja install
+```
+
+
+### Building Flang-RT for accelerators
 Flang runtime can be built for accelerators in experimental mode, i.e.
 complete enabling is WIP.  CUDA and OpenMP target offload builds
 are currently supported.
@@ -203,20 +200,21 @@ are currently supported.
 Clang with NVPTX backend and NVCC compilers are supported.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
-  ../runtime/
-make -j FortranRuntime
+  ../runtimes/
+make flang-rt
 ```
 
 Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
@@ -225,21 +223,22 @@ CUDA toolkit installations, please use `-DCUDAToolkit_ROOT=/some/path`
 to specify the compatible version.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CUDA_COMPILER=nvcc \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
-  ../runtime/
+  ../runtimes/
 
-make -j FortranRuntime
+make flang-rt
 ```
 
 Note that `nvcc` might limit support to certain
@@ -251,50 +250,59 @@ code.  Note that the packaging of the libraries is different
 between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
 compatible compiler drivers.
 
-#### Building in-tree
+#### Building in-tree (bootstrapping build)
 One may build Flang runtime library along with building Flang itself
 by providing these additional CMake variables on top of the Flang in-tree
 build config:
 
 For example:
 ```bash
-  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CUDA_COMPILER=clang \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../llvm
 ```
 
 Or:
 ```bash
-  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA \
   -DCMAKE_CUDA_ARCHITECTURES=80 \
   -DCMAKE_C_COMPILER=gcc \
   -DCMAKE_CXX_COMPILER=g++ \
   -DCMAKE_CUDA_COMPILER=nvcc \
   -DCMAKE_CUDA_HOST_COMPILER=g++ \
+  ../llvm
 ```
 
-Normal `make -j check-flang` will work with such CMake configuration.
+Normal `make check-flang` will work with such CMake configuration.
+Consider building in parallel using the `-j<jobs>` flag, where `<jobs>` is a
+number sufficiently low for all build jobs to fit into the available RAM. Using
+the number of harware threads (`nprocs`) is likely too much for most
+commodity machines.
 
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.
 
 ```bash
-cd llvm-project/flang
+cd llvm-project
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
 cd build_flang_runtime
 
 cmake \
-  -DFLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD="host_device" \
+  -DLLVM_ENABLE_RUNTIMES=flang-rt \
+  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
-  ../runtime/
+  -DFLANG_RT_DEVICE_ARCHITECTURES=all \
+  ../runtimes/
 
-make -j FortranRuntime
+make flang-rt
 ```
 
 The result of the build is a "device-only" library, i.e. the host
@@ -303,6 +311,16 @@ The resulting library may be linked to user programs using
 Clang-like device linking pipeline.
 
 The same set of CMake variables works for Flang in-tree build.
+
+### Build options
+
+One may provide optional CMake variables to customize the build. Available options:
+
+* `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
+  `flang_rt.quadmath` library that provides `REAL(16)` math APIs
+  for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
+  `quadmath.h` must be available to the build compiler.
+  [More details](Real16MathSupport.md).
 
 ## Supported C++ compilers
 

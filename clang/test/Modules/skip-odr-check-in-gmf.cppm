@@ -35,17 +35,21 @@ module;
 export module a;
 export using ::func;
 
+export extern "C++" bool func1() { return true; }
+
 //--- b.cppm
 module;
 #include "func2.h"
 export module b;
 export using ::func;
 
+export extern "C++" bool func1() { return false; }
+
 //--- test.cc
 import a;
 import b;
 bool test() {
-    return func(1, 2);
+    return func(1, 2) && func1();
 }
 
 #ifdef IGNORE_ODR_VIOLATION
@@ -53,4 +57,6 @@ bool test() {
 #else
 // expected-error@func2.h:1 {{'func' has different definitions in different modules;}}
 // expected-note@func1.h:1 {{but in 'a.<global>' found a different body}}
+// expected-error@b.cppm:6 {{'func1' has different definitions in different modules; definition in module 'b.<implicit global>' first difference is function body}}
+// expected-note@a.cppm:6 {{but in 'a.<implicit global>' found a different body}}
 #endif

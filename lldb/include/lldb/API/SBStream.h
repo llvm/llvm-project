@@ -13,6 +13,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBStream {
@@ -62,6 +66,8 @@ public:
 
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
+  friend class SBAddressRangeList;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
@@ -100,6 +106,8 @@ protected:
   friend class SBTypeMember;
   friend class SBValue;
   friend class SBWatchpoint;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::Stream *operator->();
 

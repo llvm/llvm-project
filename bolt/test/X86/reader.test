@@ -1,4 +1,4 @@
-# This script checks that DataReader in llvm-bolt is reading data correctly
+## This script checks that DataReader in llvm-bolt is reading data correctly
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.null --data %p/Inputs/blarge.fdata --dump-data \

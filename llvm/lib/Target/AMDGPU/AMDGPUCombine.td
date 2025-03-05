@@ -15,9 +15,10 @@ def fmin_fmax_legacy_matchdata : GIDefMatchData<"FMinFMaxLegacyInfo">;
 let Predicates = [HasFminFmaxLegacy] in
 def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (defs root:$select, fmin_fmax_legacy_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SELECT):$select,
-         [{ return matchFMinFMaxLegacy(*${select}, ${matchinfo}); }]),
-  (apply [{ applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
+  (match (G_FCMP $cond, $pred, $lhs, $rhs):$fcmp,
+         (G_SELECT f32:$dst, $cond, $true, $false):$select,
+         [{ return matchFMinFMaxLegacy(*${select}, *${fcmp}, ${matchinfo}); }]),
+  (apply [{ applySelectFCmpToFMinFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
 def uchar_to_float : GICombineRule<
@@ -33,6 +34,12 @@ def rcp_sqrt_to_rsq : GICombineRule<
          [{ return matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
 
+def fdiv_by_sqrt_to_rsq_f16 : GICombineRule<
+  (defs root:$root),
+  (match (G_FSQRT f16:$sqrt, $x, (MIFlags FmContract)),
+         (G_FDIV f16:$dst, $y, $sqrt, (MIFlags FmContract)):$root,
+         [{ return matchFDivSqrtToRsqF16(*${root}); }]),
+  (apply [{ applyFDivSqrtToRsqF16(*${root}, ${x}.getReg()); }])>;
 
 def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
@@ -88,10 +95,8 @@ def fmed3_intrinsic_to_clamp : GICombineRule<
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
-def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
-
 def remove_fcanonicalize : GICombineRule<
-  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
          [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
@@ -109,7 +114,7 @@ def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
   (match (wip_match_opcode G_MUL):$smul,
          [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
-  (apply [{ applyCombine_s_mul_u64(*${smul}, ${matchinfo}); }])>;
+  (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
 
 def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 
@@ -118,6 +123,16 @@ def sign_extension_in_reg : GICombineRule<
   (match (wip_match_opcode G_SEXT_INREG):$sign_inreg,
          [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
+
+// Do the following combines :
+// fmul x, select(y, A, B)   -> fldexp (x, select i32 (y, a, b))
+// fmul x, select(y, -A, -B) -> fldexp ((fneg x), select i32 (y, a, b))
+def combine_fmul_with_select_to_fldexp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match  (G_FMUL $dst, $x, $select):$root,
+          (G_SELECT $select, $y, $A, $B):$sel,
+          [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
+  (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
@@ -148,15 +163,15 @@ def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
 def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
-  [all_combines, clamp_i64_to_i16, foldable_fneg]> {
+  [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16, foldable_fneg]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AMDGPUPostLegalizerCombiner: GICombiner<
   "AMDGPUPostLegalizerCombinerImpl",
-  [all_combines, gfx6gfx7_combines, gfx8_combines,
+  [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
-   rcp_sqrt_to_rsq, sign_extension_in_reg, smulu64]> {
+   rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -164,5 +179,6 @@ def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
-   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
+   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
+   redundant_and]> {
 }

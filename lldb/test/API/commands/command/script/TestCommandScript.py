@@ -216,3 +216,17 @@ class CmdPythonTestCase(TestBase):
         # The result object will be replaced by an empty result object (in the
         # "Started" state).
         self.expect("script str(persistence.result_copy)", substrs=["Started"])
+
+    def test_interactive(self):
+        """
+        Test that we can add multiple lines interactively.
+        """
+        interp = self.dbg.GetCommandInterpreter()
+        cmd_file = self.getSourcePath("cmd_file.lldb")
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(f"command source {cmd_file}", result)
+        self.assertCommandReturn(result, "Sourcing the command should cause no errors.")
+        self.assertTrue(interp.UserCommandExists("my_cmd"), "Command defined.")
+        interp.HandleCommand("my_cmd", result)
+        self.assertCommandReturn(result, "Running the command succeeds")
+        self.assertIn("My Command Result", result.GetOutput(), "Command was correct")

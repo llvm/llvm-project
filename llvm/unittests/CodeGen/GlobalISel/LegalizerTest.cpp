@@ -27,7 +27,7 @@ namespace {
   MI->print(MISStream, /*IsStandalone=*/true, /*SkipOpers=*/false,
             /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
   return ::testing::AssertionFailure()
-         << "unable to legalize instruction: " << MISStream.str();
+         << "unable to legalize instruction: " << MIBuffer;
 }
 
 DefineLegalizerInfo(ALegalizer, {

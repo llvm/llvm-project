@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/expm1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <stdint.h>
 
@@ -50,3 +50,30 @@ TEST_F(LlvmLibcExpm1fTest, Overflow) {
       inf, LIBC_NAMESPACE::expm1f(FPBits(0x42d00008U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExpm1fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExpm1fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExpm1fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::expm1f(max_denormal));
+}
+
+#endif

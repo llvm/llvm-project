@@ -1,9 +1,9 @@
 ; RUN: opt < %s -loop-reduce -verify
 target triple = "x86_64-apple-darwin10"
 
-define void @myquicksort(ptr %a) nounwind ssp {
+define void @myquicksort(ptr %a, i1 %arg) nounwind ssp {
 entry:
-  br i1 undef, label %loop1, label %return
+  br i1 %arg, label %loop1, label %return
 
 loop1:                                            ; preds = %bb13.loopexit, %entry
   %indvar419 = phi i64 [ %indvar.next420, %loop2.exit ], [ 0, %entry ]
@@ -25,7 +25,7 @@ loop2.backedge:                                   ; preds = %loop2
 
 loop2.exit:                                       ; preds = %loop2
   %indvar.next420 = add i64 %indvar419, 1
-  br i1 undef, label %loop1, label %return
+  br i1 %arg, label %loop1, label %return
 
 return:                                           ; preds = %loop2.exit, %entry
   ret void

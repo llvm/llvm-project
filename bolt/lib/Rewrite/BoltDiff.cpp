@@ -28,7 +28,9 @@ using namespace bolt;
 namespace opts {
 extern cl::OptionCategory BoltDiffCategory;
 extern cl::opt<bool> NeverPrint;
-extern cl::opt<bool> ICF;
+extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
+               llvm::bolt::DeprecatedICFNumericOptionParser>
+    ICF;
 
 static cl::opt<bool> IgnoreLTOSuffix(
     "ignore-lto-suffix",
@@ -292,11 +294,11 @@ class RewriteInstanceDiff {
         }
       }
     }
-    PrintProgramStats PPS(opts::NeverPrint);
+    PrintProgramStats PPS;
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 1\n";
-    PPS.runOnFunctions(*RI1.BC);
+    RI1.BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*RI1.BC));
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 2\n";
-    PPS.runOnFunctions(*RI2.BC);
+    RI1.BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*RI2.BC));
     outs() << "=====\n";
     outs() << "Inputs share " << BothHaveProfile
            << " functions with valid profile.\n";
@@ -697,12 +699,12 @@ void RewriteInstance::compare(RewriteInstance &RI2) {
   }
 
   // Pre-pass ICF
-  if (opts::ICF) {
+  if (opts::ICF != IdenticalCodeFolding::ICFLevel::None) {
     IdenticalCodeFolding ICF(opts::NeverPrint);
     outs() << "BOLT-DIFF: Starting ICF pass for binary 1";
-    ICF.runOnFunctions(*BC);
+    BC->logBOLTErrorsAndQuitOnFatal(ICF.runOnFunctions(*BC));
     outs() << "BOLT-DIFF: Starting ICF pass for binary 2";
-    ICF.runOnFunctions(*RI2.BC);
+    BC->logBOLTErrorsAndQuitOnFatal(ICF.runOnFunctions(*RI2.BC));
   }
 
   RewriteInstanceDiff RID(*this, RI2);

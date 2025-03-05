@@ -47,15 +47,12 @@
 
 #  if SANITIZER_ANDROID || SANITIZER_FREEBSD || SANITIZER_SOLARIS
 #    include <ucontext.h>
-extern "C" void *_DYNAMIC;
 #  elif SANITIZER_NETBSD
 #    include <link_elf.h>
 #    include <ucontext.h>
-extern Elf_Dyn _DYNAMIC;
 #  else
 #    include <link.h>
 #    include <sys/ucontext.h>
-extern ElfW(Dyn) _DYNAMIC[];
 #  endif
 
 typedef enum {
@@ -75,11 +72,6 @@ namespace __asan {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 bool IsSystemHeapAddress(uptr addr) { return false; }
-
-void *AsanDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
 
 #  if ASAN_PREMAP_SHADOW
 uptr FindPremappedShadowStart(uptr shadow_size_bytes) {
@@ -101,7 +93,8 @@ uptr FindDynamicShadowStart() {
 #  endif
 
   return MapDynamicShadow(shadow_size_bytes, ASAN_SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
@@ -194,10 +187,7 @@ void AsanCheckIncompatibleRT() {
       MemoryMappedSegment segment(filename, sizeof(filename));
       while (proc_maps.Next(&segment)) {
         if (IsDynamicRTName(segment.filename)) {
-          Report(
-              "Your application is linked against "
-              "incompatible ASan runtimes.\n");
-          Die();
+          ReportIncompatibleRT();
         }
       }
       __asan_rt_version = ASAN_RT_VERSION_STATIC;

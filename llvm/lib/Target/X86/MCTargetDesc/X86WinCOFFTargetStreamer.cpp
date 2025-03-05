@@ -36,10 +36,10 @@ public:
   bool emitFPOEndPrologue(SMLoc L) override;
   bool emitFPOEndProc(SMLoc L) override;
   bool emitFPOData(const MCSymbol *ProcSym, SMLoc L) override;
-  bool emitFPOPushReg(unsigned Reg, SMLoc L) override;
+  bool emitFPOPushReg(MCRegister Reg, SMLoc L) override;
   bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L) override;
   bool emitFPOStackAlign(unsigned Align, SMLoc L) override;
-  bool emitFPOSetFrame(unsigned Reg, SMLoc L) override;
+  bool emitFPOSetFrame(MCRegister Reg, SMLoc L) override;
 };
 
 /// Represents a single FPO directive.
@@ -80,8 +80,6 @@ class X86WinCOFFTargetStreamer : public X86TargetStreamer {
 
   MCSymbol *emitFPOLabel();
 
-  MCContext &getContext() { return getStreamer().getContext(); }
-
 public:
   X86WinCOFFTargetStreamer(MCStreamer &S) : X86TargetStreamer(S) {}
 
@@ -90,17 +88,17 @@ public:
   bool emitFPOEndPrologue(SMLoc L) override;
   bool emitFPOEndProc(SMLoc L) override;
   bool emitFPOData(const MCSymbol *ProcSym, SMLoc L) override;
-  bool emitFPOPushReg(unsigned Reg, SMLoc L) override;
+  bool emitFPOPushReg(MCRegister Reg, SMLoc L) override;
   bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L) override;
   bool emitFPOStackAlign(unsigned Align, SMLoc L) override;
-  bool emitFPOSetFrame(unsigned Reg, SMLoc L) override;
+  bool emitFPOSetFrame(MCRegister Reg, SMLoc L) override;
 };
 } // end namespace
 
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }
@@ -123,7 +121,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOData(const MCSymbol *ProcSym,
   return false;
 }
 
-bool X86WinCOFFAsmTargetStreamer::emitFPOPushReg(unsigned Reg, SMLoc L) {
+bool X86WinCOFFAsmTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   OS << "\t.cv_fpo_pushreg\t";
   InstPrinter.printRegName(OS, Reg);
   OS << '\n';
@@ -141,7 +139,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOStackAlign(unsigned Align, SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFAsmTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
+bool X86WinCOFFAsmTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   OS << "\t.cv_fpo_setframe\t";
   InstPrinter.printRegName(OS, Reg);
   OS << '\n';
@@ -201,7 +199,7 @@ bool X86WinCOFFTargetStreamer::emitFPOEndProc(SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
+bool X86WinCOFFTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   if (checkInFPOPrologue(L))
     return true;
   FPOInstruction Inst;
@@ -212,7 +210,7 @@ bool X86WinCOFFTargetStreamer::emitFPOSetFrame(unsigned Reg, SMLoc L) {
   return false;
 }
 
-bool X86WinCOFFTargetStreamer::emitFPOPushReg(unsigned Reg, SMLoc L) {
+bool X86WinCOFFTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   if (checkInFPOPrologue(L))
     return true;
   FPOInstruction Inst;
@@ -445,8 +443,7 @@ bool X86WinCOFFTargetStreamer::emitFPOData(const MCSymbol *ProcSym, SMLoc L) {
 
 MCTargetStreamer *llvm::createX86AsmTargetStreamer(MCStreamer &S,
                                                    formatted_raw_ostream &OS,
-                                                   MCInstPrinter *InstPrinter,
-                                                   bool IsVerboseAsm) {
+                                                   MCInstPrinter *InstPrinter) {
   // FIXME: This makes it so we textually assemble COFF directives on ELF.
   // That's kind of nonsensical.
   return new X86WinCOFFAsmTargetStreamer(S, OS, *InstPrinter);

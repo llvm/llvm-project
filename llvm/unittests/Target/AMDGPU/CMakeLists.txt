@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   MC
   Support
   TargetParser
@@ -18,8 +19,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(AMDGPUTests
   AMDGPUUnitTests.cpp
+  CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  PALMetadata.cpp
   )
-
-set_property(TARGET AMDGPUTests PROPERTY FOLDER "Tests/UnitTests/TargetTests")

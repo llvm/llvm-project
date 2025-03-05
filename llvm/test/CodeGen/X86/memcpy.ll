@@ -202,14 +202,16 @@ define void @test3_minsize(ptr nocapture %A, ptr nocapture %B) nounwind minsize 
 ; DARWIN-LABEL: test3_minsize:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    pushq $64
-; DARWIN-NEXT:    popq %rdx
-; DARWIN-NEXT:    jmp _memcpy ## TAILCALL
+; DARWIN-NEXT:    popq %rcx
+; DARWIN-NEXT:    rep;movsb (%rsi), %es:(%rdi)
+; DARWIN-NEXT:    retq
 ;
 ; LINUX-LABEL: test3_minsize:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq $64
-; LINUX-NEXT:    popq %rdx
-; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
+; LINUX-NEXT:    popq %rcx
+; LINUX-NEXT:    rep;movsb (%rsi), %es:(%rdi)
+; LINUX-NEXT:    retq
 ;
 ; LINUX-SKL-LABEL: test3_minsize:
 ; LINUX-SKL:       # %bb.0:
@@ -249,14 +251,16 @@ define void @test3_minsize_optsize(ptr nocapture %A, ptr nocapture %B) nounwind 
 ; DARWIN-LABEL: test3_minsize_optsize:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    pushq $64
-; DARWIN-NEXT:    popq %rdx
-; DARWIN-NEXT:    jmp _memcpy ## TAILCALL
+; DARWIN-NEXT:    popq %rcx
+; DARWIN-NEXT:    rep;movsb (%rsi), %es:(%rdi)
+; DARWIN-NEXT:    retq
 ;
 ; LINUX-LABEL: test3_minsize_optsize:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq $64
-; LINUX-NEXT:    popq %rdx
-; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
+; LINUX-NEXT:    popq %rcx
+; LINUX-NEXT:    rep;movsb (%rsi), %es:(%rdi)
+; LINUX-NEXT:    retq
 ;
 ; LINUX-SKL-LABEL: test3_minsize_optsize:
 ; LINUX-SKL:       # %bb.0:

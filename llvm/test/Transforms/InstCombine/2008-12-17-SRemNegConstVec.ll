@@ -4,7 +4,7 @@
 
 define <2 x i8> @foo(<2 x i8> %x) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[A:%.*]] = srem <2 x i8> [[X:%.*]], <i8 2, i8 2>
+; CHECK-NEXT:    [[A:%.*]] = srem <2 x i8> [[X:%.*]], splat (i8 2)
 ; CHECK-NEXT:    ret <2 x i8> [[A]]
 ;
   %A = srem <2 x i8> %x, <i8 2, i8 -2>

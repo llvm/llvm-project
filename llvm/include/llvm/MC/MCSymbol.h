@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -98,7 +99,7 @@ protected:
   /// uses binding instead of this bit.
   mutable unsigned IsExternal : 1;
 
-  /// This symbol is private extern.
+  /// Mach-O specific: This symbol is private extern.
   mutable unsigned IsPrivateExtern : 1;
 
   /// This symbol is weak external.
@@ -156,11 +157,11 @@ protected:
   /// system, the name is a pointer so isn't going to satisfy the 8 byte
   /// alignment of uint64_t.  Account for that here.
   using NameEntryStorageTy = union {
-    const StringMapEntry<bool> *NameEntry;
+    const MCSymbolTableEntry *NameEntry;
     uint64_t AlignmentPadding;
   };
 
-  MCSymbol(SymbolKind Kind, const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbol(SymbolKind Kind, const MCSymbolTableEntry *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsUsed(false),
         IsRegistered(false), IsExternal(false), IsPrivateExtern(false),
         IsWeakExternal(false), Kind(Kind), IsUsedInReloc(false),
@@ -173,8 +174,7 @@ protected:
 
   // Provide custom new/delete as we will only allocate space for a name
   // if we need one.
-  void *operator new(size_t s, const StringMapEntry<bool> *Name,
-                     MCContext &Ctx);
+  void *operator new(size_t s, const MCSymbolTableEntry *Name, MCContext &Ctx);
 
 private:
   void operator delete(void *);
@@ -188,12 +188,12 @@ private:
   }
 
   /// Get a reference to the name field.  Requires that we have a name
-  const StringMapEntry<bool> *&getNameEntryPtr() {
+  const MCSymbolTableEntry *&getNameEntryPtr() {
     assert(HasName && "Name is required");
     NameEntryStorageTy *Name = reinterpret_cast<NameEntryStorageTy *>(this);
     return (*(Name - 1)).NameEntry;
   }
-  const StringMapEntry<bool> *&getNameEntryPtr() const {
+  const MCSymbolTableEntry *&getNameEntryPtr() const {
     return const_cast<MCSymbol*>(this)->getNameEntryPtr();
   }
 
@@ -403,12 +403,11 @@ public:
     return Fragment;
   }
 
+  // For ELF, use MCSymbolELF::setBinding instead.
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }
 
-  bool isPrivateExtern() const { return IsPrivateExtern; }
-  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
-
+  // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
 
   /// print - Print the value to the stream \p OS.

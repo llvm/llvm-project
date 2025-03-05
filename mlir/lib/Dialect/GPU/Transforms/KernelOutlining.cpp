@@ -18,7 +18,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -208,12 +208,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   // because multiple launches with the same body are not deduplicated.
   if (auto blockBounds =
           maybeConstantDimsAttr(launchOp.getBlockSizeOperandValues()))
-    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName(),
-                          blockBounds);
+    outlinedFunc.setKnownBlockSizeAttr(blockBounds);
   if (auto gridBounds =
           maybeConstantDimsAttr(launchOp.getGridSizeOperandValues()))
-    outlinedFunc->setAttr(gpu::GPUFuncOp::getKnownGridSizeAttrName(),
-                          gridBounds);
+    outlinedFunc.setKnownGridSizeAttr(gridBounds);
 
   IRMapping map;
 
@@ -241,24 +239,26 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     map.map(operand.value(), entryBlock.getArgument(operand.index()));
 
   // Clone the region of the gpu.launch operation into the gpu.func operation.
-  // TODO: If cloneInto can be modified such that if a mapping for
-  // a block exists, that block will be used to clone operations into (at the
-  // end of the block), instead of creating a new block, this would be much
-  // cleaner.
   launchOpBody.cloneInto(&outlinedFuncBody, map);
 
-  // Branch from entry of the gpu.func operation to the block that is cloned
-  // from the entry block of the gpu.launch operation.
-  Block &launchOpEntry = launchOpBody.front();
-  Block *clonedLaunchOpEntry = map.lookup(&launchOpEntry);
-  builder.setInsertionPointToEnd(&entryBlock);
-  builder.create<cf::BranchOp>(loc, clonedLaunchOpEntry);
+  // Replace the terminator op with returns.
+  for (Block &block : launchOpBody) {
+    Block *clonedBlock = map.lookup(&block);
+    auto terminator = dyn_cast<gpu::TerminatorOp>(clonedBlock->getTerminator());
+    if (!terminator)
+      continue;
+    OpBuilder replacer(terminator);
+    replacer.create<gpu::ReturnOp>(terminator->getLoc());
+    terminator->erase();
+  }
 
-  outlinedFunc.walk([](gpu::TerminatorOp op) {
-    OpBuilder replacer(op);
-    replacer.create<gpu::ReturnOp>(op.getLoc());
-    op.erase();
-  });
+  // Splice now the entry block of the gpu.launch operation at the end of the
+  // gpu.func entry block and erase the redundant block.
+  Block *clonedLaunchOpEntry = map.lookup(&launchOpBody.front());
+  entryBlock.getOperations().splice(entryBlock.getOperations().end(),
+                                    clonedLaunchOpEntry->getOperations());
+  clonedLaunchOpEntry->erase();
+
   return outlinedFunc;
 }
 
@@ -364,9 +364,15 @@ public:
       Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
-        std::string kernelFnName =
-            Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
-                .str();
+        std::string kernelFnName;
+        if (op.getKernelFunc()) {
+          kernelFnName = op.getKernelFunc()->getRootReference().str();
+        } else {
+          kernelFnName =
+              Twine(op->getParentOfType<SymbolOpInterface>().getName(),
+                    "_kernel")
+                  .str();
+        }
 
         gpu::GPUFuncOp outlinedFunc =
             outlineKernelFuncImpl(op, kernelFnName, operands);
@@ -374,7 +380,7 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(outlinedFunc, symbolTable);
+        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
         symbolTable.insert(kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
@@ -395,7 +401,8 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::GPUFuncOp kernelFunc,
+  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp,
+                                      gpu::GPUFuncOp kernelFunc,
                                       const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
@@ -403,8 +410,23 @@ private:
     // and then this needs to use the OpBuilder.
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
-    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
-                                                         kernelFunc.getName());
+    std::string kernelModuleName;
+    gpu::GPUModuleOp kernelModule;
+    if (gpuLaunchOp.getKernelModule()) {
+      kernelModuleName =
+          gpuLaunchOp.getKernelModule()->getRootReference().str();
+      kernelModule =
+          parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName);
+    } else {
+      kernelModuleName = kernelFunc.getName();
+    }
+
+    // Check if the module already exists in the symbol table
+    if (!kernelModule) {
+      // If not found, create a new GPU module
+      kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                      kernelModuleName);
+    }
 
     // If a valid data layout spec was provided, attach it to the kernel module.
     // Otherwise, the default data layout will be used.

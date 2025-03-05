@@ -15,11 +15,6 @@ define i8 @test_i8(i8 %new) {
 ; CHECK: ldrb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
 ; CHECK: strb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]
 
-; CHECK-PIC-LABEL: test_i8:
-; CHECK-PIC: adrp x[[HIREG:[0-9]+]], :got:var8
-; CHECK-PIC: ldr x[[VAR_ADDR:[0-9]+]], [x[[HIREG]], :got_lo12:var8]
-; CHECK-PIC: ldrb {{w[0-9]+}}, [x[[VAR_ADDR]]]
-
 ; CHECK-FAST-LABEL: test_i8:
 ; CHECK-FAST: adrp x[[HIREG:[0-9]+]], var8
 ; CHECK-FAST: ldrb {{w[0-9]+}}, [x[[HIREG]], :lo12:var8]

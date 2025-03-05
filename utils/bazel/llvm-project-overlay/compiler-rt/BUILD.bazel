@@ -19,6 +19,10 @@ cc_library(
         ],
         # Will raise error unless supported platforms.
     }),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 WIN32_ONLY_FILES = [
@@ -36,7 +40,7 @@ cc_library(
         exclude = WIN32_ONLY_FILES,
     ) + select({
         "@platforms//os:windows": WIN32_ONLY_FILES,
-        "//conditions:default": []
+        "//conditions:default": [],
     }),
     hdrs = glob([
         "include/profile/*.h",
@@ -45,8 +49,64 @@ cc_library(
     includes = [
         "include",
     ],
+    linkstatic = True,
     deps = [
         ":config",
     ],
+)
+
+cc_library(
+    name = "orc_rt_common_headers",
+    hdrs = [
+        "lib/orc/adt.h",
+        "lib/orc/bitmask_enum.h",
+        "lib/orc/common.h",
+        "lib/orc/compiler.h",
+        "lib/orc/debug.h",
+        "lib/orc/endianness.h",
+        "lib/orc/error.h",
+        "lib/orc/executor_address.h",
+        "lib/orc/executor_symbol_def.h",
+        "lib/orc/extensible_rtti.h",
+        "lib/orc/interval_map.h",
+        "lib/orc/interval_set.h",
+        "lib/orc/jit_dispatch.h",
+        "lib/orc/record_section_tracker.h",
+        "lib/orc/simple_packed_serialization.h",
+        "lib/orc/stl_extras.h",
+        "lib/orc/string_pool.h",
+        "lib/orc/wrapper_function_utils.h",
+    ],
+    strip_include_prefix = "lib/orc",
+)
+
+cc_library(
+    name = "orc_rt",
+    srcs = [
+        "lib/orc/debug.cpp",
+        "lib/orc/dlfcn_wrapper.cpp",
+        "lib/orc/extensible_rtti.cpp",
+        "lib/orc/log_error_to_stderr.cpp",
+        "lib/orc/run_program_wrapper.cpp",
+    ] + select({
+        "@platforms//os:macos": [
+            "lib/orc/macho_platform.cpp",
+            "lib/orc/macho_platform.h",
+            "lib/orc/macho_tlv.arm64.S",
+            "lib/orc/macho_tlv.x86-64.S",
+        ],
+        "@platforms//os:linux": [
+            "lib/orc/elfnix_platform.cpp",
+            "lib/orc/elfnix_platform.h",
+            "lib/orc/elfnix_tls.aarch64.S",
+            "lib/orc/elfnix_tls.ppc64.S",
+            "lib/orc/elfnix_tls.x86-64.S",
+        ],
+    }),
+    hdrs = glob(["include/orc_rt/*.h"]),
+    includes = ["include"],
     linkstatic = True,
+    deps = [
+        ":orc_rt_common_headers",
+    ],
 )

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -24,7 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
-#define DEBUG_TYPE "loop-fusion-utils"
+#define DEBUG_TYPE "affine-fusion-utils"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -48,12 +49,10 @@ static void getLoadAndStoreMemRefAccesses(Operation *opA,
 /// Returns false otherwise.
 static bool isDependentLoadOrStoreOp(Operation *op,
                                      DenseMap<Value, bool> &values) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op)) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(op))
     return values.count(loadOp.getMemRef()) > 0 && values[loadOp.getMemRef()];
-  }
-  if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op)) {
+  if (auto storeOp = dyn_cast<AffineWriteOpInterface>(op))
     return values.count(storeOp.getMemRef()) > 0;
-  }
   return false;
 }
 
@@ -211,8 +210,7 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
   unsigned loopDepth = getInnermostCommonLoopDepth(targetDstOps);
 
   // Return common loop depth for loads if there are no store ops.
-  if (all_of(targetDstOps,
-             [&](Operation *op) { return isa<AffineReadOpInterface>(op); }))
+  if (all_of(targetDstOps, llvm::IsaPred<AffineReadOpInterface>))
     return loopDepth;
 
   // Check dependences on all pairs of ops in 'targetDstOps' and store the

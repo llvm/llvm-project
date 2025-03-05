@@ -29,9 +29,9 @@
 
 ; CHECK: %i.sroa.2.12.vec.insert = insertelement <2 x float> %i.sroa.2.0.vec.insert, float %2, i32 1, !dbg
 ;; There's a few dbg intrinsics we're not interested in testing wedged in here.
-; CHECK-NEXT: dbg.value
-; CHECK-NEXT: dbg.value
-; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
+; CHECK-NEXT: #dbg_value
+; CHECK-NEXT: #dbg_value
+; CHECK-NEXT: #dbg_value(float %2,{{.+}}, !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 
 %class.d = type { %class.a }
 %class.a = type { [4 x float] }

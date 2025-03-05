@@ -1,0 +1,72 @@
+## Test cat command with a single file.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: echo "abcdefgh" > %t/temp.write
+# RUN: cat %t/temp.write > %t/tempcat.write
+# RUN: %{python} %S/../check_path.py file %t/tempcat.write > %t/path.out
+# RUN: FileCheck --check-prefix=FILE-EXISTS < %t/path.out %s
+# RUN: FileCheck --check-prefix=CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace < %t/tempcat.write %s
+# FILE-EXISTS: True
+# CAT-OUTPUT:abcdefgh
+
+## Test cat command with multiple files.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: echo "abcdefgh" > %t/temp1.write
+# RUN: echo "efghijkl" > %t/temp2.write
+# RUN: echo "mnopqrst" > %t/temp3.write
+# RUN: cat %t/temp1.write %t/temp2.write %t/temp3.write > %t/tempmulticat.write
+# RUN: %{python} %S/../check_path.py file %t/tempmulticat.write > %t/path.out
+# RUN: FileCheck --check-prefix=MULTI-FILE-EXISTS < %t/path.out %s
+# RUN: FileCheck --check-prefix=MULTI-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace < %t/tempmulticat.write %s
+# MULTI-FILE-EXISTS: True
+#      MULTI-CAT-OUTPUT:abcdefgh
+# MULTI-CAT-OUTPUT-NEXT:efghijkl
+# MULTI-CAT-OUTPUT-NEXT:mnopqrst
+
+## Test cat command with multiple files and piped output to FileCheck.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: echo "abcdefgh" > %t/temp1.write
+# RUN: echo "efghijkl" > %t/temp2.write
+# RUN: cat %t/temp1.write %t/temp2.write | \
+# RUN:      FileCheck --check-prefix=PIPED-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
+#      PIPED-CAT-OUTPUT:abcdefgh
+# PIPED-CAT-OUTPUT-NEXT:efghijkl
+
+## Test cat command with multiple files and glob expressions.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: echo "cvbnm" > %t/temp1.write
+# RUN: echo "qwerty" > %t/temp2.write
+# RUN: cat %t/*.write | \
+# RUN:      FileCheck --check-prefix=GLOB-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
+#      GLOB-CAT-OUTPUT:cvbnm
+# GLOB-CAT-OUTPUT-NEXT:qwerty
+
+## Test cat command with -v and --show-nonprinting option.
+## The -v/--show-nonprinting options format text input into ^ and M- notation
+# RUN: cat -v %S/cat_nonprinting.bin | \
+# RUN:      FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
+# RUN: cat --show-nonprinting %S/cat_nonprinting.bin | \
+# RUN:      FileCheck --check-prefix=NP-CAT-OUTPUT --implicit-check-not={{.}} \
+# RUN:      --match-full-lines --strict-whitespace %s
+#      NP-CAT-OUTPUT:^@^A^B^C^D^E^F^G	^H
+# NP-CAT-OUTPUT-NEXT:^K^L^M^N^O^P^Q^R^S
+# NP-CAT-OUTPUT-NEXT:^T^U^V^W^X^Y^Z^[^\^]^^^_ !"#$%&'
+# NP-CAT-OUTPUT-NEXT:()*+,-./0123456789:;
+# NP-CAT-OUTPUT-NEXT:<=>?@ABCDEFGHIJKLMNO
+# NP-CAT-OUTPUT-NEXT:PQRSTUVWXYZ[\]^_`abc
+# NP-CAT-OUTPUT-NEXT:defghijklmnopqrstuvw
+# NP-CAT-OUTPUT-NEXT:xyz{|}~^?M-^@M-^AM-^BM-^CM-^DM-^EM-^FM-^GM-^HM-^IM-^JM-^K
+# NP-CAT-OUTPUT-NEXT:M-^LM-^MM-^NM-^OM-^PM-^QM-^RM-^SM-^TM-^UM-^VM-^WM-^XM-^YM-^ZM-^[M-^\M-^]M-^^M-^_
+# NP-CAT-OUTPUT-NEXT:M- M-!M-"M-#M-$M-%M-&M-'M-(M-)M-*M-+M-,M--M-.M-/M-0M-1M-2M-3
+# NP-CAT-OUTPUT-NEXT:M-4M-5M-6M-7M-8M-9M-:M-;M-<M-=M->M-?M-@M-AM-BM-CM-DM-EM-FM-G
+# NP-CAT-OUTPUT-NEXT:M-HM-IM-JM-KM-LM-MM-NM-OM-PM-QM-RM-SM-TM-UM-VM-WM-XM-YM-ZM-[
+# NP-CAT-OUTPUT-NEXT:M-\M-]M-^M-_M-`M-aM-bM-cM-dM-eM-fM-gM-hM-iM-jM-kM-lM-mM-nM-o
+# NP-CAT-OUTPUT-NEXT:M-pM-qM-rM-sM-tM-uM-vM-wM-xM-yM-zM-{M-|M-}M-~M-^?

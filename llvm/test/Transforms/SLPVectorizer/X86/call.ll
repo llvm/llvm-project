@@ -6,6 +6,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 declare double @sin(double) nounwind willreturn
 declare double @cos(double) nounwind willreturn
+declare double @tan(double) nounwind willreturn
 declare double @pow(double, double) nounwind willreturn
 declare double @exp2(double) nounwind willreturn
 declare double @sqrt(double) nounwind willreturn
@@ -14,9 +15,14 @@ declare i64 @round(i64) nounwind willreturn
 
 define void @sin_libm(ptr %a, ptr %b) {
 ; CHECK-LABEL: @sin_libm(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.sin.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[SIN1:%.*]] = tail call double @sin(double [[A0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[SIN2:%.*]] = tail call double @sin(double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    store double [[SIN1]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    store double [[SIN2]], ptr [[IDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, ptr %a, align 8
@@ -32,9 +38,14 @@ define void @sin_libm(ptr %a, ptr %b) {
 
 define void @cos_libm(ptr %a, ptr %b) {
 ; CHECK-LABEL: @cos_libm(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.cos.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[COS1:%.*]] = tail call double @cos(double [[A0]]) #[[ATTR3]]
+; CHECK-NEXT:    [[COS2:%.*]] = tail call double @cos(double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    store double [[COS1]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    store double [[COS2]], ptr [[IDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, ptr %a, align 8
@@ -48,11 +59,39 @@ define void @cos_libm(ptr %a, ptr %b) {
   ret void
 }
 
+define void @tan_libm(ptr %a, ptr %b) {
+; CHECK-LABEL: @tan_libm(
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[TAN1:%.*]] = tail call double @tan(double [[A0]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TAN2:%.*]] = tail call double @tan(double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    store double [[TAN1]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    store double [[TAN2]], ptr [[IDX2]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a0 = load double, ptr %a, align 8
+  %idx1 = getelementptr inbounds double, ptr %a, i64 1
+  %a1 = load double, ptr %idx1, align 8
+  %tan1 = tail call double @tan(double %a0) nounwind readnone
+  %tan2 = tail call double @tan(double %a1) nounwind readnone
+  store double %tan1, ptr %b, align 8
+  %idx2 = getelementptr inbounds double, ptr %b, i64 1
+  store double %tan2, ptr %idx2, align 8
+  ret void
+}
+
 define void @pow_libm(ptr %a, ptr %b) {
 ; CHECK-LABEL: @pow_libm(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.pow.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[POW1:%.*]] = tail call double @pow(double [[A0]], double [[A0]]) #[[ATTR3]]
+; CHECK-NEXT:    [[POW2:%.*]] = tail call double @pow(double [[A1]], double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    store double [[POW1]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    store double [[POW2]], ptr [[IDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, ptr %a, align 8
@@ -68,9 +107,14 @@ define void @pow_libm(ptr %a, ptr %b) {
 
 define void @exp_libm(ptr %a, ptr %b) {
 ; CHECK-LABEL: @exp_libm(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.exp2.v2f64(<2 x double> [[TMP2]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
+; CHECK-NEXT:    [[EXP1:%.*]] = tail call double @exp2(double [[A0]]) #[[ATTR3]]
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call double @exp2(double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    store double [[EXP1]], ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    store double [[EXP2]], ptr [[IDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, ptr %a, align 8
@@ -115,8 +159,8 @@ define void @sqrt_libm_errno(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDX1]], align 8
-; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR4]]
 ; CHECK-NEXT:    store double [[SQRT1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
 ; CHECK-NEXT:    store double [[SQRT2]], ptr [[IDX2]], align 8
@@ -139,8 +183,8 @@ define void @round_custom(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr [[IDX1]], align 8
-; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR4]]
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR3]]
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR3]]
 ; CHECK-NEXT:    store i64 [[ROUND1]], ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 1
 ; CHECK-NEXT:    store i64 [[ROUND2]], ptr [[IDX2]], align 8

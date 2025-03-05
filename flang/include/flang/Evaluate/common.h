@@ -9,15 +9,16 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
+#include "flang/Common/target-rounding.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/default-kinds.h"
 #include <cinttypes>
 #include <map>
 #include <set>
@@ -32,6 +33,8 @@ class IntrinsicProcTable;
 class TargetCharacteristics;
 
 using common::ConstantSubscript;
+using common::RealFlag;
+using common::RealFlags;
 using common::RelationalOperator;
 
 // Integers are always ordered; reals may not be.
@@ -127,11 +130,6 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   }
   return false; // silence g++ warning
 }
-
-ENUM_CLASS(
-    RealFlag, Overflow, DivideByZero, InvalidArgument, Underflow, Inexact)
-
-using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 template <typename A> struct ValueWithRealFlags {
   A AccumulateFlags(RealFlags &f) {
@@ -256,9 +254,11 @@ public:
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
   }
-  bool inModuleFile() const { return inModuleFile_; }
-  FoldingContext &set_inModuleFile(bool yes = true) {
-    inModuleFile_ = yes;
+  std::optional<parser::CharBlock> moduleFileName() const {
+    return moduleFileName_;
+  }
+  FoldingContext &set_moduleFileName(std::optional<parser::CharBlock> n) {
+    moduleFileName_ = n;
     return *this;
   }
 
@@ -288,7 +288,7 @@ private:
   const IntrinsicProcTable &intrinsics_;
   const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
-  bool inModuleFile_{false};
+  std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;
   std::set<std::string> &tempNames_;

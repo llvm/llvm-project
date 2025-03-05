@@ -875,180 +875,180 @@ func.func @arm_sme_store_tile_slice_hor_i8(%tile : vector<[16]x[16]xi8>, %tile_s
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_vector_to_tile_slice
+// arm_sme.insert_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i8(%vector : vector<[16]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[16]xi8> into vector<[16]x[16]xi8>
+func.func @arm_sme_insert_tile_slice_i8(%vector : vector<[16]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[16]xi8> into vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[16]xi8> into vector<[16]x[16]xi8>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[16]xi8> into vector<[16]x[16]xi8>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i16(%vector : vector<[8]xi16>, %tile : vector<[8]x[8]xi16>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[8]xi16> into vector<[8]x[8]xi16>
+func.func @arm_sme_insert_tile_slice_i16(%vector : vector<[8]xi16>, %tile : vector<[8]x[8]xi16>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[8]xi16> into vector<[8]x[8]xi16>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xi16> into vector<[8]x[8]xi16>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[8]xi16> into vector<[8]x[8]xi16>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i32(%vector : vector<[4]xi32>, %tile : vector<[4]x[4]xi32>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
+func.func @arm_sme_insert_tile_slice_i32(%vector : vector<[4]xi32>, %tile : vector<[4]x[4]xi32>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[4]xi32> into vector<[4]x[4]xi32>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[4]xi32> into vector<[4]x[4]xi32>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[4]xi32> into vector<[4]x[4]xi32>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i64(%vector : vector<[2]xi64>, %tile : vector<[2]x[2]xi64>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[2]xi64> into vector<[2]x[2]xi64>
+func.func @arm_sme_insert_tile_slice_i64(%vector : vector<[2]xi64>, %tile : vector<[2]x[2]xi64>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[2]xi64> into vector<[2]x[2]xi64>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[2]xi64> into vector<[2]x[2]xi64>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[2]xi64> into vector<[2]x[2]xi64>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i128(%vector : vector<[1]xi128>, %tile : vector<[1]x[1]xi128>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[1]xi128> into vector<[1]x[1]xi128>
+func.func @arm_sme_insert_tile_slice_i128(%vector : vector<[1]xi128>, %tile : vector<[1]x[1]xi128>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[1]xi128> into vector<[1]x[1]xi128>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[1]xi128> into vector<[1]x[1]xi128>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[1]xi128> into vector<[1]x[1]xi128>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_f16(%vector : vector<[8]xf16>, %tile : vector<[8]x[8]xf16>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
+func.func @arm_sme_insert_tile_slice_f16(%vector : vector<[8]xf16>, %tile : vector<[8]x[8]xf16>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[8]xf16> into vector<[8]x[8]xf16>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xf16> into vector<[8]x[8]xf16>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[8]xf16> into vector<[8]x[8]xf16>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_bf16(%vector : vector<[8]xbf16>, %tile : vector<[8]x[8]xbf16>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[8]xbf16> into vector<[8]x[8]xbf16>
+func.func @arm_sme_insert_tile_slice_bf16(%vector : vector<[8]xbf16>, %tile : vector<[8]x[8]xbf16>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xbf16> into vector<[8]x[8]xbf16>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[8]xbf16> into vector<[8]x[8]xbf16>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_f32(%vector : vector<[4]xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[4]xf32> into vector<[4]x[4]xf32>
+func.func @arm_sme_insert_tile_slice_f32(%vector : vector<[4]xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[4]xf32> into vector<[4]x[4]xf32>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[4]xf32> into vector<[4]x[4]xf32>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[4]xf32> into vector<[4]x[4]xf32>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_f64(%vector : vector<[2]xf64>, %tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} : vector<[2]xf64> into vector<[2]x[2]xf64>
+func.func @arm_sme_insert_tile_slice_f64(%vector : vector<[2]xf64>, %tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} : vector<[2]xf64> into vector<[2]x[2]xf64>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[2]xf64> into vector<[2]x[2]xf64>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[2]xf64> into vector<[2]x[2]xf64>
   return
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_ver_i8(%vector : vector<[16]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> () {
-  // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} layout<vertical> : vector<[16]xi8> into vector<[16]x[16]xi8>
+func.func @arm_sme_insert_tile_slice_ver_i8(%vector : vector<[16]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> () {
+  // CHECK: arm_sme.insert_tile_slice {{.*}} layout<vertical> : vector<[16]xi8> into vector<[16]x[16]xi8>
   %c0 = arith.constant 0 : index
-  arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index layout<vertical> : vector<[16]xi8> into vector<[16]x[16]xi8>
+  arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] layout<vertical> : vector<[16]xi8> into vector<[16]x[16]xi8>
   return
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_tile_slice_to_vector
+// arm_sme.extract_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_i8(%tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> vector<[16]xi8> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
+func.func @arm_sme_extract_tile_slice_i8(%tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> vector<[16]xi8> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[16]xi8> from vector<[16]x[16]xi8>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
   return %slice : vector<[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_i16(%tile : vector<[8]x[8]xi16>, %tile_slice_index : index) -> vector<[8]xi16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xi16> from vector<[8]x[8]xi16>
+func.func @arm_sme_extract_tile_slice_i16(%tile : vector<[8]x[8]xi16>, %tile_slice_index : index) -> vector<[8]xi16> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xi16> from vector<[8]x[8]xi16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xi16> from vector<[8]x[8]xi16>
   return %slice : vector<[8]xi16>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_i32(%tile : vector<[4]x[4]xi32>, %tile_slice_index : index) -> vector<[4]xi32> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[4]xi32> from vector<[4]x[4]xi32>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[4]xi32> from vector<[4]x[4]xi32>
+func.func @arm_sme_extract_tile_slice_i32(%tile : vector<[4]x[4]xi32>, %tile_slice_index : index) -> vector<[4]xi32> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[4]xi32> from vector<[4]x[4]xi32>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[4]xi32> from vector<[4]x[4]xi32>
   return %slice : vector<[4]xi32>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_i64(%tile : vector<[2]x[2]xi64>, %tile_slice_index : index) -> vector<[2]xi64> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xi64> from vector<[2]x[2]xi64>
+func.func @arm_sme_extract_tile_slice_i64(%tile : vector<[2]x[2]xi64>, %tile_slice_index : index) -> vector<[2]xi64> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[2]xi64> from vector<[2]x[2]xi64>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[2]xi64> from vector<[2]x[2]xi64>
   return %slice : vector<[2]xi64>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_i128(%tile : vector<[1]x[1]xi128>, %tile_slice_index : index) -> vector<[1]xi128> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[1]xi128> from vector<[1]x[1]xi128>
+func.func @arm_sme_extract_tile_slice_i128(%tile : vector<[1]x[1]xi128>, %tile_slice_index : index) -> vector<[1]xi128> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[1]xi128> from vector<[1]x[1]xi128>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[1]xi128> from vector<[1]x[1]xi128>
   return %slice : vector<[1]xi128>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_f16(%tile : vector<[8]x[8]xf16>, %tile_slice_index : index) -> vector<[8]xf16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xf16> from vector<[8]x[8]xf16>
+func.func @arm_sme_extract_tile_slice_f16(%tile : vector<[8]x[8]xf16>, %tile_slice_index : index) -> vector<[8]xf16> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xf16> from vector<[8]x[8]xf16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xf16> from vector<[8]x[8]xf16>
   return %slice : vector<[8]xf16>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_bf16(%tile : vector<[8]x[8]xbf16>, %tile_slice_index : index) -> vector<[8]xbf16> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+func.func @arm_sme_extract_tile_slice_bf16(%tile : vector<[8]x[8]xbf16>, %tile_slice_index : index) -> vector<[8]xbf16> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[8]xbf16> from vector<[8]x[8]xbf16>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[8]xbf16> from vector<[8]x[8]xbf16>
   return %slice : vector<[8]xbf16>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_f32(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]xf32> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+func.func @arm_sme_extract_tile_slice_f32(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]xf32> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[4]xf32> from vector<[4]x[4]xf32>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
   return %slice : vector<[4]xf32>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_f64(%tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> vector<[2]xf64> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
+func.func @arm_sme_extract_tile_slice_f64(%tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> vector<[2]xf64> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} : vector<[2]xf64> from vector<[2]x[2]xf64>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
   return %slice : vector<[2]xf64>
 }
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector_ver_f64(%tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> vector<[2]xf64> {
-  // CHECK: arm_sme.move_tile_slice_to_vector {{.*}} layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
-  %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
+func.func @arm_sme_extract_tile_slice_ver_f64(%tile : vector<[2]x[2]xf64>, %tile_slice_index : index) -> vector<[2]xf64> {
+  // CHECK: arm_sme.extract_tile_slice {{.*}} layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
+  %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
   return %slice : vector<[2]xf64>
 }
 
@@ -1402,4 +1402,13 @@ func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
   // CHECK: arm_sme.usmops_4way {{.*}}, {{.*}} : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
   %reuslt = arm_sme.usmops_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[2]x[2]xi64>
   return %reuslt : vector<[2]x[2]xi64>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.copy_tile
+//===----------------------------------------------------------------------===//
+
+func.func @arm_sme_copy_tile(%vec: vector<[4]x[4]xf32>) -> vector<[4]x[4]xf32> {
+  %result = arm_sme.copy_tile %vec : vector<[4]x[4]xf32>
+  return %result : vector<[4]x[4]xf32>
 }

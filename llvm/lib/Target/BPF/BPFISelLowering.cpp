@@ -14,7 +14,6 @@
 #include "BPFISelLowering.h"
 #include "BPF.h"
 #include "BPFSubtarget.h"
-#include "BPFTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -69,7 +68,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
 
-  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, MVT::i64, Custom);
 
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -93,6 +92,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Custom);
   }
 
+  for (auto VT : {MVT::i32, MVT::i64}) {
+    setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+  }
+
   for (auto VT : { MVT::i32, MVT::i64 }) {
     if (VT == MVT::i32 && !STI.getHasAlu32())
       continue;
@@ -113,6 +117,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS, VT, Expand);
     setOperationAction(ISD::SRA_PARTS, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
+    setOperationAction(ISD::CTTZ, VT, Expand);
+    setOperationAction(ISD::CTLZ, VT, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Expand);
 
     setOperationAction(ISD::SETCC, VT, Expand);
     setOperationAction(ISD::SELECT, VT, Expand);
@@ -124,11 +132,6 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::i32,
                        STI.getHasJmp32() ? Custom : Promote);
   }
-
-  setOperationAction(ISD::CTTZ, MVT::i64, Custom);
-  setOperationAction(ISD::CTLZ, MVT::i64, Custom);
-  setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Custom);
-  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   if (!STI.hasMovsx()) {
@@ -292,6 +295,9 @@ void BPFTargetLowering::ReplaceNodeResults(
     else
       Msg = "unsupported atomic operation, please use 64 bit version";
     break;
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return;
   }
 
   SDLoc DL(N);
@@ -308,6 +314,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBR_CC(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::ConstantPool:
+    return LowerConstantPool(Op, DAG);
   case ISD::SELECT_CC:
     return LowerSELECT_CC(Op, DAG);
   case ISD::SDIV:
@@ -315,6 +323,9 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSDIVSREM(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return LowerATOMIC_LOAD_STORE(Op, DAG);
   }
 }
 
@@ -400,6 +411,21 @@ SDValue BPFTargetLowering::LowerFormalArguments(
 }
 
 const size_t BPFTargetLowering::MaxArgs = 5;
+
+static void resetRegMaskBit(const TargetRegisterInfo *TRI, uint32_t *RegMask,
+                            MCRegister Reg) {
+  for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+    RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+}
+
+static uint32_t *regMaskFromTemplate(const TargetRegisterInfo *TRI,
+                                     MachineFunction &MF,
+                                     const uint32_t *BaseRegMask) {
+  uint32_t *RegMask = MF.allocateRegMask();
+  unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+  memcpy(RegMask, BaseRegMask, sizeof(RegMask[0]) * RegMaskSize);
+  return RegMask;
+}
 
 SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
@@ -511,6 +537,22 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // known live into the call.
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+
+  bool HasFastCall =
+      (CLI.CB && isa<CallInst>(CLI.CB) && CLI.CB->hasFnAttr("bpf_fastcall"));
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  if (HasFastCall) {
+    uint32_t *RegMask = regMaskFromTemplate(
+        TRI, MF, TRI->getCallPreservedMask(MF, CallingConv::PreserveAll));
+    for (auto const &RegPair : RegsToPass)
+      resetRegMaskBit(TRI, RegMask, RegPair.first);
+    if (!CLI.CB->getType()->isVoidTy())
+      resetRegMaskBit(TRI, RegMask, BPF::R0);
+    Ops.push_back(DAG.getRegisterMask(RegMask));
+  } else {
+    Ops.push_back(
+        DAG.getRegisterMask(TRI->getCallPreservedMask(MF, CLI.CallConv)));
+  }
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
@@ -665,10 +707,23 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     NegateCC(LHS, RHS, CC);
 
   SDValue TargetCC = DAG.getConstant(CC, DL, LHS.getValueType());
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
 
-  return DAG.getNode(BPFISD::SELECT_CC, DL, VTs, Ops);
+  return DAG.getNode(BPFISD::SELECT_CC, DL, Op.getValueType(), Ops);
+}
+
+SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
+      AtomicOrdering::SequentiallyConsistent)
+    fail(DL, DAG,
+         "sequentially consistent (seq_cst) "
+         "atomic load/store is not supported");
+
+  return Op;
 }
 
 const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -691,18 +746,41 @@ const char *BPFTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
+}
+
+static SDValue getTargetNode(ConstantPoolSDNode *N, const SDLoc &DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
+                                   N->getOffset(), Flags);
+}
+
+template <class NodeTy>
+SDValue BPFTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                   unsigned Flags) const {
+  SDLoc DL(N);
+
+  SDValue GA = getTargetNode(N, DL, MVT::i64, DAG, Flags);
+
+  return DAG.getNode(BPFISD::Wrapper, DL, MVT::i64, GA);
+}
+
 SDValue BPFTargetLowering::LowerGlobalAddress(SDValue Op,
                                               SelectionDAG &DAG) const {
-  auto *N = cast<GlobalAddressSDNode>(Op);
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   if (N->getOffset() != 0)
     report_fatal_error("invalid offset for global address: " +
                        Twine(N->getOffset()));
+  return getAddr(N, DAG);
+}
 
-  SDLoc DL(Op);
-  const GlobalValue *GV = N->getGlobal();
-  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i64);
+SDValue BPFTargetLowering::LowerConstantPool(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
 
-  return DAG.getNode(BPFISD::Wrapper, DL, MVT::i64, GA);
+  return getAddr(N, DAG);
 }
 
 unsigned

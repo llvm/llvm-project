@@ -87,10 +87,9 @@ void bar() {
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[B:%.*]] = alloca double, align 8
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    store i32 2, ptr @_ZZ4mainE1a, align 4
-// CHECK1-NEXT:    store double 3.000000e+00, ptr [[B]], align 8
+// CHECK1-NEXT:    store double 3.000000e+00, ptr @b1, align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooIiET_v() #[[ATTR7:[0-9]+]]
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //

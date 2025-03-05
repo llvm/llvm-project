@@ -50,6 +50,9 @@ class Attr<Pred condition, string summary = ""> :
 
   // Default value for attribute.
   // Requires a constBuilderCall defined.
+  //
+  // Format: `$_builder` will be expanded to the relevant builder, e.g. to allow
+  //         access to the current context.
   string defaultValue = ?;
 
   // The value type of this attribute. This corresponds to the mlir::Type that
@@ -169,15 +172,16 @@ def AnyAttr : Attr<CPred<"true">, "any attribute"> {
 
 // Any attribute from the given list
 class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
-                string cppClassName = "::mlir::Attribute",
+                string cppType = "::mlir::Attribute",
                 string fromStorage = "$_self"> : Attr<
     // Satisfy any of the allowed attribute's condition
     Or<!foreach(allowedattr, allowedAttrs, allowedattr.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedAttrs, t.summary), " or "),
         summary)> {
-    let returnType = cppClassName;
+    let returnType = cppType;
     let convertFromStorage = fromStorage;
+    list<Attr> allowedAttributes = allowedAttrs;
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
@@ -333,17 +337,19 @@ class StringBasedAttr<Pred condition, string descr> : Attr<condition, descr> {
   let valueType = NoneType;
 }
 
-def StrAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                              "string attribute">;
+def StrAttrPred : CPred<"::llvm::isa<::mlir::StringAttr>($_self)">;
+
+def StrAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // A string attribute that represents the name of a symbol.
-def SymbolNameAttr : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                                     "string attribute">;
+def SymbolNameAttr : StringBasedAttr<StrAttrPred, "string attribute">;
 
 // String attribute that has a specific value type.
 class TypedStrAttr<Type ty>
-    : StringBasedAttr<CPred<"::llvm::isa<::mlir::StringAttr>($_self)">,
-                            "string attribute"> {
+    : StringBasedAttr<And<[StrAttrPred,
+        SubstLeaves<"$_self", "::mlir::cast<StringAttr>($_self).getType()",
+                    ty.predicate>]>,
+        "string attribute of " # ty.summary> {
   let valueType = ty;
 }
 
@@ -369,7 +375,7 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
 }
 
 class TypeAttrOf<Type ty>
-   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary,
+   : TypeAttrBase<ty.cppType, "type attribute of " # ty.summary,
                     ty.predicate> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
@@ -555,6 +561,15 @@ CPred<"::llvm::isa<::mlir::AffineMapAttr>($_self)">, "AffineMap attribute"> {
   let returnType = [{ ::mlir::AffineMap }];
   let valueType = Index;
   let constBuilderCall = "::mlir::AffineMapAttr::get($0)";
+}
+
+// Attributes containing integer sets.
+def IntegerSetAttr : Attr<
+CPred<"::llvm::isa<::mlir::IntegerSetAttr>($_self)">, "IntegerSet attribute"> {
+  let storageType = [{::mlir::IntegerSetAttr }];
+  let returnType = [{ ::mlir::IntegerSet }];
+  let valueType = NoneType;
+  let constBuilderCall = "::mlir::IntegerSetAttr::get($0)";
 }
 
 // Base class for array attributes.
@@ -743,6 +758,8 @@ class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
   let isOptional = attr.isOptional;
 
   let baseAttr = attr;
+
+  list<AttrConstraint> attrConstraints = constraints;
 }
 
 // An AttrConstraint that holds if all attr constraints specified in
@@ -755,7 +772,7 @@ class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
 
 class IntNEQValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() != " # n>,
-    "whose minimum value is " # n>;
+    "whose value is not " # n>;
 
 class IntMinValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() >= " # n>,
@@ -773,6 +790,10 @@ def IntPositive : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
+class ArrayMaxCount<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,
+    "with at most " # n # " elements">;
+
 class ArrayMinCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() >= " # n>,
     "with at least " # n # " elements">;
@@ -784,6 +805,14 @@ class ArrayCount<int n> : AttrConstraint<
 class DenseArrayCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() == " #n>,
     "with exactly " # n # " elements">;
+
+class DenseArrayMaxCt<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() <= " # n>,
+    "with at most " # n # " elements">;
+
+class DenseArrayMinCt<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::DenseArrayAttr>($_self).size() >= " # n>,
+    "with at least " # n # " elements">;
 
 class DenseArrayStrictlyPositive<DenseArrayAttrBase arrayType> : AttrConstraint<
   CPred<"::llvm::all_of(::llvm::cast<" # arrayType #">($_self).asArrayRef(), "

@@ -28,7 +28,16 @@ roriw t0, t1, 0
 # CHECK-ASM: encoding: [0xbb,0x42,0x73,0x08]
 packw t0, t1, t2
 
-# Test the encoding used for zext.h
-# CHECK-ASM-AND-OBJ: packw t0, t1, zero
+# Test the encoding used for zext.h on RV64
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xbb,0x42,0x03,0x08]
 packw t0, t1, zero
+
+# Test the encoding used for zext.h on RV32
+# CHECK-ASM-AND-OBJ: pack t0, t1, zero
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+pack t0, t1, zero
+
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xbb,0x42,0x03,0x08]
+zext.h t0, t1

@@ -15,9 +15,42 @@
 namespace llvm {
 namespace dxil {
 
-#define DXIL_OP_ENUM
+enum class OpCode : unsigned {
+#define DXIL_OPCODE(Op, Name) Name = Op,
 #include "DXILOperation.inc"
-#undef DXIL_OP_ENUM
+};
+
+enum class OpCodeClass : unsigned {
+#define DXIL_OPCLASS(Name) Name,
+#include "DXILOperation.inc"
+};
+
+enum class OpParamType : unsigned {
+#define DXIL_OP_PARAM_TYPE(Name) Name,
+#include "DXILOperation.inc"
+};
+
+struct Attributes {
+#define DXIL_ATTRIBUTE(Name) bool Name = false;
+#include "DXILOperation.inc"
+};
+
+inline Attributes operator|(Attributes a, Attributes b) {
+  Attributes c;
+#define DXIL_ATTRIBUTE(Name) c.Name = a.Name | b.Name;
+#include "DXILOperation.inc"
+  return c;
+}
+
+inline Attributes &operator|=(Attributes &a, Attributes &b) {
+  a = a | b;
+  return a;
+}
+
+struct Properties {
+#define DXIL_PROPERTY(Name) bool Name = false;
+#include "DXILOperation.inc"
+};
 
 } // namespace dxil
 } // namespace llvm

@@ -184,15 +184,6 @@ func.func @vector_transfers(%arg0: index, %arg1: index) {
   return
 }
 
-// CHECK-LABEL: func @cancelling_shape_cast_ops
-//  CHECK-SAME: %[[A0:.*0]]: vector<2x4xf32>
-//       CHECK: return %[[A0]] : vector<2x4xf32>
-func.func @cancelling_shape_cast_ops(%arg0 : vector<2x4xf32>) -> vector<2x4xf32> {
-  %0 = vector.shape_cast %arg0 : vector<2x4xf32> to vector<8xf32>
-  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
-  return %1 : vector<2x4xf32>
-}
-
 // CHECK-LABEL: func @elementwise_unroll
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<4x4xf32>, %[[ARG1:.*]]: memref<4x4xf32>)
 //       CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
@@ -339,6 +330,51 @@ func.func @bubble_down_bitcast_in_strided_slice_extract_odd_size(%arg0: vector<4
   return %0: vector<3xf16>
 }
 
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i4_i8(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<32xi4>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x32xi4>) -> vector<8x16xi8> {
+func.func @bubble_up_bitcast_in_insert_i4_i8(%val: vector<32xi4>, %src: vector<8x32xi4>) -> vector<8x16xi8> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<32xi4> to vector<16xi8>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x32xi4> to vector<8x16xi8>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<16xi8> into vector<8x16xi8>
+  %0 = vector.insert %val, %src[4] : vector<32xi4> into vector<8x32xi4>
+  %1 = vector.bitcast %0 : vector<8x32xi4> to vector<8x16xi8>
+  return %1 : vector<8x16xi8>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i8_i4(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<16xi8>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x16xi8>) -> vector<8x32xi4> {
+func.func @bubble_up_bitcast_in_insert_i8_i4(%val: vector<16xi8>, %src: vector<8x16xi8>) -> vector<8x32xi4> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<16xi8> to vector<32xi4>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x16xi8> to vector<8x32xi4>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<32xi4> into vector<8x32xi4>
+  %0 = vector.insert %val, %src[4] : vector<16xi8> into vector<8x16xi8>
+  %1 = vector.bitcast %0 : vector<8x16xi8> to vector<8x32xi4>
+  return %1 : vector<8x32xi4>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_i32_f32(
+// CHECK-SAME:                                                 %[[VAL:.*]]: vector<16xi32>,
+// CHECK-SAME:                                                 %[[DST:.*]]: vector<8x16xi32>) -> vector<8x16xf32> {
+func.func @bubble_up_bitcast_in_insert_i32_f32(%val: vector<16xi32>, %src: vector<8x16xi32>) -> vector<8x16xf32> {
+// CHECK:           %[[BC_VAL:.*]] = vector.bitcast %[[VAL]] : vector<16xi32> to vector<16xf32>
+// CHECK:           %[[BC_DST:.*]] = vector.bitcast %[[DST]] : vector<8x16xi32> to vector<8x16xf32>
+// CHECK:           vector.insert %[[BC_VAL]], %[[BC_DST]] [4] : vector<16xf32> into vector<8x16xf32>
+  %0 = vector.insert %val, %src[4] : vector<16xi32> into vector<8x16xi32>
+  %1 = vector.bitcast %0 : vector<8x16xi32> to vector<8x16xf32>
+  return %1 : vector<8x16xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_bitcast_in_insert_scalar(
+func.func @bubble_up_bitcast_in_insert_scalar(%val: i8, %src: vector<8x16xi8>) -> vector<8x32xi4> {
+// CHECK:           vector.insert
+// CHECK-NEXT:      vector.bitcast
+  %0 = vector.insert %val, %src[4, 8] : i8 into vector<8x16xi8>
+  %1 = vector.bitcast %0 : vector<8x16xi8> to vector<8x32xi4>
+  return %1 : vector<8x32xi4>
+}
+
 // CHECK-LABEL: func @bubble_up_bitcast_in_strided_slice_insert
 //  CHECK-SAME: (%[[DST:.+]]: vector<8xf16>, %[[SRC1:.+]]: vector<4xf16>, %[[SRC2:.+]]: vector<4xf16>)
 func.func @bubble_up_bitcast_in_strided_slice_insert(%dst: vector<8xf16>, %src1: vector<4xf16>, %src2: vector<4xf16>) -> vector<4xf32> {
@@ -397,3 +433,16 @@ func.func @vec_0D(%arg0: vector<f32>) -> vector<i32> {
   %0 = vector.bitcast %arg0 : vector<f32> to vector<i32>
   return %0 : vector<i32>
 }
+
+// Make sure not crash on dynamic index `vector.extract`:
+func.func @vector_extract_dynamic_index(%arg0 : vector<4xi32>, %index : index) -> i16 {
+  %0 = vector.bitcast %arg0 : vector<4xi32> to vector<8xi16>
+  %1 = vector.extract %0[%index] : i16 from vector<8xi16>
+  return %1 : i16
+}
+
+// CHECK-LABEL: func.func @vector_extract_dynamic_index
+// CHECK-SAME: (%[[VEC:.+]]: vector<4xi32>, %[[IDX:.+]]: index) -> i16 {
+// CHECK: %[[BC:.+]] = vector.bitcast %[[VEC]] : vector<4xi32> to vector<8xi16>
+// CHECK: %[[EXTRACT:.+]] = vector.extract %[[BC]][%[[IDX]]] : i16 from vector<8xi16>
+// CHECK: return %[[EXTRACT]]

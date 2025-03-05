@@ -56,9 +56,7 @@ define i1 @reduce_and_insert_subvec_into_ones(<vscale x 4 x i1> %in) {
 ; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
-  %allones.ins = insertelement <vscale x 16 x i1> poison, i1 1, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %allones.ins,  <vscale x 16 x i1> poison,  <vscale x 16 x i32> zeroinitializer
-  %t = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> %allones, <vscale x 4 x i1> %in, i64 0)
+  %t = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> splat(i1 true), <vscale x 4 x i1> %in, i64 0)
   %res = call i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1> %t)
   ret i1 %res
 }
@@ -80,8 +78,8 @@ define i1 @reduce_and_insert_subvec_into_var(<vscale x 4 x i1> %in, <vscale x 16
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p1.h, p1.b
-; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
+; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    nots p0.b, p2/z, p0.b

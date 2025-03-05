@@ -73,6 +73,9 @@ int ferror(FILE *stream);
 int fileno(FILE *stream);
 int fflush(FILE *stream);
 
+
+int getc(FILE *stream);
+
 size_t strlen(const char *);
 
 char *strcpy(char *restrict, const char *restrict);
@@ -151,3 +154,11 @@ void _Exit(int status) __attribute__ ((__noreturn__));
 #define EOF (-1)
 
 #define offsetof(t, d) __builtin_offsetof(t, d)
+
+struct sigaction {
+  void (*sa_handler)(int);
+};
+#define SIGINT 2
+#define	SIG_IGN (void (*)(int))1
+
+int sigaction(int, const struct sigaction *restrict, struct sigaction *restrict);

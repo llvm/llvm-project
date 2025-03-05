@@ -134,11 +134,11 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]
 ; CHECK:       sw:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    i32 1, label [[CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[CASE0]]
-; CHECK-NEXT:    i32 3, label [[CASE3]]
-; CHECK-NEXT:    i32 4, label [[DEFAULT]]
+; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE0]]
+; CHECK-NEXT:      i32 3, label [[CASE3]]
+; CHECK-NEXT:      i32 4, label [[DEFAULT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @bar(i32 [[X]])

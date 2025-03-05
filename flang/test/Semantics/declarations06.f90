@@ -16,6 +16,7 @@ module m
   procedure(cf1), pointer :: pp1
   procedure(cf2), pointer :: pp2
   procedure(cf3), pointer :: pp3
+  procedure(cf5), pointer :: pp4 ! ok
  contains
   !ERROR: CLASS entity 'cf1' must be a dummy argument, allocatable, or object pointer
   class(t) function cf1()
@@ -32,5 +33,13 @@ module m
     class(t), external :: d2
     !ERROR: CLASS entity 'd3' must be a dummy argument, allocatable, or object pointer
     class(t), external, pointer :: d3
+  end
+  function cf4()
+    class(t), pointer :: cf4
+    cf4 => v3
+  end
+  function cf5
+    procedure(cf4), pointer :: cf5
+    cf5 => cf4
   end
 end

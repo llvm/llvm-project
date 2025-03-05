@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN:%clang_cc1 %s -ferror-limit 0 -triple=x86_64-pc-windows-msvc -target-feature +avx512f -target-feature +avx2 -target-feature +avx512vl -fasm-blocks -mllvm -x86-asm-syntax=intel -S -emit-llvm -o -  | FileCheck %s -check-prefix=INTEL
-// RUN:%clang_cc1 %s -ferror-limit 0 -triple=x86_64-pc-windows-msvc -target-feature +avx512f -target-feature +avx2 -target-feature +avx512vl -fasm-blocks -mllvm -x86-asm-syntax=att -S -emit-llvm -o -  | FileCheck %s -check-prefix=ATT
+// RUN:%clang_cc1 %s -ferror-limit 0 -triple=x86_64-pc-windows-msvc -target-feature +avx512f -target-feature +avx2 -target-feature +avx512vl -fasm-blocks -mllvm -x86-asm-syntax=intel -emit-llvm -o -  | FileCheck %s -check-prefix=INTEL
+// RUN:%clang_cc1 %s -ferror-limit 0 -triple=x86_64-pc-windows-msvc -target-feature +avx512f -target-feature +avx2 -target-feature +avx512vl -fasm-blocks -mllvm -x86-asm-syntax=att -emit-llvm -o -  | FileCheck %s -check-prefix=ATT
 
 void check_inline_prefix(void) {
   __asm {

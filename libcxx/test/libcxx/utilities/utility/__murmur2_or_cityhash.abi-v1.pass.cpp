@@ -16,6 +16,7 @@
 // REQUIRES: libcpp-abi-version=1
 
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <utility>
 

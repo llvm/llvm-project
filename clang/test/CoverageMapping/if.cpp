@@ -14,7 +14,7 @@ struct S {
 // CHECK-LABEL: _Z3foov:
                                 // CHECK-NEXT: [[@LINE+3]]:12 -> [[@LINE+8]]:2 = #0
                                 // CHECK-NEXT: [[@LINE+3]]:15 -> [[@LINE+3]]:19 = #0
-                                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:15 -> [[@LINE+2]]:19 = 0, 0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:15 -> [[@LINE+2]]:19 = #2, 0
 void foo() {                    // CHECK-NEXT: Gap,File 0, [[@LINE+1]]:21 -> [[@LINE+1]]:22 = #2
   if (int j = true ? nop()      // CHECK-NEXT: [[@LINE]]:22 -> [[@LINE]]:27 = #2
                    : nop();     // CHECK-NEXT: [[@LINE]]:22 -> [[@LINE]]:27 = (#0 - #2)
@@ -168,7 +168,7 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
   // GH-45481
   S s;                    
   s.the_prop = 0? 1 : 2;        // CHECK-NEXT: File 0, [[@LINE]]:16 -> [[@LINE]]:17 = #0
-                                // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:17 = 0, 0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:17 = 0, (#0 - #7)
                                 // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:18 -> [[@LINE-2]]:19 = #7
                                 // CHECK-NEXT: File 0, [[@LINE-3]]:19 -> [[@LINE-3]]:20 = #7
                                 // CHECK-NEXT: File 0, [[@LINE-4]]:23 -> [[@LINE-4]]:24 = (#0 - #7)

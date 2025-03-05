@@ -13,6 +13,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <cstring>
 using namespace clang;
 
 static constexpr const char *TypeTraitNames[] = {
@@ -81,6 +82,15 @@ const char *clang::getTraitName(UnaryExprOrTypeTrait T) {
 
 const char *clang::getTraitSpelling(TypeTrait T) {
   assert(T <= TT_Last && "invalid enum value!");
+  if (T == BTT_IsDeducible) {
+    // The __is_deducible is an internal-only type trait. To hide it from
+    // external users, we define it with an empty spelling name, preventing the
+    // clang parser from recognizing its token kind.
+    // However, other components such as the AST dump still require the real
+    // type trait name. Therefore, we return the real name when needed.
+    assert(std::strlen(TypeTraitSpellings[T]) == 0);
+    return "__is_deducible";
+  }
   return TypeTraitSpellings[T];
 }
 

@@ -31,6 +31,7 @@
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -39,7 +40,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -64,12 +64,15 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  bool CFGChanged;
+  bool CFGChanged = false;
   AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
   ARCRuntimeEntryPoints EP;
   BundledRetainClaimRVs *BundledInsts = nullptr;
+
+  /// A flag indicating whether this optimization pass should run.
+  bool Run;
 
   /// The inline asm string to insert between calls and RetainRV calls to make
   /// the optimization work on targets which need it.
@@ -376,18 +379,10 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
                    << "            Retain:  " << *Retain << "\n"
                    << "            Load:    " << *Load << "\n");
 
-  LLVMContext &C = Release->getContext();
-  Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-  Type *I8XX = PointerType::getUnqual(I8X);
-
-  Value *Args[] = { Load->getPointerOperand(), New };
-  if (Args[0]->getType() != I8XX)
-    Args[0] = new BitCastInst(Args[0], I8XX, "", Store);
-  if (Args[1]->getType() != I8X)
-    Args[1] = new BitCastInst(Args[1], I8X, "", Store);
+  Value *Args[] = {Load->getPointerOperand(), New};
   Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
-  CallInst *StoreStrong =
-      objcarc::createCallInstWithColors(Decl, Args, "", Store, BlockColors);
+  CallInst *StoreStrong = objcarc::createCallInstWithColors(
+      Decl, Args, "", Store->getIterator(), BlockColors);
   StoreStrong->setDoesNotThrow();
   StoreStrong->setDebugLoc(Store->getDebugLoc());
 
@@ -472,7 +467,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, std::nullopt, "", Inst,
+      objcarc::createCallInstWithColors(IA, {}, "", Inst->getIterator(),
                                         BlockColors);
     }
   decline_rv_optimization:
@@ -484,7 +479,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     if (IsNullOrUndef(CI->getArgOperand(1))) {
       Value *Null = ConstantPointerNull::get(cast<PointerType>(CI->getType()));
       Changed = true;
-      new StoreInst(Null, CI->getArgOperand(0), CI);
+      new StoreInst(Null, CI->getArgOperand(0), CI->getIterator());
 
       LLVM_DEBUG(dbgs() << "OBJCARCContract: Old = " << *CI << "\n"
                         << "                 New = " << *Null << "\n");
@@ -527,6 +522,10 @@ bool ObjCARCContract::tryToPeepholeInstruction(
 //===----------------------------------------------------------------------===//
 
 bool ObjCARCContract::init(Module &M) {
+  Run = ModuleHasARC(M);
+  if (!Run)
+    return false;
+
   EP.init(&M);
 
   // Initialize RVInstMarker.
@@ -536,6 +535,9 @@ bool ObjCARCContract::init(Module &M) {
 }
 
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
+  if (!Run)
+    return false;
+
   if (!EnableARCOpts)
     return false;
 
@@ -575,7 +577,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
       if (objcarc::hasAttachedCallOpBundle(CI)) {
-        BundledInsts->insertRVCallWithColors(&*I, CI, BlockColors);
+        BundledInsts->insertRVCallWithColors(I->getIterator(), CI, BlockColors);
         --I;
         Changed = true;
       }
@@ -625,14 +627,14 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             // block with a catchswitch has no insertion point. Keep going up
             // the dominator tree until we find a non-catchswitch.
             BasicBlock *InsertBB = IncomingBB;
-            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHI())) {
+            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHIIt())) {
               InsertBB = DT->getNode(InsertBB)->getIDom()->getBlock();
             }
 
             assert(DT->dominates(Inst, &InsertBB->back()) &&
                    "Invalid insertion point for bitcast");
-            Replacement =
-                new BitCastInst(Replacement, UseTy, "", &InsertBB->back());
+            Replacement = new BitCastInst(Replacement, UseTy, "",
+                                          InsertBB->back().getIterator());
           }
 
           // While we're here, rewrite all edges for this PHI, rather
@@ -649,8 +651,9 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             }
         } else {
           if (Replacement->getType() != UseTy)
-            Replacement = new BitCastInst(Replacement, UseTy, "",
-                                          cast<Instruction>(U.getUser()));
+            Replacement =
+                new BitCastInst(Replacement, UseTy, "",
+                                cast<Instruction>(U.getUser())->getIterator());
           U.set(Replacement);
         }
       }
@@ -729,6 +732,9 @@ INITIALIZE_PASS_END(ObjCARCContractLegacyPass, "objc-arc-contract",
 void ObjCARCContractLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
 Pass *llvm::createObjCARCContractPass() {

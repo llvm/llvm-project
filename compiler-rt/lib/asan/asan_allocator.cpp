@@ -21,6 +21,7 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -717,14 +718,23 @@ struct Allocator {
       return;
     }
 
-    RunFreeHooks(ptr);
+    if (RunFreeHooks(ptr)) {
+      // Someone used __sanitizer_ignore_free_hook() and decided that they
+      // didn't want the memory to __sanitizer_ignore_free_hook freed right now.
+      // When they call free() on this pointer again at a later time, we should
+      // ignore the alloc-type mismatch and allow them to deallocate the pointer
+      // through free(), rather than the initial alloc type.
+      m->alloc_type = FROM_MALLOC;
+      return;
+    }
 
     // Must mark the chunk as quarantined before any changes to its metadata.
     // Do not quarantine given chunk if we failed to set CHUNK_QUARANTINE flag.
     if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
 
     if (m->alloc_type != alloc_type) {
-      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
+      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire) &&
+          !IsAllocDeallocMismatchSuppressed(stack)) {
         ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
                                 (AllocType)alloc_type);
       }

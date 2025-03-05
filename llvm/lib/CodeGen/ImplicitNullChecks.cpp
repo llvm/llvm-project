@@ -801,7 +801,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // Insert an *unconditional* branch to not-null successor - we expect
     // block placement to remove fallthroughs later.
     TII->insertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
-                      /*Cond=*/std::nullopt, DL);
+                      /*Cond=*/{}, DL);
 
     NumImplicitNullChecks++;
   }

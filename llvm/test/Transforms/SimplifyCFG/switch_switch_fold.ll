@@ -15,10 +15,10 @@ declare void @foo4()
 define void @test1(i32 %V) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[INFLOOP:%.*]] [
-; CHECK-NEXT:    i32 4, label [[A:%.*]]
-; CHECK-NEXT:    i32 17, label [[B:%.*]]
-; CHECK-NEXT:    i32 18, label [[B]]
-; CHECK-NEXT:    i32 42, label [[D:%.*]]
+; CHECK-NEXT:      i32 4, label [[A:%.*]]
+; CHECK-NEXT:      i32 17, label [[B:%.*]]
+; CHECK-NEXT:      i32 18, label [[B]]
+; CHECK-NEXT:      i32 42, label [[D:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void

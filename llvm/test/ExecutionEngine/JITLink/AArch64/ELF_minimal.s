@@ -1,5 +1,5 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
+# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -x86-relax-relocations=false \
 # RUN:   -position-independent -filetype=obj -o %t/elf_minimal.o %s
 # RUN: llvm-jitlink -noexec %t/elf_minimal.o
 

@@ -180,13 +180,13 @@ class Token;
     }
 
     /// True if it is a builtin macro.
-    bool isBuiltinMacro() const { return NameOrDef.is<IdentifierInfo *>(); }
+    bool isBuiltinMacro() const { return isa<IdentifierInfo *>(NameOrDef); }
 
     /// The name of the macro being expanded.
     const IdentifierInfo *getName() const {
       if (MacroDefinitionRecord *Def = getDefinition())
         return Def->getName();
-      return NameOrDef.get<IdentifierInfo *>();
+      return cast<IdentifierInfo *>(NameOrDef);
     }
 
     /// The definition of the macro being expanded. May return null if
@@ -532,7 +532,8 @@ class Token;
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange,
                             OptionalFileEntryRef File, StringRef SearchPath,
-                            StringRef RelativePath, const Module *Imported,
+                            StringRef RelativePath,
+                            const Module *SuggestedModule, bool ModuleImported,
                             SrcMgr::CharacteristicKind FileType) override;
     void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override;

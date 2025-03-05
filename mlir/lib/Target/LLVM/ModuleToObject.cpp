@@ -14,6 +14,8 @@
 #include "mlir/Target/LLVM/ModuleToObject.h"
 
 #include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
@@ -25,6 +27,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,10 +37,17 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
-ModuleToObject::ModuleToObject(Operation &module, StringRef triple,
-                               StringRef chip, StringRef features, int optLevel)
+ModuleToObject::ModuleToObject(
+    Operation &module, StringRef triple, StringRef chip, StringRef features,
+    int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
+    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
+    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
+    function_ref<void(StringRef)> isaCallback)
     : module(module), triple(triple), chip(chip), features(features),
-      optLevel(optLevel) {}
+      optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
+      linkedLlvmIRCallback(linkedLlvmIRCallback),
+      optimizedLlvmIRCallback(optimizedLlvmIRCallback),
+      isaCallback(isaCallback) {}
 
 ModuleToObject::~ModuleToObject() = default;
 
@@ -82,22 +92,53 @@ ModuleToObject::loadBitcodeFile(llvm::LLVMContext &context, StringRef path) {
 }
 
 LogicalResult ModuleToObject::loadBitcodeFilesFromList(
-    llvm::LLVMContext &context, ArrayRef<std::string> fileList,
+    llvm::LLVMContext &context, ArrayRef<Attribute> librariesToLink,
     SmallVector<std::unique_ptr<llvm::Module>> &llvmModules,
     bool failureOnError) {
-  for (const std::string &str : fileList) {
-    // Test if the path exists, if it doesn't abort.
-    StringRef pathRef = StringRef(str.data(), str.size());
-    if (!llvm::sys::fs::is_regular_file(pathRef)) {
+  for (Attribute linkLib : librariesToLink) {
+    // Attributes in this list can be either list of file paths using
+    // StringAttr, or a resource attribute pointing to the LLVM bitcode in
+    // memory.
+    if (auto filePath = dyn_cast<StringAttr>(linkLib)) {
+      // Test if the path exists, if it doesn't abort.
+      if (!llvm::sys::fs::is_regular_file(filePath.strref())) {
+        getOperation().emitError()
+            << "File path: " << filePath << " does not exist or is not a file.";
+        return failure();
+      }
+      // Load the file or abort on error.
+      if (auto bcFile = loadBitcodeFile(context, filePath))
+        llvmModules.push_back(std::move(bcFile));
+      else if (failureOnError)
+        return failure();
+      continue;
+    }
+    if (auto blobAttr = dyn_cast<BlobAttr>(linkLib)) {
+      // Load the file or abort on error.
+      llvm::SMDiagnostic error;
+      ArrayRef<char> data = blobAttr.getData();
+      std::unique_ptr<llvm::MemoryBuffer> buffer =
+          llvm::MemoryBuffer::getMemBuffer(StringRef(data.data(), data.size()),
+                                           "blobLinkedLib",
+                                           /*RequiresNullTerminator=*/false);
+      std::unique_ptr<llvm::Module> mod =
+          getLazyIRModule(std::move(buffer), error, context);
+      if (mod) {
+        if (failed(handleBitcodeFile(*mod)))
+          return failure();
+        llvmModules.push_back(std::move(mod));
+      } else if (failureOnError) {
+        getOperation().emitError()
+            << "Couldn't load LLVM library for linking: " << error.getMessage();
+        return failure();
+      }
+      continue;
+    }
+    if (failureOnError) {
       getOperation().emitError()
-          << "File path: " << pathRef << " does not exist or is not a file.\n";
+          << "Unknown attribute describing LLVM library to load: " << linkLib;
       return failure();
     }
-    // Load the file or abort on error.
-    if (auto bcFile = loadBitcodeFile(context, pathRef))
-      llvmModules.push_back(std::move(bcFile));
-    else if (failureOnError)
-      return failure();
   }
   return success();
 }
@@ -182,7 +223,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
     codegenPasses.run(llvmModule);
   }
-  return stream.str();
+  return targetISA;
 }
 
 void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
@@ -215,6 +256,9 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   }
   setDataLayoutAndTriple(*llvmModule);
 
+  if (initialLlvmIRCallback)
+    initialLlvmIRCallback(*llvmModule);
+
   // Link bitcode files.
   handleModulePreLink(*llvmModule);
   {
@@ -227,9 +271,15 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     handleModulePostLink(*llvmModule);
   }
 
+  if (linkedLlvmIRCallback)
+    linkedLlvmIRCallback(*llvmModule);
+
   // Optimize the module.
   if (failed(optimizeModule(*llvmModule, optLevel)))
     return std::nullopt;
+
+  if (optimizedLlvmIRCallback)
+    optimizedLlvmIRCallback(*llvmModule);
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);

@@ -18,7 +18,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
-#include "PPCFixupKinds.h"
 #include "PPCMCCodeEmitter.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -29,8 +28,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -76,7 +73,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
     // label to the top of the fragment containing the aligned instruction that
     // was just added.
     if (InstLine == LabelLine) {
-      assignFragment(LastLabel, InstructionFragment);
+      LastLabel->setFragment(InstructionFragment);
       LastLabel->setOffset(0);
     }
   }
@@ -220,10 +217,11 @@ std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   return (Inst.getOpcode() == PPC::PLDpc);
 }
 
-MCELFStreamer *llvm::createPPCELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW,
-    std::unique_ptr<MCCodeEmitter> Emitter) {
-  return new PPCELFStreamer(Context, std::move(MAB), std::move(OW),
+MCStreamer *
+llvm::createPPCELFStreamer(const Triple &T, MCContext &C,
+                           std::unique_ptr<MCAsmBackend> &&MAB,
+                           std::unique_ptr<MCObjectWriter> &&OW,
+                           std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new PPCELFStreamer(C, std::move(MAB), std::move(OW),
                             std::move(Emitter));
 }

@@ -236,15 +236,11 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
   APInt Scratch(64, 0U); // One APInt word is enough.
   getBinaryCodeForInstr(MI, Fixups, EncodedInst, Scratch, STI);
 
-  ArrayRef<uint64_t> Data(EncodedInst.getRawData(), EncodedInst.getNumWords());
-  int64_t InstSize = EncodedInst.getBitWidth();
-  for (uint64_t Word : Data) {
-    for (int i = 0; i < 4 && InstSize > 0; ++i, InstSize -= 16) {
-      support::endian::write<uint16_t>(CB, static_cast<uint16_t>(Word),
-                                       llvm::endianness::big);
-      Word >>= 16;
-    }
-  }
+  unsigned InstSize = EncodedInst.getBitWidth();
+  for (unsigned i = 0; i != InstSize; i += 16)
+    support::endian::write<uint16_t>(
+        CB, static_cast<uint16_t>(EncodedInst.extractBitsAsZExtValue(16, i)),
+        llvm::endianness::big);
 }
 
 MCCodeEmitter *llvm::createM68kMCCodeEmitter(const MCInstrInfo &MCII,

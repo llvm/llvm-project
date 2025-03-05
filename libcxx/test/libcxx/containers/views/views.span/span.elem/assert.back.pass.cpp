@@ -23,17 +23,17 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int> const s(array.data(), 0);
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T>::back() on empty span");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int> const s(array.data(), 0);
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T>::back() on empty span");
+  }
 
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int, 0> const s(array.data(), 0);
-        TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T, N>::back() on empty span");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int, 0> const s(array.data(), 0);
+    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "span<T, N>::back() on empty span");
+  }
 
-    return 0;
+  return 0;
 }

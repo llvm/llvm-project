@@ -16,14 +16,21 @@
 // Test the feature test macros defined by <variant>
 
 /*  Constant                          Value
+    __cpp_lib_constrained_equality    202403L [C++26]
     __cpp_lib_freestanding_variant    202311L [C++26]
     __cpp_lib_variant                 202102L [C++17]
+                                      202106L [C++20]
+                                      202306L [C++26]
 */
 
 #include <variant>
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_variant
 #   error "__cpp_lib_freestanding_variant should not be defined before c++26"
@@ -35,6 +42,10 @@
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_variant
 #   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
@@ -44,6 +55,10 @@
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_variant
 #   error "__cpp_lib_freestanding_variant should not be defined before c++26"
@@ -58,6 +73,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_variant
 #   error "__cpp_lib_freestanding_variant should not be defined before c++26"
 # endif
@@ -65,11 +84,15 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++20"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++20"
 # endif
 
 #elif TEST_STD_VER == 23
+
+# ifdef __cpp_lib_constrained_equality
+#   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_variant
 #   error "__cpp_lib_freestanding_variant should not be defined before c++26"
@@ -78,11 +101,24 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++23"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++23"
+# if __cpp_lib_variant != 202106L
+#   error "__cpp_lib_variant should have the value 202106L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should be defined in c++26"
+#   endif
+#   if __cpp_lib_constrained_equality != 202403L
+#     error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constrained_equality
+#     error "__cpp_lib_constrained_equality should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_freestanding_variant
@@ -100,8 +136,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++26"
 # endif
-# if __cpp_lib_variant != 202102L
-#   error "__cpp_lib_variant should have the value 202102L in c++26"
+# if __cpp_lib_variant != 202306L
+#   error "__cpp_lib_variant should have the value 202306L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

@@ -13,7 +13,6 @@
 ; CHECK: Running an SCC pass across the RefSCC: [(test1_a, test1_b, test1_c)]
 ; CHECK: Enqueuing the existing SCC in the worklist:(test1_b)
 ; CHECK: Enqueuing a newly formed SCC:(test1_c)
-; CHECK: Enqueuing a new RefSCC in the update worklist: [(test1_b)]
 ; CHECK: Switch an internal ref edge to a call edge from 'test1_a' to 'test1_c'
 ; CHECK: Switch an internal ref edge to a call edge from 'test1_a' to 'test1_a'
 ; CHECK: Re-running SCC passes after a refinement of the current SCC: (test1_c, test1_a)

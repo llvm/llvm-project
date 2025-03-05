@@ -21,7 +21,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSION
+#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSIONPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -143,15 +143,16 @@ struct SimplifyDepthwiseConvQOp
 };
 
 struct LinalgNamedOpConversionPass
-    : public impl::LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
-  LinalgNamedOpConversionPass() = default;
-  LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) = default;
+    : public impl::LinalgNamedOpConversionPassBase<
+          LinalgNamedOpConversionPass> {
+  using impl::LinalgNamedOpConversionPassBase<
+      LinalgNamedOpConversionPass>::LinalgNamedOpConversionPassBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
     populateLinalgNamedOpConversionPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -161,8 +162,4 @@ void mlir::linalg::populateLinalgNamedOpConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<SimplifyDepthwiseConvOp, SimplifyDepthwiseConvQOp>(
       patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createLinalgNamedOpConversionPass() {
-  return std::make_unique<LinalgNamedOpConversionPass>();
 }

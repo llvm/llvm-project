@@ -6,39 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMFixupKinds.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
 namespace {
 class ARMMachObjectWriter : public MCMachObjectTargetWriter {
-  void RecordARMScatteredRelocation(MachObjectWriter *Writer,
+  void recordARMScatteredRelocation(MachObjectWriter *Writer,
                                     const MCAssembler &Asm,
-                                    const MCAsmLayout &Layout,
                                     const MCFragment *Fragment,
-                                    const MCFixup &Fixup,
-                                    MCValue Target,
-                                    unsigned Type,
-                                    unsigned Log2Size,
+                                    const MCFixup &Fixup, MCValue Target,
+                                    unsigned Type, unsigned Log2Size,
                                     uint64_t &FixedValue);
-  void RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
+  void recordARMScatteredHalfRelocation(MachObjectWriter *Writer,
                                         const MCAssembler &Asm,
-                                        const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue);
@@ -53,9 +49,8 @@ public:
       : MCMachObjectTargetWriter(Is64Bit, CPUType, CPUSubtype) {}
 
   void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                        const MCAsmLayout &Layout, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 };
 }
 
@@ -136,15 +131,11 @@ static bool getARMFixupKindMachOInfo(unsigned Kind, unsigned &RelocType,
   }
 }
 
-void ARMMachObjectWriter::
-RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
-                                 const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFragment *Fragment,
-                                 const MCFixup &Fixup,
-                                 MCValue Target,
-                                 uint64_t &FixedValue) {
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
+    MachObjectWriter *Writer, const MCAssembler &Asm,
+    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    uint64_t &FixedValue) {
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -167,7 +158,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Layout);
+  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
   uint32_t Value2 = 0;
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
@@ -184,7 +175,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_HALF_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Layout);
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -250,16 +241,11 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   Writer->addRelocation(nullptr, Fragment->getParent(), MRE);
 }
 
-void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
-                                                    const MCAssembler &Asm,
-                                                    const MCAsmLayout &Layout,
-                                                    const MCFragment *Fragment,
-                                                    const MCFixup &Fixup,
-                                                    MCValue Target,
-                                                    unsigned Type,
-                                                    unsigned Log2Size,
-                                                    uint64_t &FixedValue) {
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+void ARMMachObjectWriter::recordARMScatteredRelocation(
+    MachObjectWriter *Writer, const MCAssembler &Asm,
+    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
+    unsigned Type, unsigned Log2Size, uint64_t &FixedValue) {
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
 
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -281,7 +267,7 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
     return;
   }
 
-  uint32_t Value = Writer->getSymbolAddress(*A, Layout);
+  uint32_t Value = Writer->getSymbolAddress(*A, Asm);
   uint64_t SecAddr = Writer->getSectionAddress(A->getFragment()->getParent());
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
@@ -299,7 +285,7 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Layout);
+    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -374,7 +360,6 @@ bool ARMMachObjectWriter::requiresExternRelocation(MachObjectWriter *Writer,
 
 void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
                                            MCAssembler &Asm,
-                                           const MCAsmLayout &Layout,
                                            const MCFragment *Fragment,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
@@ -395,11 +380,10 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // relocations.
   if (Target.getSymB()) {
     if (RelocType == MachO::ARM_RELOC_HALF)
-      return RecordARMScatteredHalfRelocation(Writer, Asm, Layout, Fragment,
-                                              Fixup, Target, FixedValue);
-    return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
-                                        Target, RelocType, Log2Size,
-                                        FixedValue);
+      return recordARMScatteredHalfRelocation(Writer, Asm, Fragment, Fixup,
+                                              Target, FixedValue);
+    return recordARMScatteredRelocation(Writer, Asm, Fragment, Fixup, Target,
+                                        RelocType, Log2Size, FixedValue);
   }
 
   // Get the symbol data, if any.
@@ -417,12 +401,11 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     Offset += 1 << Log2Size;
   if (Offset && A && !Writer->doesSymbolRequireExternRelocation(*A) &&
       RelocType != MachO::ARM_RELOC_HALF)
-    return RecordARMScatteredRelocation(Writer, Asm, Layout, Fragment, Fixup,
-                                        Target, RelocType, Log2Size,
-                                        FixedValue);
+    return recordARMScatteredRelocation(Writer, Asm, Fragment, Fixup, Target,
+                                        RelocType, Log2Size, FixedValue);
 
   // See <reloc.h>.
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
   unsigned Index = 0;
   unsigned Type = 0;
   const MCSymbol *RelSymbol = nullptr;
@@ -438,7 +421,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     if (A->isVariable()) {
       int64_t Res;
       if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Layout, Writer->getSectionAddressMap())) {
+              Res, Asm, Writer->getSectionAddressMap())) {
         FixedValue = Res;
         return;
       }
@@ -453,7 +436,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
       // compensate for the addend of the symbol address, if it was
       // undefined. This occurs with weak definitions, for example.
       if (!A->isUndefined())
-        FixedValue -= Layout.getSymbolOffset(*A);
+        FixedValue -= Asm.getSymbolOffset(*A);
     } else {
       // The index is the section ordinal (1-based).
       const MCSection &Sec = A->getSection();
@@ -508,4 +491,24 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
   return std::make_unique<ARMMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+}
+
+namespace {
+class ARMTargetMachOStreamer : public ARMTargetStreamer {
+public:
+  ARMTargetMachOStreamer(MCStreamer &S) : ARMTargetStreamer(S) {}
+  MCObjectStreamer &getStreamer() {
+    return static_cast<MCObjectStreamer &>(Streamer);
+  }
+  void emitThumbFunc(MCSymbol *Symbol) override {
+    // Remember that the function is a thumb function. Fixup and relocation
+    // values will need adjusted.
+    getStreamer().getAssembler().setIsThumbFunc(Symbol);
+    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+  }
+};
+} // namespace
+
+MCTargetStreamer *llvm::createARMObjectTargetMachOStreamer(MCStreamer &S) {
+  return new ARMTargetMachOStreamer(S);
 }

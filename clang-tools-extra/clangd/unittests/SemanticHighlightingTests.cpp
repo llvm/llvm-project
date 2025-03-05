@@ -621,7 +621,7 @@ sizeof...($TemplateParameter[[Elements]]);
       struct $Class_def[[Foo]] {
         int $Field_decl[[Waldo]];
         void $Method_def[[bar]]() {
-          $Class[[Foo]]().$Field_dependentName[[Waldo]];
+          $Class[[Foo]]().$Field[[Waldo]];
         }
         template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]]
         void $Method_def[[bar1]]() {
@@ -741,6 +741,7 @@ sizeof...($TemplateParameter[[Elements]]);
           $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] $Operator[[=]] 1;
           self.$Field[[someProperty]] $Operator[[=]] self.$Field[[someProperty]] $Operator[[+]] self.$Field[[otherMethod]] $Operator[[+]] 1;
           self->$Field[[_someProperty]] $Operator[[=]] $Field[[_someProperty]] $Operator[[+]] 1;
+          return 0;
         }
         @end
       )cpp",
@@ -1092,6 +1093,13 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
             $Field_dependentName[[waldo]];
           }
         };
+    )cpp",
+      // Pointer-to-member with nested-name-specifiers
+      R"cpp(
+      struct $Class_def[[Outer]] {
+        struct $Class_def[[Inner]] {};
+      };
+      using $Typedef_decl[[Alias]] = void ($Class[[Outer]]::$Class[[Inner]]:: *)();
     )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.

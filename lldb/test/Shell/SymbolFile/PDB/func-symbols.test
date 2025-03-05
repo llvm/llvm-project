@@ -1,4 +1,4 @@
-REQUIRES: system-windows, lld
+REQUIRES: target-windows, lld
 RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%T/FuncSymbolsTest.exe %S/Inputs/FuncSymbolsTestMain.cpp %S/Inputs/FuncSymbols.cpp
 RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s
 RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-TWO %s

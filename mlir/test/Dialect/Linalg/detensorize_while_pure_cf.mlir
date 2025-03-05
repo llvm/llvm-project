@@ -49,8 +49,8 @@ func.func @main() -> () attributes {} {
 // CHECK-NEXT:    cf.br ^[[bb1:.*]](%{{.*}} : i32)
 // CHECK-NEXT:  ^[[bb1]](%{{.*}}: i32)
 // CHECK-NEXT:    %{{.*}} = arith.cmpi slt, %{{.*}}, %{{.*}}
-// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]]
-// CHECK-NEXT:  ^[[bb2]](%{{.*}}: i32)
+// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[bb2:.*]], ^[[bb3:.*]]
+// CHECK-NEXT:  ^[[bb2]]
 // CHECK-NEXT:    %{{.*}} = arith.addi %{{.*}}, %{{.*}}
 // CHECK-NEXT:    cf.br ^[[bb1]](%{{.*}} : i32)
 // CHECK-NEXT:  ^[[bb3]]:

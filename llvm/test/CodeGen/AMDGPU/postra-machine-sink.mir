@@ -5,7 +5,7 @@
 # CHECK-LABEL: bb.0:
 # CHECK: renamable $sgpr1 = COPY renamable $sgpr2
 # CHECK-LABEL: bb.1:
-# CHECK: liveins: $sgpr0_sgpr1:0x000000000000000F
+# CHECK: liveins: $sgpr0_sgpr1
 # CHECK: renamable $vgpr1_vgpr2 = COPY renamable $sgpr0_sgpr1
 
 ---

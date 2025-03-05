@@ -212,7 +212,7 @@ private:
     struct C Capture;
   };
 
-  InitializedEntity() {};
+  InitializedEntity() {}
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
@@ -603,7 +603,7 @@ private:
     /// Normal context
     IC_Normal,
 
-    /// Normal context, but allows explicit conversion functionss
+    /// Normal context, but allows explicit conversion functions
     IC_ExplicitConvs,
 
     /// Implicit context (value initialization)
@@ -1383,6 +1383,11 @@ public:
   void AddOCLZeroOpaqueTypeStep(QualType T);
 
   void AddParenthesizedListInitStep(QualType T);
+
+  /// Only used when initializing structured bindings from an array with
+  /// direct-list-initialization. Unwrap the initializer list to get the array
+  /// for array copy.
+  void AddUnwrapInitListInitStep(InitListExpr *Syntactic);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

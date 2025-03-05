@@ -1181,77 +1181,94 @@ entry:
 
 declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 
-define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, i64 %ll9, i16 signext %s10, i8 zeroext %c11, i32 %ui12, i32 %si13, i64 %ll14, i8 zeroext %uc15, i32 %i16) {
+define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8, i64 %ll9, i16 signext %s10, i8 zeroext %c11, i32 %ui12, i32 %si13, i64 %ll14, i8 zeroext %uc15, i32 %i16, i8 signext %si8, i1 zeroext %zi1) {
 ; ASM32PWR4-LABEL: test_ints_stack:
 ; ASM32PWR4:       # %bb.0: # %entry
 ; ASM32PWR4-NEXT:    add 3, 3, 4
-; ASM32PWR4-NEXT:    lwz 11, 92(1)
+; ASM32PWR4-NEXT:    stw 31, -4(1) # 4-byte Folded Spill
 ; ASM32PWR4-NEXT:    add 3, 3, 5
 ; ASM32PWR4-NEXT:    add 3, 3, 6
 ; ASM32PWR4-NEXT:    add 3, 3, 7
-; ASM32PWR4-NEXT:    lwz 12, 76(1)
+; ASM32PWR4-NEXT:    lbz 12, 99(1)
 ; ASM32PWR4-NEXT:    add 3, 3, 8
 ; ASM32PWR4-NEXT:    add 3, 3, 9
-; ASM32PWR4-NEXT:    lwz 6, 60(1)
+; ASM32PWR4-NEXT:    lwz 0, 92(1)
 ; ASM32PWR4-NEXT:    add 3, 3, 10
-; ASM32PWR4-NEXT:    srawi 5, 11, 31
+; ASM32PWR4-NEXT:    extsb 4, 12
 ; ASM32PWR4-NEXT:    srawi 8, 3, 31
-; ASM32PWR4-NEXT:    lwz 4, 64(1)
+; ASM32PWR4-NEXT:    lwz 31, 76(1)
+; ASM32PWR4-NEXT:    srawi 12, 0, 31
+; ASM32PWR4-NEXT:    lwz 6, 60(1)
+; ASM32PWR4-NEXT:    lha 11, 66(1)
 ; ASM32PWR4-NEXT:    lwz 7, 56(1)
-; ASM32PWR4-NEXT:    stw 31, -4(1) # 4-byte Folded Spill
-; ASM32PWR4-NEXT:    srawi 31, 12, 31
+; ASM32PWR4-NEXT:    stw 30, -8(1) # 4-byte Folded Spill
+; ASM32PWR4-NEXT:    srawi 30, 31, 31
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    adde 7, 8, 7
-; ASM32PWR4-NEXT:    lwz 6, 68(1)
-; ASM32PWR4-NEXT:    srawi 8, 4, 31
-; ASM32PWR4-NEXT:    addc 3, 3, 4
+; ASM32PWR4-NEXT:    lbz 6, 71(1)
+; ASM32PWR4-NEXT:    srawi 8, 11, 31
+; ASM32PWR4-NEXT:    addc 3, 3, 11
 ; ASM32PWR4-NEXT:    adde 7, 7, 8
-; ASM32PWR4-NEXT:    lwz 4, 72(1)
+; ASM32PWR4-NEXT:    lwz 9, 72(1)
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    addze 6, 7
-; ASM32PWR4-NEXT:    addc 3, 3, 4
-; ASM32PWR4-NEXT:    lwz 0, 84(1)
-; ASM32PWR4-NEXT:    addze 4, 6
-; ASM32PWR4-NEXT:    addc 3, 3, 12
+; ASM32PWR4-NEXT:    addc 3, 3, 9
+; ASM32PWR4-NEXT:    lwz 5, 84(1)
+; ASM32PWR4-NEXT:    addze 6, 6
+; ASM32PWR4-NEXT:    addc 3, 3, 31
 ; ASM32PWR4-NEXT:    lwz 7, 80(1)
-; ASM32PWR4-NEXT:    adde 4, 4, 31
+; ASM32PWR4-NEXT:    adde 6, 6, 30
+; ASM32PWR4-NEXT:    addc 3, 3, 5
+; ASM32PWR4-NEXT:    lbz 8, 91(1)
+; ASM32PWR4-NEXT:    adde 5, 6, 7
+; ASM32PWR4-NEXT:    addc 3, 3, 8
+; ASM32PWR4-NEXT:    lbz 6, 103(1)
+; ASM32PWR4-NEXT:    addze 5, 5
 ; ASM32PWR4-NEXT:    addc 3, 3, 0
-; ASM32PWR4-NEXT:    lwz 6, 88(1)
-; ASM32PWR4-NEXT:    adde 4, 4, 7
-; ASM32PWR4-NEXT:    addc 3, 3, 6
+; ASM32PWR4-NEXT:    adde 5, 5, 12
 ; ASM32PWR4-NEXT:    lwz 31, -4(1) # 4-byte Folded Reload
-; ASM32PWR4-NEXT:    addze 6, 4
-; ASM32PWR4-NEXT:    addc 4, 3, 11
-; ASM32PWR4-NEXT:    adde 3, 6, 5
+; ASM32PWR4-NEXT:    srawi 7, 4, 31
+; ASM32PWR4-NEXT:    addc 3, 3, 4
+; ASM32PWR4-NEXT:    adde 5, 5, 7
+; ASM32PWR4-NEXT:    lwz 30, -8(1) # 4-byte Folded Reload
+; ASM32PWR4-NEXT:    addc 4, 3, 6
+; ASM32PWR4-NEXT:    addze 3, 5
 ; ASM32PWR4-NEXT:    blr
 ;
 ; ASM64PWR4-LABEL: test_ints_stack:
 ; ASM64PWR4:       # %bb.0: # %entry
 ; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    ld 4, 112(1)
+; ASM64PWR4-NEXT:    std 31, -8(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 5
 ; ASM64PWR4-NEXT:    add 3, 3, 6
 ; ASM64PWR4-NEXT:    add 3, 3, 7
-; ASM64PWR4-NEXT:    lwa 12, 124(1)
+; ASM64PWR4-NEXT:    std 2, -16(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 8
 ; ASM64PWR4-NEXT:    add 3, 3, 9
+; ASM64PWR4-NEXT:    ld 6, 112(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 10
 ; ASM64PWR4-NEXT:    extsw 3, 3
-; ASM64PWR4-NEXT:    lwz 5, 132(1)
-; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    add 3, 3, 12
-; ASM64PWR4-NEXT:    std 31, -8(1) # 8-byte Folded Spill
-; ASM64PWR4-NEXT:    add 3, 3, 5
-; ASM64PWR4-NEXT:    lwz 31, 140(1)
-; ASM64PWR4-NEXT:    lwa 11, 148(1)
-; ASM64PWR4-NEXT:    add 3, 3, 31
-; ASM64PWR4-NEXT:    add 3, 3, 11
-; ASM64PWR4-NEXT:    ld 4, 152(1)
-; ASM64PWR4-NEXT:    lwz 0, 164(1)
-; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    lwa 5, 172(1)
+; ASM64PWR4-NEXT:    lha 0, 126(1)
+; ASM64PWR4-NEXT:    add 3, 3, 6
 ; ASM64PWR4-NEXT:    add 3, 3, 0
+; ASM64PWR4-NEXT:    lbz 5, 135(1)
+; ASM64PWR4-NEXT:    lwz 7, 140(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 5
+; ASM64PWR4-NEXT:    lwa 12, 148(1)
+; ASM64PWR4-NEXT:    add 3, 3, 7
+; ASM64PWR4-NEXT:    add 3, 3, 12
+; ASM64PWR4-NEXT:    ld 31, 152(1)
+; ASM64PWR4-NEXT:    lbz 5, 167(1)
+; ASM64PWR4-NEXT:    add 3, 3, 31
+; ASM64PWR4-NEXT:    lwa 11, 172(1)
+; ASM64PWR4-NEXT:    add 3, 3, 5
+; ASM64PWR4-NEXT:    add 3, 3, 11
+; ASM64PWR4-NEXT:    lbz 2, 183(1)
+; ASM64PWR4-NEXT:    lbz 6, 191(1)
+; ASM64PWR4-NEXT:    extsb 4, 2
+; ASM64PWR4-NEXT:    add 3, 3, 4
+; ASM64PWR4-NEXT:    add 3, 3, 6
+; ASM64PWR4-NEXT:    ld 2, -16(1) # 8-byte Folded Reload
 ; ASM64PWR4-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; ASM64PWR4-NEXT:    blr
 entry:
@@ -1277,7 +1294,11 @@ entry:
   %add18 = add nsw i64 %add16, %conv17
   %conv19 = sext i32 %i16 to i64
   %add20 = add nsw i64 %add18, %conv19
-  ret i64 %add20
+  %conv21 = sext i8 %si8 to i64
+  %add22 = add nsw i64 %add20, %conv21
+  %conv23 = zext i1 %zi1 to i64
+  %add24 = add nsw i64 %add22, %conv23
+  ret i64 %add24
 }
 
 @ll1 = common global i64 0, align 8
@@ -1720,17 +1741,17 @@ entry:
 define i32 @mix_callee(double %d1, double %d2, double %d3, double %d4, i8 zeroext %c1, i16 signext %s1, i64 %ll1, i32 %i1, i32 %i2, i32 %i3) {
 ; ASM32PWR4-LABEL: mix_callee:
 ; ASM32PWR4:       # %bb.0: # %entry
-; ASM32PWR4-NEXT:    lwz 4, 60(1)
+; ASM32PWR4-NEXT:    lha 3, 62(1)
 ; ASM32PWR4-NEXT:    lis 8, 17200
 ; ASM32PWR4-NEXT:    fadd 1, 1, 2
 ; ASM32PWR4-NEXT:    fadd 1, 1, 3
-; ASM32PWR4-NEXT:    lwz 5, 56(1)
-; ASM32PWR4-NEXT:    lwz 3, 68(1)
-; ASM32PWR4-NEXT:    add 4, 5, 4
-; ASM32PWR4-NEXT:    lwz 5, L..C34(2) # %const.0
+; ASM32PWR4-NEXT:    lbz 5, 59(1)
 ; ASM32PWR4-NEXT:    fadd 1, 1, 4
+; ASM32PWR4-NEXT:    lwz 4, 68(1)
+; ASM32PWR4-NEXT:    add 3, 5, 3
+; ASM32PWR4-NEXT:    lwz 5, L..C34(2) # %const.0
 ; ASM32PWR4-NEXT:    lwz 6, 72(1)
-; ASM32PWR4-NEXT:    add 3, 4, 3
+; ASM32PWR4-NEXT:    add 3, 3, 4
 ; ASM32PWR4-NEXT:    lwz 7, 76(1)
 ; ASM32PWR4-NEXT:    add 3, 3, 6
 ; ASM32PWR4-NEXT:    stw 8, -16(1)

@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -132,7 +132,7 @@ SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
       static_cast<RewriterBase::Listener *>(rewriter.getListener());
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
   // Apply the simplification pattern to a fixpoint.
-  if (failed(applyOpPatternsAndFold(targets, frozenPatterns, config))) {
+  if (failed(applyOpPatternsGreedily(targets, frozenPatterns, config))) {
     auto diag = emitDefiniteFailure()
                 << "affine.min/max simplification did not converge";
     return diag;
@@ -142,9 +142,9 @@ SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
 
 void SimplifyBoundedAffineOpsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  for (Value v : getBoundedValues())
-    onlyReadsHandle(v, effects);
+  consumesHandle(getTargetMutable(), effects);
+  for (OpOperand &operand : getBoundedValuesMutable())
+    onlyReadsHandle(operand, effects);
   modifiesPayload(effects);
 }
 
@@ -157,6 +157,8 @@ class AffineTransformDialectExtension
     : public transform::TransformDialectExtension<
           AffineTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AffineTransformDialectExtension)
+
   using Base::Base;
 
   void init() {

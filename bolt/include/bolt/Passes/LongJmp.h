@@ -63,6 +63,19 @@ class LongJmpPass : public BinaryFunctionPass {
   uint32_t NumColdStubs{0};
   uint32_t NumSharedStubs{0};
 
+  /// The shortest distance for any branch instruction on AArch64.
+  static constexpr size_t ShortestJumpBits = 16;
+  static constexpr size_t ShortestJumpSpan = 1ULL << (ShortestJumpBits - 1);
+
+  /// The longest single-instruction branch.
+  static constexpr size_t LongestJumpBits = 28;
+  static constexpr size_t LongestJumpSpan = 1ULL << (LongestJumpBits - 1);
+
+  /// Relax all internal function branches including those between fragments.
+  /// Assume that fragments are placed in different sections but are within
+  /// 128MB of each other.
+  void relaxLocalBranches(BinaryFunction &BF);
+
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions
   /// and MCInsts -- this is an estimation. To be correct for longjmp inserter
@@ -131,14 +144,14 @@ class LongJmpPass : public BinaryFunctionPass {
                  uint64_t DotAddress) const;
 
   /// Expand the range of the stub in StubBB if necessary
-  bool relaxStub(BinaryBasicBlock &StubBB);
+  Error relaxStub(BinaryBasicBlock &StubBB, bool &Modified);
 
   /// Helper to resolve a symbol address according to our tentative layout
   uint64_t getSymbolAddress(const BinaryContext &BC, const MCSymbol *Target,
                             const BinaryBasicBlock *TgtBB) const;
 
   /// Relax function by adding necessary stubs or relaxing existing stubs
-  bool relax(BinaryFunction &BF);
+  Error relax(BinaryFunction &BF, bool &Modified);
 
 public:
   /// BinaryPass public interface
@@ -148,7 +161,7 @@ public:
 
   const char *getName() const override { return "long-jmp"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 } // namespace bolt
 } // namespace llvm

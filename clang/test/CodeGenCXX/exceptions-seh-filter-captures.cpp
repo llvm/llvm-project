@@ -52,7 +52,7 @@ void S::test_method() {
 // CHECK: %[[l1_i8:[^ ]*]] = call ptr @llvm.localrecover(ptr @"?test_method@S@@QEAAXXZ", ptr %[[fp]], i32 0)
 // CHECK: %[[this_i8:[^ ]*]] = call ptr @llvm.localrecover(ptr @"?test_method@S@@QEAAXXZ", ptr %[[fp]], i32 1)
 // CHECK: %[[this:[^ ]*]] = load ptr, ptr %[[this_i8]], align 8
-// CHECK: %[[m1_ptr:[^ ]*]] = getelementptr inbounds %struct.S, ptr %[[this]], i32 0, i32 0
+// CHECK: %[[m1_ptr:[^ ]*]] = getelementptr inbounds nuw %struct.S, ptr %[[this]], i32 0, i32 0
 // CHECK: %[[m1:[^ ]*]] = load i32, ptr %[[m1_ptr]]
 // CHECK: %[[l1:[^ ]*]] = load i32, ptr %[[l1_i8]]
 // CHECK: call i32 (i32, ...) @basic_filter(i32 noundef %[[l1]], i32 noundef %[[m1]])
@@ -110,7 +110,7 @@ void test_lambda() {
 // CHECK: %[[this:[^ ]*]] = load ptr, ptr %[[this_i8]], align 8
 // CHECK: %[[l2_i8:[^ ]*]] = call ptr @llvm.localrecover(ptr @"??R<lambda_0>@?0??test_lambda@@YAXXZ@QEBA@XZ", ptr %[[fp]], i32 1)
 // CHECK: %[[l2:[^ ]*]] = load i32, ptr %[[l2_i8]]
-// CHECK: %[[l1_ref_ptr:[^ ]*]] = getelementptr inbounds %class.anon, ptr %[[this]], i32 0, i32 0
+// CHECK: %[[l1_ref_ptr:[^ ]*]] = getelementptr inbounds nuw %class.anon, ptr %[[this]], i32 0, i32 0
 // CHECK: %[[l1_ref:[^ ]*]] = load ptr, ptr %[[l1_ref_ptr]]
 // CHECK: %[[l1:[^ ]*]] = load i32, ptr %[[l1_ref]]
 // CHECK: call i32 (i32, ...) @basic_filter(i32 noundef %[[l1]], i32 noundef %[[l2]])
@@ -132,6 +132,6 @@ void U::this_in_lambda() {
 // CHECK-LABEL: define internal noundef i32 @"?filt$0@0@?R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@"(ptr noundef %exception_pointers, ptr noundef %frame_pointer)
 // CHECK: %[[this_i8:[^ ]*]] = call ptr @llvm.localrecover(ptr @"??R<lambda_1>@?0??this_in_lambda@U@@QEAAXXZ@QEBA@XZ", ptr %[[fp:[^ ]*]], i32 0)
 // CHECK: %[[this:[^ ]*]] = load ptr, ptr %[[this_i8]], align 8
-// CHECK: %[[actual_this_ptr:[^ ]*]] = getelementptr inbounds %class.anon.0, ptr %[[this]], i32 0, i32 0
+// CHECK: %[[actual_this_ptr:[^ ]*]] = getelementptr inbounds nuw %class.anon.0, ptr %[[this]], i32 0, i32 0
 // CHECK: %[[actual_this:[^ ]*]] = load ptr, ptr %[[actual_this_ptr]], align 8
 // CHECK: call i32 (i32, ...) @basic_filter(i32 noundef 0, ptr noundef %[[actual_this]])

@@ -11,8 +11,7 @@
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A, string Invert = "">
     : CCIf<!strconcat(Invert,
-                      "static_cast<const MipsSubtarget&>"
-			"(State.getMachineFunction().getSubtarget()).",
+                      "State.getMachineFunction().getSubtarget<MipsSubtarget>().",
                       F),
            A>;
 
@@ -21,8 +20,8 @@ class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
 /// Match if the original argument (before lowering) was a float.
 /// For example, this is true for i32's that were lowered from soft-float.
-class CCIfOrigArgWasNotFloat<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
+class CCIfOrigArgWasFloat<CCAction A>
+    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgFloat(ValNo)",
            A>;
 
 /// Match if the original argument (before lowering) was a 128-bit float (i.e.
@@ -135,12 +134,13 @@ def CC_MipsN : CallingConv<[
       CCIfSubtargetNot<"isLittle()",
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
-  // All integers (except soft-float integers) are promoted to 64-bit.
-  CCIfType<[i8, i16, i32], CCIfOrigArgWasNotFloat<CCPromoteToType<i64>>>,
+  // First deal with f32s that got turned into i32s due to soft-float
+  CCIfType<[i32],
+      CCIfSubtarget<"useSoftFloat()",
+          CCIfOrigArgWasFloat<CCDelegateTo<CC_MipsN_SoftFloat>>>>,
 
-  // The only i32's we have left are soft-float arguments.
-  CCIfSubtarget<"useSoftFloat()", CCIfType<[i32],
-                CCDelegateTo<CC_MipsN_SoftFloat>>>,
+  // All remaining integers are promoted to 64-bit.
+  CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
 
   // Integer arguments are passed in integer registers.
   CCIfType<[i64], CCAssignToRegWithShadow<[A0_64, A1_64, A2_64, A3_64,

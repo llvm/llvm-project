@@ -38,21 +38,19 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Argument.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/OperandTraits.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 
@@ -101,7 +99,7 @@ class PPCBoolRetToInt : public FunctionPass {
       // runOnUse.
       Value *Zero = Constant::getNullValue(IntTy);
       PHINode *Q =
-        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P);
+        PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P->getIterator());
       for (unsigned i = 0; i < P->getNumOperands(); ++i)
         Q->addIncoming(Zero, P->getIncomingBlock(i));
       return Q;
@@ -263,7 +261,8 @@ class PPCBoolRetToInt : public FunctionPass {
     Value *IntRetVal = BoolToIntMap[U];
     Type *Int1Ty = Type::getInt1Ty(U->getContext());
     auto *I = cast<Instruction>(U.getUser());
-    Value *BackToBool = new TruncInst(IntRetVal, Int1Ty, "backToBool", I);
+    Value *BackToBool =
+        new TruncInst(IntRetVal, Int1Ty, "backToBool", I->getIterator());
     U.set(BackToBool);
 
     return true;

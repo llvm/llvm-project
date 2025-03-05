@@ -9,8 +9,9 @@ declare extern_weak i8 @ExternWeak(i8)
 define noundef i8 @call_if_exists() local_unnamed_addr {
   ; CHECK-LABEL: @call_if_exists.dfsan
   ; Ensure comparison is preserved
-  ; CHECK: br i1 icmp ne ([[FUNCPTRTY:.*]] @ExternWeak, [[FUNCPTRTY]] null), label %use_func, label %avoid_func
-  br i1 icmp ne (ptr @ExternWeak, ptr null), label %use_func, label %avoid_func
+  ; CHECK: %cmp = icmp ne [[FUNCPTRTY:.*]] @ExternWeak, null
+  %cmp = icmp ne ptr @ExternWeak, null
+  br i1 %cmp, label %use_func, label %avoid_func
 
 use_func:
   ; CHECK: use_func:

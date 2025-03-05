@@ -33,8 +33,8 @@
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
-// CHECK-DAG:       %[[VAL_15:.*]] = bufferization.to_memref %[[VAL_4]] : memref<32x16xf32>
+// CHECK-DAG:       %[[VAL_14:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<f32> to memref<f32>
+// CHECK-DAG:       %[[VAL_15:.*]] = bufferization.to_memref %[[VAL_4]] : tensor<32x16xf32> to memref<32x16xf32>
 // CHECK-DAG:       %[[VAL_16:.*]] = memref.load %[[VAL_14]][] : memref<f32>
 // CHECK-DAG:       %[[VAL_17:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_6]]] : memref<?xindex>
 // CHECK-DAG:       %[[VAL_18:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_7]]] : memref<?xindex>

@@ -17,7 +17,6 @@
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 
@@ -45,6 +44,8 @@ struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() 
 // pointers that don't have the same type (ignoring cv-qualifiers): pointers to virtual bases are equality comparable,
 //   but don't have the same bit-pattern. An exception to this is comparing to a void-pointer. There the bit-pattern is
 //   always compared.
+// objects with padding bytes: since objects with padding bytes may compare equal, even though their object
+//   representation may not be equivalent.
 
 template <class _Tp, class _Up, class = void>
 struct __libcpp_is_trivially_equality_comparable_impl : false_type {};
@@ -79,7 +80,7 @@ struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Up*>
 };
 
 template <class _Tp, class _Up>
-using __libcpp_is_trivially_equality_comparable =
+using __libcpp_is_trivially_equality_comparable _LIBCPP_NODEBUG =
     __libcpp_is_trivially_equality_comparable_impl<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >;
 
 _LIBCPP_END_NAMESPACE_STD

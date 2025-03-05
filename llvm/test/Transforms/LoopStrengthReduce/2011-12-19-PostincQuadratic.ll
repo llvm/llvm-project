@@ -16,7 +16,7 @@ define void @vb() nounwind {
 ; CHECK-NEXT:  for.cond.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY7:%.*]]
 ; CHECK:       for.body7:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY7]] ], [ getelementptr inbounds ([121 x i32], ptr @b, i32 0, i32 1), [[FOR_COND_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[FOR_BODY7]] ], [ getelementptr inbounds nuw (i8, ptr @b, i32 4), [[FOR_COND_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY7]] ], [ 8, [[FOR_COND_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDVARS_IV77:%.*]] = phi i32 [ [[INDVARS_IV_NEXT78:%.*]], [[FOR_BODY7]] ], [ 1, [[FOR_COND_PREHEADER]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT78]] = add i32 [[INDVARS_IV77]], 1
@@ -39,7 +39,7 @@ for.body7:
   %bf.072 = phi i32 [ %t1, %for.body7 ], [ 0, %for.cond.preheader ]
   %t1 = add i32 %bf.072, %indvars.iv77
   %indvars.iv.next78 = add i32 %indvars.iv77, 1
-  br i1 undef, label %for.body43, label %for.body7
+  br i1 true, label %for.body43, label %for.body7
 
 for.body43:
   %bf.459 = phi i32 [ %inc44, %for.body43 ], [ %t1, %for.body7 ]

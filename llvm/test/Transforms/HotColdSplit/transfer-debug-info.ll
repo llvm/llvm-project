@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; - The llvm.dbg.value intrinsic pointing to an argument in @foo (%arg1) is
 ;   dropped
-; CHECK-NOT: llvm.dbg.value
+; CHECK-NOT: #dbg_value
 
 ; - Instructions without locations in the original function have no
 ;   location in the new function
@@ -23,21 +23,21 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE1:![0-9]+]]
 
 ; - llvm.dbg.value intrinsics for values local to @foo.cold.1 are preserved
-; CHECK-NEXT: llvm.dbg.value(metadata i32 [[ADD1]], metadata [[VAR1:![0-9]+]], metadata !DIExpression()), !dbg [[LINE1]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]], [[VAR1:![0-9]+]], !DIExpression(), [[LINE1]]
 
 ; - Expressions inside of dbg.value intrinsics are preserved
-; CHECK-NEXT: llvm.dbg.value(metadata i32 [[ADD1]], metadata [[VAR1]], metadata !DIExpression(DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value)
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]], [[VAR1]], !DIExpression(DW_OP_constu, 1, DW_OP_plus, DW_OP_stack_value)
 
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE2:![0-9]+]]
 ; CHECK-NEXT: call void @sink(i32 [[ADD1]]), !dbg [[LINE3:![0-9]+]]
 
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[ADD1]]
-; CHECK-SAME:      metadata [[VAR_FROM_INLINE_ME:![0-9]+]]
-; CHECK-SAME:      !dbg [[LINE2]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
+; CHECK-SAME:      [[VAR_FROM_INLINE_ME:![0-9]+]]
+; CHECK-SAME:      [[LINE2]]
 
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 [[ADD1]]
-; CHECK-SAME:      metadata [[VAR2:![0-9]+]]
-; CHECK-SAME:     !dbg [[LINE4:![0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
+; CHECK-SAME:      [[VAR2:![0-9]+]]
+; CHECK-SAME:     [[LINE4:![0-9]+]]
 
 
 ; - The DISubprogram for @foo.cold.1 has an empty DISubroutineType

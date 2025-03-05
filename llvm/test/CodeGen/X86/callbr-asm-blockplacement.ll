@@ -29,7 +29,7 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
 ; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
 ; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    callq bar@PLT

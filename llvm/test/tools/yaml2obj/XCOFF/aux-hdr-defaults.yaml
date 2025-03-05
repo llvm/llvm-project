@@ -10,12 +10,12 @@
 # CASE1:      AuxiliaryHeader {
 # CASE1-NEXT:   Magic: 0x10B
 # CASE1-NEXT:   Version: 0x1
-# CASE1-NEXT:   Size of .text section: 0x8
-# CASE1-NEXT:   Size of .data section: 0x8
-# CASE1-NEXT:   Size of .bss section: 0x8
+# CASE1-NEXT:   Size of .text section: 0x5
+# CASE1-NEXT:   Size of .data section: 0x5
+# CASE1-NEXT:   Size of .bss section: 0x5
 # CASE1-NEXT:   Entry point address: 0x0
-# CASE1-NEXT:   .text section start address: 0x4
-# CASE1-NEXT:   .data section start address: 0x10
+# CASE1-NEXT:   .text section start address: 0x0
+# CASE1-NEXT:   .data section start address: 0x0
 # CASE1-NEXT:   TOC anchor address: 0x0
 # CASE1-NEXT:   Section number of entryPoint: 0
 # CASE1-NEXT:   Section number of .text: 2
@@ -79,16 +79,12 @@ Sections:
 # RUN: yaml2obj %s --docnum=1 -DMAGIC=0x1F7 -o %t2
 # RUN: llvm-readobj --auxiliary-header %t2 | FileCheck %s --check-prefix=CASE2
 
-## Case2: same as case1, except it is 64-bit.
-# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x1F7 -o %t2
-# RUN: llvm-readobj --auxiliary-header %t2 | FileCheck %s --check-prefix=CASE2
-
 # CASE2:      AuxiliaryHeader {
 # CASE2-NEXT:   Magic: 0x10B
 # CASE2-NEXT:   Version: 0x1
 # CASE2-NEXT:   Reserved for debugger: 0x0
-# CASE2-NEXT:   .text section start address: 0x2
-# CASE2-NEXT:   .data section start address: 0xE
+# CASE2-NEXT:   .text section start address: 0x0
+# CASE2-NEXT:   .data section start address: 0x0
 # CASE2-NEXT:   TOC anchor address: 0x0
 # CASE2-NEXT:   Section number of entryPoint: 0
 # CASE2-NEXT:   Section number of .text: 2
@@ -106,9 +102,9 @@ Sections:
 # CASE2-NEXT:   Stack page size: 0x0
 # CASE2-NEXT:   Flag: 0x80
 # CASE2-NEXT:   Alignment of thread-local storage: 0x0
-# CASE2-NEXT:   Size of .text section: 0x8
-# CASE2-NEXT:   Size of .data section: 0x8
-# CASE2-NEXT:   Size of .bss section: 0x8
+# CASE2-NEXT:   Size of .text section: 0x5
+# CASE2-NEXT:   Size of .data section: 0x5
+# CASE2-NEXT:   Size of .bss section: 0x5
 # CASE2-NEXT:   Entry point address: 0x0
 # CASE2-NEXT:   Maximum stack size: 0x0
 # CASE2-NEXT:   Maximum data size: 0x0

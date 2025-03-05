@@ -1,6 +1,13 @@
 // REQUIRES: webassembly-registered-target
+
+// RUN: %clang -E -dM %s -target wasm32-unknown-unknown -fwasm-exceptions | FileCheck %s -check-prefix PREPROCESSOR
+// PREPROCESSOR: #define __WASM_EXCEPTIONS__ 1
+
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+
+// Test code generation for Wasm EH using WebAssembly EH proposal.
+// (https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md)
 
 void may_throw();
 void dont_throw() noexcept;
@@ -34,7 +41,7 @@ void test0() {
 // CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
 // CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
 // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #7
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #7
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
 
@@ -51,7 +58,7 @@ void test0() {
 // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
 
 // CHECK: [[CATCH_FALLTHROUGH_BB]]
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTId) #7
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTId) #7
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
 
@@ -376,6 +383,15 @@ void test8() {
 // CHECK:   cleanupret from %[[CLEANUPPAD1]] unwind to caller
 
 // CHECK:   unreachable
+
+void noexcept_throw() noexcept {
+  throw 3;
+}
+
+// CATCH-LABEL: define void @_Z14noexcept_throwv()
+// CHECK: %{{.*}} = cleanuppad within none []
+// CHECK-NEXT:  call void @_ZSt9terminatev()
+
 
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON

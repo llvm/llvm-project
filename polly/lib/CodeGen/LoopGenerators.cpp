@@ -35,6 +35,11 @@ static cl::opt<int, true>
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
 
+cl::opt<bool> PollyVectorizeMetadata(
+    "polly-annotate-metadata-vectorize",
+    cl::desc("Append vectorize enable/disable metadata from polly"),
+    cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
     cl::desc("Scheduling type of parallel OpenMP for loops"),
@@ -159,8 +164,19 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
 
   // Create the loop latch and annotate it as such.
   BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
-  if (Annotator)
-    Annotator->annotateLoopLatch(B, NewLoop, Parallel, LoopVectDisabled);
+
+  // Don't annotate vectorize metadata when both LoopVectDisabled and
+  // PollyVectorizeMetadata are disabled. Annotate vectorize metadata to false
+  // when LoopVectDisabled is true. Otherwise we annotate the vectorize metadata
+  // to true.
+  if (Annotator) {
+    std::optional<bool> EnableVectorizeMetadata;
+    if (LoopVectDisabled)
+      EnableVectorizeMetadata = false;
+    else if (PollyVectorizeMetadata)
+      EnableVectorizeMetadata = true;
+    Annotator->annotateLoopLatch(B, Parallel, EnableVectorizeMetadata);
+  }
 
   IV->addIncoming(IncrementedIV, HeaderBB);
   if (GuardBB)
@@ -169,7 +185,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
     DT.changeImmediateDominator(ExitBB, HeaderBB);
 
   // The loop body should be added here.
-  Builder.SetInsertPoint(HeaderBB->getFirstNonPHI());
+  Builder.SetInsertPoint(HeaderBB->getFirstNonPHIIt());
   return IV;
 }
 
@@ -225,7 +241,7 @@ ParallelLoopGenerator::storeValuesIntoStruct(SetVector<Value *> &Values) {
   // in the entry block of the function and use annotations to denote the actual
   // live span (similar to clang).
   BasicBlock &EntryBB = Builder.GetInsertBlock()->getParent()->getEntryBlock();
-  Instruction *IP = &*EntryBB.getFirstInsertionPt();
+  BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
   StructType *Ty = StructType::get(Builder.getContext(), Members);
   AllocaInst *Struct = new AllocaInst(Ty, DL.getAllocaAddrSpace(), nullptr,
                                       "polly.par.userContext", IP);

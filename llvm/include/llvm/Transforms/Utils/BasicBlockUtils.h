@@ -540,7 +540,7 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
 std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -550,9 +550,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    Instruction *InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -563,7 +563,7 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
 /// the given index, and a value which is (at runtime) the index to access. This
 /// index *may* be a constant.
 void SplitBlockAndInsertForEachLane(
-    Value *End, Instruction *InsertBefore,
+    Value *End, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.
@@ -601,81 +601,6 @@ BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
 bool SplitIndirectBrCriticalEdges(Function &F, bool IgnoreBlocksWithoutPHI,
                                   BranchProbabilityInfo *BPI = nullptr,
                                   BlockFrequencyInfo *BFI = nullptr);
-
-/// Given a set of incoming and outgoing blocks, create a "hub" such that every
-/// edge from an incoming block InBB to an outgoing block OutBB is now split
-/// into two edges, one from InBB to the hub and another from the hub to
-/// OutBB. The hub consists of a series of guard blocks, one for each outgoing
-/// block. Each guard block conditionally branches to the corresponding outgoing
-/// block, or the next guard block in the chain. These guard blocks are returned
-/// in the argument vector.
-///
-/// Since the control flow edges from InBB to OutBB have now been replaced, the
-/// function also updates any PHINodes in OutBB. For each such PHINode, the
-/// operands corresponding to incoming blocks are moved to a new PHINode in the
-/// hub, and the hub is made an operand of the original PHINode.
-///
-/// Input CFG:
-/// ----------
-///
-///                    Def
-///                     |
-///                     v
-///           In1      In2
-///            |        |
-///            |        |
-///            v        v
-///  Foo ---> Out1     Out2
-///                     |
-///                     v
-///                    Use
-///
-///
-/// Create hub: Incoming = {In1, In2}, Outgoing = {Out1, Out2}
-/// ----------------------------------------------------------
-///
-///             Def
-///              |
-///              v
-///  In1        In2          Foo
-///   |    Hub   |            |
-///   |    + - - | - - +      |
-///   |    '     v     '      V
-///   +------> Guard1 -----> Out1
-///        '     |     '
-///        '     v     '
-///        '   Guard2 -----> Out2
-///        '           '      |
-///        + - - - - - +      |
-///                           v
-///                          Use
-///
-/// Limitations:
-/// -----------
-/// 1. This assumes that all terminators in the CFG are direct branches (the
-///    "br" instruction). The presence of any other control flow such as
-///    indirectbr, switch or callbr will cause an assert.
-///
-/// 2. The updates to the PHINodes are not sufficient to restore SSA
-///    form. Consider a definition Def, its use Use, incoming block In2 and
-///    outgoing block Out2, such that:
-///    a. In2 is reachable from D or contains D.
-///    b. U is reachable from Out2 or is contained in Out2.
-///    c. U is not a PHINode if U is contained in Out2.
-///
-///    Clearly, Def dominates Out2 since the program is valid SSA. But when the
-///    hub is introduced, there is a new path through the hub along which Use is
-///    reachable from entry without passing through Def, and SSA is no longer
-///    valid. To fix this, we need to look at all the blocks post-dominated by
-///    the hub on the one hand, and dominated by Out2 on the other. This is left
-///    for the caller to accomplish, since each specific use of this function
-///    may have additional information which simplifies this fixup. For example,
-///    see restoreSSA() in the UnifyLoopExits pass.
-BasicBlock *CreateControlFlowHub(
-    DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
-    const SetVector<BasicBlock *> &Predecessors,
-    const SetVector<BasicBlock *> &Successors, const StringRef Prefix,
-    std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
 
 // Utility function for inverting branch condition and for swapping its
 // successors

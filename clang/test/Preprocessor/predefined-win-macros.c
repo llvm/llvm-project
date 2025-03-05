@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 5
+// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 7
 // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS64: #define _ISO_VOLATILE 1
 // CHECK-MS64: #define _MSC_EXTENSIONS 1
@@ -26,7 +26,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 5
+// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 7
 // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS: #define _ISO_VOLATILE 1
 // CHECK-MS: #define _MSC_EXTENSIONS 1
@@ -39,6 +39,8 @@
 // CHECK-MS-NOT: GNU
 // CHECK-MS-NOT: GXX
 // CHECK-MS: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-MS: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// CHECK-MS: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
@@ -54,7 +56,12 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++23 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
 // CHECK-MS-CPP2B: #define _MSC_VER 1900
-// CHECK-MS-CPP2B: #define _MSVC_LANG 202004L
+// CHECK-MS-CPP2B: #define _MSVC_LANG 202302L
+
+// RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.00 -std=c++26 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2C
+// CHECK-MS-CPP2C: #define _MSC_VER 1900
+// CHECK-MS-CPP2C: #define _MSVC_LANG 202400L
 
 // RUN: %clang_cc1 -triple i386-windows %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-WIN
@@ -106,6 +113,13 @@
 // CHECK-ARM64EC-WIN: #define _WIN32 1
 // CHECK-ARM64EC-WIN: #define _WIN64 1
 
+// RUN: %clang_cc1 -triple mipsel-windows %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-WIN
+
+// CHECK-MIPSEL-WIN: #define _M_MRX000 4000
+// CHECK-MIPSEL-WIN: #define _WIN32 1
+// CHECK-MIPSEL-WIN-NOT: #define _MIPS_ 1
+
 // RUN: %clang_cc1 -triple i686-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-X86-MINGW
 
@@ -114,6 +128,7 @@
 // CHECK-X86-MINGW: #define WINNT 1
 // CHECK-X86-MINGW: #define _WIN32 1
 // CHECK-X86-MINGW-NOT: #define _WIN64 1
+// CHECK-X86-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple thumbv7-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM-MINGW
@@ -123,6 +138,7 @@
 // CHECK-ARM-MINGW: #define WINNT 1
 // CHECK-ARM-MINGW: #define _WIN32 1
 // CHECK-ARM-MINGW-NOT: #define _WIN64 1
+// CHECK-ARM-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple x86_64-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-AMD64-MINGW
@@ -132,6 +148,7 @@
 // CHECK-AMD64-MINGW: #define WINNT 1
 // CHECK-AMD64-MINGW: #define _WIN32 1
 // CHECK-AMD64-MINGW: #define _WIN64 1
+// CHECK-AMD64-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 
 // RUN: %clang_cc1 -triple aarch64-windows-gnu %s -E -dM -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-ARM64-MINGW
@@ -143,6 +160,7 @@
 // CHECK-ARM64-MINGW: #define _WIN32 1
 // CHECK-ARM64-MINGW: #define _WIN64 1
 // CHECK-ARM64-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-ARM64-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 // CHECK-ARM64-MINGW: #define __aarch64__ 1
 
 // RUN: %clang_cc1 -triple arm64ec-windows-gnu %s -E -dM -o - \
@@ -155,9 +173,19 @@
 // CHECK-ARM64EC-MINGW: #define _WIN32 1
 // CHECK-ARM64EC-MINGW: #define _WIN64 1
 // CHECK-ARM64EC-MINGW: #define __GCC_ASM_FLAG_OUTPUTS__ 1
+// CHECK-ARM64EC-MINGW: #define __GXX_TYPEINFO_EQUALITY_INLINE 0
 // CHECK-ARM64EC-MINGW-NOT: #define __aarch64__ 1
 // CHECK-ARM64EC-MINGW: #define __amd64 1
 // CHECK-ARM64EC-MINGW: #define __amd64__ 1
 // CHECK-ARM64EC-MINGW: #define __arm64ec__ 1
 // CHECK-ARM64EC-MINGW: #define __x86_64 1
 // CHECK-ARM64EC-MINGW: #define __x86_64__ 1
+
+// RUN: %clang_cc1 -triple mipsel-windows-gnu %s -E -dM -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MIPSEL-MINGW
+
+// CHECK-MIPSEL-MINGW-NOT: #define _M_MRX000 4000
+// CHECK-MIPSEL-MINGW: #define _MIPS_ 1
+// CHECK-MIPSEL-MINGW: #define _WIN32 1
+// CHECK-MIPSEL-MINGW: #define __mips 32
+// CHECK-MIPSEL-MINGW: #define __mips__ 1

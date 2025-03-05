@@ -1,5 +1,3 @@
-UNSUPPORTED: lldb-repro
-
 RUN: %lldb --help | FileCheck %s
 RUN: cat %S/../../../docs/man/lldb.rst | FileCheck %s
 
@@ -37,8 +35,6 @@ CHECK: --arch
 CHECK: -a
 CHECK: --core
 CHECK: -c
-CHECK: --debug
-CHECK: -d
 CHECK: --editor
 CHECK: -e
 CHECK: --file

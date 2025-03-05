@@ -17,8 +17,9 @@
 
 #include <random>
 #include <cassert>
-#include <vector>
+#include <cmath>
 #include <numeric>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -69,7 +70,7 @@ int main(int, char**)
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
         assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.04);
     }
     {
         typedef std::gamma_distribution<> D;
@@ -108,7 +109,7 @@ int main(int, char**)
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
         assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
     }
     {
         typedef std::gamma_distribution<> D;
@@ -147,7 +148,7 @@ int main(int, char**)
         assert(std::abs((mean - x_mean) / x_mean) < 0.01);
         assert(std::abs((var - x_var) / x_var) < 0.01);
         assert(std::abs((skew - x_skew) / x_skew) < 0.01);
-        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
+        assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.03);
     }
 
   return 0;

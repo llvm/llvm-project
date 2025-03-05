@@ -149,7 +149,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
       tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(),
       tosaConv2DOp.getPadAttr(), tosaConv2DOp.getStrideAttr(),
-      tosaConv2DOp.getDilationAttr());
+      tosaConv2DOp.getDilationAttr(), tosaConv2DOp.getAccTypeAttr());
 
   // Create rescale to quantized type
   double inputScale = inputQType.getScale();
@@ -165,13 +165,18 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   // Obtain the quantized scale = multiplier and shift.
   computeMultiplierAndShift(opTensorScale, multiplier, shift, 32);
 
+  bool input_unsigned =
+      newTosaConv2DOp.getResult().getType().isUnsignedInteger();
+  bool output_unsigned = outputType.isUnsignedInteger();
+
   auto newTosaRescaleOp = rewriter.create<tosa::RescaleOp>(
       op->getLoc(), outputType, newTosaConv2DOp.getResult(),
       rewriter.getI32IntegerAttr(0), rewriter.getI32IntegerAttr(outputZp),
       rewriter.getDenseI32ArrayAttr({multiplier}),
       rewriter.getDenseI8ArrayAttr({static_cast<int8_t>(shift)}),
       rewriter.getBoolAttr(true), rewriter.getBoolAttr(true),
-      rewriter.getBoolAttr(false));
+      rewriter.getBoolAttr(false), rewriter.getBoolAttr(input_unsigned),
+      rewriter.getBoolAttr(output_unsigned));
 
   rewriter.replaceOp(op, {newTosaRescaleOp.getResult()});
   return success();
@@ -197,7 +202,7 @@ void TosaTestQuantUtilAPI::runOnOperation() {
 
   patterns.add<ConvertTosaNegateOp>(ctx);
   patterns.add<ConvertTosaConv2DOp>(ctx);
-  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+  (void)applyPatternsGreedily(func, std::move(patterns));
 }
 
 } // namespace

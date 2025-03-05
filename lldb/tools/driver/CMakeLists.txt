@@ -11,6 +11,11 @@ if(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
 endif()
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")                               
+  remove_definitions("-D_XOPEN_SOURCE=700")                                    
+  add_definitions("-D_ALL_SOURCE")                                             
+endif()
+
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
@@ -27,8 +32,6 @@ add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
-
-set_target_properties(LLDBOptionsTableGen PROPERTIES FOLDER "lldb misc")
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

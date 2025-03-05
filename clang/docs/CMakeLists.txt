@@ -78,6 +78,7 @@ if (LLVM_ENABLE_DOXYGEN)
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating clang doxygen documentation." VERBATIM)
+  set_target_properties(doxygen-clang PROPERTIES FOLDER "Clang/Docs")
 
   if (LLVM_BUILD_DOCS)
     add_dependencies(doxygen doxygen-clang)
@@ -116,7 +117,7 @@ if (LLVM_ENABLE_SPHINX)
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_SOURCE_DIR}/../CodeOwners.rst"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
       "${CMAKE_CURRENT_BINARY_DIR}"
     )
 

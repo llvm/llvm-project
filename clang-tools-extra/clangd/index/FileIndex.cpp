@@ -239,8 +239,8 @@ SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                       /*CollectMainFileRefs=*/false);
 }
 
-FileSymbols::FileSymbols(IndexContents IdxContents)
-    : IdxContents(IdxContents) {}
+FileSymbols::FileSymbols(IndexContents IdxContents, bool SupportContainedRefs)
+    : IdxContents(IdxContents), SupportContainedRefs(SupportContainedRefs) {}
 
 void FileSymbols::update(llvm::StringRef Key,
                          std::unique_ptr<SymbolSlab> Symbols,
@@ -395,7 +395,7 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
         std::move(AllRelations), std::move(Files), IdxContents,
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
-        StorageSize);
+        StorageSize, SupportContainedRefs);
   }
   llvm_unreachable("Unknown clangd::IndexType");
 }
@@ -419,11 +419,12 @@ void FileSymbols::profile(MemoryTree &MT) const {
   }
 }
 
-FileIndex::FileIndex()
+FileIndex::FileIndex(bool SupportContainedRefs)
     : MergedIndex(&MainFileIndex, &PreambleIndex),
-      PreambleSymbols(IndexContents::Symbols | IndexContents::Relations),
+      PreambleSymbols(IndexContents::Symbols | IndexContents::Relations,
+                      SupportContainedRefs),
       PreambleIndex(std::make_unique<MemIndex>()),
-      MainFileSymbols(IndexContents::All),
+      MainFileSymbols(IndexContents::All, SupportContainedRefs),
       MainFileIndex(std::make_unique<MemIndex>()) {}
 
 void FileIndex::updatePreamble(IndexFileIn IF) {

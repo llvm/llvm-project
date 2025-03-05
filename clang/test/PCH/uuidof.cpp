@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fms-extensions -x c++-header -emit-pch -o %t %s
-// RUN: %clang_cc1 -fms-extensions -include-pch %t -fsyntax-only %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -include-pch %t %s -emit-llvm -o - | FileCheck %s
 
 #ifndef HEADER
 #define HEADER

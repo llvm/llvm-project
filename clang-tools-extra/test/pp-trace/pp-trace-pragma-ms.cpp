@@ -18,6 +18,12 @@
 
 // CHECK: ---
 // CHECK-NEXT: - Callback: PragmaDirective
+// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
+// CHECK-NEXT:   Introducer: PIK_HashPragma
+// CHECK-NEXT: - Callback: PragmaDirective
+// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
+// CHECK-NEXT:   Introducer: PIK_HashPragma
+// CHECK-NEXT: - Callback: PragmaDirective
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:3:1"
 // CHECK-NEXT:   Introducer: PIK_HashPragma
 // CHECK-NEXT: - Callback: PragmaComment
@@ -67,7 +73,7 @@
 // CHECK-NEXT:   Introducer: PIK_HashPragma
 // CHECK-NEXT: - Callback: PragmaMessage
 // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:13:9"
-// CHECK-NEXT:   Namespace: 
+// CHECK-NEXT:   Namespace:
 // CHECK-NEXT:   Kind: PMK_Message
 // CHECK-NEXT:   Str: message argument
 // CHECK-NEXT: - Callback: PragmaDirective

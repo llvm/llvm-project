@@ -204,7 +204,7 @@ public:
   std::vector<EnumAttrCase> getAllCases() const;
 
   bool genSpecializedAttr() const;
-  llvm::Record *getBaseAttrClass() const;
+  const llvm::Record *getBaseAttrClass() const;
   StringRef getSpecializedAttrClassName() const;
   bool printBitEnumPrimaryGroups() const;
 };

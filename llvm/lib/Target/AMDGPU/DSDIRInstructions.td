@@ -112,9 +112,12 @@ class DSDIR_Real<DSDIR_Pseudo lds, dag ins, string asm, int subtarget> :
                lds.Mnemonic # asm,
                ins,
                lds.is_direct>,
-  SIMCInstr <lds.Mnemonic, subtarget> {
+  SIMCInstr <lds.PseudoInstr, subtarget> {
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+
+  // copy SubtargetPredicate from pseudo.
+  let SubtargetPredicate = lds.SubtargetPredicate;
 }
 
 //===----------------------------------------------------------------------===//
@@ -159,8 +162,8 @@ def : GCNPat <
 // GFX11
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx11<bits<2> op,
-                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx11<bits<2> op> {
+  defvar lds = !cast<DSDIR_Pseudo>(NAME);
   def _gfx11 : DSDIR_Real<lds, lds.InOperandList,
                           LDSDIR_getAsm<lds.is_direct>.ret,
                           SIEncodingFamily.GFX11>,
@@ -177,8 +180,8 @@ defm LDS_DIRECT_LOAD : DSDIR_Real_gfx11<0x1>;
 // GFX12+
 //===----------------------------------------------------------------------===//
 
-multiclass DSDIR_Real_gfx12<bits<2> op,
-                            DSDIR_Pseudo lds = !cast<DSDIR_Pseudo>(NAME)> {
+multiclass DSDIR_Real_gfx12<bits<2> op> {
+  defvar lds = !cast<DSDIR_Pseudo>(NAME);
   def _gfx12 : DSDIR_Real<lds, lds.InOperandList,
                           VDSDIR_getAsm<lds.is_direct>.ret,
                           SIEncodingFamily.GFX12>,
@@ -190,3 +193,8 @@ multiclass DSDIR_Real_gfx12<bits<2> op,
 
 defm DS_PARAM_LOAD : DSDIR_Real_gfx12<0x0>;
 defm DS_DIRECT_LOAD : DSDIR_Real_gfx12<0x1>;
+
+let SubtargetPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"lds_param_load", "ds_param_load">;
+  def : AMDGPUMnemonicAlias<"lds_direct_load", "ds_direct_load">;
+}

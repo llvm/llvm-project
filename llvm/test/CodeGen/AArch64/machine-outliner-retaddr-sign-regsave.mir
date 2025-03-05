@@ -81,8 +81,8 @@ body:             |
 # CHECK:         name:            bar
 # CHECK:          bb.0:
 # CHECK:            frame-setup EMITBKEY
-# CHECK-NEXT:       frame-setup PACIBSP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT:       frame-setup CFI_INSTRUCTION negate_ra_sign_state
+# CHECK-NEXT:       frame-setup PACIBSP implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NOT:        OUTLINED_FUNCTION_
 # CHECK:          bb.1:
 # CHECK-NOT:        OUTLINED_FUNCTION_
@@ -126,6 +126,6 @@ body:             |
 # CHECK:         body:
 # CHECK-NEXT:     bb.0:
 # CHECK-NOT:        frame-setup EMITBKEY
-# CHECK-NOT:        frame-setup PACI{{[A,B]]}}SP
+# CHECK-NOT:        frame-setup PACI{{[A,B]}}SP
 # CHECK-NOT:        frame-setup CFI_INSTRUCTION negate_ra_sign_state
-# CHECK-NOT:        frame-destroy AUTI{{[A,B]]}}SP
+# CHECK-NOT:        frame-destroy AUTI{{[A,B]}}SP

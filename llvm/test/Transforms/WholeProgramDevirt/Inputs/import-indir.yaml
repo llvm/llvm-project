@@ -2,6 +2,7 @@
 GlobalValueMap:
   42:
     - Live: true
+      ImportType: 0
       TypeTestAssumeVCalls:
         - GUID: 123
           Offset: 0
@@ -22,6 +23,9 @@ GlobalValueMap:
             GUID: 456
             Offset: 8
           Args: [24, 12]
+  43:
+    - Live: true
+      ImportType : 1
 TypeIdMap:
   typeid1:
     WPDRes:

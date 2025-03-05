@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -21,10 +22,6 @@ using namespace llvm;
 /// DisableFramePointerElim - This returns true if frame pointer elimination
 /// optimization should be disabled for the given machine function.
 bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  // Check to see if the target want to forcably keep frame pointer.
-  if (MF.getSubtarget().getFrameLowering()->keepFramePointer(MF))
-    return true;
-
   const Function &F = MF.getFunction();
 
   if (!F.hasFnAttribute("frame-pointer"))
@@ -34,9 +31,21 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
     return true;
   if (FP == "non-leaf")
     return MF.getFrameInfo().hasCalls();
-  if (FP == "none")
+  if (FP == "none" || FP == "reserved")
     return false;
   llvm_unreachable("unknown frame pointer flag");
+}
+
+bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+
+  if (!F.hasFnAttribute("frame-pointer"))
+    return false;
+
+  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
+  return StringSwitch<bool>(FP)
+      .Cases("all", "non-leaf", "reserved", true)
+      .Case("none", false);
 }
 
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume

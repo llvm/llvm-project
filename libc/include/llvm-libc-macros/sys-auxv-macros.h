@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_AUXV_MACROS_H
-#define __LLVM_LIBC_MACROS_AUXV_MACROS_H
+#ifndef LLVM_LIBC_MACROS_SYS_AUXV_MACROS_H
+#define LLVM_LIBC_MACROS_SYS_AUXV_MACROS_H
 
 // Macros defining the aux vector indexes.
 #define AT_NULL 0
@@ -40,4 +40,4 @@
 #define AT_MINSIGSTKSZ 51
 #endif
 
-#endif // __LLVM_LIBC_MACROS_AUXV_MACROS_H
+#endif // LLVM_LIBC_MACROS_SYS_AUXV_MACROS_H

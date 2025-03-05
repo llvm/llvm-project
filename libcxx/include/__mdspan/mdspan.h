@@ -22,12 +22,12 @@
 #include <__fwd/mdspan.h>
 #include <__mdspan/default_accessor.h>
 #include <__mdspan/extents.h>
+#include <__memory/addressof.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_abstract.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
@@ -38,9 +38,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/integer_sequence.h>
 #include <array>
-#include <cinttypes>
-#include <cstddef>
-#include <limits>
 #include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -219,7 +216,7 @@ public:
     _LIBCPP_ASSERT_UNCATEGORIZED(
         false == ([&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
           size_type __prod = 1;
-          return (__builtin_mul_overflow(__prod, extent(_Idxs), &__prod) || ... || false);
+          return (__builtin_mul_overflow(__prod, extent(_Idxs), std::addressof(__prod)) || ... || false);
         }(make_index_sequence<rank()>())),
         "mdspan: size() is not representable as size_type");
     return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
@@ -267,10 +264,17 @@ private:
   friend class mdspan;
 };
 
+#  if _LIBCPP_STD_VER >= 26
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*, _OtherIndexTypes...)
-    -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+explicit mdspan(_ElementType*,
+                _OtherIndexTypes...) -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
+#  else
+template <class _ElementType, class... _OtherIndexTypes>
+  requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
+explicit mdspan(_ElementType*,
+                _OtherIndexTypes...) -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+#  endif
 
 template <class _Pointer>
   requires(is_pointer_v<remove_reference_t<_Pointer>>)

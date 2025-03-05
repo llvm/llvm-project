@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -passes=machine-scheduler -o - %s | FileCheck %s
 
 --- |
   %struct.widget.0 = type { float, i32, i32 }
@@ -181,6 +182,8 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }

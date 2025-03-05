@@ -88,14 +88,15 @@ int main(int argc, const char **argv) {
   llvm::InitLLVM x(argc, argv);
   llvm::SmallVector<const char *, 256> args(argv, argv + argc);
 
-  clang::driver::ParsedClangName targetandMode("flang", "--driver-mode=flang");
+  clang::driver::ParsedClangName targetandMode =
+      clang::driver::ToolChain::getTargetAndModeFromProgramName(argv[0]);
   std::string driverPath = getExecutablePath(args[0]);
 
   llvm::BumpPtrAllocator a;
   llvm::StringSaver saver(a);
   ExpandResponseFiles(saver, args);
 
-  // Check if flang-new is in the frontend mode
+  // Check if flang is in the frontend mode
   auto firstArg = std::find_if(args.begin() + 1, args.end(),
                                [](const char *a) { return a != nullptr; });
   if (firstArg != args.end()) {
@@ -104,7 +105,7 @@ int main(int argc, const char **argv) {
                    << "Valid tools include '-fc1'.\n";
       return 1;
     }
-    // Call flang-new frontend
+    // Call flang frontend
     if (llvm::StringRef(args[1]).starts_with("-fc1")) {
       return executeFC1Tool(args);
     }
@@ -130,6 +131,9 @@ int main(int argc, const char **argv) {
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+#ifdef FLANG_RUNTIME_F128_MATH_LIB
+  theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
+#endif
   std::unique_ptr<clang::driver::Compilation> c(
       theDriver.BuildCompilation(args));
   llvm::SmallVector<std::pair<int, const clang::driver::Command *>, 4>
@@ -137,7 +141,7 @@ int main(int argc, const char **argv) {
 
   // Set the environment variable, FLANG_COMPILER_OPTIONS_STRING, to contain all
   // the compiler options. This is intended for the frontend driver,
-  // flang-new -fc1, to enable the implementation of the COMPILER_OPTIONS
+  // flang -fc1, to enable the implementation of the COMPILER_OPTIONS
   // intrinsic. To this end, the frontend driver requires the list of the
   // original compiler options, which is not available through other means.
   // TODO: This way of passing information between the compiler and frontend

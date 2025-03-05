@@ -30,6 +30,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -179,8 +181,41 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned MaxSteps,
   return WList->hasWork();
 }
 
-void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
-                                  const WorkListUnit& WU) {
+static std::string timeTraceScopeName(const ProgramPoint &Loc) {
+  if (llvm::timeTraceProfilerEnabled()) {
+    return llvm::formatv("dispatchWorkItem {0}",
+                         ProgramPoint::getProgramPointKindName(Loc.getKind()))
+        .str();
+  }
+  return "";
+}
+
+static llvm::TimeTraceMetadata timeTraceMetadata(const ExplodedNode *Pred,
+                                                 const ProgramPoint &Loc) {
+  // If time-trace profiler is not enabled, this function is never called.
+  assert(llvm::timeTraceProfilerEnabled());
+  std::string Detail = "";
+  if (const auto SP = Loc.getAs<StmtPoint>()) {
+    if (const Stmt *S = SP->getStmt())
+      Detail = S->getStmtClassName();
+  }
+  auto SLoc = Loc.getSourceLocation();
+  if (!SLoc)
+    return llvm::TimeTraceMetadata{Detail, ""};
+  const auto &SM = Pred->getLocationContext()
+                       ->getAnalysisDeclContext()
+                       ->getASTContext()
+                       .getSourceManager();
+  auto Line = SM.getPresumedLineNumber(*SLoc);
+  auto Fname = SM.getFilename(*SLoc);
+  return llvm::TimeTraceMetadata{Detail, Fname.str(), static_cast<int>(Line)};
+}
+
+void CoreEngine::dispatchWorkItem(ExplodedNode *Pred, ProgramPoint Loc,
+                                  const WorkListUnit &WU) {
+  llvm::TimeTraceScope tcs{timeTraceScopeName(Loc), [Loc, Pred]() {
+                             return timeTraceMetadata(Pred, Loc);
+                           }};
   // Dispatch on the location type.
   switch (Loc.getKind()) {
     case ProgramPoint::BlockEdgeKind:
@@ -220,18 +255,6 @@ void CoreEngine::dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
       HandlePostStmt(WU.getBlock(), WU.getIndex(), Pred);
       break;
   }
-}
-
-bool CoreEngine::ExecuteWorkListWithInitialState(const LocationContext *L,
-                                                 unsigned Steps,
-                                                 ProgramStateRef InitState,
-                                                 ExplodedNodeSet &Dst) {
-  bool DidNotFinish = ExecuteWorkList(L, Steps, InitState);
-  for (ExplodedGraph::eop_iterator I = G.eop_begin(), E = G.eop_end(); I != E;
-       ++I) {
-    Dst.Add(*I);
-  }
-  return DidNotFinish;
 }
 
 void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
@@ -456,7 +479,8 @@ void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
   NodeBuilderContext Ctx(*this, B, Pred);
   ExplodedNodeSet Dst;
   ExprEng.processBranch(Cond, Ctx, Pred, Dst, *(B->succ_begin()),
-                       *(B->succ_begin() + 1));
+                        *(B->succ_begin() + 1),
+                        getCompletedIterationCount(B, Pred));
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }
@@ -603,6 +627,30 @@ ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
   return isNew ? Node : nullptr;
 }
 
+std::optional<unsigned>
+CoreEngine::getCompletedIterationCount(const CFGBlock *B,
+                                       ExplodedNode *Pred) const {
+  const LocationContext *LC = Pred->getLocationContext();
+  BlockCounter Counter = WList->getBlockCounter();
+  unsigned BlockCount =
+      Counter.getNumVisited(LC->getStackFrame(), B->getBlockID());
+
+  const Stmt *Term = B->getTerminatorStmt();
+  if (isa<ForStmt, WhileStmt, CXXForRangeStmt>(Term)) {
+    assert(BlockCount >= 1 &&
+           "Block count of currently analyzed block must be >= 1");
+    return BlockCount - 1;
+  }
+  if (isa<DoStmt>(Term)) {
+    // In a do-while loop one iteration happens before the first evaluation of
+    // the loop condition, so we don't subtract one.
+    return BlockCount;
+  }
+  // ObjCForCollectionStmt is skipped intentionally because the current
+  // application of the iteration counts is not relevant for it.
+  return std::nullopt;
+}
+
 void CoreEngine::enqueue(ExplodedNodeSet &Set) {
   for (const auto I : Set)
     WList->enqueue(I);
@@ -637,8 +685,8 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             bool MarkAsSink) {
   HasGeneratedNodes = true;
   bool IsNew;
-  ExplodedNode *N = C.Eng.G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.Eng.G);
+  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
 
   if (!IsNew)
@@ -661,14 +709,15 @@ StmtNodeBuilder::~StmtNodeBuilder() {
 void BranchNodeBuilder::anchor() {}
 
 ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
-                                              bool branch,
+                                              bool Branch,
                                               ExplodedNode *NodePred) {
-  // If the branch has been marked infeasible we should not generate a node.
-  if (!isFeasible(branch))
+  const CFGBlock *Dst = Branch ? DstT : DstF;
+
+  if (!Dst)
     return nullptr;
 
-  ProgramPoint Loc = BlockEdge(C.Block, branch ? DstT:DstF,
-                               NodePred->getLocationContext());
+  ProgramPoint Loc =
+      BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
   ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
   return Succ;
 }

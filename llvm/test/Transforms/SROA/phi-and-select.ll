@@ -114,13 +114,13 @@ define i32 @test3(i32 %x) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BB0:%.*]] [
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 5, label [[BB5:%.*]]
-; CHECK-NEXT:    i32 6, label [[BB6:%.*]]
-; CHECK-NEXT:    i32 7, label [[BB7:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 5, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 6, label [[BB6:%.*]]
+; CHECK-NEXT:      i32 7, label [[BB7:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -334,6 +334,40 @@ define i32 @test9(i32 %b, ptr %ptr) {
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], i32 undef, i32 [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret i32 [[LOADED_SROA_SPECULATED]]
+;
+entry:
+  %f = alloca float
+  store i32 0, ptr %ptr
+  %test = icmp ne i32 %b, 0
+  %select = select i1 %test, ptr %f, ptr %ptr
+  %loaded = load i32, ptr %select, align 4
+  ret i32 %loaded
+}
+
+; We should not unconditionally load with sanitizers.
+define i32 @test9_asan(i32 %b, ptr %ptr) sanitize_address {
+; Same as @test8 but for a select rather than a PHI node.
+;
+; CHECK-PRESERVE-CFG-LABEL: @test9_asan(
+; CHECK-PRESERVE-CFG-NEXT:  entry:
+; CHECK-PRESERVE-CFG-NEXT:    [[F:%.*]] = alloca float, align 4
+; CHECK-PRESERVE-CFG-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
+; CHECK-PRESERVE-CFG-NEXT:    [[SELECT:%.*]] = select i1 [[TEST]], ptr [[F]], ptr [[PTR]]
+; CHECK-PRESERVE-CFG-NEXT:    [[LOADED:%.*]] = load i32, ptr [[SELECT]], align 4
+; CHECK-PRESERVE-CFG-NEXT:    ret i32 [[LOADED]]
+;
+; CHECK-MODIFY-CFG-LABEL: @test9_asan(
+; CHECK-MODIFY-CFG-NEXT:  entry:
+; CHECK-MODIFY-CFG-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
+; CHECK-MODIFY-CFG-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
+; CHECK-MODIFY-CFG-NEXT:    [[LOADED_ELSE_VAL:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[TEST]], label [[ENTRY_THEN:%.*]], label [[ENTRY_CONT:%.*]]
+; CHECK-MODIFY-CFG:       entry.then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT]]
+; CHECK-MODIFY-CFG:       entry.cont:
+; CHECK-MODIFY-CFG-NEXT:    [[LOADED:%.*]] = phi i32 [ undef, [[ENTRY_THEN]] ], [ [[LOADED_ELSE_VAL]], [[ENTRY:%.*]] ]
+; CHECK-MODIFY-CFG-NEXT:    ret i32 [[LOADED]]
 ;
 entry:
   %f = alloca float
@@ -733,6 +767,7 @@ define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
 ; CHECK-LABEL: @PR20822(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[F1_SROA_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[PTR:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -742,9 +777,8 @@ define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br label [[IF_THEN5]]
 ; CHECK:       if.then5:
-; CHECK-NEXT:    [[F1:%.*]] = phi ptr [ [[PTR:%.*]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[F1_SROA_PHI:%.*]] = phi ptr [ [[F1_SROA_GEP]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]
+; CHECK-NEXT:    store i32 0, ptr [[F1_SROA_PHI]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

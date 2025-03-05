@@ -4,13 +4,14 @@
 
 // RUN: rm -f %t.pdb
 // RUN: %clangxx_asan -c -O2 %s -o %t.obj
-// RUN: lld-link /nologo /OUT:%t.exe %t.obj %asan_lib %asan_cxx_lib
+// RUN: lld-link /nologo /OUT:%t.exe %t.obj -defaultlib:libcmt -nodefaultlib:msvcrt -defaultlib:oldnames %asan_static_runtime_thunk %asan_lib
 // RUN: not %run %t.exe 2>&1 | FileCheck %s
 // REQUIRES: lld-available
 
-#include <stdlib.h>
+#include "../defines.h"
 #include <stdio.h>
-int __attribute__((noinline)) do_uaf(void);
+#include <stdlib.h>
+int ATTRIBUTE_NOINLINE do_uaf(void);
 int main() {
   int r = do_uaf();
   printf("r: %d\n", r);

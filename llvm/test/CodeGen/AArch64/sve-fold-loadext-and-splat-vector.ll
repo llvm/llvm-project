@@ -13,9 +13,7 @@ define <vscale x 2 x i64> @fold_loadext_and(ptr %ptr, i32 %needle, <vscale x 2 x
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i32>, ptr %ptr, align 4
   %ext = zext <vscale x 2 x i32> %load to <vscale x 2 x i64>
-  %splatinsert = insertelement <vscale x 2 x i64> poison, i64 4294967295, i64 0
-  %splat = shufflevector <vscale x 2 x i64> %splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %and = and <vscale x 2 x i64> %ext, %splat
+  %and = and <vscale x 2 x i64> %ext, splat(i64 4294967295)
   ret <vscale x 2 x i64> %and
 }
 

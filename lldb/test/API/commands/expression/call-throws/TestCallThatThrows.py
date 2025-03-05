@@ -46,7 +46,7 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
         self.assertTrue(value.IsValid())
-        self.assertEquals(value.GetError().Success(), False)
+        self.assertFalse(value.GetError().Success())
 
         self.check_after_call()
 
@@ -55,13 +55,13 @@ class ExprCommandWithThrowTestCase(TestBase):
         handler_bkpt = target.BreakpointCreateBySourceRegex(
             "I felt like it", self.main_source_spec
         )
-        self.assertTrue(handler_bkpt.GetNumLocations() > 0)
+        self.assertGreater(handler_bkpt.GetNumLocations(), 0)
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success() == False)
+        self.assertTrue(value.IsValid() and not value.GetError().Success())
         self.check_after_call()
 
         # Now set the ObjC language breakpoint and make sure that doesn't
@@ -69,14 +69,14 @@ class ExprCommandWithThrowTestCase(TestBase):
         exception_bkpt = target.BreakpointCreateForException(
             lldb.eLanguageTypeObjC, False, True
         )
-        self.assertTrue(exception_bkpt.GetNumLocations() > 0)
+        self.assertGreater(exception_bkpt.GetNumLocations(), 0)
 
         options.SetIgnoreBreakpoints(True)
         options.SetUnwindOnError(True)
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success() == False)
+        self.assertTrue(value.IsValid() and not value.GetError().Success())
         self.check_after_call()
 
         # Now turn off exception trapping, and call a function that catches the exceptions,
@@ -86,7 +86,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         value = frame.EvaluateExpression("[my_class iCatchMyself]", options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
-        self.assertEquals(value.GetValueAsUnsigned(), 57)
+        self.assertEqual(value.GetValueAsUnsigned(), 57)
         self.check_after_call()
         options.SetTrapExceptions(True)
 
@@ -95,5 +95,5 @@ class ExprCommandWithThrowTestCase(TestBase):
         options.SetUnwindOnError(False)
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and value.GetError().Success() == False)
+        self.assertTrue(value.IsValid() and not value.GetError().Success())
         self.check_after_call()

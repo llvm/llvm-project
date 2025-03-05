@@ -339,7 +339,7 @@ define amdgpu_kernel void @all_local_size(ptr addrspace(1) nocapture readnone %o
 ; TODO: Should be able to handle this, but not much reason to.
 ; CHECK-LABEL: @partial_load_group_size_x(
 ; CHECK-NEXT: %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
+; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds nuw i8, ptr addrspace(4) %dispatch.ptr, i64 4
 ; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 4
 ; CHECK-NEXT: store i8 %group.size.x.lo, ptr addrspace(1) %out, align 1
 define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
@@ -352,7 +352,7 @@ define amdgpu_kernel void @partial_load_group_size_x(ptr addrspace(1) %out) #0 !
 
 ; CHECK-LABEL: @partial_load_group_size_x_explicit_callsite_align(
 ; CHECK-NEXT: %dispatch.ptr = tail call align 2 ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
+; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds nuw i8, ptr addrspace(4) %dispatch.ptr, i64 4
 ; CHECK-NEXT: %group.size.x.lo = load i8, ptr addrspace(4) %gep.group.size.x, align 2
 ; CHECK-NEXT: store i8 %group.size.x.lo, ptr addrspace(1) %out, align 1
 define amdgpu_kernel void @partial_load_group_size_x_explicit_callsite_align(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
@@ -394,7 +394,7 @@ define amdgpu_kernel void @load_group_size_x_y_multiple_dispatch_ptr(ptr addrspa
 
 ; CHECK-LABEL: @use_local_size_x_uniform_work_group_size(
 ; CHECK-NEXT: %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
+; CHECK-NEXT: %gep.group.size.x = getelementptr inbounds nuw i8, ptr addrspace(4) %dispatch.ptr, i64 4
 ; CHECK-NEXT: %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
 ; CHECK: %group.size.x.zext = zext i16 %group.size.x to i32
 ; CHECK: store i64 %zext, ptr addrspace(1) %out
@@ -458,4 +458,4 @@ attributes #3 = { nounwind "uniform-work-group-size"="false" }
 !3 = !{i16 8, i16 16, i16 2}
 
 !llvm.module.flags = !{!4}
-!4 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!4 = !{i32 1, !"amdhsa_code_object_version", i32 500}

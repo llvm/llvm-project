@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --strict-whitespace -check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck --strict-whitespace -check-prefix=GFX12 %s
 
 ds_direct_load v1 wait_va_vdst:15
 // GFX12: ds_direct_load v1 wait_va_vdst:15 wait_vm_vsrc:0 ; encoding: [0x01,0x00,0x1f,0xce]

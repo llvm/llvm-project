@@ -4,8 +4,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
 // RUN: mlir-opt %s --sparse-reinterpret-map -sparsification --sparse-tensor-conversion --cse \
-// RUN: --func-bufferize --arith-bufferize           \
-// RUN: --tensor-bufferize --finalizing-bufferize |  \
+// RUN: --one-shot-bufferize="copy-before-write bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map" | \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
 #CSC = #sparse_tensor.encoding<{
@@ -33,8 +32,8 @@
 // CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[DEMAP]] {level = 1 : index}
 // CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[DEMAP]] {level = 1 : index}
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[DEMAP]]
-// CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
-// CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
+// CHECK-HIR-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
+// CHECK-HIR-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // CHECK-HIR:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK-HIR-DAG:         %[[VAL_13:.*]] = memref.load %[[VAL_9]]{{\[}}%[[VAL_12]]] : memref<64xf64>
 // CHECK-HIR-DAG:         %[[VAL_14:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xindex>
@@ -63,8 +62,8 @@
 // CHECK-MIR-DAG:       %[[VAL_7:.*]] = call @sparsePositions0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseCoordinates0(%[[VAL_0]], %[[VAL_6]]) : (!llvm.ptr, index) -> memref<?xindex>
 // CHECK-MIR-DAG:       %[[VAL_9:.*]] = call @sparseValuesF64(%[[VAL_0]]) : (!llvm.ptr) -> memref<?xf64>
-// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
-// CHECK-MIR-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>
+// CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<64xf64> to memref<64xf64>
+// CHECK-MIR-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // CHECK-MIR:           scf.for %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK-MIR:             %[[VAL_16:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_15]]] : memref<64xf64>
 // CHECK-MIR:             %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_15]]] : memref<?xindex>

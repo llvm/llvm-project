@@ -22,7 +22,9 @@
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_errno.h"
 
-namespace __dfsan {
+using namespace __dfsan;
+
+namespace {
 
 struct Metadata {
   uptr requested_size;
@@ -37,12 +39,15 @@ struct DFsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
+// Note: to ensure that the allocator is compatible with the application memory
+// layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
+// duplicated as MappingDesc::ALLOCATOR in dfsan_platform.h.
 #if defined(__aarch64__)
 const uptr kAllocatorSpace = 0xE00000000000ULL;
 #else
 const uptr kAllocatorSpace = 0x700000000000ULL;
 #endif
-const uptr kMaxAllowedMallocSize = 8UL << 30;
+const uptr kMaxAllowedMallocSize = 1ULL << 40;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -64,8 +69,9 @@ static AllocatorCache fallback_allocator_cache;
 static StaticSpinMutex fallback_mutex;
 
 static uptr max_malloc_size;
+}  // namespace
 
-void dfsan_allocator_init() {
+void __dfsan::dfsan_allocator_init() {
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
   if (common_flags()->max_allocation_size_mb)
@@ -75,7 +81,7 @@ void dfsan_allocator_init() {
     max_malloc_size = kMaxAllowedMallocSize;
 }
 
-AllocatorCache *GetAllocatorCache(DFsanThreadLocalMallocStorage *ms) {
+static AllocatorCache *GetAllocatorCache(DFsanThreadLocalMallocStorage *ms) {
   CHECK(ms);
   CHECK_LE(sizeof(AllocatorCache), sizeof(ms->allocator_cache));
   return reinterpret_cast<AllocatorCache *>(ms->allocator_cache);
@@ -92,13 +98,13 @@ static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
              size);
       return nullptr;
     }
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportAllocationSizeTooBig(size, max_malloc_size, &stack);
   }
   if (UNLIKELY(IsRssLimitExceeded())) {
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportRssLimitExceeded(&stack);
   }
   DFsanThread *t = GetCurrentThread();
@@ -115,7 +121,7 @@ static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
     SetAllocatorOutOfMemory();
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportOutOfMemory(size, &stack);
   }
   Metadata *meta =
@@ -130,7 +136,7 @@ static void *DFsanAllocate(uptr size, uptr alignment, bool zeroise) {
   return allocated;
 }
 
-void dfsan_deallocate(void *p) {
+void __dfsan::dfsan_deallocate(void *p) {
   CHECK(p);
   Metadata *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(p));
   uptr size = meta->requested_size;
@@ -148,7 +154,7 @@ void dfsan_deallocate(void *p) {
   }
 }
 
-void *DFsanReallocate(void *old_p, uptr new_size, uptr alignment) {
+static void *DFsanReallocate(void *old_p, uptr new_size, uptr alignment) {
   Metadata *meta = reinterpret_cast<Metadata *>(allocator.GetMetaData(old_p));
   uptr old_size = meta->requested_size;
   uptr actually_allocated_size = allocator.GetActuallyAllocatedSize(old_p);
@@ -168,11 +174,11 @@ void *DFsanReallocate(void *old_p, uptr new_size, uptr alignment) {
   return new_p;
 }
 
-void *DFsanCalloc(uptr nmemb, uptr size) {
+static void *DFsanCalloc(uptr nmemb, uptr size) {
   if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportCallocOverflow(nmemb, size, &stack);
   }
   return DFsanAllocate(nmemb * size, sizeof(u64), true /*zeroise*/);
@@ -206,15 +212,15 @@ static uptr AllocationSizeFast(const void *p) {
   return reinterpret_cast<Metadata *>(allocator.GetMetaData(p))->requested_size;
 }
 
-void *dfsan_malloc(uptr size) {
+void *__dfsan::dfsan_malloc(uptr size) {
   return SetErrnoOnNull(DFsanAllocate(size, sizeof(u64), false /*zeroise*/));
 }
 
-void *dfsan_calloc(uptr nmemb, uptr size) {
+void *__dfsan::dfsan_calloc(uptr nmemb, uptr size) {
   return SetErrnoOnNull(DFsanCalloc(nmemb, size));
 }
 
-void *dfsan_realloc(void *ptr, uptr size) {
+void *__dfsan::dfsan_realloc(void *ptr, uptr size) {
   if (!ptr)
     return SetErrnoOnNull(DFsanAllocate(size, sizeof(u64), false /*zeroise*/));
   if (size == 0) {
@@ -224,29 +230,29 @@ void *dfsan_realloc(void *ptr, uptr size) {
   return SetErrnoOnNull(DFsanReallocate(ptr, size, sizeof(u64)));
 }
 
-void *dfsan_reallocarray(void *ptr, uptr nmemb, uptr size) {
+void *__dfsan::dfsan_reallocarray(void *ptr, uptr nmemb, uptr size) {
   if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
     errno = errno_ENOMEM;
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportReallocArrayOverflow(nmemb, size, &stack);
   }
   return dfsan_realloc(ptr, nmemb * size);
 }
 
-void *dfsan_valloc(uptr size) {
+void *__dfsan::dfsan_valloc(uptr size) {
   return SetErrnoOnNull(
       DFsanAllocate(size, GetPageSizeCached(), false /*zeroise*/));
 }
 
-void *dfsan_pvalloc(uptr size) {
+void *__dfsan::dfsan_pvalloc(uptr size) {
   uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(size, PageSize))) {
     errno = errno_ENOMEM;
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportPvallocOverflow(size, &stack);
   }
   // pvalloc(0) should allocate one page.
@@ -254,33 +260,33 @@ void *dfsan_pvalloc(uptr size) {
   return SetErrnoOnNull(DFsanAllocate(size, PageSize, false /*zeroise*/));
 }
 
-void *dfsan_aligned_alloc(uptr alignment, uptr size) {
+void *__dfsan::dfsan_aligned_alloc(uptr alignment, uptr size) {
   if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(alignment, size))) {
     errno = errno_EINVAL;
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportInvalidAlignedAllocAlignment(size, alignment, &stack);
   }
   return SetErrnoOnNull(DFsanAllocate(size, alignment, false /*zeroise*/));
 }
 
-void *dfsan_memalign(uptr alignment, uptr size) {
+void *__dfsan::dfsan_memalign(uptr alignment, uptr size) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
     if (AllocatorMayReturnNull())
       return nullptr;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportInvalidAllocationAlignment(alignment, &stack);
   }
   return SetErrnoOnNull(DFsanAllocate(size, alignment, false /*zeroise*/));
 }
 
-int dfsan_posix_memalign(void **memptr, uptr alignment, uptr size) {
+int __dfsan::dfsan_posix_memalign(void **memptr, uptr alignment, uptr size) {
   if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
     if (AllocatorMayReturnNull())
       return errno_EINVAL;
-    BufferedStackTrace stack;
+    UNINITIALIZED BufferedStackTrace stack;
     ReportInvalidPosixMemalignAlignment(alignment, &stack);
   }
   void *ptr = DFsanAllocate(size, alignment, false /*zeroise*/);
@@ -292,10 +298,7 @@ int dfsan_posix_memalign(void **memptr, uptr alignment, uptr size) {
   return 0;
 }
 
-}  // namespace __dfsan
-
-using namespace __dfsan;
-
+extern "C" {
 uptr __sanitizer_get_current_allocated_bytes() {
   uptr stats[AllocatorStatCount];
   allocator.GetStats(stats);
@@ -327,4 +330,5 @@ uptr __sanitizer_get_allocated_size_fast(const void *p) {
   uptr ret = AllocationSizeFast(p);
   DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
   return ret;
+}
 }

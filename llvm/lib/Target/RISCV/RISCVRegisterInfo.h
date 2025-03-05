@@ -14,11 +14,45 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVREGISTERINFO_H
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 #define GET_REGINFO_HEADER
 #include "RISCVGenRegisterInfo.inc"
 
 namespace llvm {
+
+namespace RISCVRI {
+enum {
+  // The IsVRegClass value of this RegisterClass.
+  IsVRegClassShift = 0,
+  IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
+  // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
+  // is true.
+  VLMulShift = IsVRegClassShift + 1,
+  VLMulShiftMask = 0b111 << VLMulShift,
+
+  // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
+  // true.
+  NFShift = VLMulShift + 3,
+  NFShiftMask = 0b111 << NFShift,
+};
+
+/// \returns the IsVRegClass for the register class.
+static inline bool isVRegClass(uint64_t TSFlags) {
+  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
+}
+
+/// \returns the LMUL for the register class.
+static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
+                                        VLMulShift);
+}
+
+/// \returns the NF for the register class.
+static inline unsigned getNF(uint64_t TSFlags) {
+  return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
+}
+} // namespace RISCVRI
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
@@ -29,14 +63,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
+
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
   const uint32_t *getNoPreservedMask() const override;
-
-  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
-                            int &FrameIdx) const override;
 
   // Update DestReg to have the value SrcReg plus an offset.  This is
   // used during frame layout, and we may need to ensure that if we
@@ -72,6 +105,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  StringRef getRegAsmName(MCRegister Reg) const override;
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
   }
@@ -99,7 +134,20 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  static bool isVRRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags) &&
+           RISCVRI::getNF(RC->TSFlags) == 1;
+  }
+
+  static bool isVRNRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags) && RISCVRI::getNF(RC->TSFlags) > 1;
+  }
+
+  static bool isRVVRegClass(const TargetRegisterClass *RC) {
+    return RISCVRI::isVRegClass(RC->TSFlags);
+  }
 };
-}
+} // namespace llvm
 
 #endif

@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s | not llvm-objdump -s - 2>&1 | FileCheck %s
+
+# Check for invalid relocations.  In this case we have a relocations of type
+# R_WASM_FUNCTION_INDEX_LEB against a symbol (foo) which is not a function
+# symbol but a data symbol.
+
+# CHECK: invalid function relocation: foo
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   0
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           0
+        Content:         '6401020304'
+    Relocations:
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
+        Index:           0
+        Offset:          0x00000000
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            DATA
+        Name:            foo
+        Flags:           [ ]
+        Segment:         0
+        Offset:          0
+        Size:            1

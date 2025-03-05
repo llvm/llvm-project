@@ -206,7 +206,7 @@ public:
       SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
       SmallVectorImpl<std::string> &Constraints,
       SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
-      const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
+      MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
 
   /// Emit a note at the location \p L, with the message \p Msg.
   virtual void Note(SMLoc L, const Twine &Msg,
@@ -270,7 +270,7 @@ public:
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);
 
-  bool parseIntToken(int64_t &V, const Twine &ErrMsg);
+  bool parseIntToken(int64_t &V, const Twine &ErrMsg = "expected integer");
 
   bool check(bool P, const Twine &Msg);
   bool check(bool P, SMLoc Loc, const Twine &Msg);
@@ -330,17 +330,6 @@ public:
   /// report an error and switch to .text.
   /// \return - False on success.
   virtual bool checkForValidSection() = 0;
-
-  /// Parse an arbitrary expression of a specified parenthesis depth,
-  /// assuming that the initial '(' characters have already been consumed.
-  ///
-  /// \param ParenDepth - Specifies how many trailing expressions outside the
-  /// current parentheses we have to parse.
-  /// \param Res - The value of the expression. The result is undefined
-  /// on error.
-  /// \return - False on success.
-  virtual bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
-                                     SMLoc &EndLoc) = 0;
 
   /// Parse a .gnu_attribute.
   bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);

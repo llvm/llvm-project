@@ -1014,7 +1014,7 @@ define void @swifterror_isel(ptr) {
 ; CHECK-i386-NEXT:    retl
 entry:
   %swifterror = alloca swifterror ptr, align 8
-  br i1 undef, label %5, label %1
+  br i1 poison, label %5, label %1
 
   %2 = phi i16 [ %4, %1 ], [ undef, %entry ]
   %3 = call i1 undef(i16 %2, ptr swiftself %0, ptr nocapture swifterror %swifterror)
@@ -1259,12 +1259,7 @@ entry:
 define swiftcc void @dont_crash_on_new_isel_blocks(ptr nocapture swifterror, i1, ptr) {
 ; CHECK-APPLE-LABEL: dont_crash_on_new_isel_blocks:
 ; CHECK-APPLE:       ## %bb.0: ## %entry
-; CHECK-APPLE-NEXT:    xorl %eax, %eax
-; CHECK-APPLE-NEXT:    testb %al, %al
-; CHECK-APPLE-NEXT:    jne LBB15_2
-; CHECK-APPLE-NEXT:  ## %bb.1: ## %entry
 ; CHECK-APPLE-NEXT:    testb $1, %dil
-; CHECK-APPLE-NEXT:  LBB15_2: ## %cont
 ; CHECK-APPLE-NEXT:    pushq %rax
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-APPLE-NEXT:    callq *%rax
@@ -1290,12 +1285,7 @@ define swiftcc void @dont_crash_on_new_isel_blocks(ptr nocapture swifterror, i1,
 ;
 ; CHECK-i386-LABEL: dont_crash_on_new_isel_blocks:
 ; CHECK-i386:       ## %bb.0: ## %entry
-; CHECK-i386-NEXT:    xorl %eax, %eax
-; CHECK-i386-NEXT:    testb %al, %al
-; CHECK-i386-NEXT:    jne LBB15_2
-; CHECK-i386-NEXT:  ## %bb.1: ## %entry
 ; CHECK-i386-NEXT:    testb $1, 8(%esp)
-; CHECK-i386-NEXT:  LBB15_2: ## %cont
 ; CHECK-i386-NEXT:    jmpl *%eax ## TAILCALL
 entry:
   %3 = or i1 false, %1

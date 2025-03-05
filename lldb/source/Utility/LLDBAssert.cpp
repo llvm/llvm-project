@@ -20,6 +20,7 @@
 
 namespace lldb_private {
 
+/// The default callback prints to stderr.
 static void DefaultAssertCallback(llvm::StringRef message,
                                   llvm::StringRef backtrace,
                                   llvm::StringRef prompt) {
@@ -31,8 +32,8 @@ static void DefaultAssertCallback(llvm::StringRef message,
 static std::atomic<LLDBAssertCallback> g_lldb_assert_callback =
     &DefaultAssertCallback;
 
-void lldb_assert(bool expression, const char *expr_text, const char *func,
-                 const char *file, unsigned int line) {
+void _lldb_assert(bool expression, const char *expr_text, const char *func,
+                  const char *file, unsigned int line) {
   if (LLVM_LIKELY(expression))
     return;
 
@@ -44,8 +45,6 @@ void lldb_assert(bool expression, const char *expr_text, const char *func,
   }
 #endif
 
-  // Print a warning and encourage the user to file a bug report, similar to
-  // LLVM’s crash handler, and then return execution.
   std::string buffer;
   llvm::raw_string_ostream backtrace(buffer);
   llvm::sys::PrintStackTrace(backtrace);
@@ -54,7 +53,7 @@ void lldb_assert(bool expression, const char *expr_text, const char *func,
       llvm::formatv("Assertion failed: ({0}), function {1}, file {2}, line {3}",
                     expr_text, func, file, line)
           .str(),
-      backtrace.str(),
+      buffer,
       "Please file a bug report against lldb reporting this failure log, and "
       "as many details as possible");
 }

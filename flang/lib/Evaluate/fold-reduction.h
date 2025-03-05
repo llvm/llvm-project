@@ -43,17 +43,23 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction{}; // Use Kahan summation for greater precision.
+      [[maybe_unused]] Element correction{};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        auto next{correction.Add(x, rounding)};
-        overflow |= next.flags.test(RealFlag::Overflow);
-        auto added{sum.Add(next.value, rounding)};
-        overflow |= added.flags.test(RealFlag::Overflow);
-        correction = added.value.Subtract(sum, rounding)
-                         .value.Subtract(next.value, rounding)
-                         .value;
-        sum = std::move(added.value);
+        if constexpr (useKahanSummation) {
+          auto next{x.Subtract(correction, rounding)};
+          overflow |= next.flags.test(RealFlag::Overflow);
+          auto added{sum.Add(next.value, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          correction = added.value.Subtract(sum, rounding)
+                           .value.Subtract(next.value, rounding)
+                           .value;
+          sum = std::move(added.value);
+        } else {
+          auto added{sum.Add(x, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          sum = std::move(added.value);
+        }
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
       Expr<T> conjunctions{Fold(context,
@@ -75,26 +81,41 @@ static Expr<T> FoldDotProduct(
         overflow |= next.overflow;
         sum = std::move(next.value);
       }
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      Expr<T> products{
+          Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
+      Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
+      for (const Element &x : cProducts.values()) {
+        sum = sum.AddUnsigned(x).value;
+      }
     } else {
       static_assert(T::category == TypeCategory::Real);
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction{}; // Use Kahan summation for greater precision.
+      [[maybe_unused]] Element correction{};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        auto next{correction.Add(x, rounding)};
-        overflow |= next.flags.test(RealFlag::Overflow);
-        auto added{sum.Add(next.value, rounding)};
-        overflow |= added.flags.test(RealFlag::Overflow);
-        correction = added.value.Subtract(sum, rounding)
-                         .value.Subtract(next.value, rounding)
-                         .value;
-        sum = std::move(added.value);
+        if constexpr (useKahanSummation) {
+          auto next{x.Subtract(correction, rounding)};
+          overflow |= next.flags.test(RealFlag::Overflow);
+          auto added{sum.Add(next.value, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          correction = added.value.Subtract(sum, rounding)
+                           .value.Subtract(next.value, rounding)
+                           .value;
+          sum = std::move(added.value);
+        } else {
+          auto added{sum.Add(x, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          sum = std::move(added.value);
+        }
       }
     }
-    if (overflow) {
-      context.messages().Say(
+    if (overflow &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
+      context.messages().Say(common::UsageWarning::FoldingException,
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
           T::AsFortran());
     }
@@ -182,25 +203,27 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
     ConstantSubscript &maskDimAt{maskAt[*dim - 1]};
     ConstantSubscript maskDimLbound{maskDimAt};
     for (auto n{GetSize(resultShape)}; n-- > 0;
-         IncrementSubscripts(at, array.shape()),
-         IncrementSubscripts(maskAt, mask.shape())) {
-      dimAt = dimLbound;
-      maskDimAt = maskDimLbound;
+         array.IncrementSubscripts(at), mask.IncrementSubscripts(maskAt)) {
       elements.push_back(identity);
-      bool firstUnmasked{true};
-      for (ConstantSubscript j{0}; j < dimExtent; ++j, ++dimAt, ++maskDimAt) {
-        if (mask.At(maskAt).IsTrue()) {
-          accumulator(elements.back(), at, firstUnmasked);
-          firstUnmasked = false;
+      if (dimExtent > 0) {
+        dimAt = dimLbound;
+        maskDimAt = maskDimLbound;
+        bool firstUnmasked{true};
+        for (ConstantSubscript j{0}; j < dimExtent; ++j, ++dimAt, ++maskDimAt) {
+          if (mask.At(maskAt).IsTrue()) {
+            accumulator(elements.back(), at, firstUnmasked);
+            firstUnmasked = false;
+          }
         }
+        --dimAt, --maskDimAt;
       }
       accumulator.Done(elements.back());
     }
   } else { // no DIM=, result is scalar
     elements.push_back(identity);
     bool firstUnmasked{true};
-    for (auto n{array.size()}; n-- > 0; IncrementSubscripts(at, array.shape()),
-         IncrementSubscripts(maskAt, mask.shape())) {
+    for (auto n{array.size()}; n-- > 0;
+         array.IncrementSubscripts(at), mask.IncrementSubscripts(maskAt)) {
       if (mask.At(maskAt).IsTrue()) {
         accumulator(elements.back(), at, firstUnmasked);
         firstUnmasked = false;
@@ -257,13 +280,14 @@ template <typename T>
 static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
     RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
           ProcessReductionArgs<T>(context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    MaxvalMinvalAccumulator accumulator{opr, context, arrayAndMask->array};
+    MaxvalMinvalAccumulator<T> accumulator{opr, context, arrayAndMask->array};
     return Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)};
   }
@@ -280,6 +304,8 @@ public:
       auto prod{element.MultiplySigned(array_.At(at))};
       overflow_ |= prod.SignedMultiplicationOverflowed();
       element = prod.lower;
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      element = element.MultiplyUnsigned(array_.At(at)).lower;
     } else { // Real & Complex
       auto prod{element.Multiply(array_.At(at))};
       overflow_ |= prod.flags.test(RealFlag::Overflow);
@@ -298,6 +324,7 @@ template <typename T>
 static Expr<T> FoldProduct(
     FoldingContext &context, FunctionRef<T> &&ref, Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   std::optional<int> dim;
@@ -307,8 +334,10 @@ static Expr<T> FoldProduct(
     ProductAccumulator accumulator{arrayAndMask->array};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow()) {
-      context.messages().Say(
+    if (accumulator.overflow() &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
+      context.messages().Say(common::UsageWarning::FoldingException,
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;
@@ -329,8 +358,10 @@ public:
       auto sum{element.AddSigned(array_.At(at))};
       overflow_ |= sum.overflow;
       element = sum.value;
+    } else if constexpr (T::category == TypeCategory::Unsigned) {
+      element = element.AddUnsigned(array_.At(at)).value;
     } else { // Real & Complex: use Kahan summation
-      auto next{array_.At(at).Add(correction_, rounding_)};
+      auto next{array_.At(at).Subtract(correction_, rounding_)};
       overflow_ |= next.flags.test(RealFlag::Overflow);
       auto sum{element.Add(next.value, rounding_)};
       overflow_ |= sum.flags.test(RealFlag::Overflow);
@@ -343,7 +374,8 @@ public:
   }
   bool overflow() const { return overflow_; }
   void Done([[maybe_unused]] Element &element) {
-    if constexpr (T::category != TypeCategory::Integer) {
+    if constexpr (T::category != TypeCategory::Integer &&
+        T::category != TypeCategory::Unsigned) {
       auto corrected{element.Add(correction_, rounding_)};
       overflow_ |= corrected.flags.test(RealFlag::Overflow);
       correction_ = Scalar<T>{};
@@ -361,6 +393,7 @@ private:
 template <typename T>
 static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
   static_assert(T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
@@ -373,8 +406,10 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         arrayAndMask->array, context.targetCharacteristics().roundingMode()};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow()) {
-      context.messages().Say(
+    if (accumulator.overflow() &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
+      context.messages().Say(common::UsageWarning::FoldingException,
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
     return result;

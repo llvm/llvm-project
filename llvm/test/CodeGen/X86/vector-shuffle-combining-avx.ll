@@ -140,7 +140,7 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 ; AVX512-LABEL: combine_vpermilvar_vperm2f128_zero_8f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,18,19,3,2,1,0]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [16,17,18,19,3,2,1,0]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
@@ -305,6 +305,35 @@ define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
   ret <4 x float> %2
 }
 
+define <8 x i32> @combine_blend_of_permutes_v8i32(<4 x i64> %a0, <4 x i64> %a1) {
+; AVX1-LABEL: combine_blend_of_permutes_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: combine_blend_of_permutes_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: combine_blend_of_permutes_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [4,21,6,23,16,1,2,19]
+; AVX512-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %s0 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %s1 = shufflevector <4 x i64> %a1, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+  %x0 = bitcast <4 x i64> %s0 to <8 x i32>
+  %x1 = bitcast <4 x i64> %s1 to <8 x i32>
+  %r = shufflevector <8 x i32> %x0, <8 x i32> %x1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 12, i32 5, i32 6, i32 15>
+  ret <8 x i32> %r
+}
+
 define <2 x double> @constant_fold_vpermilvar_pd() {
 ; CHECK-LABEL: constant_fold_vpermilvar_pd:
 ; CHECK:       # %bb.0:
@@ -374,13 +403,12 @@ define void @PR39483() {
 ;
 ; X86-AVX512-LABEL: PR39483:
 ; X86-AVX512:       # %bb.0: # %entry
-; X86-AVX512-NEXT:    vmovups 0, %zmm0
-; X86-AVX512-NEXT:    vmovups 64, %ymm1
-; X86-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
-; X86-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
-; X86-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X86-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
-; X86-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; X86-AVX512-NEXT:    vmovups 64, %ymm0
+; X86-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [18,21,24,27,30,1,4,7]
+; X86-AVX512-NEXT:    vpermt2ps 0, %zmm1, %zmm0
+; X86-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; X86-AVX512-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax)
 ;
 ; X64-AVX1-LABEL: PR39483:
@@ -415,13 +443,12 @@ define void @PR39483() {
 ;
 ; X64-AVX512-LABEL: PR39483:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovups 0, %zmm0
-; X64-AVX512-NEXT:    vmovups 64, %ymm1
-; X64-AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [2,5,8,11,14,17,20,23]
-; X64-AVX512-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
-; X64-AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vmulps %ymm0, %ymm2, %ymm1
-; X64-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; X64-AVX512-NEXT:    vmovups 64, %ymm0
+; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [18,21,24,27,30,1,4,7]
+; X64-AVX512-NEXT:    vpermt2ps 0, %zmm1, %zmm0
+; X64-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)
 entry:
   %wide.vec = load <24 x float>, ptr null, align 4
@@ -464,11 +491,11 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
+; X86-AVX2-NEXT:    vbroadcastsd %xmm1, %ymm3
 ; X86-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X86-AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
 ; X86-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
-; X86-AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,2,2,1]
+; X86-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[2,3],ymm0[0,1]
 ; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm6[0],ymm3[1],ymm6[2],ymm3[3]
 ; X86-AVX2-NEXT:    vmovapd %ymm3, (%edx)
 ; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2,3]
@@ -491,20 +518,19 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm4
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [1,0,2,0,8,0,9,0]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,2,8,9]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm2, %zmm1, %zmm3
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,0,10,0,2,0,9,0]
-; X86-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
-; X86-AVX512-NEXT:    vpermt2pd %zmm4, %zmm5, %zmm6
-; X86-AVX512-NEXT:    vmovapd %ymm6, (%edx)
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm4 = [0,0,3,0,10,0,1,0]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,8,2,1]
+; X86-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm4
+; X86-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[0,1],ymm2[0,1]
+; X86-AVX512-NEXT:    vblendpd {{.*#+}} ymm4 = ymm5[0],ymm4[1],ymm5[2],ymm4[3]
+; X86-AVX512-NEXT:    vmovapd %ymm4, (%edx)
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,3,10,1]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm0, %zmm3, %zmm4
 ; X86-AVX512-NEXT:    vmovapd %ymm4, (%ecx)
-; X86-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [3,0,11,0,3,0,11,0]
-; X86-AVX512-NEXT:    # ymm3 = mem[0,1,0,1]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [3,11,0,0]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm0 = [2,0,8,0,9,0,3,0]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [2,8,9,3]
 ; X86-AVX512-NEXT:    vpermi2pd %zmm3, %zmm2, %zmm0
 ; X86-AVX512-NEXT:    vmovapd %ymm0, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
@@ -535,11 +561,11 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ;
 ; X64-AVX2-LABEL: PR48908:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vbroadcastsd %xmm1, %ymm3
 ; X64-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X64-AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
 ; X64-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
-; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,2,2,1]
+; X64-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm3[2,3],ymm0[0,1]
 ; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm6[0],ymm3[1],ymm6[2],ymm3[3]
 ; X64-AVX2-NEXT:    vmovapd %ymm3, (%rdi)
 ; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2,3]
@@ -559,20 +585,19 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
 ; X64-AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; X64-AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X64-AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm4 = [1,2,8,9]
-; X64-AVX512-NEXT:    vpermi2pd %zmm2, %zmm1, %zmm4
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,10,2,9]
-; X64-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
-; X64-AVX512-NEXT:    vpermt2pd %zmm3, %zmm5, %zmm6
-; X64-AVX512-NEXT:    vmovapd %ymm6, (%rdi)
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [0,3,10,1]
-; X64-AVX512-NEXT:    vpermi2pd %zmm0, %zmm4, %zmm3
-; X64-AVX512-NEXT:    vmovapd %ymm3, (%rsi)
-; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [3,11,3,11]
-; X64-AVX512-NEXT:    # ymm3 = mem[0,1,0,1]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm3 = [1,2,8,9]
+; X64-AVX512-NEXT:    vpermi2pd %zmm2, %zmm1, %zmm3
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,8,2,1]
+; X64-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm4
+; X64-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[0,1],ymm2[0,1]
+; X64-AVX512-NEXT:    vblendpd {{.*#+}} ymm4 = ymm5[0],ymm4[1],ymm5[2],ymm4[3]
+; X64-AVX512-NEXT:    vmovapd %ymm4, (%rdi)
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,3,10,1]
+; X64-AVX512-NEXT:    vpermi2pd %zmm0, %zmm3, %zmm4
+; X64-AVX512-NEXT:    vmovapd %ymm4, (%rsi)
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [3,11]
 ; X64-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm0 = [2,8,9,3]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [2,8,9,3]
 ; X64-AVX512-NEXT:    vpermi2pd %zmm3, %zmm2, %zmm0
 ; X64-AVX512-NEXT:    vmovapd %ymm0, (%rdx)
 ; X64-AVX512-NEXT:    vzeroupper

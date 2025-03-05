@@ -1,0 +1,24 @@
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            region_nesting
+body:             |
+  bb.0:
+    %0:sgpr_64 = CONVERGENCECTRL_ANCHOR
+    %1:sgpr_64 = CONVERGENCECTRL_ANCHOR
+    %2:sgpr_64 = IMPLICIT_DEF
+    %3:sgpr_64 = SI_CALL %2, 1, implicit %0:sgpr_64
+    ; CHECK: Convergence region is not well-nested.
+    ; CHECK: SI_CALL %{{[0-9]}}:sgpr_64, 2
+    %4:sgpr_64 = SI_CALL %2, 2, implicit %1:sgpr_64
+    S_CBRANCH_EXECZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    %5:sgpr_64 = SI_CALL %2, 3, implicit %0:sgpr_64
+
+  bb.2:
+    ; CHECK: Convergence region is not well-nested.
+    ; CHECK: SI_CALL %{{[0-9]}}:sgpr_64, 4
+    %6:sgpr_64 = SI_CALL %2, 4, implicit %1:sgpr_64
+
+...

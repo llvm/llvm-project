@@ -10,7 +10,7 @@ define <vscale x 2 x i64> @masked_sload_nxv2i8(ptr %a, <vscale x 2 x i1> %mask) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> poison)
   %ext = sext <vscale x 2 x i8> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -20,7 +20,7 @@ define <vscale x 2 x i64> @masked_sload_nxv2i16(ptr %a, <vscale x 2 x i1> %mask)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i16> poison)
   %ext = sext <vscale x 2 x i16> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -30,7 +30,7 @@ define <vscale x 2 x i64> @masked_sload_nxv2i32(ptr %a, <vscale x 2 x i1> %mask)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
+  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> poison)
   %ext = sext <vscale x 2 x i32> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -40,7 +40,7 @@ define <vscale x 4 x i32> @masked_sload_nxv4i8(ptr %a, <vscale x 4 x i1> %mask) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   %ext = sext <vscale x 4 x i8> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -50,7 +50,7 @@ define <vscale x 4 x i32> @masked_sload_nxv4i16(ptr %a, <vscale x 4 x i1> %mask)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> undef)
+  %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
   %ext = sext <vscale x 4 x i16> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -60,7 +60,7 @@ define <vscale x 8 x i16> @masked_sload_nxv8i8(ptr %a, <vscale x 8 x i1> %mask) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> undef)
+  %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
   %ext = sext <vscale x 8 x i8> %load to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ext
 }
@@ -90,7 +90,7 @@ define <vscale x 16 x i32> @masked_sload_nxv16i8(ptr %a, <vscale x 16 x i1> %mas
 ; CHECK-NEXT:    sunpklo z2.s, z3.h
 ; CHECK-NEXT:    sunpkhi z3.s, z3.h
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> poison)
   %ext = sext <vscale x 16 x i8> %load to <vscale x 16 x i32>
   ret <vscale x 16 x i32> %ext
 }
@@ -106,7 +106,7 @@ define <vscale x 4 x double> @masked_sload_4i8_4f32(ptr noalias %in, <vscale x 4
 ; CHECK-NEXT:    scvtf z0.d, p1/m, z0.d
 ; CHECK-NEXT:    scvtf z1.d, p1/m, z1.d
 ; CHECK-NEXT:    ret
-  %wide.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %in, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
+  %wide.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %in, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   %sext = sext <vscale x 4 x i8> %wide.load to <vscale x 4 x i64>
   %res = sitofp <vscale x 4 x i64> %sext to <vscale x 4 x double>
   ret <vscale x 4 x double> %res
@@ -235,9 +235,9 @@ define <vscale x 8 x i64> @masked_sload_x2_8i8_8i64(ptr %a, ptr %b, <vscale x 8 
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p3.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1sb { z3.d }, p2/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ld1sb { z5.d }, p2/z, [x1, #3, mul vl]
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1sb { z2.d }, p1/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z6.d }, p1/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1sb { z1.d }, p3/z, [x0, #1, mul vl]

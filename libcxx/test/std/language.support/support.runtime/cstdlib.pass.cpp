@@ -8,9 +8,15 @@
 
 // test <cstdlib>
 
+// mblen was added in Android API 26.
+// TODO: Switch from UNSUPPORTED to XFAIL once the Android CI Docker sysroot is
+// updated.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && target={{.+}}-android{{(eabi)?(21|22|23|24|25)}}
+
 #include <cstdlib>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

@@ -20,6 +20,12 @@
 using namespace mlir;
 using namespace mlir::arm_sme;
 
+namespace mlir::arm_sme::detail {
+LogicalResult verifyArmSMETileOpInterface(Operation *op) {
+  return verifyOperationHasValidTileId(op);
+}
+} // namespace mlir::arm_sme::detail
+
 //===----------------------------------------------------------------------===//
 // Tablegen Definitions
 //===----------------------------------------------------------------------===//

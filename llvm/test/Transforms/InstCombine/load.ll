@@ -56,6 +56,18 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
+; FIXME: Constants should be allowed for this optimization.
+define i32 @test5_asan(i1 %C) sanitize_address {
+; CHECK-LABEL: @test5_asan(
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]
+  %Z = load i32, ptr %Y		; <i32> [#uses=1]
+  ret i32 %Z
+}
+
 define i32 @load_gep_null_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_inbounds(
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
@@ -426,4 +438,73 @@ define i4 @test_vector_load_i4_non_byte_sized() {
   %ptr0 = getelementptr i8, ptr @foo, i64 0
   %res0 = load i4, ptr %ptr0, align 1
   ret i4 %res0
+}
+
+define i32 @load_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
+; CHECK-LABEL: @load_select_with_null_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %gep = getelementptr i8, ptr %sel, i64 %off
+  %res = load i32, ptr %gep, align 4
+  ret i32 %res
+}
+
+define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
+; CHECK-LABEL: @load_select_with_null_gep2(
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP]], align 2
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %invariant.gep = getelementptr i8, ptr %sel, i64 -2
+  %gep = getelementptr i16, ptr %invariant.gep, i64 %x
+  %res = load i16, ptr %gep, align 2
+  ret i16 %res
+}
+
+define i16 @load_select_with_null_gep3(i1 %cond, ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @load_select_with_null_gep3(
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[GEP]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP2]], align 2
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %invariant.gep = getelementptr i8, ptr %sel, i64 -2
+  %gep = getelementptr i16, ptr %invariant.gep, i64 %x
+  %gep2 = getelementptr i16, ptr %gep, i64 %y
+  %res = load i16, ptr %gep2, align 2
+  ret i16 %res
+}
+
+define i32 @test_load_phi_with_select(ptr %p, i1 %cond1) {
+; CHECK-LABEL: @test_load_phi_with_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    [[TARGET:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE:%.*]], i64 24
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TARGET]], align 4
+; CHECK-NEXT:    [[COND21:%.*]] = icmp eq i32 [[LOAD]], 0
+; CHECK-NEXT:    br i1 [[COND21]], label [[LOOP_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+entry:
+  br label %loop.body
+
+loop.body:
+  %base = phi ptr [ %p, %entry ], [ %sel, %loop.body ]
+  %target = getelementptr inbounds i8, ptr %base, i64 24
+  %load = load i32, ptr %target, align 4
+  %sel = select i1 %cond1, ptr null, ptr %p
+  %cond2 = icmp eq i32 %load, 0
+  br i1 %cond2, label %loop.body, label %exit
+
+exit:
+  ret i32 %load
 }

@@ -29,6 +29,8 @@ class TargetMachine;
   class HexagonAsmPrinter : public AsmPrinter {
     const HexagonSubtarget *Subtarget = nullptr;
 
+    void emitAttributes();
+
   public:
     explicit HexagonAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
@@ -68,6 +70,8 @@ class TargetMachine;
                          const char *ExtraCode, raw_ostream &OS) override;
     bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                const char *ExtraCode, raw_ostream &OS) override;
+    void emitStartOfAsmFile(Module &M) override;
+    void emitEndOfAsmFile(Module &M) override;
   };
 
 } // end namespace llvm

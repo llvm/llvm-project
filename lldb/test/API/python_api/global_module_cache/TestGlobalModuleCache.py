@@ -12,6 +12,7 @@ import shutil
 from pathlib import Path
 import time
 
+
 class GlobalModuleCacheTestCase(TestBase):
     # NO_DEBUG_INFO_TESTCASE = True
 
@@ -110,8 +111,11 @@ class GlobalModuleCacheTestCase(TestBase):
         else:
             if one_target:
                 new_debugger = lldb.SBDebugger().Create()
+                new_debugger.SetSelectedPlatform(lldb.selected_platform)
+                new_debugger.SetAsync(False)
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
+
                 def cleanupDebugger(self):
                     lldb.SBDebugger.Destroy(self.dbg)
                     self.dbg = self.old_debugger
@@ -143,7 +147,7 @@ class GlobalModuleCacheTestCase(TestBase):
         fail_msg = ""
         if error != "":
             fail_msg = "Error before MPD: " + error
-            
+
         if error_after_mpd != "":
             fail_msg = fail_msg + "\nError after MPD: " + error_after_mpd
         if fail_msg != "":
@@ -172,11 +176,13 @@ class GlobalModuleCacheTestCase(TestBase):
                 found_a_dot_out += 1
             if "main.o" in line:
                 found_main_dot_o += 1
-        
+
         if num_a_dot_out != found_a_dot_out:
             return f"Got {found_a_dot_out} number of a.out's, expected {num_a_dot_out}"
-            
+
         if found_main_dot_o > 0 and num_main_dot_o != found_main_dot_o:
-            return f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
+            return (
+                f"Got {found_main_dot_o} number of main.o's, expected {num_main_dot_o}"
+            )
 
         return ""

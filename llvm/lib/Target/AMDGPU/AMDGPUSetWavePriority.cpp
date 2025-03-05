@@ -19,8 +19,6 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Allocator.h"
 
 using namespace llvm;
 

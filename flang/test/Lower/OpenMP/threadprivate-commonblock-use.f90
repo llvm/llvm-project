@@ -4,7 +4,7 @@
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: fir.global common @cmn_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+!CHECK: fir.global common @cmn_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
 module m0
   common /cmn/ k1
   !$omp threadprivate(/cmn/)
@@ -15,7 +15,7 @@ contains
   subroutine ss1
     use m0
   contains
-!CHECK-LABEL: func @_QMm1Fss1Pss2
+!CHECK-LABEL: func private @_QMm1Fss1Pss2
 !CHECK: %[[CMN:.*]] = fir.address_of(@cmn_) : !fir.ref<!fir.array<4xi8>>
 !CHECK: omp.parallel
 !CHECK: %{{.*}} = omp.threadprivate %[[CMN]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
