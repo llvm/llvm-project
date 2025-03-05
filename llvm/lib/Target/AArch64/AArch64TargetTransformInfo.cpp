@@ -3144,6 +3144,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
       {ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
       {ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
+
+      // Add cost for extending and converting to illegal -too wide- scalable
+      // Extending one size (e.g. i32 -> f64) takes 2 unpacks and 2 fcvts, while
+      // extending twice (e.g. i16 -> f64) takes 6 unpacks and 4 fcvts.
+      {ISD::SINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8, 12},
+      {ISD::SINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8, 22},
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16, 12},
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16, 22},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32, 12},
+
+      {ISD::UINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8, 12},
+      {ISD::UINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8, 22},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16, 12},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16, 22},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32, 12},
   };
 
   // We have to estimate a cost of fixed length operation upon
