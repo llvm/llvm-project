@@ -64,7 +64,8 @@ define i8 @test4(<8 x i8> %V) {
 
 define i32 @test5(<4 x i32> %V) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret i32 poison
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x i32> [[V:%.*]], i32 undef
+; CHECK-NEXT:    ret i32 [[EXTRACT]]
 ;
   %extract = extractelement <4 x i32> %V, i32 undef
   ret i32 %extract

@@ -40,7 +40,9 @@ define i32 @test() {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB10]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw i32 [[TMP3]], undef
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[BB10:%.*]], label [[BB10]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
 ; CHECK:       bb12:

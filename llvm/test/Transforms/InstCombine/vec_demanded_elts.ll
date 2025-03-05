@@ -630,7 +630,10 @@ define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 
 define ptr @gep_demanded_lane_undef(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_demanded_lane_undef(
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> poison, i64 [[IDX:%.*]], i64 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> <ptr poison, ptr undef>, <2 x i64> [[IDXVEC]]
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x ptr> [[GEP]], i64 1
+; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec = insertelement <2 x ptr> undef, ptr %base, i32 0
   %idxvec = insertelement <2 x i64> undef, i64 %idx, i32 1
