@@ -555,7 +555,8 @@ bool handleConstMemberCall(const CallExpr *CE,
                            dataflow::RecordStorageLocation *RecordLoc,
                            const MatchFinder::MatchResult &Result,
                            LatticeTransferState &State) {
-  if (RecordLoc == nullptr) return false;
+  if (RecordLoc == nullptr)
+    return false;
 
   // If the const method returns an optional or reference to an optional.
   if (isSupportedOptionalType(CE->getType())) {
@@ -582,8 +583,8 @@ bool handleConstMemberCall(const CallExpr *CE,
     return true;
   }
 
-  bool IsBooleanOrPointer = CE->getType()->isBooleanType() ||
-                            CE->getType()->isPointerType();
+  bool IsBooleanOrPointer =
+      CE->getType()->isBooleanType() || CE->getType()->isPointerType();
 
   // Cache if the const method returns a reference
   if (CE->isGLValue()) {
