@@ -2843,6 +2843,8 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
 
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
+  if (!R)
+    return false;
 
   auto *CaptureInitIt = E->capture_init_begin();
   // Initialize all fields (which represent lambda captures) of the
@@ -3277,6 +3279,8 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   return this->emitCall(F, 0, E);
 }
 
+// FIXME: This function has become rather unwieldy, especially
+// the part where we initialize an array allocation of dynamic size.
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   assert(classifyPrim(E->getType()) == PT_Ptr);
@@ -3457,7 +3461,16 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (!this->emitArrayElemPtr(SizeT, E))
           return false;
 
-        if (DynamicInit) {
+        if (isa_and_nonnull<ImplicitValueInitExpr>(DynamicInit) &&
+            DynamicInit->getType()->isArrayType()) {
+          QualType ElemType =
+              DynamicInit->getType()->getAsArrayTypeUnsafe()->getElementType();
+          PrimType InitT = classifyPrim(ElemType);
+          if (!this->visitZeroInitializer(InitT, ElemType, E))
+            return false;
+          if (!this->emitStorePop(InitT, E))
+            return false;
+        } else if (DynamicInit) {
           if (std::optional<PrimType> InitT = classify(DynamicInit)) {
             if (!this->visit(DynamicInit))
               return false;
@@ -4076,9 +4089,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     } else if (D->isRecord()) {
       if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
         return false;
-    } else {
-      assert(false);
-    }
+    } else
+      return false;
 
     if (!this->emitFinishInitPop(E))
       return false;
@@ -5096,7 +5108,7 @@ template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
-            FunctionDecl, NamespaceAliasDecl>(D))
+            FunctionDecl, NamespaceAliasDecl, UsingDirectiveDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);
@@ -6028,14 +6040,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult) {
-      // assert(false);
+    if (DiscardResult)
       return this->discard(SubExpr);
-    }
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr)
+    if (classifyPrim(SubExpr) == PT_Ptr && !E->getType()->isArrayType())
       return this->emitNarrowPtr(E);
     return true;
 
@@ -6315,7 +6325,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
     if (IsReference)
-      return this->emitGetLocal(PT_Ptr, Offset, E);
+      return this->emitGetLocal(classifyPrim(E), Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference) {

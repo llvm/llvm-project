@@ -18,6 +18,7 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -61,9 +62,9 @@ const char DEV_NULL[] = "/dev/null";
 namespace lldb_dap {
 
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-         StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
+         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
-    : name(std::move(name)), debug_adaptor_path(path), log(log),
+    : name(std::move(name)), debug_adapter_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
@@ -525,12 +526,14 @@ ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
 }
 
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
-  auto tid = GetSigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
+  auto tid = GetInteger<int64_t>(arguments, "threadId")
+                 .value_or(LLDB_INVALID_THREAD_ID);
   return target.GetProcess().GetThreadByID(tid);
 }
 
 lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const uint64_t frame_id = GetUnsigned(arguments, "frameId", UINT64_MAX);
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
@@ -770,7 +773,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   }
 
   if (packet_type == "response") {
-    auto id = GetSigned(object, "request_seq", 0);
+    auto id = GetInteger<int64_t>(object, "request_seq").value_or(0);
 
     std::unique_ptr<ResponseHandler> response_handler;
     {
@@ -786,7 +789,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       response_handler = std::make_unique<UnknownResponseHandler>("", id);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
+    if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
@@ -855,7 +858,11 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 }
 
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  auto cleanup = llvm::make_scope_exit([this]() {
+    if (output.descriptor)
+      output.descriptor->Close();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);

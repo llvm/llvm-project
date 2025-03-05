@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/llvm-config.h"
-
-#ifdef LLVM_BUILD_TELEMETRY
-
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
@@ -23,25 +18,34 @@
 
 namespace lldb_private {
 
-struct FakeTelemetryInfo : public llvm::telemetry::TelemetryInfo {
+struct FakeTelemetryInfo : public telemetry::LLDBBaseTelemetryInfo {
   std::string msg;
+  int num;
+
+  ::llvm::telemetry::KindType getKind() const override { return 0b11111111; }
 };
 
 class TestDestination : public llvm::telemetry::Destination {
 public:
-  TestDestination(std::vector<const llvm::telemetry::TelemetryInfo *> *entries)
+  TestDestination(
+      std::vector<std::unique_ptr<llvm::telemetry::TelemetryInfo>> *entries)
       : received_entries(entries) {}
 
   llvm::Error
   receiveEntry(const llvm::telemetry::TelemetryInfo *entry) override {
-    received_entries->push_back(entry);
+    // Save a copy of the entry for later verification (because the original
+    // entry might have gone out of scope by the time verification is done.
+    if (auto *fake_entry = llvm::dyn_cast<FakeTelemetryInfo>(entry))
+      received_entries->push_back(
+          std::make_unique<FakeTelemetryInfo>(*fake_entry));
     return llvm::Error::success();
   }
 
   llvm::StringLiteral name() const override { return "TestDestination"; }
 
 private:
-  std::vector<const llvm::telemetry::TelemetryInfo *> *received_entries;
+  std::vector<std::unique_ptr<llvm::telemetry::TelemetryInfo>>
+      *received_entries;
 };
 
 class FakePlugin : public telemetry::TelemetryManager {
@@ -71,7 +75,15 @@ public:
 
 } // namespace lldb_private
 
-TEST(TelemetryTest, PluginTest) {
+using namespace lldb_private::telemetry;
+
+#if LLVM_ENABLE_TELEMETRY
+#define TELEMETRY_TEST(suite, test) TEST(suite, test)
+#else
+#define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
+#endif
+
+TELEMETRY_TEST(TelemetryTest, PluginTest) {
   // This would have been called by the plugin reg in a "real" plugin
   // For tests, we just call it directly.
   lldb_private::FakePlugin::Initialize();
@@ -79,20 +91,51 @@ TEST(TelemetryTest, PluginTest) {
   auto *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
   ASSERT_NE(ins, nullptr);
 
-  std::vector<const ::llvm::telemetry::TelemetryInfo *> expected_entries;
+  std::vector<std::unique_ptr<::llvm::telemetry::TelemetryInfo>>
+      received_entries;
   ins->addDestination(
-      std::make_unique<lldb_private::TestDestination>(&expected_entries));
+      std::make_unique<lldb_private::TestDestination>(&received_entries));
 
   lldb_private::FakeTelemetryInfo entry;
   entry.msg = "";
 
   ASSERT_THAT_ERROR(ins->dispatch(&entry), ::llvm::Succeeded());
-  ASSERT_EQ(1U, expected_entries.size());
+  ASSERT_EQ(1U, received_entries.size());
   EXPECT_EQ("In FakePlugin",
-            llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(expected_entries[0])
+            llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(received_entries[0])
                 ->msg);
 
   ASSERT_EQ("FakeTelemetryPlugin", ins->GetInstanceName());
 }
 
-#endif // LLVM_BUILD_TELEMETRY
+TELEMETRY_TEST(TelemetryTest, ScopedDispatcherTest) {
+  lldb_private::FakePlugin::Initialize();
+  auto *ins = TelemetryManager::GetInstance();
+  ASSERT_NE(ins, nullptr);
+  std::vector<std::unique_ptr<::llvm::telemetry::TelemetryInfo>>
+      received_entries;
+  ins->addDestination(
+      std::make_unique<lldb_private::TestDestination>(&received_entries));
+
+  {
+    ScopedDispatcher<lldb_private::FakeTelemetryInfo> helper(
+        [](lldb_private::FakeTelemetryInfo *info) { info->num = 0; });
+  }
+
+  {
+    ScopedDispatcher<lldb_private::FakeTelemetryInfo> helper(
+        [](lldb_private::FakeTelemetryInfo *info) { info->num = 1; });
+  }
+
+  {
+    ScopedDispatcher<lldb_private::FakeTelemetryInfo> helper(
+        [](lldb_private::FakeTelemetryInfo *info) { info->num = 2; });
+  }
+
+  EXPECT_EQ(3U, received_entries.size());
+  for (int i = 0; i < 3; ++i) {
+    EXPECT_EQ(
+        i, llvm::dyn_cast<lldb_private::FakeTelemetryInfo>(received_entries[i])
+               ->num);
+  }
+}
