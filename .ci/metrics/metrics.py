@@ -144,9 +144,12 @@ def buildkite_get_builds_up_to(buildkite_token: str, last_cursor: str = None) ->
             return page
 
         # Cursor has been provided, check if present in this page.
-        match_index = next(
-            (i for i, x in enumerate(page) if x["cursor"] == last_cursor), None
-        )
+        match_index = None
+        for index, item in enumerate(page):
+            if item["cursor"] == last_cursor:
+                match_index = index
+                break
+
         # Not present, continue loading more pages.
         if match_index is None:
             output += page
