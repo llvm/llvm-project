@@ -114,7 +114,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 
-  static uint64_t GetNextId() {}
+  static uint64_t GetNextId();
 
 private:
   // We assign each command (in the same session) a unique id so that their
