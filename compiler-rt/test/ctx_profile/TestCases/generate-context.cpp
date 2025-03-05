@@ -62,7 +62,14 @@ class TestProfileWriter : public ProfileWriter {
       }
   }
 
-public:
+  void startContextSection() override {
+    std::cout << "Entered Context Section" << std::endl;
+  }
+
+  void endContextSection() override {
+    std::cout << "Exited Context Section" << std::endl;
+  }
+
   void writeContextual(const ContextNode &RootNode) override {
     printProfile(RootNode, "", "");
   }
@@ -77,6 +84,7 @@ public:
 // path gets instrumented).
 // The second context is in the loop. We expect 2 entries and each of the
 // branches would be taken once, so the second counter is 1.
+// CHECK-NEXT: Entered Context Section
 // CHECK-NEXT: Guid: 8657661246551306189
 // CHECK-NEXT: Entries: 1
 // CHECK-NEXT: 2 counters and 3 callsites
@@ -91,6 +99,7 @@ public:
 // CHECK-NEXT:   Entries: 2
 // CHECK-NEXT:   2 counters and 2 callsites
 // CHECK-NEXT:   Counter values: 2 1
+// CHECK-NEXT: Exited Context Section
 
 bool profileWriter() {
   TestProfileWriter W;
