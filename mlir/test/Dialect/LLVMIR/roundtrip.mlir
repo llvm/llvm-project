@@ -995,3 +995,10 @@ llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
   %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) : (i32 {llvm.signext}) -> (i32)
   llvm.return %0 : i32
 }
+
+// CHECK-LABEL: intrinsic_call_arg_attrs_bundles
+llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
