@@ -34,7 +34,7 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
   // If true, we will collect full details about a debug command (eg., args and
   // original command). Note: This may contain PII, hence can only be enabled by
   // the vendor while creating the Manager.
-  const bool m_detailed_command_telemetry;
+  const bool detailed_command_telemetry;
 
   explicit LLDBConfig(bool enable_telemetry, bool detailed_command_telemetry)
       : ::llvm::telemetry::Config(enable_telemetry),
@@ -81,23 +81,25 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 };
 
 struct CommandInfo : public LLDBBaseTelemetryInfo {
-  // If the command is/can be associated with a target entry this field contains
-  // that target's UUID. <EMPTY> otherwise.
+  /// If the command is/can be associated with a target entry this field
+  /// contains that target's UUID. <EMPTY> otherwise.
   UUID target_uuid;
-  // A unique ID for a command so the manager can match the start entry with
-  // its end entry. These values only need to be unique within the same session.
-  // Necessary because we'd send off an entry right before a command's execution
-  // and another right after. This is to avoid losing telemetry if the command
-  // does not execute successfully.
+  /// A unique ID for a command so the manager can match the start entry with
+  /// its end entry. These values only need to be unique within the same
+  /// session. Necessary because we'd send off an entry right before a command's
+  /// execution and another right after. This is to avoid losing telemetry if
+  /// the command does not execute successfully.
   uint64_t command_id;
-  // Eg., "breakpoint set"
+  /// The command name(eg., "breakpoint set")
   std::string command_name;
-  // !!NOTE!! These two fields are not collected by default due to PII risks.
-  // Vendor may allow them by setting the
-  // LLDBConfig::m_detailed_command_telemetry.
+  /// These two fields are not collected by default due to PII risks.
+  /// Vendor may allow them by setting the
+  /// LLDBConfig::detailed_command_telemetry.
+  /// @{
   std::string original_command;
   std::string args;
-  // Return status of a command and any error description in case of error.
+  /// @}
+  /// Return status of a command and any error description in case of error.
   std::optional<lldb::ReturnStatus> ret_status;
   std::optional<std::string> error_data;
 

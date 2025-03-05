@@ -1890,7 +1890,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   const bool detailed_command_telemetry =
       telemetry::TelemetryManager::GetInstance()
           ->GetConfig()
-          ->m_detailed_command_telemetry;
+          ->detailed_command_telemetry;
   const int command_id = telemetry::CommandInfo::GetNextId();
 
   std::string command_string(command_line);
