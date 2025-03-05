@@ -1021,6 +1021,92 @@ private:
   ValueObjectSP m_task_sp;
 };
 
+class CheckedContinuationSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  CheckedContinuationSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
+    bool is_64bit = false;
+    if (auto target_sp = m_backend.GetTargetSP())
+      is_64bit = target_sp->GetArchitecture().GetTriple().isArch64Bit();
+
+    std::optional<uint32_t> concurrency_version;
+    if (auto process_sp = m_backend.GetProcessSP())
+      concurrency_version =
+          SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
+
+    bool is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    if (!is_supported_target)
+      return;
+
+    if (auto target_sp = m_backend.GetTargetSP()) {
+      if (auto ts_or_err =
+              target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift)) {
+        if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+                ts_or_err->get()))
+          // TypeMangling for "Swift.UnsafeCurrentTask"
+          m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+      } else {
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+            ts_or_err.takeError(),
+            "could not get Swift type system for CheckedContinuation "
+            "synthetic provider: {0}");
+      }
+    }
+  }
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    if (!m_task_sp)
+      return m_backend.GetNumChildren();
+
+    return 1;
+  }
+
+  bool MightHaveChildren() override { return true; }
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    if (!m_task_sp)
+      return m_backend.GetChildAtIndex(idx);
+
+    if (idx == 0)
+      return m_task_sp;
+
+    return {};
+  }
+
+  size_t GetIndexOfChildWithName(ConstString name) override {
+    if (!m_task_sp)
+      return m_backend.GetIndexOfChildWithName(name);
+
+    if (name == "task")
+      return 0;
+
+    return UINT32_MAX;
+  }
+
+  lldb::ChildCacheState Update() override {
+    if (!m_task_type)
+      return ChildCacheState::eReuse;
+
+    size_t canary_task_offset = 0x10;
+    Status status;
+    if (auto canary_sp = m_backend.GetChildMemberWithName("canary"))
+      if (addr_t canary_addr = canary_sp->GetValueAsUnsigned(0))
+        if (addr_t task_addr = m_backend.GetProcessSP()->ReadPointerFromMemory(
+                canary_addr + canary_task_offset, status))
+          m_task_sp = ValueObject::CreateValueObjectFromAddress(
+              "task", task_addr, m_backend.GetExecutionContextRef(),
+              m_task_type, false);
+    if (auto synthetic_sp = m_task_sp->GetSyntheticValue())
+      m_task_sp = synthetic_sp;
+    return ChildCacheState::eRefetch;
+  }
+
+private:
+  CompilerType m_task_type;
+  ValueObjectSP m_task_sp;
+};
+
 class TaskGroupSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   TaskGroupSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
@@ -1274,6 +1360,14 @@ lldb_private::formatters::swift::UnsafeContinuationSyntheticFrontEndCreator(
   if (!valobj_sp)
     return nullptr;
   return new UnsafeContinuationSyntheticFrontEnd(valobj_sp);
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::swift::CheckedContinuationSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  return new CheckedContinuationSyntheticFrontEnd(valobj_sp);
 }
 
 SyntheticChildrenFrontEnd *

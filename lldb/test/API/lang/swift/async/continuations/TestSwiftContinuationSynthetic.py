@@ -7,16 +7,32 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     @swiftTest
-    def test_value_printing(self):
+    def test_unsafe_continuation_printing(self):
         """Print an UnsafeContinuation and verify its children."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift")
+            self, "break unsafe continuation", lldb.SBFileSpec("main.swift")
         )
         self.expect(
             "v cont",
             substrs=[
                 "(UnsafeContinuation<Void, Never>) cont = {",
+                "task = {",
+                "isFuture = true",
+            ],
+        )
+
+    @swiftTest
+    def test_checked_continuation_printing(self):
+        """Print an CheckedContinuation and verify its children."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break checked continuation", lldb.SBFileSpec("main.swift")
+        )
+        self.expect(
+            "v cont",
+            substrs=[
+                "(CheckedContinuation<Int, Never>) cont = {",
                 "task = {",
                 "isFuture = true",
             ],
