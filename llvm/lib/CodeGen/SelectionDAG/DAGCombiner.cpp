@@ -21399,7 +21399,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
   auto StIt = StoreNodes.begin();
   unsigned i = 0;
-  while (StIt != StoreNodes.end() && i < NumConsecutiveStores) {
+  while (StIt != StoreNodes.end() && i++ < NumConsecutiveStores) {
     StoreSDNode *St = cast<StoreSDNode>(StIt->MemNode);
     SDValue Val = peekThroughBitcasts(St->getValue());
     LoadSDNode *Ld = cast<LoadSDNode>(Val);
@@ -21423,7 +21423,6 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       LoadNodes.push_back(MemOpLink(Ld, LdOffset));
       ++StIt;
     }
-    ++i;
   }
 
   while (NumConsecutiveStores >= 2 && LoadNodes.size() >= 2) {
