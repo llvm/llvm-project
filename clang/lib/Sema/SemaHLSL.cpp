@@ -3066,9 +3066,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
       collectResourceBindingsOnVarDecl(VD);
 
     const Type *VarType = VD->getType().getTypePtr();
-    if (VarType->isArrayType()) {
+    while (VarType->isArrayType())
       VarType = VarType->getArrayElementTypeNoTypeQual();
-    }
     if (VarType->isHLSLResourceClass()) {
       // Make the variable for resources static. The global externally visible
       // storage is accessed through the handle, which is a member. The variable
