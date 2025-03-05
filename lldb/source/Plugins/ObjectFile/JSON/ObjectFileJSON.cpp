@@ -180,18 +180,55 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
   m_sections_up = std::make_unique<SectionList>();
 
   lldb::user_id_t id = 1;
-  for (const auto &section : m_sections) {
-    auto section_sp = std::make_shared<Section>(
-        GetModule(), this,
-        /*sect_id=*/id++,
-        /*name=*/ConstString(section.name),
-        /*sect_type=*/section.type.value_or(eSectionTypeCode),
-        /*file_vm_addr=*/section.address.value_or(0),
-        /*vm_size=*/section.size.value_or(0),
-        /*file_offset=*/0,
-        /*file_size=*/0,
-        /*log2align=*/0,
-        /*flags=*/0);
+  for (const auto &json_section : m_sections) {
+    auto make_section = [this, &id](const JSONSection &section,
+                                    SectionSP parent_section_sp =
+                                        nullptr) -> SectionSP {
+      SectionSP section_sp;
+      if (parent_section_sp) {
+        section_sp = std::make_shared<Section>(
+            parent_section_sp, GetModule(), this,
+            /*sect_id=*/id++,
+            /*name=*/ConstString(section.name),
+            /*sect_type=*/section.type.value_or(eSectionTypeCode),
+            /*file_vm_addr=*/section.address.value_or(0) -
+                parent_section_sp->GetFileAddress(),
+            /*vm_size=*/section.size.value_or(0),
+            /*file_offset=*/0,
+            /*file_size=*/0,
+            /*log2align=*/0,
+            /*flags=*/0);
+
+      } else {
+        section_sp = std::make_shared<Section>(
+            GetModule(), this,
+            /*sect_id=*/id++,
+            /*name=*/ConstString(section.name),
+            /*sect_type=*/section.type.value_or(eSectionTypeCode),
+            /*file_vm_addr=*/section.address.value_or(0),
+            /*vm_size=*/section.size.value_or(0),
+            /*file_offset=*/0,
+            /*file_size=*/0,
+            /*log2align=*/0,
+            /*flags=*/0);
+      }
+      uint32_t permissions = 0;
+      if (section.read.value_or(0))
+        permissions |= lldb::ePermissionsReadable;
+      if (section.write.value_or(0))
+        permissions |= lldb::ePermissionsWritable;
+      if (section.execute.value_or(0))
+        permissions |= lldb::ePermissionsExecutable;
+      if (permissions)
+        section_sp->SetPermissions(permissions);
+      return section_sp;
+    };
+    auto section_sp = make_section(json_section);
+    for (const auto &subsection : json_section.subsections) {
+      SectionSP subsection_sp = make_section(subsection, section_sp);
+      section_sp->GetChildren().AddSection(subsection_sp);
+    }
+
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }

@@ -690,7 +690,10 @@ bool fromJSON(const llvm::json::Value &value,
               lldb_private::JSONSection &section, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("name", section.name) && o.map("type", section.type) &&
-         o.map("address", section.address) && o.map("size", section.size);
+         o.map("address", section.address) && o.map("size", section.size) &&
+         o.map("read", section.read) && o.map("write", section.write) &&
+         o.map("execute", section.execute) &&
+         o.mapOptional("subsections", section.subsections);
 }
 
 bool fromJSON(const llvm::json::Value &value, lldb::SectionType &type,
