@@ -22,12 +22,29 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <functional>
 
 using namespace llvm;
+
+namespace {
+
+bool allowEmitFakeUse(const Value *Arg) {
+  if (isSpvIntrinsic(Arg))
+    return false;
+  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
+      dyn_cast<UndefValue>(Arg))
+    return false;
+  if (const auto *LI = dyn_cast<LoadInst>(Arg))
+    if (LI->getType()->isAggregateType())
+      return false;
+  return true;
+}
 
 inline unsigned typeToAddressSpace(const Type *Ty) {
   if (auto PType = dyn_cast<TypedPointerType>(Ty))
@@ -39,6 +56,8 @@ inline unsigned typeToAddressSpace(const Type *Ty) {
     return ExtTy->getIntParameter(0);
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
+
+} // anonymous namespace
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -1738,4 +1757,63 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   }
   }
   return LLT::scalar(64);
+}
+
+void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
+                                             bool DeleteOld) {
+  Old->replaceAllUsesWith(New);
+  updateIfExistDeducedElementType(Old, New, DeleteOld);
+  updateIfExistAssignPtrTypeInstr(Old, New, DeleteOld);
+}
+
+void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty,
+                                          Value *Arg) {
+  Value *OfType = getNormalizedPoisonValue(Ty);
+  CallInst *AssignCI = nullptr;
+  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
+      allowEmitFakeUse(Arg)) {
+    LLVMContext &Ctx = Arg->getContext();
+    SmallVector<Metadata *, 2> ArgMDs{
+        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
+        MDString::get(Ctx, Arg->getName())};
+    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+  } else {
+    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
+                               OfType, Arg, {}, B);
+  }
+  addAssignPtrTypeInstr(Arg, AssignCI);
+}
+
+void SPIRVGlobalRegistry::buildAssignPtr(IRBuilder<> &B, Type *ElemTy,
+                                         Value *Arg) {
+  Value *OfType = PoisonValue::get(ElemTy);
+  CallInst *AssignPtrTyCI = findAssignPtrTypeInstr(Arg);
+  Function *CurrF =
+      B.GetInsertBlock() ? B.GetInsertBlock()->getParent() : nullptr;
+  if (AssignPtrTyCI == nullptr ||
+      AssignPtrTyCI->getParent()->getParent() != CurrF) {
+    AssignPtrTyCI = buildIntrWithMD(
+        Intrinsic::spv_assign_ptr_type, {Arg->getType()}, OfType, Arg,
+        {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
+    addDeducedElementType(AssignPtrTyCI, ElemTy);
+    addDeducedElementType(Arg, ElemTy);
+    addAssignPtrTypeInstr(Arg, AssignPtrTyCI);
+  } else {
+    updateAssignType(AssignPtrTyCI, Arg, OfType);
+  }
+}
+
+void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
+                                           Value *OfType) {
+  AssignCI->setArgOperand(1, buildMD(OfType));
+  if (cast<IntrinsicInst>(AssignCI)->getIntrinsicID() !=
+      Intrinsic::spv_assign_ptr_type)
+    return;
+
+  // update association with the pointee type
+  Type *ElemTy = OfType->getType();
+  addDeducedElementType(AssignCI, ElemTy);
+  addDeducedElementType(Arg, ElemTy);
 }

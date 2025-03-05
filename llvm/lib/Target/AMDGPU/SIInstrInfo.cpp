@@ -5889,7 +5889,7 @@ unsigned SIInstrInfo::buildExtractSubReg(
     return RI.getSubReg(SuperReg.getReg(), SubIdx);
 
   MachineBasicBlock *MBB = MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
   unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);

@@ -487,7 +487,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
     case OPT_aligncomm:
-      parseAligncomm(arg->getValue());
+      file->symtab.parseAligncomm(arg->getValue());
       break;
     case OPT_alternatename:
       file->symtab.parseAlternateName(arg->getValue());
@@ -2050,7 +2050,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /aligncomm
   for (auto *arg : args.filtered(OPT_aligncomm))
-    parseAligncomm(arg->getValue());
+    mainSymtab.parseAligncomm(arg->getValue());
 
   // Handle /manifestdependency.
   for (auto *arg : args.filtered(OPT_manifestdependency))
@@ -2568,7 +2568,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /includeglob
   for (StringRef pat : args::getStrings(args, OPT_incl_glob))
-    ctx.symtab.addUndefinedGlob(pat);
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
   // Create wrapped symbols for -wrap option.
   ctx.forEachSymtab([&](SymbolTable &symtab) {
@@ -2700,25 +2701,27 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
-  for (auto pair : config->alignComm) {
-    StringRef name = pair.first;
-    uint32_t alignment = pair.second;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    for (auto pair : symtab.alignComm) {
+      StringRef name = pair.first;
+      uint32_t alignment = pair.second;
 
-    Symbol *sym = ctx.symtab.find(name);
-    if (!sym) {
-      Warn(ctx) << "/aligncomm symbol " << name << " not found";
-      continue;
+      Symbol *sym = symtab.find(name);
+      if (!sym) {
+        Warn(ctx) << "/aligncomm symbol " << name << " not found";
+        continue;
+      }
+
+      // If the symbol isn't common, it must have been replaced with a regular
+      // symbol, which will carry its own alignment.
+      auto *dc = dyn_cast<DefinedCommon>(sym);
+      if (!dc)
+        continue;
+
+      CommonChunk *c = dc->getChunk();
+      c->setAlignment(std::max(c->getAlignment(), alignment));
     }
-
-    // If the symbol isn't common, it must have been replaced with a regular
-    // symbol, which will carry its own alignment.
-    auto *dc = dyn_cast<DefinedCommon>(sym);
-    if (!dc)
-      continue;
-
-    CommonChunk *c = dc->getChunk();
-    c->setAlignment(std::max(c->getAlignment(), alignment));
-  }
+  });
 
   // Windows specific -- Create an embedded or side-by-side manifest.
   // /manifestdependency: enables /manifest unless an explicit /manifest:no is

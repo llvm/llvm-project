@@ -35,6 +35,9 @@ Potentially Breaking Changes
 ============================
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
+- Fix missing diagnostics for uses of declarations when performing typename access,
+  such as when performing member access on a '[[deprecated]]' type alias.
+  (#GH58547)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -93,6 +96,9 @@ Resolutions to C++ Defect Reports
 - Implemented `CWG2918 Consideration of constraints for address of overloaded `
   `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
 
+- Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
+  `P2493R0 <https://wg21.link/P2493R0>`_.
+
 C Language Changes
 ------------------
 
@@ -126,6 +132,10 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The ARM AArch32 ``-mtp`` option accepts and defaults to ``auto``, a value of ``auto`` uses the best available method of providing the frame pointer supported by the hardware. This matches
+  the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
+  Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
+
 Removed Compiler Flags
 -------------------------
 
@@ -140,6 +150,9 @@ related warnings within the method body.
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
   This forces the global to be considered small or large in regards to the
   x86-64 code model, regardless of the code model specified for the compilation.
+- Clang now emits a warning ``-Wreserved-init-priority`` instead of a hard error 
+  when ``__attribute__((init_priority(n)))`` is used with values of n in the 
+  reserved range [0, 100]. The warning will be treated as an error by default.
 
 - There is a new ``format_matches`` attribute to complement the existing
   ``format`` attribute. ``format_matches`` allows the compiler to verify that
@@ -161,7 +174,7 @@ related warnings within the method body.
       print_status("%s (%#08x)\n");
       // order of %s and %x is swapped but there is no diagnostic
     }
-  
+
   Before the introducion of ``format_matches``, this code cannot be verified
   at compile-time. ``format_matches`` plugs that hole:
 
@@ -216,6 +229,8 @@ Improvements to Clang's diagnostics
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
 
+- Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -229,6 +244,10 @@ Bug Fixes in This Version
   signed char values (#GH102798).
 - Fixed rejects-valid problem when #embed appears in std::initializer_list or
   when it can affect template argument deduction (#GH122306).
+- Fix crash on code completion of function calls involving partial order of function templates
+  (#GH125500).
+- Fixed clang crash when #embed data does not fit into an array
+  (#GH128987).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -250,6 +269,8 @@ Bug Fixes to C++ Support
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
+- Clang is now better at instantiating the function definition after its use inside
+  of a constexpr lambda. (#GH125747)
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
@@ -299,6 +320,8 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
