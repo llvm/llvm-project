@@ -30,20 +30,20 @@ functions:
       - type: void *
       - type: size_t
   - name: ffs
-    standards: 
-    - POSIX
+    standards:
+      - POSIX
     return_type: int
     arguments:
       - int
   - name: ffsl
-    standards: 
-    - POSIX
+    standards:
+      - POSIX
     return_type: int
     arguments:
       - long
   - name: ffsll
-    standards: 
-    - POSIX
+    standards:
+      - POSIX
     return_type: int
     arguments:
       - long long
