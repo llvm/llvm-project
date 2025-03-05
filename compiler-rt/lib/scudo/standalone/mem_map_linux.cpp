@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/futex.h>
-#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
