@@ -104,15 +104,19 @@ bool SymbolContext::DumpStopContext(
 
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
-      const addr_t function_offset =
-          file_addr - function->GetAddress().GetFileAddress();
+      // Avoiding signed arithmetic due to UB in -INT_MAX.
+      const char sign =
+          file_addr >= function->GetAddress().GetFileAddress() ? '+' : '-';
+      addr_t offset = file_addr - function->GetAddress().GetFileAddress();
+      if (sign == '-')
+        offset = -offset;
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
-        s->Printf("+%" PRIu64 ">", function_offset);
-      } else if (function_offset) {
+        s->Format("{0}{1}>", sign, offset);
+      } else if (offset) {
         dumped_something = true;
-        s->Printf(" + %" PRIu64, function_offset);
+        s->Format(" {0} {1}", sign, offset);
       }
     }
 
@@ -351,8 +355,8 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
 
   if ((scope & eSymbolContextFunction) && (function != nullptr)) {
-    if (range_idx == 0) {
-      range = function->GetAddressRange();
+    if (range_idx < function->GetAddressRanges().size()) {
+      range = function->GetAddressRanges()[range_idx];
       return true;
     }
   }
@@ -368,6 +372,16 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
   range.Clear();
   return false;
+}
+
+Address SymbolContext::GetFunctionOrSymbolAddress() const {
+  if (function)
+    return function->GetAddress();
+
+  if (symbol)
+    return symbol->GetAddress();
+
+  return Address();
 }
 
 LanguageType SymbolContext::GetLanguage() const {

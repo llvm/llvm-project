@@ -236,10 +236,10 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, pt
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_byval_i32@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_byval_i32@rel32@hi+12
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -881,6 +881,9 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, 9
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, void_fastcc_multi_byval@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, void_fastcc_multi_byval@rel32@hi+12
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:148
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:144
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:152
@@ -895,9 +898,6 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:16
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8
-; GCN-NEXT:    s_getpc_b64 s[16:17]
-; GCN-NEXT:    s_add_u32 s16, s16, void_fastcc_multi_byval@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s17, s17, void_fastcc_multi_byval@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
 entry:
   %alloca0 = alloca [3 x i32], align 16, addrspace(5)
@@ -925,6 +925,9 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:12
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
+; GCN-NEXT:    s_getpc_b64 s[16:17]
+; GCN-NEXT:    s_add_u32 s16, s16, void_fastcc_byval_and_stack_passed@rel32@lo+4
+; GCN-NEXT:    s_addc_u32 s17, s17, void_fastcc_byval_and_stack_passed@rel32@hi+12
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
@@ -956,9 +959,6 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
 ; GCN-NEXT:    v_mov_b32_e32 v28, 0
 ; GCN-NEXT:    v_mov_b32_e32 v29, 0
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0
-; GCN-NEXT:    s_getpc_b64 s[16:17]
-; GCN-NEXT:    s_add_u32 s16, s16, void_fastcc_byval_and_stack_passed@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s17, s17, void_fastcc_byval_and_stack_passed@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[16:17]
 entry:
   %alloca = alloca [3 x i32], align 16, addrspace(5)

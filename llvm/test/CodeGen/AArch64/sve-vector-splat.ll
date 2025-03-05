@@ -8,8 +8,8 @@ define <vscale x 16 x i8> @sve_splat_16xi8(i8 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %splat
 }
 
@@ -18,8 +18,8 @@ define <vscale x 8 x i16> @sve_splat_8xi16(i16 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %val, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %val, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %splat
 }
 
@@ -28,8 +28,8 @@ define <vscale x 4 x i32> @sve_splat_4xi32(i32 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %val, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %splat
 }
 
@@ -38,8 +38,8 @@ define <vscale x 2 x i64> @sve_splat_2xi64(i64 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, x0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %val, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %splat
 }
 
@@ -107,8 +107,8 @@ define <vscale x 2 x i8> @sve_splat_2xi8(i8 %val) {
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    mov z0.d, x0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i8> undef, i8 %val, i32 0
-  %splat = shufflevector <vscale x 2 x i8> %ins, <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i8> poison, i8 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i8> %ins, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i8> %splat
 }
 
@@ -117,8 +117,8 @@ define <vscale x 4 x i8> @sve_splat_4xi8(i8 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i8> undef, i8 %val, i32 0
-  %splat = shufflevector <vscale x 4 x i8> %ins, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i8> poison, i8 %val, i32 0
+  %splat = shufflevector <vscale x 4 x i8> %ins, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i8> %splat
 }
 
@@ -127,8 +127,8 @@ define <vscale x 8 x i8> @sve_splat_8xi8(i8 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i8> undef, i8 %val, i32 0
-  %splat = shufflevector <vscale x 8 x i8> %ins, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i8> poison, i8 %val, i32 0
+  %splat = shufflevector <vscale x 8 x i8> %ins, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i8> %splat
 }
 
@@ -146,8 +146,8 @@ define <vscale x 2 x i16> @sve_splat_2xi16(i16 %val) {
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    mov z0.d, x0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i16> undef, i16 %val, i32 0
-  %splat = shufflevector <vscale x 2 x i16> %ins, <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i16> poison, i16 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i16> %ins, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i16> %splat
 }
 
@@ -156,8 +156,8 @@ define <vscale x 4 x i16> @sve_splat_4xi16(i16 %val) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, w0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i16> undef, i16 %val, i32 0
-  %splat = shufflevector <vscale x 4 x i16> %ins, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i16> poison, i16 %val, i32 0
+  %splat = shufflevector <vscale x 4 x i16> %ins, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i16> %splat
 }
 
@@ -175,8 +175,8 @@ define <vscale x 2 x i32> @sve_splat_2xi32(i32 %val) {
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    mov z0.d, x0
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i32> undef, i32 %val, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i32> poison, i32 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i32> %splat
 }
 
@@ -196,8 +196,8 @@ define <vscale x 1 x i32> @sve_splat_1xi32(i32 %val) {
 ; CHECK-NEXT:    mov z0.s, w0
 ; CHECK-NEXT:    ret
 entry:
-  %ins = insertelement <vscale x 1 x i32> undef, i32 %val, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %ins, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
+  %ins = insertelement <vscale x 1 x i32> poison, i32 %val, i32 0
+  %splat = shufflevector <vscale x 1 x i32> %ins, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   ret <vscale x 1 x i32> %splat
 }
 
@@ -208,8 +208,8 @@ define <vscale x 12 x i32> @sve_splat_12xi32(i32 %val) {
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    mov z2.d, z0.d
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 12 x i32> undef, i32 %val, i32 0
-  %splat = shufflevector <vscale x 12 x i32> %ins, <vscale x 12 x i32> undef, <vscale x 12 x i32> zeroinitializer
+  %ins = insertelement <vscale x 12 x i32> poison, i32 %val, i32 0
+  %splat = shufflevector <vscale x 12 x i32> %ins, <vscale x 12 x i32> poison, <vscale x 12 x i32> zeroinitializer
   ret <vscale x 12 x i32> %splat
 }
 
@@ -220,8 +220,8 @@ define <vscale x 2 x i1> @sve_splat_2xi1(i1 %val) {
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x i1> undef, i1 %val, i32 0
-  %splat = shufflevector <vscale x 2 x i1> %ins, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i1> poison, i1 %val, i32 0
+  %splat = shufflevector <vscale x 2 x i1> %ins, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i1> %splat
 }
 
@@ -232,8 +232,8 @@ define <vscale x 4 x i1> @sve_splat_4xi1(i1 %val) {
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x i1> undef, i1 %val, i32 0
-  %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i1> poison, i1 %val, i32 0
+  %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i1> %splat
 }
 
@@ -244,8 +244,8 @@ define <vscale x 8 x i1> @sve_splat_8xi1(i1 %val) {
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 8 x i1> undef, i1 %val, i32 0
-  %splat = shufflevector <vscale x 8 x i1> %ins, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i1> poison, i1 %val, i32 0
+  %splat = shufflevector <vscale x 8 x i1> %ins, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i1> %splat
 }
 
@@ -256,8 +256,8 @@ define <vscale x 16 x i1> @sve_splat_16xi1(i1 %val) {
 ; CHECK-NEXT:    sbfx x8, x0, #0, #1
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 16 x i1> undef, i1 %val, i32 0
-  %splat = shufflevector <vscale x 16 x i1> %ins, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i1> poison, i1 %val, i32 0
+  %splat = shufflevector <vscale x 16 x i1> %ins, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i1> %splat
 }
 
@@ -269,8 +269,8 @@ define <vscale x 8 x bfloat> @splat_nxv8bf16(bfloat %val) #0 {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 8 x bfloat> undef, bfloat %val, i32 0
-  %2 = shufflevector <vscale x 8 x bfloat> %1, <vscale x 8 x bfloat> undef, <vscale x 8 x i32> zeroinitializer
+  %1 = insertelement <vscale x 8 x bfloat> poison, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 8 x bfloat> %1, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x bfloat> %2
 }
 
@@ -280,8 +280,8 @@ define <vscale x 4 x bfloat> @splat_nxv4bf16(bfloat %val) #0 {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 4 x bfloat> undef, bfloat %val, i32 0
-  %2 = shufflevector <vscale x 4 x bfloat> %1, <vscale x 4 x bfloat> undef, <vscale x 4 x i32> zeroinitializer
+  %1 = insertelement <vscale x 4 x bfloat> poison, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 4 x bfloat> %1, <vscale x 4 x bfloat> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x bfloat> %2
 }
 
@@ -291,8 +291,8 @@ define <vscale x 2 x bfloat> @splat_nxv2bf16(bfloat %val) #0 {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 2 x bfloat> undef, bfloat %val, i32 0
-  %2 = shufflevector <vscale x 2 x bfloat> %1, <vscale x 2 x bfloat> undef, <vscale x 2 x i32> zeroinitializer
+  %1 = insertelement <vscale x 2 x bfloat> poison, bfloat %val, i32 0
+  %2 = shufflevector <vscale x 2 x bfloat> %1, <vscale x 2 x bfloat> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x bfloat> %2
 }
 
@@ -302,8 +302,8 @@ define <vscale x 8 x half> @splat_nxv8f16(half %val) {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %2 = shufflevector <vscale x 8 x half> %1, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %1 = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %2 = shufflevector <vscale x 8 x half> %1, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %2
 }
 
@@ -313,8 +313,8 @@ define <vscale x 4 x half> @splat_nxv4f16(half %val) {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 4 x half> undef, half %val, i32 0
-  %2 = shufflevector <vscale x 4 x half> %1, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %1 = insertelement <vscale x 4 x half> poison, half %val, i32 0
+  %2 = shufflevector <vscale x 4 x half> %1, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x half> %2
 }
 
@@ -324,8 +324,8 @@ define <vscale x 2 x half> @splat_nxv2f16(half %val) {
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 2 x half> undef, half %val, i32 0
-  %2 = shufflevector <vscale x 2 x half> %1, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %1 = insertelement <vscale x 2 x half> poison, half %val, i32 0
+  %2 = shufflevector <vscale x 2 x half> %1, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x half> %2
 }
 
@@ -335,8 +335,8 @@ define <vscale x 4 x float> @splat_nxv4f32(float %val) {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 4 x float> undef, float %val, i32 0
-  %2 = shufflevector <vscale x 4 x float> %1, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %1 = insertelement <vscale x 4 x float> poison, float %val, i32 0
+  %2 = shufflevector <vscale x 4 x float> %1, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x float> %2
 }
 
@@ -346,8 +346,8 @@ define <vscale x 2 x float> @splat_nxv2f32(float %val) {
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 2 x float> undef, float %val, i32 0
-  %2 = shufflevector <vscale x 2 x float> %1, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %1 = insertelement <vscale x 2 x float> poison, float %val, i32 0
+  %2 = shufflevector <vscale x 2 x float> %1, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x float> %2
 }
 
@@ -357,8 +357,8 @@ define <vscale x 2 x double> @splat_nxv2f64(double %val) {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
-  %1 = insertelement <vscale x 2 x double> undef, double %val, i32 0
-  %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %1 = insertelement <vscale x 2 x double> poison, double %val, i32 0
+  %2 = shufflevector <vscale x 2 x double> %1, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %2
 }
 
@@ -482,6 +482,33 @@ define <vscale x 2 x double> @splat_nxv2f64_imm() {
   ret <vscale x 2 x double> splat(double 1.0)
 }
 
+; NOTE: f16(1.875) == bf16(1.0)
+define <vscale x 8 x bfloat> @splat_nxv8bf16_imm() {
+; CHECK-LABEL: splat_nxv8bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 8 x bfloat> splat(bfloat 1.0)
+}
+
+; NOTE: f16(-1.875) == bf16(-1.0)
+define <vscale x 4 x bfloat> @splat_nxv4bf16_imm() {
+; CHECK-LABEL: splat_nxv4bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #-1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 4 x bfloat> splat(bfloat -1.0)
+}
+
+; NOTE: f16(1.875) == bf16(1.0)
+define <vscale x 2 x bfloat> @splat_nxv2bf16_imm() {
+; CHECK-LABEL: splat_nxv2bf16_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.87500000
+; CHECK-NEXT:    ret
+  ret <vscale x 2 x bfloat> splat(bfloat 1.0)
+}
+
 define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: splat_nxv4i32_fold:
 ; CHECK:       // %bb.0:
@@ -554,8 +581,8 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    adrp x8, .LCPI57_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI57_0
+; CHECK-NEXT:    adrp x8, .LCPI60_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI60_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x double> splat(double 3.33)

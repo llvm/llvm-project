@@ -51,7 +51,8 @@ set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel header
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
-  set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}")
+  string(REPLACE "-" "" NS_LLVM_VERSION_SUFFIX "${LLVM_VERSION_SUFFIX}")
+  set(default_namespace "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${NS_LLVM_VERSION_SUFFIX}")
 endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
@@ -127,19 +128,24 @@ else()
   endif()
 endif()
 
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
+include(LLVMLibCArchitectures)
+
+# Some targets can only support the full build.
+set(default_to_full_build OFF)
+if(LIBC_TARGET_OS_IS_GPU)
+  set(default_to_full_build ON)
+endif()
+
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
-
-set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
-
-# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
-include(LLVMLibCArchitectures)
 
 set(LIBC_CONFIG_JSON_FILE_LIST "")
 

@@ -38,7 +38,7 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
              "run stale profile call graph matching."));
 
 static cl::opt<bool> LoadFuncProfileforCGMatching(
-    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(false),
+    "load-func-profile-for-cg-matching", cl::Hidden, cl::init(true),
     cl::desc(
         "Load top-level profiles that the sample reader initially skipped for "
         "the call-graph matching (only meaningful for extended binary "
@@ -790,9 +790,8 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
       longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
                             false /* Match unused functions */);
 
-  Similarity =
-      static_cast<float>(MatchedAnchors.size()) * 2 /
-      (FilteredIRAnchorsList.size() + FilteredProfileAnchorList.size());
+  Similarity = static_cast<float>(MatchedAnchors.size()) /
+               FilteredProfileAnchorList.size();
 
   LLVM_DEBUG(dbgs() << "The similarity between " << IRFunc.getName()
                     << "(IR) and " << ProfFunc << "(profile) is "

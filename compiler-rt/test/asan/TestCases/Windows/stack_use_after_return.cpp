@@ -3,7 +3,7 @@
 
 // RUN: %clang_cl_asan %Od %s %Fe%t -fsanitize-address-use-after-return=always
 // RUN: not %run %t 2>&1 | FileCheck %s
-
+// XFAIL: msvc
 char *x;
 
 void foo() {

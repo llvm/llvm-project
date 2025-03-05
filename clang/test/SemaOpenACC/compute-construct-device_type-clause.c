@@ -113,8 +113,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels device_type(*) deviceptr(VarPtr)
   while(1);
-  // expected-error@+2{{OpenACC clause 'device_resident' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*)  device_resident(VarPtr)
   while(1);
   // expected-error@+2{{OpenACC clause 'firstprivate' may not follow a 'device_type' clause in a 'parallel' construct}}
@@ -124,8 +123,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'host' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) host(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'link' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) link(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'no_create' may not follow a 'device_type' clause in a 'kernels' construct}}

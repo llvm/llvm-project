@@ -278,9 +278,9 @@ private:
 
   unsigned getSparseIndexFromReg(Register Reg) const {
     if (Reg.isVirtual())
-      return Register::virtReg2Index(Reg) + NumRegUnits;
+      return Reg.virtRegIndex() + NumRegUnits;
     assert(Reg < NumRegUnits);
-    return Reg;
+    return Reg.id();
   }
 
   Register getRegFromSparseIndex(unsigned SparseIndex) const {

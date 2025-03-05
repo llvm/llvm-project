@@ -9,7 +9,6 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 #define LLDB_TOOLS_LLDB_DAP_OUTPUT_REDIRECTOR_H
 
-#include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <atomic>
@@ -20,6 +19,8 @@ namespace lldb_dap {
 
 class OutputRedirector {
 public:
+  static int kInvalidDescriptor;
+
   /// Creates writable file descriptor that will invoke the given callback on
   /// each write in a background thread.
   ///
@@ -33,13 +34,13 @@ public:
 
   ~OutputRedirector() { Stop(); }
 
-  OutputRedirector() = default;
+  OutputRedirector();
   OutputRedirector(const OutputRedirector &) = delete;
   OutputRedirector &operator=(const OutputRedirector &) = delete;
 
 private:
   std::atomic<bool> m_stopped = false;
-  lldb_private::Pipe m_pipe;
+  int m_fd;
   std::thread m_forwarder;
 };
 

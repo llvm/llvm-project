@@ -135,11 +135,9 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    unsigned BuiltinID = FuncDecl->getBuiltinID();
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, BuiltinID);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
   }
 
   assert(Func);
@@ -212,8 +210,7 @@ Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
   Function *Func =
       P.createFunction(BE, ParamOffset, std::move(ParamTypes),
                        std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false,
-                       /*IsUnevaluatedBuiltin=*/false);
+                       /*HasThisPointer=*/false, /*HasRVO=*/false);
 
   assert(Func);
   Func->setDefined(true);

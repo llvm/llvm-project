@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
@@ -41,11 +40,11 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <optional>
@@ -698,16 +697,6 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-static std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
-  auto line_entry = frame.GetLineEntry();
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
-    return CreateSource(line_entry);
-
-  return {};
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -799,21 +788,40 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto source = CreateSource(frame);
-
-  if (source) {
-    object.try_emplace("source", *source);
-    auto line_entry = frame.GetLineEntry();
-    auto line = line_entry.GetLine();
-    if (line && line != LLDB_INVALID_LINE_NUMBER)
-      object.try_emplace("line", line);
-    else
-      object.try_emplace("line", 0);
+  auto line_entry = frame.GetLineEntry();
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file is associated with the frame.
+  if (line_entry.GetFileSpec().IsValid() &&
+      (line_entry.GetLine() != 0 ||
+       line_entry.GetLine() != LLDB_INVALID_LINE_NUMBER)) {
+    object.try_emplace("source", CreateSource(line_entry));
+    object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
     object.try_emplace("column", column);
-  } else {
-    object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
+  } else if (frame.GetSymbol().IsValid()) {
+    // If no source is associated with the frame, use the DAPFrameID to track
+    // the 'source' and generate assembly.
+    llvm::json::Object source;
+    EmplaceSafeString(source, "name", frame_name);
+    char buf[PATH_MAX] = {0};
+    size_t size = frame.GetModule().GetFileSpec().GetPath(buf, PATH_MAX);
+    EmplaceSafeString(source, "path",
+                      std::string(buf, size) + '`' + frame_name);
+    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
+    // Mark the source as deemphasized since users will only be able to view
+    // assembly for these frames.
+    EmplaceSafeString(source, "presentationHint", "deemphasize");
+    object.try_emplace("source", std::move(source));
+
+    // Calculate the line of the current PC from the start of the current
+    // symbol.
+    lldb::addr_t inst_offset = frame.GetPCAddress().GetOffset() -
+                               frame.GetSymbol().GetStartAddress().GetOffset();
+    lldb::addr_t inst_line =
+        inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
+    // Line numbers are 1-based.
+    object.try_emplace("line", inst_line + 1);
+    object.try_emplace("column", 1);
   }
 
   const auto pc = frame.GetPC();
@@ -1428,7 +1436,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adaptor_path,
+                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
@@ -1438,7 +1446,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adaptor_path.str(), "--comm-file",
+  std::vector<std::string> args = {debug_adapter_path.str(), "--comm-file",
                                    comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     args.push_back("--debugger-pid");

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -20,6 +21,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -59,136 +61,145 @@ STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 
 namespace {
 
-  class StackSlotColoring : public MachineFunctionPass {
-    LiveStacks *LS = nullptr;
-    MachineFrameInfo *MFI = nullptr;
-    const TargetInstrInfo *TII = nullptr;
-    const MachineBlockFrequencyInfo *MBFI = nullptr;
-    SlotIndexes *Indexes = nullptr;
+class StackSlotColoring {
+  MachineFrameInfo *MFI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  LiveStacks *LS = nullptr;
+  const MachineBlockFrequencyInfo *MBFI = nullptr;
+  SlotIndexes *Indexes = nullptr;
 
-    // SSIntervals - Spill slot intervals.
-    std::vector<LiveInterval*> SSIntervals;
+  // SSIntervals - Spill slot intervals.
+  std::vector<LiveInterval *> SSIntervals;
 
-    // SSRefs - Keep a list of MachineMemOperands for each spill slot.
-    // MachineMemOperands can be shared between instructions, so we need
-    // to be careful that renames like [FI0, FI1] -> [FI1, FI2] do not
-    // become FI0 -> FI1 -> FI2.
-    SmallVector<SmallVector<MachineMemOperand *, 8>, 16> SSRefs;
+  // SSRefs - Keep a list of MachineMemOperands for each spill slot.
+  // MachineMemOperands can be shared between instructions, so we need
+  // to be careful that renames like [FI0, FI1] -> [FI1, FI2] do not
+  // become FI0 -> FI1 -> FI2.
+  SmallVector<SmallVector<MachineMemOperand *, 8>, 16> SSRefs;
 
-    // OrigAlignments - Alignments of stack objects before coloring.
-    SmallVector<Align, 16> OrigAlignments;
+  // OrigAlignments - Alignments of stack objects before coloring.
+  SmallVector<Align, 16> OrigAlignments;
 
-    // OrigSizes - Sizes of stack objects before coloring.
-    SmallVector<unsigned, 16> OrigSizes;
+  // OrigSizes - Sizes of stack objects before coloring.
+  SmallVector<unsigned, 16> OrigSizes;
 
-    // AllColors - If index is set, it's a spill slot, i.e. color.
-    // FIXME: This assumes PEI locate spill slot with smaller indices
-    // closest to stack pointer / frame pointer. Therefore, smaller
-    // index == better color. This is per stack ID.
-    SmallVector<BitVector, 2> AllColors;
+  // AllColors - If index is set, it's a spill slot, i.e. color.
+  // FIXME: This assumes PEI locate spill slot with smaller indices
+  // closest to stack pointer / frame pointer. Therefore, smaller
+  // index == better color. This is per stack ID.
+  SmallVector<BitVector, 2> AllColors;
 
-    // NextColor - Next "color" that's not yet used. This is per stack ID.
-    SmallVector<int, 2> NextColors = { -1 };
+  // NextColor - Next "color" that's not yet used. This is per stack ID.
+  SmallVector<int, 2> NextColors = {-1};
 
-    // UsedColors - "Colors" that have been assigned. This is per stack ID
-    SmallVector<BitVector, 2> UsedColors;
+  // UsedColors - "Colors" that have been assigned. This is per stack ID
+  SmallVector<BitVector, 2> UsedColors;
 
-    // Join all intervals sharing one color into a single LiveIntervalUnion to
-    // speedup range overlap test.
-    class ColorAssignmentInfo {
-      // Single liverange (used to avoid creation of LiveIntervalUnion).
-      LiveInterval *SingleLI = nullptr;
-      // LiveIntervalUnion to perform overlap test.
-      LiveIntervalUnion *LIU = nullptr;
-      // LiveIntervalUnion has a parameter in its constructor so doing this
-      // dirty magic.
-      uint8_t LIUPad[sizeof(LiveIntervalUnion)];
-
-    public:
-      ~ColorAssignmentInfo() {
-        if (LIU)
-          LIU->~LiveIntervalUnion(); // Dirty magic again.
-      }
-
-      // Return true if LiveInterval overlaps with any
-      // intervals that have already been assigned to this color.
-      bool overlaps(LiveInterval *LI) const {
-        if (LIU)
-          return LiveIntervalUnion::Query(*LI, *LIU).checkInterference();
-        return SingleLI ? SingleLI->overlaps(*LI) : false;
-      }
-
-      // Add new LiveInterval to this color.
-      void add(LiveInterval *LI, LiveIntervalUnion::Allocator &Alloc) {
-        assert(!overlaps(LI));
-        if (LIU) {
-          LIU->unify(*LI, *LI);
-        } else if (SingleLI) {
-          LIU = new (LIUPad) LiveIntervalUnion(Alloc);
-          LIU->unify(*SingleLI, *SingleLI);
-          LIU->unify(*LI, *LI);
-          SingleLI = nullptr;
-        } else
-          SingleLI = LI;
-      }
-    };
-
-    LiveIntervalUnion::Allocator LIUAlloc;
-
-    // Assignments - Color to intervals mapping.
-    SmallVector<ColorAssignmentInfo, 16> Assignments;
+  // Join all intervals sharing one color into a single LiveIntervalUnion to
+  // speedup range overlap test.
+  class ColorAssignmentInfo {
+    // Single liverange (used to avoid creation of LiveIntervalUnion).
+    LiveInterval *SingleLI = nullptr;
+    // LiveIntervalUnion to perform overlap test.
+    LiveIntervalUnion *LIU = nullptr;
+    // LiveIntervalUnion has a parameter in its constructor so doing this
+    // dirty magic.
+    uint8_t LIUPad[sizeof(LiveIntervalUnion)];
 
   public:
-    static char ID; // Pass identification
-
-    StackSlotColoring() : MachineFunctionPass(ID) {
-      initializeStackSlotColoringPass(*PassRegistry::getPassRegistry());
+    ~ColorAssignmentInfo() {
+      if (LIU)
+        LIU->~LiveIntervalUnion(); // Dirty magic again.
     }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<SlotIndexesWrapperPass>();
-      AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<LiveStacksWrapperLegacy>();
-      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addPreservedID(MachineDominatorsID);
-
-      // In some Target's pipeline, register allocation (RA) might be
-      // split into multiple phases based on register class. So, this pass
-      // may be invoked multiple times requiring it to save these analyses to be
-      // used by RA later.
-      AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
-
-      MachineFunctionPass::getAnalysisUsage(AU);
+    // Return true if LiveInterval overlaps with any
+    // intervals that have already been assigned to this color.
+    bool overlaps(LiveInterval *LI) const {
+      if (LIU)
+        return LiveIntervalUnion::Query(*LI, *LIU).checkInterference();
+      return SingleLI ? SingleLI->overlaps(*LI) : false;
     }
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
-
-  private:
-    void InitializeSlots();
-    void ScanForSpillSlotRefs(MachineFunction &MF);
-    int ColorSlot(LiveInterval *li);
-    bool ColorSlots(MachineFunction &MF);
-    void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
-                            MachineFunction &MF);
-    bool RemoveDeadStores(MachineBasicBlock* MBB);
+    // Add new LiveInterval to this color.
+    void add(LiveInterval *LI, LiveIntervalUnion::Allocator &Alloc) {
+      assert(!overlaps(LI));
+      if (LIU) {
+        LIU->unify(*LI, *LI);
+      } else if (SingleLI) {
+        LIU = new (LIUPad) LiveIntervalUnion(Alloc);
+        LIU->unify(*SingleLI, *SingleLI);
+        LIU->unify(*LI, *LI);
+        SingleLI = nullptr;
+      } else
+        SingleLI = LI;
+    }
   };
+
+  LiveIntervalUnion::Allocator LIUAlloc;
+
+  // Assignments - Color to intervals mapping.
+  SmallVector<ColorAssignmentInfo, 16> Assignments;
+
+public:
+  StackSlotColoring(MachineFunction &MF, LiveStacks *LS,
+                    MachineBlockFrequencyInfo *MBFI, SlotIndexes *Indexes)
+      : MFI(&MF.getFrameInfo()), TII(MF.getSubtarget().getInstrInfo()), LS(LS),
+        MBFI(MBFI), Indexes(Indexes) {}
+  bool run(MachineFunction &MF);
+
+private:
+  void InitializeSlots();
+  void ScanForSpillSlotRefs(MachineFunction &MF);
+  int ColorSlot(LiveInterval *li);
+  bool ColorSlots(MachineFunction &MF);
+  void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
+                          MachineFunction &MF);
+  bool RemoveDeadStores(MachineBasicBlock *MBB);
+};
+
+class StackSlotColoringLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+
+  StackSlotColoringLegacy() : MachineFunctionPass(ID) {
+    initializeStackSlotColoringLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addRequired<LiveStacksWrapperLegacy>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreservedID(MachineDominatorsID);
+
+    // In some Target's pipeline, register allocation (RA) might be
+    // split into multiple phases based on register class. So, this pass
+    // may be invoked multiple times requiring it to save these analyses to be
+    // used by RA later.
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
 
 } // end anonymous namespace
 
-char StackSlotColoring::ID = 0;
+char StackSlotColoringLegacy::ID = 0;
 
-char &llvm::StackSlotColoringID = StackSlotColoring::ID;
+char &llvm::StackSlotColoringID = StackSlotColoringLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
-                "Stack Slot Coloring", false, false)
+INITIALIZE_PASS_BEGIN(StackSlotColoringLegacy, DEBUG_TYPE,
+                      "Stack Slot Coloring", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
-                "Stack Slot Coloring", false, false)
+INITIALIZE_PASS_END(StackSlotColoringLegacy, DEBUG_TYPE, "Stack Slot Coloring",
+                    false, false)
 
 namespace {
 
@@ -511,20 +522,11 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
   return changed;
 }
 
-bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
+bool StackSlotColoring::run(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Stack Slot Coloring **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
-
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  MFI = &MF.getFrameInfo();
-  TII = MF.getSubtarget().getInstrInfo();
-  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
 
@@ -558,4 +560,38 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   Assignments.clear();
 
   return Changed;
+}
+
+bool StackSlotColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  LiveStacks *LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  SlotIndexes *Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  StackSlotColoring Impl(MF, LS, MBFI, Indexes);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+StackSlotColoringPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  LiveStacks *LS = &MFAM.getResult<LiveStacksAnalysis>(MF);
+  MachineBlockFrequencyInfo *MBFI =
+      &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  SlotIndexes *Indexes = &MFAM.getResult<SlotIndexesAnalysis>(MF);
+  StackSlotColoring Impl(MF, LS, MBFI, Indexes);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<MachineBlockFrequencyAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<LiveDebugVariablesAnalysis>();
+  return PA;
 }

@@ -101,7 +101,7 @@ countr_zero(T value) {
     shift >>= 1;
     mask >>= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
@@ -140,7 +140,7 @@ countl_zero(T value) {
     else
       zero_bits |= shift;
   }
-  return zero_bits;
+  return static_cast<int>(zero_bits);
 }
 #if __has_builtin(__builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
@@ -226,25 +226,25 @@ rotr(T value, int rotate);
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return static_cast<T>((value << rotate) | (value >> (N - rotate)));
 }
 
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
 rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return static_cast<T>((value >> rotate) | (value << (N - rotate)));
 }
 
 // TODO: Do we need this function at all? How is it different from

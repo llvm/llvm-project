@@ -492,7 +492,7 @@ public:
   /// perform non-Decl specific checks based on the object's type and strict
   /// flex array level.
   static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
+      const ASTContext &Context, const Decl *D, QualType Ty,
       LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution);
 
@@ -1257,8 +1257,11 @@ public:
   int64_t getID() const;
 
   /// Looks through the Decl's underlying type to extract a FunctionType
-  /// when possible. Will return null if the type underlying the Decl does not
-  /// have a FunctionType.
+  /// when possible. This includes direct FunctionDecls, along with various
+  /// function types and typedefs. This includes function pointers/references,
+  /// member function pointers, and optionally if \p BlocksToo is set
+  /// Objective-C block pointers. Returns nullptr if the type underlying the
+  /// Decl does not have a FunctionType.
   const FunctionType *getFunctionType(bool BlocksToo = true) const;
 
   // Looks through the Decl's underlying type to determine if it's a

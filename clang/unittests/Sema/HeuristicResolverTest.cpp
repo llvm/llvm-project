@@ -155,6 +155,26 @@ TEST(HeuristicResolver, MemberExpr_SmartPointer_Qualified) {
       cxxMethodDecl(hasName("find"), isConst()).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_Static_Qualified) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct Waldo {
+      static void find();
+    };
+    template <typename T>
+    void foo(const Waldo<T>& t) {
+      t.find();
+    }
+  )cpp";
+  // Test resolution of "find" in "t.find()".
+  // The object being `const` should have no bearing on a call to a static
+  // method.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("find")).bind("input"),
+      cxxMethodDecl(hasName("find")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction1) {
   std::string Code = R"cpp(
     template <typename T>
@@ -372,6 +392,22 @@ TEST(HeuristicResolver, MemberExpr_DeducedNonTypeTemplateParameter) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("found")).bind("input"),
       fieldDecl(hasName("found")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
+  std::string Code = R"cpp(
+    template <class T>
+    void foo() {
+      T bar;
+      auto baz = (bar, bar);
+      baz.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "baz.foo()".
+  // Here, we are testing that we do not get into an infinite loop.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {

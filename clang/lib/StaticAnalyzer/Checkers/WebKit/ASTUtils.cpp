@@ -24,6 +24,8 @@ bool isSafePtr(clang::CXXRecordDecl *Decl) {
 
 bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -53,9 +55,9 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                callback) &&
+                                isSafePtr, isSafePtrType, callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                callback);
+                                isSafePtr, isSafePtrType, callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -92,7 +94,7 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *callee = call->getDirectCallee()) {
-        if (isCtorOfRefCounted(callee) || isCtorOfCheckedPtr(callee)) {
+        if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
@@ -138,8 +140,13 @@ bool tryToFindPtrOrigin(
 bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+    auto *FoundDecl = Ref->getFoundDecl();
+    if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+        return true;
+    } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
+      VarDecl *VD = BD->getHoldingVar();
+      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
         return true;
     }
   }
@@ -154,19 +161,20 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
     if (auto *Callee = MCE->getDirectCallee()) {
       auto Name = safeGetName(Callee);
-      if (Name == "get" || Name == "ptr") {
-        auto *ThisArg = MCE->getImplicitObjectArgument();
-        E = ThisArg;
-      }
+      if (Name == "get" || Name == "ptr")
+        E = MCE->getImplicitObjectArgument();
+      if (isa<CXXConversionDecl>(Callee))
+        E = MCE->getImplicitObjectArgument();
     }
   } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (OCE->getOperator() == OO_Star && OCE->getNumArgs() == 1)
       E = OCE->getArg(0);
   }
-  auto *ME = dyn_cast<MemberExpr>(E);
-  if (!ME)
-    return false;
-  auto *D = ME->getMemberDecl();
+  const ValueDecl *D = nullptr;
+  if (auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  else if (auto *IVR = dyn_cast<ObjCIvarRefExpr>(E))
+    D = IVR->getDecl();
   if (!D)
     return false;
   auto T = D->getType();

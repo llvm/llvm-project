@@ -184,6 +184,7 @@ class MapInfoFinalizationPass
         /*members=*/mlir::SmallVector<mlir::Value>{},
         /*membersIndex=*/mlir::ArrayAttr{}, bounds,
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*name=*/builder.getStringAttr(""),
@@ -329,7 +330,8 @@ class MapInfoFinalizationPass
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
                 getDescriptorMapType(op.getMapType().value_or(0), target)),
-            op.getMapCaptureTypeAttr(), op.getNameAttr(),
+            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
+            op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -464,7 +466,8 @@ class MapInfoFinalizationPass
     for (auto *user : mapOp->getUsers()) {
       if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
                     mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
-                    mlir::omp::TargetEnterDataOp>(user))
+                    mlir::omp::TargetEnterDataOp,
+                    mlir::omp::DeclareMapperInfoOp>(user))
         return user;
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
@@ -497,7 +500,9 @@ class MapInfoFinalizationPass
     // ourselves to the possibility of race conditions while this pass
     // undergoes frequent re-iteration for the near future. So we loop
     // over function in the module and then map.info inside of those.
-    getOperation()->walk([&](mlir::func::FuncOp func) {
+    getOperation()->walk([&](mlir::Operation *func) {
+      if (!mlir::isa<mlir::func::FuncOp, mlir::omp::DeclareMapperOp>(func))
+        return;
       // clear all local allocations we made for any boxes in any prior
       // iterations from previous function scopes.
       localBoxAllocas.clear();
@@ -574,7 +579,7 @@ class MapInfoFinalizationPass
           if (!shouldMapField)
             continue;
 
-          int64_t fieldIdx = recordType.getFieldIndex(field);
+          int32_t fieldIdx = recordType.getFieldIndex(field);
           bool alreadyMapped = [&]() {
             if (op.getMembersIndexAttr())
               for (auto indexList : op.getMembersIndexAttr()) {
@@ -592,12 +597,11 @@ class MapInfoFinalizationPass
             continue;
 
           builder.setInsertionPoint(op);
-          mlir::Value fieldIdxVal = builder.createIntegerConstant(
-              op.getLoc(), mlir::IndexType::get(builder.getContext()),
-              fieldIdx);
+          fir::IntOrValue idxConst =
+              mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
           auto fieldCoord = builder.create<fir::CoordinateOp>(
               op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-              fieldIdxVal);
+              llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
           fir::factory::AddrAndBoundsInfo info =
               fir::factory::getDataOperandBaseAddr(
                   builder, fieldCoord, /*isOptional=*/false, op.getLoc());
@@ -620,6 +624,7 @@ class MapInfoFinalizationPass
                   /*members=*/mlir::ValueRange{},
                   /*members_index=*/mlir::ArrayAttr{},
                   /*bounds=*/bounds, op.getMapTypeAttr(),
+                  /*mapperId*/ mlir::FlatSymbolRefAttr(),
                   builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
                       mlir::omp::VariableCaptureKind::ByRef),
                   builder.getStringAttr(op.getNameAttr().strref() + "." +

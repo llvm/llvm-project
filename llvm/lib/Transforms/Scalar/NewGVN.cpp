@@ -3056,13 +3056,8 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
 
 void NewGVN::updateProcessedCount(const Value *V) {
 #ifndef NDEBUG
-  if (ProcessedCount.count(V) == 0) {
-    ProcessedCount.insert({V, 1});
-  } else {
-    ++ProcessedCount[V];
-    assert(ProcessedCount[V] < 100 &&
-           "Seem to have processed the same Value a lot");
-  }
+  assert(++ProcessedCount[V] < 100 &&
+         "Seem to have processed the same Value a lot");
 #endif
 }
 

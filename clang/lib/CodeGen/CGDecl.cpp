@@ -27,6 +27,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -176,6 +177,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::OMPDeclareMapper:
     return CGM.EmitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(&D), this);
+
+  case Decl::OpenACCDeclare:
+    return CGM.EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -2843,6 +2847,11 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
   getOpenMPRuntime().emitUserDefinedMapper(D, CGF);
 }
 
+void CodeGenModule::EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                                       CodeGenFunction *CGF) {
+  // This is a no-op, we cna just ignore these declarations.
+}
+
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
   getOpenMPRuntime().processRequiresDirective(D);
 }
@@ -2870,15 +2879,12 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
 
     // We can also keep the existing global if the address space is what we
     // expect it to be, if not, it is replaced.
-    QualType ASTTy = VD->getType();
     clang::LangAS GVAS = GetGlobalVarAddressSpace(VD);
     auto TargetAS = getContext().getTargetAddressSpace(GVAS);
     if (Entry->getType()->getAddressSpace() == TargetAS)
       continue;
 
-    // Make a new global with the correct type / address space.
-    llvm::Type *Ty = getTypes().ConvertTypeForMem(ASTTy);
-    llvm::PointerType *PTy = llvm::PointerType::get(Ty, TargetAS);
+    llvm::PointerType *PTy = llvm::PointerType::get(getLLVMContext(), TargetAS);
 
     // Replace all uses of the old global with a cast. Since we mutate the type
     // in place we neeed an intermediate that takes the spot of the old entry
@@ -2891,8 +2897,7 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
 
     Entry->mutateType(PTy);
     llvm::Constant *NewPtrForOldDecl =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            Entry, DummyGV->getType());
+        llvm::ConstantExpr::getAddrSpaceCast(Entry, DummyGV->getType());
 
     // Now we have a casted version of the changed global, the dummy can be
     // replaced and deleted.

@@ -74,17 +74,17 @@ if.end123:                                        ; preds = %for.end
   br i1 %arg, label %if.end150, label %if.then126
 
 if.then126:                                       ; preds = %if.end123
-  %ptrint.i.i185 = ptrtoint ptr undef to i64
+  %ptrint.i.i185 = ptrtoint ptr poison to i64
   %maskedptr.i.i186 = and i64 %ptrint.i.i185, 1
   %maskcond.i.i187 = icmp eq i64 %maskedptr.i.i186, 0
   tail call void @llvm.assume(i1 %maskcond.i.i187) #0
-  %ret.0.copyload.i.i189 = load i32, ptr undef, align 2
+  %ret.0.copyload.i.i189 = load i32, ptr poison, align 2
 
 ; CHECK: load {{.*}} align 2
 
   %0 = tail call i32 @llvm.bswap.i32(i32 %ret.0.copyload.i.i189) #0
   %conv131 = zext i32 %0 to i64
-  %add.ptr132 = getelementptr inbounds i8, ptr undef, i64 %conv131
+  %add.ptr132 = getelementptr inbounds i8, ptr poison, i64 %conv131
   br i1 %arg, label %if.end150, label %if.end.i173
 
 if.end.i173:                                      ; preds = %if.then126

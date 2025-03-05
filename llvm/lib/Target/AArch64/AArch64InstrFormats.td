@@ -400,6 +400,16 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
    let ParserMatchClass = UImm6Operand;
 }
 
+def CmpBranchUImm6Operand_32b
+    : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
+def CmpBranchUImm6Operand_64b
+    : ComplexPattern<i64, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
 def UImm6Plus1Operand : AsmOperandClass {
   let Name = "UImm6P1";
   let DiagnosticType = "InvalidImm1_64";
@@ -5511,6 +5521,15 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
     let Inst{31} = 1; // 64-bit FPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
+
+  def : Pat<(f16 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f64 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # DSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f16 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HDr) (EXTRACT_SUBREG $Rn, dsub))>;
+  def : Pat<(f32 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # SDr) (EXTRACT_SUBREG $Rn, dsub))>;
 }
 
 //---
@@ -12529,26 +12548,19 @@ multiclass STOPregister<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
+let Predicates = [HasLSUI] in
 class BaseSTOPregisterLSUI<string asm, RegisterClass OP, Register Reg,
                         Instruction inst> :
-      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn), 0>;
 
 multiclass STOPregisterLSUI<string asm, string instr> {
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR32, WZR,
+  def : BaseSTOPregisterLSUI<asm # "l", GPR32, WZR,
+                    !cast<Instruction>(instr # "LW")>;
+  def : BaseSTOPregisterLSUI<asm # "l", GPR64, XZR,
+                    !cast<Instruction>(instr # "LX")>;
+  def : BaseSTOPregisterLSUI<asm, GPR32, WZR,
                     !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR64, XZR,
+  def : BaseSTOPregisterLSUI<asm, GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
 }
 
@@ -13223,6 +13235,21 @@ multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
   def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
                  (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
 }
+
+class CmpBranchRegisterPseudo<RegisterClass regtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
+class CmpBranchImmediatePseudo<RegisterClass regtype, ImmLeaf imtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, imtype:$Imm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
@@ -13319,4 +13346,3 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
       let Predicates = [HasNEON, HasF8F32MM];
     }
 }
-

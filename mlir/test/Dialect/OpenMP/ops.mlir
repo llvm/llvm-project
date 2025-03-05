@@ -879,6 +879,15 @@ cleanup {
   omp.yield
 }
 
+// CHECK: omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)>
+omp.declare_mapper @my_mapper : !llvm.struct<"my_type", (i32)> {
+^bb0(%arg: !llvm.ptr):
+  // CHECK: %[[DECL_MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %decl_map_info = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  // CHECK: omp.declare_mapper.info map_entries(%[[DECL_MAP_INFO]] : !llvm.ptr)
+  omp.declare_mapper.info map_entries(%decl_map_info : !llvm.ptr)
+}
+
 // CHECK-LABEL: func @wsloop_reduction
 func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
@@ -2408,6 +2417,22 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     }
   }
 
+  // CHECK: omp.taskloop grainsize(strict, %{{[^:]+}}: i64) {
+  omp.taskloop grainsize(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop num_tasks(strict, %{{[^:]+}}: i64) {
+  omp.taskloop num_tasks(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
   // CHECK: omp.taskloop nogroup {
   omp.taskloop nogroup {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
@@ -2537,13 +2562,13 @@ func.func @omp_targets_with_map_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr) -> ()
   // CHECK: %[[C_12:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[C_13:.*]] = llvm.mlir.constant(2 : index) : i64
   // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_11]] : i64) upper_bound(%[[C_10]] : i64) stride(%[[C_12]] : i64) start_idx(%[[C_13]] : i64)
-  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+  // CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, !llvm.array<10 x i32>)   mapper(@my_mapper) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
     %6 = llvm.mlir.constant(9 : index) : i64
     %7 = llvm.mlir.constant(1 : index) : i64
     %8 = llvm.mlir.constant(2 : index) : i64
     %9 = llvm.mlir.constant(2 : index) : i64
     %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%8 : i64) start_idx(%9 : i64)
-    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%10) -> !llvm.ptr {name = ""}
+    %mapv2 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   mapper(@my_mapper) map_clauses(exit_release_or_enter_alloc) capture(ByCopy) bounds(%10) -> !llvm.ptr {name = ""}
 
     // CHECK: omp.target map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}} : !llvm.ptr, !llvm.ptr)
     omp.target map_entries(%mapv1 -> %arg2, %mapv2 -> %arg3 : !llvm.ptr, !llvm.ptr) {
@@ -2685,34 +2710,31 @@ func.func @parallel_op_privatizers(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   return
 }
 
-// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @a.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @a.privatizer : !llvm.ptr init {
+omp.private {type = private} @a.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
 }
 
-// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
+// CHECK-LABEL: omp.private {type = private} @x.privatizer : !llvm.ptr init {
+omp.private {type = private} @x.privatizer : !llvm.ptr init {
+// CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):
   omp.yield
 }
 
-// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
-// CHECK: ^bb0(%{{.*}}: {{.*}}):
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-// CHECK: } copy {
-} copy {
+// CHECK-LABEL: omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
+omp.private {type = firstprivate} @y.privatizer : !llvm.ptr copy {
 // CHECK: ^bb0(%{{.*}}: {{.*}}, %{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   omp.yield(%arg0 : !llvm.ptr)
+// CHECK: } dealloc {
 } dealloc {
 // CHECK: ^bb0(%{{.*}}: {{.*}}):
 ^bb0(%arg0: !llvm.ptr):

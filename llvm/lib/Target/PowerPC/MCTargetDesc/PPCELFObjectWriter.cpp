@@ -399,13 +399,13 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_nofixup:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_PPC_TLSGD:
+      case MCSymbolRefExpr::VK_TLSGD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSGD;
         else
           Type = ELF::R_PPC_TLSGD;
         break;
-      case MCSymbolRefExpr::VK_PPC_TLSLD:
+      case MCSymbolRefExpr::VK_TLSLD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSLD;
         else

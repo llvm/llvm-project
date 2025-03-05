@@ -1395,7 +1395,7 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = Options.FDPIC
-                        ? ELF::ELFOSABI_ARM_FDPIC
+                        ? static_cast<uint8_t>(ELF::ELFOSABI_ARM_FDPIC)
                         : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
     return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
                                 Endian);

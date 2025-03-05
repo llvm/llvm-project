@@ -47,10 +47,10 @@ int bar(int n){
 // CHECK-HOST: [[OFFLOAD_MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [21 x i8]
-// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr [[VAR_DECL_TGT_LINK_PTR]], ptr [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME]], i64 8, i64 0, ptr null }, section "omp_offl
+// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr [[VAR_DECL_TGT_LINK_PTR]], ptr [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME]], i64 8, i64 0, ptr null }, section "llvm_offload_entries"
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [24 x i8]
-// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr [[VAR_DECL_TGT_TO_PTR]], ptr [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR_NAME]], i64 8, i64 0, ptr null }, section "omp_offloading_entries", align 1
+// CHECK-HOST: [[OMP_OFFLOAD_ENTRY_TO_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr [[VAR_DECL_TGT_TO_PTR]], ptr @.offloading.entry_name.1, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
 
 // CHECK-HOST: [[N_CASTED:%.+]] = alloca i64
 // CHECK-HOST: [[SUM_CASTED:%.+]] = alloca i64

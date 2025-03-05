@@ -202,7 +202,8 @@ public:
   /// special or non-printable characters in it.
   virtual void printSymbolName(StringRef symbolRef);
 
-  /// Print a handle to the given dialect resource.
+  /// Print a handle to the given dialect resource. The handle key is quoted and
+  /// escaped if it has any special or non-printable characters in it.
   virtual void printResourceHandle(const AsmDialectResourceHandle &resource);
 
   /// Print an optional arrow followed by a type list.
@@ -1602,10 +1603,12 @@ public:
                   SmallVectorImpl<Value> &result) {
     size_t operandSize = llvm::range_size(operands);
     size_t typeSize = llvm::range_size(types);
-    if (operandSize != typeSize)
-      return emitError(loc)
+    if (operandSize != typeSize) {
+      // If no location was provided, report errors at the beginning of the op.
+      return emitError(loc.isValid() ? loc : getNameLoc())
              << "number of operands and types do not match: got " << operandSize
              << " operands and " << typeSize << " types";
+    }
 
     for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))
@@ -1824,6 +1827,7 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 //===--------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
+#include "mlir/IR/OpAsmAttrInterface.h.inc"
 #include "mlir/IR/OpAsmOpInterface.h.inc"
 #include "mlir/IR/OpAsmTypeInterface.h.inc"
 
