@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -80,7 +81,6 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 };
 
 struct CommandInfo : public LLDBBaseTelemetryInfo {
-
   // If the command is/can be associated with a target entry this field contains
   // that target's UUID. <EMPTY> otherwise.
   UUID target_uuid;

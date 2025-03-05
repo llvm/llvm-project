@@ -59,10 +59,11 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
   if (end_time.has_value())
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
+
 void CommandInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
-  serializer.write("target_uuid", target_uuid);
+  serializer.write("target_uuid", target_uuid.GetAsString());
   serializer.write("command_id", command_id);
   serializer.write("command_name", command_name);
   serializer.write("original_command", original_command);
@@ -79,7 +80,7 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
 }
 
 std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
-uint64_t DebuggerInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}

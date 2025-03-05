@@ -1903,10 +1903,9 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     info->command_id = command_id;
     if (Target *target = GetExecutionContext().GetTargetPtr()) {
       // If we have a target attached to this command, then get the UUID.
-      info->target_uuid =
-          target->GetExecutableModule() != nullptr
-              ? target->GetExecutableModule()->GetUUID().GetAsString()
-              : "";
+      info->target_uuid = target->GetExecutableModule() != nullptr
+                              ? target->GetExecutableModule()->GetUUID()
+                              : UUID();
     }
     if (ins->GetConfig()->m_detailed_command_telemetry)
       info->original_command = original_command_string;
