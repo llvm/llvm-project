@@ -9,11 +9,13 @@
 
 #include "llvm/Support/AArch64AttributeParser.h"
 
-std::vector<llvm::SubsectionAndTagToTagName>
+std::vector<llvm::SubsectionAndTagToTagName> &
 llvm::AArch64AttributeParser::returnTagsNamesMap() {
-  return {{"aeabi_pauthabi", 1, "Tag_PAuth_Platform"},
-          {"aeabi_pauthabi", 2, "Tag_PAuth_Schema"},
-          {"aeabi_feature_and_bits", 0, "Tag_Feature_BTI"},
-          {"aeabi_feature_and_bits", 1, "Tag_Feature_PAC"},
-          {"aeabi_feature_and_bits", 2, "Tag_Feature_GCS"}};
+  static std::vector<SubsectionAndTagToTagName> TagsNamesMap = {
+      {"aeabi_pauthabi", 1, "Tag_PAuth_Platform"},
+      {"aeabi_pauthabi", 2, "Tag_PAuth_Schema"},
+      {"aeabi_feature_and_bits", 0, "Tag_Feature_BTI"},
+      {"aeabi_feature_and_bits", 1, "Tag_Feature_PAC"},
+      {"aeabi_feature_and_bits", 2, "Tag_Feature_GCS"}};
+  return TagsNamesMap;
 }

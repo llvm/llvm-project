@@ -136,19 +136,17 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
       uint64_t Tag = De.getULEB128(Cursor);
 
       StringRef TagName = getTagName(VendorName, Tag);
-      if ("" == TagName)
-        TagName = StringRef(utostr(Tag));
 
       uint64_t ValueInt = 0;
       std::string ValueStr = "";
       if (Type) { // type==1 --> ntbs
         ValueStr = De.getCStrRef(Cursor);
         if (Sw)
-          Sw->printString(TagName, ValueStr);
+          Sw->printString("" != TagName ? TagName : utostr(Tag), ValueStr);
       } else { // type==0 --> uleb128
-        uint64_t ValueInt = De.getULEB128(Cursor);
+        ValueInt = De.getULEB128(Cursor);
         if (Sw)
-          Sw->printNumber(TagName, ValueInt);
+          Sw->printNumber("" != TagName ? TagName : utostr(Tag), ValueInt);
       }
 
       // populate data structure

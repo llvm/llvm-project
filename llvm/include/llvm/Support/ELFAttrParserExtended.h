@@ -42,10 +42,12 @@ public:
   std::optional<StringRef> getAttributeString(StringRef BuildAttrSubsectionName,
                                               unsigned Tag) const override;
 
-  ELFExtendedAttrParser(ScopedPrinter *Sw,
-                        std::vector<SubsectionAndTagToTagName> TagsNamesMap)
+  ELFExtendedAttrParser(
+      ScopedPrinter *Sw,
+      const std::vector<SubsectionAndTagToTagName> TagsNamesMap)
       : Sw(Sw), TagsNamesMap(TagsNamesMap) {}
-  ELFExtendedAttrParser(std::vector<SubsectionAndTagToTagName> TagsNamesMap)
+  ELFExtendedAttrParser(
+      const std::vector<SubsectionAndTagToTagName> TagsNamesMap)
       : Sw(nullptr), TagsNamesMap(TagsNamesMap) {}
 };
 } // namespace llvm
