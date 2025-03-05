@@ -34,19 +34,19 @@ functions:
       - POSIX
     return_type: int
     arguments:
-      - int
+      - type: int
   - name: ffsl
     standards:
       - POSIX
     return_type: int
     arguments:
-      - long
+      - type: long
   - name: ffsll
     standards:
       - POSIX
     return_type: int
     arguments:
-      - long long
+      - type: long long
   - name: index
     standards:
       - BSDExtensions
