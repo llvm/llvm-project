@@ -809,7 +809,8 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
+static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                   MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -821,7 +822,7 @@ static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
         buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
                                 MI.getOperand(2).getMetadata());
       } else {
-        buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
+        GR->buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
                                    MI.getOperand(2).getImm(),
                                    MI.getOperand(3).getMetadata());
       }
@@ -1041,7 +1042,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
-  insertSpirvDecorations(MF, MIB);
+  insertSpirvDecorations(MF, GR, MIB);
   insertInlineAsm(MF, GR, ST, MIB);
   selectOpBitcasts(MF, GR, MIB);
 

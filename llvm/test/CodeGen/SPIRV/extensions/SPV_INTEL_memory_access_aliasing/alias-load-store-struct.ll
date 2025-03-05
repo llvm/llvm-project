@@ -1,7 +1,7 @@
 ; Test if alias scope metadata translates well for a load/store with structure object
 ; type (special case as such lowering uses spv_load/store intrinsics)
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
 
 ; CHECK: OpCapability MemoryAccessAliasingINTEL
 ; CHECK: OpExtension "SPV_INTEL_memory_access_aliasing"

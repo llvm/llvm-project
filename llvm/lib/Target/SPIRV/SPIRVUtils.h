@@ -148,13 +148,8 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD);
 
-// Add OpAliasDomainDeclINTEL, OpAliasScopeINTEL and OpAliasScopeListDeclINTEL
-// instructions.
-MachineInstr *getOrAddMemAliasingINTELInst(MachineIRBuilder &MIRBuilder,
-                                           const MDNode *AliasingListMD);
-
-void buildMemAliasingOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
-                                uint32_t Dec, const MDNode *GVarMD);
+//void buildMemAliasingOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+//                                uint32_t Dec, const MDNode *GVarMD);
 
 // Return a valid position for the OpVariable instruction inside a function,
 // i.e., at the beginning of the first block of the function.

@@ -1,6 +1,6 @@
 ; The test checks if the backend won't crash
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
 
 ; CHECK: OpControlBarrier
 ; CHECK-NOT: MemoryAccessAliasingINTEL

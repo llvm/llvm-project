@@ -689,10 +689,10 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     const CallBase *CI = Info.CB;
     if (CI && CI->hasMetadata()) {
       if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alias_scope))
-        buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
                                    SPIRV::Decoration::AliasScopeINTEL, MD);
       if (MDNode *MD = CI->getMetadata(LLVMContext::MD_noalias))
-        buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
                                    SPIRV::Decoration::NoAliasINTEL, MD);
     }
   }

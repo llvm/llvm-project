@@ -3,7 +3,7 @@
 
 ; Check aliasing information translation on load and store
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
 
 ; CHECK-NOT: MemoryAccessAliasingINTEL
 ; CHECK-NOT: SPV_INTEL_memory_access_aliasing

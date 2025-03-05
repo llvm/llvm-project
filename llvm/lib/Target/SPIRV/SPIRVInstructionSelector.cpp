@@ -1021,7 +1021,8 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
 
 static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB,
-                              MachineIRBuilder &MIRBuilder) {
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry &GR) {
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
@@ -1036,13 +1037,13 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
       static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     if (auto *MD = MemOp->getAAInfo().Scope) {
-      AliasList = getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
       if (AliasList)
         SpvMemOp |=
             static_cast<uint32_t>(SPIRV::MemoryOperand::AliasScopeINTELMask);
     }
     if (auto *MD = MemOp->getAAInfo().NoAlias) {
-      NoAliasList = getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      NoAliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
       if (NoAliasList)
         SpvMemOp |=
             static_cast<uint32_t>(SPIRV::MemoryOperand::NoAliasINTELMask);
@@ -1106,7 +1107,7 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
     MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1149,7 +1150,7 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
     MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1228,7 +1229,7 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                  .addUse(I.getOperand(2).getReg());
   if (I.getNumMemOperands()) {
     MachineIRBuilder MIRBuilder(I);
-    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   Result &= MIB.constrainAllUses(TII, TRI, RBI);
   if (ResVReg.isValid() && ResVReg != MIB->getOperand(0).getReg())
