@@ -1045,6 +1045,44 @@ public:
   }
 };
 
+static std::optional<InterchangeableBinOp> isConvertible(Instruction *From,
+                                                         Instruction *To) {
+  InterchangeableBinOp Converter(From);
+  if (Converter.add(From) && Converter.add(To))
+    return Converter;
+  return {};
+}
+
+static bool isConvertible(Instruction *I, Instruction *MainOp,
+                          Instruction *AltOp) {
+  assert(MainOp && "MainOp cannot be nullptr.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return true;
+  assert(AltOp && "AltOp cannot be nullptr.");
+  if (I->getOpcode() == AltOp->getOpcode())
+    return true;
+  if (!I->isBinaryOp())
+    return false;
+  return isConvertible(I, MainOp) || isConvertible(I, AltOp);
+}
+
+static std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  if (I->getOpcode() == AltOp->getOpcode())
+    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
+  assert(I->isBinaryOp() && "Cannot convert the instruction.");
+  std::optional<InterchangeableBinOp> Converter(isConvertible(I, MainOp));
+  if (Converter)
+    return std::make_pair(MainOp, Converter->getOperand(MainOp));
+  Converter = isConvertible(I, AltOp);
+  assert(Converter && "Cannot convert the instruction.");
+  return std::make_pair(AltOp, Converter->getOperand(AltOp));
+}
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// The main/alternate instruction. MainOp is also VL0.
@@ -1106,22 +1144,6 @@ public:
         AltOpConverter(AltOpConverter) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 };
-
-static std::pair<Instruction *, SmallVector<Value *>>
-convertTo(Instruction *I, const InstructionsState &S) {
-  Instruction *MainOp = S.getMainOp();
-  if (I->getOpcode() == MainOp->getOpcode())
-    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
-  Instruction *AltOp = S.getAltOp();
-  // Prefer AltOp instead of interchangeable instruction of MainOp.
-  if (I->getOpcode() == AltOp->getOpcode())
-    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
-  assert(S.hasOpConverter() && "Cannot convert the instruction.");
-  if (S.getMainOpConverter().contain(I))
-    return std::make_pair(MainOp, InterchangeableBinOp(I).getOperand(MainOp));
-  assert(S.getAltOpConverter().contain(I) && "Cannot convert the instruction.");
-  return std::make_pair(AltOp, InterchangeableBinOp(I).getOperand(AltOp));
-}
 
 } // end anonymous namespace
 
@@ -2786,7 +2808,8 @@ public:
           }
           continue;
         }
-        auto [SelectedOp, Ops] = convertTo(cast<Instruction>(VL[Lane]), S);
+        auto [SelectedOp, Ops] =
+            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
         bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
