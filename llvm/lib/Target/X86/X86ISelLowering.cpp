@@ -42367,26 +42367,25 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     if (VT.is512BitVector()) {
       // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
       // the upper subvector is used.
-      SDValue LHS = N->getOperand(0);
-      SDValue RHS = N->getOperand(1);
+      SDValue LHS = peekThroughBitcasts(N->getOperand(0));
+      SDValue RHS = peekThroughBitcasts(N->getOperand(1));
       uint64_t Mask = N->getConstantOperandVal(2);
       SmallVector<SDValue> LHSOps, RHSOps;
       SDValue NewLHS, NewRHS;
-      if (collectConcatOps(peekThroughBitcasts(LHS).getNode(), LHSOps, DAG) &&
-          LHSOps.size() == 2 && (Mask & 0x0A) == 0x0A) {
+      if ((Mask & 0x0A) == 0x0A &&
+          collectConcatOps(LHS.getNode(), LHSOps, DAG) && LHSOps.size() == 2) {
         NewLHS = widenSubVector(LHSOps[1], false, Subtarget, DAG, DL, 512);
-        NewLHS = DAG.getBitcast(VT, NewLHS);
         Mask &= ~0x0A;
       }
-      if (collectConcatOps(peekThroughBitcasts(RHS).getNode(), RHSOps, DAG) &&
-          RHSOps.size() == 2 && (Mask & 0xA0) == 0xA0) {
+      if ((Mask & 0xA0) == 0xA0 &&
+          collectConcatOps(RHS.getNode(), RHSOps, DAG) && RHSOps.size() == 2) {
         NewRHS = widenSubVector(RHSOps[1], false, Subtarget, DAG, DL, 512);
-        NewRHS = DAG.getBitcast(VT, NewRHS);
         Mask &= ~0xA0;
       }
       if (NewLHS || NewRHS)
-        return DAG.getNode(X86ISD::SHUF128, DL, VT, NewLHS ? NewLHS : LHS,
-                           NewRHS ? NewRHS : RHS,
+        return DAG.getNode(X86ISD::SHUF128, DL, VT,
+                           DAG.getBitcast(VT, NewLHS ? NewLHS : LHS),
+                           DAG.getBitcast(VT, NewRHS ? NewRHS : RHS),
                            DAG.getTargetConstant(Mask, DL, MVT::i8));
     }
     return SDValue();
