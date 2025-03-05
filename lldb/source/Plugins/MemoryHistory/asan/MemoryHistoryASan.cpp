@@ -8,6 +8,7 @@
 
 #include "MemoryHistoryASan.h"
 
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/MemoryHistory.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
@@ -175,19 +176,19 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
   const auto &target = process_sp->GetTarget();
-  std::unordered_set<ModuleSP> preferred_modules;
+  SymbolContextList preferred_modules;
+  llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
   target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
-    llvm::Regex pattern("libclang_rt.asan_.*_dynamic.dylib");
     if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
-      preferred_modules.insert(m);
+      preferred_modules.Append(SymbolContext(m));
       return false;
     }
 
     return true;
   });
 
-  if (!preferred_modules.empty())
-    options.SetPreferredModules(std::move(preferred_modules));
+  if (!preferred_modules.IsEmpty())
+    options.SetPreferredSymbolContexts(std::move(preferred_modules));
 
   ExpressionResults expr_result = UserExpression::Evaluate(
       exe_ctx, options, expr.GetString(), "", return_value_sp);

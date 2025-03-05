@@ -782,15 +782,11 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   }
 
   ModuleList non_local_images = target->GetImages();
-  // We'll process module_sp separately, before the other modules.
+  // We'll process module_sp and any preferred modules separately, before the
+  // other modules.
   non_local_images.Remove(sc.module_sp);
-
-  ModuleList preferred_images;
-  // TODO: make m_preferred_modules a ModuleList
-  for (auto const &m : m_preferred_modules) {
-    non_local_images.Remove(m);
-    preferred_images.Append(m);
-  }
+  for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
+    non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
 
   LoadAddressResolver resolver(target, symbol_was_missing_weak);
 
@@ -801,9 +797,11 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   for (const ConstString &name : names) {
     // The lookup order here is as follows:
     // 1) Functions in `sc.module_sp`
-    // 2) Functions in the other modules
-    // 3) Symbols in `sc.module_sp`
-    // 4) Symbols in the other modules
+    // 2) Functions in the preferred modules list
+    // 3) Functions in the other modules
+    // 4) Symbols in `sc.module_sp`
+    // 5) Symbols in the preferred modules list
+    // 6) Symbols in the other modules
     if (sc.module_sp) {
       SymbolContextList sc_list;
       sc.module_sp->FindFunctions(name, CompilerDeclContext(),
@@ -815,8 +813,8 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
 
     {
       SymbolContextList sc_list;
-      preferred_images.FindFunctions(name, lldb::eFunctionNameTypeFull,
-                                     function_options, sc_list);
+      m_preferred_modules.FindFunctions(name, lldb::eFunctionNameTypeFull,
+                                        function_options, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
@@ -839,8 +837,8 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
 
     {
       SymbolContextList sc_list;
-      preferred_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
-                                                  sc_list);
+      m_preferred_modules.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
+                                                     sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }

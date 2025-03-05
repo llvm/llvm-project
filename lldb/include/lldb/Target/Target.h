@@ -25,6 +25,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
@@ -332,12 +333,12 @@ public:
     m_language = SourceLanguage(language_type);
   }
 
-  void SetPreferredModules(std::unordered_set<lldb::ModuleSP> modules) {
-    m_preferred_modules = std::move(modules);
+  void SetPreferredSymbolContexts(SymbolContextList modules) {
+    m_preferred_lookup_contexts = std::move(modules);
   }
 
-  const std::unordered_set<lldb::ModuleSP> &GetPreferredModules() const {
-    return m_preferred_modules;
+  const SymbolContextList &GetPreferredSymbolContexts() const {
+    return m_preferred_lookup_contexts;
   }
 
   /// Set the language using a pair of language code and version as
@@ -509,7 +510,7 @@ private:
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
 
-  std::unordered_set<lldb::ModuleSP> m_preferred_modules;
+  SymbolContextList m_preferred_lookup_contexts;
 };
 
 // Target

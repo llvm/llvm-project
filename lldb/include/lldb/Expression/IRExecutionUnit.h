@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
 
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -162,8 +163,10 @@ public:
     return m_jitted_global_variables;
   }
 
-  void SetPreferredModules(std::unordered_set<lldb::ModuleSP> modules) {
-    m_preferred_modules = std::move(modules);
+  void SetPreferredModules(SymbolContextList const &modules) {
+    for (auto const &m : modules)
+      if (m.module_sp)
+        m_preferred_modules.Append(m.module_sp);
   }
 
 private:
@@ -401,7 +404,11 @@ private:
   ///< defining no functions using that variable, would do this.)  If this
   ///< is true, any allocations need to be committed immediately -- no
   ///< opportunity for relocation.
-  std::unordered_set<lldb::ModuleSP> m_preferred_modules;
+
+  ///< Any Module in this list will be used for symbol/function lookup
+  ///< before any other module (except for the module corresponding to the
+  ///< current frame).
+  ModuleList m_preferred_modules;
 };
 
 } // namespace lldb_private
