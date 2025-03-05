@@ -287,8 +287,8 @@ for.body:
   %x = phi i32 [ 0, %entry ], [ %y, %for.body ]
   %a = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %y = phi i32 [ 0, %entry ], [ %a, %for.body ]
-  tail call void @_Z1gi(i32 signext %x)
-  tail call void @_Z1gi(i32 signext %a)
+  tail call void @_Z1gi(i32 %x)
+  tail call void @_Z1gi(i32 %a)
   %add = add nuw nsw i32 %i, 2
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp ne i32 %inc, 100000

@@ -221,9 +221,9 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
   assert(MaxIterations > 0 && "no peeling is allowed?");
 }
 
-// Test if \p Phi is induction variable or not. It can be checked by using SCEV,
-// but it's expensive to calculate it here. Instead, we perform the cheaper
-// checks, which cannot detect complex one but enough for some cases.
+/// Test if \p Phi is induction variable or not. It can be checked by using SCEV,
+/// but it's expensive to calculate it here. Instead, we perform the cheaper
+/// checks, which cannot detect complex one but enough for some cases.
 bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
   // Currently, we only support loops that consist of one basic block. In this
   // case, the phi can become an IV if it has an incoming value from the basic
@@ -253,7 +253,7 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
     if (Visited.contains(Cur))
       return false;
 
-    Instruction *I = dyn_cast<Instruction>(Cur);
+    auto *I = dyn_cast<Instruction>(Cur);
     if (!I || I->getParent() != Phi->getParent())
       return false;
 
