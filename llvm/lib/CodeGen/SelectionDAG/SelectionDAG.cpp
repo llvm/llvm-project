@@ -5615,8 +5615,8 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
 
     // For signed division need to compare abs value of the operands.
-    Op0 = Op0.abs(/*IntMinIsPoison*/ false);
-    Op1 = Op1.abs(/*IntMinIsPoison*/ false);
+    Op0 = Op0.abs(/*IntMinIsPoison=*/ false);
+    Op1 = Op1.abs(/*IntMinIsPoison=*/ false);
 
     std::optional<bool> Uge = KnownBits::uge(Op0, Op1);
     if (Uge && *Uge)
