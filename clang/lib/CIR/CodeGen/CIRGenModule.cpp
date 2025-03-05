@@ -547,6 +547,7 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     return *(theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes));
   }
 
+  case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64: {
     return *(theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes));
   }
