@@ -162,17 +162,16 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     // Check a function argument.
     bool Ret = false;
 
-    if (!CountFD->hasAttr<PureAttr>() && !CountFD->hasAttr<ConstAttr>()) {
-      Diag(E->getBeginLoc(), diag::err_count_attr_func_must_be_pure_or_const)
-          << CountDecl << E->getSourceRange();
-      Ret = true;
-    }
+    // FIXME: We should check that the function is either pure or const.
 
     if (CountFD->getNumParams() != 1) {
       Diag(E->getBeginLoc(), diag::err_count_attr_func_must_have_one_param)
           << CountDecl << E->getSourceRange();
       Ret = true;
     }
+
+    if (!Ret && !CountFD->hasAttr<UsedAttr>())
+      CountFD->addAttr(UsedAttr::Create(Context, CountFD->getSourceRange()));
 
     return Ret;
   }

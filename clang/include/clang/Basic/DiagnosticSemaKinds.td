@@ -6767,8 +6767,6 @@ def err_counted_by_attr_pointee_unknown_size : Error<
     ""
   "}2">;
 def err_count_attr_func_cannot_be_a_call : Error<"function must not be a call">;
-def err_count_attr_func_must_be_pure_or_const
-    : Error<"function must be either 'pure' or 'const'">;
 def err_count_attr_func_must_have_one_param
     : Error<"function must have only one parameter">;
 
