@@ -30,6 +30,14 @@ public:
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
 };
 
+class MachineBlockPlacementStatsPass
+    : public PassInfoMixin<MachineBlockPlacementStatsPass> {
+
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEBLOCKPLACEMENT_H
