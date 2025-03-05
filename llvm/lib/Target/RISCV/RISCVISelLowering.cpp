@@ -23064,8 +23064,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
       NewShuffleMask.push_back(Mask[i + Factor * j]);
 
     Value *Shuffle = Builder.CreateShuffleVector(
-        SVI->getOperand(0), SVI->getOperand(1),
-        NewShuffleMask);
+        SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask);
     Ops.push_back(Shuffle);
 
     NewShuffleMask.clear();
