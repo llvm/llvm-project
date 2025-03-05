@@ -62,6 +62,25 @@ MemoryHistoryASan::MemoryHistoryASan(const ProcessSP &process_sp) {
     m_process_wp = process_sp;
 }
 
+///< On Darwin, if LLDB loaded libclang_rt, it's coming from a locally built
+///< compiler-rt, and we should prefer it in favour of the system sanitizers.
+///< This helper searches the target for such a dylib. Returns nullptr if no
+///< such dylib was found.
+static ModuleSP GetPreferredAsanModule(const Target &target) {
+  ModuleSP module;
+  llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
+  target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
+    if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
+      module = m;
+      return false;
+    }
+
+    return true;
+  });
+
+  return module;
+}
+
 const char *memory_history_asan_command_prefix = R"(
     extern "C"
     {
@@ -175,20 +194,11 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
-  const auto &target = process_sp->GetTarget();
-  SymbolContextList preferred_modules;
-  llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
-  target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
-    if (pattern.match(m->GetFileSpec().GetFilename().GetStringRef())) {
-      preferred_modules.Append(SymbolContext(m));
-      return false;
-    }
-
-    return true;
-  });
-
-  if (!preferred_modules.IsEmpty())
-    options.SetPreferredSymbolContexts(std::move(preferred_modules));
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
 
   ExpressionResults expr_result = UserExpression::Evaluate(
       exe_ctx, options, expr.GetString(), "", return_value_sp);
