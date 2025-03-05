@@ -959,17 +959,17 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC,
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    if (Imm && FeatureBits[RISCV::FeatureVendorXCVbi])
+    if (!Imm)
+      return RISCV::BEQ;
+    if (FeatureBits[RISCV::FeatureVendorXCVbi])
       return RISCV::CV_BEQIMM;
-    else
-      llvm_unreachable("Unknown branch immediate!");
-    return RISCV::BEQ;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_NE:
-    if (Imm && FeatureBits[RISCV::FeatureVendorXCVbi])
+    if (!Imm)
+      return RISCV::BNE;
+    if (FeatureBits[RISCV::FeatureVendorXCVbi])
       return RISCV::CV_BNEIMM;
-    else
-      llvm_unreachable("Unknown branch immediate!");
-    return RISCV::BNE;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
