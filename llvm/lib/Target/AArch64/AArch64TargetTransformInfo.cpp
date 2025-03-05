@@ -185,7 +185,7 @@ public:
 
 TailFoldingOption TailFoldingOptionLoc;
 
-cl::opt<TailFoldingOption, true, cl::parser<std::string>> SVETailFolding(
+static cl::opt<TailFoldingOption, true, cl::parser<std::string>> SVETailFolding(
     "sve-tail-folding",
     cl::desc(
         "Control the use of vectorisation using tail-folding for SVE where the"
@@ -3017,20 +3017,24 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i1, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i1, MVT::nxv2f64, 1},
 
       // Complex, from nxv4f32.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i1, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i1, MVT::nxv4f32, 1},
 
       // Complex, from nxv8f64. Illegal -> illegal conversions not required.
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7},
@@ -3057,10 +3061,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv8i1, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10},
       {ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv8i1, MVT::nxv8f16, 1},
 
       // Complex, from nxv4f16.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4},
@@ -4167,15 +4173,14 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
                                  TargetTransformInfo::UnrollingPreferences &UP,
                                  AArch64TTIImpl &TTI) {
   // Limit loops with structure that is highly likely to benefit from runtime
-  // unrolling; that is we exclude outer loops, loops with multiple exits and
-  // many blocks (i.e. likely with complex control flow). Note that the
-  // heuristics here may be overly conservative and we err on the side of
-  // avoiding runtime unrolling rather than unroll excessively. They are all
-  // subject to further refinement.
-  if (!L->isInnermost() || !L->getExitBlock() || L->getNumBlocks() > 8)
+  // unrolling; that is we exclude outer loops and loops with many blocks (i.e.
+  // likely with complex control flow). Note that the heuristics here may be
+  // overly conservative and we err on the side of avoiding runtime unrolling
+  // rather than unroll excessively. They are all subject to further refinement.
+  if (!L->isInnermost() || L->getNumBlocks() > 8)
     return;
 
-  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
        SE.getSmallConstantMaxTripCount(L) <= 32))
@@ -4193,6 +4198,28 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
           *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
     }
   }
+
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  if (!L->getExitBlock()) {
+    if (L->getNumBlocks() == 2 && Size < 6 &&
+        all_of(
+            L->getBlocks(),
+            [](BasicBlock *BB) {
+              return isa<BranchInst>(BB->getTerminator());
+            })) {
+      UP.RuntimeUnrollMultiExit = true;
+      UP.Runtime = true;
+      // Limit unroll count.
+      UP.DefaultUnrollRuntimeCount = 4;
+      // Allow slightly more costly trip-count expansion to catch search loops
+      // with pointer inductions.
+      UP.SCEVExpansionBudget = 5;
+    }
+    return;
+  }
+
+  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
+    return;
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;

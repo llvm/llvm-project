@@ -1171,6 +1171,55 @@ public:
   OpenACCReductionOperator getReductionOp() const { return Op; }
 };
 
+class OpenACCLinkClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCLinkClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCLinkClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Link, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Link;
+  }
+
+  static OpenACCLinkClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceResidentClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceResidentClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceResidentClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                              ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::DeviceResident, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DeviceResident;
+  }
+
+  static OpenACCDeviceResidentClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 

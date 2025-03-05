@@ -27,6 +27,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -176,6 +177,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::OMPDeclareMapper:
     return CGM.EmitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(&D), this);
+
+  case Decl::OpenACCDeclare:
+    return CGM.EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -2841,6 +2845,11 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
       (!LangOpts.EmitAllDecls && !D->isUsed()))
     return;
   getOpenMPRuntime().emitUserDefinedMapper(D, CGF);
+}
+
+void CodeGenModule::EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                                       CodeGenFunction *CGF) {
+  // This is a no-op, we cna just ignore these declarations.
 }
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {

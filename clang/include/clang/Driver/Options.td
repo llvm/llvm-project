@@ -2278,6 +2278,24 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
 
+defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
+  LangOpts<"AtomicRemoteMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+
+defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
+  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+
+defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
+  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
+  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
+
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -3158,7 +3176,7 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
-def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
@@ -4711,7 +4729,7 @@ def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of data access to code sections (ARM only)">;
 let Flags = [TargetSpecific] in {
-def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0">,
+def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "
            "For AArch32: 'soft' uses a function call, or 'tpidrurw', 'tpidruro' or 'tpidrprw' use the three CP15 registers. 'cp15' is an alias for 'tpidruro'. "
            "For AArch64: 'tpidr_el0', 'tpidr_el1', 'tpidr_el2', 'tpidr_el3' or 'tpidrro_el0' use the five system registers. 'elN' is an alias for 'tpidr_elN'.">;
@@ -5154,14 +5172,10 @@ defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
 
-defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
-  TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable generation of unsafe floating point "
-          "atomic instructions. May generate more efficient code, but may not "
-          "respect rounding and denormal modes, and may give incorrect results "
-          "for certain memory destinations. (AMDGPU only)">,
-  NegFlag<SetFalse>>;
+def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
+  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
+  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -6763,8 +6777,16 @@ defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
 defm cray_pointer : BooleanFFlag<"cray-pointer">, Group<gfortran_Group>;
-defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">, Group<gfortran_Group>;
-defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">, Group<gfortran_Group>;
+defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">,
+                       HelpText<"Treat fixed form lines with 'd' or 'D' in the "
+                                "first column as blank.">,
+                       Group<f_Group>,
+                       Visibility<[FlangOption, FC1Option]>;
+defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">,
+                           HelpText<"Treat fixed form lines with 'd' or 'D' in "
+                                    "the first column as comments.">,
+                           Group<f_Group>,
+                           Visibility<[FlangOption, FC1Option]>;
 defm dollar_ok : BooleanFFlag<"dollar-ok">, Group<gfortran_Group>;
 defm dump_fortran_optimized : BooleanFFlag<"dump-fortran-optimized">, Group<gfortran_Group>;
 defm dump_fortran_original : BooleanFFlag<"dump-fortran-original">, Group<gfortran_Group>;
@@ -7417,7 +7439,7 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">,
 DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,

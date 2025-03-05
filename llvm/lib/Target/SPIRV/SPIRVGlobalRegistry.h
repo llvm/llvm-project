@@ -620,6 +620,14 @@ public:
 
   const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
   LLT getRegType(SPIRVType *SpvType) const;
+
+  // Replace all uses of a |Old| with |New| updates the global registry type
+  // mappings.
+  void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);
+
+  void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
+  void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
+  void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

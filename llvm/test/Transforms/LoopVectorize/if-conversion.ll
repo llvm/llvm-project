@@ -159,10 +159,10 @@ define i32 @reduction_func(ptr nocapture %A, i32 %n) nounwind uwtable readonly s
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 31)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 30)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[VEC_PHI]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP2]], <4 x i32> [[VEC_PHI]], <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP4]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]

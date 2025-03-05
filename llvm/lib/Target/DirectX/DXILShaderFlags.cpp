@@ -99,6 +99,19 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (!CSF.LowPrecisionPresent)
+    CSF.LowPrecisionPresent =
+        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
+
+  if (!CSF.LowPrecisionPresent) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
+        CSF.LowPrecisionPresent = true;
+        break;
+      }
+    }
+  }
+
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:
