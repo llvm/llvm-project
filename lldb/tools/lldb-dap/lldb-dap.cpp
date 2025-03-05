@@ -509,8 +509,11 @@ int main(int argc, char *argv[]) {
   // Create a memory monitor. This can return nullptr if the host platform is
   // not supported.
   std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
-      lldb_private::MemoryMonitor::Create(
-          []() { lldb::SBDebugger::MemoryPressureDetected(); });
+      lldb_private::MemoryMonitor::Create([&]() {
+        if (log)
+          *log << "memory pressure detected\n";
+        lldb::SBDebugger::MemoryPressureDetected();
+      });
 
   if (memory_monitor)
     memory_monitor->Start();
