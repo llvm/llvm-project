@@ -156,16 +156,16 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point must be zero for non-int8 integer types");
 
-    if (weightZpVal != 0) {
-      weight = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-          weightPaddingVal, nullptr, rewriter.getI32IntegerAttr(weightZpVal));
+    // construct pad_const values from zp values
+    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+    const Value inputPadConst =
+        createPadConstTensor(builder, op->getLoc(), input, inputZpVal);
+    const Value weightPadConst =
+        createPadConstTensor(builder, op->getLoc(), input, weightZpVal);
 
-    } else {
-      weight = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(weightETy), weight,
-          weightPaddingVal);
-    }
+    weight = CreateOpAndInferShape<tosa::PadOp>(
+        rewriter, loc, UnrankedTensorType::get(weightETy), weight,
+        weightPaddingVal, weightPadConst);
 
     weightTy = cast<ShapedType>(weight.getType());
     weightHeight = weightTy.getDimSize(1);
@@ -177,7 +177,6 @@ public:
         stride[0],      weightWidth / stride[1],
         stride[1],      inputChannels};
 
-    ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
     weight = CreateOpAndInferShape<tosa::ReshapeOp>(
         builder, UnrankedTensorType::get(weightETy), weight,
         getTosaConstShape(rewriter, loc, weightReshapeDims0));
@@ -214,15 +213,9 @@ public:
     Value inputPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), inputPadding);
 
-    if (inputZpVal != 0) {
-      input = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(inputETy), input,
-          inputPaddingVal, nullptr, rewriter.getI32IntegerAttr(inputZpVal));
-    } else {
-      input = CreateOpAndInferShape<tosa::PadOp>(
-          rewriter, loc, UnrankedTensorType::get(inputETy), input,
-          inputPaddingVal);
-    }
+    input = CreateOpAndInferShape<tosa::PadOp>(
+        rewriter, loc, UnrankedTensorType::get(inputETy), input,
+        inputPaddingVal, inputPadConst);
 
     // We use a zero bias as we need to broadcast the bias.
     auto zeroBias = rewriter.create<tosa::ConstOp>(
