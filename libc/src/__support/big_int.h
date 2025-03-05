@@ -296,10 +296,10 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
     word &dst = out[at(index)];
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
