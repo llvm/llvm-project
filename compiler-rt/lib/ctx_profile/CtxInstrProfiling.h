@@ -169,7 +169,6 @@ void __llvm_ctx_profile_free();
 /// The Writer's first parameter plays the role of closure for Writer, and is
 /// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
 /// The second parameter is the root of a context tree.
-bool __llvm_ctx_profile_fetch(void *Data,
-                              bool (*Writer)(void *, const ContextNode &));
+bool __llvm_ctx_profile_fetch(ProfileWriter &);
 }
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_

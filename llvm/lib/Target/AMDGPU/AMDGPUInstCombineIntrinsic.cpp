@@ -1563,12 +1563,57 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   return NewCall;
 }
 
+Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+    APInt &UndefElts) const {
+  auto *VT = dyn_cast<FixedVectorType>(II.getType());
+  if (!VT)
+    return nullptr;
+
+  const unsigned FirstElt = DemandedElts.countr_zero();
+  const unsigned LastElt = DemandedElts.getActiveBits() - 1;
+  const unsigned MaskLen = LastElt - FirstElt + 1;
+
+  // TODO: Handle general subvector extract.
+  if (MaskLen != 1)
+    return nullptr;
+
+  Type *EltTy = VT->getElementType();
+  if (!isTypeLegal(EltTy))
+    return nullptr;
+
+  Value *Src = II.getArgOperand(0);
+
+  assert(FirstElt == LastElt);
+  Value *Extract = IC.Builder.CreateExtractElement(Src, FirstElt);
+
+  // Make sure convergence tokens are preserved.
+  // TODO: CreateIntrinsic should allow directly copying bundles
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  II.getOperandBundlesAsDefs(OpBundles);
+
+  Module *M = IC.Builder.GetInsertBlock()->getModule();
+  Function *Remangled = Intrinsic::getOrInsertDeclaration(
+      M, II.getIntrinsicID(), {Extract->getType()});
+
+  // TODO: Preserve callsite attributes?
+  CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
+
+  // FIXME: If the call has a convergence bundle, we end up leaving the dead
+  // call behind.
+  return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()), NewCall,
+                                        FirstElt);
+}
+
 std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
+  case Intrinsic::amdgcn_readfirstlane:
+    SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    return simplifyAMDGCNLaneIntrinsicDemanded(IC, II, DemandedElts, UndefElts);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
