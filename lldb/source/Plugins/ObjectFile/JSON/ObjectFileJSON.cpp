@@ -182,7 +182,8 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
   lldb::user_id_t id = 1;
   for (const auto &json_section : m_sections) {
     auto make_section = [this, &id](const JSONSection &section,
-                               SectionSP parent_section_sp = nullptr) -> SectionSP {
+                                    SectionSP parent_section_sp =
+                                        nullptr) -> SectionSP {
       SectionSP section_sp;
       if (parent_section_sp) {
         section_sp = std::make_shared<Section>(
@@ -190,7 +191,8 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
             /*sect_id=*/id++,
             /*name=*/ConstString(section.name),
             /*sect_type=*/section.type.value_or(eSectionTypeCode),
-            /*file_vm_addr=*/section.address.value_or(0) - parent_section_sp->GetFileAddress(),
+            /*file_vm_addr=*/section.address.value_or(0) -
+                parent_section_sp->GetFileAddress(),
             /*vm_size=*/section.size.value_or(0),
             /*file_offset=*/0,
             /*file_size=*/0,
