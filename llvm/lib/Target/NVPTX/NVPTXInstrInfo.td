@@ -703,6 +703,53 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+
+  // FP6 conversions.
+  multiclass CVT_TO_F6X2<string F6Name> {
+    def _f32 :
+      NVPTXInst<(outs Int16Regs:$dst),
+                (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+                !strconcat("cvt${mode:base}.satfinite${mode:relu}.",
+                F6Name, "x2.f32 \t$dst, $src1, $src2;"), []>;
+  }
+
+  defm CVT_e2m3x2 : CVT_TO_F6X2<"e2m3">;
+  defm CVT_e3m2x2 : CVT_TO_F6X2<"e3m2">;
+
+  class CVT_f16x2_fp6<string F6Name> :
+    NVPTXInst<(outs Int32Regs:$dst),
+              (ins Int16Regs:$src, CvtMode:$mode),
+              !strconcat("cvt${mode:base}${mode:relu}.f16x2.",
+              F6Name, "x2 \t$dst, $src;"), []>;
+
+  def CVT_f16x2_e2m3x2 : CVT_f16x2_fp6<"e2m3">;
+  def CVT_f16x2_e3m2x2 : CVT_f16x2_fp6<"e3m2">;
+  
+  // UE8M0x2 conversions.
+  class CVT_f32_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Float32Regs:$src1, Float32Regs:$src2, CvtMode:$mode),
+              !strconcat("cvt${mode:base}", sat, ".ue8m0x2.f32 \t$dst, $src1, $src2;"), []>;
+  
+  class CVT_bf16x2_to_ue8m0x2<string sat = ""> :
+    NVPTXInst<(outs Int16Regs:$dst),
+              (ins Int32Regs:$src, CvtMode:$mode),
+              !strconcat("cvt${mode:base}", sat, ".ue8m0x2.bf16x2 \t$dst, $src;"), []>;
+
+  multiclass CVT_TO_UE8M0x2 {
+    def _f32 : CVT_f32_to_ue8m0x2;
+    def _f32_sf : CVT_f32_to_ue8m0x2<".satfinite">;
+    def _bf16x2 : CVT_bf16x2_to_ue8m0x2;
+    def _bf16x2_sf : CVT_bf16x2_to_ue8m0x2<".satfinite">;
+  }
+  
+  defm CVT_ue8m0x2 : CVT_TO_UE8M0x2;
+
+  def CVT_bf16x2_ue8m0x2 :
+      NVPTXInst<(outs Int32Regs:$dst),
+                (ins Int16Regs:$src),
+                "cvt.rn.bf16x2.ue8m0x2 \t$dst, $src;", []>;
+
 }
 
 def fpround_oneuse : OneUse1<fpround>;
