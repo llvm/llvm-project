@@ -449,7 +449,7 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
    return nullptr;
 #else 
   CHECK(path == nullptr);
- #if SANITIZER_APPLE
+#if SANITIZER_APPLE
    if (const char *found_path = FindPathToBinary("atos")) {
      VReport(2, "Using atos found at: %s\n", found_path);
      return new(*allocator) AtosSymbolizer(found_path, allocator);
