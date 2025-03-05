@@ -134,7 +134,6 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
         Value *Op0 = ICmp->getOperand(0);
         Value *Op1 = ICmp->getOperand(1);
         ICmpInst::Predicate Pred = ICmp->getPredicate();
-        IRBuilder<> Builder(ICmp);
 
         // Ensure ballot is one of the operands
         Value *OtherOp = nullptr;
@@ -149,10 +148,11 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
         // %ballot_arg, 1
         if ((Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) ||
             (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_One()))) {
-          Value *Xor = Builder.CreateXor(Src, Builder.getTrue());
-          LLVM_DEBUG(dbgs()
-                     << "Replacing ICMP_EQ/ICMP_NE with XOR: " << *Xor << "\n");
-          ICmp->replaceAllUsesWith(Xor);
+          Instruction *NotOp = BinaryOperator::CreateNot(Src);
+          NotOp->insertInto(ICmp->getParent(), ICmp->getIterator());
+          LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ/ICMP_NE with NOT: " << *NotOp
+                            << "\n");
+          ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
         }
         // Case (icmp eq %ballot, 1) OR (icmp ne %ballot, 0)  -->  %ballot_arg
