@@ -37,6 +37,10 @@ struct MissingFeatures {
   static bool opGlobalAlignment() { return false; }
   static bool opGlobalLinkage() { return false; }
 
+  static bool supportIFuncAttr() { return false; }
+  static bool supportVisibility() { return false; }
+  static bool supportComdat() { return false; }
+
   // Load/store attributes
   static bool opLoadThreadLocal() { return false; }
   static bool opLoadEmitScalarRangeCheck() { return false; }
