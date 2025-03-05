@@ -3119,6 +3119,8 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
       match(UpperSrc, m_BitReverse(m_Value(UpperBRev))))
     return ConcatIntrinsicCalls(Intrinsic::bitreverse, UpperBRev, LowerBRev);
 
+  // iX ext split: extending or(zext(x),shl(zext(y),bw/2) pattern
+  // to consume sext/ashr: or(zext(sext(x)),shl(zext(sext(ashr(x))),bw/2)
   Value *X;
   if (match(LowerSrc, m_SExt(m_Value(X))) &&
       match(UpperSrc,
