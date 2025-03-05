@@ -241,7 +241,7 @@ func.func @test_pad_non_const(%arg0: tensor<13x21x3xf32>, %arg1: !tosa.shape<6>)
 // -----
 
 func.func @test_pad_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi8>) -> tensor<13x21x3xi8> {
-  %0 = tosa.const_shape {value = dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %0 = tosa.const_shape {values = dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
   // expected-error@+1 {{'tosa.pad' op pad_const of pad is not constant}}
   %1 = tosa.pad %arg0, %0, %arg1 : (tensor<13x21x3xi8>, !tosa.shape<6>, tensor<1xi8>) -> tensor<13x21x3xi8>
   return %1 : tensor<13x21x3xi8>
@@ -250,7 +250,7 @@ func.func @test_pad_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<1xi8>) ->
 // -----
 
 func.func @test_pad_io_rank_mismatch(%arg0: tensor<13x21xf32>) {
-  %0 = tosa.const_shape {value = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.const_shape {values = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.pad' op expect same input and output tensor rank.}}
   %1 = tosa.pad %arg0, %0, %pad_const : (tensor<13x21xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<13x21x3xf32>
@@ -267,7 +267,7 @@ func.func @test_concat_input_rank_mismatch(%arg0: tensor<1x2x3xf32>, %arg1: tens
 // -----
 
 func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>) {
-  %0 = tosa.const_shape {value = dense<1> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %0 = tosa.const_shape {values = dense<1> : tensor<6xindex>} : () -> !tosa.shape<6>
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.pad' op expected padding tensor dim 0 to have size 4 (2*rank(shape1)) but got size 6}}
   %1 = tosa.pad %arg0, %0, %pad_const : (tensor<13x21xf32>, !tosa.shape<6>, tensor<1xf32>) -> tensor<13x21xf32>
@@ -277,7 +277,7 @@ func.func @test_pad_invalid_padding_rank(%arg0: tensor<13x21xf32>) {
 // -----
 
 func.func @test_pad_invalid_padConst_rank(%arg0: tensor<13x21xf32>, %arg1: tensor<2x2xi32>) {
-  %0 = tosa.const_shape {value = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.const_shape {values = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
   %1 = "tosa.const"() {values = dense<3.14> : tensor<2xf32>} : () -> tensor<2xf32>
   // expected-error@+1 {{'tosa.pad' op operand #2 must be tosa-conformant scalar tensor of number values, but got 'tensor<2xf32>'}}
   %2 = tosa.pad %arg0, %0, %1 : (tensor<13x21xf32>, !tosa.shape<4>, tensor<2xf32>) -> tensor<13x21xf32>
@@ -287,7 +287,7 @@ func.func @test_pad_invalid_padConst_rank(%arg0: tensor<13x21xf32>, %arg1: tenso
 // -----
 
 func.func @test_pad_padding_shape_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  %0 = tosa.const_shape {value = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.const_shape {values = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>  
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.pad' op expected padding tensor dim 0 to have size 6 (2*rank(shape1)) but got size 4}}
   %1 = tosa.pad %arg0, %0, %pad_const : (tensor<13x21x3xf32>, !tosa.shape<4>, tensor<1xf32>) -> tensor<13x21x3xf32>
@@ -461,7 +461,7 @@ func.func @test_reduce_min_invalid_output_rank(%arg0 : tensor<i32>) -> () {
 // -----
 
 func.func @test_reshape_type_mismatch(%arg0 : tensor<13x21x3xf32>) -> () {
-  %1 = tosa.const_shape {value = dense<[13, 21, 3, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %1 = tosa.const_shape {values = dense<[13, 21, 3, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
   // expected-error@+1 {{'tosa.reshape' op expect input and output to have same element type, got 'f32' and 'i32'}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xf32>, !tosa.shape<4>) -> tensor<13x21x3x1xi32>
   return
@@ -470,7 +470,7 @@ func.func @test_reshape_type_mismatch(%arg0 : tensor<13x21x3xf32>) -> () {
 // -----
 
 func.func @test_reshape_static_zero_dim_input(%arg0 : tensor<13x0x3xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %s = tosa.const_shape {values = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.reshape' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<13x0x3xf32>'}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<13x0x3xf32>, !tosa.shape<3>) -> tensor<13x0x3xf32>
   return
@@ -479,7 +479,7 @@ func.func @test_reshape_static_zero_dim_input(%arg0 : tensor<13x0x3xf32>) -> () 
 // -----
 
 func.func @test_reshape_zero_dim_input(%arg0 : tensor<?x0x3xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %s = tosa.const_shape {values = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.reshape' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<?x0x3xf32>'}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?x0x3xf32>, !tosa.shape<3>) -> tensor<13x0x3xf32>
   return
@@ -488,7 +488,7 @@ func.func @test_reshape_zero_dim_input(%arg0 : tensor<?x0x3xf32>) -> () {
 // -----
 
 func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[2, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %s = tosa.const_shape {values = dense<[2, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op new shape does not match result rank}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<2>) -> tensor<?xf32>
   return
@@ -497,7 +497,7 @@ func.func @test_reshape_rank_mismatch(%arg0 : tensor<?xf32>) -> () {
 // -----
 
 func.func @test_reshape_inconsistent_result_type(%arg0 : tensor<?xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[2, 4, -1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %s = tosa.const_shape {values = dense<[2, 4, -1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.reshape' op new shape is inconsistent with result shape}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<3>) -> tensor<?x3x5xf32>
   return
@@ -506,7 +506,7 @@ func.func @test_reshape_inconsistent_result_type(%arg0 : tensor<?xf32>) -> () {
 // -----
 
 func.func @test_reshape_invalid_size(%arg0 : tensor<2x4xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[3, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %s = tosa.const_shape {values = dense<[3, 5]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 15}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<2x4xf32>, !tosa.shape<2>) -> tensor<3x5xf32>
   return
@@ -515,7 +515,7 @@ func.func @test_reshape_invalid_size(%arg0 : tensor<2x4xf32>) -> () {
 // -----
 
 func.func @test_reshape_invalid_newshape(%arg0 : tensor<1xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[-1, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %s = tosa.const_shape {values = dense<[-1, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op cannot reshape 1 elements into 4}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<1xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
   return
@@ -524,7 +524,7 @@ func.func @test_reshape_invalid_newshape(%arg0 : tensor<1xf32>) -> () {
 // -----
 
 func.func @test_reshape_invalid_newshape(%arg0 : tensor<8xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[1, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %s = tosa.const_shape {values = dense<[1, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 4}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
   return
@@ -533,7 +533,7 @@ func.func @test_reshape_invalid_newshape(%arg0 : tensor<8xf32>) -> () {
 // -----
 
 func.func @test_reshape_invalid_placeholders(%arg0 : tensor<?xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[2, -1, -1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %s = tosa.const_shape {values = dense<[2, -1, -1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.reshape' op expected at most one target dimension to be -1}}
   %0 = "tosa.reshape"(%arg0, %s) : (tensor<?xf32>, !tosa.shape<3>) -> tensor<2x?x?xf32>
   return
@@ -542,7 +542,7 @@ func.func @test_reshape_invalid_placeholders(%arg0 : tensor<?xf32>) -> () {
 // -----
 
 func.func @test_reshape_invalid_tensor_dim(%arg0 : tensor<4x?xf32>) -> () {
-  %s = tosa.const_shape {value = dense<[-2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %s = tosa.const_shape {values = dense<[-2, -1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size -2}}
   %0 = "tosa.reshape" (%arg0, %s) : (tensor<4x?xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
   return
@@ -559,7 +559,7 @@ func.func @test_reverse_axis_out_of_range(%arg0 : tensor<13x21x3xf32>) -> () {
 // -----
 
 func.func @test_reshape_zero_dim_input(%arg0 : tensor<?x0x3xf32>) -> () {
-  %1 = tosa.const_shape {value = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %1 = tosa.const_shape {values = dense<[13, 21, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.reshape' op operand #0 must be tosa-conformant tensor of number values, but got 'tensor<?x0x3xf32>'}}
   %0 = "tosa.reshape"(%arg0, %1) : (tensor<?x0x3xf32>, !tosa.shape<3>) -> tensor<13x0x3xf32>
   return
@@ -663,8 +663,8 @@ func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
 
 func.func @test_slice_invalid_start() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
-  %start = tosa.const_shape {value = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %size = tosa.const_shape {value = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // expected-error@+1 {{'tosa.slice' op length of start is not equal to rank of input shape}}
   %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<2>, !tosa.shape<3>) -> tensor<*xf32>
   return
@@ -674,8 +674,8 @@ func.func @test_slice_invalid_start() {
 
 func.func @test_slice_invalid_size() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
-  %start = tosa.const_shape {value = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %size = tosa.const_shape {value = dense<[1]> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %start = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1]> : tensor<1xindex>} : () -> !tosa.shape<1>
   // expected-error@+1 {{'tosa.slice' op length of size is not equal to rank of input shape}}
   %3 = tosa.slice %0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<1>) -> tensor<*xf32>
   return
@@ -685,7 +685,7 @@ func.func @test_slice_invalid_size() {
 
 func.func @test_tile_invalid_multiples() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
-  %cst = tosa.const_shape { value = dense<1> : tensor<1xindex> } : () -> !tosa.shape<1>
+  %cst = tosa.const_shape { values = dense<1> : tensor<1xindex> } : () -> !tosa.shape<1>
   // expected-error@+1 {{'tosa.tile' op expect 'multiples' to have rank 3 but got 1.}}
   %1 = tosa.tile %0, %cst: (tensor<4x31x31xf32>, !tosa.shape<1>) -> tensor<4x31x31xf32>
   return
@@ -695,7 +695,7 @@ func.func @test_tile_invalid_multiples() {
 
 func.func @test_tile_invalid_multiples_value() {
   %0 = tensor.empty() : tensor<4x31xf32>
-  %multiples = tosa.const_shape { value = dense<[2, -2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %multiples = tosa.const_shape { values = dense<[2, -2]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.tile' op expect element of 'multiples' to be positive integer or -1.}}
   %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31xf32>
   return
@@ -705,7 +705,7 @@ func.func @test_tile_invalid_multiples_value() {
 
 func.func @test_tile_io_rank_mismatch() {
   %0 = tensor.empty() : tensor<4x31xf32>
-  %multiples = tosa.const_shape { value = dense<[2, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %multiples = tosa.const_shape { values = dense<[2, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.tile' op expect same input and output tensor rank.}}
   %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31x31xf32>
   return
@@ -1079,24 +1079,24 @@ func.func @test_shape_type(%arg0: !tosa.shape<-1>) -> !tosa.shape<-1> {
 // -----
 
 func.func @test_const_shape() -> !tosa.shape<4> {
-  // expected-error@+1 {{'tosa.const_shape' op attribute 'value' failed to satisfy constraint: index elements attribute}}
-  %cst = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xi32>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.const_shape' op attribute 'values' failed to satisfy constraint: index elements attribute}}
+  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xi32>} : () -> !tosa.shape<4>
   return %cst : !tosa.shape<4>
 }
 
 // -----
 
-func.func @test_const_shape_value() -> !tosa.shape<5> {
-  // expected-error@+1 {{'tosa.const_shape' op expect number of elements in attribute value (4) to be equal to the rank (5) for the result shape type}}
-  %cst = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
+func.func @test_const_shape_values() -> !tosa.shape<5> {
+  // expected-error@+1 {{'tosa.const_shape' op expect number of elements in attribute values (4) to be equal to the rank (5) for the result shape type}}
+  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
   return %cst : !tosa.shape<5>
 }
 
 // -----
 
-func.func @test_const_shape_value() -> !tosa.shape<4> {
-  // expected-error@+1 {{'tosa.const_shape' op expect elements in attribute value with rank 1}}
-  %cst = tosa.const_shape {value = dense<[[1, 2], [3, 4]]> : tensor<2x2xindex>} : () -> !tosa.shape<4>
+func.func @test_const_shape_values() -> !tosa.shape<4> {
+  // expected-error@+1 {{'tosa.const_shape' op expect elements in attribute values with rank 1}}
+  %cst = tosa.const_shape {values = dense<[[1, 2], [3, 4]]> : tensor<2x2xindex>} : () -> !tosa.shape<4>
   return %cst : !tosa.shape<4>
 }
 
@@ -1146,9 +1146,9 @@ func.func @test_mul_non_broadcast(%arg0: tensor<13x21x2xf32>, %arg1: tensor<3x1x
 // -----
 // CHECK-LABEL: test_resize_invalid_scale_values
 func.func @test_resize_invalid_scale_values(%arg0: tensor<1x8x8x8xf32>) -> tensor<?x?x?x?xf32> {
-  %scale = tosa.const_shape { value = dense<[2, 0, -1, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[2, 0, -1, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op expect all scale values to be > 0, got 2, 0, -1, 2}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x?x?x?xf32>
   return %1 : tensor<?x?x?x?xf32>
@@ -1158,9 +1158,9 @@ func.func @test_resize_invalid_scale_values(%arg0: tensor<1x8x8x8xf32>) -> tenso
 
 // CHECK-LABEL: test_resize_invalid_wholly_divisible_height
 func.func @test_resize_invalid_wholly_divisible_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
-  %scale = tosa.const_shape { value = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[1, 3, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op expected (input_height - 1) * scale_y_n - offset_y + border_y to be wholly divisible by scale_y_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
   return %1 : tensor<1x8x8x8xf32>
@@ -1170,9 +1170,9 @@ func.func @test_resize_invalid_wholly_divisible_height(%arg0: tensor<1x8x8x8xf32
 
 // CHECK-LABEL: test_resize_invalid_output_height
 func.func @test_resize_invalid_output_height(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x9x8x8xf32> {
-  %scale = tosa.const_shape { value = dense<[2, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[2, 1, 1, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=15, expected=9}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x9x8x8xf32>
   return %1 : tensor<1x9x8x8xf32>
@@ -1182,9 +1182,9 @@ func.func @test_resize_invalid_output_height(%arg0: tensor<1x8x8x8xf32>) -> tens
 
 // CHECK-LABEL: test_resize_invalid_wholly_divisible_width
 func.func @test_resize_invalid_wholly_divisible_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x8x8xf32> {
-  %scale = tosa.const_shape { value = dense<[1, 1, 1, 3]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[1, 1, 1, 3]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op expected (input_width - 1) * scale_x_n - offset_x + border_x to be wholly divisible by scale_x_d, got ((8 - 1) * 1 - 0 + 0) / 3}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x8x8xf32>
   return %1 : tensor<1x8x8x8xf32>
@@ -1194,9 +1194,9 @@ func.func @test_resize_invalid_wholly_divisible_width(%arg0: tensor<1x8x8x8xf32>
 
 // CHECK-LABEL: test_resize_invalid_output_width
 func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tensor<1x8x9x8xf32> {
-  %scale = tosa.const_shape { value = dense<[1, 1, 2, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[1, 1, 2, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=15, expected=9}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = "BILINEAR" } : (tensor<1x8x8x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x8x9x8xf32>
   return %1 : tensor<1x8x9x8xf32>
@@ -1206,9 +1206,9 @@ func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tenso
 
 // CHECK-LABEL: broadcast_resize_nearest_f32
 func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
-  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op calculated output width did not match expected: calculated=1, expected=5}}
   %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "NEAREST_NEIGHBOR"} : (tensor<3x1x1x7xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x1x5x7xf32>
 
@@ -1219,9 +1219,9 @@ func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3
 
 // CHECK-LABEL: broadcast_resize_bilinear_i8
 func.func @broadcast_resize_bilinear_i8(%arg0 : tensor<3x1x1x7xi8>) -> tensor<3x4x5x7xi32> {
-  %scale = tosa.const_shape { value = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
-  %offset = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
-  %border = tosa.const_shape { value = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %scale = tosa.const_shape { values = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<0> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.resize' op calculated output height did not match expected: calculated=1, expected=4}}
   %resize = tosa.resize %arg0, %scale, %offset, %border {mode = "BILINEAR"} : (tensor<3x1x1x7xi8>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<3x4x5x7xi32>
 

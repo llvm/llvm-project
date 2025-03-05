@@ -399,8 +399,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.
   llvm::SmallVector<int64_t> newShape;
-  if (!tosa::getConstShapeValue(reshapeOp.getShape().getDefiningOp(),
-                                newShape)) {
+  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
+                                 newShape)) {
     // this mean shape is not constant
     return std::nullopt;
   }
