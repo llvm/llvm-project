@@ -128,6 +128,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
 
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by fixing false
+  positives on methods ``find`` and ``rfind`` called with three arguments.
+
 - Improved :doc:`performance/unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers 
@@ -136,10 +140,6 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
   on ternary operators calling ``std::move``.
-
-- Improved :doc:`modernize-use-starts-ends-with
-  <clang-tidy/checks/modernize/use-starts-ends-with>` check by fixing false
-  positives on methods ``find`` and ``rfind`` called with three arguments.
 
 Removed checks
 ^^^^^^^^^^^^^^
