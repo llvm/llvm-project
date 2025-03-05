@@ -5466,6 +5466,11 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
       if (!Field)
         continue;
 
+      // C++ [class.base.init]p12:
+      //   In a non-delegating constructor, the destructor for each
+      //   potentially constructed subobject of class type is potentially
+      //   invoked
+      //   ([class.dtor]).
       MarkFieldDestructorReferenced(Location, Field);
     }
 
