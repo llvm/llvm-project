@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++23 -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
 // RUN: %clang_cc1 -std=c++23 -verify %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
@@ -153,4 +153,27 @@ int g() {
     array<5> arr {};
     static_assert(f(arr) == 5);
 }
+}
+
+namespace GH128409 {
+  int &ff();
+  int &x = ff(); // nointerpreter-note {{declared here}}
+  constinit int &z = x; // expected-error {{variable does not have a constant initializer}}
+                        // expected-note@-1 {{required by 'constinit' specifier here}}
+                        // nointerpreter-note@-2 {{initializer of 'x' is not a constant expression}}
+}
+
+namespace GH129845 {
+  int &ff();
+  int &x = ff(); // nointerpreter-note {{declared here}}
+  struct A { int& x; };
+  constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}}
+                       // nointerpreter-note@-1 {{initializer of 'x' is not a constant expression}}
+  const A* gg = &g;
+}
+
+namespace extern_reference_used_as_unknown {
+  extern int &x;
+  int y;
+  constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
 }

@@ -13,3 +13,15 @@ int& test() {
   auto &i = s;
   return i;
 }
+
+// CHECK: @_Z1fv(
+// CHECK-NEXT: entry:
+// CHECK-NEXT: getelementptr inbounds nuw %struct.B
+// CHECK-NEXT: getelementptr inbounds nuw %struct.A
+// CHECK-NEXT: [[X:%.*]] = load ptr, ptr @x, align 8
+// CHECK-NEXT: store ptr [[X]]
+int &ff();
+int &x = ff();
+struct A { int& x; };
+struct B { A x[20]; };
+B f() { return {x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x,x}; }
