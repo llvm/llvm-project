@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Telemetry/Telemetry.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -77,8 +78,13 @@ public:
 
 using namespace lldb_private::telemetry;
 
+class TelemetryTest : public testing::Test {
+ public:
+  SubsystemRAII<FakePlugin> subsystems;
+};
+
 #if LLVM_ENABLE_TELEMETRY
-#define TELEMETRY_TEST(suite, test) TEST(suite, test)
+#define TELEMETRY_TEST(suite, test) TEST_F(suite, test)
 #else
 #define TELEMETRY_TEST(suite, test) TEST(DISABLED_##suite, test)
 #endif
