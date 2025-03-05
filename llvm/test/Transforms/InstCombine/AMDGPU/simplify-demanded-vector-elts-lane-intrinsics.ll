@@ -349,7 +349,6 @@ define i32 @extract_elt0_v2i32_readfirstlane_convergencetoken(<2 x i32> %src) co
 ; CHECK-LABEL: define i32 @extract_elt0_v2i32_readfirstlane_convergencetoken(
 ; CHECK-SAME: <2 x i32> [[SRC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
-; CHECK-NEXT:    [[VEC:%.*]] = call <2 x i32> @llvm.amdgcn.readfirstlane.v2i32(<2 x i32> [[SRC]]) [ "convergencectrl"(token [[T]]) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[SRC]], i64 0
 ; CHECK-NEXT:    [[ELT:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP1]]) [ "convergencectrl"(token [[T]]) ]
 ; CHECK-NEXT:    ret i32 [[ELT]]
