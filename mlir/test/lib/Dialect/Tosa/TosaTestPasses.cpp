@@ -163,7 +163,8 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   int32_t shift;
 
   // Obtain the quantized scale = multiplier and shift.
-  computeMultiplierAndShift(opTensorScale, multiplier, shift, 32);
+  if (!computeMultiplierAndShift(opTensorScale, multiplier, shift, 32))
+    return failure();
 
   bool input_unsigned =
       newTosaConv2DOp.getResult().getType().isUnsignedInteger();
