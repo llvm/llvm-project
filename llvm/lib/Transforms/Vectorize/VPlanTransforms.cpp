@@ -90,8 +90,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
-          NewRecipe = new VPWidenCastRecipe(
-              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
+          NewRecipe = new VPInstructionWithType(
+              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), {});
+          NewRecipe->getVPSingleValue()->setUnderlyingValue(CI);
         } else {
           NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
         }
@@ -552,7 +553,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
     assert(ResultTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits() &&
            "Not truncating.");
     assert(ResultTy->isIntegerTy() && "Truncation requires an integer type");
-    BaseIV = Builder.createScalarCast(Instruction::Trunc, BaseIV, TruncTy, DL);
+    BaseIV = Builder.createCast(Instruction::Trunc, BaseIV, TruncTy, DL);
     ResultTy = TruncTy;
   }
 
@@ -566,7 +567,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
         cast<VPBasicBlock>(HeaderVPBB->getSingleHierarchicalPredecessor());
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(VecPreheader);
-    Step = Builder.createScalarCast(Instruction::Trunc, Step, ResultTy, DL);
+    Step = Builder.createCast(Instruction::Trunc, Step, ResultTy, DL);
   }
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
 }
@@ -927,8 +928,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *VPC =
-            new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        auto *VPC = new VPInstructionWithType(Instruction::CastOps(ExtOpcode),
+                                              A, TruncTy, {});
         if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           VPC->setUnderlyingValue(UnderlyingExt);
@@ -936,7 +937,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         VPC->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-        auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
+        auto *VPC =
+            new VPInstructionWithType(Instruction::Trunc, A, TruncTy, {});
         VPC->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       }
@@ -1336,14 +1338,14 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
   // typed.
-  DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
+  DenseMap<VPValue *, VPInstructionWithType *> ProcessedTruncs;
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
+      if (!isa<VPWidenRecipe, VPInstructionWithType, VPReplicateRecipe,
                VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
         continue;
 
@@ -1360,7 +1362,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       // type. Skip those here, after incrementing NumProcessedRecipes. Also
       // skip casts which do not need to be handled explicitly here, as
       // redundant casts will be removed during recipe simplification.
-      if (isa<VPReplicateRecipe, VPWidenCastRecipe>(&R)) {
+      if (isa<VPReplicateRecipe, VPInstructionWithType>(&R)) {
 #ifndef NDEBUG
         // If any of the operands is a live-in and not used by VPWidenRecipe or
         // VPWidenSelectRecipe, but in MinBWs, make sure it is counted as
@@ -1404,8 +1406,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (OldResSizeInBits != NewResSizeInBits &&
           !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
-        auto *Ext =
-            new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
+        auto *Ext = new VPInstructionWithType(Instruction::ZExt, {ResultVPV},
+                                              OldResTy, {});
         Ext->insertAfter(&R);
         ResultVPV->replaceAllUsesWith(Ext);
         Ext->setOperand(0, ResultVPV);
@@ -1431,10 +1433,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
         auto [ProcessedIter, IterIsEmpty] =
             ProcessedTruncs.insert({Op, nullptr});
-        VPWidenCastRecipe *NewOp =
-            IterIsEmpty
-                ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)
-                : ProcessedIter->second;
+        VPInstructionWithType *NewOp =
+            IterIsEmpty ? new VPInstructionWithType(Instruction::Trunc, Op,
+                                                    NewResTy, {})
+                        : ProcessedIter->second;
         R.setOperand(Idx, NewOp);
         if (!IterIsEmpty)
           continue;
@@ -1749,9 +1751,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
             TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
         VFSize != 32) {
       VPBuilder Builder(LoopRegion->getPreheaderVPBB());
-      MaxEVL = Builder.createScalarCast(
-          VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
-          Type::getInt32Ty(Ctx), DebugLoc());
+      MaxEVL = Builder.createCast(VFSize > 32 ? Instruction::Trunc
+                                              : Instruction::ZExt,
+                                  MaxEVL, Type::getInt32Ty(Ctx), DebugLoc());
     }
     PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
@@ -1875,7 +1877,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   VPSingleDefRecipe *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
-    OpVPEVL = Builder.createScalarCast(
+    OpVPEVL = Builder.createCast(
         IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
         CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
   }

@@ -160,7 +160,7 @@ void UnrollState::unrollWidenInductionByUF(
   if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
     Instruction::CastOps CastOp =
         IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;
-    VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
+    VectorStep = Builder.createCast(CastOp, VectorStep, IVTy);
     ToSkip.insert(VectorStep->getDefiningRecipe());
   }
 
@@ -170,8 +170,7 @@ void UnrollState::unrollWidenInductionByUF(
                         : nullptr;
   if (!ConstStep || ConstStep->getValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
-      ScalarStep =
-          Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
+      ScalarStep = Builder.createCast(Instruction::Trunc, ScalarStep, IVTy);
       ToSkip.insert(ScalarStep->getDefiningRecipe());
     }
 
