@@ -216,6 +216,22 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
   }
 }
 
+// Create a pad-const const tensor with value of `val` of required data-type
+Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
+                                       Value src, int32_t val) {
+  const auto srcType = getElementTypeOrSelf(src);
+  const auto srcElemType = getElementTypeOrSelf(src);
+  const auto padConstType = mlir::RankedTensorType::get({1}, srcType);
+  const auto padConstEType = mlir::RankedTensorType::get({1}, srcElemType);
+  const auto padConstAttr{
+      llvm::isa<FloatType>(srcElemType)
+          ? DenseElementsAttr::get(padConstEType,
+                                   builder.getFloatAttr(srcElemType, val))
+          : DenseElementsAttr::get(padConstEType,
+                                   builder.getIntegerAttr(srcElemType, val))};
+  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -708,30 +724,14 @@ static void buildUnaryOpWithQuantInfo(OpBuilder &builder,
 static void buildPadOpWithQuantInfo(OpBuilder &builder, OperationState &result,
                                     Type outputType, Value input,
                                     Value paddings) {
-  result.addOperands({input, paddings});
-  auto quantAttr = buildPadOpQuantizationAttr(builder, input);
+  const Location loc{result.location};
+  int32_t zp{0};
+  const auto quantAttr = buildPadOpQuantizationAttr(builder, input);
   if (quantAttr) {
-    result.addAttribute("input_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getInputZp())));
+    zp = static_cast<int32_t>(quantAttr.getInputZp());
   }
-  result.types.push_back(outputType);
-}
-
-/// This builder is called on TOSA pad operator when an explicit pad_const
-/// value is passed in. It also optionally constructs quantization_attr.
-static void buildExplicitValuePadOpWithQuantInfo(OpBuilder &builder,
-                                                 OperationState &result,
-                                                 Type outputType, Value input,
-                                                 Value paddings,
-                                                 Value padConst) {
-  result.addOperands({input, paddings, padConst});
-  auto quantAttr = buildPadOpQuantizationAttr(builder, input);
-  if (quantAttr) {
-    result.addAttribute("input_zp",
-                        builder.getI32IntegerAttr(
-                            static_cast<int32_t>(quantAttr.getInputZp())));
-  }
+  const auto padConstOp{createPadConstTensor(builder, loc, input, zp)};
+  result.addOperands({input, paddings, padConstOp});
   result.types.push_back(outputType);
 }
 
