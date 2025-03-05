@@ -347,7 +347,7 @@ static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
                                              const MCDisassembler *Decoder) {
   assert(isUInt<Width>(Imm) && "Invalid immediate");
 
-  if (Imm < LowerBound)
+  if ((Imm + 1) < LowerBound)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm + 1));

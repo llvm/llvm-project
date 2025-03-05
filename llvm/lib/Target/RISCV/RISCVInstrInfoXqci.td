@@ -125,10 +125,10 @@ class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
                   (ins InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
                   opcodestr, "$rd, $rs1, $width, $shamt"> {
   bits<5> shamt;
-  bits<6> width;
+  bits<5> width;
 
   let Inst{31-30} = funct2;
-  let Inst{29-25} = width{4-0};
+  let Inst{29-25} = width;
   let Inst{24-20} = shamt;
 }
 
@@ -406,10 +406,10 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
                              "$rd, $imm5, $width, $shamt"> {
     bits<5> imm5;
     bits<5> shamt;
-    bits<6> width;
+    bits<5> width;
     let rs1 = imm5;
     let Inst{31-30} = 0b00;
-    let Inst{29-25} = width{4-0};
+    let Inst{29-25} = width;
     let Inst{24-20} = shamt;
   }
   def QC_INSB : QCIBitManipRII<0b001, 0b01, GPR, "qc.insb">;
@@ -443,7 +443,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     bits<5> rd;
     bits<5> width;
     let Constraints = "$rd = $rd_wb";
-    let Inst{6-2} = width{4-0};
+    let Inst{6-2} = width;
     let Inst{11-7} = rd;
     let Inst{12} = 0b1;
   }

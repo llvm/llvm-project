@@ -400,7 +400,8 @@ RISCVMCCodeEmitter::getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
     return (Res - 1);
   }
 
-  return getImmOpValue(MI, OpNo, Fixups, STI);
+  llvm_unreachable("Unhandled expression!");
+  return 0;
 }
 
 uint64_t
