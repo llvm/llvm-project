@@ -507,6 +507,13 @@ to specify how shader stages access specific GPU resources.
 
 .. code-block:: cpp
 
+   enum RootDescriptorFlags {
+      None = 0,
+      DataVolatile = 0x2,
+      DataStaticWhileSetAtExecute = 0x4,
+      DataStatic = 0x8,
+   }
+
    // Version 1.0 Root Descriptor
    struct RootDescriptor_V1_0 {
       uint32_t ShaderRegister;
@@ -516,15 +523,7 @@ to specify how shader stages access specific GPU resources.
    // Version 1.1 Root Descriptor
    struct RootDescriptor_V1_1 {
       uint32_t ShaderRegister;
-      uint32_t RegisterSpace;
-      // New flags for Version 1.1
-      enum Flags {
-        None                = 0x0,
-        DATA_STATIC         = 0x1,
-        DATA_STATIC_WHILE_SET_AT_EXECUTE = 0x2,
-        DATA_VOLATILE       = 0x4
-      };
-      
+      uint32_t RegisterSpace;      
       // Bitfield of flags from the Flags enum
       uint32_t Flags;
    };
