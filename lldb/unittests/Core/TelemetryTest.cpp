@@ -80,7 +80,7 @@ using namespace lldb_private::telemetry;
 
 class TelemetryTest : public testing::Test {
 public:
-  SubsystemRAII<lldb_private::FakePlugin> subsystems;
+  lldb_private::SubsystemRAII<lldb_private::FakePlugin> subsystems;
 };
 
 #if LLVM_ENABLE_TELEMETRY
