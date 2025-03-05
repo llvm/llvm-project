@@ -970,7 +970,10 @@ Status MinidumpFileBuilder::DumpDirectories() const {
 }
 
 Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
+    const std::unique_ptr<lldb_private::DataBufferHeap> &data_up,
     const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read) {
+  if (!data_up)
+    return Status::FromErrorString("No buffer supplied to read memory.");
   Log *log = GetLog(LLDBLog::Object);
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
@@ -982,8 +985,6 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
 
   uint64_t bytes_remaining = size;
   uint64_t total_bytes_read = 0;
-  auto data_up = std::make_unique<DataBufferHeap>(
-      std::min(bytes_remaining, MAX_WRITE_CHUNK_SIZE), 0);
   Status error;
   while (bytes_remaining > 0) {
     // Get the next read chunk size as the minimum of the remaining bytes and
@@ -1041,17 +1042,17 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     // report the accurate total.
     if (bytes_read)
       *bytes_read += bytes_read_for_chunk;
-
-    // We clear the heap per loop, without checking if we
-    // read the expected bytes this is so we don't allocate
-    // more than the MAX_WRITE_CHUNK_SIZE. But we do check if
-    // this is even worth clearing before we return and
-    // destruct the heap.
-    if (bytes_remaining > 0)
-      data_up->Clear();
   }
 
   return error;
+}
+
+static uint64_t
+GetLargestRangeSize(const std::vector<CoreFileMemoryRange> &ranges) {
+  uint64_t max_size = 0;
+  for (const auto &core_range : ranges)
+    max_size = std::max(max_size, core_range.range.size());
+  return max_size;
 }
 
 Status
@@ -1064,6 +1065,8 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
+  auto data_up = std::make_unique<DataBufferHeap>(
+      std::min(GetLargestRangeSize(ranges), MAX_WRITE_CHUNK_SIZE), 0);
   for (const auto &core_range : ranges) {
     // Take the offset before we write.
     const offset_t offset_for_data = GetCurrentDataEndOffset();
@@ -1079,7 +1082,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     uint64_t bytes_read;
-    error = ReadWriteMemoryInChunks(core_range, &bytes_read);
+    error = ReadWriteMemoryInChunks(data_up, core_range, &bytes_read);
     if (error.Fail())
       return error;
 
@@ -1155,6 +1158,8 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
   list_header.BaseRVA = memory_ranges_base_rva;
   m_data.AppendData(&list_header, sizeof(llvm::minidump::Memory64ListHeader));
 
+  auto data_up = std::make_unique<DataBufferHeap>(
+      std::min(GetLargestRangeSize(ranges), MAX_WRITE_CHUNK_SIZE), 0);
   bool cleanup_required = false;
   std::vector<MemoryDescriptor_64> descriptors;
   // Enumerate the ranges and create the memory descriptors so we can append
@@ -1186,7 +1191,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
     uint64_t bytes_read;
-    error = ReadWriteMemoryInChunks(core_range, &bytes_read);
+    error = ReadWriteMemoryInChunks(data_up, core_range, &bytes_read);
     if (error.Fail())
       return error;
 
