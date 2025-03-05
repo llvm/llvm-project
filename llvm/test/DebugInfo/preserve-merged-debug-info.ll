@@ -1,6 +1,22 @@
-; RUN: opt %s -passes=simplifycfg -hoist-common-insts -preserve-merged-debug-info -S | FileCheck %s
-; CHECK: tail call i32 @bar{{.*!dbg !}}[[TAG:[0-9]+]]
-; CHECK: ![[TAG]] = !DILocation(line: 9, column: 16, scope: !9) 
+;; This test verifies that we assign a deterministic location for merged
+;; instructions when -preserve-merged-debug-info is enabled. We use the
+;; simplifycfg pass to test this behaviour since it was a common source of
+;; merged instructions, however we intend this to apply to all users of the
+;; getMergedLocation API.
+
+;; Run simplifycfg and check that only 1 call to bar remains and it's debug
+;; location has a valid line number (lexicographically smallest).
+; RUN: opt %s -passes=simplifycfg -hoist-common-insts -preserve-merged-debug-info -S | FileCheck %s --check-prefix=ENABLED
+; ENABLED: call i32 @bar{{.*!dbg !}}[[TAG:[0-9]+]]
+; ENABLED-NOT: call i32 @bar
+; ENABLED: ![[TAG]] = !DILocation(line: 9, column: 16, scope: !9)
+
+;; Run simplifycfg without the pass to ensure that we don't spuriously start
+;; passing the test if simplifycfg behaviour changes.
+; RUN: opt %s -passes=simplifycfg -hoist-common-insts -preserve-merged-debug-info=false -S | FileCheck %s --check-prefix=DISABLED
+; DISABLED: call i32 @bar{{.*!dbg !}}[[TAG:[0-9]+]]
+; DISABLED-NOT: call i32 @bar
+; DISABLED: ![[TAG]] = !DILocation(line: 0, scope: !9)
 
 ; ModuleID = '../llvm/test/DebugInfo/Inputs/debug-info-merge-call.c'
 source_filename = "../llvm/test/DebugInfo/Inputs/debug-info-merge-call.c"
@@ -8,19 +24,19 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @test(i32 noundef %n) local_unnamed_addr #0 !dbg !9 {
+define dso_local i32 @test(i32 %n) !dbg !9 {
 entry:
-  %call = tail call i32 @foo(i32 noundef %n) #2, !dbg !12
+  %call = call i32 @foo(i32 %n), !dbg !12
   %cmp1 = icmp sgt i32 %n, 100, !dbg !13
   br i1 %cmp1, label %if.then, label %if.else, !dbg !13
 
 if.then:                                          ; preds = %entry
-  %call2 = tail call i32 @bar(i32 noundef %n) #2, !dbg !14
+  %call2 = call i32 @bar(i32 %n), !dbg !14
   %add = add nsw i32 %call2, %call, !dbg !15
   br label %if.end, !dbg !16
 
 if.else:                                          ; preds = %entry
-  %call4 = tail call i32 @bar(i32 noundef %n) #2, !dbg !17
+  %call4 = call i32 @bar(i32 %n), !dbg !17
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -28,13 +44,9 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %r.0, !dbg !19
 }
 
-declare !dbg !20 i32 @foo(i32 noundef) local_unnamed_addr #1
+declare !dbg !20 i32 @foo(i32)
 
-declare !dbg !21 i32 @bar(i32 noundef) local_unnamed_addr #1
-
-attributes #0 = { nounwind uwtable "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #2 = { nounwind }
+declare !dbg !21 i32 @bar(i32)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
