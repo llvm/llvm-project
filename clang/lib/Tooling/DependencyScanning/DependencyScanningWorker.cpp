@@ -287,10 +287,11 @@ public:
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      bool DisableFree, std::optional<StringRef> ModuleName = std::nullopt)
+      bool DisableFree,
+      std::optional<ArrayRef<StringRef>> ModuleNames = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        DisableFree(DisableFree), ModuleName(ModuleName) {}
+        DisableFree(DisableFree), ModuleNames(ModuleNames) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *DriverFileMgr,
@@ -431,8 +432,9 @@ public:
 
     if (Service.getFormat() == ScanningOutputFormat::P1689)
       Action = std::make_unique<PreprocessOnlyAction>();
-    else if (ModuleName)
-      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
+    else if (ModuleNames)
+      Action =
+          std::make_unique<GetDependenciesByModuleNameAction>(*ModuleNames);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
@@ -478,7 +480,7 @@ private:
   DependencyActionController &Controller;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   bool DisableFree;
-  std::optional<StringRef> ModuleName;
+  std::optional<ArrayRef<StringRef>> ModuleNames;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
@@ -546,7 +548,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
-    StringRef ModuleName) {
+    ArrayRef<StringRef> ModuleNames) {
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
   std::string DiagnosticOutput;
@@ -555,7 +557,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts.release());
 
   if (computeDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                          DiagPrinter, ModuleName))
+                          DiagPrinter, ModuleNames))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                              llvm::inconvertibleErrorCode());
@@ -625,7 +627,7 @@ bool DependencyScanningWorker::scanDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::optional<StringRef> ModuleName) {
+    std::optional<ArrayRef<StringRef>> ModuleNames) {
   auto FileMgr =
       llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{}, FS);
 
@@ -648,7 +650,7 @@ bool DependencyScanningWorker::scanDependencies(
   // always true for a driver invocation.
   bool DisableFree = true;
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
-                                  Controller, DepFS, DisableFree, ModuleName);
+                                  Controller, DepFS, DisableFree, ModuleNames);
 
   bool Success = false;
   if (CommandLine[1] == "-cc1") {
@@ -729,13 +731,14 @@ bool DependencyScanningWorker::computeDependencies(
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
   return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
-                          Controller, DC, FinalFS, /*ModuleName=*/std::nullopt);
+                          Controller, DC, FinalFS,
+                          /*ModuleNames=*/std::nullopt);
 }
 
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
-    DiagnosticConsumer &DC, StringRef ModuleName) {
+    DiagnosticConsumer &DC, ArrayRef<StringRef> ModuleNames) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -748,9 +751,13 @@ bool DependencyScanningWorker::computeDependencies(
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
   // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
+  // FIXME: should we create files for multiple modules? I think so?
+  llvm::sys::fs::createUniquePath(ModuleNames[0] + "-%%%%%%%%.input",
+                                  FakeInputPath,
                                   /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+  std::string FakeString(ModuleNames.size(), ' ');
+  InMemoryFS->addFile(FakeInputPath, 0,
+                      llvm::MemoryBuffer::getMemBuffer(FakeString));
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
   OverlayFS->pushOverlay(InMemoryOverlay);
@@ -758,7 +765,7 @@ bool DependencyScanningWorker::computeDependencies(
   ModifiedCommandLine.emplace_back(FakeInputPath);
 
   return scanDependencies(WorkingDirectory, ModifiedCommandLine, Consumer,
-                          Controller, DC, OverlayFS, ModuleName);
+                          Controller, DC, OverlayFS, ModuleNames);
 }
 
 DependencyActionController::~DependencyActionController() {}

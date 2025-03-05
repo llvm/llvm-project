@@ -144,12 +144,14 @@ public:
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Given a compilation context specified via the Clang driver command-line,
-  /// gather modular dependencies of module with the given name, and return the
-  /// information needed for explicit build.
-  llvm::Expected<ModuleDepsGraph> getModuleDependencies(
-      StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput);
+  /// gather modular dependencies of modules specified by the the given list of
+  /// names, and return the information needed for explicit build.
+  llvm::Expected<ModuleDepsGraph>
+  getModuleDependencies(ArrayRef<StringRef> ModuleNames,
+                        const std::vector<std::string> &CommandLine,
+                        StringRef CWD,
+                        const llvm::DenseSet<ModuleID> &AlreadySeen,
+                        LookupModuleOutputCallback LookupModuleOutput);
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 

@@ -111,7 +111,7 @@ public:
                            DependencyConsumer &DepConsumer,
                            DependencyActionController &Controller,
                            DiagnosticConsumer &DiagConsumer,
-                           StringRef ModuleName);
+                           ArrayRef<StringRef> ModuleNames);
 
   /// Run the dependency scanning tool for a given clang driver command-line
   /// for a specific translation unit via file system or memory buffer.
@@ -132,7 +132,7 @@ public:
                                   const std::vector<std::string> &CommandLine,
                                   DependencyConsumer &Consumer,
                                   DependencyActionController &Controller,
-                                  StringRef ModuleName);
+                                  ArrayRef<StringRef> ModuleNames);
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 
@@ -156,7 +156,7 @@ private:
                         DependencyActionController &Controller,
                         DiagnosticConsumer &DC,
                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                        std::optional<StringRef> ModuleName);
+                        std::optional<ArrayRef<StringRef>> ModuleNames);
 };
 
 } // end namespace dependencies
