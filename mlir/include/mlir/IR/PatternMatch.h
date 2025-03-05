@@ -241,15 +241,17 @@ template <typename PatternT>
 class SplitMatchAndRewriteImpl : public PatternT {
   using PatternT::PatternT;
 
+  /// Attempt to match against IR rooted at the specified operation, which is
+  /// the same operation kind as getRootKind().
+  ///
+  /// Note: This function must not modify the IR.
+  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
+
   /// Rewrite the IR rooted at the specified operation with the result of
   /// this pattern, generating any new operations with the specified
   /// rewriter.
   virtual void rewrite(typename PatternT::OperationT op,
                        PatternRewriter &rewriter) const = 0;
-
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
 
   LogicalResult matchAndRewrite(typename PatternT::OperationT op,
                                 PatternRewriter &rewriter) const final {
@@ -263,9 +265,7 @@ class SplitMatchAndRewriteImpl : public PatternT {
 } // namespace detail
 
 /// RewritePattern is the common base class for all DAG to DAG replacements.
-/// By overloading the "matchAndRewrite" function, the user can perform the
-/// rewrite in the same call as the match.
-///
+
 class RewritePattern : public Pattern {
 public:
   using OperationT = Operation *;
@@ -274,8 +274,11 @@ public:
   virtual ~RewritePattern() = default;
 
   /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind(). If successful, this
-  /// function will automatically perform the rewrite.
+  /// which is the same operation code as getRootKind(). If successful, perform
+  /// the rewrite.
+  ///
+  /// Note: Implementations must modify the IR if and only if the function
+  /// returns "success".
   virtual LogicalResult matchAndRewrite(Operation *op,
                                         PatternRewriter &rewriter) const = 0;
 

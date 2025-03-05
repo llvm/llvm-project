@@ -536,6 +536,12 @@ template <typename PatternT>
 class ConversionSplitMatchAndRewriteImpl : public PatternT {
   using PatternT::PatternT;
 
+  /// Attempt to match against IR rooted at the specified operation, which is
+  /// the same operation kind as getRootKind().
+  ///
+  /// Note: This function must not modify the IR.
+  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
+
   /// Rewrite the IR rooted at the specified operation with the result of
   /// this pattern, generating any new operations with the specified
   /// rewriter.
@@ -560,17 +566,6 @@ class ConversionSplitMatchAndRewriteImpl : public PatternT {
     }
   }
 
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
-
-  LogicalResult
-  matchAndRewrite(typename PatternT::OperationT op,
-                  typename PatternT::OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    llvm_unreachable("1:1 matchAndRewrite entry point is never used");
-  }
-
   LogicalResult
   matchAndRewrite(typename PatternT::OperationT op,
                   typename PatternT::OneToNOpAdaptor adaptor,
@@ -580,6 +575,17 @@ class ConversionSplitMatchAndRewriteImpl : public PatternT {
       return success();
     }
     return failure();
+  }
+
+  LogicalResult
+  matchAndRewrite(typename PatternT::OperationT op,
+                  typename PatternT::OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Users would normally override this function in conversion patterns to
+    // implement a 1:1 pattern. Patterns that are derived from this class have
+    // separate `match` and `rewrite` functions, so this `matchAndRewrite`
+    // overload is obsolete.
+    llvm_unreachable("this function is unreachable");
   }
 };
 } // namespace detail
