@@ -185,9 +185,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // Set CIR linkage and DLL storage class.
     varOp.setLinkage(linkage);
 
-    if (linkage == cir::GlobalLinkageKind::CommonLinkage) {
+    if (linkage == cir::GlobalLinkageKind::CommonLinkage)
       errorNYI(initExpr->getSourceRange(), "common linkage");
-    }
 
     theModule.push_back(varOp);
   } else {

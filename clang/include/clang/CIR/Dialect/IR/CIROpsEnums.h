@@ -1,4 +1,4 @@
-//===- CIROpsEnumsDialect.h - MLIR Dialect for CIR ----------------------*- C++
+//===----------------------------------------------------------------------===//
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the Target dialect for CIR in MLIR.
+// This file declares the CIR enumerations.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_CIROPSENUMS_H_
-#define MLIR_DIALECT_CIR_CIROPSENUMS_H_
+#ifndef CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
+#define CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h.inc"
@@ -116,4 +116,4 @@ LLVM_ATTRIBUTE_UNUSED static bool isValidLinkage(GlobalLinkageKind gl) {
 
 } // namespace cir
 
-#endif // MLIR_DIALECT_CIR_CIROPSENUMS_H_
+#endif // CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
