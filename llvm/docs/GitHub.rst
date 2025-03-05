@@ -150,7 +150,6 @@ Approvals
 Before merging a PR you must have the required approvals. See
 :ref:`lgtm_how_a_patch_is_accepted` for more details.
 
-.. _landing-your-change:
 
 Landing your change
 -------------------
