@@ -58,6 +58,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanCFG.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
@@ -421,8 +422,10 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
-/// Returns "best known" trip count for the specified loop \p L as defined by
-/// the following procedure:
+/// Returns "best known" trip count, which is either a valid positive trip count
+/// or std::nullopt when an estimate cannot be made (including when the trip
+/// count would overflow), for the specified loop \p L as defined by the
+/// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
 ///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
@@ -989,9 +992,10 @@ public:
                              InterleavedAccessInfo &IAI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI), CostKind(TTI::TCK_RecipThroughput) {
+        Hints(Hints), InterleaveInfo(IAI) {
     if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
       initializeVScaleForTuning();
+    CostKind = F->hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
   }
 
   /// \return An upper bound for the vectorization factors (both fixed and
@@ -1452,12 +1456,9 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
-    // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
-    // penultimate EVL.
     bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
                       TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath &&
-                      Legal->getFixedOrderRecurrences().empty();
+                      !EnableVPlanNativePath;
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -1517,8 +1518,7 @@ public:
     if (foldTailWithEVL())
       return true;
     return PreferPredicatedReductionSelect ||
-           TTI.preferPredicatedReductionSelect(
-               Opcode, PhiTy, TargetTransformInfo::ReductionFlags());
+           TTI.preferPredicatedReductionSelect(Opcode, PhiTy);
   }
 
   /// Estimate cost of an intrinsic call instruction CI if it were vectorized
@@ -2032,7 +2032,6 @@ public:
                   PSE, OuterLoop, /* CanUseConstantMax = */ false))
             BestTripCount = *EstimatedTC;
 
-          BestTripCount = std::max(BestTripCount, 1U);
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
@@ -2926,7 +2925,8 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
                  [&](Type *Ty) { return maybeVectorizeType(Ty, VF); });
 
   IntrinsicCostAttributes CostAttrs(ID, RetTy, Arguments, ParamTys, FMF,
-                                    dyn_cast<IntrinsicInst>(CI));
+                                    dyn_cast<IntrinsicInst>(CI),
+                                    InstructionCost::getInvalid(), TLI);
   return TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
@@ -3392,7 +3392,7 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarizationCost = ScalarizationCost / getReciprocalPredBlockProb();
+    ScalarizationCost = ScalarizationCost / getPredBlockCostDivisor(CostKind);
   }
   InstructionCost SafeDivisorCost = 0;
 
@@ -4310,6 +4310,13 @@ bool LoopVectorizationPlanner::isMoreProfitable(
       EstimatedWidthB *= *VScale;
   }
 
+  // When optimizing for size choose whichever is smallest, which will be the
+  // one with the smallest cost for the whole loop. On a tie pick the larger
+  // vector width, on the assumption that throughput will be greater.
+  if (CM.CostKind == TTI::TCK_CodeSize)
+    return CostA < CostB ||
+           (CostA == CostB && EstimatedWidthA > EstimatedWidthB);
+
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
   // vectorization.
@@ -4867,8 +4874,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
             Legal->getReductionVars().find(PN)->second;
         if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getOpcode(),
-                                      RdxDesc.getRecurrenceType(),
-                                      TargetTransformInfo::ReductionFlags()))
+                                      RdxDesc.getRecurrenceType()))
           continue;
         T = RdxDesc.getRecurrenceType();
       }
@@ -5029,7 +5035,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       if (TailTripCountUB == TailTripCountLB)
         MaxInterleaveCount = InterleaveCountUB;
     }
-  } else if (BestKnownTC && *BestKnownTC > 0) {
+  } else if (BestKnownTC) {
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
     unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
@@ -5552,7 +5558,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
       }
 
     // Scale the total scalar cost by block probability.
-    ScalarCost /= getReciprocalPredBlockProb();
+    ScalarCost /= getPredBlockCostDivisor(CostKind);
 
     // Compute the discount. A non-negative discount means the vector version
     // of the instruction costs more, and scalarizing would be beneficial.
@@ -5605,7 +5611,7 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     // cost by the probability of executing it. blockNeedsPredication from
     // Legal is used so as to not include all blocks in tail folded loops.
     if (VF.isScalar() && Legal->blockNeedsPredication(BB))
-      BlockCost /= getReciprocalPredBlockProb();
+      BlockCost /= getPredBlockCostDivisor(CostKind);
 
     Cost += BlockCost;
   }
@@ -5683,7 +5689,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
   if (isPredicatedInst(I)) {
-    Cost /= getReciprocalPredBlockProb();
+    Cost /= getPredBlockCostDivisor(CostKind);
 
     // Add the cost of an i1 extract and a branch
     auto *VecI1Ty =
@@ -6663,7 +6669,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
-    if (!isa<Constant>(Op2) && PSE.getSE()->isSCEVable(Op2->getType()) &&
+    if (!isa<Constant>(Op2) && TheLoop->isLoopInvariant(Op2) &&
+        PSE.getSE()->isSCEVable(Op2->getType()) &&
         isa<SCEVConstant>(PSE.getSCEV(Op2))) {
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }
@@ -7034,8 +7041,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     // want to record it as such.
     unsigned Opcode = RdxDesc.getOpcode();
     if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
-        !TTI.preferInLoopReduction(Opcode, Phi->getType(),
-                                   TargetTransformInfo::ReductionFlags()))
+        !TTI.preferInLoopReduction(Opcode, Phi->getType()))
       continue;
 
     // Check that we can correctly put the reductions into the loop, by
@@ -7291,7 +7297,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // Collect all exit conditions.
   for (BasicBlock *EB : Exiting) {
     auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term)
+    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
       continue;
     if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
       ExitInstrs.insert(CondI);
@@ -7311,7 +7317,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     Cost += CondICost;
     for (Value *Op : CondI->operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || any_of(OpI->users(), [&ExitInstrs, this](User *U) {
+      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
+          any_of(OpI->users(), [&ExitInstrs, this](User *U) {
             return OrigLoop->contains(cast<Instruction>(U)->getParent()) &&
                    !ExitInstrs.contains(cast<Instruction>(U));
           }))
@@ -7696,7 +7703,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       ((VectorizingEpilogue && ExpandedSCEVs) ||
        (!VectorizingEpilogue && !ExpandedSCEVs)) &&
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
-
+  VPlanTransforms::materializeLiveInBroadcasts(BestVPlan);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
@@ -9131,6 +9138,10 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                          VPlan &Plan) {
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
+    // Nothing to do for unreachable exit blocks.
+    if (ExitVPBB->getNumPredecessors() == 0)
+      continue;
+
     for (VPRecipeBase &R : *ExitVPBB) {
       auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
       if (!ExitIRI)
@@ -10185,7 +10196,8 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
     return true;
   }
 
-  // The scalar cost should only be 0 when vectorizing with a user specified VF/IC. In those cases, runtime checks should always be generated.
+  // The scalar cost should only be 0 when vectorizing with a user specified
+  // VF/IC. In those cases, runtime checks should always be generated.
   uint64_t ScalarC = *VF.ScalarCost.getValue();
   if (ScalarC == 0)
     return true;

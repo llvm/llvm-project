@@ -12,7 +12,7 @@
 "`LWG2404 <https://wg21.link/LWG2404>`__","``mismatch()``\ 's complexity needs to be updated","2014-11 (Urbana)","|Complete|","",""
 "`LWG2408 <https://wg21.link/LWG2408>`__","SFINAE-friendly ``common_type``\  / ``iterator_traits``\  is missing in C++14","2014-11 (Urbana)","|Complete|","",""
 "`LWG2106 <https://wg21.link/LWG2106>`__","``move_iterator``\  wrapping iterators returning prvalues","2014-11 (Urbana)","|Complete|","",""
-"`LWG2129 <https://wg21.link/LWG2129>`__","User specializations of ``std::initializer_list``\ ","2014-11 (Urbana)","|Complete|","",""
+"`LWG2129 <https://wg21.link/LWG2129>`__","User specializations of ``std::initializer_list``\ ","2014-11 (Urbana)","|Complete|","21",""
 "`LWG2212 <https://wg21.link/LWG2212>`__","``tuple_size``\  for ``const pair``\  request <tuple> header","2014-11 (Urbana)","|Complete|","",""
 "`LWG2217 <https://wg21.link/LWG2217>`__","``operator==(sub_match, string)``\  slices on embedded '\0's","2014-11 (Urbana)","|Complete|","",""
 "`LWG2230 <https://wg21.link/LWG2230>`__","""see below"" for ``initializer_list``\  constructors of unordered containers","2014-11 (Urbana)","|Complete|","",""

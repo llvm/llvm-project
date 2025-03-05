@@ -85,8 +85,10 @@ void SourceRequestHandler::operator()(const llvm::json::Object &request) const {
   const auto *arguments = request.getObject("arguments");
   const auto *source = arguments->getObject("source");
   llvm::json::Object body;
-  int64_t source_ref = GetUnsigned(
-      source, "sourceReference", GetUnsigned(arguments, "sourceReference", 0));
+  const auto source_ref =
+      GetInteger<uint64_t>(source, "sourceReference")
+          .value_or(
+              GetInteger<uint64_t>(arguments, "sourceReference").value_or(0));
 
   if (source_ref) {
     lldb::SBProcess process = dap.target.GetProcess();

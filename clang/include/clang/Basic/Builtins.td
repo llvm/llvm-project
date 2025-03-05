@@ -4789,6 +4789,12 @@ def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_any"];
   let Attributes = [NoThrow, Const];

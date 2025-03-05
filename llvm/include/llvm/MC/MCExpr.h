@@ -252,15 +252,6 @@ public:
     VK_AVR_DIFF32,
     VK_AVR_PM,
 
-    VK_PPC_LO,              // symbol@l
-    VK_PPC_HI,              // symbol@h
-    VK_PPC_HA,              // symbol@ha
-    VK_PPC_HIGH,            // symbol@high
-    VK_PPC_HIGHA,           // symbol@higha
-    VK_PPC_HIGHER,          // symbol@higher
-    VK_PPC_HIGHERA,         // symbol@highera
-    VK_PPC_HIGHEST,         // symbol@highest
-    VK_PPC_HIGHESTA,        // symbol@highesta
     VK_PPC_GOT_LO,          // symbol@got@l
     VK_PPC_GOT_HI,          // symbol@got@h
     VK_PPC_GOT_HA,          // symbol@got@ha
@@ -303,7 +294,6 @@ public:
     VK_PPC_GOT_TLSGD_LO,    // symbol@got@tlsgd@l
     VK_PPC_GOT_TLSGD_HI,    // symbol@got@tlsgd@h
     VK_PPC_GOT_TLSGD_HA,    // symbol@got@tlsgd@ha
-    VK_PPC_TLSGD,           // symbol@tlsgd
     VK_PPC_AIX_TLSGD,       // symbol@gd
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
@@ -319,7 +309,6 @@ public:
     VK_PPC_GOT_TLSLD_PCREL, // symbol@got@tlsld@pcrel
     VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
     VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
-    VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc
     VK_PPC_PCREL_OPT,       // .reloc expr, R_PPC64_PCREL_OPT, expr
@@ -417,14 +406,6 @@ public:
   bool hasSubsectionsViaSymbols() const {
     return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
   }
-
-  /// @}
-  /// \name Static Utility Functions
-  /// @{
-
-  static StringRef getVariantKindName(VariantKind Kind);
-
-  static VariantKind getVariantKindForName(StringRef Name);
 
   /// @}
 

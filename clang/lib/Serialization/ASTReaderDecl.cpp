@@ -414,6 +414,8 @@ public:
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
+  void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+
   void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
                         uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
                         uint64_t &TULocalOffset);
@@ -3099,6 +3101,14 @@ void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
 }
 
+void ASTDeclReader::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  VisitDecl(D);
+  D->DirKind = Record.readEnum<OpenACCDirectiveKind>();
+  D->DirectiveLoc = Record.readSourceLocation();
+  D->EndLoc = Record.readSourceLocation();
+  Record.readOpenACCClauseList(D->Clauses);
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute Reading
 //===----------------------------------------------------------------------===//
@@ -4203,6 +4213,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_IMPLICIT_CONCEPT_SPECIALIZATION:
     D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
                                                               Record.readInt());
+    break;
+  case DECL_OPENACC_DECLARE:
+    D = OpenACCDeclareDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   }
 

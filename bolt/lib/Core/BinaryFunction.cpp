@@ -15,6 +15,7 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
@@ -1332,6 +1333,22 @@ Error BinaryFunction::disassemble() {
         BC.printInstruction(BC.errs(), Instruction, AbsoluteInstrAddr);
         BC.errs() << '\n';
       }
+
+      // Verify that we've symbolized an operand if the instruction has a
+      // relocation against it.
+      if (getRelocationInRange(Offset, Offset + Size)) {
+        bool HasSymbolicOp = false;
+        for (MCOperand &Op : Instruction) {
+          if (Op.isExpr()) {
+            HasSymbolicOp = true;
+            break;
+          }
+        }
+        if (!HasSymbolicOp)
+          return createFatalBOLTError(
+              "expected symbolized operand for instruction at 0x" +
+              Twine::utohexstr(AbsoluteInstrAddr));
+      }
     }
 
     // Special handling for AVX-512 instructions.
@@ -1439,9 +1456,8 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isAArch64() || BC.isRISCV()) {
+    } else if (BC.isRISCV()) {
       // Check if there's a relocation associated with this instruction.
-      bool UsedReloc = false;
       for (auto Itr = Relocations.lower_bound(Offset),
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
@@ -1466,24 +1482,6 @@ Error BinaryFunction::disassemble() {
             Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
-
-        // For aarch64, if we replaced an immediate with a symbol from a
-        // relocation, we mark it so we do not try to further process a
-        // pc-relative operand. All we need is the symbol.
-        UsedReloc = true;
-      }
-
-      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc) {
-        if (auto NewE = handleErrors(
-                handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size),
-                [&](const BOLTError &E) -> Error {
-                  if (E.isFatal())
-                    return Error(std::make_unique<BOLTError>(std::move(E)));
-                  if (!E.getMessage().empty())
-                    E.log(BC.errs());
-                  return Error::success();
-                }))
-          return Error(std::move(NewE));
       }
     }
 
@@ -1543,15 +1541,11 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
 }
 
 void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
+  for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst); ++OpNum) {
+    const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, OpNum);
+    if (!Symbol)
       continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() != MCExpr::SymbolRef)
-      continue;
-    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAddressTaken for a function regardless of the ICF level.
-    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(Symbol))
       BF->setHasAddressTaken(true);
   }
 }
@@ -1583,8 +1577,9 @@ bool BinaryFunction::scanExternalRefs() {
   assert(FunctionData.size() == getMaxSize() &&
          "function size does not match raw data size");
 
-  BC.SymbolicDisAsm->setSymbolizer(
-      BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
+  if (BC.isX86())
+    BC.SymbolicDisAsm->setSymbolizer(
+        BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
 
   // Disassemble contents of the function. Detect code entry points and create
   // relocations for references to code that will be moved.
@@ -1753,8 +1748,8 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    // In BAT mode, register any known entry points for CFG construction.
-    if (!BC.HasRelocations && !BC.HasBATSection)
+    // In aggregation, register any known entry points for CFG construction.
+    if (!BC.HasRelocations && !opts::AggregateOnly)
       setSimple(false);
 
     const uint32_t Offset = KV.first;
