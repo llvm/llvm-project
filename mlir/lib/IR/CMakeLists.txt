@@ -16,6 +16,7 @@ add_mlir_library(MLIRIR
   BuiltinAttributes.cpp
   BuiltinDialect.cpp
   BuiltinDialectBytecode.cpp
+  BuiltinLinkerInterface.cpp
   BuiltinTypes.cpp
   BuiltinTypeInterfaces.cpp
   Diagnostics.cpp
@@ -69,4 +70,3 @@ add_mlir_library(MLIRIR
   LINK_LIBS PUBLIC
   MLIRSupport
   )
-

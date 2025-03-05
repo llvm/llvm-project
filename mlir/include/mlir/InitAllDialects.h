@@ -95,6 +95,7 @@
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/IR/BuiltinLinkerInterface.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
@@ -162,6 +163,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(
       registry);
   builtin::registerCastOpInterfaceExternalModels(registry);
+  builtin::registerLinkerInterface(registry);
   cf::registerBufferizableOpInterfaceExternalModels(registry);
   cf::registerBufferDeallocationOpInterfaceExternalModels(registry);
   gpu::registerBufferDeallocationOpInterfaceExternalModels(registry);

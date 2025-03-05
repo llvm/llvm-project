@@ -14,11 +14,12 @@
 #ifndef MLIR_LINKER_LINKAGEDIALECTINTERFACE_H
 #define MLIR_LINKER_LINKAGEDIALECTINTERFACE_H
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectInterface.h"
-
 #include "mlir/Interfaces/LinkageInterfaces.h"
 
-namespace mlir::link {
+namespace mlir {
+namespace link {
 
 //===----------------------------------------------------------------------===//
 // LinkerInterface
@@ -52,10 +53,12 @@ class LinkerInterface : public DialectInterface::Base<LinkerInterface> {
 public:
   LinkerInterface(Dialect *dialect) : Base(dialect) {}
 
+  // TODO: Should be moved to SymbolLinkerInterface
   virtual bool isDeclaration(GlobalValueLinkageOpInterface op) const {
     return false;
   }
 
+  // TODO: Should not exist (too llvm specific)
   bool isDeclarationForLinker(GlobalValueLinkageOpInterface op) const {
     if (op.hasAvailableExternallyLinkage())
       return true;
@@ -269,7 +272,8 @@ struct GlobalIFunc : GlobalIFuncBase<GlobalIFuncLinkageOpInterface> {
   operator GlobalValue() const { return GlobalValue(interface()); }
 };
 
-} // namespace mlir::link
+} // namespace link
+} // namespace mlir
 
 namespace llvm {
 
