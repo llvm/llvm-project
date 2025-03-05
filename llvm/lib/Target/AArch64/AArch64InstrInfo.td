@@ -134,6 +134,7 @@ def HasRDM           : Predicate<"Subtarget->hasRDM()">,
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
 def HasNoFullFP16    : Predicate<"!Subtarget->hasFullFP16()">;
+def HasNoNEON        : Predicate<"!Subtarget->isNeonAvailable()">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP16FML), "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
