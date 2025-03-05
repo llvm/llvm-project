@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
   IR/LLVMInterfaces.cpp
+  IR/LLVMLinkerInterface.cpp
   IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp

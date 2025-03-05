@@ -24,7 +24,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Linker/LinkerInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/SCCIterator.h"
@@ -3784,36 +3783,4 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
-}
-
-//===----------------------------------------------------------------------===//
-// LinkageInterface implementation
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-struct LLVMLinkerInterface : public ::mlir::link::LinkerInterface {
-  using LinkerInterface::LinkerInterface;
-
-  bool isDeclaration(GlobalValueLinkageOpInterface op) const final {
-    if (auto func = dyn_cast<LLVM::LLVMFuncOp>(op.getOperation()))
-      return isDeclaration(func);
-    if (auto global = dyn_cast<LLVM::GlobalOp>(op.getOperation()))
-      return isDeclaration(global);
-    return false;
-  }
-
-  bool isDeclaration(LLVM::LLVMFuncOp op) const { return op.getBody().empty(); }
-
-  bool isDeclaration(LLVM::GlobalOp op) const {
-    return op.getInitializerRegion().empty() && !op.getValue();
-  }
-};
-
-} // end anonymous namespace
-
-void mlir::LLVM::registerLinkerInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
-    dialect->addInterfaces<LLVMLinkerInterface>();
-  });
 }
