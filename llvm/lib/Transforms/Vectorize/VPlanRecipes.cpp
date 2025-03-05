@@ -744,7 +744,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
-    assert(VF.isVector());
+    assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
     SmallVector<int> Mask(VF.getKnownMinValue());
     std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
     Type *VectorTy =
