@@ -48,6 +48,7 @@ public:
 
     void CopyDeclsTo(SwiftDeclMap &target_map);
     static bool DeclsAreEquivalent(CompilerDecl lhs, CompilerDecl rhs);
+    void Clear() { m_swift_decls.clear(); }
 
   private:
     /// Each decl also stores the context it comes from.
@@ -101,6 +102,8 @@ public:
       llvm::StringRef name,
       const std::vector<CompilerDecl> &excluding_equivalents,
       std::vector<CompilerDecl> &matches);
+
+  void Clear() { m_swift_persistent_decls.Clear(); }
 
 private:
   /// The counter used by GetNextResultName().

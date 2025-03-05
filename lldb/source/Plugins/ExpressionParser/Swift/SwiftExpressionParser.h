@@ -215,6 +215,7 @@ private:
   /// The container for the IR, to be JIT-compiled or interpreted.
   lldb::IRExecutionUnitSP m_execution_unit_sp;
   /// The AST context to build the expression into.
+  /// A shared pointer of this is held by SwiftUserexpression.
   SwiftASTContextForExpressions &m_swift_ast_ctx;
   /// Used to manage the memory of a potential on-off context.
   //lldb::TypeSystemSP m_typesystem_sp;
@@ -257,7 +258,6 @@ public:
       llvm::SmallVectorImpl<swift::TypeAliasDecl *> &type_aliases);
 
 protected:
-  Log *m_log;
   swift::SourceFile &m_source_file;
   SwiftExpressionParser::SILVariableMap &m_variable_map;
   SymbolContext m_sc;
