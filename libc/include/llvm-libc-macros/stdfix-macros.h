@@ -323,45 +323,44 @@
 #define ULACCUM_EPSILON 0x1.0p-32ULK
 #endif // ULACCUM_EPSILON
 
-#define absfx(x) _Generic((x),                \
-    fract: LIBC_NAMESPACE::absr,              \
-    short fract: LIBC_NAMESPACE::abshr,       \
-    long fract: LIBC_NAMESPACE::abslr,        \
-    _Accum: LIBC_NAMESPACE::absk,             \
-    short _Accum: LIBC_NAMESPACE::abshk,      \
-    long _Accum: LIBC_NAMESPACE::abslk        \
-)(x)
+#define absfx(x)                                                               \
+  _Generic((x),                                                                \
+      fract: absr,                                             \
+      short fract: abshr,                                      \
+      long fract: abslr,                                       \
+      _Accum: absk,                                            \
+      short _Accum: abshk,                                     \
+      long _Accum: abslk)(x)
 
-#define countlsfx(x) _Generic((x),                      \
-    fract: LIBC_NAMESPACE::countlsr,                    \
-    short fract: LIBC_NAMESPACE::countlshr,             \
-    long fract: LIBC_NAMESPACE::countlslr,              \
-    _Accum: LIBC_NAMESPACE::countlsk,                   \
-    short _Accum: LIBC_NAMESPACE::countlshk,            \
-    long _Accum: LIBC_NAMESPACE::countlslk,             \
-    unsigned fract: LIBC_NAMESPACE::countlsur,          \
-    unsigned short fract: LIBC_NAMESPACE::countlsuhr,   \
-    unsigned long fract: LIBC_NAMESPACE::countlsulr,    \
-    unsigned _Accum: LIBC_NAMESPACE::countlsuk,         \
-    unsigned short _Accum: LIBC_NAMESPACE::countlsuhk,  \
-    unsigned long _Accum: LIBC_NAMESPACE::countlsulk    \
-)(x)
+#define countlsfx(x)                                                           \
+  _Generic((x),                                                                \
+      fract: countlsr,                                         \
+      short fract: countlshr,                                  \
+      long fract: countlslr,                                   \
+      _Accum: countlsk,                                        \
+      short _Accum: countlshk,                                 \
+      long _Accum: countlslk,                                  \
+      unsigned fract: countlsur,                               \
+      unsigned short fract: countlsuhr,                        \
+      unsigned long fract: countlsulr,                         \
+      unsigned _Accum: countlsuk,                              \
+      unsigned short _Accum: countlsuhk,                       \
+      unsigned long _Accum: countlsulk)(x)
 
-#define roundfx(x, y) _Generic((x),                    \
-    fract: LIBC_NAMESPACE::roundr,                     \
-    short fract: LIBC_NAMESPACE::roundhr,              \
-    long fract: LIBC_NAMESPACE::roundlr,               \
-    _Accum: LIBC_NAMESPACE::roundk,                    \
-    short _Accum: LIBC_NAMESPACE::roundhk,             \
-    long _Accum: LIBC_NAMESPACE::roundlk,              \
-    unsigned fract: LIBC_NAMESPACE::roundur,           \
-    unsigned short fract: LIBC_NAMESPACE::rounduhr,    \
-    unsigned long fract: LIBC_NAMESPACE::roundulr,     \
-    unsigned _Accum: LIBC_NAMESPACE::rounduk,          \
-    unsigned short _Accum: LIBC_NAMESPACE::rounduhk,   \
-    unsigned long _Accum: LIBC_NAMESPACE::roundulk     \
-)(x, y)
-
+#define roundfx(x, y)                                                          \
+  _Generic((x),                                                                \
+      fract: roundr,                                           \
+      short fract: roundhr,                                    \
+      long fract: roundlr,                                     \
+      _Accum: roundk,                                          \
+      short _Accum: roundhk,                                   \
+      long _Accum: roundlk,                                    \
+      unsigned fract: roundur,                                 \
+      unsigned short fract: rounduhr,                          \
+      unsigned long fract: roundulr,                           \
+      unsigned _Accum: rounduk,                                \
+      unsigned short _Accum: rounduhk,                         \
+      unsigned long _Accum: roundulk)(x, y)
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
