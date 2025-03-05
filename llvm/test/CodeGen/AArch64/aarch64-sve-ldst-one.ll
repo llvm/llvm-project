@@ -44,6 +44,24 @@ entry:
   ret void
 }
 
+define void @test_str_lane0_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: test_str_lane0_s32_negative_offset:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stur s0, [x0, #-32]
+; CHECK-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane0_s32_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    stur s0, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    ret
+
+entry:
+  %0 = extractelement <vscale x 4 x i32> %b, i32 0
+  %out_ptr = getelementptr inbounds i32, ptr %a, i64 -8
+  store i32 %0, ptr %out_ptr, align 4
+  ret void
+}
+
 define void @test_str_lane_s64(ptr %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: test_str_lane_s64:
 ; CHECK:       // %bb.0: // %entry
@@ -281,7 +299,7 @@ define void @test_str_reduction_i32_to_i32_negative_offset(ptr %ptr, <vscale x 4
 
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
   %trunc = trunc i64 %reduce to i32
-  %out_ptr = getelementptr inbounds float, ptr %ptr, i64 -8
+  %out_ptr = getelementptr inbounds i32, ptr %ptr, i64 -8
   store i32 %trunc, ptr %out_ptr, align 4
   ret void
 }
@@ -290,19 +308,17 @@ define void @test_str_reduction_i32_to_i64_negative_offset(ptr %ptr, <vscale x 4
 ; CHECK-LABEL: test_str_reduction_i32_to_i64_negative_offset:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    stur x8, [x0, #-32]
+; CHECK-NEXT:    stur d0, [x0, #-64]
 ; CHECK-NEXT:    ret
 ;
 ; STREAMING-COMPAT-LABEL: test_str_reduction_i32_to_i64_negative_offset:
 ; STREAMING-COMPAT:       // %bb.0:
 ; STREAMING-COMPAT-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-COMPAT-NEXT:    fmov x8, d0
-; STREAMING-COMPAT-NEXT:    stur x8, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    stur d0, [x0, #-64]
 ; STREAMING-COMPAT-NEXT:    ret
 
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
-  %out_ptr = getelementptr inbounds float, ptr %ptr, i64 -8
+  %out_ptr = getelementptr inbounds i64, ptr %ptr, i64 -8
   store i64 %reduce, ptr %out_ptr, align 8
   ret void
 }
@@ -311,18 +327,18 @@ define void @test_str_reduction_i32_to_i16_negative_offset(ptr %ptr, <vscale x 4
 ; CHECK-LABEL: test_str_reduction_i32_to_i16_negative_offset:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    stur h0, [x0, #-32]
+; CHECK-NEXT:    stur h0, [x0, #-16]
 ; CHECK-NEXT:    ret
 ;
 ; STREAMING-COMPAT-LABEL: test_str_reduction_i32_to_i16_negative_offset:
 ; STREAMING-COMPAT:       // %bb.0:
 ; STREAMING-COMPAT-NEXT:    uaddv d0, p0, z0.s
-; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
 ; STREAMING-COMPAT-NEXT:    ret
 
   %reduce = tail call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %p0, <vscale x 4 x i32> %v)
   %trunc = trunc i64 %reduce to i16
-  %out_ptr = getelementptr inbounds float, ptr %ptr, i64 -8
+  %out_ptr = getelementptr inbounds i16, ptr %ptr, i64 -8
   store i16 %trunc, ptr %out_ptr, align 2
   ret void
 }
