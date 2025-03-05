@@ -3613,6 +3613,9 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
         CallIntrinsicOp::getOpBundleTagsAttrName(result.name).getValue(),
         opBundleTags);
 
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
   SmallVector<DictionaryAttr> argAttrs;
   SmallVector<DictionaryAttr> resultAttrs;
   if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
@@ -3621,12 +3624,6 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
   call_interface_impl::addArgAndResultAttrs(
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
-
-  // TODO: In CallOp, the attr dict happens *before* the call type.
-  // CallIntrinsicOp should mimic that, allowing most of this function to be
-  // shared between the two ops.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return mlir::failure();
 
   if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
                               opBundleOperandTypes,
@@ -3658,18 +3655,19 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
     printOpBundles(p, *this, getOpBundleOperands(),
                    getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
   }
-  p << " : ";
-
-  // Reconstruct the MLIR function type from operand and result types.
-  call_interface_impl::printFunctionSignature(
-      p, args.getTypes(), getArgAttrsAttr(),
-      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
 
   p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
                           {getOperandSegmentSizesAttrName(),
                            getOpBundleSizesAttrName(), getIntrinAttrName(),
                            getOpBundleTagsAttrName(), getArgAttrsAttrName(),
                            getResAttrsAttrName()});
+
+  p << " : ";
+
+  // Reconstruct the MLIR function type from operand and result types.
+  call_interface_impl::printFunctionSignature(
+      p, args.getTypes(), getArgAttrsAttr(),
+      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
 }
 
 //===----------------------------------------------------------------------===//
