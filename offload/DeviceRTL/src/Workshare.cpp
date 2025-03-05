@@ -739,28 +739,6 @@ void __kmpc_distribute_static_init_8u(IdentTy *loc, int32_t global_tid,
 
 void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {}
 
-#ifndef FORTRAN_NO_LONGER_NEEDS
-void __kmpc_for_static_init_4_simple_spmd(int64_t *, int32_t global_tid,
-                                          int32_t schedtype, int32_t *plastiter,
-                                          int32_t *plower, int32_t *pupper,
-                                          int32_t *pstride, int32_t incr,
-                                          int32_t chunk) {
-
-  omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
-      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      /*IsSPMDExecutionMode=*/true);
-}
-
-void __kmpc_for_static_init_8_simple_spmd(int64_t *, int32_t global_tid,
-                                          int32_t schedtype, int32_t *plastiter,
-                                          int64_t *plower, int64_t *pupper,
-                                          int64_t *pstride, int64_t incr,
-                                          int64_t chunk) {
-  omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
-      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      /*IsSPMDExecutionMode=*/true);
-}
-#endif
 void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {}
 }
 
