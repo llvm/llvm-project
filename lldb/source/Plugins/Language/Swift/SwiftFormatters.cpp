@@ -777,6 +777,7 @@ public:
   }
 
   constexpr static StringLiteral TaskChildren[] = {
+      "address",
       "id",
       "kind",
       "enqueuPriority",
@@ -822,29 +823,44 @@ public:
 
     switch (idx) {
     case 0:
-      RETURN_CHILD(m_id_sp, id, uint64_type);
+      if (!m_address_sp) {
+        // TypeMangling for "Swift.UnsafeRawPointer"
+        CompilerType raw_pointer_type =
+            m_ts->GetTypeFromMangledTypename(ConstString("$sSVD"));
+
+        addr_t value = m_task_ptr;
+        DataExtractor data{reinterpret_cast<const void *>(&value),
+                           sizeof(value), endian::InlHostByteOrder(),
+                           sizeof(void *)};
+        m_address_sp = ValueObject::CreateValueObjectFromData(
+            "address", data, m_backend.GetExecutionContextRef(),
+            raw_pointer_type);
+      }
+      return m_address_sp;
     case 1:
-      RETURN_CHILD(m_kind_sp, kind, uint32_type);
+      RETURN_CHILD(m_id_sp, id, uint64_type);
     case 2:
-      RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, uint32_type);
+      RETURN_CHILD(m_kind_sp, kind, uint32_type);
     case 3:
-      RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
+      RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, uint32_type);
     case 4:
-      RETURN_CHILD(m_is_future_sp, isFuture, bool_type);
+      RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 5:
-      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask, bool_type);
+      RETURN_CHILD(m_is_future_sp, isFuture, bool_type);
     case 6:
-      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask, bool_type);
+      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask, bool_type);
     case 7:
-      RETURN_CHILD(m_is_cancelled_sp, isCancelled, bool_type);
+      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask, bool_type);
     case 8:
+      RETURN_CHILD(m_is_cancelled_sp, isCancelled, bool_type);
+    case 9:
       RETURN_CHILD(m_is_status_record_locked_sp, isStatusRecordLocked,
                    bool_type);
-    case 9:
-      RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
     case 10:
+      RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
+    case 11:
       RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
-    case 11: {
+    case 12: {
       if (!m_child_tasks_sp) {
         const auto &tasks = m_task_info.childTasks;
         std::string mangled_typename =
@@ -859,7 +875,7 @@ public:
       }
       return m_child_tasks_sp;
     }
-    case 12:
+    case 13:
       RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
     default:
       return {};
@@ -875,19 +891,19 @@ public:
       ValueObjectSP task_obj_sp = m_backend.GetChildMemberWithName("_task");
       if (!task_obj_sp)
         return ChildCacheState::eRefetch;
-      uint64_t task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      if (task_ptr != LLDB_INVALID_ADDRESS) {
+      m_task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      if (m_task_ptr != LLDB_INVALID_ADDRESS) {
         llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
-            reflection_ctx->asyncTaskInfo(task_ptr);
+            reflection_ctx->asyncTaskInfo(m_task_ptr);
         if (auto err = task_info.takeError()) {
           LLDB_LOG_ERROR(
               GetLog(LLDBLog::DataFormatters | LLDBLog::Types), std::move(err),
-              "could not get info for async task {0:x}: {1}", task_ptr);
+              "could not get info for async task {0:x}: {1}", m_task_ptr);
         } else {
           m_task_info = *task_info;
           for (auto child :
-               {m_id_sp, m_kind_sp, m_enqueue_priority_sp, m_is_child_task_sp,
-                m_is_future_sp, m_is_group_child_task_sp,
+               {m_address_sp, m_id_sp, m_kind_sp, m_enqueue_priority_sp,
+                m_is_child_task_sp, m_is_future_sp, m_is_group_child_task_sp,
                 m_is_async_let_task_sp, m_is_cancelled_sp,
                 m_is_status_record_locked_sp, m_is_escalated_sp,
                 m_is_enqueued_sp, m_child_tasks_sp, m_is_running_sp})
@@ -939,7 +955,9 @@ private:
 
 private:
   TypeSystemSwiftTypeRef *m_ts = nullptr;
+  addr_t m_task_ptr = LLDB_INVALID_ADDRESS;
   ReflectionContextInterface::AsyncTaskInfo m_task_info;
+  ValueObjectSP m_address_sp;
   ValueObjectSP m_id_sp;
   ValueObjectSP m_kind_sp;
   ValueObjectSP m_enqueue_priority_sp;

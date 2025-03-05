@@ -18,11 +18,13 @@ class TestCase(TestBase):
             "language swift task info",
             substrs=[
                 "(UnsafeCurrentTask) current_task = {",
+                "address = 0x",
                 "id = 1",
                 "isChildTask = false",
                 "isAsyncLetTask = false",
                 "children = {",
                 "0 = {",
+                "address = 0x",
                 "id = 2",
                 "isChildTask = true",
                 "isAsyncLetTask = true",

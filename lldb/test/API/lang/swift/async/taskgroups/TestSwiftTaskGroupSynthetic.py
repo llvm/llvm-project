@@ -17,10 +17,16 @@ class TestCase(TestBase):
             "v group",
             substrs=[
                 "[0] = {",
+                "address = 0x",
+                "id = ",
                 "isGroupChildTask = true",
                 "[1] = {",
+                "address = 0x",
+                "id = ",
                 "isGroupChildTask = true",
                 "[2] = {",
+                "address = 0x",
+                "id = ",
                 "isGroupChildTask = true",
             ],
         )

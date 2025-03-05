@@ -18,6 +18,8 @@ class TestCase(TestBase):
             substrs=[
                 "(UnsafeContinuation<Void, Never>) cont = {",
                 "task = {",
+                "address = 0x",
+                "id = ",
                 "isFuture = true",
             ],
         )
@@ -34,6 +36,8 @@ class TestCase(TestBase):
             substrs=[
                 "(CheckedContinuation<Int, Never>) cont = {",
                 "task = {",
+                "address = 0x",
+                "id = ",
                 "isFuture = true",
             ],
         )

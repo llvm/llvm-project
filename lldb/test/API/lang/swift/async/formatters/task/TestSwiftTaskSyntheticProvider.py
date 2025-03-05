@@ -19,6 +19,7 @@ class TestCase(TestBase):
             "frame var task",
             substrs=[
                 "(Task<(), Error>) task = {",
+                "address = 0x",
                 "id = 2",
                 "kind = 0",
                 "enqueuePriority = 21",
@@ -44,6 +45,8 @@ class TestCase(TestBase):
             "frame var currentTask",
             substrs=[
                 "(UnsafeCurrentTask) currentTask = {",
+                "address = 0x",
+                "id = ",
                 "isChildTask = true",
                 "isFuture = true",
                 "isGroupChildTask = false",
