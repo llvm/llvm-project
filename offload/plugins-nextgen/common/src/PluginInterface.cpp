@@ -740,7 +740,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
            "Autotuning is enabled, but KernelRunRecord is not initialized!");
 
     auto [Teams, Threads] =
-        KernelRecord->getLaunchParamsForKernel(KernelName, GenericDevice);
+        KernelRecord->getLaunchParamsForKernel(*this, GenericDevice);
     NumBlocks[0] = Teams;
     NumThreads[0] = Threads;
   } else {

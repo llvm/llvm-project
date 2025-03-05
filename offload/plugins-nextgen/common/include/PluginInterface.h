@@ -367,6 +367,9 @@ struct GenericKernelTy {
     return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
   }
 
+  /// Indicate if the input block size is within the limit.
+  virtual bool isValidBlockSize(uint32_t BlockSize) const { return true; }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
@@ -1345,8 +1348,10 @@ struct KernelRunRecordTy {
 
   // Get parameters for next kernel launch.
   std::pair<uint32_t, uint32_t>
-  getLaunchParamsForKernel(std::string KernelName,
+  getLaunchParamsForKernel(const GenericKernelTy &Kernel,
                            GenericDeviceTy &GenericDevice) {
+    std::string KernelName = Kernel.getName();
+
     // If the kernel reaches the run limit,
     // return the current optimal launch parameters.
     if (reachedRunLimitForKernel(KernelName)) {
@@ -1360,7 +1365,10 @@ struct KernelRunRecordTy {
 
     if (IdxCUMulti >= CUMultiplierCandidate.size()) {
       // No more element to search.
+      // Max run counter to stop further runs.
       // Return current optimal launch parameters.
+      TuningData[KernelName].RunCounters = RunLimiter + 1;
+
       return {TuningData[KernelName].MinEntry.NumTeams,
               TuningData[KernelName].MinEntry.NumThreads};
     }
@@ -1374,7 +1382,9 @@ struct KernelRunRecordTy {
     IdxThread++;
     TuningData[KernelName].IdxThread = IdxThread;
 
-    if (IdxThread >= ThreadCandidate.size()) {
+    // Threads should be within the limit.
+    if (IdxThread >= ThreadCandidate.size() ||
+        !Kernel.isValidBlockSize(ThreadCandidate[IdxThread])) {
       TuningData[KernelName].IdxThread = 0;
       TuningData[KernelName].IdxCUMultiplier++;
     }
