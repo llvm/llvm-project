@@ -92,8 +92,7 @@ contains
 ! CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DECL_ARG0]]#0, %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK: %[[UB:.*]] = arith.subi %[[DIMS0]]#1, %c1{{.*}} : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
-! CHECK: %[[ADDR:.*]] = fir.box_addr %[[DECL_ARG0]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
+! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[DECL_ARG0]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a"}
 ! CHECK: acc.kernels dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<?xf32>>)
 
   subroutine acc_multi_strides(a)
