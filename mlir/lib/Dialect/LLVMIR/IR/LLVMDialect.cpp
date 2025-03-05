@@ -3593,7 +3593,7 @@ ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
                       intrinAttr);
 
   if (parser.parseLParen())
-    return mlir::failure();
+    return failure();
 
   // Parse the function arguments.
   if (parser.parseOperandList(operands))
