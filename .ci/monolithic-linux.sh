@@ -65,6 +65,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D FLANG_ENABLE_FLANG_RT=OFF \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
