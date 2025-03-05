@@ -77,7 +77,7 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
   std::string Error;
 
   const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(
-      PTU.TheModule->getTargetTriple().str(), Error);
+      PTU.TheModule->getTargetTriple(), Error);
   if (!Target)
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());

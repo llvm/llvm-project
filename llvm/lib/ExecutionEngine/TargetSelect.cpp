@@ -66,7 +66,7 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
       TheTriple.setArch(Type);
   } else {
     std::string Error;
-    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget) {
       if (ErrorStr)
         *ErrorStr = Error;

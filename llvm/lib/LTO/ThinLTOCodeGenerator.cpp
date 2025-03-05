@@ -577,8 +577,7 @@ void ThinLTOCodeGenerator::crossReferenceSymbol(StringRef Name) {
 // TargetMachine factory
 std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   std::string ErrMsg;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TheTriple.str(), ErrMsg);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, ErrMsg);
   if (!TheTarget) {
     report_fatal_error(Twine("Can't load target for this Triple: ") + ErrMsg);
   }

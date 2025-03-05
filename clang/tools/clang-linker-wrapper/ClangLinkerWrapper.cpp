@@ -622,8 +622,7 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Compile module");
   std::string Msg;
-  const Target *T =
-      TargetRegistry::lookupTarget(M.getTargetTriple().str(), Msg);
+  const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg);
 

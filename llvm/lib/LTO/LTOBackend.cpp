@@ -520,8 +520,7 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
     Mod.setTargetTriple(Triple(C.DefaultTriple));
 
   std::string Msg;
-  const Target *T =
-      TargetRegistry::lookupTarget(Mod.getTargetTriple().str(), Msg);
+  const Target *T = TargetRegistry::lookupTarget(Mod.getTargetTriple(), Msg);
   if (!T)
     return make_error<StringError>(Msg, inconvertibleErrorCode());
   return T;
