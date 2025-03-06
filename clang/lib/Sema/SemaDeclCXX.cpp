@@ -5289,6 +5289,17 @@ Sema::SetDelegatingInitializer(CXXConstructorDecl *Constructor,
   return false;
 }
 
+static CXXDestructorDecl *LookupDestructorIfRelevant(Sema &S,
+                                                     CXXRecordDecl *Class) {
+  if (Class->isInvalidDecl())
+    return nullptr;
+  if (Class->hasIrrelevantDestructor())
+    return nullptr;
+
+  // Dtor might still be missing, e.g because it's invalid.
+  return S.LookupDestructor(Class);
+}
+
 static void MarkFieldDestructorReferenced(Sema &S, SourceLocation Location,
                                           FieldDecl *Field) {
   if (Field->isInvalidDecl())
@@ -5300,23 +5311,18 @@ static void MarkFieldDestructorReferenced(Sema &S, SourceLocation Location,
 
   QualType FieldType = S.Context.getBaseElementType(Field->getType());
 
-  const RecordType *RT = FieldType->getAs<RecordType>();
-  if (!RT)
+  auto *FieldClassDecl = FieldType->getAsCXXRecordDecl();
+  if (!FieldClassDecl)
     return;
 
-  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-  if (FieldClassDecl->isInvalidDecl())
-    return;
-  if (FieldClassDecl->hasIrrelevantDestructor())
-    return;
   // The destructor for an implicit anonymous union member is never invoked.
   if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
     return;
 
-  CXXDestructorDecl *Dtor = S.LookupDestructor(FieldClassDecl);
-  // Dtor might still be missing, e.g because it's invalid.
+  auto *Dtor = LookupDestructorIfRelevant(S, FieldClassDecl);
   if (!Dtor)
     return;
+
   S.CheckDestructorAccess(Field->getLocation(), Dtor,
                           S.PDiag(diag::err_access_dtor_field)
                               << Field->getDeclName() << FieldType);
@@ -5343,30 +5349,22 @@ static void MarkBaseDestructorsReferenced(Sema &S, SourceLocation Location,
       VisitVirtualBases = false;
   }
 
-  llvm::SmallPtrSet<const RecordType *, 8> DirectVirtualBases;
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> DirectVirtualBases;
 
   // Bases.
   for (const auto &Base : ClassDecl->bases()) {
-    const RecordType *RT = Base.getType()->getAs<RecordType>();
-    if (!RT)
+    auto *BaseClassDecl = Base.getType()->getAsCXXRecordDecl();
+    if (!BaseClassDecl)
       continue;
 
     // Remember direct virtual bases.
     if (Base.isVirtual()) {
       if (!VisitVirtualBases)
         continue;
-      DirectVirtualBases.insert(RT);
+      DirectVirtualBases.insert(BaseClassDecl);
     }
 
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    // If our base class is invalid, we probably can't get its dtor anyway.
-    if (BaseClassDecl->isInvalidDecl())
-      continue;
-    if (BaseClassDecl->hasIrrelevantDestructor())
-      continue;
-
-    CXXDestructorDecl *Dtor = S.LookupDestructor(BaseClassDecl);
-    // Dtor might still be missing, e.g because it's invalid.
+    auto *Dtor = LookupDestructorIfRelevant(S, BaseClassDecl);
     if (!Dtor)
       continue;
 
@@ -5565,8 +5563,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
       // C++ [class.base.init]p12:
       //   In a non-delegating constructor, the destructor for each
       //   potentially constructed subobject of class type is potentially
-      //   invoked
-      //   ([class.dtor]).
+      //   invoked.
       MarkFieldDestructorReferenced(*this, Location, Field);
     }
 
@@ -5897,27 +5894,21 @@ void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
 void Sema::MarkVirtualBaseDestructorsReferenced(
     SourceLocation Location, CXXRecordDecl *ClassDecl,
-    llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases) {
+    llvm::SmallPtrSetImpl<const CXXRecordDecl *> *DirectVirtualBases) {
   // Virtual bases.
   for (const auto &VBase : ClassDecl->vbases()) {
-    // Bases are always records in a well-formed non-dependent class.
-    const RecordType *RT = VBase.getType()->castAs<RecordType>();
+    auto *BaseClassDecl = VBase.getType()->getAsCXXRecordDecl();
+    if (!BaseClassDecl)
+      continue;
 
     // Ignore already visited direct virtual bases.
-    if (DirectVirtualBases && DirectVirtualBases->count(RT))
+    if (DirectVirtualBases && DirectVirtualBases->count(BaseClassDecl))
       continue;
 
-    CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    // If our base class is invalid, we probably can't get its dtor anyway.
-    if (BaseClassDecl->isInvalidDecl())
-      continue;
-    if (BaseClassDecl->hasIrrelevantDestructor())
-      continue;
-
-    CXXDestructorDecl *Dtor = LookupDestructor(BaseClassDecl);
-    // Dtor might still be missing, e.g because it's invalid.
+    auto *Dtor = LookupDestructorIfRelevant(*this, BaseClassDecl);
     if (!Dtor)
       continue;
+
     if (CheckDestructorAccess(
             ClassDecl->getLocation(), Dtor,
             PDiag(diag::err_access_dtor_vbase)
