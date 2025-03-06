@@ -132,7 +132,7 @@ enum WaitEventType {
 enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
@@ -757,14 +757,13 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg < SQ_MAX_PGM_SGPRS);
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && Reg < SQ_MAX_PGM_SGPRS) {
+    // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
+    // sources like SRC_PRIVATE_BASE.
     Result.first = Reg + NUM_ALL_VGPRS;
-  }
-  // TODO: Handle TTMP
-  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
-  else
+  } else {
     return {-1, -1};
+  }
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
