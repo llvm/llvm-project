@@ -199,7 +199,6 @@ for.body:
 }
 
 ; Check that phi analysis can handle a binary operator with induction variables.
-define void @binary_induction() {
 ; The phis become induction through the chain of phis, with a unary
 ; instruction on a loop induction.  Check that the phis for x, a, and y become
 ; loop inductions since x is based on y, which is based on a, which is based
@@ -224,6 +223,8 @@ define void @binary_induction() {
 ;     a = i + 2;
 ;   }
 ; }
+;
+define void @binary_induction() {
 ; CHECK-LABEL: @binary_induction(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
