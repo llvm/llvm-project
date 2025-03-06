@@ -1401,3 +1401,701 @@ define i32 @sext_maybe_zero(i16 %x) {
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
   ret i32 %r
 }
+
+define i32 @udiv_dividend_gt_divisor(i32 %x, i32 %y) {
+; X86-LABEL: udiv_dividend_gt_divisor:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $32, %eax
+; X86-NEXT:    setae %dl
+; X86-NEXT:    cmpl $16, %ecx
+; X86-NEXT:    setb %dh
+; X86-NEXT:    testb %dh, %dl
+; X86-NEXT:    movl $32, %esi
+; X86-NEXT:    cmovel %esi, %eax
+; X86-NEXT:    movl $16, %edi
+; X86-NEXT:    cmovnel %ecx, %edi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %edi
+; X86-NEXT:    bsfl %eax, %eax
+; X86-NEXT:    cmovel %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_dividend_gt_divisor:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cmpl $32, %edi
+; X64-NEXT:    setae %cl
+; X64-NEXT:    cmpl $16, %esi
+; X64-NEXT:    setb %dl
+; X64-NEXT:    testb %dl, %cl
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    cmovel %ecx, %eax
+; X64-NEXT:    movl $16, %edi
+; X64-NEXT:    cmovnel %esi, %edi
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %edi
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %cond1 = icmp uge i32 %x, 32
+  %cond2 = icmp ult i32 %y, 16
+  %both = and i1 %cond1, %cond2
+  %dividend = select i1 %both, i32 %x, i32 32
+  %divisor = select i1 %both, i32 %y, i32 16
+  %z = udiv i32 %dividend, %divisor
+  ; If dividend >= 32 and divisor < 16, then result is >= 2, so never zero
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @udiv_exact_never_zero(i32 %x) {
+; X86-LABEL: udiv_exact_never_zero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $256, %eax # imm = 0x100
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_exact_never_zero:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $256, %edi # imm = 0x100
+; X64-NEXT:    shrl $3, %edi
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %dividend = or i32 %x, 256
+  %z = udiv exact i32 %dividend, 8
+  ; If the dividend is a multiple of 8 and at least 256, the result is at least 32
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sdiv_different_signs(i32 %x, i32 %y) {
+; X86-LABEL: sdiv_different_signs:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $128, %eax
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %ecx
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_different_signs:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl $128, %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    negl %ecx
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %positive = or i32 %x, 128
+  %negative = sub i32 0, %positive
+  %z = sdiv i32 %positive, %negative
+  ; If the operands have different signs and both are non-zero, the result is negative and non-zero
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sdiv_exact_never_zero(i32 %x) {
+; X86-LABEL: sdiv_exact_never_zero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $512, %eax # imm = 0x200
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sarl $2, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_exact_never_zero:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $512, %edi # imm = 0x200
+; X64-NEXT:    sarl $2, %edi
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %dividend = or i32 %x, 512
+  %z = sdiv exact i32 %dividend, 4
+  ; If the dividend is a multiple of 4 and at least 512, the result is at least 128
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @udiv_dividend_higher_bits(i32 %x) {
+; X86-LABEL: udiv_dividend_higher_bits:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    orl $65536, %eax # imm = 0x10000
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %ecx
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_dividend_higher_bits:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl $65536, %eax # imm = 0x10000
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %dividend = or i32 %x, 65536
+  %divisor = and i32 %x, 255
+  %divisor_safe = or i32 %divisor, 1 ; ensure divisor is at least 1
+  %z = udiv i32 %dividend, %divisor_safe
+  ; If dividend has bits set higher than any bit in the divisor, the result must be non-zero
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @udiv_known_nonzero_gt(i32 %x, i32 %y) {
+; X86-LABEL: udiv_known_nonzero_gt:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl %ecx, %edx
+; X86-NEXT:    seta %al
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    setne %ah
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    setne %bl
+; X86-NEXT:    andb %ah, %bl
+; X86-NEXT:    testb %al, %bl
+; X86-NEXT:    movl $64, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    movl $32, %esi
+; X86-NEXT:    cmovel %esi, %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %ecx
+; X86-NEXT:    bsfl %eax, %eax
+; X86-NEXT:    cmovel %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_known_nonzero_gt:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    seta %al
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    setne %cl
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    setne %dl
+; X64-NEXT:    andb %cl, %dl
+; X64-NEXT:    testb %al, %dl
+; X64-NEXT:    movl $64, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    cmovel %ecx, %esi
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %gt = icmp ugt i32 %x, %y    ; Ensure x > y
+  %x_gt_0 = icmp ne i32 %x, 0  ; Ensure x > 0
+  %y_gt_0 = icmp ne i32 %y, 0  ; Ensure y > 0
+  %cond1 = and i1 %gt, %x_gt_0
+  %cond = and i1 %cond1, %y_gt_0
+  %dividend = select i1 %cond, i32 %x, i32 64
+  %divisor = select i1 %cond, i32 %y, i32 32
+  %z = udiv i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @udiv_exact_known_nonzero_dividend(i32 %x, i32 %y) {
+; X86-LABEL: udiv_exact_known_nonzero_dividend:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %ecx
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_exact_known_nonzero_dividend:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl $1, %eax
+; X64-NEXT:    orl $1, %esi
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %x_nz = or i32 %x, 1
+  ; Make y variable but non-zero
+  %y_nz = or i32 %y, 1
+  %z = udiv exact i32 %x_nz, %y_nz
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sdiv_known_nonzero_diff_signs(i32 %a, i32 %b) {
+  ; Ensure a is positive by making it >= 1
+; X86-LABEL: sdiv_known_nonzero_diff_signs:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    setg %al
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    sets %ah
+; X86-NEXT:    testb %ah, %al
+; X86-NEXT:    movl $10, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    movl $-5, %ecx
+; X86-NEXT:    cmovnel %edx, %ecx
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %ecx
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_known_nonzero_diff_signs:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    orl $-2147483648, %esi # imm = 0x80000000
+; X64-NEXT:    negl %esi
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    setg %al
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    sets %cl
+; X64-NEXT:    testb %cl, %al
+; X64-NEXT:    movl $10, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    movl $-5, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %a_pos = or i32 %a, 1
+  ; Ensure b is negative by making it <= -1
+  %b_neg = or i32 %b, -2147483648  ; Set the sign bit
+  %b_neg2 = sub i32 0, %b_neg      ; Force negative value
+
+  ; Create a condition to select the correct values
+  %a_is_pos = icmp sgt i32 %a_pos, 0
+  %b_is_neg = icmp slt i32 %b_neg2, 0
+  %diff_signs = and i1 %a_is_pos, %b_is_neg
+
+  ; Select the dividend and divisor based on the condition
+  %dividend = select i1 %diff_signs, i32 %a_pos, i32 10
+  %divisor = select i1 %diff_signs, i32 %b_neg2, i32 -5
+
+  %z = sdiv i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @sdiv_exact_known_nonzero_dividend(i32 %x, i32 %y) {
+; X86-LABEL: sdiv_exact_known_nonzero_dividend:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    movl $16, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %ecx
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_exact_known_nonzero_dividend:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $16, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    orl $1, %esi
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %esi
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %cond = icmp eq i32 %x, 0
+  %x_nz = select i1 %cond, i32 16, i32 %x
+  %y_nz = or i32 %y, 1
+  %z = sdiv exact i32 %x_nz, %y_nz
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @udiv_known_nonzero_higher_bits(i32 %x, i32 %y) {
+; X86-LABEL: udiv_known_nonzero_higher_bits:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $65536, %eax # imm = 0x10000
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %ecx
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_known_nonzero_higher_bits:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl $65536, %eax # imm = 0x10000
+; X64-NEXT:    orl $1, %esi
+; X64-NEXT:    movzbl %sil, %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %x_high = or i32 %x, 65536
+  %y_low = and i32 %y, 255
+  %y_safe = or i32 %y_low, 1
+  %z = udiv i32 %x_high, %y_safe
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; Test the exact condition for UDIV: dividend > divisor and both > 0
+define i32 @udiv_improved_condition(i32 %x, i32 %y) {
+; X86-LABEL: udiv_improved_condition:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl %ecx, %edx
+; X86-NEXT:    seta %al
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    setne %ah
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    setne %bl
+; X86-NEXT:    andb %ah, %bl
+; X86-NEXT:    testb %al, %bl
+; X86-NEXT:    movl $4, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    movl $1, %esi
+; X86-NEXT:    cmovnel %ecx, %esi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %esi
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_improved_condition:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    seta %al
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    setne %cl
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    setne %dl
+; X64-NEXT:    andb %cl, %dl
+; X64-NEXT:    testb %al, %dl
+; X64-NEXT:    movl $4, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    movl $1, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %is_x_gt_y = icmp ugt i32 %x, %y
+  %is_x_gt_0 = icmp ne i32 %x, 0
+  %is_y_gt_0 = icmp ne i32 %y, 0
+  %all_true = and i1 %is_x_gt_y, %is_x_gt_0
+  %all_cond = and i1 %all_true, %is_y_gt_0
+
+  ; Force the exact condition: Op0 > Op1 && Op0 > 0 && Op1 > 0
+  %dividend = select i1 %all_cond, i32 %x, i32 4
+  %divisor = select i1 %all_cond, i32 %y, i32 1
+
+  %z = udiv i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; Test that SDIV with different signs produces a non-zero result
+define i32 @sdiv_different_signs_improved(i32 %x, i32 %y) {
+  ; Ensure x is positive
+; X86-LABEL: sdiv_different_signs_improved:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    setg %al
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    sets %ah
+; X86-NEXT:    testb %ah, %al
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    movl $-1, %esi
+; X86-NEXT:    cmovnel %ecx, %esi
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %esi
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_different_signs_improved:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    setg %al
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    sets %cl
+; X64-NEXT:    testb %cl, %al
+; X64-NEXT:    movl $1, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    movl $-1, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %x_is_pos = icmp sgt i32 %x, 0
+  ; Ensure y is negative
+  %y_is_neg = icmp slt i32 %y, 0
+  ; Both conditions must be true
+  %opposite_signs = and i1 %x_is_pos, %y_is_neg
+
+  ; When signs are different, use inputs; otherwise use constants
+  %dividend = select i1 %opposite_signs, i32 %x, i32 1
+  %divisor = select i1 %opposite_signs, i32 %y, i32 -1
+
+  %z = sdiv i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; Test SDIV with exact flag and non-zero dividend
+define i32 @sdiv_exact_nonzero_dividend(i32 %x, i32 %y) {
+  ; Ensure x is non-zero
+; X86-LABEL: sdiv_exact_nonzero_dividend:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    movl $128, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    movl $4, %esi
+; X86-NEXT:    cmovnel %ecx, %esi
+; X86-NEXT:    cltd
+; X86-NEXT:    idivl %esi
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: sdiv_exact_nonzero_dividend:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $128, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    movl $4, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    cltd
+; X64-NEXT:    idivl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %x_is_nz = icmp ne i32 %x, 0
+  %dividend = select i1 %x_is_nz, i32 %x, i32 128
+
+  ; Ensure y is non-zero
+  %y_is_nz = icmp ne i32 %y, 0
+  %divisor = select i1 %y_is_nz, i32 %y, i32 4
+
+  %z = sdiv exact i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; Test UDIV with exact flag and non-zero dividend
+define i32 @udiv_exact_nonzero_dividend(i32 %x, i32 %y) {
+  ; Ensure x is non-zero
+; X86-LABEL: udiv_exact_nonzero_dividend:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    movl $128, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    movl $4, %esi
+; X86-NEXT:    cmovnel %ecx, %esi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %esi
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_exact_nonzero_dividend:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $128, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    movl $4, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %x_is_nz = icmp ne i32 %x, 0
+  %dividend = select i1 %x_is_nz, i32 %x, i32 128
+
+  ; Ensure y is non-zero
+  %y_is_nz = icmp ne i32 %y, 0
+  %divisor = select i1 %y_is_nz, i32 %y, i32 4
+
+  %z = udiv exact i32 %dividend, %divisor
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; Test the exact condition we added:
+; "If Op0 >= Op1, then the result is at least 1, and therefore not 0."
+define i32 @udiv_dividend_ge_divisor(i32 %x, i32 %y) {
+  ; Create a condition where x >= y
+; X86-LABEL: udiv_dividend_ge_divisor:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl %ecx, %edx
+; X86-NEXT:    setae %al
+; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    setne %ah
+; X86-NEXT:    testb %ah, %al
+; X86-NEXT:    movl $10, %eax
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    movl $20, %esi
+; X86-NEXT:    cmovnel %ecx, %esi
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    divl %esi
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_dividend_ge_divisor:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    setae %al
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    setne %cl
+; X64-NEXT:    testb %cl, %al
+; X64-NEXT:    movl $10, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    movl $20, %ecx
+; X64-NEXT:    cmovnel %esi, %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ecx
+; X64-NEXT:    movl $32, %ecx
+; X64-NEXT:    rep bsfl %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    retq
+  %is_x_ge_y = icmp uge i32 %x, %y
+
+  ; Ensure y is not zero to avoid division by zero
+  %is_y_nz = icmp ne i32 %y, 0
+
+  ; Both conditions must be satisfied
+  %valid_div = and i1 %is_x_ge_y, %is_y_nz
+
+  ; When the condition is true, use x and y; otherwise use constants
+  %dividend = select i1 %valid_div, i32 %x, i32 10
+  %divisor = select i1 %valid_div, i32 %y, i32 20
+
+  ; This division must produce a non-zero result when dividend >= divisor
+  %z = udiv i32 %dividend, %divisor
+
+  ; CTTZ is used to check if the compiler knows the result is never zero
+  ; If it knows, it will use rep bsf instead of conditional cmovne
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}

@@ -5857,14 +5857,31 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
       return true;
     break;
   }
-  case ISD::UDIV:
-  case ISD::SDIV:
+  case ISD::UDIV: {
     // div exact can only produce a zero if the dividend is zero.
-    // TODO: For udiv this is also true if Op1 u<= Op0
     if (Op->getFlags().hasExact())
       return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    break;
 
+    // If Op0 >= Op1, then the result is at least 1, and therefore not 0.
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op0.isStrictlyPositive() && Op1.isStrictlyPositive() &&
+        KnownBits::uge(Op0, Op1).value_or(false))
+      return true;
+    break;
+  }
+  case ISD::SDIV: {
+    // div exact can only produce a zero if the dividend is zero.
+    if (Op->getFlags().hasExact())
+      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+    KnownBits Op0 = computeKnownBits(Op.getOperand(0), Depth + 1);
+    KnownBits Op1 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    if (Op0.isStrictlyPositive() && Op1.isStrictlyPositive() &&
+        KnownBits::uge(Op0, Op1).value_or(false))
+      return true;
+    break;
+  }
   case ISD::ADD:
     if (Op->getFlags().hasNoUnsignedWrap())
       if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
