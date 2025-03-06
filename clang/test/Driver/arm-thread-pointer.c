@@ -47,3 +47,19 @@
 // RUN: %clang --target=armv7-linux -mtp=auto -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_Auto %s
 // ARMv7_THREAD_POINTER_Auto: "-target-feature" "+read-tp-tpidruro"
+
+// RUN: %clang --target=armv5t-linux -mtp=auto -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv5t_THREAD_POINTER_Auto %s
+// ARMv5t_THREAD_POINTER_Auto-NOT: "-target-feature" "+read-tp-tpidruro"
+
+// RUN: %clang --target=armv6k-linux -mtp=auto -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv6k_THREAD_POINTER_Auto %s
+// ARMv6k_THREAD_POINTER_Auto: "-target-feature" "+read-tp-tpidruro"
+
+// RUN: %clang --target=armv6-linux -mtp=auto -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv6_THREAD_POINTER_Auto %s
+// ARMv6_THREAD_POINTER_Auto-NOT: "-target-feature" "+read-tp-tpidruro"
+
+// RUN: %clang --target=armv6kz-linux -mtp=auto -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv6kz_THREAD_POINTER_Auto %s
+// ARMv6kz_THREAD_POINTER_Auto: "-target-feature" "+read-tp-tpidruro"

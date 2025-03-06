@@ -208,9 +208,16 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
 bool arm::isHardTPSupported(const llvm::Triple &Triple) {
   int Ver = getARMSubArchVersionNumber(Triple);
   llvm::ARM::ArchKind AK = llvm::ARM::parseArch(Triple.getArchName());
-  return Triple.isARM() || AK == llvm::ARM::ArchKind::ARMV6T2 ||
-         (Ver >= 7 && AK != llvm::ARM::ArchKind::ARMV8MBaseline);
+  return Triple.isARM() || (Ver >= 7 && AK != llvm::ARM::ArchKind::ARMV8MBaseline);
 }
+
+
+// We follow GCC mtp=auto when arch is arm_arch6k and support thumb2
+bool arm::isHardTPAndThumb2(const llvm::Triple &Triple) {
+  llvm::ARM::ArchKind AK = llvm::ARM::parseArch(Triple.getArchName());
+  return Triple.isARM() && AK >= llvm::ARM::ArchKind::ARMV6K && AK != llvm::ARM::ArchKind::ARMV8MBaseline;
+}
+
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
 arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
@@ -240,7 +247,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
     return ReadTPMode::Invalid;
   }
-  return (isHardTPSupported(Triple) ? ReadTPMode::TPIDRURO : ReadTPMode::Soft);
+  return (isHardTPAndThumb2(Triple) ? ReadTPMode::TPIDRURO : ReadTPMode::Soft);
 }
 
 void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
