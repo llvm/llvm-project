@@ -74,7 +74,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
       if (FD->isMain() && FD->getNumParams() == 2)
         return CCM_WasmMainArgcArgv;
 
-  if (!Triple.isOSWindows() || !Triple.isX86())
+  if (!TI.shouldUseMicrosoftCCforMangling())
     return CCM_Other;
 
   if (Context.getLangOpts().CPlusPlus && !isExternC(ND) &&
