@@ -1071,7 +1071,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
   if (op->getBlock() != insertionPoint->getBlock()) {
     return rewriter.notifyMatchFailure(
         op, "unsupported caes where operation and insertion point are not in "
-            "the sme basic block");
+            "the same basic block");
   }
 
   // Find the backward slice of operation for each `Value` the operation
@@ -1079,6 +1079,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
   // dominated by the `insertionPoint`
   BackwardSliceOptions options;
   options.inclusive = true;
+  options.omitUsesFromAbove = false;
   options.filter = [&](Operation *sliceBoundaryOp) {
     return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
   };
@@ -1093,7 +1094,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
     // If op has region, get the defined slice for all captured values.
     llvm::SetVector<Value> capturedVals;
     mlir::getUsedValuesDefinedAbove(regions, capturedVals);
-    for (auto value : capturedVals) {
+    for (Value value : capturedVals) {
       getBackwardSlice(value, &slice, options);
     }
   }
@@ -1105,9 +1106,9 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
         "cannot move dependencies before operation in backward slice of op");
   }
 
-  // Sort the slice topologically, ad move in topological order.
+  // Sort the slice topologically, and move in topological order.
   mlir::topologicalSort(slice);
-  for (auto op : slice) {
+  for (Operation *op : slice) {
     rewriter.moveOpBefore(op, insertionPoint);
   }
   return success();

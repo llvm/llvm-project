@@ -15,7 +15,7 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
-/// Transform dialect perations for testing transformations in MLIR
+/// Transform dialect operations for testing transformations in MLIR
 
 def TestMoveOperandDeps :
     Op<Transform_Dialect, "test.move_operand_deps",
