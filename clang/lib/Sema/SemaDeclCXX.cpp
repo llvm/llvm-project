@@ -490,8 +490,10 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       continue;
     }
 
-    if (PrevForDefaultArgs->getLexicalDeclContext()->getPrimaryContext() !=
-            ScopeDC->getPrimaryContext() &&
+    if (PrevForDefaultArgs->getLexicalDeclContext()
+                ->getNonTransparentContext()
+                ->getPrimaryContext() !=
+            ScopeDC->getNonTransparentContext()->getPrimaryContext() &&
         !New->isCXXClassMember())
       // If previous declaration is lexically in a different scope,
       // we don't inherit its default arguments, except for out-of-line
@@ -499,9 +501,9 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       //
       // extern "C" and local functions can have default arguments across
       // different scopes, but diagnosing that early would reject well-formed
-      // code (_N5001_.[over.match.best]/4.) Instead, they are checked
-      // in ConvertArgumentsForCall, after the best viable function has been
-      // selected.
+      // code (C++2c [over.match.best]/4.) Instead, this check is deferred to
+      // overload resolution. See handling of ambiguous overload resolution
+      // result in FinishOverloadedCallExpr().
       continue;
 
     // We found the right previous declaration.

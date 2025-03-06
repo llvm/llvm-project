@@ -18,18 +18,18 @@ namespace cwg1 { // cwg1: 21
   void g() {
     cwg1_f(0);
     cwg1_f();
-    // expected-error@-1 {{function call relies on ambiguous default argument for parameter 'a'}}
-    //   expected-note@#cwg1-Y {{default argument declared here}}
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
     //   expected-note@#cwg1-X {{default argument declared here}}
+    //   expected-note@#cwg1-Y {{default argument declared here}}
   }
   namespace X {
     using Y::cwg1_f;
     void h() {
       cwg1_f(0);
       cwg1_f();
-      // expected-error@-1 {{function call relies on ambiguous default argument for parameter 'a'}}
-      //   expected-note@#cwg1-Y {{default argument declared here}}
+      // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
       //   expected-note@#cwg1-X {{default argument declared here}}
+      //   expected-note@#cwg1-Y {{default argument declared here}}
     }
   }
 
@@ -47,19 +47,18 @@ namespace cwg1 { // cwg1: 21
     using cwg1::i;
     i(0);
     i();
-    // expected-error@-1 {{function call relies on ambiguous default argument}}
-    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
     //   expected-note@#cwg1-i {{default argument declared here}}
+    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
   }
   void k() {
     using cwg1::i;
     void i(int = 1); // #cwg1-i-redecl2
     i(0);
     i();
-    // expected-error@-1 {{function call relies on ambiguous default argument}}
-    //   expected-note@#cwg1-i-redecl2 {{default argument declared here}}
-    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
     //   expected-note@#cwg1-i {{default argument declared here}}
+    //   expected-note@#cwg1-i-redecl2 {{default argument declared here}}
   }
 } // namespace cwg1
 

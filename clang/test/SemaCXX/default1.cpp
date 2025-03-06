@@ -41,14 +41,11 @@ void kk(Y = 17); // expected-error{{no viable conversion}} \
 // expected-note{{passing argument to parameter here}}
 
 int l () {
-  int m(int i, int j, int k = 3); // #m
+  int m(int i, int j, int k = 3);
   if (1)
   {
-    int m(int i, int j = 2, int k = 4); // #m-redecl
+    int m(int i, int j = 2, int k = 4);
     m(8);
-    // expected-error@-1 {{function call relies on ambiguous default argument for parameter 'k'}}
-    //   expected-note@#m-redecl {{default argument declared here}}
-    //   expected-note@#m {{default argument declared here}}
   }
   return 0;
 }
