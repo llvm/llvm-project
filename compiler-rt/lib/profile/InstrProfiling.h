@@ -124,7 +124,6 @@ ValueProfNode *__llvm_profile_begin_vnodes(void);
 ValueProfNode *__llvm_profile_end_vnodes(void);
 const VTableProfData *__llvm_profile_begin_vtables(void);
 const VTableProfData *__llvm_profile_end_vtables(void);
-uint32_t *__llvm_profile_begin_orderfile(void);
 
 /*!
  * \brief Merge profile data from buffer.
@@ -174,8 +173,6 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
  * or if that's not set,  \c "default.profraw".
  */
 int __llvm_profile_write_file(void);
-
-int __llvm_orderfile_write_file(void);
 
 /*!
  * \brief Set the FILE object for writing instrumentation data. Return 0 if set
