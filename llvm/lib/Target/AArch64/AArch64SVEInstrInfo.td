@@ -655,6 +655,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", AArch64sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", AArch64udot>;
 
+  let Predicates = [HasSVEorStreamingSVE] in {
+    def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (UDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (SDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (UDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (SDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+  } // End HasSVEorStreamingSVE
+
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
 
@@ -3731,6 +3742,19 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SSUBWT_ZZZ : sve2_wide_int_arith_wide<0b101, "ssubwt", int_aarch64_sve_ssubwt>;
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
+
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_D (UADDWB_ZZZ_D $Acc, $Input), $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_D (SADDWB_ZZZ_D $Acc, $Input), $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_S (UADDWB_ZZZ_S $Acc, $Input), $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_S (SADDWB_ZZZ_S $Acc, $Input), $Input)>;
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (UADDWT_ZZZ_H (UADDWB_ZZZ_H $Acc, $Input), $Input)>;
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (SADDWT_ZZZ_H (SADDWB_ZZZ_H $Acc, $Input), $Input)>;
 
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
