@@ -37,13 +37,13 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
-#include "comgr-cache-bundler-command.h"
 #include "comgr-cache.h"
 #include "comgr-clang-command.h"
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
 #include "comgr-spirv-command.h"
+#include "comgr-unbundle-command.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "clang/CodeGen/CodeGenAction.h"

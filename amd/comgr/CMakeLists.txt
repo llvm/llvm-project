@@ -70,7 +70,6 @@ option(COMGR_BUILD_SHARED_LIBS "Build the shared library"
 
 set(SOURCES
   src/comgr-cache.cpp
-  src/comgr-cache-bundler-command.cpp
   src/comgr-cache-command.cpp
   src/comgr-clang-command.cpp
   src/comgr-compiler.cpp
@@ -86,6 +85,7 @@ set(SOURCES
   src/comgr-spirv-command.cpp
   src/comgr-symbol.cpp
   src/comgr-symbolizer.cpp
+  src/comgr-unbundle-command.cpp
   src/time-stat/time-stat.cpp)
 
 if(COMGR_BUILD_SHARED_LIBS)

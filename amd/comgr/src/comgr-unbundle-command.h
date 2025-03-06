@@ -33,8 +33,8 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_CACHE_BUNDLER_COMMAND_H
-#define COMGR_CACHE_BUNDLER_COMMAND_H
+#ifndef COMGR_BUNDLER_COMMAND_H
+#define COMGR_BUNDLER_COMMAND_H
 
 #include <comgr-cache-command.h>
 

@@ -36,7 +36,7 @@
  *
  ******************************************************************************/
 
-#include <comgr-cache-bundler-command.h>
+#include <comgr-unbundle-command.h>
 
 #include <clang/Driver/OffloadBundler.h>
 #include <llvm/BinaryFormat/Magic.h>
