@@ -74,17 +74,17 @@ class Filter(Regex):
 
     """
 
-    def __init__(self, regex, is_filter_out, is_filter_all_after):
+    def __init__(self, regex, is_filter_out, is_filter_out_after):
         super(Filter, self).__init__(regex)
-        if is_filter_out and is_filter_all_after:
-            raise ValueError("cannot use both --filter-out and --filter-all-after")
+        if is_filter_out and is_filter_out_after:
+            raise ValueError("cannot use both --filter-out and --filter-out-after")
         self.is_filter_out = is_filter_out
-        self.is_filter_all_after = is_filter_all_after
+        self.is_filter_out_after = is_filter_out_after
 
     def __deepcopy__(self, memo):
         result = copy.deepcopy(super(Filter, self), memo)
         result.is_filter_out = copy.deepcopy(self.is_filter_out, memo)
-        result.is_filter_all_after = copy.deepcopy(self.is_filter_all_after, memo)
+        result.is_filter_out_after = copy.deepcopy(self.is_filter_out_after, memo)
         return result
 
 
@@ -131,10 +131,10 @@ def parse_commandline_args(parser):
 
             is_filter_out = option_string == "--filter-out"
 
-            is_filter_all_after = option_string == "--filter-all-after"
+            is_filter_out_after = option_string == "--filter-out-after"
 
             value_list[-1] = Filter(
-                value_list[-1].regex, is_filter_out, is_filter_all_after
+                value_list[-1].regex, is_filter_out, is_filter_out_after
             )
 
             setattr(namespace, self.dest, value_list)
@@ -160,11 +160,11 @@ def parse_commandline_args(parser):
         help="Exclude lines matching REGEX",
     )
     filter_group.add_argument(
-        "--filter-all-after",
+        "--filter-out-after",
         action=FilterAction,
         dest="filters",
         metavar="REGEX",
-        help="Exclude all lines after line matching REGEX",
+        help="Exclude all lines within a given function after line matching REGEX",
     )
 
     parser.add_argument(
@@ -686,7 +686,7 @@ def get_globals_name_prefix(raw_tool_output):
 def apply_filters(line, filters):
     has_filter = False
     for f in filters:
-        if f.is_filter_all_after:
+        if f.is_filter_out_after:
             continue
         if not f.is_filter_out:
             has_filter = True
@@ -697,19 +697,19 @@ def apply_filters(line, filters):
     return False if has_filter else True
 
 
-def has_filter_all(filters):
+def has_filter_out_after(filters):
     for f in filters:
-        if f.is_filter_all_after:
+        if f.is_filter_out_after:
             return True
     return False
 
 
-def filter_all_after(body, filters):
+def filter_out_after(body, filters):
     lines = []
     for line in body.splitlines():
         lines.append(line)
         for f in filters:
-            if f.is_filter_all_after:
+            if f.is_filter_out_after:
                 if f.search(line):
                     return lines
     return lines
@@ -718,10 +718,10 @@ def filter_all_after(body, filters):
 def do_filter(body, filters):
     if not filters:
         return body
-    has_filter_after = has_filter_all(filters)
+    filter_out_after_flag = has_filter_out_after(filters)
     lines = []
-    if has_filter_after:
-        lines = filter_all_after(body, filters)
+    if filter_out_after_flag:
+        lines = filter_out_after(body, filters)
     else:
         lines = body.splitlines()
     return "\n".join(filter(lambda line: apply_filters(line, filters), lines))
@@ -827,7 +827,7 @@ class FunctionTestBuilder:
                     lambda f: Filter(
                         re.compile(f.pattern().strip('"'), f.flags()),
                         f.is_filter_out,
-                        f.is_filter_all_after,
+                        f.is_filter_out_after,
                     ),
                     flags.filters,
                 )
@@ -870,11 +870,10 @@ class FunctionTestBuilder:
         return self._global_var_dict
 
     def is_filtered(self):
-        total_filters = 0
         for f in self._filters:
-            if not f.is_filter_all_after:
-                total_filters += 1
-        return bool(total_filters)
+            if not f.is_filter_out_after:
+                return True
+        return False
 
     def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
         build_global_values_dictionary(
@@ -2571,8 +2570,8 @@ def get_autogennote_suffix(parser, args):
             for elem in value:
                 if elem.is_filter_out:
                     opt_name = "filter-out"
-                elif elem.is_filter_all_after:
-                    opt_name = "filter-all-after"
+                elif elem.is_filter_out_after:
+                    opt_name = "filter-out-after"
                 else:
                     opt_name = "filter"
                 opt_value = elem.pattern()
