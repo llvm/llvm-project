@@ -3150,10 +3150,9 @@ private:
               loc, 1); // Use index type directly
 
         // Ensure lb, ub, and step are of index type using fir.convert
-        mlir::Type indexType = builder->getIndexType();
-        lb = builder->create<fir::ConvertOp>(loc, indexType, lb);
-        ub = builder->create<fir::ConvertOp>(loc, indexType, ub);
-        step = builder->create<fir::ConvertOp>(loc, indexType, step);
+        lb = builder->create<fir::ConvertOp>(loc, idxTy, lb);
+        ub = builder->create<fir::ConvertOp>(loc, idxTy, ub);
+        step = builder->create<fir::ConvertOp>(loc, idxTy, step);
 
         lbs.push_back(lb);
         ubs.push_back(ub);
@@ -3163,10 +3162,6 @@ private:
 
         // Handle induction variable
         mlir::Value ivValue = getSymbolAddress(*name.symbol);
-        std::size_t ivTypeSize = name.symbol->size();
-        if (ivTypeSize == 0)
-          llvm::report_fatal_error("unexpected induction variable size");
-        mlir::Type ivTy = builder->getIntegerType(ivTypeSize * 8);
 
         if (!ivValue) {
           // DO CONCURRENT induction variables are not mapped yet since they are
@@ -3174,7 +3169,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, ivTy, toStringRef(name.symbol->name()));
+              loc, idxTy, toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
@@ -3186,7 +3181,7 @@ private:
         // Bind the symbol to the declared variable
         bindSymbol(*name.symbol, ivValue);
         ivValues.push_back(ivValue);
-        ivTypes.push_back(ivTy);
+        ivTypes.push_back(idxTy);
         ivLocs.push_back(loc);
       }
     } else {
