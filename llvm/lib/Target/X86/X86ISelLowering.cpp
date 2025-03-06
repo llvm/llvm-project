@@ -3260,6 +3260,12 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
                                               EVT NewVT) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
+  auto PeekThroughOneUserBitcasts = [](const SDNode *N) {
+    while (N->getOpcode() == ISD::BITCAST && N->hasOneUse())
+      N = *N->user_begin();
+    return N;
+  };
+
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
   // relocation target a movq or addq instruction: don't let the load shrink.
   SDValue BasePtr = cast<LoadSDNode>(Load)->getBasePtr();
@@ -3267,9 +3273,10 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
     if (const auto *GA = dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0)))
       return GA->getTargetFlags() != X86II::MO_GOTTPOFF;
 
-  // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
+  // If this is an (1) AVX vector load with (2) multiple uses and (3) any of
   // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded. Therefore, it's probably not worth splitting the load.
+  // can be store-folded, or (4) any use will be used by legal full width
+  // instruction. Then, it's probably not worth splitting the load.
   EVT VT = Load->getValueType(0);
   if ((VT.is256BitVector() || VT.is512BitVector()) &&
       !SDValue(Load, 0).hasOneUse()) {
@@ -3278,15 +3285,23 @@ bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
       if (Use.getResNo() != 0)
         continue;
 
-      SDNode *User = Use.getUser();
+      const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
-      // If this use is not an extract + store, it's probably worth splitting.
-      if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR || !User->hasOneUse() ||
-          User->user_begin()->getOpcode() != ISD::STORE)
-        return true;
+      // If any use is an extract + store, it's probably not worth splitting.
+      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          all_of(User->uses(), [&](const SDUse &U) {
+            const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
+            return Inner->getOpcode() == ISD::STORE;
+          }))
+        return false;
+
+      // If any use is a full width legal/target bin op, then assume its legal
+      // and shouldn't split.
+      if (isBinOp(User->getOpcode()) &&
+          (isOperationLegal(User->getOpcode(), VT) ||
+           User->getOpcode() > ISD::BUILTIN_OP_END))
+        return false;
     }
-    // All non-chain uses are extract + store.
-    return false;
   }
 
   return true;
