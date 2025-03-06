@@ -3749,10 +3749,16 @@ defm pascal_strings : BoolFOption<"pascal-strings",
 // Note: This flag has different semantics in the driver and in -cc1. The driver accepts -fpatchable-function-entry=M,N
 // and forwards it to -cc1 as -fpatchable-function-entry=M and -fpatchable-function-entry-offset=N. In -cc1, both flags
 // are treated as a single integer.
-def fpatchable_function_entry_EQ : Joined<["-"], "fpatchable-function-entry=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  MetaVarName<"<N,M>">, HelpText<"Generate M NOPs before function entry and N-M NOPs after function entry">,
-  MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
+def fpatchable_function_entry_EQ
+    : Joined<["-"], "fpatchable-function-entry=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N,M,Section>">,
+      HelpText<"Generate M NOPs before function entry and N-M NOPs after "
+               "function entry. "
+               "If section is specified, use it instead of "
+               "__patchable_function_entries.">,
+      MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryCount">>;
 def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
@@ -7577,6 +7583,11 @@ def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">,
       MarshallingInfoInt<CodeGenOpts<"PatchableFunctionEntryOffset">>;
+def fpatchable_function_entry_section_EQ
+    : Joined<["-"], "fpatchable-function-entry-section=">,
+      MetaVarName<"<Section>">,
+      HelpText<"Use Section instead of __patchable_function_entries">,
+      MarshallingInfoString<CodeGenOpts<"PatchableFunctionEntrySection">>;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation">, Values<"none,clang,llvm,csllvm">,
     NormalizedValuesScope<"CodeGenOptions">,
