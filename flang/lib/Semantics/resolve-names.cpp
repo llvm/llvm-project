@@ -1801,15 +1801,75 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   PopScope();
 }
 
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op) {
+  switch (op) {
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+    return parser::CharBlock{"op.*", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+    return parser::CharBlock{"op.+", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    return parser::CharBlock{"op.-", 4};
+
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+    return parser::CharBlock{"op.AND", 6};
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+    return parser::CharBlock{"op.OR", 6};
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+    return parser::CharBlock{"op.EQV", 7};
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return parser::CharBlock{"op.NEQV", 8};
+
+  default:
+    assert(0 && "Unsupported operator...");
+    return parser::CharBlock{"op.?", 4};
+  }
+}
+
+parser::CharBlock MangleSpecialFunctions(const parser::CharBlock name) {
+  if (name == "max") {
+    return parser::CharBlock{"op.max", 6};
+  }
+  if (name == "min") {
+    return parser::CharBlock{"op.min", 6};
+  }
+  if (name == "iand") {
+    return parser::CharBlock{"op.iand", 7};
+  }
+  if (name == "ior") {
+    return parser::CharBlock{"op.ior", 6};
+  }
+  if (name == "ieor") {
+    return parser::CharBlock{"op.ieor", 7};
+  }
+  // All other names: return as is.
+  return name;
+}
+
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const std::optional<parser::OmpClauseList> &clauses) {
+  const parser::Name *name{nullptr};
+  parser::Name mangledName{};
+  UserReductionDetails reductionDetailsTemp{};
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
-    if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
-      name->symbol =
-          &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
+    name = std::get_if<parser::Name>(&procDes->u);
+    if (name) {
+      mangledName.source = MangleSpecialFunctions(name->source);
     }
+  } else {
+    const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
+    mangledName.source = MakeNameFromOperator(
+        std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u));
+    name = &mangledName;
+  }
+
+  UserReductionDetails *reductionDetails{&reductionDetailsTemp};
+  Symbol *symbol{name ? name->symbol : nullptr};
+  symbol = FindSymbol(mangledName);
+  if (symbol) {
+    reductionDetails = symbol->detailsIf<UserReductionDetails>();
   }
 
   auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
@@ -1841,6 +1901,10 @@ void OmpVisitor::ProcessReductionSpecifier(
     const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
     assert(typeSpec && "We should have a type here");
 
+    if (reductionDetails) {
+      reductionDetails->AddType(typeSpec);
+    }
+
     for (auto &nm : ompVarNames) {
       ObjectEntityDetails details{};
       details.set_type(*typeSpec);
@@ -1850,6 +1914,13 @@ void OmpVisitor::ProcessReductionSpecifier(
     Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
     Walk(clauses);
     PopScope();
+  }
+
+  if (name) {
+    if (!symbol) {
+      symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+    }
+    name->symbol = symbol;
   }
 }
 
