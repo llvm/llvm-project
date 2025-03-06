@@ -43,6 +43,10 @@ bool tryToFindPtrOrigin(
         break;
       }
     }
+    if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+      if (isSafePtrType(TempExpr->getTypeAsWritten()))
+        return callback(TempExpr, true);
+    }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
         E = RF;
