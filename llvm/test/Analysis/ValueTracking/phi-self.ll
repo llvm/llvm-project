@@ -10,14 +10,11 @@ define i32 @other_noundef() {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[NONPOISON:%.*]] = phi i32 [ 0, %[[START]] ], [ [[NONPOISON]], %[[BB0:.*]] ], [ 1, %[[BB1:.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
-; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT0:.*]] [
+; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[BB0]]
 ; CHECK-NEXT:      i32 1, label %[[BB1]]
-; CHECK-NEXT:      i32 2, label %[[EXIT1:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[EXIT0]]:
-; CHECK-NEXT:    br label %[[EXIT1]]
-; CHECK:       [[EXIT1]]:
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[NONPOISON]]
 ; CHECK:       [[BB0]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -27,26 +24,22 @@ define i32 @other_noundef() {
 start:
   br label %loop
 
-loop:                                             ; preds = %bb1, %bb0, %start
+loop:
   %nonpoison = phi i32 [ 0, %start ], [ %nonpoison, %bb0 ], [ 1, %bb1 ]
   %i = call i32 @opaque()
-  switch i32 %i, label %exit0 [
+  switch i32 %i, label %exit [
   i32 0, label %bb0
   i32 1, label %bb1
-  i32 2, label %exit1
   ]
 
-exit0:                                            ; preds = %loop
-  br label %exit1
-
-exit1:                                            ; preds = %exit0, %loop
-  %r = phi i32 [ %nonpoison, %loop ], [ undef, %exit0 ]
+exit:
+  %r = freeze i32 %nonpoison
   ret i32 %r
 
-bb0:                                              ; preds = %loop
+bb0:
   br label %loop
 
-bb1:                                              ; preds = %loop
+bb1:
   br label %loop
 }
 
@@ -56,14 +49,11 @@ define i32 @other_poison() {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
-; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT0:.*]] [
+; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
 ; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i32 2, label %[[EXIT1:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[EXIT0]]:
-; CHECK-NEXT:    br label %[[EXIT1]]
-; CHECK:       [[EXIT1]]:
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[BB0]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
@@ -73,26 +63,22 @@ define i32 @other_poison() {
 start:
   br label %loop
 
-loop:                                             ; preds = %bb1, %bb0, %start
+loop:
   %maypoison = phi i32 [ 0, %start ], [ %maypoison, %bb0 ], [ poison, %bb1 ]
   %i = call i32 @opaque()
-  switch i32 %i, label %exit0 [
+  switch i32 %i, label %exit [
   i32 0, label %bb0
   i32 1, label %bb1
-  i32 2, label %exit1
   ]
 
-exit0:                                            ; preds = %loop
-  br label %exit1
-
-exit1:                                            ; preds = %exit0, %loop
-  %r = phi i32 [ %maypoison, %loop ], [ undef, %exit0 ]
+exit:
+  %r = freeze i32 %maypoison
   ret i32 %r
 
-bb0:                                              ; preds = %loop
+bb0:
   br label %loop
 
-bb1:                                              ; preds = %loop
+bb1:
   br label %loop
 }
 
