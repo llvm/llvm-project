@@ -140,7 +140,7 @@ struct MaterializeKnownConstantValues : public RewritePattern {
             llvm::any_of(block.getArguments(), needsReplacing);
       }
     }
-    if (!(hasConstantResults || hasConstantRegionArgs))
+    if (!hasConstantResults && !hasConstantRegionArgs)
       return failure();
 
     bool replacedAll = (op->getNumResults() != 0);
