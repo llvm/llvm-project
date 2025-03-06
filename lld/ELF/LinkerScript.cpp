@@ -1598,8 +1598,11 @@ bool LinkerScript::spillSections() {
           else
             potentialSpillLists.erase(isec);
 
-          // Spills to the same regions cannot help.
-          if (spill->getParent()->memRegion == osec->memRegion &&
+          // Spills to the same region that overflowed cannot help.
+          if (hasRegionOverflowed(osec->memRegion) &&
+              spill->getParent()->memRegion == osec->memRegion)
+            continue;
+          if (hasRegionOverflowed(osec->lmaRegion) &&
               spill->getParent()->lmaRegion == osec->lmaRegion)
             continue;
 
