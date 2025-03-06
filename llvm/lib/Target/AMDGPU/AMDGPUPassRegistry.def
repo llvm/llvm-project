@@ -127,6 +127,7 @@ MACHINE_FUNCTION_PASS("si-optimize-exec-masking-pre-ra", SIOptimizeExecMaskingPr
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-post-ra-bundler", SIPostRABundlerPass())
 MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
+MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 #undef MACHINE_FUNCTION_PASS
@@ -135,7 +136,6 @@ MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUsesPass())
 
-DUMMY_MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 // TODO: Move amdgpu-preload-kern-arg-prolog to MACHINE_FUNCTION_PASS since it
 // already exists.
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
