@@ -178,6 +178,8 @@ const char kAMDGPUAddressPrivateName[] = "llvm.amdgcn.is.private";
 const char kAMDGPUBallotName[] = "llvm.amdgcn.ballot.i64";
 const char kAMDGPUUnreachableName[] = "llvm.amdgcn.unreachable";
 
+const char kAsanDormancyVarName[] = "__asan_is_dormant";
+
 // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
 static const size_t kNumberOfAccessSizes = 5;
 
@@ -451,6 +453,10 @@ static cl::opt<int> ClDebugMin("asan-debug-min", cl::desc("Debug min inst"),
 
 static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
                                cl::Hidden, cl::init(-1));
+
+static cl::opt<bool> ClAsanDormant("asan-dormant",
+                                   cl::desc("Makes asan dormant"), cl::Hidden,
+                                   cl::init(false));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -858,6 +864,7 @@ private:
 
   FunctionCallee AsanMemmove, AsanMemcpy, AsanMemset;
   Value *LocalDynamicShadow = nullptr;
+  Constant *DormantAsanFlag;
   const StackSafetyGlobalInfo *SSGI;
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 
@@ -1591,6 +1598,12 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
 void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
   IRBuilder<> IRB(I);
+
+  if (ClAsanDormant)
+    IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)), I,
+        false, MDBuilder(*C).createUnlikelyBranchWeights()));
+
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
   for (Value *&i : Param) {
@@ -1736,15 +1749,23 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
     NumInstrumentedWrites++;
   else
     NumInstrumentedReads++;
+  
+  Instruction* InsertPoint = O.getInsn();
+  if(ClAsanDormant){
+    InstrumentationIRBuilder IRB(InsertPoint);
+    InsertPoint = SplitBlockAndInsertIfThen(
+        IRB.CreateNot(IRB.CreateLoad(IRB.getInt1Ty(), DormantAsanFlag)),
+        InsertPoint, false, MDBuilder(*C).createUnlikelyBranchWeights());
+  }
 
   unsigned Granularity = 1 << Mapping.Scale;
   if (O.MaybeMask) {
     instrumentMaskedLoadOrStore(this, DL, IntptrTy, O.MaybeMask, O.MaybeEVL,
-                                O.MaybeStride, O.getInsn(), Addr, O.Alignment,
+                                O.MaybeStride, InsertPoint, Addr, O.Alignment,
                                 Granularity, O.OpType, O.IsWrite, nullptr,
                                 UseCalls, Exp, RTCI);
   } else {
-    doInstrumentAddress(this, O.getInsn(), O.getInsn(), Addr, O.Alignment,
+    doInstrumentAddress(this, InsertPoint, InsertPoint, Addr, O.Alignment,
                         Granularity, O.TypeStoreSize, O.IsWrite, nullptr,
                         UseCalls, Exp, RTCI);
   }
@@ -2859,6 +2880,8 @@ void AddressSanitizer::initializeCallbacks(const TargetLibraryInfo *TLI) {
       M.getOrInsertFunction(kAMDGPUAddressSharedName, IRB.getInt1Ty(), PtrTy);
   AMDGPUAddressPrivate =
       M.getOrInsertFunction(kAMDGPUAddressPrivateName, IRB.getInt1Ty(), PtrTy);
+
+  DormantAsanFlag = M.getOrInsertGlobal(kAsanDormancyVarName, IRB.getInt1Ty());
 }
 
 bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
