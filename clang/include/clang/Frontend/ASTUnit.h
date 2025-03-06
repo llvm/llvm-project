@@ -439,8 +439,7 @@ public:
   Preprocessor &getPreprocessor() { return *PP; }
   std::shared_ptr<Preprocessor> getPreprocessorPtr() const { return PP; }
 
-  const ASTContext &getASTContext() const { return *Ctx; }
-  ASTContext &getASTContext() { return *Ctx; }
+  ASTContext &getASTContext() const { return *Ctx; }
 
   void setASTContext(ASTContext *ctx) { Ctx = ctx; }
   void setPreprocessor(std::shared_ptr<Preprocessor> pp);
