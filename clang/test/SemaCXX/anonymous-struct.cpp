@@ -27,7 +27,7 @@ struct E {
   };
 };
 
-template <class T> void foo(T);
+template <class T> void foo(T); // #foo
 typedef struct { // expected-error {{anonymous non-C-compatible type given name for linkage purposes by typedef declaration after its linkage was computed; add a tag name here to establish linkage prior to definition}}
 // expected-note@-1 {{unnamed type used in template argument was declared here}}
 
@@ -36,6 +36,7 @@ typedef struct { // expected-error {{anonymous non-C-compatible type given name 
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses unnamed type}}
     // expected-note@-3 {{while substituting deduced template arguments}}
+    // expected-note@#foo {{template parameter is declared here}}
 #endif
   }
 } A; // expected-note {{type is given name 'A' for linkage purposes by this typedef declaration}}
