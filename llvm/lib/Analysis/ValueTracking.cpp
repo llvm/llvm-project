@@ -7849,6 +7849,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       unsigned Num = PN->getNumIncomingValues();
       bool IsWellDefined = true;
       for (unsigned i = 0; i < Num; ++i) {
+        if (PN == PN->getIncomingValue(i))
+          continue;
         auto *TI = PN->getIncomingBlock(i)->getTerminator();
         if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
                                               DT, Depth + 1, Kind)) {
