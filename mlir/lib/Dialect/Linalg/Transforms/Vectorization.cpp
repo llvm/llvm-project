@@ -1990,8 +1990,18 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   // TODO: isaConvolutionOpInterface that can also infer from generic
   // features. But we will still need stride/dilation attributes that will be
   // annoying to reverse-engineer...
-  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
+  if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+    // Check if it is 2d+ convolution. If it is, return failure because we don't
+    // support it. To use this pass on a 2d+ convolution, it should have already
+    // been decomposed to 1d convolution via
+    // DecomposeConvolutionToLowerDimOpsPass.
+    if (linalgOp.getNumParallelLoops() >= 4) {
+      LDBG("precondition failed: Regular 2d+ convolutions not supported.\n");
+      return failure();
+    }
     return success();
+  }
+
   // TODO: the common vector shape is equal to the static loop sizes only when
   // all indexing maps are projected permutations. For convs and stencils the
   // logic will need to evolve.
@@ -3929,9 +3939,11 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
-    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
-            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
-           "Not a 1D depthwise conv!");
+    if (!isa<linalg::DepthwiseConv1DNwcWcOp>(*op) &&
+        !isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) {
+      return rewriter.notifyMatchFailure(
+          op, "Unexpected convolution: expected 1D depthwise conv");
+    }
     size_t chDimIdx =
         TypeSwitch<Operation *, size_t>(op)
             .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
