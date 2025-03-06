@@ -553,7 +553,7 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
                                         VectorTransferToSCFOptions options) {
   if (xferOp->hasAttr(kPassLabel))
     return rewriter.notifyMatchFailure(
-        xferOp, "kPassLabel is present (progressing lowering in progress)");
+        xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return rewriter.notifyMatchFailure(
         xferOp, "xferOp vector rank <= transformation target rank");
