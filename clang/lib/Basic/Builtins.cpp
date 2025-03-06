@@ -149,7 +149,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
     return false;
   /* MathBuiltins Unsupported */
-  if ((LangOpts.NoMathBuiltin || /*C89*/ LangOpts.LangStd == LangStandard::lang_c89)&& BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
+  if ((LangOpts.NoMathBuiltin ||
+       /*C89*/ LangOpts.LangStd == LangStandard::lang_c89) &&
+      BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
     return false;
   /* GnuMode Unsupported */
   if (!LangOpts.GNUMode && (BuiltinInfo.Langs & GNU_LANG))
