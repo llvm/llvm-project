@@ -325,41 +325,41 @@
 
 #define absfx(x)                                                               \
   _Generic((x),                                                                \
-      fract: absr,                                             \
-      short fract: abshr,                                      \
-      long fract: abslr,                                       \
-      _Accum: absk,                                            \
-      short _Accum: abshk,                                     \
+      fract: absr,                                                             \
+      short fract: abshr,                                                      \
+      long fract: abslr,                                                       \
+      _Accum: absk,                                                            \
+      short _Accum: abshk,                                                     \
       long _Accum: abslk)(x)
 
 #define countlsfx(x)                                                           \
   _Generic((x),                                                                \
-      fract: countlsr,                                         \
-      short fract: countlshr,                                  \
-      long fract: countlslr,                                   \
-      _Accum: countlsk,                                        \
-      short _Accum: countlshk,                                 \
-      long _Accum: countlslk,                                  \
-      unsigned fract: countlsur,                               \
-      unsigned short fract: countlsuhr,                        \
-      unsigned long fract: countlsulr,                         \
-      unsigned _Accum: countlsuk,                              \
-      unsigned short _Accum: countlsuhk,                       \
+      fract: countlsr,                                                         \
+      short fract: countlshr,                                                  \
+      long fract: countlslr,                                                   \
+      _Accum: countlsk,                                                        \
+      short _Accum: countlshk,                                                 \
+      long _Accum: countlslk,                                                  \
+      unsigned fract: countlsur,                                               \
+      unsigned short fract: countlsuhr,                                        \
+      unsigned long fract: countlsulr,                                         \
+      unsigned _Accum: countlsuk,                                              \
+      unsigned short _Accum: countlsuhk,                                       \
       unsigned long _Accum: countlsulk)(x)
 
 #define roundfx(x, y)                                                          \
   _Generic((x),                                                                \
-      fract: roundr,                                           \
-      short fract: roundhr,                                    \
-      long fract: roundlr,                                     \
-      _Accum: roundk,                                          \
-      short _Accum: roundhk,                                   \
-      long _Accum: roundlk,                                    \
-      unsigned fract: roundur,                                 \
-      unsigned short fract: rounduhr,                          \
-      unsigned long fract: roundulr,                           \
-      unsigned _Accum: rounduk,                                \
-      unsigned short _Accum: rounduhk,                         \
+      fract: roundr,                                                           \
+      short fract: roundhr,                                                    \
+      long fract: roundlr,                                                     \
+      _Accum: roundk,                                                          \
+      short _Accum: roundhk,                                                   \
+      long _Accum: roundlk,                                                    \
+      unsigned fract: roundur,                                                 \
+      unsigned short fract: rounduhr,                                          \
+      unsigned long fract: roundulr,                                           \
+      unsigned _Accum: rounduk,                                                \
+      unsigned short _Accum: rounduhk,                                         \
       unsigned long _Accum: roundulk)(x, y)
 
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
