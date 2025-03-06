@@ -336,4 +336,12 @@ namespace Fortran::parser {
 llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
 }
+
+const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
+  static OmpClauseList empty{std::move(decltype(OmpClauseList::v){})};
+  if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
+    return *clauses;
+  }
+  return empty;
+}
 } // namespace Fortran::parser
