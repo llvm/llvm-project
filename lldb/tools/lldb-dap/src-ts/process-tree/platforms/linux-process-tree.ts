@@ -6,7 +6,11 @@ export class LinuxProcessTree extends BaseProcessTree {
   }
 
   protected override getCommandArguments(): string[] {
-    return ["-axo", "pid=PID,lstart=START,comm:128=COMMAND,command=ARGUMENTS"];
+    return [
+      "-axo",
+      // The length of exe must be large enough or data will be truncated.
+      `pid=PID,lstart=START,exe:128=COMMAND,args=ARGUMENTS`,
+    ];
   }
 
   protected override createParser(): ProcessTreeParser {
@@ -24,9 +28,14 @@ export class LinuxProcessTree extends BaseProcessTree {
         return;
       }
 
+      const command = line.slice(commandOffset, argumentsOffset).trim();
+      if (command === "-") {
+        return;
+      }
+
       return {
         id: Number(pid[1]),
-        command: line.slice(commandOffset, argumentsOffset).trim(),
+        command,
         arguments: line.slice(argumentsOffset).trim(),
         start: Date.parse(line.slice(pid[0].length, commandOffset).trim()),
       };
