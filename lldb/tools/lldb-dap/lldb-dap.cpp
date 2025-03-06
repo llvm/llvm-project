@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
+#include "Protocol.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
@@ -151,6 +152,9 @@ static void RegisterRequestCallbacks(DAP &dap) {
 
   // Testing requests
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
+
+  // Event handlers
+  dap.onExited = dap.RegisterEvent<protocol::ExitedEventBody>("exited");
 }
 
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {

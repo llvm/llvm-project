@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol.h"
 #include "lldb/API/SBFileSpec.h"
 
 #if defined(_WIN32)
@@ -231,15 +232,6 @@ void SendContinuedEvent(DAP &dap) {
   llvm::json::Object body;
   body.try_emplace("threadId", (int64_t)dap.focus_tid);
   body.try_emplace("allThreadsContinued", true);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "exited" event to indicate the process has exited.
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
-  llvm::json::Object event(CreateEventObject("exited"));
-  llvm::json::Object body;
-  body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }

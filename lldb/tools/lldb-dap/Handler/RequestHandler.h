@@ -9,25 +9,36 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 #define LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 
+#include "DAP.h"
+#include "Protocol.h"
 #include "lldb/API/SBError.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
 namespace lldb_dap {
 struct DAP;
 
-class RequestHandler {
+/// Base class for request handlers. Do not extend this directly: Extend
+/// the RequestHandler template subclass instead.
+class BaseRequestHandler {
 public:
-  RequestHandler(DAP &dap) : dap(dap) {}
+  BaseRequestHandler(DAP &dap) : dap(dap) {}
 
-  /// RequestHandler are not copyable.
+  /// BaseRequestHandler are not copyable.
   /// @{
-  RequestHandler(const RequestHandler &) = delete;
-  RequestHandler &operator=(const RequestHandler &) = delete;
+  BaseRequestHandler(const BaseRequestHandler &) = delete;
+  BaseRequestHandler &operator=(const BaseRequestHandler &) = delete;
   /// @}
 
-  virtual ~RequestHandler() = default;
+  virtual ~BaseRequestHandler() = default;
 
+  virtual void operator()(const protocol::Request &request) const {
+    auto req = toJSON(request);
+    (*this)(*req.getAsObject());
+  }
+
+  /// FIXME: Migrate callers to typed RequestHandler for improved type handling.
   virtual void operator()(const llvm::json::Object &request) const = 0;
 
 protected:
@@ -57,235 +68,288 @@ protected:
   DAP &dap;
 };
 
-class AttachRequestHandler : public RequestHandler {
+/// Base class for handling DAP requests. Handlers should declare their
+/// arguments and response body types like:
+///
+/// class MyRequestHandler : public RequestHandler<Arguments, ResponseBody> {
+///   ....
+/// };
+template <typename Args, typename Body>
+class RequestHandler : public BaseRequestHandler {
+  using BaseRequestHandler::BaseRequestHandler;
+
+  void operator()(const llvm::json::Object &request) const override {
+    /* no-op, the other overload handles json coding. */
+  }
+
+  void operator()(const protocol::Request &request) const override {
+    protocol::Response response;
+    response.request_seq = request.seq;
+    response.command = request.command;
+    Args arguments;
+    llvm::json::Path::Root root;
+    if (request.rawArguments &&
+        !fromJSON(request.rawArguments, arguments, root)) {
+      std::string parseFailure;
+      llvm::raw_string_ostream OS(parseFailure);
+      root.printErrorContext(request.rawArguments, OS);
+      response.success = false;
+      response.message = parseFailure;
+      dap.SendJSON(std::move(response));
+      return;
+    }
+
+    auto ResponseBody = Run(arguments);
+    // FIXME: Add a dedicated DAPError for enhanced errors that are user
+    // visibile.
+    if (auto Err = ResponseBody.takeError()) {
+      response.success = false;
+      // FIXME: Build ErrorMessage based on error details instead of using the
+      // 'message' field.
+      response.message = llvm::toString(std::move(Err));
+    } else {
+      response.success = true;
+      response.rawBody = std::move(*ResponseBody);
+    }
+
+    dap.SendJSON(std::move(response));
+  };
+
+  virtual llvm::Expected<Body> Run(const Args &) const = 0;
+};
+
+class AttachRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "attach"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class BreakpointLocationsRequestHandler : public RequestHandler {
+class BreakpointLocationsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "breakpointLocations"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class CompletionsRequestHandler : public RequestHandler {
+class CompletionsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "completions"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ContinueRequestHandler : public RequestHandler {
+class ContinueRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "continue"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ConfigurationDoneRequestHandler : public RequestHandler {
+class ConfigurationDoneRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "configurationDone"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisconnectRequestHandler : public RequestHandler {
+class DisconnectRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "disconnect"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class EvaluateRequestHandler : public RequestHandler {
+class EvaluateRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "evaluate"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ExceptionInfoRequestHandler : public RequestHandler {
+class ExceptionInfoRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "exceptionInfo"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class InitializeRequestHandler : public RequestHandler {
+class InitializeRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "initialize"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class LaunchRequestHandler : public RequestHandler {
+class LaunchRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "launch"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class RestartRequestHandler : public RequestHandler {
+class RestartRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "restart"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class NextRequestHandler : public RequestHandler {
+class NextRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "next"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class StepInRequestHandler : public RequestHandler {
+class StepInRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "stepIn"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class StepInTargetsRequestHandler : public RequestHandler {
+class StepInTargetsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "stepInTargets"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class StepOutRequestHandler : public RequestHandler {
+class StepOutRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "stepOut"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetBreakpointsRequestHandler : public RequestHandler {
+class SetBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "setBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetExceptionBreakpointsRequestHandler : public RequestHandler {
+class SetExceptionBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "setExceptionBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetFunctionBreakpointsRequestHandler : public RequestHandler {
+class SetFunctionBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "setFunctionBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DataBreakpointInfoRequestHandler : public RequestHandler {
+class DataBreakpointInfoRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "dataBreakpointInfo"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetDataBreakpointsRequestHandler : public RequestHandler {
+class SetDataBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "setDataBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetInstructionBreakpointsRequestHandler : public RequestHandler {
+class SetInstructionBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() {
     return "setInstructionBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class CompileUnitsRequestHandler : public RequestHandler {
+class CompileUnitsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "compileUnits"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ModulesRequestHandler : public RequestHandler {
+class ModulesRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "modules"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class PauseRequestHandler : public RequestHandler {
+class PauseRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "pause"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ScopesRequestHandler : public RequestHandler {
+class ScopesRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "scopes"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SetVariableRequestHandler : public RequestHandler {
+class SetVariableRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "setVariable"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class SourceRequestHandler : public RequestHandler {
+class SourceRequestHandler
+    : public RequestHandler<protocol::SourceArguments,
+                            protocol::SourceResponseBody> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "source"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::SourceResponseBody>
+  Run(const protocol::SourceArguments &args) const override;
 };
 
-class StackTraceRequestHandler : public RequestHandler {
+class StackTraceRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "stackTrace"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ThreadsRequestHandler : public RequestHandler {
+class ThreadsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "threads"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class VariablesRequestHandler : public RequestHandler {
+class VariablesRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "variables"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class LocationsRequestHandler : public RequestHandler {
+class LocationsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "locations"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisassembleRequestHandler : public RequestHandler {
+class DisassembleRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "disassemble"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class ReadMemoryRequestHandler : public RequestHandler {
+class ReadMemoryRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() { return "readMemory"; }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -294,9 +358,9 @@ public:
 /// currently set in the target. This helps us to test "setBreakpoints" and
 /// "setFunctionBreakpoints" requests to verify we have the correct set of
 /// breakpoints currently set in LLDB.
-class TestGetTargetBreakpointsRequestHandler : public RequestHandler {
+class TestGetTargetBreakpointsRequestHandler : public BaseRequestHandler {
 public:
-  using RequestHandler::RequestHandler;
+  using BaseRequestHandler::BaseRequestHandler;
   static llvm::StringLiteral getCommand() {
     return "_testGetTargetBreakpoints";
   }

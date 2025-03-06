@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
@@ -178,7 +179,7 @@ static void EventThreadFunction(DAP &dap) {
               // Run any exit LLDB commands the user specified in the
               // launch.json
               dap.RunExitCommands();
-              SendProcessExitedEvent(dap, process);
+              dap.onExited(protocol::ExitedEventBody{/*exitCode=*/process.GetExitStatus()});
               dap.SendTerminatedEvent();
               done = true;
             }
