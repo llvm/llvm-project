@@ -61,6 +61,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   assert(S && "Null statement?");
   PGO.setCurrentStmt(S);
 
+  // FIXME(OCH): Would it be safer to have a stmt-level ApplyAtomGroup(*this)
+  // here, with constructs opting-out rather than opting-in to atom groups?
+  // Note if we do that we've got to be careful to keep atomGroup numbers
+  // dense (minimising unused numbers below the global watermark).
+
   // These statements have their own debug info handling.
   if (EmitSimpleStmt(S, Attrs))
     return;
@@ -679,6 +684,9 @@ void CodeGenFunction::EmitBranch(llvm::BasicBlock *Target) {
     // terminated, don't touch it.
   } else {
     // Otherwise, create a fall-through branch.
+    // In general unconditional branches are "boring" for stepping with
+    // Key Instructions, so outside of special cases we don't put these into
+    // atom groups.
     Builder.CreateBr(Target);
   }
 
@@ -1124,7 +1132,9 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
-    Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+
+    auto *I = Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    addInstToNewSourceAtom(I, BoolCondVal);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1236,9 +1246,10 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
-    Builder.CreateCondBr(
+    auto *I = Builder.CreateCondBr(
         BoolCondVal, LoopBody, LoopExit.getBlock(),
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
+    addInstToNewSourceAtom(I, BoolCondVal);
   }
 
   LoopStack.pop();
@@ -1303,6 +1314,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = getJumpDestInCurrentScope("for.inc");
   BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
 
+  llvm::BasicBlock *ForBody = nullptr;
+
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
     // declaration.
@@ -1327,18 +1340,20 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
-    llvm::BasicBlock *ForBody = createBasicBlock("for.body");
+    ForBody = createBasicBlock("for.body");
 
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
 
-    Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    addInstToNewSourceAtom(I, BoolCondVal);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1392,6 +1407,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  if (ForBody) {
+    // We want the for closing brace to be step-able on to match existing
+    // behaviour. FIXME: invokes?
+    addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
+  }
 }
 
 void
@@ -1439,7 +1460,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
     BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
         BoolCondVal, Stmt::getLikelihood(S.getBody()));
-  Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  addInstToNewSourceAtom(I, BoolCondVal);
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
@@ -1488,6 +1510,13 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  // We want the for closing brace to be step-able on to match existing
+  // behaviour.
+  // Note that with exceptions, this doesn't do the right thing, since
+  // it puts the atomgroup on the invoke, rather than the flow-on block
+  // that contains the br we see in no-exception code.
+  addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
 }
 
 void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
@@ -1545,6 +1574,7 @@ static bool isSwiftAsyncCallee(const CallExpr *CE) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  auto Grp = ApplyAtomGroup(*this);
   if (requiresReturnValueCheck()) {
     llvm::Constant *SLoc = EmitCheckSourceLocation(S.getBeginLoc());
     auto *SLocPtr =
@@ -1620,16 +1650,30 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     // If this function returns a reference, take the address of the expression
     // rather than the value.
     RValue Result = EmitReferenceBindingToExpr(RV);
-    Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    auto *S = Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    // Key Instructions: See comment in else block.
+    auto Rnk = IncAtomRank(*this);
+    addInstToCurrentSourceAtom(S, S->getValueOperand());
   } else {
+    // Key Instructions: The return-value-alloca store and branch to the
+    // return block should both be considered part of the same return
+    // statement atom. Set KeyInstRank to 2 because the primary instruction is
+    // the branch, which we'll annotate separately below. Using the store (and
+    // the stored value) as a backup location is important to retain a step to
+    // the return statement after inlining.
+    // FIXME(OCH): Possibly fine giving the store and branch both rank 1, and
+    // dropping the `IncAtomRank` class.
+    auto Rnk = IncAtomRank(*this);
     switch (getEvaluationKind(RV->getType())) {
     case TEK_Scalar: {
       llvm::Value *Ret = EmitScalarExpr(RV);
-      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
                           /*isInit*/ true);
-      else
-        Builder.CreateStore(Ret, ReturnValue);
+      } else {
+        auto *S = Builder.CreateStore(Ret, ReturnValue);
+        addInstToCurrentSourceAtom(S, Ret, 2);
+      }
       break;
     }
     case TEK_Complex:
@@ -2258,6 +2302,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
+
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
 
   // Create basic block to hold stuff that comes after switch
@@ -2265,7 +2310,10 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // explicit case ranges tests can have a place to jump to on
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
+
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  addInstToNewSourceAtom(SwitchInsn, CondV);
+
   if (PGO.haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;

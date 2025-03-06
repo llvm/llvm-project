@@ -17,6 +17,7 @@
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -37,6 +38,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
@@ -3883,7 +3885,8 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   // Functions with no result always return void.
   if (!ReturnValue.isValid()) {
-    Builder.CreateRetVoid();
+    auto *I = Builder.CreateRetVoid();
+    addRetToOverrideOrNewSourceAtom(I, nullptr);
     return;
   }
 
@@ -4065,6 +4068,9 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   if (RetDbgLoc)
     Ret->setDebugLoc(std::move(RetDbgLoc));
+
+  llvm::Value *Backup = RV ? Ret->getOperand(0) : nullptr;
+  addRetToOverrideOrNewSourceAtom(cast<llvm::ReturnInst>(Ret), Backup);
 }
 
 void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
@@ -5829,6 +5835,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               BundleList);
     EmitBlock(Cont);
   }
+
+  // NOTE(OCH) We only want the group to apply to the call instuction
+  // specifically. N.B. we currently apply is_stmt to all calls at DWARF
+  // emission time. That makes it easy to avoid "over propagating" is_stmt when
+  // calls are lowered. That's easiest, so we continue to do that for now.
+  // FIXME(OCH): Reinstate this once that is no longer the case.
+  // addInstToNewSourceAtom(CI, nullptr);
+
   if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);

@@ -3018,6 +3018,7 @@ public:
   /// Emit an aggregate assignment.
   void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
     bool IsVolatile = hasVolatileMember(EltTy);
+    auto Grp = ApplyAtomGroup(*this);
     EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }
 
@@ -5255,7 +5256,7 @@ public:
 
   /// Emit a reached-unreachable diagnostic if \p Loc is valid and runtime
   /// checking is enabled. Otherwise, just emit an unreachable instruction.
-  void EmitUnreachable(SourceLocation Loc);
+  llvm::UnreachableInst *EmitUnreachable(SourceLocation Loc);
 
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
@@ -5312,6 +5313,21 @@ public:
   llvm::Value *emitBoolVecConversion(llvm::Value *SrcVec,
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
+
+  // Wrapper, see \p DebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup, uint8_t KeyInstRank = 1);
+
+  // Wrapper, see \p DebugInfo::addInstToCurrentSourceAtom.
+  // Adds the instruction to a new source atom rather than the existing
+  // scoped one.
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup, uint8_t KeyInstRank = 1);
+
+  // TODO(OCH): Comment.
+  void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                       llvm::Value *Backup,
+                                       uint8_t KeyInstRank = 1);
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|

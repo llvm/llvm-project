@@ -335,6 +335,10 @@ public:
   StringRef getDefaultTargetFeatures();
   void setDefaultTargetFeatures(StringRef Features);
 
+  /// Key Instructions: update the highest number Atom Group emitted for any
+  /// function.
+  void updateAtomGroupWaterline(uint64_t V);
+
 private:
   // Module needs access to the add/removeModule methods.
   friend class Module;

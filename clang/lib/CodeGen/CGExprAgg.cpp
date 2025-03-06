@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGHLSLRuntime.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
@@ -724,6 +725,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     // Advance to the start of the rest of the array.
     llvm::Value *element = begin;
     if (NumInitElements) {
+      // TODO: OCH - test this too.
       element = Builder.CreateInBoundsGEP(
           llvmElementType, element,
           llvm::ConstantInt::get(CGF.SizeTy, NumInitElements),
@@ -2192,7 +2194,9 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   llvm::Constant *SizeVal = CGF.Builder.getInt64(Size.getQuantity());
 
   Address Loc = Slot.getAddress().withElementType(CGF.Int8Ty);
-  CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
+  auto *I =
+      CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
+  CGF.addInstToCurrentSourceAtom(I, nullptr);
 
   // Tell the AggExprEmitter that the slot is known zero.
   Slot.setZeroed();
@@ -2394,7 +2398,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  addInstToCurrentSourceAtom(Inst, nullptr);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

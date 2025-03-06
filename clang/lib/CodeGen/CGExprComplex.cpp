@@ -457,8 +457,12 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
-  Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
-  Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  auto *R =
+      Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(R, Val.first);
+  auto *I =
+      Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 
 
@@ -1203,6 +1207,8 @@ LValue ComplexExprEmitter::
 EmitCompoundAssignLValue(const CompoundAssignOperator *E,
           ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo&),
                          RValue &Val) {
+  auto Grp = ApplyAtomGroup(CGF);
+
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
   QualType LHSTy = E->getLHS()->getType();
@@ -1344,6 +1350,8 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
 }
 
 ComplexPairTy ComplexExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  auto Grp = ApplyAtomGroup(CGF);
+
   ComplexPairTy Val;
   LValue LV = EmitBinAssignLValue(E, Val);
 

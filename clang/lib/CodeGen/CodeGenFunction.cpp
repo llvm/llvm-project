@@ -36,11 +36,12 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -339,6 +340,15 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
       Builder.SetInsertPoint(BI->getParent());
+
+      // Key Instructions: If there's only one `ret` then we want to put the
+      // instruction in the same source atom group as the store to the ret-value
+      // alloca and unconditional `br` to the return block that we're about to
+      // delete. It all comes from the same source (`return (value)`).
+      if (auto *DI = getDebugInfo(); DI && BI->getDebugLoc())
+        DI->setRetInstSourceAtomOverride(
+            BI->getDebugLoc().get()->getAtomGroup());
+
       BI->eraseFromParent();
       delete ReturnBlock.getBlock();
       ReturnBlock = JumpDest();
@@ -1537,6 +1547,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Bypasses.Init(Body);
   }
 
+  // Finalize function debug info on exit.
+  auto Cleanup = llvm::make_scope_exit([this] {
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->completeFunction();
+  });
+
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
@@ -2112,6 +2128,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
   case HLSLControlFlowHintAttr::SpellingNotCalculated:
     break;
   }
+
+  addInstToNewSourceAtom(BrInst, CondV);
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the
@@ -2232,14 +2250,16 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
     if (vla) return emitNonZeroVLAInit(*this, Ty, DestPtr, SrcPtr, SizeVal);
 
     // Get and call the appropriate llvm.memcpy overload.
-    Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
+    auto *I = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
+    addInstToCurrentSourceAtom(I, nullptr);
     return;
   }
 
   // Otherwise, just memset the whole thing to zero.  This is legal
   // because in LLVM, all default initializers (other than the ones we just
   // handled above) are guaranteed to have a bit pattern of all zeros.
-  Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  auto *I = Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  addInstToCurrentSourceAtom(I, nullptr);
 }
 
 llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
@@ -2582,6 +2602,27 @@ void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
   if (CGDebugInfo *Dbg = getDebugInfo())
     if (CGM.getCodeGenOpts().hasReducedDebugInfo())
       Dbg->EmitGlobalVariable(E->getDecl(), Init);
+}
+
+void CodeGenFunction::addInstToCurrentSourceAtom(
+    llvm::Instruction *KeyInstruction, llvm::Value *Backup,
+    uint8_t KeyInstRank) {
+  if (auto *DI = getDebugInfo())
+    DI->addInstToCurrentSourceAtom(KeyInstruction, Backup, KeyInstRank);
+}
+
+void CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                                             llvm::Value *Backup,
+                                             uint8_t KeyInstRank) {
+  auto Grp = ApplyAtomGroup(*this);
+  addInstToCurrentSourceAtom(KeyInstruction, Backup, KeyInstRank);
+}
+
+void CodeGenFunction::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                                      llvm::Value *Backup,
+                                                      uint8_t KeyInstRank) {
+  if (auto *DI = getDebugInfo())
+    DI->addRetToOverrideOrNewSourceAtom(Ret, Backup, KeyInstRank);
 }
 
 CodeGenFunction::PeepholeProtection

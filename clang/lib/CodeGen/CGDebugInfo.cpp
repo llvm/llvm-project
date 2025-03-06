@@ -43,6 +43,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -52,6 +53,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <cstdint>
 #include <optional>
 using namespace clang;
 using namespace clang::CodeGen;
@@ -119,6 +121,144 @@ CGDebugInfo::~CGDebugInfo() {
          "Region stack mismatch, stack not empty!");
 }
 
+void CGDebugInfo::addInstSourceAtomMetadata(llvm::Instruction *I,
+                                            uint64_t Group, uint8_t Rank) {
+  if (!I->getDebugLoc() || Group == 0 || !I->getDebugLoc()->getLine())
+    return;
+
+  // Saturate the 3-bit rank.
+  Rank = std::min<uint8_t>(Rank, 7);
+
+  const llvm::DebugLoc &DL = I->getDebugLoc();
+
+  // Each instruction can only be attributed to one source atom (as an
+  // limitation of the implementation). If this instruction is already
+  // part of a source atom, pick the group in which it has highest
+  // precedence (lowest rank).
+  // TODO(OCH): Is there a better way to handle merging? Ideally we'd like
+  // to be able to have it attributed to both atoms.
+  if (DL.get()->getAtomGroup() && DL.get()->getAtomRank() &&
+      DL.get()->getAtomRank() < Rank) {
+    Group = DL.get()->getAtomGroup();
+    Rank = DL.get()->getAtomRank();
+  }
+
+  // Update the watermark to indicate this Group ID has been used
+  // in this function.
+  HighestEmittedAtomGroup = std::max(Group, HighestEmittedAtomGroup);
+
+  llvm::DILocation *NewDL = llvm::DILocation::get(
+      I->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+      DL.getInlinedAt(), DL.isImplicitCode(), Group, Rank);
+  I->setDebugLoc(NewDL);
+};
+
+void CGDebugInfo::addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                             llvm::Value *Backup,
+                                             uint8_t KeyInstRank) {
+  /* TODO(OCH):
+  if (key-instructions-is-not-enabled)
+    return;
+  */
+  uint64_t Group = CurrentAtomGroup;
+  if (!Group)
+    return;
+
+  KeyInstRank += CurrentAtomRankBase;
+  addInstSourceAtomMetadata(KeyInstruction, Group, KeyInstRank);
+
+  llvm::Instruction *BackupI =
+      llvm::dyn_cast_or_null<llvm::Instruction>(Backup);
+  if (!BackupI)
+    return;
+
+  // Add the backup instruction to the group.
+  addInstSourceAtomMetadata(BackupI, Group, /*Rank*/ ++KeyInstRank);
+
+  // Look through chains of casts too, as they're probably going to evaporate.
+  // FIXME(OCH): And other nops like zero length geps?
+  // FIXME(OCH): Should use Cast->isNoopCast()?
+  while (auto *Cast = dyn_cast<llvm::CastInst>(BackupI)) {
+    BackupI = dyn_cast<llvm::Instruction>(Cast->getOperand(0));
+    if (!BackupI)
+      break;
+    addInstSourceAtomMetadata(BackupI, Group, ++KeyInstRank);
+  }
+}
+
+void CGDebugInfo::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                                  llvm::Value *Backup,
+                                                  uint8_t KeyInstRank) {
+  if (RetAtomGroupOverride) {
+    uint64_t CurGrp = CurrentAtomGroup;
+    CurrentAtomGroup = RetAtomGroupOverride;
+    addInstToCurrentSourceAtom(Ret, Backup, KeyInstRank);
+    CurrentAtomGroup = CurGrp;
+    RetAtomGroupOverride = 0;
+  } else {
+    auto Grp = ApplyAtomGroup(this);
+    addInstToCurrentSourceAtom(Ret, Backup, KeyInstRank);
+  }
+}
+
+void CGDebugInfo::setRetInstSourceAtomOverride(uint64_t Group) {
+  assert(RetAtomGroupOverride == 0);
+  RetAtomGroupOverride = Group;
+}
+
+void CGDebugInfo::completeFunction() {
+  // Atoms are identified by a {AtomGroup, InlinedAt} pair, meaning AtomGroup
+  // numbers can be repeated across different functions. LLVM optimisations may
+  // need to assign new AtomGroups. In order to guarentee that those future
+  // transformations keep the numbers within functions unique, we just need to
+  // track the highest number used across all functions.
+  CGM.getLLVMContext().updateAtomGroupWaterline(NextAtomGroup);
+  NextAtomGroup = 1;
+  HighestEmittedAtomGroup = 0;
+  CurrentAtomGroup = 0;
+  RetAtomGroupOverride = 0;
+  CurrentAtomRankBase = 0;
+}
+
+ApplyAtomGroup::ApplyAtomGroup(CodeGenFunction &CGF)
+    : ApplyAtomGroup(CGF.getDebugInfo()) {}
+
+ApplyAtomGroup::ApplyAtomGroup(CGDebugInfo *DI) : DI(DI) {
+  if (!DI)
+    return;
+  OriginalAtomGroup = DI->CurrentAtomGroup;
+  DI->CurrentAtomGroup = DI->NextAtomGroup++;
+  // Reset rank-base as it should only apply to the group it was added to.
+  OriginalRankBase = DI->CurrentAtomRankBase;
+  DI->CurrentAtomRankBase = 0;
+}
+
+ApplyAtomGroup::~ApplyAtomGroup() {
+  if (!DI)
+    return;
+  if (DI->HighestEmittedAtomGroup < DI->NextAtomGroup - 1)
+    DI->NextAtomGroup = DI->HighestEmittedAtomGroup + 1;
+  DI->CurrentAtomGroup = OriginalAtomGroup;
+
+  DI->CurrentAtomRankBase = OriginalRankBase;
+}
+
+IncAtomRank::IncAtomRank(CodeGenFunction &CGF)
+    : IncAtomRank(CGF.getDebugInfo()) {}
+
+IncAtomRank::IncAtomRank(CGDebugInfo *DI) : DI(DI) {
+  if (!DI)
+    return;
+  ++DI->CurrentAtomRankBase;
+}
+
+IncAtomRank::~IncAtomRank() {
+  if (!DI)
+    return;
+  assert(DI->CurrentAtomRankBase);
+  --DI->CurrentAtomRankBase;
+}
+
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
                                        SourceLocation TemporaryLocation)
     : CGF(&CGF) {
@@ -174,8 +314,15 @@ ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, llvm::DebugLoc Loc)
     return;
   }
   OriginalLocation = CGF.Builder.getCurrentDebugLocation();
-  if (Loc)
+  if (Loc) {
+    // Key Instructions: drop the atom group and rank to avoid accidentally
+    // propagating it around.
+    if (Loc->getAtomGroup())
+      Loc = llvm::DILocation::get(Loc->getContext(), Loc.getLine(),
+                                  Loc->getColumn(), Loc->getScope(),
+                                  Loc->getInlinedAt(), Loc.isImplicitCode());
     CGF.Builder.SetCurrentDebugLocation(std::move(Loc));
+  }
 }
 
 ApplyDebugLocation::~ApplyDebugLocation() {

@@ -36,6 +36,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -2174,6 +2175,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(Value, Addr, Volatile);
+  addInstToCurrentSourceAtom(Store, Value);
+
   if (isNontemporal) {
     llvm::MDNode *Node =
         llvm::MDNode::get(Store->getContext(),
@@ -2427,8 +2430,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         // <N x i1> --> <iN>.
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
       }
-      Builder.CreateStore(Vec, Dst.getVectorAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getVectorAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Src.getScalarVal());
       return;
     }
 
@@ -2585,7 +2589,10 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   }
 
   // Write the new value back out.
-  Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  auto *I = Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  addInstToCurrentSourceAtom(I, SrcVal);
+  // FIXME(OCH): Should the casts below get added to the group? It looks like
+  // we're ok without doing that.
 
   // Return the new value of the bit-field, if requested.
   if (Result) {
@@ -3901,7 +3908,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
   CGM.addUsedGlobal(F);
 }
 
-void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
+llvm::UnreachableInst *CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
   if (SanOpts.has(SanitizerKind::Unreachable)) {
     SanitizerScope SanScope(this);
     EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
@@ -3909,7 +3916,7 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
               SanitizerHandler::BuiltinUnreachable,
               EmitCheckSourceLocation(Loc), {});
   }
-  Builder.CreateUnreachable();
+  return Builder.CreateUnreachable();
 }
 
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
@@ -5771,6 +5778,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     return EmitPointerToDataMemberBinaryExpr(E);
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+  // This covers both LHS and RHS expressions, though nested RHS
+  // expressions may get subsequently separately grouped.
+  // FIXME(OCH): Not clear yet if we've got fine enough control
+  // to pick and choose when we need to. Currently looks ok:
+  // a = b = c  -> Two atoms.
+  // x = new(1) -> One atom (for both addr store and value store).
+  // Complex and agg assignment -> One atom.
+  auto Grp = ApplyAtomGroup(*this);
 
   // Note that in all of these cases, __block variables need the RHS
   // evaluated first just in case the variable gets moved by the RHS.

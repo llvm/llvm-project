@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
@@ -39,11 +40,13 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -97,6 +100,7 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   if (CGF.CGM.stopAutoInit())
     return;
   auto *I = CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
+  CGF.addInstToCurrentSourceAtom(I, nullptr);
   I->addAnnotationMetadata("auto-init");
 }
 
@@ -3543,6 +3547,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
   };
 
+  // FIXME(OCH): Should any of the maths builtins be key instructions?
+  auto Grp = ApplyAtomGroup(*this);
+  llvm::Instruction *InstForAtomGrp = nullptr;
+  auto Cleanup = llvm::make_scope_exit([&]() {
+    if (InstForAtomGrp)
+      addInstToCurrentSourceAtom(InstForAtomGrp, nullptr);
+  });
+
   switch (BuiltinIDIfNoAsmLabel) {
   default: break;
   case Builtin::BI__builtin___CFStringMakeConstantString:
@@ -3948,6 +3960,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_byteswap_ushort:
   case Builtin::BI_byteswap_ulong:
   case Builtin::BI_byteswap_uint64: {
+    // FIXME(OCH): Should bswap and similar intrinsics be key instructions?
+    // If the result is stored then that will be key - is that enough?
     return RValue::get(
         emitBuiltinWithOneOverloadedType<1>(*this, E, Intrinsic::bswap));
   }
@@ -4080,7 +4094,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
   case Builtin::BI__builtin_trap:
-    EmitTrapCall(Intrinsic::trap);
+    InstForAtomGrp = EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_verbose_trap: {
     llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
@@ -4095,10 +4109,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__debugbreak:
-    EmitTrapCall(Intrinsic::debugtrap);
+    InstForAtomGrp = EmitTrapCall(Intrinsic::debugtrap);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_unreachable: {
-    EmitUnreachable(E->getExprLoc());
+    InstForAtomGrp = EmitUnreachable(E->getExprLoc());
 
     // We do need to preserve an insertion point.
     EmitBlock(createBasicBlock("unreachable.cont"));
@@ -4547,6 +4561,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         Matrix, Dst.emitRawPointer(*this),
         Align(Dst.getAlignment().getQuantity()), Stride, IsVolatile,
         MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+    InstForAtomGrp = cast<llvm::Instruction>(Result);
     return RValue::get(Result);
   }
 
@@ -4667,6 +4682,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             .getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(SuitableAlignmentInBytes);
+    // NOTE(OCH): `initializeAlloca` adds Key Instruction metadata.
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
     LangAS AAS = getASTAllocaAddressSpace();
@@ -4689,6 +4705,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
+    // NOTE(OCH): `initializeAlloca` adds Key Instruction metadata.
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
     LangAS AAS = getASTAllocaAddressSpace();
@@ -4707,7 +4724,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *SizeVal = EmitScalarExpr(E->getArg(1));
     EmitNonNullArgCheck(Dest, E->getArg(0)->getType(),
                         E->getArg(0)->getExprLoc(), FD, 0);
-    Builder.CreateMemSet(Dest, Builder.getInt8(0), SizeVal, false);
+    InstForAtomGrp =
+        Builder.CreateMemSet(Dest, Builder.getInt8(0), SizeVal, false);
     return RValue::get(nullptr);
   }
 
@@ -4722,7 +4740,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Dest.emitRawPointer(*this)),
                         E->getArg(1)->getType(), E->getArg(1)->getExprLoc(), FD,
                         0);
-    Builder.CreateMemMove(Dest, Src, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemMove(Dest, Src, SizeVal, false);
     return RValue::get(nullptr);
   }
 
@@ -4735,7 +4753,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
-    Builder.CreateMemCpy(Dest, Src, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemCpy(Dest, Src, SizeVal, false);
     if (BuiltinID == Builtin::BImempcpy ||
         BuiltinID == Builtin::BI__builtin_mempcpy)
       return RValue::get(Builder.CreateInBoundsGEP(
@@ -4751,7 +4769,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
-    Builder.CreateMemCpyInline(Dest, Src, Size);
+    InstForAtomGrp = Builder.CreateMemCpyInline(Dest, Src, Size);
     return RValue::get(nullptr);
   }
 
@@ -4772,7 +4790,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = llvm::ConstantInt::get(Builder.getContext(), Size);
-    Builder.CreateMemCpy(Dest, Src, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemCpy(Dest, Src, SizeVal, false);
     return RValue::get(Dest, *this);
   }
 
@@ -4798,7 +4816,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = llvm::ConstantInt::get(Builder.getContext(), Size);
-    Builder.CreateMemMove(Dest, Src, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemMove(Dest, Src, SizeVal, false);
     return RValue::get(Dest, *this);
   }
 
@@ -4809,7 +4827,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
-    Builder.CreateMemMove(Dest, Src, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemMove(Dest, Src, SizeVal, false);
     return RValue::get(Dest, *this);
   }
   case Builtin::BImemset:
@@ -4820,7 +4838,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
     EmitNonNullArgCheck(Dest, E->getArg(0)->getType(),
                         E->getArg(0)->getExprLoc(), FD, 0);
-    Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
     return RValue::get(Dest, *this);
   }
   case Builtin::BI__builtin_memset_inline: {
@@ -4832,7 +4850,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitNonNullArgCheck(RValue::get(Dest.emitRawPointer(*this)),
                         E->getArg(0)->getType(), E->getArg(0)->getExprLoc(), FD,
                         0);
-    Builder.CreateMemSetInline(Dest, ByteVal, Size);
+    InstForAtomGrp = Builder.CreateMemSetInline(Dest, ByteVal, Size);
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin___memset_chk: {
@@ -4849,10 +4867,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *ByteVal = Builder.CreateTrunc(EmitScalarExpr(E->getArg(1)),
                                          Builder.getInt8Ty());
     Value *SizeVal = llvm::ConstantInt::get(Builder.getContext(), Size);
-    Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
+    InstForAtomGrp = Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
     return RValue::get(Dest, *this);
   }
   case Builtin::BI__builtin_wmemchr: {
+    // FIXME(OCH): Probably ok for none of the inline implementation to be key.
+    // If the result is stored, that store should be a stepping location.
+
     // The MSVC runtime library does not provide a definition of wmemchr, so we
     // need an inline implementation.
     if (!getTarget().getTriple().isOSMSVCRT())
@@ -6462,7 +6483,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(0));
     Address Address = EmitPointerWithAlignment(E->getArg(1));
     Value *HalfVal = Builder.CreateFPTrunc(Val, Builder.getHalfTy());
-    Builder.CreateStore(HalfVal, Address);
+    InstForAtomGrp = Builder.CreateStore(HalfVal, Address);
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_load_half: {

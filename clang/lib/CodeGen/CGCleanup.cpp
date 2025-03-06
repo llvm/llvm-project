@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -1118,6 +1119,8 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
 
   // Create the branch.
   llvm::BranchInst *BI = Builder.CreateBr(Dest.getBlock());
+  // This is the primary instruction for this atom, acting as a ret.
+  addInstToCurrentSourceAtom(BI, nullptr);
 
   // Calculate the innermost active normal cleanup.
   EHScopeStack::stable_iterator

@@ -58,6 +58,9 @@ class CGBlockInfo;
 class CGDebugInfo {
   friend class ApplyDebugLocation;
   friend class SaveAndRestoreLocation;
+  friend class ApplyAtomGroup;
+  friend class IncAtomRank;
+
   CodeGenModule &CGM;
   const llvm::codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
@@ -179,6 +182,15 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
+  /// Source atoms are identified by a {AtomGroup, InlinedAt} pair, meaning
+  /// AtomGroup numbers can be repeated across different functions.
+  uint64_t NextAtomGroup = 1;
+  uint64_t HighestEmittedAtomGroup = 0;
+  uint64_t CurrentAtomGroup = 0;
+  uint64_t RetAtomGroupOverride = 0;
+  uint8_t CurrentAtomRankBase = 0;
+
+private:
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -636,7 +648,26 @@ public:
                                                 StringRef Category,
                                                 StringRef FailureMsg);
 
+  // TODO(OCH): comment.
+  void completeFunction();
+
+  // TODO(OCH): Add comment.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup, uint8_t KeyInstRank = 1);
+  // TODO(OCH): Add comment.
+  void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
+                                       llvm::Value *Backup,
+                                       uint8_t KeyInstRank = 1);
+  void setRetInstSourceAtomOverride(uint64_t Group);
+
 private:
+  /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
+  /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
+  /// has no DebugLoc, and chooses the atom group in which the instruction
+  /// has the highest precedence if it's already in one.
+  void addInstSourceAtomMetadata(llvm::Instruction *I, uint64_t Group,
+                                 uint8_t Rank);
+
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
@@ -851,6 +882,26 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
+};
+
+class ApplyAtomGroup {
+  uint64_t OriginalAtomGroup = 0;
+  uint8_t OriginalRankBase = 0;
+  CGDebugInfo *DI = nullptr;
+
+public:
+  ApplyAtomGroup(CodeGenFunction &CGF);
+  ApplyAtomGroup(CGDebugInfo *DI);
+  ~ApplyAtomGroup();
+};
+
+class IncAtomRank {
+  CGDebugInfo *DI = nullptr;
+
+public:
+  IncAtomRank(CodeGenFunction &CGF);
+  IncAtomRank(CGDebugInfo *DI);
+  ~IncAtomRank();
 };
 
 /// A scoped helper to set the current debug location to the specified

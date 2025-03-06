@@ -1,0 +1,48 @@
+// RUN: %clang %s -gmlt -gcolumn-info -S -emit-llvm -o - -Wno-unused-variable \
+// RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
+
+int g;
+void a(int A, int B) {
+// CHECK: entry:
+// The load gets associated with the branch rather than the store.
+// FIXME: Is that the best thing to do?
+// CHECK: %0 = load i32, ptr %A.addr{{.*}}, !dbg [[G2R2:!.*]]
+// CHECK: store i32 %0, ptr @g{{.*}}, !dbg [[G1R1:!.*]]
+// CHECK: switch i32 %0, label %{{.*}} [
+// CHECK:   i32 0, label %sw.bb
+// CHECK:   i32 1, label %sw.bb1
+// CHECK: ], !dbg [[G2R1:!.*]]
+    switch ((g = A)) {
+    case 0: break;
+    case 1: {
+// CHECK: sw.bb1:
+// CHECK: %1 = load i32, ptr %B.addr{{.*}}, !dbg [[G3R2:!.*]]
+// CHECK: switch i32 %1, label %{{.*}} [
+// CHECK:   i32 0, label %sw.bb2
+// CHECK: ], !dbg [[G3R1:!.*]]
+    switch ((B)) {
+        case 0: {
+// Test that assignments in constant-folded switches don't go missing.
+// CHECK: sw.bb2:
+// CHECK: store i32 1, ptr %C{{.*}}, !dbg [[G4R1:!.*]]
+            switch (const int C = 1; C) {
+                case 0: break;
+                case 1: break;
+                default: break;
+            }
+        } break;
+        default: break;
+    }
+    } break;
+    default: break;
+    }
+// CHECK: ret{{.*}}, !dbg [[G5R1:!.*]]
+}
+
+// CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
+// CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+// CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[G3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
+// CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)

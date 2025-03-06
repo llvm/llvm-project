@@ -215,8 +215,10 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
     }
     bool NeedsDtor =
         D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
-    if (PerformInit)
+    if (PerformInit) {
+      auto Grp = ApplyAtomGroup(*this);
       EmitDeclInit(*this, D, DeclAddr);
+    }
     if (D.getType().isConstantStorage(getContext(), true, !NeedsDtor))
       EmitDeclInvariant(*this, D, DeclPtr);
     else

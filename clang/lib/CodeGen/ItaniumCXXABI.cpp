@@ -5054,6 +5054,7 @@ void ItaniumCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 
   // Emit the local.
   CodeGenFunction::AutoVarEmission var = CGF.EmitAutoVarAlloca(*CatchParam);
+  auto Grp = ApplyAtomGroup(CGF);
   InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF), S->getBeginLoc());
   CGF.EmitAutoVarCleanups(var);
 }
