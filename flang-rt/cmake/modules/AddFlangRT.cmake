@@ -142,7 +142,6 @@ function (add_flangrt_library name)
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    find_package(Threads REQUIRED)
     target_link_libraries(${name_shared} PUBLIC Threads::Threads)
   endif ()
 
