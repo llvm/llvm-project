@@ -405,4 +405,41 @@ def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
   }];
 }
 
+// Test fallback attributes.
+def TestBytecodeFallbackAttr : Test_Attr<"TestBytecodeFallback"> {
+  let mnemonic = "bytecode_fallback";
+  let parameters = (ins 
+    "uint64_t":$attrIndex,
+    "::mlir::ArrayAttr":$encodedReqdAttributes,
+    "::mlir::ArrayAttr":$encodedOptAttributes);
+
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
+// New nested CompoundAttr to validate bytecode fallback attr.
+def CompoundAttrNoReadingNested : Test_Attr<"CompoundAttrNoReadingNested"> {
+  let mnemonic = "compound_attr_no_reading_nested";
+  let parameters = (ins
+    "::mlir::StringAttr":$value,
+    "::mlir::ArrayAttr":$payload);
+
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
+// New CompoundAttr to validate bytecode fallback attr.
+def CompoundAttrNoReading : Test_Attr<"CompoundAttrNoReading"> {
+  let mnemonic = "compound_attr_no_reading";
+  let parameters = (ins
+    CompoundAttrNoReadingNested:$noReadingNested,
+    TestAttrParams:$supportsReading);
+  
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
 #endif // TEST_ATTRDEFS

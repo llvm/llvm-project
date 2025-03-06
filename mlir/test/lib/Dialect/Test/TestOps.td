@@ -3032,7 +3032,7 @@ def TestVersionedOpC : TEST_Op<"versionedC"> {
 
 // This op is used to generate tests for the bytecode dialect fallback path.
 def TestVersionedOpD : TEST_Op<"versionedD"> {
-  let arguments = (ins AnyAttrOf<[TestAttrParams,
+  let arguments = (ins AnyAttrOf<[CompoundAttrNoReading,
                                   I32ElementsAttr]>:$attribute
   );
 

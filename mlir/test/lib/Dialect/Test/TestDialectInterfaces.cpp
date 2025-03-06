@@ -8,10 +8,14 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace test;
@@ -40,7 +44,12 @@ struct TestResourceBlobManagerInterface
 };
 
 namespace {
-enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
+enum test_encoding {
+  k_attr_params = 0,
+  k_test_i32 = 99,
+  kCompoundAttrNoReading = 100,
+  kCompoundAttrNoReadingNested = 101
+};
 } // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
@@ -67,6 +76,39 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
     return Type();
   }
 
+  struct FallbackCompliantAttributeEncoding {
+    SmallVector<Attribute> requiredAttributes;
+    SmallVector<Attribute> optionalAttributes;
+
+    LogicalResult write(DialectBytecodeWriter &writer, uint64_t attributeCode) {
+      writer.writeVarInt(attributeCode);
+      writer.writeList(requiredAttributes,
+                       [&](Attribute attr) { writer.writeAttribute(attr); });
+      writer.writeList(optionalAttributes, [&](Attribute attr) {
+        writer.writeOptionalAttribute(attr);
+      });
+      return success();
+    }
+
+    LogicalResult read(DialectBytecodeReader &reader) {
+      // The attribute code should be pre-populated.
+
+      // Read the required attributes.
+      if (failed(reader.readList(requiredAttributes, [&](Attribute &attr) {
+            return reader.readAttribute(attr);
+          })))
+        return failure();
+
+      // Read the optional attributes.
+      if (failed(reader.readList(optionalAttributes, [&](Attribute &attr) {
+            return reader.readOptionalAttribute(attr);
+          })))
+        return failure();
+
+      return success();
+    }
+  };
+
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const final {
     if (auto concreteAttr = llvm::dyn_cast<TestAttrParamsAttr>(attr)) {
@@ -75,6 +117,32 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(concreteAttr.getV1());
       return success();
     }
+
+    if (auto concreteAttr = dyn_cast<CompoundAttrNoReadingAttr>(attr)) {
+      FallbackCompliantAttributeEncoding encoding = {
+          .requiredAttributes = {concreteAttr.getNoReadingNested(),
+                                 concreteAttr.getSupportsReading()},
+          .optionalAttributes = {}};
+      return encoding.write(writer, kCompoundAttrNoReading);
+    }
+
+    if (auto concreteAttr = dyn_cast<CompoundAttrNoReadingNestedAttr>(attr)) {
+      FallbackCompliantAttributeEncoding encoding = {
+          .requiredAttributes = {concreteAttr.getValue(),
+                                 concreteAttr.getPayload()},
+          .optionalAttributes = {}};
+      return encoding.write(writer, kCompoundAttrNoReadingNested);
+    }
+
+    if (auto concreteAttr = dyn_cast<TestBytecodeFallbackAttr>(attr)) {
+      FallbackCompliantAttributeEncoding encoding = {
+          .requiredAttributes =
+              llvm::to_vector(concreteAttr.getEncodedReqdAttributes()),
+          .optionalAttributes =
+              llvm::to_vector(concreteAttr.getEncodedOptAttributes())};
+      return encoding.write(writer, concreteAttr.getAttrIndex());
+    }
+
     return failure();
   }
 
@@ -146,16 +214,29 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
 
 private:
   Attribute readAttrNewEncoding(DialectBytecodeReader &reader) const {
-    uint64_t encoding;
-    if (failed(reader.readVarInt(encoding)) ||
-        encoding != test_encoding::k_attr_params)
+    uint64_t attributeCode;
+    if (failed(reader.readVarInt(attributeCode)))
       return Attribute();
-    // The new encoding has v0 first, v1 second.
-    uint64_t v0, v1;
-    if (failed(reader.readVarInt(v0)) || failed(reader.readVarInt(v1)))
-      return Attribute();
-    return TestAttrParamsAttr::get(getContext(), static_cast<int>(v0),
-                                   static_cast<int>(v1));
+
+    switch (attributeCode) {
+    case test_encoding::k_attr_params: {
+      // The new encoding has v0 first, v1 second.
+      uint64_t v0, v1;
+      if (failed(reader.readVarInt(v0)) || failed(reader.readVarInt(v1)))
+        return Attribute();
+      return TestAttrParamsAttr::get(getContext(), static_cast<int>(v0),
+                                     static_cast<int>(v1));
+    }
+    default: {
+      FallbackCompliantAttributeEncoding encoding;
+      if (failed(encoding.read(reader)))
+        return {};
+      return TestBytecodeFallbackAttr::get(
+          reader.getContext(), attributeCode,
+          ArrayAttr::get(reader.getContext(), encoding.requiredAttributes),
+          ArrayAttr::get(reader.getContext(), encoding.optionalAttributes));
+    }
+    }
   }
 
   Attribute readAttrOldEncoding(DialectBytecodeReader &reader) const {
