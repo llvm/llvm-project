@@ -12733,6 +12733,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::NoHost:
+    return OpenACCNoHostClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Finalize:
     return OpenACCFinalizeClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::IfPresent:
@@ -12795,7 +12797,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                                LParenLoc, VarList, EndLoc);
   }
 
-  case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

@@ -3,8 +3,8 @@
 void Func();
 
 #pragma acc routine(Func) worker
-#pragma acc routine(Func) vector
-#pragma acc routine(Func) seq
+#pragma acc routine(Func) vector nohost
+#pragma acc routine(Func) nohost seq
 #pragma acc routine(Func) gang
 
 // Only 1 of worker, vector, seq, gang.
@@ -56,6 +56,10 @@ void Func();
 // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'gang' clause on a 'routine' construct}}
 // expected-note@+1{{previous clause is here}}
 #pragma acc routine(Func) gang gang
+// expected-error@+1{{REQUIRED}}
+#pragma acc routine(Func)
+// expected-error@+1{{REQUIRED}}
+#pragma acc routine(Func) nohost
 
 // only the 'dim' syntax for gang is legal.
 #pragma acc routine(Func) gang(dim:1)
@@ -106,8 +110,8 @@ struct DependentT {
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to -5}}
 #pragma acc routine(Func) gang(dim:T::Neg())
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 0}}
-#pragma acc routine(Func) gang(dim:T::Zero())
-#pragma acc routine(Func) gang(dim:T::One())
+#pragma acc routine(Func) gang(dim:T::Zero()) nohost
+#pragma acc routine(Func) nohost gang(dim:T::One())
 #pragma acc routine(Func) gang(dim:T::Two())
 #pragma acc routine(Func) gang(dim:T::Three())
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
