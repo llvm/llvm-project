@@ -2438,8 +2438,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
 
-  unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
-  unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
