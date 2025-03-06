@@ -859,6 +859,24 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
 }
 
+static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    llvm::Intrinsic::ID IntrinsicID) {
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
+
+  llvm::Value *Call =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Val->getType()}, Val);
+
+  llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
+  llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
+
+  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
+  LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
+  CGF.EmitStoreOfScalar(IntegralResult, IntegralLV);
+
+  return FractionalResult;
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -4120,6 +4138,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
+  case Builtin::BImodf:
+  case Builtin::BImodff:
+  case Builtin::BImodfl:
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+    if (Builder.getIsFPConstrained())
+      break; // TODO: Emit constrained modf intrinsic once one exists.
+    return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
@@ -4378,7 +4405,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umax,
                                              Op0, Op1, nullptr, "elt.max");
     } else
-      Result = Builder.CreateMaxNum(Op0, Op1, "elt.max");
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4394,7 +4421,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                                  : llvm::Intrinsic::umin,
                                              Op0, Op1, nullptr, "elt.min");
     } else
-      Result = Builder.CreateMinNum(Op0, Op1, "elt.min");
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
   }
 
@@ -10223,6 +10250,7 @@ llvm::Type *CodeGenFunction::getEltType(const SVETypeFlags &TypeFlags) {
   default:
     llvm_unreachable("Invalid SVETypeFlag!");
 
+  case SVETypeFlags::EltTyMFloat8:
   case SVETypeFlags::EltTyInt8:
     return Builder.getInt8Ty();
   case SVETypeFlags::EltTyInt16:
@@ -10651,7 +10679,7 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           unsigned IntrinsicID,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
       LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is returned may be different from the
@@ -10698,7 +10726,7 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            SmallVectorImpl<Value *> &Ops,
                                            unsigned IntrinsicID) {
   QualType LangPTy = E->getArg(1)->getType();
-  llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
+  llvm::Type *MemEltTy = CGM.getTypes().ConvertTypeForMem(
       LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is stored may be different from the
@@ -19469,6 +19497,62 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_adduint64: {
+    Value *OpA = EmitScalarExpr(E->getArg(0));
+    Value *OpB = EmitScalarExpr(E->getArg(1));
+    QualType Arg0Ty = E->getArg(0)->getType();
+    uint64_t NumElements = Arg0Ty->castAs<VectorType>()->getNumElements();
+    assert(Arg0Ty == E->getArg(1)->getType() &&
+           "AddUint64 operand types must match");
+    assert(Arg0Ty->hasIntegerRepresentation() &&
+           "AddUint64 operands must have an integer representation");
+    assert((NumElements == 2 || NumElements == 4) &&
+           "AddUint64 operands must have 2 or 4 elements");
+
+    llvm::Value *LowA;
+    llvm::Value *HighA;
+    llvm::Value *LowB;
+    llvm::Value *HighB;
+
+    // Obtain low and high words of inputs A and B
+    if (NumElements == 2) {
+      LowA = Builder.CreateExtractElement(OpA, (uint64_t)0, "LowA");
+      HighA = Builder.CreateExtractElement(OpA, (uint64_t)1, "HighA");
+      LowB = Builder.CreateExtractElement(OpB, (uint64_t)0, "LowB");
+      HighB = Builder.CreateExtractElement(OpB, (uint64_t)1, "HighB");
+    } else {
+      LowA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{0, 2}, "LowA");
+      HighA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{1, 3}, "HighA");
+      LowB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{0, 2}, "LowB");
+      HighB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{1, 3}, "HighB");
+    }
+
+    // Use an uadd_with_overflow to compute the sum of low words and obtain a
+    // carry value
+    llvm::Value *Carry;
+    llvm::Value *LowSum = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
+    llvm::Value *ZExtCarry =
+        Builder.CreateZExt(Carry, HighA->getType(), "CarryZExt");
+
+    // Sum the high words and the carry
+    llvm::Value *HighSum = Builder.CreateAdd(HighA, HighB, "HighSum");
+    llvm::Value *HighSumPlusCarry =
+        Builder.CreateAdd(HighSum, ZExtCarry, "HighSumPlusCarry");
+
+    if (NumElements == 4) {
+      return Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
+                                         ArrayRef<int>{0, 2, 1, 3},
+                                         "hlsl.AddUint64");
+    }
+
+    llvm::Value *Result = PoisonValue::get(OpA->getType());
+    Result = Builder.CreateInsertElement(Result, LowSum, (uint64_t)0,
+                                         "hlsl.AddUint64.upto0");
+    Result = Builder.CreateInsertElement(Result, HighSumPlusCarry, (uint64_t)1,
+                                         "hlsl.AddUint64");
+    return Result;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
@@ -19491,6 +19575,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateAnd(Op0, Op1, "hlsl.and");
+  }
+  case Builtin::BI__builtin_hlsl_or: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateOr(Op0, Op1, "hlsl.or");
   }
   case Builtin::BI__builtin_hlsl_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

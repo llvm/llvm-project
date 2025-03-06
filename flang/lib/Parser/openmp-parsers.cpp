@@ -855,6 +855,8 @@ TYPE_PARSER("ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
+    "INITIALIZER" >> construct<OmpClause>(construct<OmpClause::Initializer>(
+                         parenthesized(Parser<OmpInitializerClause>{}))) ||
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
                            parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
@@ -1104,9 +1106,25 @@ TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
 TYPE_PARSER(sourced(construct<OpenMPDepobjConstruct>(verbatim("DEPOBJ"_tok),
     parenthesized(Parser<OmpObject>{}), sourced(Parser<OmpClause>{}))))
 
-TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
-    many(maybe(","_tok) >> sourced(Parser<OmpMemoryOrderClause>{})),
-    maybe(parenthesized(Parser<OmpObjectList>{})))))
+static OpenMPFlushConstruct makeFlushFromOldSyntax(Verbatim &&text,
+    std::optional<OmpClauseList> &&clauses,
+    std::optional<OmpObjectList> &&objects) {
+  bool oldSyntax{
+      clauses && !clauses->v.empty() && objects && !objects->v.empty()};
+  return OpenMPFlushConstruct{std::move(text), std::move(objects),
+      std::move(clauses),
+      /*TrailingClauses=*/!oldSyntax};
+}
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPFlushConstruct>( //
+        applyFunction<OpenMPFlushConstruct>(makeFlushFromOldSyntax,
+            verbatim("FLUSH"_tok), maybe(Parser<OmpClauseList>{}),
+            maybe(parenthesized(Parser<OmpObjectList>{})))) ||
+
+    construct<OpenMPFlushConstruct>( //
+        verbatim("FLUSH"_tok), maybe(parenthesized(Parser<OmpObjectList>{})),
+        Parser<OmpClauseList>{}, pure(/*TrailingClauses=*/true))))
 
 // Simple Standalone Directives
 TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
@@ -1158,14 +1176,19 @@ TYPE_PARSER(construct<OmpBlockDirective>(first(
 TYPE_PARSER(sourced(construct<OmpBeginBlockDirective>(
     sourced(Parser<OmpBlockDirective>{}), Parser<OmpClauseList>{})))
 
-TYPE_PARSER(construct<OmpReductionInitializerClause>(
-    "INITIALIZER" >> parenthesized("OMP_PRIV =" >> expr)))
+TYPE_PARSER(construct<OmpInitializerExpr>("OMP_PRIV =" >> expr))
+TYPE_PARSER(construct<OmpInitializerProc>(Parser<ProcedureDesignator>{},
+    parenthesized(many(maybe(","_tok) >> Parser<ActualArgSpec>{}))))
+
+TYPE_PARSER(construct<OmpInitializerClause>(
+    construct<OmpInitializerClause>(Parser<OmpInitializerExpr>{}) ||
+    construct<OmpInitializerClause>(Parser<OmpInitializerProc>{})))
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
     verbatim("DECLARE REDUCTION"_tok),
     "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
-    maybe(Parser<OmpReductionInitializerClause>{}))))
+    maybe(Parser<OmpClauseList>{}))))
 
 // declare-target with list
 TYPE_PARSER(sourced(construct<OmpDeclareTargetWithList>(

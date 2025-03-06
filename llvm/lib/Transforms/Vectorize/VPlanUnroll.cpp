@@ -295,8 +295,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
-      auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
-      if (Phi->isOrdered()) {
+      auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
+      if (Phi && Phi->isOrdered()) {
         auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
           Parts.clear();
