@@ -11,13 +11,14 @@
 
 ; ALL-LABEL: {{^}}test:
 
-; ALL-NOT: flat_scr
+; HSA-DEFAULT: flat_scr
+; HSA-NODEFAULT-NOT: flat_scr
 
 ; HSA-DEFAULT: flat_store_dword
 ; HSA-NODEFAULT: buffer_store_dword
 ; HSA-NOADDR64: flat_store_dword
 
-; HSA: .amdhsa_user_sgpr_flat_scratch_init 0
+; HSA: .amdhsa_user_sgpr_flat_scratch_init 1
 
 ; NOHSA-DEFAULT: buffer_store_dword
 ; NOHSA-NODEFAULT: flat_store_dword
@@ -27,6 +28,8 @@ entry:
   store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+; ALL-LABEL: {{^}}test_addr64:
 
 ; HSA-DEFAULT: flat_store_dword
 ; HSA-NODEFAULT: buffer_store_dword
