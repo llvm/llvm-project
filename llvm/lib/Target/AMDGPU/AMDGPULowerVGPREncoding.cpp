@@ -359,13 +359,14 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
 
   MachineInstr *LoadMI = CoreMI.getPrevNode();
 
-#if !defined(NDEBUG)
-  // Check if the value loaded by V_LOAD_IDX is the same as stored by
-  // V_STORE_IDX
   assert(LoadMI->getOpcode() == AMDGPU::V_LOAD_IDX &&
          "V_LOAD_IDX + V_STORE_IDX Bundle was not created correctly");
   assert(LoadMI->hasOneMemOperand() && "V_LOAD/STORE_IDX must have one MMO");
   MachineMemOperand *LoadMMO = *LoadMI->memoperands_begin();
+
+#if !defined(NDEBUG)
+  // Check if the value loaded by V_LOAD_IDX is the same as stored by
+  // V_STORE_IDX
   auto LoadSize = LoadMMO->getSizeInBits().getValue();
   MachineOperand &DataOp = CoreMI.getOperand(
       AMDGPU::getNamedOperandIdx(AMDGPU::V_STORE_IDX, AMDGPU::OpName::data_op));
