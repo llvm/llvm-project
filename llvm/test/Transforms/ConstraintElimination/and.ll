@@ -603,3 +603,139 @@ exit:
 
   ret i1 %r.10
 }
+
+define void @test_decompose_bitwise_and(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = and i4 %y, %x
+  %and = icmp slt i4 %1, 0
+  br i1 %and, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp slt i4 %x, 0
+  %f.2 = icmp slt i4 %y, 0
+  call void @use(i1 %f.1)
+  call void @use(i1 %f.2)
+  ret void
+
+exit:
+  ret void
+}
+
+define i1 @test_decompose_bitwise_and2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_and2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND_NOT:%.*]] = icmp sgt i4 [[TMP0]], -1
+; CHECK-NEXT:    br i1 [[AND_NOT]], label [[END:%.*]], label [[THEN:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %0 = and i4 %x, %y
+  %and.not = icmp sgt i4 %0, -1
+  br i1 %and.not, label %end, label %then
+
+then:
+  %cmp = icmp slt i4 %x, 0
+  ret i1 %cmp
+
+end:
+  ret i1 false
+}
+
+define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z, i4 %w) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i4 [[TMP1]], [[W:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[F_5:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    [[F_6:%.*]] = icmp slt i4 [[Z]], 0
+; CHECK-NEXT:    [[F_7:%.*]] = icmp slt i4 [[W]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    call void @use(i1 [[F_5]])
+; CHECK-NEXT:    call void @use(i1 [[F_6]])
+; CHECK-NEXT:    call void @use(i1 [[F_7]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %1 = and i4 %y, %x
+  %2 = and i4 %1, %z
+  %3 = and i4 %2, %w
+  %and = icmp slt i4 %3, 0
+  br i1 %and, label %bb1, label %exit
+
+bb1:
+  %f.1 = icmp slt i4 %x, 0
+  %f.2 = icmp slt i4 %y, 0
+  %f.3 = icmp slt i4 %z, 0
+  %f.4 = icmp slt i4 %w, 0
+  call void @use(i1 %f.1)
+  call void @use(i1 %f.2)
+  call void @use(i1 %f.3)
+  call void @use(i1 %f.4)
+  ret void
+
+exit:
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_and2(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_and2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
+; CHECK-NEXT:    br i1 [[AND_2_NOT]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP_2]])
+; CHECK-NEXT:    [[CMP_3:%.*]] = icmp slt i4 [[Z]], 0
+; CHECK-NEXT:    call void @use(i1 [[CMP_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       f:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = and i4 %x, %y
+  %1 = and i4 %0, %z
+  %and.2.not = icmp sgt i4 %1, -1
+  br i1 %and.2.not, label %f, label %t
+
+t:
+  %cmp = icmp slt i4 %x, 0
+  call void @use(i1 %cmp)
+  %cmp.2 = icmp slt i4 %y, 0
+  call void @use(i1 %cmp.2)
+  %cmp.3 = icmp slt i4 %z, 0
+  call void @use(i1 %cmp.3)
+  ret void
+
+f:
+  ret void
+}
