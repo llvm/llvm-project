@@ -13,7 +13,6 @@
 #include <list>
 #include <cassert>
 #include <cstddef>
-#include <type_traits>
 
 #include "test_macros.h"
 #include "DefaultOnly.h"
@@ -88,7 +87,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*i == 0);
   }
 
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       std::list<DefaultOnly> l(3);
       assert(l.size() == 3);
