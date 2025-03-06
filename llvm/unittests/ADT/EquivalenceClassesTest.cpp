@@ -66,6 +66,22 @@ TEST(EquivalenceClassesTest, TwoSets) {
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
 }
 
+TEST(EquivalenceClassesTest, MembersIterator) {
+  EquivalenceClasses<int> EC;
+  EC.unionSets(1, 2);
+  EC.insert(4);
+  EC.insert(5);
+  EC.unionSets(5, 1);
+  EXPECT_EQ(EC.getNumClasses(), 2u);
+
+  std::set<int> ActualMembers;
+  std::set<int> ExpectedMembers{1, 2, 5};
+  EquivalenceClasses<int>::iterator I = EC.findValue(EC.getLeaderValue(1));
+  for (auto M : EC.members(I))
+    ActualMembers.insert(M);
+  EXPECT_EQ(ActualMembers, ExpectedMembers);
+}
+
 // Type-parameterized tests: Run the same test cases with different element
 // types.
 template <typename T> class ParameterizedTest : public testing::Test {};
