@@ -1362,8 +1362,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
       OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
       OutStreamer->emitAssignment(
-          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Src, MCSymbolRefExpr::create(Dst, MMI->getContext()));
     };
 
     auto getSymbolFromMetadata = [&](StringRef Name) {
@@ -1436,8 +1435,7 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
       OutStreamer->endCOFFSymbolDef();
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
       OutStreamer->emitAssignment(
-          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Sym, MCSymbolRefExpr::create(ExpSym, MMI->getContext()));
       return;
     }
   }

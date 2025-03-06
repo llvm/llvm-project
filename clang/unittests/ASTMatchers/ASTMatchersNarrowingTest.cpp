@@ -1167,6 +1167,23 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_EmptyName) {
   EXPECT_TRUE(notMatches(Code, cxxRecordDecl(isSameOrDerivedFrom(""))));
 }
 
+TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  DeclarationMatcher IsDerivenFromBase =
+      cxxRecordDecl(isDerivedFrom(decl().bind("typedef")));
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "struct AnInterface {};"
+      "typedef AnInterface UnusedTypedef;"
+      "typedef AnInterface Base;"
+      "class AClass : public Base {};",
+      IsDerivenFromBase,
+      std::make_unique<VerifyIdIsBoundTo<TypedefDecl>>("typedef", "Base")));
+}
+
 TEST_P(ASTMatchersTest, IsDerivedFrom_ObjC) {
   DeclarationMatcher IsDerivedFromX = objcInterfaceDecl(isDerivedFrom("X"));
   EXPECT_TRUE(
