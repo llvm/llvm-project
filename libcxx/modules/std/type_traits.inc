@@ -107,10 +107,10 @@ export namespace std {
   using std::has_unique_object_representations;
 
 #if _LIBCPP_STD_VER >= 23
-#  if _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY
+#  if __has_builtin(__reference_constructs_from_temporary)
   using std::reference_constructs_from_temporary;
 #  endif
-#  if _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY
+#  if __has_builtin(__reference_converts_from_temporary)
   using std::reference_converts_from_temporary;
 #  endif
 #endif
@@ -291,10 +291,10 @@ export namespace std {
   using std::is_unsigned_v;
   using std::is_volatile_v;
 #if _LIBCPP_STD_VER >= 23
-#  if _LIBCPP_HAS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY
+#  if __has_builtin(__reference_constructs_from_temporary)
   using std::reference_constructs_from_temporary_v;
 #  endif
-#  if _LIBCPP_HAS_REFERENCE_CONVERTS_FROM_TEMPORARY
+#  if __has_builtin(__reference_converts_from_temporary)
   using std::reference_converts_from_temporary_v;
 #  endif
 #endif
