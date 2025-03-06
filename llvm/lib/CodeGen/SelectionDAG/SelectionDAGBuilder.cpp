@@ -11827,10 +11827,25 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           AssertOp = ISD::AssertSext;
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
-
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+        if (Arg.hasAttribute(Attribute::NoFPClass) &&
+            OutVal.getValueType().isFloatingPoint()) {
+          SDNodeFlags OutValFlags = OutVal->getFlags();
+          bool NoSNaN = ((Arg.getNoFPClass() & llvm::fcSNan) == llvm::fcSNan);
+          bool NoQNaN = ((Arg.getNoFPClass() & llvm::fcQNan) == llvm::fcQNan);
+          bool NoInf = ((Arg.getNoFPClass() & llvm::fcInf) == llvm::fcInf);
+          bool NoNegZero =
+              ((Arg.getNoFPClass() & llvm::fcInf) == llvm::fcNegZero);
+          OutValFlags.setNoSNaNs(NoSNaN);
+          OutValFlags.setNoQNaNs(NoQNaN);
+          OutValFlags.setNoInfs(NoInf);
+          OutValFlags.setNoSignedZeros(NoNegZero);
+          OutVal =
+              DAG.getNode(ISD::AssertNoFPClass, dl, VT, OutVal, OutValFlags);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;

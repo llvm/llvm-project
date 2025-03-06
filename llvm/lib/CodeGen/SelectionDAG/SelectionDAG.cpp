@@ -5603,7 +5603,12 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (getTarget().Options.NoNaNsFPMath)
+    return true;
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (SNaN && OpFlags.hasNoSNaNs())
+    return true;
+  if (OpFlags.hasNoSNaNs() && OpFlags.hasNoQNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)
@@ -7370,6 +7375,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
+  case ISD::AssertNoFPClass:
+    assert(N1.getValueType().isFloatingPoint() &&
+           "AssertNoFPClass is used for a non-floating type");
+    return N1;
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();

@@ -397,7 +397,7 @@ public:
     Exact = 1 << 2,
     Disjoint = 1 << 3,
     NonNeg = 1 << 4,
-    NoNaNs = 1 << 5,
+    // 1 << 5 was used as NoNaNs
     NoInfs = 1 << 6,
     NoSignedZeros = 1 << 7,
     AllowReciprocal = 1 << 8,
@@ -416,13 +416,17 @@ public:
     // Compare instructions which may carry the samesign flag.
     SameSign = 1 << 14,
 
+    NoSNaNs = 1 << 15,
+    NoQNaNs = 1 << 16,
+
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign,
-    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
-                    AllowContract | ApproximateFuncs | AllowReassociation,
+                            NonNeg | NoSNaNs | NoQNaNs | NoInfs | SameSign,
+    FastMathFlags = NoSNaNs | NoQNaNs | NoInfs | NoSignedZeros |
+                    AllowReciprocal | AllowContract | ApproximateFuncs |
+                    AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -430,7 +434,8 @@ public:
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
-    setNoNaNs(FPMO.hasNoNaNs());
+    setNoSNaNs(FPMO.hasNoNaNs());
+    setNoQNaNs(FPMO.hasNoNaNs());
     setNoInfs(FPMO.hasNoInfs());
     setNoSignedZeros(FPMO.hasNoSignedZeros());
     setAllowReciprocal(FPMO.hasAllowReciprocal());
@@ -446,7 +451,12 @@ public:
   void setDisjoint(bool b) { setFlag<Disjoint>(b); }
   void setSameSign(bool b) { setFlag<SameSign>(b); }
   void setNonNeg(bool b) { setFlag<NonNeg>(b); }
-  void setNoNaNs(bool b) { setFlag<NoNaNs>(b); }
+  void setNoNaNs(bool b) {
+    setFlag<NoSNaNs>(b);
+    setFlag<NoQNaNs>(b);
+  }
+  void setNoSNaNs(bool b) { setFlag<NoSNaNs>(b); }
+  void setNoQNaNs(bool b) { setFlag<NoQNaNs>(b); }
   void setNoInfs(bool b) { setFlag<NoInfs>(b); }
   void setNoSignedZeros(bool b) { setFlag<NoSignedZeros>(b); }
   void setAllowReciprocal(bool b) { setFlag<AllowReciprocal>(b); }
@@ -463,7 +473,9 @@ public:
   bool hasDisjoint() const { return Flags & Disjoint; }
   bool hasSameSign() const { return Flags & SameSign; }
   bool hasNonNeg() const { return Flags & NonNeg; }
-  bool hasNoNaNs() const { return Flags & NoNaNs; }
+  bool hasNoNaNs() const { return (Flags & NoSNaNs) && (Flags & NoQNaNs); }
+  bool hasNoSNaNs() const { return Flags & NoSNaNs; }
+  bool hasNoQNaNs() const { return Flags & NoQNaNs; }
   bool hasNoInfs() const { return Flags & NoInfs; }
   bool hasNoSignedZeros() const { return Flags & NoSignedZeros; }
   bool hasAllowReciprocal() const { return Flags & AllowReciprocal; }
