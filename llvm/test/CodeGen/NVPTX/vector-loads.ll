@@ -4,7 +4,7 @@
 ; Even though general vector types are not supported in PTX, we can still
 ; optimize loads/stores with pseudo-vector instructions of the form:
 ;
-; ld.v2.f32 {%r0, %r1}, [%r0]
+; ld.v2.b32 {%r0, %r1}, [%r0]
 ;
 ; which will load two floats at once into scalar registers.
 
@@ -101,18 +101,18 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
 ; CHECK: ld.global.v4.b32 {%r
   %v = load <8 x half>, ptr addrspace(1) %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: mov.b32 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E4:%rs[0-9]+]], [[E5:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E6:%rs[0-9]+]], [[E7:%rs[0-9]+]]}
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E0]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E1]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E2]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E3]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E4]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E5]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E6]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E7]]
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.global.v4.b32
 ; CHECK: st.global.v4.b32
@@ -151,18 +151,18 @@ define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst,
 define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
 ; CHECK: ld.v4.b32 {%r
   %v = load <8 x half>, ptr %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
-; CHECK: cvt.f32.f16 %r{{.*}}, %rs
+; CHECK-DAG: mov.b32 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E4:%rs[0-9]+]], [[E5:%rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {[[E6:%rs[0-9]+]], [[E7:%rs[0-9]+]]}
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E0]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E1]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E2]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E3]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E4]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E5]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E6]]
+; CHECK-DAG: cvt.f32.f16 %r{{.*}}, [[E7]]
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.v4.b32
 ; CHECK: st.v4.b32
