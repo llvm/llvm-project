@@ -1218,8 +1218,38 @@ Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
     return nullptr;
 
   DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
+      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(), {},
+      nullptr, {}, D->getEndLoc(), TransformedClauses);
+
+  if (Res.isNull())
+    return nullptr;
+
+  return Res.getSingleDecl();
+}
+
+Decl *TemplateDeclInstantiator::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  SemaRef.OpenACC().ActOnConstruct(D->getDirectiveKind(), D->getBeginLoc());
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      InstantiateOpenACCClauseList(SemaRef, TemplateArgs, D->getDirectiveKind(),
+                                   D->clauses());
+
+  ExprResult FuncRef;
+  if (D->getFunctionReference()) {
+    FuncRef = SemaRef.SubstCXXIdExpr(D->getFunctionReference(), TemplateArgs);
+    if (FuncRef.isUsable())
+      FuncRef = SemaRef.OpenACC().ActOnRoutineName(FuncRef.get());
+    // We don't return early here, we leave the construct in the AST, even if
+    // the function decl is empty.
+  }
+
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(D->getDirectiveKind(),
+                                                D->getBeginLoc()))
+    return nullptr;
+
+  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
       D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(),
-      D->getEndLoc(), TransformedClauses);
+      D->getLParenLoc(), FuncRef.get(), D->getRParenLoc(), D->getEndLoc(),
+      TransformedClauses);
 
   if (Res.isNull())
     return nullptr;
@@ -2362,7 +2392,8 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // DR1484 clarifies that the members of a local class are instantiated as part
   // of the instantiation of their enclosing entity.
   if (D->isCompleteDefinition() && D->isLocalClass()) {
-    Sema::LocalEagerInstantiationScope LocalInstantiations(SemaRef);
+    Sema::LocalEagerInstantiationScope LocalInstantiations(SemaRef,
+                                                           /*AtEndOfTU=*/false);
 
     SemaRef.InstantiateClass(D->getLocation(), Record, D, TemplateArgs,
                              TSK_ImplicitInstantiation,
@@ -5344,8 +5375,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // This has to happen before LateTemplateParser below is called, so that
   // it marks vtables used in late parsed templates as used.
   GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                     /*Enabled=*/Recursive);
-  LocalEagerInstantiationScope LocalInstantiations(*this);
+                                                     /*Enabled=*/Recursive,
+                                                     /*AtEndOfTU=*/AtEndOfTU);
+  LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                   /*AtEndOfTU=*/AtEndOfTU);
 
   // Call the LateTemplateParser callback if there is a need to late parse
   // a templated function definition.
@@ -5919,10 +5952,12 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
       // If we're performing recursive template instantiation, create our own
       // queue of pending implicit instantiations that we will instantiate
       // later, while we're still within our own instantiation context.
-      GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                         /*Enabled=*/Recursive);
+      GlobalEagerInstantiationScope GlobalInstantiations(
+          *this,
+          /*Enabled=*/Recursive, /*AtEndOfTU=*/AtEndOfTU);
       LocalInstantiationScope Local(*this);
-      LocalEagerInstantiationScope LocalInstantiations(*this);
+      LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                       /*AtEndOfTU=*/AtEndOfTU);
 
       // Enter the scope of this instantiation. We don't use
       // PushDeclContext because we don't have a scope.
@@ -6019,14 +6054,16 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // queue of pending implicit instantiations that we will instantiate later,
   // while we're still within our own instantiation context.
   GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                     /*Enabled=*/Recursive);
+                                                     /*Enabled=*/Recursive,
+                                                     /*AtEndOfTU=*/AtEndOfTU);
 
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
   ContextRAII PreviousContext(*this, Var->getDeclContext());
   LocalInstantiationScope Local(*this);
 
-  LocalEagerInstantiationScope LocalInstantiations(*this);
+  LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                   /*AtEndOfTU=*/AtEndOfTU);
 
   VarDecl *OldVar = Var;
   if (Def->isStaticDataMember() && !Def->isOutOfLine()) {
@@ -6774,18 +6811,20 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   return D;
 }
 
-void Sema::PerformPendingInstantiations(bool LocalOnly) {
-  std::deque<PendingImplicitInstantiation> delayedPCHInstantiations;
+void Sema::PerformPendingInstantiations(bool LocalOnly, bool AtEndOfTU) {
+  std::deque<PendingImplicitInstantiation> DelayedImplicitInstantiations;
   while (!PendingLocalImplicitInstantiations.empty() ||
          (!LocalOnly && !PendingInstantiations.empty())) {
     PendingImplicitInstantiation Inst;
 
+    bool LocalInstantiation = false;
     if (PendingLocalImplicitInstantiations.empty()) {
       Inst = PendingInstantiations.front();
       PendingInstantiations.pop_front();
     } else {
       Inst = PendingLocalImplicitInstantiations.front();
       PendingLocalImplicitInstantiations.pop_front();
+      LocalInstantiation = true;
     }
 
     // Instantiate function definitions
@@ -6794,22 +6833,26 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
                                 TSK_ExplicitInstantiationDefinition;
       if (Function->isMultiVersion()) {
         getASTContext().forEachMultiversionedFunctionVersion(
-            Function, [this, Inst, DefinitionRequired](FunctionDecl *CurFD) {
+            Function,
+            [this, Inst, DefinitionRequired, AtEndOfTU](FunctionDecl *CurFD) {
               InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, CurFD, true,
-                                            DefinitionRequired, true);
+                                            DefinitionRequired, AtEndOfTU);
               if (CurFD->isDefined())
                 CurFD->setInstantiationIsPending(false);
             });
       } else {
         InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, Function, true,
-                                      DefinitionRequired, true);
+                                      DefinitionRequired, AtEndOfTU);
         if (Function->isDefined())
           Function->setInstantiationIsPending(false);
       }
       // Definition of a PCH-ed template declaration may be available only in the TU.
       if (!LocalOnly && LangOpts.PCHInstantiateTemplates &&
           TUKind == TU_Prefix && Function->instantiationIsPending())
-        delayedPCHInstantiations.push_back(Inst);
+        DelayedImplicitInstantiations.push_back(Inst);
+      else if (!AtEndOfTU && Function->instantiationIsPending() &&
+               !LocalInstantiation)
+        DelayedImplicitInstantiations.push_back(Inst);
       continue;
     }
 
@@ -6853,11 +6896,11 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     // Instantiate static data member definitions or variable template
     // specializations.
     InstantiateVariableDefinition(/*FIXME:*/ Inst.second, Var, true,
-                                  DefinitionRequired, true);
+                                  DefinitionRequired, AtEndOfTU);
   }
 
-  if (!LocalOnly && LangOpts.PCHInstantiateTemplates)
-    PendingInstantiations.swap(delayedPCHInstantiations);
+  if (!DelayedImplicitInstantiations.empty())
+    PendingInstantiations.swap(DelayedImplicitInstantiations);
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

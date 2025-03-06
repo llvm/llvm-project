@@ -9066,7 +9066,6 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       Out.emitLabel(Dot);
       const MCExpr *OpExpr = Inst.getOperand(2).getExpr();
       const MCExpr *InstPC = MCSymbolRefExpr::create(Dot,
-                                                     MCSymbolRefExpr::VK_None,
                                                      getContext());
       const MCExpr *Const8 = MCConstantExpr::create(8, getContext());
       const MCExpr *ReadPC = MCBinaryExpr::createAdd(InstPC, Const8,
@@ -12438,9 +12437,9 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError("expected variable after '.tlsdescseq' directive");
 
-  const MCSymbolRefExpr *SRE =
-    MCSymbolRefExpr::create(Parser.getTok().getIdentifier(),
-                            MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
+  auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
+  const auto *SRE = MCSymbolRefExpr::create(
+      Sym, MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())

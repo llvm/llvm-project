@@ -1482,7 +1482,7 @@ public:
     return false;
   }
 
-  bool Pre(const parser::OmpReductionInitializerProc &x) {
+  bool Pre(const parser::OmpInitializerProc &x) {
     auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
     auto &name = std::get<parser::Name>(procDes.u);
     auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
@@ -1496,13 +1496,9 @@ public:
 
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
-    parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        emptyList);
-    auto &init =
-        std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t);
-    Walk(init);
+        std::get<std::optional<parser::OmpClauseList>>(x.t));
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1659,7 +1655,7 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &clauses);
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1754,7 +1750,7 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses) {
+    const std::optional<parser::OmpClauseList> &clauses) {
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
@@ -1796,7 +1792,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, *maybeClauses);
+        ProcessReductionSpecifier(*spec, maybeClauses);
       }
     }
     break;
@@ -7490,15 +7486,10 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   Walk(bounds.upper);
   Walk(bounds.step);
   EndCheckOnIndexUseInOwnBounds(restore);
-  bool pushScope{currScope().kind() != Scope::Kind::ImpliedDos};
-  if (pushScope) {
-    PushScope(Scope::Kind::ImpliedDos, nullptr);
-  }
+  PushScope(Scope::Kind::ImpliedDos, nullptr);
   DeclareStatementEntity(bounds.name, type);
   Walk(objects);
-  if (pushScope) {
-    PopScope();
-  }
+  PopScope();
   return false;
 }
 
@@ -7539,9 +7530,9 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
             }
           },
           [&](const parser::DataImpliedDo &y) {
-            PushScope(Scope::Kind::ImpliedDos, nullptr);
+            // Don't push scope here, since it's done when visiting
+            // DataImpliedDo.
             Walk(y);
-            PopScope();
           },
       },
       x.u);
