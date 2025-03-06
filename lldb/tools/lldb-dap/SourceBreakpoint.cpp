@@ -27,8 +27,10 @@ namespace lldb_dap {
 SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
     : Breakpoint(dap, obj),
       logMessage(std::string(GetString(obj, "logMessage"))),
-      line(GetInteger<uint64_t>(obj, "line").value_or(0)),
-      column(GetInteger<uint64_t>(obj, "column").value_or(0)) {}
+      line(
+          GetInteger<uint64_t>(obj, "line").value_or(LLDB_INVALID_LINE_NUMBER)),
+      column(GetInteger<uint64_t>(obj, "column")
+                 .value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
