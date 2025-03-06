@@ -1113,6 +1113,29 @@ template instantiation, so the value for ``T::number`` is known.
   }];
 }
 
+def ExtVectorTypeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+
+The ext_vector_type(N) attribute specifies that a type is a vector with N
+elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
+allows element access via [] or x, y, z, w for graphics-style indexing. This
+attribute enables efficient SIMD operations and is usable in general-purpose
+code.
+
+.. code-block:: c++
+
+  template <typename T, uint32_t N>
+  constexpr T simd_reduce(T [[clang::ext_vector_type(N)]] v) {
+    T sum{};
+    for (uint32_t i = 0; i < N; ++i) {
+      sum += v[i];
+    }
+    return sum;
+  }
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
