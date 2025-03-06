@@ -230,3 +230,26 @@ define <8 x i16> @umaxqv_i16(<vscale x 8 x i16> %a) {
   %res = call <8 x i16> @llvm.aarch64.sve.umaxqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a);
   ret <8 x i16> %res
 }
+
+define <vscale x 8 x i1> @match_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: define <vscale x 8 x i1> @match_i16(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
+;
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.match.nxv8i16(<vscale x 8 x i1> zeroinitializer,
+  <vscale x 8 x i16> %a,
+  <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i1> %out
+}
+
+
+define <vscale x 8 x i1> @nmatch_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: define <vscale x 8 x i1> @nmatch_i16(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) {
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
+;
+  %out = call <vscale x 8 x i1> @llvm.aarch64.sve.nmatch.nxv8i16(<vscale x 8 x i1> zeroinitializer,
+  <vscale x 8 x i16> %a,
+  <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i1> %out
+}
