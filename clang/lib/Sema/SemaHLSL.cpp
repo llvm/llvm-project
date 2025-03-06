@@ -2392,8 +2392,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0) ||
+	!(SemaRef.Context.hasSameUnqualifiedType(TheCall->getArg(0)->getType(),
+						  TheCall->getArg(1)->getType()) &&
+	  SemaRef.Context.hasSameUnqualifiedType(TheCall->getArg(0)->getType(),
+						  TheCall->getArg(2)->getType()))) {
+      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_different_arg_types)
+	<< TheCall->getArg(0)->getType() << TheCall->getArg(1)->getType()
+	<< TheCall->getBeginLoc() << TheCall->getBeginLoc();
       return true;
+    }
     if (SemaRef.BuiltinElementwiseTernaryMath(
             TheCall, /*CheckForFloatArgs*/
             TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
