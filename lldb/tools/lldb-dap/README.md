@@ -65,7 +65,7 @@ This will attach to a process `a.out` whose process ID is 123:
 }
 ```
 
-You can also use the variable substituion `${command:pickProcess}` to select a
+You can also use the variable substitution `${command:pickProcess}` to select a
 process at the start of the debug session instead of setting the pid manually:
 
 ```javascript
@@ -73,9 +73,14 @@ process at the start of the debug session instead of setting the pid manually:
   "type": "lldb-dap",
   "request": "attach",
   "name": "Attach to PID",
-  "pid": "${command:pickProcess}"
+  "pid": "${command:pickProcess}",
+  "program": "/path/to/program"
 }
 ```
+
+Note: The `program` path above is optional. If specified, `pickProcess` will
+filter the list of available process based on the full program path. If absent,
+`pickProcess` will offer a list of all processes running on the system.
 
 #### Attach by Name
 
