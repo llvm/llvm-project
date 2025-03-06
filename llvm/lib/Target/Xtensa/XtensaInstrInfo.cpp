@@ -100,9 +100,13 @@ void XtensaInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
         .addReg(Reg1, RegState::Kill);
   }
 
+  if (STI.isWinABI()) {
+    BuildMI(MBB, I, DL, get(Xtensa::MOVSP), SP).addReg(Reg, RegState::Kill);
+  } else {
   BuildMI(MBB, I, DL, get(Xtensa::OR), SP)
       .addReg(Reg, RegState::Kill)
       .addReg(Reg, RegState::Kill);
+      }
 }
 
 void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
