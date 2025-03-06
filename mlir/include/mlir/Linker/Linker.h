@@ -60,16 +60,9 @@ public:
 
   MLIRContext *getContext() { return context; }
 
-  LogicalResult linkInModule(OwningOpRef<ModuleOp> src, unsigned flags = None);
+  LogicalResult linkInModule(OwningOpRef<ModuleOp> src);
 
   unsigned getFlags() const;
-
-  // Infer how to link file from linker config
-  LinkFileConfig linkFileConfig(unsigned fileFlags = None) const;
-
-  /// The first file is linked without internalization and with the
-  /// OverrideFromSrc flag set
-  LinkFileConfig firstFileConfig(unsigned fileFlags = None) const;
 
   OwningOpRef<ModuleOp> takeModule() { return std::move(composite); }
 

@@ -268,13 +268,17 @@ LogicalResult ModuleLinker::run() {
   return success();
 }
 
-LogicalResult Linker::linkInModule(OwningOpRef<ModuleOp> src, unsigned flags) {
+LogicalResult Linker::linkInModule(OwningOpRef<ModuleOp> src) {
+  unsigned flags = getFlags();
+
   if (!composite) {
     auto interface =
         dyn_cast_or_null<LinkerInterface>(src->getOperation()->getDialect());
     if (!interface)
       return emitError("Module does not have a linker interface");
     composite = interface->createCompositeModule(src.get());
+    // We always override from source for the first module.
+    flags &= Linker::OverrideFromSrc;
   }
 
   IRMover mover(composite.get());
@@ -289,13 +293,4 @@ unsigned Linker::getFlags() const {
     flags |= Linker::Flags::LinkOnlyNeeded;
 
   return flags;
-}
-
-Linker::LinkFileConfig Linker::linkFileConfig(unsigned fileFlags) const {
-  return {.flags = fileFlags};
-}
-
-Linker::LinkFileConfig Linker::firstFileConfig(unsigned fileFlags) const {
-  // Filter out flags that don't apply to the first file we load.
-  return {.flags = fileFlags & Linker::OverrideFromSrc};
 }

@@ -153,7 +153,6 @@ const LinkerCLOptions &createLinkerConfigFromCLOptions() {
 /// This class encapsulates all the file handling logic for linker.
 class FileProcessor {
 public:
-  using FileConfig = Linker::LinkFileConfig;
   using OwningMemoryBuffer = std::unique_ptr<MemoryBuffer>;
 
   explicit FileProcessor(Linker &linker, raw_ostream &os, StringRef inMarker,
@@ -162,49 +161,39 @@ public:
 
   /// Process and link multiple input files
   LogicalResult linkFiles(const std::vector<std::string> fileNames) {
-
-    unsigned flags = linker.getFlags();
-    FileConfig config = linker.firstFileConfig(flags);
-
     for (StringRef fileName : fileNames) {
-      if (failed(processFile(fileName, config)))
+      if (failed(processFile(fileName)))
         return failure();
-
-      // Update config for subsequent files
-      config = linker.linkFileConfig(flags);
     }
 
     return success();
   }
 
 private:
-  /// Process a single file
-  LogicalResult processFile(StringRef fileName, FileConfig config) {
-    // Open input file
+  LogicalResult processFile(StringRef fileName) {
     std::string errorMessage;
     auto input = openInputFile(fileName, &errorMessage);
     if (!input)
       return linker.emitFileError(fileName, errorMessage);
 
     // Process each file chunk
-    if (failed(processFile(std::move(input), config)))
+    if (failed(processFile(std::move(input))))
       return linker.emitFileError(fileName, "Failed to process input file");
 
     return success();
   }
 
-  /// Process a single file buffer
-  LogicalResult processFile(OwningMemoryBuffer file, FileConfig config) {
+  /// Process a single input file, potentially containing multiple modules
+  LogicalResult processFile(OwningMemoryBuffer file) {
     return splitAndProcessBuffer(
         std::move(file),
-        [config, this](OwningMemoryBuffer chunk, raw_ostream & /* os */) {
-          return processFileChunk(std::move(chunk), config);
+        [this](OwningMemoryBuffer chunk, raw_ostream & /* os */) {
+          return processFileChunk(std::move(chunk));
         },
         os, inMarker, outMarker);
   }
 
-  /// Process a single input file, potentially containing multiple modules
-  LogicalResult processFileChunk(OwningMemoryBuffer buffer, FileConfig config) {
+  LogicalResult processFileChunk(OwningMemoryBuffer buffer) {
     auto sourceMgr = std::make_shared<SourceMgr>();
     sourceMgr->AddNewSourceBuffer(std::move(buffer), SMLoc());
 
@@ -214,7 +203,7 @@ private:
 
     // Parse the source file
     OwningOpRef<Operation *> op =
-        parseSourceFileForTool(sourceMgr, ctx, true /*insertImplicitModule*/);
+        parseSourceFileForTool(sourceMgr, ctx, /*insertImplicitModule=*/true);
     ctx->enableMultithreading(wasThreadingEnabled);
 
     if (!op)
@@ -228,7 +217,7 @@ private:
     // TBD: internalization
     OwningOpRef<ModuleOp> mod = cast<ModuleOp>(op.release());
     // Link the parsed operation
-    return linker.linkInModule(std::move(mod), config.flags);
+    return linker.linkInModule(std::move(mod));
   }
 
   Linker &linker;
