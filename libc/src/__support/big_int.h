@@ -285,7 +285,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
       return 0;
     if (i >= int(N))
       return is_neg ? cpp::numeric_limits<word>::max() : 0;
-    return array[i];
+    return array[static_cast<size_t>(i)];
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
