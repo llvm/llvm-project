@@ -146,8 +146,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe,
               VPScalarPHIRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPScalarCastRecipe>(
-            [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstructionWithType>(
+            [&](const auto *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
           if (I->getOpcode() != Instruction::Add) {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
