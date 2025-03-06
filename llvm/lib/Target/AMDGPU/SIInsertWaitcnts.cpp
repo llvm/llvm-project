@@ -114,13 +114,6 @@ struct HardwareLimits {
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 };
 
-struct RegisterEncoding {
-  unsigned VGPR0;
-  unsigned VGPRL;
-  unsigned SGPR0;
-  unsigned SGPRL;
-};
-
 enum WaitEventType {
   VMEM_ACCESS,              // vector-memory read & write
   VMEM_READ_ACCESS,         // vector-memory read
@@ -283,11 +276,10 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
 class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, RegisterEncoding Encoding,
-                  const unsigned *WaitEventMaskForInst,
+                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
                   InstCounterType SmemAccessCounter)
       : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        Encoding(Encoding), WaitEventMaskForInst(WaitEventMaskForInst),
+        WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
   unsigned getWaitCountMax(InstCounterType T) const {
@@ -462,7 +454,6 @@ private:
   const GCNSubtarget *ST = nullptr;
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
-  RegisterEncoding Encoding = {};
   const unsigned *WaitEventMaskForInst;
   InstCounterType SmemAccessCounter;
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
@@ -807,16 +798,14 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                  AMDGPU::HWEncoding::REG_IDX_MASK;
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0;
+    assert(Reg <= SQ_MAX_PGM_VGPRS);
+    Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
   } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
-    assert(Result.first >= NUM_ALL_VGPRS &&
-           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
+    assert(Reg < SQ_MAX_PGM_SGPRS);
+    Result.first = Reg + NUM_ALL_VGPRS;
   }
   // TODO: Handle TTMP
   // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
@@ -2718,14 +2707,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
-  RegisterEncoding Encoding = {};
-  Encoding.VGPR0 =
-      TRI->getEncodingValue(AMDGPU::VGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 =
-      TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
-
   BlockInfos.clear();
   bool Modified = false;
 
@@ -2765,8 +2746,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-        SmemAccessCounter);
+        ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
@@ -2804,10 +2784,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       } else {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-              SmemAccessCounter);
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
         else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits, Encoding,
+          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
                                       WaitEventMaskForInst, SmemAccessCounter);
       }
 

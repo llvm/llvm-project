@@ -789,8 +789,12 @@ createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
 
   firOpBuilder.restoreInsertionPoint(insPt);
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
-  mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
-      loc, cvtVal, converter.getSymbolAddress(*sym));
+  hlfir::Entity lhs{converter.getSymbolAddress(*sym)};
+
+  lhs = hlfir::derefPointersAndAllocatables(loc, firOpBuilder, lhs);
+
+  mlir::Operation *storeOp =
+      firOpBuilder.create<hlfir::AssignOp>(loc, cvtVal, lhs);
   return storeOp;
 }
 

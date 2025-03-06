@@ -283,7 +283,7 @@ private:
 
 class ModuleMemProfiler {
 public:
-  ModuleMemProfiler(Module &M) { TargetTriple = Triple(M.getTargetTriple()); }
+  ModuleMemProfiler(Module &M) { TargetTriple = M.getTargetTriple(); }
 
   bool instrumentModule(Module &);
 
@@ -426,7 +426,7 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
     if (GV->hasSection()) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
-      auto OF = Triple(I->getModule()->getTargetTriple()).getObjectFormat();
+      auto OF = I->getModule()->getTargetTriple().getObjectFormat();
       if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return std::nullopt;
@@ -542,7 +542,7 @@ void createProfileFileNameVar(Module &M) {
   GlobalVariable *ProfileNameVar = new GlobalVariable(
       M, ProfileNameConst->getType(), /*isConstant=*/true,
       GlobalValue::WeakAnyLinkage, ProfileNameConst, MemProfFilenameVar);
-  Triple TT(M.getTargetTriple());
+  const Triple &TT = M.getTargetTriple();
   if (TT.supportsCOMDAT()) {
     ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
     ProfileNameVar->setComdat(M.getOrInsertComdat(MemProfFilenameVar));
@@ -557,7 +557,7 @@ void createMemprofHistogramFlagVar(Module &M) {
   auto MemprofHistogramFlag = new GlobalVariable(
       M, IntTy1, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy1, APInt(1, ClHistogram)), VarName);
-  Triple TT(M.getTargetTriple());
+  const Triple &TT = M.getTargetTriple();
   if (TT.supportsCOMDAT()) {
     MemprofHistogramFlag->setLinkage(GlobalValue::ExternalLinkage);
     MemprofHistogramFlag->setComdat(M.getOrInsertComdat(VarName));
@@ -571,7 +571,7 @@ void createMemprofDefaultOptionsVar(Module &M) {
   GlobalVariable *OptionsVar = new GlobalVariable(
       M, OptionsConst->getType(), /*isConstant=*/true,
       GlobalValue::WeakAnyLinkage, OptionsConst, getMemprofOptionsSymbolName());
-  Triple TT(M.getTargetTriple());
+  const Triple &TT = M.getTargetTriple();
   if (TT.supportsCOMDAT()) {
     OptionsVar->setLinkage(GlobalValue::ExternalLinkage);
     OptionsVar->setComdat(M.getOrInsertComdat(OptionsVar->getName()));
