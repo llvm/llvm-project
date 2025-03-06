@@ -1828,7 +1828,6 @@ let Predicates = [HasSVE] in {
 } // End HasSVE
 
 let Predicates = [HasSVE_or_SME] in {
-
   defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
 
   defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1", AArch64zip1>;
