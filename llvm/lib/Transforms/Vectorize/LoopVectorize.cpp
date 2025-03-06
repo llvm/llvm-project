@@ -2099,12 +2099,7 @@ public:
     if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
       return nullptr;
 
-    Value *Cond = SCEVCheckCond;
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    SCEVCheckCond = nullptr;
-
     auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
-
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
     // Create new preheader for vector loop.
     if (OuterLoop)
@@ -2118,10 +2113,14 @@ public:
     DT->addNewBlock(SCEVCheckBlock, Pred);
     DT->changeImmediateDominator(LoopVectorPreHeader, SCEVCheckBlock);
 
-    BranchInst &BI = *BranchInst::Create(Bypass, LoopVectorPreHeader, Cond);
+    BranchInst &BI =
+        *BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheckCond);
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
+
+    // Mark the check as used, to prevent it from being removed during cleanup.
+    SCEVCheckCond = nullptr;
     return SCEVCheckBlock;
   }
 
