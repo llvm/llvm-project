@@ -19470,6 +19470,62 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_adduint64: {
+    Value *OpA = EmitScalarExpr(E->getArg(0));
+    Value *OpB = EmitScalarExpr(E->getArg(1));
+    QualType Arg0Ty = E->getArg(0)->getType();
+    uint64_t NumElements = Arg0Ty->castAs<VectorType>()->getNumElements();
+    assert(Arg0Ty == E->getArg(1)->getType() &&
+           "AddUint64 operand types must match");
+    assert(Arg0Ty->hasIntegerRepresentation() &&
+           "AddUint64 operands must have an integer representation");
+    assert((NumElements == 2 || NumElements == 4) &&
+           "AddUint64 operands must have 2 or 4 elements");
+
+    llvm::Value *LowA;
+    llvm::Value *HighA;
+    llvm::Value *LowB;
+    llvm::Value *HighB;
+
+    // Obtain low and high words of inputs A and B
+    if (NumElements == 2) {
+      LowA = Builder.CreateExtractElement(OpA, (uint64_t)0, "LowA");
+      HighA = Builder.CreateExtractElement(OpA, (uint64_t)1, "HighA");
+      LowB = Builder.CreateExtractElement(OpB, (uint64_t)0, "LowB");
+      HighB = Builder.CreateExtractElement(OpB, (uint64_t)1, "HighB");
+    } else {
+      LowA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{0, 2}, "LowA");
+      HighA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{1, 3}, "HighA");
+      LowB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{0, 2}, "LowB");
+      HighB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{1, 3}, "HighB");
+    }
+
+    // Use an uadd_with_overflow to compute the sum of low words and obtain a
+    // carry value
+    llvm::Value *Carry;
+    llvm::Value *LowSum = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
+    llvm::Value *ZExtCarry =
+        Builder.CreateZExt(Carry, HighA->getType(), "CarryZExt");
+
+    // Sum the high words and the carry
+    llvm::Value *HighSum = Builder.CreateAdd(HighA, HighB, "HighSum");
+    llvm::Value *HighSumPlusCarry =
+        Builder.CreateAdd(HighSum, ZExtCarry, "HighSumPlusCarry");
+
+    if (NumElements == 4) {
+      return Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
+                                         ArrayRef<int>{0, 2, 1, 3},
+                                         "hlsl.AddUint64");
+    }
+
+    llvm::Value *Result = PoisonValue::get(OpA->getType());
+    Result = Builder.CreateInsertElement(Result, LowSum, (uint64_t)0,
+                                         "hlsl.AddUint64.upto0");
+    Result = Builder.CreateInsertElement(Result, HighSumPlusCarry, (uint64_t)1,
+                                         "hlsl.AddUint64");
+    return Result;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
