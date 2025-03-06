@@ -12637,8 +12637,9 @@ def err_riscv_builtin_requires_extension : Error<
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 def err_riscv_type_requires_extension : Error<
-  "RISC-V type %0 requires the '%1' extension"
->;
+  "RISC-V type %0 requires the '%1' extension">;
+def err_riscv_attribute_interrupt_requires_extension : Error<
+  "RISC-V interrupt attribute '%0' requires extension '%1'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
