@@ -581,7 +581,7 @@ bool handleConstMemberCall(const CallExpr *CE,
 
     State.Env.setStorageLocation(*CE, Loc);
     return true;
-  } else {
+  }
     // PRValue cases:
     if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
       // If the const method returns a boolean or pointer type.
@@ -591,7 +591,8 @@ bool handleConstMemberCall(const CallExpr *CE,
         return false;
       State.Env.setValue(*CE, *Val);
       return true;
-    } else if (isSupportedOptionalType(CE->getType())) {
+    }
+    if (isSupportedOptionalType(CE->getType())) {
       // If the const method returns an optional by value.
       const FunctionDecl *DirectCallee = CE->getDirectCallee();
       if (DirectCallee == nullptr)
@@ -608,7 +609,7 @@ bool handleConstMemberCall(const CallExpr *CE,
       copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
       return true;
     }
-  }
+
 
   return false;
 }
