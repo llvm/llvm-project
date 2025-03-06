@@ -358,7 +358,7 @@ multiclass USMOP4<string mode, string za, string t, string i, list<ImmCheck> che
                               [IsStreaming, IsInOutZA],
                               checks>;
   def _1x2 : SInst<"svmop4" # mode # "[_1x2]_" # za # "[_{d}_{3}]",
-                              "vid2.x", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_1x1",
+                              "vid2.x", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_1x2",
                               [IsStreaming, IsInOutZA],
                               checks>;
 }
