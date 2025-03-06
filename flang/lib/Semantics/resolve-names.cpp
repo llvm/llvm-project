@@ -1656,7 +1656,6 @@ private:
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses);
-  void CreateTempSymbol(const parser::CharBlock &name, const DeclTypeSpec &dts);
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1749,14 +1748,6 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   PopScope();
 }
 
-void OmpVisitor::CreateTempSymbol(
-    const parser::CharBlock &name, const DeclTypeSpec &dts) {
-  ObjectEntityDetails details{};
-  details.set_type(dts);
-
-  MakeSymbol(name, Attrs{}, std::move(details));
-}
-
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const std::optional<parser::OmpClauseList> &clauses) {
@@ -1783,7 +1774,9 @@ void OmpVisitor::ProcessReductionSpecifier(
         {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}};
 
     for (auto &nm : ompVarNames) {
-      CreateTempSymbol(nm, *typeSpec);
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
     }
     EndDeclTypeSpec();
     Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
