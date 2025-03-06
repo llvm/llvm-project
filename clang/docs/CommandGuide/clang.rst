@@ -738,8 +738,8 @@ ENVIRONMENT
   paths specified with the :option:`-I\<directory\>` option, but before any
   system header search paths. Paths are delimited by the platform dependent
   delimiter as used in the ``PATH`` environment variable. Empty entries in the
-  delimited path list are ignored. The treatment of empty entries differs from
-  gcc which treats them as specifying the compiler's current working directory.
+  delimited path list, including those at the beginning or end of the list, are
+  treated as specifying the compiler's current working directory.
 
 .. envvar:: C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
 
