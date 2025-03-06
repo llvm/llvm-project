@@ -776,6 +776,45 @@ struct TargetX86_64Win : public TargetX86_64 {
     }
     return marshal;
   }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType type,
+                     const Marshalling &) const override {
+    std::uint64_t size =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, type, getDataLayout(), kindMap)
+            .first;
+    CodeGenSpecifics::Marshalling marshal;
+    if (size <= 8)
+      marshal.emplace_back(mlir::IntegerType::get(type.getContext(), size * 8),
+                           AT{});
+    else
+      // TODO: investigate: clang is not setting the byval attribute, it is not
+      // clear why. Currently, this needs to be set here for flang so that the
+      // target-rewrite pass allocate memory as expected. Is it OK to set byval
+      // when clang does not?
+      marshal.emplace_back(fir::ReferenceType::get(type),
+                           AT{16, /*byval=*/true, /*sret=*/false});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType type) const override {
+    std::uint64_t size =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, type, getDataLayout(), kindMap)
+            .first;
+    CodeGenSpecifics::Marshalling marshal;
+    if (size <= 8)
+      marshal.emplace_back(mlir::IntegerType::get(type.getContext(), size * 8),
+                           AT{});
+    else
+      // TODO: investigate: the ABI is not very clear about the alignment for
+      // the return in memory (while it was explicit about 16 for the argument
+      // passing case). Should it be the default alignment for that type
+      // instead?
+      marshal.emplace_back(fir::ReferenceType::get(type),
+                           AT{16, /*byval=*/false, /*sret=*/true});
+    return marshal;
+  }
 };
 } // namespace
 
