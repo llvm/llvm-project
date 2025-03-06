@@ -240,6 +240,137 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
+// MARK: Types
+
+// "Source": {
+//   "type": "object",
+//   "description": "A `Source` is a descriptor for source code.\nIt is returned
+//   from the debug adapter as part of a `StackFrame` and it is used by clients
+//   when specifying breakpoints.", "properties": {
+//     "name": {
+//       "type": "string",
+//       "description": "The short name of the source. Every source returned
+//       from the debug adapter has a name.\nWhen sending a source to the debug
+//       adapter this name is optional."
+//     },
+//     "path": {
+//       "type": "string",
+//       "description": "The path of the source to be shown in the UI.\nIt is
+//       only used to locate and load the content of the source if no
+//       `sourceReference` is specified (or its value is 0)."
+//     },
+//     "sourceReference": {
+//       "type": "integer",
+//       "description": "If the value > 0 the contents of the source must be
+//       retrieved through the `source` request (even if a path is
+//       specified).\nSince a `sourceReference` is only valid for a session, it
+//       can not be used to persist a source.\nThe value should be less than or
+//       equal to 2147483647 (2^31-1)."
+//     },
+//     "presentationHint": {
+//       "type": "string",
+//       "description": "A hint for how to present the source in the UI.\nA
+//       value of `deemphasize` can be used to indicate that the source is not
+//       available or that it is skipped on stepping.", "enum": [ "normal",
+//       "emphasize", "deemphasize" ]
+//     },
+//     "origin": {
+//       "type": "string",
+//       "description": "The origin of this source. For example, 'internal
+//       module', 'inlined content from source map', etc."
+//     },
+//     "sources": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/Source"
+//       },
+//       "description": "A list of sources that are related to this source.
+//       These may be the source that generated this source."
+//     },
+//     "adapterData": {
+//       "type": [ "array", "boolean", "integer", "null", "number", "object",
+//       "string" ], "description": "Additional data that a debug adapter might
+//       want to loop through the client.\nThe client should leave the data
+//       intact and persist it across sessions. The client should not interpret
+//       the data."
+//     },
+//     "checksums": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/Checksum"
+//       },
+//       "description": "The checksums associated with this file."
+//     }
+//   }
+// },
+struct Source {
+  enum class PresentationHint { normal, emphasize, deemphasize };
+
+  std::optional<std::string> name;
+  std::optional<std::string> path;
+  std::optional<int64_t> sourceReference;
+  std::optional<PresentationHint> presentationHint;
+
+  // unsupproted keys origin, sources, adapterData, checksums
+};
+bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
+llvm::json::Value toJSON(const Source &);
+
+// MARK: Requests
+
+// "SourceArguments": {
+//   "type": "object",
+//   "description": "Arguments for `source` request.",
+//   "properties": {
+//     "source": {
+//       "$ref": "#/definitions/Source",
+//       "description": "Specifies the source content to load. Either
+//       `source.path` or `source.sourceReference` must be specified."
+//     },
+//     "sourceReference": {
+//       "type": "integer",
+//       "description": "The reference to the source. This is the same as
+//       `source.sourceReference`.\nThis is provided for backward compatibility
+//       since old clients do not understand the `source` attribute."
+//     }
+//   },
+//   "required": [ "sourceReference" ]
+// },
+struct SourceArguments {
+  std::optional<Source> source;
+  int64_t sourceReference;
+};
+bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
+
+// "SourceResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `source` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "content": {
+//             "type": "string",
+//             "description": "Content of the source reference."
+//           },
+//           "mimeType": {
+//             "type": "string",
+//             "description": "Content type (MIME type) of the source."
+//           }
+//         },
+//         "required": [ "content" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// },
+struct SourceResponseBody {
+  std::string content;
+  std::optional<std::string> mimeType;
+};
+llvm::json::Value toJSON(const SourceResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif
