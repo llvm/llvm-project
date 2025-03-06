@@ -251,8 +251,10 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
  %result = call {double, i32} @llvm.frexp.f64.i32(double %j)
  %result.0 = extractvalue { double, i32 } %result, 0
  %result.1 = extractvalue { double, i32 } %result, 1
+ %resultModf = call {double, double} @llvm.modf.f64(double %result.0)
+ %resultModf.0 = extractvalue { double, double } %resultModf, 0
  call void @escape_value(i32 %result.1)
- ret double %result.0
+ ret double %resultModf.0
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see
