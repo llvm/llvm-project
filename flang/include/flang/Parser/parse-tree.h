@@ -3807,9 +3807,7 @@ struct OmpDeviceModifier {
 // [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
 // the directive-name-modifier. For the sake of uniformity CANCEL can be
 // considered a valid value in 4.5 as well.
-struct OmpDirectiveNameModifier {
-  WRAPPER_CLASS_BOILERPLATE(OmpDirectiveNameModifier, llvm::omp::Directive);
-};
+using OmpDirectiveNameModifier = OmpDirectiveName;
 
 // Ref: [5.1:205-209], [5.2:166-168]
 //
@@ -4515,6 +4513,7 @@ struct OmpDirectiveSpecification {
   llvm::omp::Directive DirId() const { //
     return std::get<OmpDirectiveName>(t).v;
   }
+  const OmpClauseList &Clauses() const;
 
   CharBlock source;
   std::tuple<OmpDirectiveName, std::optional<std::list<OmpArgument>>,

@@ -329,7 +329,8 @@ private:
     TargetNest,
     DeclarativeNest,
     ContextSelectorNest,
-    LastType = ContextSelectorNest,
+    MetadirectiveNest,
+    LastType = MetadirectiveNest,
   };
   int directiveNest_[LastType + 1] = {0};
 
