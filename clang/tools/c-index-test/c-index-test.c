@@ -3555,11 +3555,12 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   clang_indexLoc_getFileLocation(loc, &file, 0, &line, &column, 0);
 
   len = sizeof(IndexDataStringList) + strlen(name) + digitCount(line) +
-        digitCount(column) + 2;
+        digitCount(column) + 3;
   node = (IndexDataStringList *)malloc(len);
   assert(node);
   newStr = node->data;
-  snprintf(newStr, len, "%s:%d:%d", name, line, column);
+  snprintf(newStr, len - sizeof(IndexDataStringList), "%s:%d:%d", name, line,
+           column);
 
   /* Remember string so it can be freed later. */
   index_data = (IndexData *)client_data;
