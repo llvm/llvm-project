@@ -43,14 +43,7 @@ function compute-projects-to-test() {
     clang-tools-extra)
       echo libc
     ;;
-    mlir)
-      # Flang is not stable in Windows CI at the moment
-      if [[ $isForWindows == 0 ]]; then
-        echo flang
-      fi
-    ;;
-    flang-rt)
-      # Flang-RT will be built whenever Flang is built
+    mlir|flang-rt)
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
@@ -128,6 +121,7 @@ function exclude-linux() {
     case ${project} in
     cross-project-tests) ;; # tests failing
     openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
+    flang-rt)            ;; # added to runtimes build, not LLVM_ENABLE_PROJECTS
     *)
       echo "${project}"
     ;;
