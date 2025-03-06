@@ -42365,10 +42365,10 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // If we're permuting the upper 256-bits subvectors of a concatenation, then
     // see if we can peek through and access the subvector directly.
     if (VT.is512BitVector()) {
-      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only the
-      // upper subvector is used.
-      SDValue LHS = N->getOperand(0);
-      SDValue RHS = N->getOperand(1);
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
+      // the upper subvector is used.
+      SDValue LHS = peekThroughBitcasts(N->getOperand(0));
+      SDValue RHS = peekThroughBitcasts(N->getOperand(1));
       uint64_t Mask = N->getConstantOperandVal(2);
       SmallVector<SDValue> LHSOps, RHSOps;
       SDValue NewLHS, NewRHS;
@@ -42383,8 +42383,9 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         Mask &= ~0xA0;
       }
       if (NewLHS || NewRHS)
-        return DAG.getNode(X86ISD::SHUF128, DL, VT, NewLHS ? NewLHS : LHS,
-                           NewRHS ? NewRHS : RHS,
+        return DAG.getNode(X86ISD::SHUF128, DL, VT,
+                           DAG.getBitcast(VT, NewLHS ? NewLHS : LHS),
+                           DAG.getBitcast(VT, NewRHS ? NewRHS : RHS),
                            DAG.getTargetConstant(Mask, DL, MVT::i8));
     }
     return SDValue();
