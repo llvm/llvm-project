@@ -7160,7 +7160,7 @@ def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
 def warn_consecutive_comparison : Warning<
-  "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
+  "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
