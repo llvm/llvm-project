@@ -1660,9 +1660,7 @@ const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
 APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
 const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
 
-inline DoubleAPFloat::~DoubleAPFloat() {
-  delete[] Floats;
-}
+inline DoubleAPFloat::~DoubleAPFloat() { delete[] Floats; }
 
 } // namespace detail
 
