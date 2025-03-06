@@ -18,6 +18,10 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/DXILABI.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <unordered_map>
+
 namespace llvm {
 class CallInst;
 class DataLayout;
@@ -406,6 +410,69 @@ public:
     return NewIt->second;
   }
 };
+
+enum ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+};
+
+class DXILResourceCounterDirectionMap {
+  std::vector<std::pair<dxil::ResourceBindingInfo, ResourceCounterDirection>> CounterDirections;
+
+public:
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &Inv);
+
+   void populate(Module &M, ModuleAnalysisManager &AM);
+
+   ResourceCounterDirection operator[](const dxil::ResourceBindingInfo &Info) const {
+    auto Lower = std::lower_bound(CounterDirections.begin(), CounterDirections.end(), std::pair{Info, ResourceCounterDirection::Unknown},  [](auto lhs, auto rhs){
+                                  return lhs.first  < rhs.first;
+    });
+
+    if (Lower == CounterDirections.end()) {
+      return ResourceCounterDirection::Unknown;
+    }
+
+    if (Lower->first != Info) {
+      return ResourceCounterDirection::Unknown;
+    }
+
+    return Lower->second;
+   }
+};
+
+class DXILResourceCounterDirectionAnalysis
+    : public AnalysisInfoMixin<DXILResourceCounterDirectionAnalysis> {
+  friend AnalysisInfoMixin<DXILResourceCounterDirectionAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DXILResourceCounterDirectionMap;
+
+  DXILResourceCounterDirectionMap run(Module &M, ModuleAnalysisManager &AM) {
+    DXILResourceCounterDirectionMap DRCDM{};
+    DRCDM.populate(M, AM);
+    return DRCDM;
+  }
+};
+
+class DXILResourceCounterDirectionWrapperPass : public ImmutablePass {
+  DXILResourceCounterDirectionMap DRCDM;
+
+  virtual void anchor();
+
+public:
+  static char ID;
+  DXILResourceCounterDirectionWrapperPass();
+
+  DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() { return DRCDM; }
+  const DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() const { return DRCDM; }
+};
+
+ModulePass *createDXILResourceCounterDirectionWrapperPassPass();
 
 class DXILResourceTypeAnalysis
     : public AnalysisInfoMixin<DXILResourceTypeAnalysis> {
