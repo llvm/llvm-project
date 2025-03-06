@@ -995,3 +995,14 @@ define { <vscale x 32 x bfloat>, i32 } @vploadff_nxv32bf16_allones_mask(ptr %ptr
   %load = call { <vscale x 32 x bfloat>, i32 } @llvm.vp.load.ff.nxv32bf16.p0(ptr %ptr, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret { <vscale x 32 x bfloat>, i32 } %load
 }
+
+define { <vscale x 3 x i8>, i32 } @vploadff_nxv3i8(ptr %ptr, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0), v0.t
+; CHECK-NEXT:    csrr a0, vl
+; CHECK-NEXT:    ret
+  %load = call { <vscale x 3 x i8>, i32 } @llvm.vp.load.ff.nxv3i8.p0(ptr %ptr, <vscale x 3 x i1> %m, i32 %evl)
+  ret { <vscale x 3 x i8>, i32 } %load
+}
