@@ -1245,6 +1245,12 @@ def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "Enable dynamic VGPR mode"
 >;
 
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
