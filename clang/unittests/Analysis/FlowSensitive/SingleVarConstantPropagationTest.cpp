@@ -46,7 +46,10 @@ using namespace ast_matchers;
 // A semi-lattice for dataflow analysis that tracks the value of a single
 // integer variable. If it can be identified with a single (constant) value,
 // then that value is stored.
-struct ConstantPropagationLattice {
+struct ConstantPropagationLattice
+    : public llvm::RTTIExtends<ConstantPropagationLattice, DataflowLattice> {
+  inline static char ID = 0;
+
   // A null `Var` represents "top": either more than one value is possible or
   // more than one variable was encountered. Otherwise, `Data` indicates that
   // `Var` has the given `Value` at the program point with which this lattice
@@ -62,11 +65,14 @@ struct ConstantPropagationLattice {
   // `std::nullopt` is "bottom".
   std::optional<VarValue> Data;
 
-  static constexpr ConstantPropagationLattice bottom() {
-    return {std::nullopt};
+  explicit ConstantPropagationLattice(std::optional<VarValue> Data)
+      : Data(std::move(Data)) {}
+
+  static ConstantPropagationLattice bottom() {
+    return ConstantPropagationLattice{std::nullopt};
   }
-  static constexpr ConstantPropagationLattice top() {
-    return {VarValue{nullptr, 0}};
+  static ConstantPropagationLattice top() {
+    return ConstantPropagationLattice{VarValue{nullptr, 0}};
   }
 
   friend bool operator==(const ConstantPropagationLattice &Lhs,
@@ -74,17 +80,26 @@ struct ConstantPropagationLattice {
     return Lhs.Data == Rhs.Data;
   }
 
-  LatticeJoinEffect join(const ConstantPropagationLattice &Other) {
+  DataflowLatticePtr clone() override {
+    return std::make_unique<ConstantPropagationLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const ConstantPropagationLattice>(Other);
+  }
+
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<ConstantPropagationLattice>(L);
     if (*this == Other || Other == bottom() || *this == top())
-      return LatticeJoinEffect::Unchanged;
+      return LatticeEffect::Unchanged;
 
     if (*this == bottom()) {
       *this = Other;
-      return LatticeJoinEffect::Changed;
+      return LatticeEffect::Changed;
     }
 
     *this = top();
-    return LatticeJoinEffect::Changed;
+    return LatticeEffect::Changed;
   }
 };
 
@@ -112,24 +127,23 @@ namespace {
 // details needed for a real analysis in production. Most notably, the transfer
 // function does not account for the variable's address possibly escaping, which
 // would invalidate the analysis.
-class ConstantPropagationAnalysis
-    : public DataflowAnalysis<ConstantPropagationAnalysis,
-                              ConstantPropagationLattice> {
+class ConstantPropagationAnalysis : public DataflowAnalysis {
 public:
+  using Lattice = ConstantPropagationLattice;
   explicit ConstantPropagationAnalysis(ASTContext &Context)
-      : DataflowAnalysis<ConstantPropagationAnalysis,
-                         ConstantPropagationLattice>(Context) {}
+      : DataflowAnalysis(Context) {}
 
-  static ConstantPropagationLattice initialElement() {
-    return ConstantPropagationLattice::bottom();
+  std::unique_ptr<DataflowLattice> initialElement() override {
+    return std::make_unique<Lattice>(ConstantPropagationLattice::bottom());
   }
 
-  void transfer(const CFGElement &E, ConstantPropagationLattice &Element,
-                Environment &Env) {
+  void transfer(const CFGElement &E, DataflowLattice &L,
+                Environment &Env) override {
+    auto &Element = llvm::cast<ConstantPropagationLattice>(L);
     auto CS = E.getAs<CFGStmt>();
     if (!CS)
       return;
-    auto S = CS->getStmt();
+    auto *S = CS->getStmt();
     auto matcher = stmt(
         anyOf(declStmt(hasSingleDecl(varDecl(hasType(isInteger()),
                                              hasInitializer(expr().bind(kInit)))

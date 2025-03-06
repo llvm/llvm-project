@@ -1,6 +1,7 @@
 #include "clang/Analysis/FlowSensitive/MapLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <ostream>
@@ -10,7 +11,7 @@ using namespace dataflow;
 
 namespace {
 // A simple lattice for basic tests.
-class BooleanLattice {
+class BooleanLattice : public DataflowLattice {
 public:
   BooleanLattice() : Value(false) {}
   explicit BooleanLattice(bool B) : Value(B) {}
@@ -19,7 +20,16 @@ public:
 
   static BooleanLattice top() { return BooleanLattice(true); }
 
-  LatticeJoinEffect join(BooleanLattice Other) {
+  DataflowLatticePtr clone() override {
+    return std::make_unique<BooleanLattice>(*this);
+  }
+
+  bool isEqual(const DataflowLattice &Other) const override {
+    return *this == llvm::cast<const BooleanLattice>(Other);
+  }
+
+  LatticeEffect join(const DataflowLattice &L) override {
+    const auto &Other = llvm::cast<BooleanLattice>(L);
     auto Prev = Value;
     Value = Value || Other.Value;
     return Prev == Value ? LatticeJoinEffect::Unchanged
@@ -44,6 +54,8 @@ public:
 private:
   bool Value;
 };
+
+using BoolMapLattice = MapLattice<int, BooleanLattice>;
 } // namespace
 
 static constexpr int Key1 = 0;
@@ -55,7 +67,7 @@ using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 TEST(MapLatticeTest, InsertWorks) {
-  MapLattice<int, BooleanLattice> Lattice;
+  BoolMapLattice Lattice;
   EXPECT_THAT(Lattice.insert({Key1, BooleanLattice(false)}), Pair(_, true));
   EXPECT_THAT(Lattice.insert({Key2, BooleanLattice(false)}), Pair(_, true));
 
@@ -68,10 +80,10 @@ TEST(MapLatticeTest, InsertWorks) {
 }
 
 TEST(MapLatticeTest, ComparisonWorks) {
-  MapLattice<int, BooleanLattice> Lattice1;
+  BoolMapLattice Lattice1;
   Lattice1.insert({Key1, BooleanLattice(true)});
   Lattice1.insert({Key2, BooleanLattice(false)});
-  MapLattice<int, BooleanLattice> Lattice2 = Lattice1;
+  BoolMapLattice Lattice2 = Lattice1;
   EXPECT_EQ(Lattice1, Lattice2);
 
   Lattice2.find(Key2)->second = BooleanLattice(true);
@@ -79,11 +91,11 @@ TEST(MapLatticeTest, ComparisonWorks) {
 }
 
 TEST(MapLatticeTest, JoinChange) {
-  MapLattice<int, BooleanLattice> Lattice1;
+  BoolMapLattice Lattice1;
   Lattice1.insert({Key1, BooleanLattice(false)});
   Lattice1.insert({Key2, BooleanLattice(false)});
 
-  MapLattice<int, BooleanLattice> Lattice2;
+  BoolMapLattice Lattice2;
   Lattice2.insert({Key1, BooleanLattice(true)});
   Lattice2.insert({Key2, BooleanLattice(true)});
 
@@ -97,7 +109,7 @@ TEST(MapLatticeTest, JoinChange) {
 }
 
 TEST(MapLatticeTest, JoinEqNoChange) {
-  MapLattice<int, BooleanLattice> Lattice;
+  BoolMapLattice Lattice;
   Lattice.insert({Key1, BooleanLattice(false)});
   Lattice.insert({Key2, BooleanLattice(false)});
 
@@ -107,11 +119,11 @@ TEST(MapLatticeTest, JoinEqNoChange) {
 }
 
 TEST(MapLatticeTest, JoinLtNoChange) {
-  MapLattice<int, BooleanLattice> Lattice1;
+  BoolMapLattice Lattice1;
   Lattice1.insert({Key1, BooleanLattice(false)});
   Lattice1.insert({Key2, BooleanLattice(false)});
 
-  MapLattice<int, BooleanLattice> Lattice2;
+  BoolMapLattice Lattice2;
   Lattice2.insert({Key1, BooleanLattice(true)});
   Lattice2.insert({Key2, BooleanLattice(true)});
 
@@ -128,9 +140,9 @@ TEST(MapLatticeTest, JoinLtNoChange) {
 }
 
 TEST(MapLatticeTest, JoinDifferentDomainsProducesUnion) {
-  MapLattice<int, BooleanLattice> Lattice1;
+  BoolMapLattice Lattice1;
   Lattice1.insert({Key1, BooleanLattice(true)});
-  MapLattice<int, BooleanLattice> Lattice2;
+  BoolMapLattice Lattice2;
   Lattice2.insert({Key2, BooleanLattice(true)});
 
   ASSERT_EQ(Lattice1.join(Lattice2), LatticeJoinEffect::Changed);
@@ -139,7 +151,7 @@ TEST(MapLatticeTest, JoinDifferentDomainsProducesUnion) {
 }
 
 TEST(MapLatticeTest, FindWorks) {
-  MapLattice<int, BooleanLattice> Lattice;
+  BoolMapLattice Lattice;
   Lattice.insert({Key1, BooleanLattice(true)});
   Lattice.insert({Key2, BooleanLattice(false)});
 
@@ -153,7 +165,7 @@ TEST(MapLatticeTest, FindWorks) {
 }
 
 TEST(MapLatticeTest, ContainsWorks) {
-  MapLattice<int, BooleanLattice> Lattice;
+  BoolMapLattice Lattice;
   Lattice.insert({Key1, BooleanLattice(true)});
   EXPECT_TRUE(Lattice.contains(Key1));
   EXPECT_FALSE(Lattice.contains(Key2));
