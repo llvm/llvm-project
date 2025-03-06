@@ -3262,7 +3262,8 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
   // to be synced.
   if (auto declare = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
           fPtr->getAddr().getDefiningOp()))
-    if (mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
+    if (declare.getMemref().getDefiningOp() &&
+        mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
       if (cuf::isRegisteredDeviceAttr(declare.getDataAttr()) &&
           !cuf::isCUDADeviceContext(builder.getRegion()))
         fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc,
