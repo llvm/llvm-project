@@ -153,8 +153,9 @@ public:
     disableMultithreading(!enable);
   }
 
-  /// Set the flag specifying if thread-local storage should be used
-  /// by storage allocators in this context.
+  /// Set the flag specifying if thread-local storage should be used by storage
+  /// allocators in this context. Note that disabling mutlithreading implies
+  /// thread-local storage is also disabled.
   void disableThreadLocalStorage(bool disable = true);
   void enableThreadLocalStorage(bool enable = true) {
     disableThreadLocalStorage(!enable);
