@@ -2245,8 +2245,7 @@ void OmpStructureChecker::Enter(
   case llvm::omp::Directive::OMPD_taskgroup:
     break;
   default:
-    context_.Say(dirName.source,
-        "%s is not a cancellable construct"_err_en_US,
+    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
         parser::ToUpperCaseLetters(
             llvm::omp::getOpenMPDirectiveName(dirName.v).str()));
     break;

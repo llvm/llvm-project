@@ -1125,8 +1125,8 @@ TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
     verbatim("CANCELLATION POINT"_tok), Parser<OmpClauseList>{})))
 
 // 2.14.1 Cancel construct
-TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
-    Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(
+    verbatim("CANCEL"_tok), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(sourced(construct<OmpFailClause>(
     parenthesized(indirect(Parser<OmpMemoryOrderClause>{})))))
