@@ -2832,8 +2832,8 @@ Permissible values for this parameter are ``supervisor``, ``machine``,
 ``qci-nest`` and ``qci-nonest``. If there is no parameter, then it defaults to
 ``machine``.
 
-The ``qci-nest`` and ``qci-nonest`` values require the Qualcomm's Xqciint
-extension and are used for Machine-mode Interrupts and Machine-mode Non-maskable
+The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
+and are used for Machine-mode Interrupts and Machine-mode Non-maskable
 interrupts. These use the following instructions from Xqciint to save and
 restore interrupt state to the stack -- the ``qci-nest`` value will use
 ``qc.c.mienter.nest`` and the ``qci-nonest`` value will use ``qc.c.mienter`` to

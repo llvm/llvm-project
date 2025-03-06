@@ -20831,7 +20831,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    constexpr StringRef SupportedInterruptKinds[] = {
+    constexpr StringLiteral SupportedInterruptKinds[] = {
         "machine",
         "supervisor",
         "qci-nest",

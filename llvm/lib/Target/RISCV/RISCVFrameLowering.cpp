@@ -412,7 +412,7 @@ void RISCVFrameLowering::determineFrameLayout(MachineFunction &MF) const {
 
   // QCI Interrupts use at least 96 bytes of stack space
   if (RVFI->useQCIInterrupt(MF))
-    FrameSize = std::max<uint64_t>(FrameSize, QCIInterruptPushAmount);
+    FrameSize = std::max(FrameSize, QCIInterruptPushAmount);
 
   // Get the alignment.
   Align StackAlign = getStackAlign();
@@ -1981,9 +1981,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
                     : RISCV::QC_C_MIENTER))
         .setMIFlag(MachineInstr::FrameSetup);
 
-    for (auto [Reg, _Offset] : FixedCSRFIQCIInterruptMap) {
+    for (auto [Reg, _Offset] : FixedCSRFIQCIInterruptMap)
       MBB.addLiveIn(Reg);
-    }
     // TODO: Handle QCI Interrupt + Push/Pop
   } else if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base SPimm & evaluate Push stack
@@ -2214,7 +2213,7 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const auto *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
 
-  // Qe do not want QC.C.MILEAVERET to be subject to shrink-wrapping - it must
+  // We do not want QC.C.MILEAVERET to be subject to shrink-wrapping - it must
   // come in the final block of its function as it both pops and returns.
   if (RVFI->useQCIInterrupt(*MF))
     return MBB.succ_empty();
