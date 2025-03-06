@@ -1265,38 +1265,34 @@ void Gang() {
   // expected-warning@+4{{OpenACC clause 'vector' not yet implemented, clause ignored}}
   // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
   // expected-warning@+2{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
-  // expected-warning@+5{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+4{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+4{{OpenACC clause 'worker' not yet implemented, clause ignored}}
+  // expected-warning@+3{{OpenACC clause 'vector' not yet implemented, clause ignored}}
+  // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
+  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
 #pragma acc routine(bar) worker, vector, seq, nohost
 
 
 // Bind Clause Parsing.
 
   // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine bind
 void BCP1();
 
-  // expected-error@+2{{expected identifier or string literal}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected identifier or string literal}}
 #pragma acc routine(BCP1) bind()
 
   // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine bind("ReductionClauseParsing")
 void BCP2();
 
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
 #pragma acc routine(BCP1) bind(BCP2)
 
-  // expected-error@+2{{use of undeclared identifier 'unknown_thing'}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-error@+1{{use of undeclared identifier 'unknown_thing'}}
 #pragma acc routine(BCP1) bind(unknown_thing)

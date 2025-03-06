@@ -810,7 +810,7 @@ ParseStatus LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  Res = MCSymbolRefExpr::create(Sym, getContext());
   Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_LoongArch_CALL,
                                 getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));

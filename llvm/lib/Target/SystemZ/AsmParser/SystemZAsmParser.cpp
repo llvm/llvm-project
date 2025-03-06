@@ -1648,8 +1648,7 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                                 Ctx);
+    const MCExpr *Base = MCSymbolRefExpr::create(Sym, Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
 
