@@ -374,7 +374,14 @@ namespace call_with_explicit_temporary_obj {
   }
 }
 
-namespace call_with_explicit_construct {
+namespace call_via_local_var {
+  RefCountable* provide();
+  void bar(RefCountable*);
+  void foo() {
+    auto* obj = provide();
+    bar(obj);
+    // expected-warning@-1{{Call argument is uncounted and unsafe}}
+  }
 }
 
 namespace call_with_adopt_ref {

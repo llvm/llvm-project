@@ -141,7 +141,7 @@ bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
     if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-      if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+      if (isa<ParmVarDecl>(D))
         return true;
     }
   }

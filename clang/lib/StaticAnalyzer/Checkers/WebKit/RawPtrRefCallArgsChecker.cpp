@@ -158,6 +158,14 @@ public:
             // foo(NULL)
             return true;
           }
+          if (auto *Ref = dyn_cast<DeclRefExpr>(ArgOrigin)) {
+            if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+              if (isa<ParmVarDecl>(D))
+                return true; // Parameters are transitively safe.
+              if (D->isLocalVarDecl() && isSafePtrType(D->getType()))
+                return true;
+            }
+          }
           if (isASafeCallArg(ArgOrigin))
             return true;
           if (EFA.isACallToEnsureFn(ArgOrigin))
