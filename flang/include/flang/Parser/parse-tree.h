@@ -3470,6 +3470,7 @@ struct OmpDirectiveName {
   constexpr OmpDirectiveName(const OmpDirectiveName &) = default;
   // Construct from an already parsed text. Use Verbatim for this because
   // Verbatim's source corresponds to an actual source location.
+  // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
   OmpDirectiveName(const Verbatim &name);
   using WrapperTrait = std::true_type;
   CharBlock source;
