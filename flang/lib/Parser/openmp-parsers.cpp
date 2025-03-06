@@ -803,8 +803,9 @@ TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
 TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
     construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 
-TYPE_PARSER("ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
-                            parenthesized(Parser<OmpAbsentClause>{}))) ||
+TYPE_PARSER( //
+    "ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
+                    parenthesized(Parser<OmpAbsentClause>{}))) ||
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
@@ -981,7 +982,24 @@ TYPE_PARSER("ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
                     parenthesized(Parser<OmpUpdateClause>{}))) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
-                  parenthesized(Parser<OmpWhenClause>{}))))
+                  parenthesized(Parser<OmpWhenClause>{}))) ||
+    // Cancellable constructs
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        construct<OmpCancellationConstructTypeClause>( //
+            construct<OmpDirectiveName>(verbatim("DO"_id)),
+            maybe(parenthesized(scalarLogicalExpr))))) ||
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        construct<OmpCancellationConstructTypeClause>( //
+            construct<OmpDirectiveName>(verbatim("PARALLEL"_id)),
+            maybe(parenthesized(scalarLogicalExpr))))) ||
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        construct<OmpCancellationConstructTypeClause>( //
+            construct<OmpDirectiveName>(verbatim("SECTIONS"_id)),
+            maybe(parenthesized(scalarLogicalExpr))))) ||
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        construct<OmpCancellationConstructTypeClause>( //
+            construct<OmpDirectiveName>(verbatim("TASKGROUP"_id)),
+            maybe(parenthesized(scalarLogicalExpr))))))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
@@ -1104,11 +1122,11 @@ TYPE_PARSER(sourced(construct<OmpCancelType>(
 
 // 2.14.2 Cancellation Point construct
 TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
-    verbatim("CANCELLATION POINT"_tok), Parser<OmpCancelType>{})))
+    verbatim("CANCELLATION POINT"_tok), Parser<OmpClauseList>{})))
 
 // 2.14.1 Cancel construct
 TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(verbatim("CANCEL"_tok),
-    Parser<OmpCancelType>{}, maybe("IF" >> parenthesized(scalarLogicalExpr)))))
+    Parser<OmpClauseList>{})))
 
 TYPE_PARSER(sourced(construct<OmpFailClause>(
     parenthesized(indirect(Parser<OmpMemoryOrderClause>{})))))
@@ -1192,9 +1210,10 @@ TYPE_PARSER(
     sourced(construct<OpenMPStandaloneConstruct>(
                 Parser<OpenMPSimpleStandaloneConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPFlushConstruct>{}) ||
-        construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
+        // Try CANCELLATION POINT before CANCEL.
         construct<OpenMPStandaloneConstruct>(
             Parser<OpenMPCancellationPointConstruct>{}) ||
+        construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(
             Parser<OmpMetadirectiveDirective>{}) ||
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{})) /

@@ -4048,6 +4048,12 @@ struct OmpBindClause {
   WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
 };
 
+// Artificial clause to represent a cancellable construct.
+struct OmpCancellationConstructTypeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpCancellationConstructTypeClause);
+  std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
+};
+
 // Ref: [5.2:214]
 //
 // contains-clause ->
@@ -4870,15 +4876,14 @@ struct OmpCancelType {
 struct OpenMPCancellationPointConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType> t;
+  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // 2.14.1 cancel -> CANCEL construct-type-clause [ [,] if-clause]
 struct OpenMPCancelConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCancelConstruct);
-  WRAPPER_CLASS(If, ScalarLogicalExpr);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
+  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:322-323]
