@@ -80,7 +80,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       sys::fs::TempFile TempFile;
       std::string ModuleName;
       unsigned Task;
-      bool Committed = false;
 
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   sys::fs::TempFile TempFile, std::string EntryPath,
@@ -90,10 +89,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             ModuleName(ModuleName), Task(Task) {}
 
       Error commit() override {
-        if (Committed)
-          return createStringError(make_error_code(std::errc::invalid_argument),
-                                   Twine("CacheStream already committed."));
-        Committed = true;
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
 
         // Make sure the stream is closed before committing it.
         OS.reset();
@@ -119,7 +117,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         // AddBuffer a copy of the bytes we wrote in that case. We do this
         // instead of just using the existing file, because the pruner might
         // delete the file before we get a chance to use it.
-        Error E = TempFile.keep(ObjectPathName);
+        E = TempFile.keep(ObjectPathName);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();
           if (EC != errc::permission_denied)
@@ -143,11 +141,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
-      }
-
-      ~CacheStream() {
-        if (!Committed)
-          report_fatal_error("CacheStream was not committed.\n");
       }
     };
 

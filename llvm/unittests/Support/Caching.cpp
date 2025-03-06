@@ -115,3 +115,49 @@ TEST(Caching, WriteAfterCommit) {
 
   ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
 }
+
+TEST(Caching, NoCommit) {
+  SmallString<256> TempDir;
+  sys::path::system_temp_directory(true, TempDir);
+  SmallString<256> CacheDir;
+  sys::path::append(CacheDir, TempDir, "llvm_test_cache");
+
+  sys::fs::remove_directories(CacheDir.str());
+
+  std::unique_ptr<MemoryBuffer> CachedBuffer;
+  auto AddBuffer = [&CachedBuffer](unsigned Task, const Twine &ModuleName,
+                                   std::unique_ptr<MemoryBuffer> M) {
+    CachedBuffer = std::move(M);
+  };
+  auto CacheOrErr =
+      localCache("LLVMTestCache", "LLVMTest", CacheDir, AddBuffer);
+  ASSERT_TRUE(bool(CacheOrErr));
+
+  FileCache &Cache = *CacheOrErr;
+
+  auto AddStreamOrErr = Cache(1, "foo", "");
+  ASSERT_TRUE(bool(AddStreamOrErr));
+
+  AddStreamFn &AddStream = *AddStreamOrErr;
+  ASSERT_TRUE(AddStream);
+
+  auto FileOrErr = AddStream(1, "");
+  ASSERT_TRUE(bool(FileOrErr));
+
+  CachedFileStream *CFS = FileOrErr->get();
+  (*CFS->OS).write(data, sizeof(data));
+  ASSERT_THAT_ERROR(CFS->commit(), Succeeded());
+
+  EXPECT_DEATH(
+      {
+        auto FileOrErr = AddStream(1, "");
+        ASSERT_TRUE(bool(FileOrErr));
+
+        CachedFileStream *CFS = FileOrErr->get();
+        (*CFS->OS).write(data, sizeof(data));
+      },
+      "")
+      << "destruction without commit did not cause error";
+
+  ASSERT_NO_ERROR(sys::fs::remove_directories(CacheDir.str()));
+}
