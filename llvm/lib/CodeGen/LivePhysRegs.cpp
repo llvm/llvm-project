@@ -139,8 +139,8 @@ LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
-                             MCPhysReg Reg) const {
-  if (LiveRegs.count(Reg))
+                             MCRegister Reg) const {
+  if (LiveRegs.count(Reg.id()))
     return false;
   if (MRI.isReserved(Reg))
     return false;
