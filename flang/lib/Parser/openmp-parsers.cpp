@@ -1013,7 +1013,7 @@ TYPE_PARSER(sourced(
         // lists absent in the parsed result.
         // E.g. for FLUSH(x) SEQ_CST it would find no clauses following
         // the directive name, parse the argument list "(x)" and stop.
-        applyFunction(makeFlushFromOldSyntax1,
+        applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax1,
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
             maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
