@@ -12764,7 +12764,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> Exprs;
     for (unsigned I = 0; I < NumExprs; ++I) {
       GangKinds.push_back(readEnum<OpenACCGangKind>());
-      Exprs.push_back(readSubExpr());
+      // Can't use `readSubExpr` because this is usable from a 'decl' construct.
+      Exprs.push_back(readExpr());
     }
     return OpenACCGangClause::Create(getContext(), BeginLoc, LParenLoc,
                                      GangKinds, Exprs, EndLoc);
