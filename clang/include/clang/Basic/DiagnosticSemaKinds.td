@@ -10797,6 +10797,23 @@ def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
 def err_non_variable_decl_in_for : Error<
   "non-variable declaration in 'for' loop">;
+
+def ext_c23_non_local_variable_decl_in_for : Extension<
+  "declaration of non-local variable in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_local_variable_decl_in_for : Warning<
+  "declaration of non-local variable in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
+def ext_c23_non_variable_decl_in_for : Extension<
+  "non-variable declaration in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_variable_decl_in_for : Warning<
+  "non-variable declaration in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
 def err_toomany_element_decls : Error<
   "only one element declaration is allowed">;
 def err_selector_element_not_lvalue : Error<
