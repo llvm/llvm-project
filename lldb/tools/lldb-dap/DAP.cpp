@@ -8,10 +8,12 @@
 
 #include "DAP.h"
 #include "DAPLog.h"
+#include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "Protocol.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -25,6 +27,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,6 +44,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 #if defined(_WIN32)
@@ -663,31 +667,23 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 }
 
 bool DAP::HandleObject(const protocol::Message &M) {
-  // FIXME: Directly handle `Message` instead of serializing to JSON.
-  llvm::json::Value v = toJSON(M);
-  llvm::json::Object object = *v.getAsObject();
-  const auto packet_type = GetString(object, "type");
-  if (packet_type == "request") {
-    const auto command = GetString(object, "command");
-
-    auto new_handler_pos = request_handlers.find(command);
+  if (const auto *req = std::get_if<protocol::Request>(&M)) {
+    auto new_handler_pos = request_handlers.find(req->command);
     if (new_handler_pos != request_handlers.end()) {
-      (*new_handler_pos->second)(object);
+      (*new_handler_pos->second)(*req);
       return true; // Success
     }
 
     DAP_LOG(log, "({0}) error: unhandled command '{1}'",
-            transport.GetClientName(), command);
+            transport.GetClientName(), req->command);
     return false; // Fail
   }
 
-  if (packet_type == "response") {
-    auto id = GetInteger<int64_t>(object, "request_seq").value_or(0);
-
+  if (const auto *resp = std::get_if<protocol::Response>(&M)) {
     std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
-      auto inflight = inflight_reverse_requests.find(id);
+      auto inflight = inflight_reverse_requests.find(resp->request_seq);
       if (inflight != inflight_reverse_requests.end()) {
         response_handler = std::move(inflight->second);
         inflight_reverse_requests.erase(inflight);
@@ -695,25 +691,40 @@ bool DAP::HandleObject(const protocol::Message &M) {
     }
 
     if (!response_handler)
-      response_handler = std::make_unique<UnknownResponseHandler>("", id);
+      response_handler =
+          std::make_unique<UnknownResponseHandler>("", resp->request_seq);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success").value_or(false)) {
-      llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body"))
-        Result = std::move(*B);
-      (*response_handler)(Result);
+    if (resp->success) {
+      (*response_handler)(resp->rawBody);
     } else {
-      llvm::StringRef message = GetString(object, "message");
-      if (message.empty()) {
-        message = "Unknown error, response failed";
+      std::string message = "Unknown error, response failed";
+      if (resp->message) {
+        message = std::visit(
+            llvm::makeVisitor(
+                [](const std::string &message) -> std::string {
+                  return message;
+                },
+                [](const protocol::Response::Message &message) -> std::string {
+                  switch (message) {
+                  case protocol::Response::Message::cancelled:
+                    return "cancelled";
+                  case protocol::Response::Message::notStopped:
+                    return "notStopped";
+                  }
+                }),
+            *resp->message);
       }
+
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
 
     return true;
   }
+
+  if (log)
+    *log << "Unsupported protocol message" << std::endl;
 
   return false;
 }
