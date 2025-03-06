@@ -1004,6 +1004,11 @@ message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
+set(LLVM_USE_TARGET_TRIPLE_WHEN_BUILDING_DEFAULT_TARGET_FOR_RUNTIMES
+    ON CACHE BOOL
+    "Disable this if the underlying runtime build detects and builds for multiple platform
+    at once (like it's the case for compiler-rt on Apple platforms)")
+
 if(WIN32 OR CYGWIN)
   if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
     set(LLVM_ENABLE_PLUGINS_default ON)

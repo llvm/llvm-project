@@ -82,10 +82,21 @@ macro(set_enable_per_target_runtime_dir)
   endif()
 endmacro()
 
+macro(set_target_triple_for_default_runtime_build)
+  if(NOT DEFINED LLVM_USE_TARGET_TRIPLE_WHEN_BUILDING_DEFAULT_TARGET_FOR_RUNTIMES
+     OR "${LLVM_USE_TARGET_TRIPLE_WHEN_BUILDING_DEFAULT_TARGET_FOR_RUNTIMES}")
+    list(APPEND TARGET_TRIPLE_ARGUMENTS TARGET_TRIPLE ${LLVM_TARGET_TRIPLE})
+  else()
+    list(APPEND TARGET_TRIPLE_ARGUMENTS)
+  endif()
+endmacro()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
   set_enable_per_target_runtime_dir()
+
+  set_target_triple_for_default_runtime_build()
 
   llvm_ExternalProject_Add(builtins
                            ${compiler_rt_path}/lib/builtins
@@ -103,7 +114,7 @@ function(builtin_default_target compiler_rt_path)
                                                 DARWIN
                                                 SANITIZER
                            USE_TOOLCHAIN
-                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
+                           ${TARGET_TRIPLE_ARGUMENTS}
                            FOLDER "Compiler-RT"
                            ${EXTRA_ARGS})
 endfunction()
@@ -258,6 +269,8 @@ function(runtime_default_target)
 
   set_enable_per_target_runtime_dir()
 
+  set_target_triple_for_default_runtime_build()
+
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${ARG_DEPENDS}
@@ -287,7 +300,7 @@ function(runtime_default_target)
                                          ${SUB_CHECK_TARGETS}
                                          ${SUB_INSTALL_TARGETS}
                            USE_TOOLCHAIN
-                           TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
+                           ${TARGET_TRIPLE_ARGUMENTS}
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 endfunction()
