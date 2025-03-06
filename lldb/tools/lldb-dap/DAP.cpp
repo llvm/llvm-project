@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "Protocol.h"
+#include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -23,6 +26,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -33,11 +37,13 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <condition_variable>
 #include <cstdarg>
 #include <cstdio>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 #if defined(_WIN32)
@@ -65,7 +71,7 @@ DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
          lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
     : name(std::move(name)), debug_adapter_path(path), log(log),
-      input(std::move(input)), output(std::move(output)),
+      transport(this->name, std::move(input), std::move(output)),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
@@ -237,65 +243,45 @@ void DAP::StopEventHandlers() {
   }
 }
 
-// Send the JSON in "json_str" to the "out" stream. Correctly send the
-// "Content-Length:" field followed by the length, followed by the raw
-// JSON bytes.
-void DAP::SendJSON(const std::string &json_str) {
-  output.write_full("Content-Length: ");
-  output.write_full(llvm::utostr(json_str.size()));
-  output.write_full("\r\n\r\n");
-  output.write_full(json_str);
-}
-
 // Serialize the JSON value into a string and send the JSON packet to
 // the "out" stream.
 void DAP::SendJSON(const llvm::json::Value &json) {
-  std::string json_str;
-  llvm::raw_string_ostream strm(json_str);
-  strm << json;
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> locker(mutex);
-  SendJSON(json_str);
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} <-- ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << json_str.size() << "\r\n\r\n"
-         << llvm::formatv("{0:2}", json).str() << std::endl;
+  protocol::Message M;
+  llvm::json::Path::Root root;
+  if (!protocol::fromJSON(json, M, root)) {
+    if (log) {
+      std::string error;
+      llvm::raw_string_ostream OS(error);
+      root.printErrorContext(json, OS);
+      *log << "encoding failure: " << error << "\n";
+    }
+    return;
   }
+  Send(M);
 }
 
-// Read a JSON packet from the "in" stream.
-std::string DAP::ReadJSON() {
-  std::string length_str;
-  std::string json_str;
-  int length;
-
-  if (!input.read_expected(log, "Content-Length: "))
-    return json_str;
-
-  if (!input.read_line(log, length_str))
-    return json_str;
-
-  if (!llvm::to_integer(length_str, length))
-    return json_str;
-
-  if (!input.read_expected(log, "\r\n"))
-    return json_str;
-
-  if (!input.read_full(log, length, json_str))
-    return json_str;
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << length << "\r\n\r\n";
+void DAP::Send(const protocol::Message &M) {
+  lldb_private::Status status;
+  // If the debugger was interrupted while handling a response, mark the
+  // response as cancelled since it may contain partial information.
+  if (const auto *resp = std::get_if<protocol::Response>(&M);
+      debugger.InterruptRequested()) {
+    status = transport.Write(
+        log, protocol::Response{
+                 /*request_seq=*/resp->request_seq,
+                 /*command=*/resp->command,
+                 /*success=*/false,
+                 /*message=*/protocol::Response::Message::cancelled,
+                 /*rawBody=*/std::nullopt,
+             });
+  } else {
+    status = transport.Write(log, M);
   }
-  return json_str;
+
+  if (status.Fail() && log)
+    *log << llvm::formatv("failed to send {0}: {1}\n", llvm::json::Value(M),
+                          status.AsCString())
+                .str();
 }
 
 // "OutputEvent": {
@@ -722,63 +708,25 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
-  std::string json = ReadJSON();
-  if (json.empty())
-    return PacketStatus::EndOfFile;
-
-  llvm::StringRef json_sref(json);
-  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
-    }
-    return PacketStatus::JSONMalformed;
-  }
-
-  if (log) {
-    *log << llvm::formatv("{0:2}", *json_value).str() << std::endl;
-  }
-
-  llvm::json::Object *object_ptr = json_value->getAsObject();
-  if (!object_ptr) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
-    return PacketStatus::JSONNotObject;
-  }
-  object = *object_ptr;
-  return PacketStatus::Success;
-}
-
-bool DAP::HandleObject(const llvm::json::Object &object) {
-  const auto packet_type = GetString(object, "type");
-  if (packet_type == "request") {
-    const auto command = GetString(object, "command");
-
-    auto new_handler_pos = request_handlers.find(command);
+bool DAP::HandleObject(const protocol::Message &M) {
+  if (const auto *req = std::get_if<protocol::Request>(&M)) {
+    auto new_handler_pos = request_handlers.find(req->command);
     if (new_handler_pos != request_handlers.end()) {
-      (*new_handler_pos->second)(object);
+      (*new_handler_pos->second)(*req);
       return true; // Success
     }
 
     if (log)
-      *log << "error: unhandled command \"" << command.data() << "\""
+      *log << "error: unhandled command \"" << req->command << "\""
            << std::endl;
     return false; // Fail
   }
 
-  if (packet_type == "response") {
-    auto id = GetInteger<int64_t>(object, "request_seq").value_or(0);
-
+  if (const auto *resp = std::get_if<protocol::Response>(&M)) {
     std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
-      auto inflight = inflight_reverse_requests.find(id);
+      auto inflight = inflight_reverse_requests.find(resp->request_seq);
       if (inflight != inflight_reverse_requests.end()) {
         response_handler = std::move(inflight->second);
         inflight_reverse_requests.erase(inflight);
@@ -786,26 +734,40 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
     }
 
     if (!response_handler)
-      response_handler = std::make_unique<UnknownResponseHandler>("", id);
+      response_handler =
+          std::make_unique<UnknownResponseHandler>("", resp->request_seq);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success").value_or(false)) {
-      llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body")) {
-        Result = std::move(*B);
-      }
-      (*response_handler)(Result);
+    if (resp->success) {
+      (*response_handler)(resp->rawBody);
     } else {
-      llvm::StringRef message = GetString(object, "message");
-      if (message.empty()) {
-        message = "Unknown error, response failed";
+      std::string message = "Unknown error, response failed";
+      if (resp->message) {
+        message = std::visit(
+            llvm::makeVisitor(
+                [](const std::string &message) -> std::string {
+                  return message;
+                },
+                [](const protocol::Response::Message &message) -> std::string {
+                  switch (message) {
+                  case protocol::Response::Message::cancelled:
+                    return "cancelled";
+                  case protocol::Response::Message::notStopped:
+                    return "notStopped";
+                  }
+                }),
+            *resp->message);
       }
+
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
     }
 
     return true;
   }
+
+  if (log)
+    *log << "Unsupported protocol message" << std::endl;
 
   return false;
 }
@@ -857,29 +819,112 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
   return error;
 }
 
+template <typename T>
+static std::optional<T> getArgumentsIfRequest(const protocol::Message &pm,
+                                              llvm::StringLiteral command) {
+  auto *const req = std::get_if<protocol::Request>(&pm);
+  if (!req || req->command != command)
+    return std::nullopt;
+
+  T args;
+  llvm::json::Path::Root root;
+  if (!fromJSON(req->rawArguments, args, root)) {
+    return std::nullopt;
+  }
+
+  return std::move(args);
+}
+
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() {
-    if (output.descriptor)
-      output.descriptor->Close();
-    StopEventHandlers();
+  std::deque<protocol::Message> queue;
+  std::condition_variable queue_cv;
+  std::mutex queue_mutex;
+  std::thread queue_reader([&]() {
+    auto cleanup = llvm::make_scope_exit([&]() {
+      // Ensure we're marked as disconnecting when the reader exits.
+      disconnecting = true;
+      queue_cv.notify_all();
+    });
+    while (!disconnecting) {
+      protocol::Message next;
+      auto status = transport.Read(log, next);
+      if (status.Fail()) {
+        if (status.GetError() != Transport::kEOF && log)
+          *log << "DAP transport failure: " << status.AsCString() << std::endl;
+        break;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(queue_mutex);
+
+        // If a cancel is requested for the active request, make a best
+        // effort attempt to interrupt.
+        if (const auto args = getArgumentsIfRequest<protocol::CancelArguments>(
+                next, "cancel");
+            args && active_seq == args->requestId)
+          debugger.RequestInterrupt();
+
+        queue.push_back(std::move(next));
+      }
+      queue_cv.notify_one();
+    }
   });
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    StopEventHandlers();
+    queue_reader.join();
+  });
+
   while (!disconnecting) {
-    llvm::json::Object object;
-    lldb_dap::PacketStatus status = GetNextObject(object);
+    protocol::Message next;
+    {
+      std::unique_lock<std::mutex> lock(queue_mutex);
+      queue_cv.wait(lock, [&] { return disconnecting || !queue.empty(); });
 
-    if (status == lldb_dap::PacketStatus::EndOfFile) {
-      break;
+      if (queue.empty())
+        break;
+
+      next = queue.front();
+      queue.pop_front();
+
+      if (protocol::Request *req = std::get_if<protocol::Request>(&next)) {
+        active_seq = req->seq;
+
+        // Check if we should preempt this request from a queued cancel.
+        bool cancelled = false;
+        for (const auto &message : queue) {
+          if (const auto args =
+                  getArgumentsIfRequest<protocol::CancelArguments>(message,
+                                                                   "cancel");
+              args && args->requestId == req->seq) {
+            cancelled = true;
+            break;
+          }
+        }
+
+        // Preempt the request and immeidately respond with cancelled.
+        if (cancelled) {
+          Send(protocol::Response{
+              /*request_seq=*/req->seq,
+              /*command=*/req->command,
+              /*success=*/false,
+              /*message=*/protocol::Response::Message::cancelled,
+              /*rawBody=*/std::nullopt,
+          });
+          continue;
+        }
+      } else
+        active_seq = 0;
     }
 
-    if (status != lldb_dap::PacketStatus::Success) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "failed to send packet");
-    }
-
-    if (!HandleObject(object)) {
+    if (!HandleObject(next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
     }
+
+    // Clear interrupt marker prior to handling the next request.
+    if (debugger.InterruptRequested())
+      debugger.CancelInterruptRequest();
   }
 
   return llvm::Error::success();

@@ -21,6 +21,7 @@
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
 
 #include "llvm/Support/JSON.h"
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -152,6 +153,8 @@ struct Response {
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
 
+using VoidResponseBody = std::nullptr_t;
+
 // "Message": {
 //   "type": "object",
 //   "description": "A structured message object. Used to return errors from
@@ -239,6 +242,232 @@ llvm::json::Value toJSON(const ErrorMessage &);
 using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
+
+// MARK: Types
+
+// "Source": {
+//   "type": "object",
+//   "description": "A `Source` is a descriptor for source code.\nIt is returned
+//   from the debug adapter as part of a `StackFrame` and it is used by clients
+//   when specifying breakpoints.", "properties": {
+//     "name": {
+//       "type": "string",
+//       "description": "The short name of the source. Every source returned
+//       from the debug adapter has a name.\nWhen sending a source to the debug
+//       adapter this name is optional."
+//     },
+//     "path": {
+//       "type": "string",
+//       "description": "The path of the source to be shown in the UI.\nIt is
+//       only used to locate and load the content of the source if no
+//       `sourceReference` is specified (or its value is 0)."
+//     },
+//     "sourceReference": {
+//       "type": "integer",
+//       "description": "If the value > 0 the contents of the source must be
+//       retrieved through the `source` request (even if a path is
+//       specified).\nSince a `sourceReference` is only valid for a session, it
+//       can not be used to persist a source.\nThe value should be less than or
+//       equal to 2147483647 (2^31-1)."
+//     },
+//     "presentationHint": {
+//       "type": "string",
+//       "description": "A hint for how to present the source in the UI.\nA
+//       value of `deemphasize` can be used to indicate that the source is not
+//       available or that it is skipped on stepping.", "enum": [ "normal",
+//       "emphasize", "deemphasize" ]
+//     },
+//     "origin": {
+//       "type": "string",
+//       "description": "The origin of this source. For example, 'internal
+//       module', 'inlined content from source map', etc."
+//     },
+//     "sources": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/Source"
+//       },
+//       "description": "A list of sources that are related to this source.
+//       These may be the source that generated this source."
+//     },
+//     "adapterData": {
+//       "type": [ "array", "boolean", "integer", "null", "number", "object",
+//       "string" ], "description": "Additional data that a debug adapter might
+//       want to loop through the client.\nThe client should leave the data
+//       intact and persist it across sessions. The client should not interpret
+//       the data."
+//     },
+//     "checksums": {
+//       "type": "array",
+//       "items": {
+//         "$ref": "#/definitions/Checksum"
+//       },
+//       "description": "The checksums associated with this file."
+//     }
+//   }
+// },
+struct Source {
+  enum class PresentationHint { normal, emphasize, deemphasize };
+
+  std::optional<std::string> name;
+  std::optional<std::string> path;
+  std::optional<int64_t> sourceReference;
+  std::optional<PresentationHint> presentationHint;
+
+  // unsupproted keys origin, sources, adapterData, checksums
+};
+bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
+llvm::json::Value toJSON(const Source &);
+
+// MARK: Events
+
+// "ExitedEvent": {
+//   "allOf": [ { "$ref": "#/definitions/Event" }, {
+//     "type": "object",
+//     "description": "The event indicates that the debuggee has exited and
+//     returns its exit code.", "properties": {
+//       "event": {
+//         "type": "string",
+//         "enum": [ "exited" ]
+//       },
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "exitCode": {
+//             "type": "integer",
+//             "description": "The exit code returned from the debuggee."
+//           }
+//         },
+//         "required": [ "exitCode" ]
+//       }
+//     },
+//     "required": [ "event", "body" ]
+//   }]
+// }
+struct ExitedEventBody {
+  int exitCode;
+};
+llvm::json::Value toJSON(const ExitedEventBody &);
+
+// MARK: Requests
+
+// "CancelRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "The `cancel` request is used by the client in two
+//     situations:\n- to indicate that it is no longer interested in the result
+//     produced by a specific request issued earlier\n- to cancel a progress
+//     sequence.\nClients should only call this request if the corresponding
+//     capability `supportsCancelRequest` is true.\nThis request has a hint
+//     characteristic: a debug adapter can only be expected to make a 'best
+//     effort' in honoring this request but there are no guarantees.\nThe
+//     `cancel` request may return an error if it could not cancel an operation
+//     but a client should refrain from presenting this error to end users.\nThe
+//     request that got cancelled still needs to send a response back. This can
+//     either be a normal result (`success` attribute true) or an error response
+//     (`success` attribute false and the `message` set to
+//     `cancelled`).\nReturning partial results from a cancelled request is
+//     possible but please note that a client has no generic way for detecting
+//     that a response is partial or not.\nThe progress that got cancelled still
+//     needs to send a `progressEnd` event back.\n A client should not assume
+//     that progress just got cancelled after sending the `cancel` request.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "cancel" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/CancelArguments"
+//       }
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "CancelArguments": {
+//   "type": "object",
+//   "description": "Arguments for `cancel` request.",
+//   "properties": {
+//     "requestId": {
+//       "type": "integer",
+//       "description": "The ID (attribute `seq`) of the request to cancel. If
+//       missing no request is cancelled.\nBoth a `requestId` and a `progressId`
+//       can be specified in one request."
+//     },
+//     "progressId": {
+//       "type": "string",
+//       "description": "The ID (attribute `progressId`) of the progress to
+//       cancel. If missing no progress is cancelled.\nBoth a `requestId` and a
+//       `progressId` can be specified in one request."
+//     }
+//   }
+// },
+struct CancelArguments {
+  std::optional<int64_t> requestId;
+  std::optional<int64_t> progressId;
+};
+bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
+
+// "CancelResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `cancel` request. This is just an
+//     acknowledgement, so no body field is required."
+//   }]
+// },
+using CancelResponseBody = VoidResponseBody;
+
+// "SourceArguments": {
+//   "type": "object",
+//   "description": "Arguments for `source` request.",
+//   "properties": {
+//     "source": {
+//       "$ref": "#/definitions/Source",
+//       "description": "Specifies the source content to load. Either
+//       `source.path` or `source.sourceReference` must be specified."
+//     },
+//     "sourceReference": {
+//       "type": "integer",
+//       "description": "The reference to the source. This is the same as
+//       `source.sourceReference`.\nThis is provided for backward compatibility
+//       since old clients do not understand the `source` attribute."
+//     }
+//   },
+//   "required": [ "sourceReference" ]
+// },
+struct SourceArguments {
+  std::optional<Source> source;
+  int64_t sourceReference;
+};
+bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
+
+// "SourceResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `source` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "content": {
+//             "type": "string",
+//             "description": "Content of the source reference."
+//           },
+//           "mimeType": {
+//             "type": "string",
+//             "description": "Content type (MIME type) of the source."
+//           }
+//         },
+//         "required": [ "content" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// },
+struct SourceResponseBody {
+  std::string content;
+  std::optional<std::string> mimeType;
+};
+llvm::json::Value toJSON(const SourceResponseBody &);
 
 } // namespace lldb_dap::protocol
 

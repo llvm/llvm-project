@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
@@ -178,7 +179,7 @@ static void EventThreadFunction(DAP &dap) {
               // Run any exit LLDB commands the user specified in the
               // launch.json
               dap.RunExitCommands();
-              SendProcessExitedEvent(dap, process);
+              dap.onExited(protocol::ExitedEventBody{/*exitCode=*/process.GetExitStatus()});
               dap.SendTerminatedEvent();
               done = true;
             }
@@ -421,6 +422,7 @@ void InitializeRequestHandler::operator()(
   // The debug adapter support for instruction breakpoint.
   body.try_emplace("supportsInstructionBreakpoints", true);
 
+
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
   completion_characters.emplace_back(" ");
@@ -463,6 +465,8 @@ void InitializeRequestHandler::operator()(
   body.try_emplace("supportsDataBreakpoints", true);
   // The debug adapter supports the `readMemory` request.
   body.try_emplace("supportsReadMemoryRequest", true);
+  // The debug adapter supports the `cancel` request.
+  body.try_emplace("supportsCancelRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;

@@ -26,8 +26,6 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process);
 
 void SendContinuedEvent(DAP &dap);
 
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
-
 } // namespace lldb_dap
 
 #endif
