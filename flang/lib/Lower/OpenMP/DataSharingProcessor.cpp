@@ -307,7 +307,6 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto [v, loopIV] : llvm::zip_equal(vs, loopIVs)) {
-      assert(loopIV && "loopIV was not set");
       hlfir::Entity loopIVEntity{loopIV};
       loopIVEntity =
           hlfir::derefPointersAndAllocatables(loc, firOpBuilder, loopIVEntity);
