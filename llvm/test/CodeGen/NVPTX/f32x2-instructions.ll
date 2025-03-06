@@ -513,13 +513,12 @@ define void @test_ldst_v2f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: test_ldst_v2f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .f32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd2, [test_ldst_v2f32_param_1];
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v2f32_param_0];
-; CHECK-NEXT:    ld.b64 %rd3, [%rd1];
-; CHECK-NEXT:    mov.b64 {%f1, %f2}, %rd3;
+; CHECK-NEXT:    ld.v2.f32 {%f1, %f2}, [%rd1];
 ; CHECK-NEXT:    st.v2.f32 [%rd2], {%f1, %f2};
 ; CHECK-NEXT:    ret;
   %t1 = load <2 x float>, ptr %a

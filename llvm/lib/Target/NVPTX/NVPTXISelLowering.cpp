@@ -5089,11 +5089,13 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+/// OverrideVT - allows overriding result and memory type
 static std::optional<std::pair<SDValue, SDValue>>
-convertVectorLoad(SDNode *N, SelectionDAG &DAG, bool BuildVector) {
+convertVectorLoad(SDNode *N, SelectionDAG &DAG, bool BuildVector,
+                  std::optional<EVT> OverrideVT = std::nullopt) {
   LoadSDNode *LD = cast<LoadSDNode>(N);
-  const EVT ResVT = LD->getValueType(0);
-  const EVT MemVT = LD->getMemoryVT();
+  const EVT ResVT = OverrideVT.value_or(LD->getValueType(0));
+  const EVT MemVT = OverrideVT.value_or(LD->getMemoryVT());
 
   // If we're doing sign/zero extension as part of the load, avoid lowering to
   // a LoadV node. TODO: consider relaxing this restriction.
@@ -5147,33 +5149,31 @@ convertVectorLoad(SDNode *N, SelectionDAG &DAG, bool BuildVector) {
   // pass along the extension information
   OtherOps.push_back(DAG.getIntPtrConstant(LD->getExtensionType(), DL));
 
-  SDValue NewLD = DAG.getMemIntrinsicNode(Opcode, DL, LdResVTs, OtherOps,
-                                          LD->getMemoryVT(),
+  SDValue NewLD = DAG.getMemIntrinsicNode(Opcode, DL, LdResVTs, OtherOps, MemVT,
                                           LD->getMemOperand());
-
-  SmallVector<SDValue> ScalarRes;
-  if (EltVT.isVector()) {
-    assert(EVT(EltVT.getVectorElementType()) == ResVT.getVectorElementType());
-    assert(NumElts * EltVT.getVectorNumElements() ==
-           ResVT.getVectorNumElements());
-    // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
-    // into individual elements.
-    for (const unsigned I : llvm::seq(NumElts)) {
-      SDValue SubVector = NewLD.getValue(I);
-      DAG.ExtractVectorElements(SubVector, ScalarRes);
-    }
-  } else {
-    for (const unsigned I : llvm::seq(NumElts)) {
-      SDValue Res = NewLD.getValue(I);
-      if (LoadEltVT != EltVT)
-        Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
-      ScalarRes.push_back(Res);
-    }
-  }
-
   SDValue LoadChain = NewLD.getValue(NumElts);
 
   if (BuildVector) {
+    SmallVector<SDValue> ScalarRes;
+    if (EltVT.isVector()) {
+      assert(EVT(EltVT.getVectorElementType()) == ResVT.getVectorElementType());
+      assert(NumElts * EltVT.getVectorNumElements() ==
+             ResVT.getVectorNumElements());
+      // Generate EXTRACT_VECTOR_ELTs to split v2[i,f,bf]16/v4i8 subvectors back
+      // into individual elements.
+      for (const unsigned I : llvm::seq(NumElts)) {
+        SDValue SubVector = NewLD.getValue(I);
+        DAG.ExtractVectorElements(SubVector, ScalarRes);
+      }
+    } else {
+      for (const unsigned I : llvm::seq(NumElts)) {
+        SDValue Res = NewLD.getValue(I);
+        if (LoadEltVT != EltVT)
+          Res = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Res);
+        ScalarRes.push_back(Res);
+      }
+    }
+
     const MVT BuildVecVT =
         MVT::getVectorVT(EltVT.getScalarType(), ScalarRes.size());
     SDValue BuildVec = DAG.getBuildVector(BuildVecVT, DL, ScalarRes);
@@ -5188,23 +5188,20 @@ convertVectorLoad(SDNode *N, SelectionDAG &DAG, bool BuildVector) {
 static SDValue PerformLoadCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI) {
   auto *MemN = cast<MemSDNode>(N);
-  EVT MemVT = MemN->getMemoryVT();
-
-  // ignore volatile loads
-  if (MemN->isVolatile())
-    return SDValue();
-
   // only operate on vectors of f32s / i64s
-  if (!MemVT.isVector())
+  if (EVT MemVT = MemN->getMemoryVT();
+      !(MemVT == MVT::i64 ||
+        (MemVT.isVector() && (MemVT.getVectorElementType() == MVT::f32 ||
+                              MemVT.getVectorElementType() == MVT::i64))))
     return SDValue();
 
-  EVT ElementVT = MemVT.getVectorElementType();
-  if (!(ElementVT == MVT::f32 ||
-        (ElementVT == MVT::i64 && N->getOpcode() != ISD::LOAD)))
-    return SDValue();
+  const unsigned OrigNumResults =
+      llvm::count_if(N->values(), [](const auto &VT) {
+        return VT == MVT::i64 || VT == MVT::f32 || VT.isVector();
+      });
 
   SmallDenseMap<SDNode *, unsigned> ExtractElts;
-  SDNode *ProxyReg = nullptr;
+  SmallVector<SDNode *> ProxyRegs(OrigNumResults, nullptr);
   SmallVector<std::pair<SDNode *, unsigned /*offset*/>> WorkList{{N, 0}};
   while (!WorkList.empty()) {
     auto [V, Offset] = WorkList.pop_back_val();
@@ -5217,8 +5214,14 @@ static SDValue PerformLoadCombine(SDNode *N,
 
       SDNode *User = U.getUser();
       if (User->getOpcode() == NVPTXISD::ProxyReg) {
+        Offset = U.getResNo() * 2;
+        SDNode *&ProxyReg = ProxyRegs[Offset / 2];
+
+        // We shouldn't have multiple proxy regs for the same value from the
+        // load, but bail out anyway since we don't handle this.
         if (ProxyReg)
-          return SDValue(); // bail out if we've seen a proxy reg?
+          return SDValue();
+
         ProxyReg = User;
       } else if (User->getOpcode() == ISD::BITCAST &&
                  User->getValueType(0) == MVT::v2f32 &&
@@ -5308,9 +5311,18 @@ static SDValue PerformLoadCombine(SDNode *N,
     if (NewGlueIdx)
       NewGlue = NewLoad.getValue(*NewGlueIdx);
   } else if (N->getOpcode() == ISD::LOAD) { // rewrite a load
-    if (auto Result = convertVectorLoad(N, DCI.DAG, /*BuildVector=*/false)) {
+    std::optional<EVT> CastToType;
+    EVT ResVT = N->getValueType(0);
+    if (ResVT == MVT::i64) {
+      // ld.b64 is treated as a vector by subsequent code
+      CastToType = MVT::v2f32;
+    }
+    if (auto Result =
+            convertVectorLoad(N, DCI.DAG, /*BuildVector=*/false, CastToType)) {
       std::tie(NewLoad, NewChain) = *Result;
-      NumElts = MemVT.getVectorNumElements();
+      NumElts =
+          CastToType.value_or(cast<MemSDNode>(NewLoad.getNode())->getMemoryVT())
+              .getVectorNumElements();
       if (NewLoad->getValueType(NewLoad->getNumValues() - 1) == MVT::Glue)
         NewGlue = NewLoad.getValue(NewLoad->getNumValues() - 1);
     }
@@ -5322,54 +5334,65 @@ static SDValue PerformLoadCombine(SDNode *N,
   // (3) begin rewriting uses
   SmallVector<SDValue> NewOutputsF32;
 
-  if (ProxyReg) {
-    // scalarize proxyreg, but first rewrite all uses of chain and glue from the
-    // old load to the new load
+  if (llvm::any_of(ProxyRegs, [](const SDNode *PR) { return PR != nullptr; })) {
+    // scalarize proxy regs, but first rewrite all uses of chain and glue from
+    // the old load to the new load
     DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
     DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
 
-    // Update the new chain and glue to be old inputs to the proxyreg, if they
-    // came from an intervening instruction between this proxyreg and the
-    // original load (ex: callseq_end). Other than bitcasts and extractelts, we
-    // followed all other nodes by chain and glue accesses.
-    if (SDValue OldInChain = ProxyReg->getOperand(0); OldInChain.getNode() != N)
+    for (unsigned ProxyI = 0, ProxyE = ProxyRegs.size(); ProxyI != ProxyE;
+         ++ProxyI) {
+      SDNode *ProxyReg = ProxyRegs[ProxyI];
+
+      // no proxy reg might mean this result is unused
+      if (!ProxyReg)
+        continue;
+
+      // Update the new chain and glue to be old inputs to the proxyreg, if they
+      // came from an intervening instruction between this proxyreg and the
+      // original load (ex: callseq_end). Other than bitcasts and extractelts,
+      // we followed all other nodes by chain and glue accesses.
+      if (SDValue OldInChain = ProxyReg->getOperand(0);
+          OldInChain.getNode() != N)
         NewChain = OldInChain;
-    if (SDValue OldInGlue = ProxyReg->getOperand(2); OldInGlue.getNode() != N)
+      if (SDValue OldInGlue = ProxyReg->getOperand(2); OldInGlue.getNode() != N)
         NewGlue = OldInGlue;
 
-    // update OldChain, OldGlue to the outputs of ProxyReg, which we will
-    // replace later
-    OldChain = SDValue(ProxyReg, 1);
-    OldGlue = SDValue(ProxyReg, 2);
+      // update OldChain, OldGlue to the outputs of ProxyReg, which we will
+      // replace later
+      OldChain = SDValue(ProxyReg, 1);
+      OldGlue = SDValue(ProxyReg, 2);
 
-    // generate the scalar proxy regs
-    for (unsigned I = 0, E = NumElts; I != E; ++I) {
-      SDValue ProxyRegElem =
-          DCI.DAG.getNode(NVPTXISD::ProxyReg, SDLoc(ProxyReg),
-                          DCI.DAG.getVTList(MVT::f32, MVT::Other, MVT::Glue),
-                          {NewChain, NewLoad.getValue(I), NewGlue});
-      NewChain = ProxyRegElem.getValue(1);
-      NewGlue = ProxyRegElem.getValue(2);
-      NewOutputsF32.push_back(ProxyRegElem);
+      // generate the scalar proxy regs
+      for (unsigned I = 0, E = 2; I != E; ++I) {
+        SDValue ProxyRegElem = DCI.DAG.getNode(
+            NVPTXISD::ProxyReg, SDLoc(ProxyReg),
+            DCI.DAG.getVTList(MVT::f32, MVT::Other, MVT::Glue),
+            {NewChain, NewLoad.getValue(ProxyI * 2 + I), NewGlue});
+        NewChain = ProxyRegElem.getValue(1);
+        NewGlue = ProxyRegElem.getValue(2);
+        NewOutputsF32.push_back(ProxyRegElem);
+      }
+
+      // replace all uses of the glue and chain from the old proxy reg
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
     }
   } else {
     for (unsigned I = 0, E = NumElts; I != E; ++I)
       if (NewLoad->getValueType(I) == MVT::f32)
         NewOutputsF32.push_back(NewLoad.getValue(I));
+
+    // replace all glue and chain nodes
+    DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
+    if (OldGlue)
+      DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
   }
 
-  // now, for all extractelts, replace them with one of the new outputs
+  // replace all extractelts with the new outputs
   for (auto &[Extract, Index] : ExtractElts)
     DCI.CombineTo(Extract, NewOutputsF32[Index], false);
 
-  // now replace all glue and chain nodes
-  DCI.DAG.ReplaceAllUsesOfValueWith(OldChain, NewChain);
-  if (OldGlue)
-    DCI.DAG.ReplaceAllUsesOfValueWith(OldGlue, NewGlue);
-
-  // cleanup
-  if (ProxyReg)
-    DCI.recursivelyDeleteUnusedNodes(ProxyReg);
   return SDValue();
 }
 
