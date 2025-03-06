@@ -149,6 +149,11 @@ MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
   cl::desc("Maximum interleave factor for MVE VLDn to generate."),
   cl::init(2));
 
+cl::opt<unsigned> ArmMaxBaseUpdatesToCheck(
+    "arm-max-base-updates-to-check", cl::Hidden,
+    cl::desc("Maximum number of base-updates to check generating postindex."),
+    cl::init(64));
+
 /// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
 constexpr MVT FlagsVT = MVT::i32;
 
@@ -15842,6 +15847,22 @@ struct BaseUpdateUser {
   unsigned ConstInc;
 };
 
+static bool isValidBaseUpdate(SDNode *N, SDNode *User) {
+  // Check that the add is independent of the load/store.
+  // Otherwise, folding it would create a cycle. Search through Addr
+  // as well, since the User may not be a direct user of Addr and
+  // only share a base pointer.
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<const SDNode *, 16> Worklist;
+  Worklist.push_back(N);
+  Worklist.push_back(User);
+  const unsigned MaxSteps = 1024;
+  if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+      SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
+    return false;
+  return true;
+}
+
 static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
                                  struct BaseUpdateUser &User,
                                  bool SimpleConstIncOnly,
@@ -16043,6 +16064,9 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   if (SimpleConstIncOnly && User.ConstInc != NumBytes)
     return false;
 
+  if (!isValidBaseUpdate(N, User.N))
+    return false;
+
   // OK, we found an ADD we can fold into the base update.
   // Now, create a _UPD node, taking care of not breaking alignment.
 
@@ -16191,21 +16215,6 @@ static bool findPointerConstIncrement(SDNode *N, SDValue *Ptr, SDValue *CInc) {
   }
 }
 
-static bool isValidBaseUpdate(SDNode *N, SDNode *User) {
-  // Check that the add is independent of the load/store.
-  // Otherwise, folding it would create a cycle. Search through Addr
-  // as well, since the User may not be a direct user of Addr and
-  // only share a base pointer.
-  SmallPtrSet<const SDNode *, 32> Visited;
-  SmallVector<const SDNode *, 16> Worklist;
-  Worklist.push_back(N);
-  Worklist.push_back(User);
-  if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
-      SDNode::hasPredecessorHelper(User, Visited, Worklist))
-    return false;
-  return true;
-}
-
 /// CombineBaseUpdate - Target-specific DAG combine function for VLDDUP,
 /// NEON load/store intrinsics, and generic vector load/stores, to merge
 /// base address updates.
@@ -16218,6 +16227,10 @@ static SDValue CombineBaseUpdate(SDNode *N,
   const bool isStore = N->getOpcode() == ISD::STORE;
   const unsigned AddrOpIdx = ((isIntrinsic || isStore) ? 2 : 1);
   BaseUpdateTarget Target = {N, isIntrinsic, isStore, AddrOpIdx};
+
+  // Limit the number of possible base-updates we look at to prevent degenerate
+  // cases.
+  unsigned MaxBaseUpdates = ArmMaxBaseUpdatesToCheck;
 
   SDValue Addr = N->getOperand(AddrOpIdx);
 
@@ -16233,8 +16246,11 @@ static SDValue CombineBaseUpdate(SDNode *N,
     unsigned ConstInc =
         getPointerConstIncrement(User->getOpcode(), Addr, Inc, DCI.DAG);
 
-    if (ConstInc || User->getOpcode() == ISD::ADD)
+    if (ConstInc || User->getOpcode() == ISD::ADD) {
       BaseUpdates.push_back({User, Inc, ConstInc});
+      if (BaseUpdates.size() >= MaxBaseUpdates)
+        break;
+    }
   }
 
   // If the address is a constant pointer increment itself, find
@@ -16261,27 +16277,19 @@ static SDValue CombineBaseUpdate(SDNode *N,
       unsigned NewConstInc = UserOffset - Offset;
       SDValue NewInc = DCI.DAG.getConstant(NewConstInc, SDLoc(N), MVT::i32);
       BaseUpdates.push_back({User, NewInc, NewConstInc});
+      if (BaseUpdates.size() >= MaxBaseUpdates)
+        break;
     }
   }
 
   // Try to fold the load/store with an update that matches memory
   // access size. This should work well for sequential loads.
-  //
-  // Filter out invalid updates as well.
   unsigned NumValidUpd = BaseUpdates.size();
-  for (unsigned I = 0; I < NumValidUpd;) {
+  for (unsigned I = 0; I < NumValidUpd; I++) {
     BaseUpdateUser &User = BaseUpdates[I];
-    if (!isValidBaseUpdate(N, User.N)) {
-      --NumValidUpd;
-      std::swap(BaseUpdates[I], BaseUpdates[NumValidUpd]);
-      continue;
-    }
-
     if (TryCombineBaseUpdate(Target, User, /*SimpleConstIncOnly=*/true, DCI))
       return SDValue();
-    ++I;
   }
-  BaseUpdates.resize(NumValidUpd);
 
   // Try to fold with other users. Non-constant updates are considered
   // first, and constant updates are sorted to not break a sequence of
@@ -16337,8 +16345,9 @@ static SDValue PerformMVEVLDCombine(SDNode *N,
     Visited.insert(Addr.getNode());
     Worklist.push_back(N);
     Worklist.push_back(User);
-    if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
-        SDNode::hasPredecessorHelper(User, Visited, Worklist))
+    const unsigned MaxSteps = 1024;
+    if (SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist, MaxSteps))
       continue;
 
     // Find the new opcode for the updating load/store.
