@@ -47,36 +47,6 @@ bool writePid(const char *file_name, const pid_t pid) {
 }
 
 int main(int argc, char **argv) {
-
-  // Remove libno-nlists.dylib that we are linked against.
-  char executable_path[PATH_MAX];
-  realpath(argv[0], executable_path);
-  executable_path[PATH_MAX - 1] = '\0';
-
-  char *dir = dirname(executable_path);
-  char dylib_path[PATH_MAX];
-  snprintf(dylib_path, PATH_MAX, "%s/%s", dir, "libno-nlists.dylib");
-  dylib_path[PATH_MAX - 1] = '\0';
-  struct stat sb;
-  if (stat(dylib_path, &sb) == -1) {
-    printf("Could not find dylib %s to remove it\n", dylib_path);
-    exit(1);
-  }
-  if (unlink(dylib_path) == -1) {
-    printf("Could not remove dylib %s\n", dylib_path);
-    exit(2);
-  }
-  snprintf(dylib_path, PATH_MAX, "%s/%s", dir, "libhas-nlists.dylib");
-  dylib_path[PATH_MAX - 1] = '\0';
-  if (stat(dylib_path, &sb) == -1) {
-    printf("Could not find dylib %s to remove it\n", dylib_path);
-    exit(1);
-  }
-  if (unlink(dylib_path) == -1) {
-    printf("Could not remove dylib %s\n", dylib_path);
-    exit(2);
-  }
-
   if (writePid(argv[1], getpid())) {
     // we've signaled lldb we are ready to be attached to,
     // this sleep() call will be interrupted when lldb

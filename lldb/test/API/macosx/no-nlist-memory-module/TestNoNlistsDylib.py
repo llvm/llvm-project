@@ -3,6 +3,7 @@ Test that we read don't read the nlist symbols for a specially marked dylib
 when read from memory.
 """
 
+import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -32,6 +33,9 @@ class NoNlistsTestCase(TestBase):
         popen = self.spawnSubprocess(exe, [pid_file_path])
 
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
+
+        os.unlink(self.getBuildArtifact("libno-nlists.dylib"))
+        os.unlink(self.getBuildArtifact("libhas-nlists.dylib"))
 
         self.runCmd("process attach -p " + str(pid))
         target = self.dbg.GetSelectedTarget()
