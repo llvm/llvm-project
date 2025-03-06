@@ -6325,7 +6325,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
     if (IsReference)
-      return this->emitGetLocal(PT_Ptr, Offset, E);
+      return this->emitGetLocal(classifyPrim(E), Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference) {

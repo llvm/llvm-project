@@ -602,6 +602,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/span.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
     ],
 )
@@ -611,6 +612,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/string_view.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
     ],
 )
 

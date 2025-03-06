@@ -23110,12 +23110,18 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
       {VTy, SI->getPointerOperandType(), XLenTy});
 
   SmallVector<Value *, 10> Ops;
+  SmallVector<int, 16> NewShuffleMask;
 
   for (unsigned i = 0; i < Factor; i++) {
+    // Collect shuffle mask for this lane.
+    for (unsigned j = 0; j < VTy->getNumElements(); j++)
+      NewShuffleMask.push_back(Mask[i + Factor * j]);
+
     Value *Shuffle = Builder.CreateShuffleVector(
-        SVI->getOperand(0), SVI->getOperand(1),
-        createSequentialMask(Mask[i], VTy->getNumElements(), 0));
+        SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask);
     Ops.push_back(Shuffle);
+
+    NewShuffleMask.clear();
   }
   // This VL should be OK (should be executable in one vsseg instruction,
   // potentially under larger LMULs) because we checked that the fixed vector

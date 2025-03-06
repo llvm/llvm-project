@@ -1031,10 +1031,9 @@ int runOrcJIT(const char *ProgName) {
     Builder.getJITTargetMachineBuilder()
         ->setRelocationModel(Reloc::PIC_)
         .setCodeModel(CodeModel::Small);
-    Builder.setObjectLinkingLayerCreator(
-        [&](orc::ExecutionSession &ES, const Triple &TT) {
-          return std::make_unique<orc::ObjectLinkingLayer>(ES);
-        });
+    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
+      return std::make_unique<orc::ObjectLinkingLayer>(ES);
+    });
   }
 
   auto J = ExitOnErr(Builder.create());
