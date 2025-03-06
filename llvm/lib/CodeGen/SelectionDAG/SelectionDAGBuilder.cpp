@@ -11885,6 +11885,16 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           AssertOp = ISD::AssertSext;
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
+        if (Arg.hasAttribute(Attribute::NoFPClass)) {
+          SDNodeFlags InValFlags = InVals[i]->getFlags();
+          bool NoSNaN = ((Arg.getNoFPClass() & llvm::fcSNan) == llvm::fcSNan);
+          bool NoQNaN = ((Arg.getNoFPClass() & llvm::fcQNan) == llvm::fcQNan);
+          InValFlags.setNoSNaNs(NoSNaN);
+          InValFlags.setNoQNaNs(NoQNaN);
+          InValFlags.setNoInfs((Arg.getNoFPClass() & llvm::fcInf) ==
+                               llvm::fcInf);
+          InVals[i]->setFlags(InValFlags);
+        }
 
         ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
                                              PartVT, VT, nullptr, NewRoot,

@@ -5613,7 +5613,12 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (getTarget().Options.NoNaNsFPMath)
+    return true;
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (SNaN && OpFlags.hasNoSNaNs())
+    return true;
+  if (OpFlags.hasNoSNaNs() && OpFlags.hasNoQNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)

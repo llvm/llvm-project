@@ -37,6 +37,24 @@ define float @maximumnum_float_nnan(float %x, float %y) {
   ret float %z
 }
 
+define float @maximumnum_float_nofpclass(float nofpclass(nan) %x, float nofpclass(nan) %y) {
+; MIPS32R6-LABEL: maximumnum_float_nofpclass:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f0, $f12, $f14
+  %z = call float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @maximumnum_float_nofpclass_s(float nofpclass(snan) %x, float nofpclass(snan) %y) {
+; MIPS32R6-LABEL: maximumnum_float_nofpclass_s:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f0, $f12, $f14
+  %z = call float @llvm.maximumnum.f32(float %x, float %y)
+  ret float %z
+}
+
 
 define double @maximumnum_double(double %x, double %y) {
 ; MIPS32R6-LABEL: maximumnum_double:
@@ -69,6 +87,25 @@ define double @maximumnum_double_nnan(double %x, double %y) {
   ret double %z
 }
 
+define double @maximumnum_double_nofpclass(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; MIPS32R6-LABEL: maximumnum_double_nofpclass:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.d $f0, $f12, $f14
+  %z = call double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @maximumnum_double_nofpclass_s(double nofpclass(snan) %x, double nofpclass(snan) %y) {
+; MIPS32R6-LABEL: maximumnum_double_nofpclass_s:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.d $f0, $f12, $f14
+  %z = call double @llvm.maximumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+
 define float @minimumnum_float(float %x, float %y) {
 ; MIPS32R6-LABEL: minimumnum_float:
 ; MIPS32R6:       # %bb.0:
@@ -100,6 +137,24 @@ define float @minimumnum_float_nnan(float %x, float %y) {
   ret float %z
 }
 
+define float @minimumnum_float_nofpclass(float nofpclass(nan) %x, float nofpclass(nan) %y) {
+; MIPS32R6-LABEL: minimumnum_float_nofpclass:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.s $f0, $f12, $f14
+  %z = call float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
+define float @minimumnum_float_nofpclass_s(float nofpclass(snan) %x, float nofpclass(snan) %y) {
+; MIPS32R6-LABEL: minimumnum_float_nofpclass_s:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.s $f0, $f12, $f14
+  %z = call float @llvm.minimumnum.f32(float %x, float %y)
+  ret float %z
+}
+
 define double @minimumnum_double(double %x, double %y) {
 ; MIPS32R6-LABEL: minimumnum_double:
 ; MIPS32R6:       # %bb.0:
@@ -128,5 +183,23 @@ define double @minimumnum_double_nnan(double %x, double %y) {
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    min.d $f0, $f12, $f14
   %z = call nnan double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nofpclass(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; MIPS32R6-LABEL: minimumnum_double_nofpclass:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.d $f0, $f12, $f14
+  %z = call double @llvm.minimumnum.f64(double %x, double %y)
+  ret double %z
+}
+
+define double @minimumnum_double_nofpclass_s(double nofpclass(snan) %x, double nofpclass(snan) %y) {
+; MIPS32R6-LABEL: minimumnum_double_nofpclass_s:
+; MIPS32R6:       # %bb.0:
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    min.d $f0, $f12, $f14
+  %z = call double @llvm.minimumnum.f64(double %x, double %y)
   ret double %z
 }
