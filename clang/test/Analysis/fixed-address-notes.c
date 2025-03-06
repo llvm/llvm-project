@@ -27,7 +27,7 @@ struct test3_s {
 
 void test3() {
   struct test3_s *x;
-  unsigned long val = 1111111; // expected-note{{'val' initialized to 1111111}}
+  unsigned long long val = 1111111; // expected-note{{'val' initialized to 1111111}}
   x = (struct test3_s *)val; // expected-note{{Pointer value of (struct test3_s *)1111111 stored to 'x'}}
   x->a = 3; // expected-warning{{Access to field 'a' results in a dereference of a fixed address (loaded from variable 'x')}} \
             // expected-note{{Access to field 'a' results in a dereference of a fixed address (loaded from variable 'x')}}
