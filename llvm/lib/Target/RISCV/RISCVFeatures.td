@@ -1453,6 +1453,10 @@ def FeatureUnalignedVectorMem
                       "true", "Has reasonably performant unaligned vector "
                       "loads and stores">;
 
+def TuneNLogNVRGather
+   : SubtargetFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
+                      "Has vrgather.vv with LMUL*log2(LMUL) latency">;
+
 def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 

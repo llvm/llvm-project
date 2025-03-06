@@ -253,6 +253,14 @@ static StructType *getSplitDoubleType(LLVMContext &Context) {
   return StructType::create({Int32Ty, Int32Ty}, "dx.types.splitdouble");
 }
 
+static StructType *getBinaryWithCarryType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.i32c"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
+  return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
+}
+
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
                                     Type *OverloadTy) {
   switch (Kind) {
@@ -308,6 +316,8 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResPropsType(Ctx);
   case OpParamType::SplitDoubleTy:
     return getSplitDoubleType(Ctx);
+  case OpParamType::BinaryWithCarryTy:
+    return getBinaryWithCarryType(Ctx);
   }
   llvm_unreachable("Invalid parameter kind");
   return nullptr;

@@ -25,7 +25,7 @@ namespace Fortran::lower {
 // for it.
 // If the insertion point is inside an OpenACC region op, it is considered
 // device context.
-static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
+static bool inline isCudaDeviceContext(fir::FirOpBuilder &builder) {
   if (builder.getRegion().getParentOfType<cuf::KernelOp>())
     return true;
   if (builder.getRegion()
@@ -41,6 +41,23 @@ static bool isCudaDeviceContext(fir::FirOpBuilder &builder) {
   }
   return false;
 }
+
+static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
+  if (cudaAttr) {
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
+      return kPinnedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
+      return kDeviceAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
+      return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
 } // end namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CUDA_H

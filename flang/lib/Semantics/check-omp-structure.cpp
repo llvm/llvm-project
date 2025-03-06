@@ -1678,6 +1678,18 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareMapperConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(
+      dir.source, llvm::omp::Directive::OMPD_declare_reduction);
+}
+
+void OmpStructureChecker::Leave(
+    const parser::OpenMPDeclareReductionConstruct &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
@@ -2139,16 +2151,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
+  auto &flushList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
+
   if (FindClause(llvm::omp::Clause::OMPC_acquire) ||
       FindClause(llvm::omp::Clause::OMPC_release) ||
       FindClause(llvm::omp::Clause::OMPC_acq_rel)) {
-    if (const auto &flushList{
-            std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+    if (flushList) {
       context_.Say(parser::FindSourceLocation(flushList),
           "If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items "
           "must not be specified on the FLUSH directive"_err_en_US);
     }
   }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (version >= 52) {
+    if (!std::get</*TrailingClauses=*/bool>(x.t)) {
+      context_.Say(parser::FindSourceLocation(flushList),
+          "The syntax \"FLUSH clause (object, ...)\" has been deprecated, use \"FLUSH(object, ...) clause\" instead"_warn_en_US);
+    }
+  }
+
   dirContext_.pop_back();
 }
 
@@ -2980,6 +3002,7 @@ CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
+CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
 CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)

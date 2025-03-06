@@ -90,7 +90,9 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/FinalizeISel.h"
+#include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
@@ -122,6 +124,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
@@ -137,6 +140,7 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -1428,6 +1432,11 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
   return make_error<StringError>(
       formatv("invalid regallocgreedy register filter '{0}' ", Params).str(),
       inconvertibleErrorCode());
+}
+
+Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
+                                            "MachineSinkingPass");
 }
 
 } // namespace

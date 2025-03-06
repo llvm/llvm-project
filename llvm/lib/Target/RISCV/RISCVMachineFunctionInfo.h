@@ -74,7 +74,6 @@ private:
   /// Size of stack frame for Zcmp PUSH/POP
   unsigned RVPushStackSize = 0;
   unsigned RVPushRegs = 0;
-  int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
 
   int64_t StackProbeSize = 0;
 
@@ -137,17 +136,13 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
-  bool isPushable(const MachineFunction &MF) const {
-    // We cannot use fixed locations for the callee saved spill slots if the
-    // function uses a varargs save area.
-    // TODO: Use a separate placement for vararg registers to enable Zcmp.
-    return MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
-           !MF.getTarget().Options.DisableFramePointerElim(MF) &&
-           VarArgsSaveSize == 0;
-  }
+  enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 
-  int getRVPushRlist() const { return RVPushRlist; }
-  void setRVPushRlist(int Rlist) { RVPushRlist = Rlist; }
+  PushPopKind getPushPopKind(const MachineFunction &MF) const;
+
+  bool isPushable(const MachineFunction &MF) const {
+    return getPushPopKind(MF) != PushPopKind::None;
+  }
 
   unsigned getRVPushRegs() const { return RVPushRegs; }
   void setRVPushRegs(unsigned Regs) { RVPushRegs = Regs; }

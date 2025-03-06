@@ -131,7 +131,8 @@ __gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
                                              __gpu_num_lanes() - 1)
           << 32ull) |
          ((uint64_t)__nvvm_shfl_sync_idx_i32(__mask, __lo, __id,
-                                             __gpu_num_lanes() - 1));
+                                             __gpu_num_lanes() - 1) &
+          0xFFFFFFFF);
 }
 
 // Returns a bitmask of threads in the current lane for which \p x is true.
@@ -206,7 +207,7 @@ __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, __done)) {
+  while (__gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
       uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
       if (__first == __x) {

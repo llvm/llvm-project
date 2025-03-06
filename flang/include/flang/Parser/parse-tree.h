@@ -4246,6 +4246,20 @@ struct OmpInReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
+// declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
+//                                              : combiner) [initializer-clause]
+struct OmpInitializerProc {
+  TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
+  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
+};
+WRAPPER_CLASS(OmpInitializerExpr, Expr);
+
+// Initialization for declare reduction construct
+struct OmpInitializerClause {
+  UNION_CLASS_BOILERPLATE(OmpInitializerClause);
+  std::variant<OmpInitializerProc, OmpInitializerExpr> u;
+};
+
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
 //
 // lastprivate-clause ->
@@ -4627,15 +4641,14 @@ struct OpenMPDeclareMapperConstruct {
   std::tuple<Verbatim, OmpMapperSpecifier, OmpClauseList> t;
 };
 
+// ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-WRAPPER_CLASS(OmpReductionInitializerClause, Expr);
-
 struct OpenMPDeclareReductionConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclareReductionConstruct);
   CharBlock source;
   std::tuple<Verbatim, common::Indirection<OmpReductionSpecifier>,
-      std::optional<OmpReductionInitializerClause>>
+      std::optional<OmpClauseList>>
       t;
 };
 
@@ -4888,12 +4901,23 @@ struct OpenMPDispatchConstruct {
       t;
 };
 
-// 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
+// [4.5:162-165], [5.0:242-246], [5.1:275-279], [5.2:315-316], [6.0:498-500]
+//
+// flush-construct ->
+//    FLUSH [(list)]                                // since 4.5, until 4.5
+// flush-construct ->
+//    FLUSH [memory-order-clause] [(list)]          // since 5.0, until 5.1
+// flush-construct ->
+//    FLUSH [(list)] [clause-list]                  // since 5.2
+//
+// memory-order-clause ->                           // since 5.0, until 5.1
+//    ACQ_REL | RELEASE | ACQUIRE |                 // since 5.0
+//    SEQ_CST                                       // since 5.1
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<std::list<OmpMemoryOrderClause>>,
-      std::optional<OmpObjectList>>
+  std::tuple<Verbatim, std::optional<OmpObjectList>,
+      std::optional<OmpClauseList>, /*TrailingClauses=*/bool>
       t;
 };
 
