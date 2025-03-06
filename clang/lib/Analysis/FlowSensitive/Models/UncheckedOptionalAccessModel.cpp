@@ -582,34 +582,33 @@ bool handleConstMemberCall(const CallExpr *CE,
     State.Env.setStorageLocation(*CE, Loc);
     return true;
   }
-    // PRValue cases:
-    if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
-      // If the const method returns a boolean or pointer type.
-      Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(
-          *RecordLoc, CE, State.Env);
-      if (Val == nullptr)
-        return false;
-      State.Env.setValue(*CE, *Val);
-      return true;
-    }
-    if (isSupportedOptionalType(CE->getType())) {
-      // If the const method returns an optional by value.
-      const FunctionDecl *DirectCallee = CE->getDirectCallee();
-      if (DirectCallee == nullptr)
-        return false;
-      StorageLocation &Loc =
-          State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-              *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-                setHasValue(cast<RecordStorageLocation>(Loc),
-                            State.Env.makeAtomicBoolValue(), State.Env);
-              });
-      // Use copyRecord to link the optional to the result object of the call
-      // expression.
-      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
-      copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
-      return true;
-    }
-
+  // PRValue cases:
+  if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
+    // If the const method returns a boolean or pointer type.
+    Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
+                                                                 State.Env);
+    if (Val == nullptr)
+      return false;
+    State.Env.setValue(*CE, *Val);
+    return true;
+  }
+  if (isSupportedOptionalType(CE->getType())) {
+    // If the const method returns an optional by value.
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return false;
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+              setHasValue(cast<RecordStorageLocation>(Loc),
+                          State.Env.makeAtomicBoolValue(), State.Env);
+            });
+    // Use copyRecord to link the optional to the result object of the call
+    // expression.
+    auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
+    copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+    return true;
+  }
 
   return false;
 }
