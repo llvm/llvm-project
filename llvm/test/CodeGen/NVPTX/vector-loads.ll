@@ -101,18 +101,18 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
 define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
 ; CHECK: ld.global.v4.b32 {%r
   %v = load <8 x half>, ptr addrspace(1) %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK-DAG: mov.b32 {%[[RS0:rs[0-9]+]], %[[RS1:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS2:rs[0-9]+]], %[[RS3:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS4:rs[0-9]+]], %[[RS5:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS6:rs[0-9]+]], %[[RS7:rs[0-9]+]]}
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS0]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS1]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS2]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS3]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS4]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS5]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS6]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS7]]
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.global.v4.f32
 ; CHECK: st.global.v4.f32
@@ -151,18 +151,18 @@ define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst,
 define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
 ; CHECK: ld.v4.b32 {%r
   %v = load <8 x half>, ptr %src, align 16
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: mov.b32 {%rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
-; CHECK: cvt.f32.f16 %f{{.*}}, %rs
+; CHECK-DAG: mov.b32 {%[[RS0:rs[0-9]+]], %[[RS1:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS2:rs[0-9]+]], %[[RS3:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS4:rs[0-9]+]], %[[RS5:rs[0-9]+]]}
+; CHECK-DAG: mov.b32 {%[[RS6:rs[0-9]+]], %[[RS7:rs[0-9]+]]}
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS0]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS1]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS2]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS3]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS4]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS5]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS6]]
+; CHECK-DAG: cvt.f32.f16 %f{{.*}}, %[[RS7]]
   %ext = fpext <8 x half> %v to <8 x float>
 ; CHECK: st.v4.f32
 ; CHECK: st.v4.f32
