@@ -1044,7 +1044,7 @@ void RewriteInstance::discoverFileObjects() {
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
-             "unexpect non-zero sized symbol at end of section");
+             "unexpected non-zero sized symbol at end of section");
       LLVM_DEBUG(
           dbgs()
           << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
@@ -2365,7 +2365,7 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
-  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  // The static executable might have .rela.dyn section and not have PT_DYNAMIC
   if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getUniqueSectionByName(getRelaDynSectionName());
@@ -4870,7 +4870,7 @@ void RewriteInstance::updateELFSymbolTable(
     if (!Section)
       return false;
 
-    // Remove the section symbol iif the corresponding section was stripped.
+    // Remove the section symbol if the corresponding section was stripped.
     if (Symbol.getType() == ELF::STT_SECTION) {
       if (!getNewSectionIndex(Symbol.st_shndx))
         return true;

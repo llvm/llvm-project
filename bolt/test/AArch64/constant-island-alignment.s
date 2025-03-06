@@ -1,6 +1,6 @@
 // This test checks that the constant island is aligned after BOLT tool.
 // In case the nop before .Lci will be removed the pointer to exit function
-// won't be alinged and the test will fail.
+// won't be aligned and the test will fail.
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %s -o %t.o

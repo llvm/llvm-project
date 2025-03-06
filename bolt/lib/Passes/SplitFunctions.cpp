@@ -409,7 +409,7 @@ private:
   }
 
   /// Compute sum of scores over jumps within \p BlockOrder given \p SplitIndex.
-  /// Increament Score.LocalScore in place by the sum.
+  /// Increment Score.LocalScore in place by the sum.
   void computeJumpScore(const BasicBlockOrder &BlockOrder,
                         const size_t SplitIndex, SplitScore &Score) {
 
@@ -436,7 +436,7 @@ private:
   }
 
   /// Compute sum of scores over calls originated in the current function
-  /// given \p SplitIndex. Increament Score.LocalScore in place by the sum.
+  /// given \p SplitIndex. Increment Score.LocalScore in place by the sum.
   void computeLocalCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex, SplitScore &Score) {
     if (opts::CallScale == 0)
@@ -478,7 +478,7 @@ private:
   }
 
   /// Compute sum of splitting scores for cover calls of the input function.
-  /// Increament Score.CoverCallScore in place by the sum.
+  /// Increment Score.CoverCallScore in place by the sum.
   void computeCoverCallScore(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex,
                              const std::vector<CallInfo> &CoverCalls,
@@ -490,7 +490,7 @@ private:
       assert(CI.Length >= Score.HotSizeReduction &&
              "Length of cover calls must exceed reduced size of hot fragment.");
       // Compute the new length of the call, which is shorter than the original
-      // one by the size of the splitted fragment minus the total size increase.
+      // one by the size of the split fragment minus the total size increase.
       const size_t NewCallLength = CI.Length - Score.HotSizeReduction;
       Score.CoverCallScore += computeCallScore(CI.Count, NewCallLength);
     }
@@ -525,12 +525,12 @@ private:
 
     // First part of LocalScore is the sum over call edges originated in the
     // input function. These edges can get shorter or longer depending on
-    // SplitIndex. Score.LocalScore is increamented in place.
+    // SplitIndex. Score.LocalScore is incremented in place.
     computeLocalCallScore(BlockOrder, SplitIndex, Score);
 
     // Second part of LocalScore is the sum over jump edges with src basic block
     // and dst basic block in the current function. Score.LocalScore is
-    // increamented in place.
+    // incremented in place.
     computeJumpScore(BlockOrder, SplitIndex, Score);
 
     // Compute CoverCallScore and store in Score in place.
