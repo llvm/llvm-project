@@ -39,8 +39,8 @@ void splash(Swim& swam) {
   static_assert(swam.phelps() == 28);     // ok
   static_assert((&swam)->phelps() == 28); // ok
   Swim* pswam = &swam;                    // expected-note {{declared here}}
-  static_assert(pswam->phelps() == 28);   // expected-error {{static assertion expression is not an integral constant expression}}
-                                          // expected-note@-1 {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
+  static_assert(pswam->phelps() == 28);   // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // expected-note {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
   static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
@@ -158,17 +158,17 @@ int g() {
 namespace GH128409 {
   int &ff();
   int &x = ff(); // nointerpreter-note {{declared here}}
-  constinit int &z = x; // expected-error {{variable does not have a constant initializer}}
-                        // expected-note@-1 {{required by 'constinit' specifier here}}
-                        // nointerpreter-note@-2 {{initializer of 'x' is not a constant expression}}
+  constinit int &z = x; // expected-error {{variable does not have a constant initializer}} \
+                        // expected-note {{required by 'constinit' specifier here}} \
+                        // nointerpreter-note {{initializer of 'x' is not a constant expression}}
 }
 
 namespace GH129845 {
   int &ff();
   int &x = ff(); // nointerpreter-note {{declared here}}
   struct A { int& x; };
-  constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}}
-                       // nointerpreter-note@-1 {{initializer of 'x' is not a constant expression}}
+  constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}} \
+                       // nointerpreter-note {{initializer of 'x' is not a constant expression}}
   const A* gg = &g;
 }
 
