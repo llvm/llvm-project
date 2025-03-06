@@ -41,7 +41,7 @@ template <class _ValueType
           = byte
 #  endif
           >
-class _LIBCPP_AVAILABILITY_PMR _LIBCPP_TEMPLATE_VIS polymorphic_allocator {
+class _LIBCPP_AVAILABILITY_PMR [[__libcpp_template_vis]] polymorphic_allocator {
 
 public:
   using value_type = _ValueType;

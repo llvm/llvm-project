@@ -64,7 +64,7 @@ concept __move_iter_comparable = requires {
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Iter>
-class _LIBCPP_TEMPLATE_VIS move_iterator
+class [[__libcpp_template_vis]] move_iterator
 #if _LIBCPP_STD_VER >= 20
     : public __move_iter_category_base<_Iter>
 #endif
@@ -116,7 +116,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 pointer operator->() const {
+  [[__libcpp_deprecated_in_cxx20()]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 pointer operator->() const {
     return __current_;
   }
 

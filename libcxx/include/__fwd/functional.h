@@ -18,10 +18,10 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class>
-struct _LIBCPP_TEMPLATE_VIS hash;
+struct [[__libcpp_template_vis]] hash;
 
 template <class>
-class _LIBCPP_TEMPLATE_VIS reference_wrapper;
+class [[__libcpp_template_vis]] reference_wrapper;
 
 _LIBCPP_END_NAMESPACE_STD
 

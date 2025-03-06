@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_pod : public integral_constant<bool, __is_pod(_Tp)> {};
+struct [[__libcpp_template_vis]] _LIBCPP_NO_SPECIALIZATIONS is_pod : public integral_constant<bool, __is_pod(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

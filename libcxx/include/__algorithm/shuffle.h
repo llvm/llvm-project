@@ -92,7 +92,7 @@ public:
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 template <class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
+_LIBCPP_HIDE_FROM_ABI [[__libcpp_deprecated_in_cxx14("std::shuffle should be used instead")]] void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   typedef uniform_int_distribution<ptrdiff_t> _Dp;
@@ -110,7 +110,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 }
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
+_LIBCPP_HIDE_FROM_ABI [[__libcpp_deprecated_in_cxx14("std::shuffle should be used instead")]] void
 random_shuffle(_RandomAccessIterator __first,
                _RandomAccessIterator __last,
 #  ifndef _LIBCPP_CXX03_LANG

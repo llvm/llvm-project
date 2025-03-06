@@ -35,17 +35,17 @@ template <class _Tp>
 class allocator;
 
 #if _LIBCPP_STD_VER <= 17
-// These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
+// These specializations shouldn't be marked [[__libcpp_deprecated_in_cxx17()]].
 // Specializing allocator<void> is deprecated, but not using it.
 template <>
-class _LIBCPP_TEMPLATE_VIS allocator<void> {
+class [[__libcpp_template_vis]] allocator<void> {
 public:
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* const_pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef void value_type;
+  [[__libcpp_deprecated_in_cxx17()]] typedef void* pointer;
+  [[__libcpp_deprecated_in_cxx17()]] typedef const void* const_pointer;
+  [[__libcpp_deprecated_in_cxx17()]] typedef void value_type;
 
   template <class _Up>
-  struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {
+  struct [[__libcpp_deprecated_in_cxx17()]] rebind {
     typedef allocator<_Up> other;
   };
 };
@@ -77,7 +77,7 @@ struct __non_trivial_if<true, _Unique> {
 //       allocator<void> trivial in C++20.
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
+class [[__libcpp_template_vis]] allocator : private __non_trivial_if<!is_void<_Tp>::value, allocator<_Tp> > {
   static_assert(!is_const<_Tp>::value, "std::allocator does not support const types");
   static_assert(!is_volatile<_Tp>::value, "std::allocator does not support volatile types");
 
@@ -87,7 +87,7 @@ public:
   typedef _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
 #if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
-  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+  [[__libcpp_deprecated_in_cxx23()]] typedef true_type is_always_equal;
 #endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
@@ -123,37 +123,37 @@ public:
 
   // C++20 Removed members
 #if _LIBCPP_STD_VER <= 17
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp* pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp& reference;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp& const_reference;
+  [[__libcpp_deprecated_in_cxx17()]] typedef _Tp* pointer;
+  [[__libcpp_deprecated_in_cxx17()]] typedef const _Tp* const_pointer;
+  [[__libcpp_deprecated_in_cxx17()]] typedef _Tp& reference;
+  [[__libcpp_deprecated_in_cxx17()]] typedef const _Tp& const_reference;
 
   template <class _Up>
-  struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {
+  struct [[__libcpp_deprecated_in_cxx17()]] rebind {
     typedef allocator<_Up> other;
   };
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
+  [[__libcpp_deprecated_in_cxx17()]] _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT {
+  [[__libcpp_deprecated_in_cxx17()]] _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI [[__libcpp_deprecated_in_cxx17()]] _Tp* allocate(size_t __n, const void*) {
     return allocate(__n);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  [[__libcpp_deprecated_in_cxx17()]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
     return size_type(~0) / sizeof(_Tp);
   }
 
   template <class _Up, class... _Args>
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
+  [[__libcpp_deprecated_in_cxx17()]] _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
     ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
+  [[__libcpp_deprecated_in_cxx17()]] _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
 #endif
 };
 

@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS vector;
+class [[__libcpp_template_vis]] vector;
 
 template <class _Allocator>
 class vector<bool, _Allocator>;

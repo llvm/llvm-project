@@ -23,12 +23,12 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TEMPLATE_VIS bernoulli_distribution {
+class [[__libcpp_template_vis]] bernoulli_distribution {
 public:
   // types
   typedef bool result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class [[__libcpp_template_vis]] param_type {
     double __p_;
 
   public:

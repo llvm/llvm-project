@@ -72,7 +72,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __get_comp_type() {
 
 // [cmp.common], common comparison category type
 template <class... _Ts>
-struct _LIBCPP_TEMPLATE_VIS common_comparison_category {
+struct [[__libcpp_template_vis]] common_comparison_category {
   using type = decltype(__comp_detail::__get_comp_type<_Ts...>());
 };
 

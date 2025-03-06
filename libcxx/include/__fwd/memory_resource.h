@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace pmr {
 template <class _ValueType>
-class _LIBCPP_AVAILABILITY_PMR _LIBCPP_TEMPLATE_VIS polymorphic_allocator;
+class _LIBCPP_AVAILABILITY_PMR [[__libcpp_template_vis]] polymorphic_allocator;
 } // namespace pmr
 
 _LIBCPP_END_NAMESPACE_STD

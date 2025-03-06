@@ -467,13 +467,13 @@ _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
+[[__libcpp_deprecated_in_cxx20()]] _LIBCPP_HIDE_FROM_ABI void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
+[[__libcpp_deprecated_in_cxx20()]] _LIBCPP_HIDE_FROM_ABI void
 atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
