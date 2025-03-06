@@ -2,7 +2,7 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; CHECK-LABEL: .visible .func foo1
-; CHECK: st.v2.f32
+; CHECK: st.u64
 define void @foo1(<2 x float> %val, ptr %ptr) {
   store <2 x float> %val, ptr %ptr
   ret void
