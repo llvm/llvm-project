@@ -37,10 +37,12 @@ private:
     .uuid = {}
   };
 
-  static constexpr char dylib_name[] = "libclang_rt.\0\0\0"; // 8 bytes aligned, padded with zeros per loader.h
+  static constexpr char libclang_rt_dylib_name[]    = "libclang_rt.\0\0\0"; // 8 bytes aligned, padded with zeros per loader.h
+  static constexpr char uninstrumented_dylib_name[] = "uninst___rt.\0\0\0"; // 8 bytes aligned, padded with zeros per loader.h
+
   static constexpr dylib_command mock_dylib_command = {
     .cmd = LC_LOAD_DYLIB,
-    .cmdsize = sizeof(dylib_command) + sizeof(dylib_name),
+    .cmdsize = sizeof(dylib_command) + sizeof(libclang_rt_dylib_name),
     .dylib = {
       .name = {
         .offset = sizeof(dylib_command)
@@ -59,7 +61,7 @@ private:
   std::vector<unsigned char> mock_header;
 
 public:
-  MemoryMappingLayoutMock(): MemoryMappingLayout(false) {
+  MemoryMappingLayoutMock(bool instrumented): MemoryMappingLayout(false) {
     EXPECT_EQ(mock_uuid_command.cmdsize % 8, 0u);
     EXPECT_EQ(mock_dylib_command.cmdsize % 8, 0u);
 
@@ -89,6 +91,7 @@ public:
     copy((unsigned char *)&mock_dylib_command,
       ((unsigned char *)&mock_dylib_command) + sizeof(dylib_command), // as mock_dylib_command.cmdsize contains the following string
       back_inserter(mock_header));
+    const char (&dylib_name)[16] = instrumented ? libclang_rt_dylib_name : uninstrumented_dylib_name;
     copy((unsigned char *)dylib_name,
       ((unsigned char *)dylib_name) + sizeof(dylib_name),
       back_inserter(mock_header));
@@ -120,8 +123,20 @@ protected:
   }
 };
 
-TEST(MemoryMappingLayout, Next) {
-  __sanitizer::MemoryMappingLayoutMock memory_mapping;
+TEST(MemoryMappingLayout, NextInstrumented) {
+  __sanitizer::MemoryMappingLayoutMock memory_mapping(true);
+  __sanitizer::MemoryMappedSegment segment;
+  size_t size = memory_mapping.SizeOfLoadCommands();
+  while (memory_mapping.Next(&segment)) {
+    size_t offset = memory_mapping.CurrentLoadCommandOffset();
+    EXPECT_LE(offset, size);
+  }
+  size_t final_offset = memory_mapping.CurrentLoadCommandOffset();
+  EXPECT_EQ(final_offset, size); // All commands processed, no more, no less
+}
+
+TEST(MemoryMappingLayout, NextUnInstrumented) {
+  __sanitizer::MemoryMappingLayoutMock memory_mapping(false);
   __sanitizer::MemoryMappedSegment segment;
   size_t size = memory_mapping.SizeOfLoadCommands();
   while (memory_mapping.Next(&segment)) {
