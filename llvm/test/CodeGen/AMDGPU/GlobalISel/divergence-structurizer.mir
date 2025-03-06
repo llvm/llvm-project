@@ -771,19 +771,22 @@ body: |
   ; GFX10-NEXT:   [[MV2:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
   ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX10-NEXT:   [[DEF1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = IMPLICIT_DEF
-  ; GFX10-NEXT:   [[DEF2:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[DEF1:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[DEF2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[DEF3:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF2]](s1), %bb.0, %54(s1), %bb.5
-  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[DEF1]](s1), %bb.0, %41(s1), %bb.5
-  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI %12(s32), %bb.5, [[C]](s32), %bb.0
-  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %14(s32), %bb.5
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF3]](s1), %bb.0, %61(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[DEF2]](s1), %bb.0, %48(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %38(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI %12(s32), %bb.5, [[C]](s32), %bb.0
+  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %14(s32), %bb.5
   ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI1]](s1)
-  ; GFX10-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[PHI3]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; GFX10-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[PHI4]](s32)
   ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; GFX10-NEXT:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT]], [[C1]](s32)
   ; GFX10-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[MV1]], [[SHL]](s64)
@@ -791,16 +794,16 @@ body: |
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX10-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[LOAD]](s32), [[C2]]
   ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32(s1) = COPY [[C3]](s1)
-  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C3]](s1)
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[C3]](s1)
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C3]](s1)
   ; GFX10-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 [[COPY7]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY9]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY10]](s1), implicit-def $scc
   ; GFX10-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[S_OR_B32_]](s1)
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[S_OR_B32_]](s1)
   ; GFX10-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY6]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY8]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY9]](s1), implicit-def $scc
   ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_1]](s1)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_1]](s1)
   ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[ICMP]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.3
   ; GFX10-NEXT: {{  $}}
@@ -821,17 +824,17 @@ body: |
   ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[C6]]
   ; GFX10-NEXT:   G_STORE [[ADD]](s32), [[PTR_ADD1]](p1) :: (store (s32), addrspace 1)
-  ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI3]], [[C6]]
+  ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI4]], [[C6]]
   ; GFX10-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 100
-  ; GFX10-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[PHI3]](s32), [[C7]]
-  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP1]](s1)
+  ; GFX10-NEXT:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[PHI4]](s32), [[C7]]
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP1]](s1)
   ; GFX10-NEXT:   [[C8:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C8]](s1)
-  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 [[COPY10]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY13]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C8]](s1)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 [[COPY11]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY14]](s1), implicit-def $scc
   ; GFX10-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY11]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY12]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY12]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY13]](s1), implicit-def $scc
   ; GFX10-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
   ; GFX10-NEXT:   G_BR %bb.5
   ; GFX10-NEXT: {{  $}}
@@ -842,13 +845,17 @@ body: |
   ; GFX10-NEXT: bb.5:
   ; GFX10-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_1]](s1), %bb.1, [[S_OR_B32_3]](s1), %bb.3
-  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[S_OR_B32_]](s1), %bb.1, [[S_OR_B32_2]](s1), %bb.3
-  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:_(s32) = G_PHI [[ADD1]](s32), %bb.3, [[DEF]](s32), %bb.1
-  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[PHI4]](s1)
-  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI5]](s1)
+  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[S_OR_B32_1]](s1), %bb.1, [[S_OR_B32_3]](s1), %bb.3
+  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[S_OR_B32_]](s1), %bb.1, [[S_OR_B32_2]](s1), %bb.3
+  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:_(s32) = G_PHI [[ADD1]](s32), %bb.3, [[DEF]](s32), %bb.1
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI6]](s1)
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY [[COPY16]](s1)
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[SI_IF]](s32)
-  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY14]](s1), [[PHI2]](s32)
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY15]](s1), [[PHI3]](s32)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_4:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY8]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_4:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY17]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_4:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_4]](s1), [[S_AND_B32_4]](s1), implicit-def $scc
   ; GFX10-NEXT:   SI_LOOP [[INT]](s32), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.6
   ; GFX10-NEXT: {{  $}}
@@ -856,7 +863,7 @@ body: |
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
-  ; GFX10-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY15]](s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[S_OR_B32_4]](s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -965,14 +972,18 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI %51(s1), %bb.5, %50(s1), %bb.8
-  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI %39(s1), %bb.5, %38(s1), %bb.8
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI %52(s1), %bb.5, %51(s1), %bb.8
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI %45(s1), %bb.5, %44(s1), %bb.8
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI]](s1)
   ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[PHI1]](s1)
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[COPY9]](s1)
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %17(s32)
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[C2]](s1)
-  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[COPY10]](s1)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %40(s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY10]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[C2]](s1)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[COPY11]](s1)
   ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY8]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
@@ -986,13 +997,13 @@ body: |
   ; GFX10-NEXT: bb.3:
   ; GFX10-NEXT:   successors: %bb.6(0x04000000), %bb.8(0x7c000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[COPY10]](s1), %bb.1, %58(s1), %bb.7
+  ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:sreg_32(s1) = PHI [[COPY11]](s1), %bb.1, %59(s1), %bb.7
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s1) = G_PHI %23(s1), %bb.7, [[DEF]](s1), %bb.1
-  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[PHI2]](s1)
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[SI_IF]](s32)
-  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY12]](s1), %27(s32)
-  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[COPY9]](s1)
-  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[PHI3]](s1)
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[COPY13]](s1), %27(s32)
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[COPY9]](s1)
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[PHI3]](s1)
   ; GFX10-NEXT:   SI_LOOP [[INT]](s32), %bb.8, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.6
   ; GFX10-NEXT: {{  $}}
@@ -1008,24 +1019,24 @@ body: |
   ; GFX10-NEXT:   successors: %bb.1(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY5]](s32), [[COPY]]
-  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
   ; GFX10-NEXT:   [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE [[ICMP]]
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
   ; GFX10-NEXT:   [[XOR1:%[0-9]+]]:_(s1) = G_XOR [[FREEZE]], [[C4]]
   ; GFX10-NEXT:   [[OR:%[0-9]+]]:_(s1) = G_OR [[ICMP2]], [[XOR1]]
   ; GFX10-NEXT:   [[XOR2:%[0-9]+]]:_(s1) = G_XOR [[OR]], [[C4]]
-  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[XOR2]](s1)
-  ; GFX10-NEXT:   [[S_ANDN2_B32_:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %46(s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY15]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 %52(s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY16]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[XOR2]](s1)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %46(s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY16]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 %53(s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY17]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
   ; GFX10-NEXT:   G_BR %bb.1
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
-  ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY9]](s1), [[COPY3]], [[COPY2]]
+  ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[S_OR_B32_]](s1), [[COPY3]], [[COPY2]]
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[SELECT]](s32)
   ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
@@ -1035,32 +1046,29 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY [[C5]](s1)
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY [[C5]](s1)
   ; GFX10-NEXT:   [[C6:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY11]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY17]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY12]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY18]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
   ; GFX10-NEXT:   G_BR %bb.3
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.8:
   ; GFX10-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[COPY7]](s1), %bb.0, [[COPY14]](s1), %bb.3
-  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:sreg_32(s1) = PHI [[COPY6]](s1), %bb.0, [[COPY13]](s1), %bb.3
-  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, [[PHI1]](s1), %bb.3
+  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[COPY7]](s1), %bb.0, [[COPY15]](s1), %bb.3
+  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:sreg_32(s1) = PHI [[COPY6]](s1), %bb.0, [[COPY14]](s1), %bb.3
+  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, [[S_OR_B32_]](s1), %bb.3
   ; GFX10-NEXT:   [[PHI8:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.3, [[C1]](s32), %bb.0
-  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI5]](s1)
-  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:sreg_32(s1) = COPY [[PHI6]](s1)
-  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s1) = COPY [[COPY19]](s1)
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI5]](s1)
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s1) = COPY [[PHI6]](s1)
   ; GFX10-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s1) = COPY [[PHI7]](s1)
   ; GFX10-NEXT:   [[C7:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY21]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY20]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_3]](s1)
-  ; GFX10-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY [[C7]](s1)
-  ; GFX10-NEXT:   [[COPY24:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[COPY23]](s1)
-  ; GFX10-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY18]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[COPY22:%[0-9]+]]:sreg_32(s1) = COPY [[COPY20]](s1)
+  ; GFX10-NEXT:   [[COPY23:%[0-9]+]]:sreg_32(s1) = COPY [[COPY22]](s1)
+  ; GFX10-NEXT:   [[COPY24:%[0-9]+]]:sreg_32(s1) = COPY [[C7]](s1)
+  ; GFX10-NEXT:   [[COPY25:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[COPY24]](s1)
+  ; GFX10-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY19]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.5
   bb.0:
     successors: %bb.8(0x80000000)
@@ -1173,6 +1181,7 @@ body: |
   ; GFX10-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY4]](s32), [[COPY1]]
   ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX10-NEXT:   [[DEF1:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[DEF2:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
   ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP]](s1)
   ; GFX10-NEXT:   G_BR %bb.7
   ; GFX10-NEXT: {{  $}}
@@ -1186,8 +1195,8 @@ body: |
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI %45(s1), %bb.6, %49(s1), %bb.7
-  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI %34(s1), %bb.6, %33(s1), %bb.7
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI %52(s1), %bb.6, %56(s1), %bb.7
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI %41(s1), %bb.6, %40(s1), %bb.7
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s1) = G_PHI %12(s1), %bb.6, [[DEF]](s1), %bb.7
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI2]](s1)
   ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI]](s1)
@@ -1214,23 +1223,27 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
   ; GFX10-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[COPY5]](s32), [[COPY]]
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32(s1) = COPY [[ICMP2]](s1)
   ; GFX10-NEXT:   [[FREEZE:%[0-9]+]]:_(s1) = G_FREEZE [[ICMP]]
   ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C2]](s1)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[C2]](s1)
   ; GFX10-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[FREEZE]], [[C2]]
   ; GFX10-NEXT:   [[OR:%[0-9]+]]:_(s1) = G_OR [[ICMP2]], [[XOR]]
   ; GFX10-NEXT:   [[INT2:%[0-9]+]]:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[OR]](s1), %26(s32)
   ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; GFX10-NEXT:   [[DEF2:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
-  ; GFX10-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 [[COPY10]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY11]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %34(s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_1:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY11]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_1]](s1), [[S_AND_B32_1]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[DEF3:%[0-9]+]]:sreg_32(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_ANDN2_B32 [[COPY10]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_AND_B32 $exec_lo, [[COPY12]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32_xm0_xexec(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
   ; GFX10-NEXT:   SI_LOOP [[INT2]](s32), %bb.7, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5:
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT2]](s32)
-  ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[COPY3]], [[COPY2]]
+  ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[S_OR_B32_1]](s1), [[COPY3]], [[COPY2]]
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[SELECT]](s32)
   ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
@@ -1240,29 +1253,31 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s32)
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:sreg_32(s1) = COPY [[C4]](s1)
-  ; GFX10-NEXT:   [[S_ANDN2_B32_2:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %41(s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_2:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY12]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_2:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_2]](s1), [[S_AND_B32_2]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[DEF3:%[0-9]+]]:sreg_32_xm0_xexec(s1) = IMPLICIT_DEF
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[C4]](s1)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 %48(s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY13]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[DEF4:%[0-9]+]]:sreg_32_xm0_xexec(s1) = IMPLICIT_DEF
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.7:
   ; GFX10-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[COPY6]](s1), %bb.0, [[S_OR_B32_]](s1), %bb.2, [[S_OR_B32_1]](s1), %bb.4
-  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, [[PHI1]](s1), %bb.2, [[DEF2]](s1), %bb.4
-  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:_(s32) = G_PHI [[INT2]](s32), %bb.4, [[PHI6]](s32), %bb.2, [[C]](s32), %bb.0
-  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:_(s32) = G_PHI [[C3]](s32), %bb.4, [[INT]](s32), %bb.2, [[C]](s32), %bb.0
-  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI4]](s1)
-  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[COPY6]](s1), %bb.0, [[S_OR_B32_]](s1), %bb.2, [[S_OR_B32_2]](s1), %bb.4
+  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:sreg_32(s1) = PHI [[DEF2]](s1), %bb.0, [[PHI1]](s1), %bb.2, [[DEF3]](s1), %bb.4
+  ; GFX10-NEXT:   [[PHI6:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, [[PHI6]](s1), %bb.2, [[S_OR_B32_1]](s1), %bb.4
+  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:_(s32) = G_PHI [[INT2]](s32), %bb.4, [[PHI7]](s32), %bb.2, [[C]](s32), %bb.0
+  ; GFX10-NEXT:   [[PHI8:%[0-9]+]]:_(s32) = G_PHI [[C3]](s32), %bb.4, [[INT]](s32), %bb.2, [[C]](s32), %bb.0
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI4]](s1)
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[PHI5]](s1)
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY [[PHI6]](s1)
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:sreg_32(s1) = COPY [[C5]](s1)
-  ; GFX10-NEXT:   [[S_ANDN2_B32_3:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY14]](s1), $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[S_AND_B32_3:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY15]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[S_OR_B32_3:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_3]](s1), [[S_AND_B32_3]](s1), implicit-def $scc
-  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_3]](s1)
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:sreg_32(s1) = COPY [[C5]](s1)
+  ; GFX10-NEXT:   [[S_ANDN2_B32_4:%[0-9]+]]:sreg_32(s1) = S_ANDN2_B32 [[COPY15]](s1), $exec_lo, implicit-def $scc
+  ; GFX10-NEXT:   [[S_AND_B32_4:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[COPY17]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[S_OR_B32_4:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_4]](s1), [[S_AND_B32_4]](s1), implicit-def $scc
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_4]](s1)
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY14]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.1
   bb.0:
     successors: %bb.7(0x80000000)
