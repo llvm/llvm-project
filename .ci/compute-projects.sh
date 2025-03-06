@@ -49,6 +49,13 @@ function compute-projects-to-test() {
         echo flang
       fi
     ;;
+    flang-rt)
+      # Flang-RT will be built whenever Flang is built
+      # Flang is not stable in Windows CI at the moment
+      if [[ $isForWindows == 0 ]]; then
+        echo flang
+      fi
+    ;;
     *)
       # Nothing to do
     ;;
