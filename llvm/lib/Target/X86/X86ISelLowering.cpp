@@ -42621,7 +42621,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       assert((SubOps.size() == 2 || SubOps.size() == 4) &&
              "Unexpected split ops");
       // Bail if we were permuting a widened vector.
-      if (SubOps[SubOps.size() - 1].isUndef())
+      if ((SubOps.size() == 2 && SubOps[1].isUndef()) ||
+          (SubOps.size() == 4 && SubOps[2].isUndef() && SubOps[3].isUndef()))
         return SDValue();
       // Bail if any subops would have folded into the concat.
       if (any_of(SubOps, [](SDValue Op) { return isShuffleFoldableLoad(Op); }))
