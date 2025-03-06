@@ -419,20 +419,20 @@ exit:
   ret void
 }
 
-define protected amdgpu_kernel void @waterfall(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
+define protected amdgpu_kernel void @trivial_uniform_waterfall(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_uniform_waterfall(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
-; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CURRENT-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP1]], 0
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[WORK_PEEL:.*]]
+; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[TMP0]], 0
+; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_PEEL]], label %[[EXIT:.*]], label %[[WORK_PEEL:.*]]
 ; CURRENT-CHECK:       [[WORK_PEEL]]:
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    br label %[[EXIT]]
 ; CURRENT-CHECK:       [[EXIT]]:
 ; CURRENT-CHECK-NEXT:    ret void
 ;
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_uniform_waterfall(
 ; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
 ; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
@@ -456,7 +456,7 @@ define protected amdgpu_kernel void @waterfall(ptr addrspace(1) %out) {
 ; PASS-CHECK:       [[EXIT]]:
 ; PASS-CHECK-NEXT:    ret void
 ;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @waterfall(
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_uniform_waterfall(
 ; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
 ; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -475,6 +475,86 @@ while:
 if:
   %first_active_id = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 0)
   %is_first_active_id = icmp eq i32 0, %first_active_id
+  br i1 %is_first_active_id, label %work, label %tail
+
+work:
+  store i32 5, ptr addrspace(1) %out
+  br label %tail
+
+tail:
+  %new_done = phi i1 [ true, %work ], [ false, %if ]
+  br label %while
+
+exit:
+  ret void
+}
+
+define protected amdgpu_kernel void @uniform_waterfall(ptr addrspace(1) %out, i32 %mymask) {
+; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @uniform_waterfall(
+; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]], i32 [[MYMASK:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-NEXT:  [[ENTRY:.*]]:
+; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
+; CURRENT-CHECK:       [[WHILE]]:
+; CURRENT-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[IS_FIRST_ACTIVE_ID:%.*]], %[[WHILE_BACKEDGE:.*]] ]
+; CURRENT-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
+; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[NOT_DONE]])
+; CURRENT-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP0]], 0
+; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[IF:.*]]
+; CURRENT-CHECK:       [[IF]]:
+; CURRENT-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[MYMASK]])
+; CURRENT-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID]] = icmp eq i32 [[MYMASK]], [[FIRST_ACTIVE_ID]]
+; CURRENT-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[WHILE_BACKEDGE]]
+; CURRENT-CHECK:       [[WORK]]:
+; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    br label %[[WHILE_BACKEDGE]]
+; CURRENT-CHECK:       [[WHILE_BACKEDGE]]:
+; CURRENT-CHECK-NEXT:    br label %[[WHILE]]
+; CURRENT-CHECK:       [[EXIT]]:
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define protected amdgpu_kernel void @uniform_waterfall(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[MYMASK:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
+; PASS-CHECK:       [[WHILE]]:
+; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[NEW_DONE:%.*]], %[[TAIL:.*]] ]
+; PASS-CHECK-NEXT:    [[NOT_DONE:%.*]] = xor i1 [[DONE]], true
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[NOT_DONE]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[NOT_DONE]], true
+; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
+; PASS-CHECK:       [[IF]]:
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[MYMASK]])
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[MYMASK]], [[MYMASK]]
+; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
+; PASS-CHECK:       [[WORK]]:
+; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    br label %[[TAIL]]
+; PASS-CHECK:       [[TAIL]]:
+; PASS-CHECK-NEXT:    [[NEW_DONE]] = phi i1 [ true, %[[WORK]] ], [ false, %[[IF]] ]
+; PASS-CHECK-NEXT:    br label %[[WHILE]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define protected amdgpu_kernel void @uniform_waterfall(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], i32 [[MYMASK:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
+; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+entry:
+  br label %while
+
+while:
+  %done = phi i1 [ false, %entry ], [ %new_done, %tail ]
+  %not_done = xor i1 %done, true
+  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %not_done)
+  %is_done = icmp eq i64 %ballot, 0
+  br i1 %is_done, label %exit, label %if
+
+if:
+  %first_active_id = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 %mymask)
+  %is_first_active_id = icmp eq i32 %mymask, %first_active_id
   br i1 %is_first_active_id, label %work, label %tail
 
 work:
