@@ -9,6 +9,7 @@
 // <forward_list>
 
 // template <class Compare> void merge(forward_list& x, Compare comp);
+// If (addressof(x) == this) does nothing; otherwise ...
 
 #include <forward_list>
 #include <iterator>
@@ -91,7 +92,6 @@ int main(int, char**) {
     C c3(std::begin(t3), std::end(t3));
     assert(c1 == c3);
   }
-
 #if TEST_STD_VER >= 11
   { // Test with a different allocator.
     typedef int T;
@@ -109,6 +109,13 @@ int main(int, char**) {
     assert(c1 == c3);
   }
 #endif
+
+  { // Make sure self-merging does nothing.
+    int a[] = {5, 4, 3, 2, 1};
+    std::forward_list<int> c(a, a + sizeof(a) / sizeof(a[0]));
+    c.merge(c, std::greater<int>());
+    assert((c == std::forward_list<int>(a, a + sizeof(a) / sizeof(a[0]))));
+  }
 
   return 0;
 }

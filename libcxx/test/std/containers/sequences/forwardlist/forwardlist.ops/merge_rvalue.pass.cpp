@@ -11,6 +11,7 @@
 // <forward_list>
 
 // void merge(forward_list&& x);
+// If (addressof(x) == this) does nothing; otherwise ...
 
 #include <forward_list>
 #include <functional>
@@ -100,6 +101,13 @@ int main(int, char**) {
 
     C c3(std::begin(t3), std::end(t3));
     assert(c1 == c3);
+  }
+
+  { // Make sure self-merging does nothing.
+    int a[] = {1, 2, 3, 4, 5};
+    std::forward_list<int> c(a, a + sizeof(a) / sizeof(a[0]));
+    c.merge(std::move(c));
+    assert((c == std::forward_list<int>(a, a + sizeof(a) / sizeof(a[0]))));
   }
 
   return 0;
