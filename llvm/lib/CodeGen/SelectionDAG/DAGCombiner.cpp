@@ -21363,42 +21363,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
   // must not be zext, volatile, indexed, and they must be consecutive.
   BaseIndexOffset LdBasePtr;
 
-  // Check if a call exists in the store chain.
-  auto HasCallInLdStChain = [](SDNode *Load, SDNode *Store) {
-    SmallPtrSet<const SDNode *, 32> Visited;
-    SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
-    Worklist.emplace_back(Store->getOperand(0).getNode(), false);
-
-    while (!Worklist.empty()) {
-      auto [Node, FoundCall] = Worklist.pop_back_val();
-      if (!Visited.insert(Node).second || Node->getNumOperands() == 0)
-        continue;
-
-      switch (Node->getOpcode()) {
-      case ISD::CALLSEQ_END:
-        Worklist.emplace_back(Node->getOperand(0).getNode(), true);
-        break;
-      case ISD::TokenFactor:
-        for (SDValue Op : Node->ops())
-          Worklist.emplace_back(Op.getNode(), FoundCall);
-        break;
-      case ISD::LOAD:
-        if (Node == Load)
-          return FoundCall;
-        [[fallthrough]];
-      default:
-        if (Node->getNumOperands() > 0)
-          Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
-        break;
-      }
-    }
-    return false;
-  };
-
-  auto StIt = StoreNodes.begin();
-  unsigned i = 0;
-  while (StIt != StoreNodes.end() && i++ < NumConsecutiveStores) {
-    StoreSDNode *St = cast<StoreSDNode>(StIt->MemNode);
+  for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
+    StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
     SDValue Val = peekThroughBitcasts(St->getValue());
     LoadSDNode *Ld = cast<LoadSDNode>(Val);
 
@@ -21414,14 +21380,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       LdBasePtr = LdPtr;
     }
 
-    // Check if there is a call in the load/store chain.
-    if (!TLI.shouldMergeStoreOfLoadsOverCall(MemVT) &&
-        HasCallInLdStChain(Ld, St)) {
-      StIt = StoreNodes.erase(StIt);
-    } else {
-      LoadNodes.push_back(MemOpLink(Ld, LdOffset));
-      ++StIt;
-    }
+    // We found a potential memory operand to merge.
+    LoadNodes.push_back(MemOpLink(Ld, LdOffset));
   }
 
   while (NumConsecutiveStores >= 2 && LoadNodes.size() >= 2) {
@@ -21591,6 +21551,56 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     } else {
       unsigned SizeInBits = NumElem * ElementSizeBytes * 8;
       JointMemOpVT = EVT::getIntegerVT(Context, SizeInBits);
+    }
+
+    auto HasCallInLdStChain = [](SmallVectorImpl<MemOpLink> &StoreNodes,
+                                 SmallVectorImpl<MemOpLink> &LoadNodes,
+                                 unsigned NumStores) {
+      for (unsigned i = 0; i < NumStores; ++i) {
+        StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
+        SDValue Val = peekThroughBitcasts(St->getValue());
+        LoadSDNode *Ld = cast<LoadSDNode>(Val);
+        assert(Ld == LoadNodes[i].MemNode && "Load and store mismatch");
+
+        SmallPtrSet<const SDNode *, 32> Visited;
+        SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
+        Worklist.emplace_back(St->getOperand(0).getNode(), false);
+
+        while (!Worklist.empty()) {
+          auto [Node, FoundCall] = Worklist.pop_back_val();
+          if (!Visited.insert(Node).second || Node->getNumOperands() == 0)
+            continue;
+
+          switch (Node->getOpcode()) {
+          case ISD::CALLSEQ_END:
+            Worklist.emplace_back(Node->getOperand(0).getNode(), true);
+            break;
+          case ISD::TokenFactor:
+            for (SDValue Op : Node->ops())
+              Worklist.emplace_back(Op.getNode(), FoundCall);
+            break;
+          case ISD::LOAD:
+            if (Node == Ld)
+              return FoundCall;
+            [[fallthrough]];
+          default:
+            if (Node->getNumOperands() > 0)
+              Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
+            break;
+          }
+        }
+        return false;
+      }
+      return false;
+    };
+
+    // Check if there is a call in the load/store chain.
+    if (!TLI.shouldMergeStoreOfLoadsOverCall(JointMemOpVT) &&
+        HasCallInLdStChain(StoreNodes, LoadNodes, NumElem)) {
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
+      LoadNodes.erase(LoadNodes.begin(), LoadNodes.begin() + NumElem);
+      NumConsecutiveStores -= NumElem;
+      continue;
     }
 
     SDLoc LoadDL(LoadNodes[0].MemNode);
