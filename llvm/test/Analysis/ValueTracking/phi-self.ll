@@ -3,143 +3,97 @@
 
 ; Test `%r` can be replaced by `%nonpoison`.
 
-define i64 @other_noundef() {
-; CHECK-LABEL: define i64 @other_noundef() {
+define i32 @other_noundef() {
+; CHECK-LABEL: define i32 @other_noundef() {
 ; CHECK-NEXT:  [[START:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[R]], %[[BB0:.*]] ], [ [[R]], %[[BB1:.*]] ], [ [[R]], %[[BB2:.*]] ], [ [[R]], %[[BB:.*]] ], [ [[I:%.*]], %[[BACK_TO_LOOP:.*]] ], [ 0, %[[START]] ]
-; CHECK-NEXT:    [[I]] = call i64 @opaque()
-; CHECK-NEXT:    switch i64 [[I]], label %[[EXIT0:.*]] [
-; CHECK-NEXT:      i64 -1, label %[[EXIT1:.*]]
-; CHECK-NEXT:      i64 2, label %[[BACK_TO_LOOP]]
-; CHECK-NEXT:      i64 0, label %[[BB]]
+; CHECK-NEXT:    [[NONPOISON:%.*]] = phi i32 [ 0, %[[START]] ], [ [[NONPOISON]], %[[BB0:.*]] ], [ 1, %[[BB1:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
+; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT0:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB0]]
+; CHECK-NEXT:      i32 1, label %[[BB1]]
+; CHECK-NEXT:      i32 2, label %[[EXIT1:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[EXIT0]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    ret i64 [[R]]
-; CHECK:       [[BACK_TO_LOOP]]:
-; CHECK-NEXT:    br label %[[LOOP]]
-; CHECK:       [[BB]]:
-; CHECK-NEXT:    switch i64 [[R]], label %[[LOOP]] [
-; CHECK-NEXT:      i64 0, label %[[BB0]]
-; CHECK-NEXT:      i64 1, label %[[BB1]]
-; CHECK-NEXT:      i64 2, label %[[BB2]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ret i32 [[NONPOISON]]
 ; CHECK:       [[BB0]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[LOOP]]
-; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 start:
   br label %loop
 
-loop:                                             ; preds = %bb2, %bb1, %bb0, %bb, %back_to_loop, %start
-  %nonpoison = phi i64 [ %nonpoison, %bb0 ], [ %nonpoison, %bb1 ], [ %nonpoison, %bb2 ], [ %nonpoison, %bb ], [ %i, %back_to_loop ], [ 0, %start ]
-  %i = call i64 @opaque()
-  switch i64 %i, label %exit0 [
-  i64 -1, label %exit1
-  i64 2, label %back_to_loop
-  i64 0, label %bb
+loop:                                             ; preds = %bb1, %bb0, %start
+  %nonpoison = phi i32 [ 0, %start ], [ %nonpoison, %bb0 ], [ 1, %bb1 ]
+  %i = call i32 @opaque()
+  switch i32 %i, label %exit0 [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %exit1
   ]
 
 exit0:                                            ; preds = %loop
   br label %exit1
 
 exit1:                                            ; preds = %exit0, %loop
-  %r = phi i64 [ %nonpoison, %loop ], [ undef, %exit0 ]
-  ret i64 %r
+  %r = phi i32 [ %nonpoison, %loop ], [ undef, %exit0 ]
+  ret i32 %r
 
-back_to_loop:                                     ; preds = %loop
+bb0:                                              ; preds = %loop
   br label %loop
 
-bb:                                               ; preds = %loop
-  switch i64 %nonpoison, label %loop [
-  i64 0, label %bb0
-  i64 1, label %bb1
-  i64 2, label %bb2
-  ]
-
-bb0:                                              ; preds = %bb
-  br label %loop
-
-bb1:                                              ; preds = %bb
-  br label %loop
-
-bb2:                                              ; preds = %bb
+bb1:                                              ; preds = %loop
   br label %loop
 }
 
-define i64 @other_poison() {
-; CHECK-LABEL: define i64 @other_poison() {
+define i32 @other_poison() {
+; CHECK-LABEL: define i32 @other_poison() {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = call i64 @opaque()
-; CHECK-NEXT:    switch i64 [[I]], label %[[EXIT0:.*]] [
-; CHECK-NEXT:      i64 -1, label %[[EXIT1:.*]]
-; CHECK-NEXT:      i64 2, label %[[BACK_TO_LOOP:.*]]
-; CHECK-NEXT:      i64 0, label %[[BB:.*]]
+; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
+; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT0:.*]] [
+; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
+; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
+; CHECK-NEXT:      i32 2, label %[[EXIT1:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[EXIT0]]:
 ; CHECK-NEXT:    br label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    ret i64 0
-; CHECK:       [[BACK_TO_LOOP]]:
-; CHECK-NEXT:    br label %[[LOOP]]
-; CHECK:       [[BB]]:
-; CHECK-NEXT:    switch i64 0, label %[[LOOP]] [
-; CHECK-NEXT:      i64 0, label %[[BB0:.*]]
-; CHECK-NEXT:      i64 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i64 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[BB0]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[LOOP]]
-; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 start:
   br label %loop
 
-loop:                                             ; preds = %bb2, %bb1, %bb0, %bb, %back_to_loop, %start
-  %maypoison = phi i64 [ %maypoison, %bb0 ], [ %maypoison, %bb1 ], [ %maypoison, %bb2 ], [ %maypoison, %bb ], [ poison, %back_to_loop ], [ 0, %start ]
-  %i = call i64 @opaque()
-  switch i64 %i, label %exit0 [
-  i64 -1, label %exit1
-  i64 2, label %back_to_loop
-  i64 0, label %bb
+loop:                                             ; preds = %bb1, %bb0, %start
+  %maypoison = phi i32 [ 0, %start ], [ %maypoison, %bb0 ], [ poison, %bb1 ]
+  %i = call i32 @opaque()
+  switch i32 %i, label %exit0 [
+  i32 0, label %bb0
+  i32 1, label %bb1
+  i32 2, label %exit1
   ]
 
 exit0:                                            ; preds = %loop
   br label %exit1
 
 exit1:                                            ; preds = %exit0, %loop
-  %r = phi i64 [ %maypoison, %loop ], [ undef, %exit0 ]
-  ret i64 %r
+  %r = phi i32 [ %maypoison, %loop ], [ undef, %exit0 ]
+  ret i32 %r
 
-back_to_loop:                                     ; preds = %loop
+bb0:                                              ; preds = %loop
   br label %loop
 
-bb:                                               ; preds = %loop
-  switch i64 %maypoison, label %loop [
-  i64 0, label %bb0
-  i64 1, label %bb1
-  i64 2, label %bb2
-  ]
-
-bb0:                                              ; preds = %bb
-  br label %loop
-
-bb1:                                              ; preds = %bb
-  br label %loop
-
-bb2:                                              ; preds = %bb
+bb1:                                              ; preds = %loop
   br label %loop
 }
 
-declare i64 @opaque()
+declare i32 @opaque()
