@@ -888,7 +888,7 @@ LogicalResult tosa::RFFT2dOp::verify() {
   // Output width dimension expected to be input_width / 2 + 1
   const int64_t outputWidth = outputType.getDimSize(2);
   if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
-      (outputWidth - 1) * 2 != width)
+      (outputWidth != (width / 2) + 1))
     return emitOpError(
                "expected output width to be equal to input_width / 2 + 1, got ")
            << outputWidth;
