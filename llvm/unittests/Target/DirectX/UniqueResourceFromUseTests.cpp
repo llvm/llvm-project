@@ -307,7 +307,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   ASSERT_TRUE(M) << "Bad assembly?";
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
-  const DXILResourceCounterDirectionMap &DCDM = MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
     if (F.getName() != "a.func") {

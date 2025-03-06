@@ -418,18 +418,21 @@ enum ResourceCounterDirection {
 };
 
 class DXILResourceCounterDirectionMap {
-  std::vector<std::pair<dxil::ResourceBindingInfo, ResourceCounterDirection>> CounterDirections;
+  std::vector<std::pair<dxil::ResourceBindingInfo, ResourceCounterDirection>>
+      CounterDirections;
 
 public:
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
 
-   void populate(Module &M, ModuleAnalysisManager &AM);
+  void populate(Module &M, ModuleAnalysisManager &AM);
 
-   ResourceCounterDirection operator[](const dxil::ResourceBindingInfo &Info) const {
-    auto Lower = std::lower_bound(CounterDirections.begin(), CounterDirections.end(), std::pair{Info, ResourceCounterDirection::Unknown},  [](auto lhs, auto rhs){
-                                  return lhs.first  < rhs.first;
-    });
+  ResourceCounterDirection
+  operator[](const dxil::ResourceBindingInfo &Info) const {
+    auto Lower = std::lower_bound(
+        CounterDirections.begin(), CounterDirections.end(),
+        std::pair{Info, ResourceCounterDirection::Unknown},
+        [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
 
     if (Lower == CounterDirections.end()) {
       return ResourceCounterDirection::Unknown;
@@ -440,7 +443,7 @@ public:
     }
 
     return Lower->second;
-   }
+  }
 };
 
 class DXILResourceCounterDirectionAnalysis
@@ -468,8 +471,13 @@ public:
   static char ID;
   DXILResourceCounterDirectionWrapperPass();
 
-  DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() { return DRCDM; }
-  const DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() const { return DRCDM; }
+  DXILResourceCounterDirectionMap &getResourceCounterDirectionMap() {
+    return DRCDM;
+  }
+  const DXILResourceCounterDirectionMap &
+  getResourceCounterDirectionMap() const {
+    return DRCDM;
+  }
 };
 
 ModulePass *createDXILResourceCounterDirectionWrapperPassPass();
