@@ -371,6 +371,21 @@ void SPIRVModuleAnalysis::visitDecl(
       MAI.setSkipEmission(NextInstr);
       NextInstr = NextInstr->getNextNode();
     }
+  } else if (Opcode == SPIRV::OpCompositeConstruct) {
+    GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
+    const MachineInstr *NextInstr = MI.getNextNode();
+    while (NextInstr && NextInstr->getOpcode() ==
+                            SPIRV::OpCompositeConstructContinuedINTEL) {
+      Register Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
+      // For the case with the global variable,
+      // OpConstantCompositeContinuedINTEL does not go directly after
+      // OpConstantComposite, but they are "split" by the OpVariable
+      // instruction. My guess is that the order can be fixed somewhere here,
+      // but not sure. MAI.setRegisterAlias(MF,
+      // NextInstr->getOperand(0).getReg(), Tmp);
+      // MAI.setSkipEmission(NextInstr);
+      NextInstr = NextInstr->getNextNode();
+    }
   } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
              TII->isInlineAsmDefInstr(MI)) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
