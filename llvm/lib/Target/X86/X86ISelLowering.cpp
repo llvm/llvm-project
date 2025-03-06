@@ -42612,8 +42612,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     SmallVector<int, 32> Mask;
     SmallVector<SDValue, 2> SrcOps, SubOps;
     SDValue Src = peekThroughBitcasts(N.getOperand(1));
-    if ((Subtarget.hasVLX() ||
-         (VT.is512BitVector() && Subtarget.hasAVX512())) &&
+    if ((Subtarget.hasVLX() || VT.is512BitVector()) &&
         getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask) &&
         collectConcatOps(Src.getNode(), SubOps, DAG)) {
       assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
