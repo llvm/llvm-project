@@ -673,8 +673,9 @@ LogicalResult ModuleImport::convertDataLayout() {
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
-                      builder.getStringAttr(llvmModule->getTargetTriple()));
+  mlirModule->setAttr(
+      LLVM::LLVMDialect::getTargetTripleAttrName(),
+      builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
