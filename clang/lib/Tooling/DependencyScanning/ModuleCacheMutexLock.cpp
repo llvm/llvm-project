@@ -1,5 +1,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleCacheMutexLock.h"
 
+#include <mutex>
+
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
