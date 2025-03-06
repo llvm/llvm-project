@@ -1918,9 +1918,12 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
 
 void DeclPrinter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
   if (!D->isInvalidDecl()) {
-    Out << "#pragma acc declare ";
-    OpenACCClausePrinter Printer(Out, Policy);
-    Printer.VisitClauseList(D->clauses());
+    Out << "#pragma acc declare";
+    if (!D->clauses().empty()) {
+      Out << ' ';
+      OpenACCClausePrinter Printer(Out, Policy);
+      Printer.VisitClauseList(D->clauses());
+    }
   }
 }
 void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
@@ -1941,7 +1944,10 @@ void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
       Out << ")";
     }
 
-    OpenACCClausePrinter Printer(Out, Policy);
-    Printer.VisitClauseList(D->clauses());
+    if (!D->clauses().empty()) {
+      Out << ' ';
+      OpenACCClausePrinter Printer(Out, Policy);
+      Printer.VisitClauseList(D->clauses());
+    }
   }
 }
