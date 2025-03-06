@@ -2138,6 +2138,8 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_constructor)
+      << D->getSourceRange();
 
   D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
 }
@@ -2147,6 +2149,7 @@ static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
 
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
 }
@@ -7726,17 +7729,6 @@ void Sema::ProcessDeclAttributeList(
         << (D->hasAttr<ConstructorAttr>() ? "constructors" : "destructors");
     D->setInvalidDecl();
   }
-
-  // Warn on global constructors and destructors created by attributes.
-  if (D->hasAttr<ConstructorAttr>() &&
-      !getDiagnostics().isIgnored(diag::warn_global_constructor,
-                                  D->getLocation()))
-    Diag(D->getLocation(), diag::warn_global_constructor)
-        << D->getSourceRange();
-  if (D->hasAttr<DestructorAttr>() &&
-      !getDiagnostics().isIgnored(diag::warn_global_destructor,
-                                  D->getLocation()))
-    Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
 
   // Do this check after processing D's attributes because the attribute
   // objc_method_family can change whether the given method is in the init
