@@ -445,7 +445,7 @@ Algorithms + Implementation Details
 Fixed-point Arithmetics
 =======================
 
-* :doc:`../stdfix.rst`
+* :doc:`../stdfix`
 
 References
 ==========
