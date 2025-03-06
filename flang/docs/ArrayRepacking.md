@@ -298,6 +298,16 @@ So the most conservative implementation of the predicate generator may be to alw
 
 [TBD] define `TempCopyIsSafe` attribute interface so that OpenACC/OpenMP dialects can provide their specific attributes, which can be used to generate static/runtime checks for safety of the temporary copy in particular context.
 
+#### Alternatives/additions to the attribute interface
+
+The following ideas were expressed during the review, and they are worth considering.
+
+| |
+| - |
+| For OpenACC/OpenMP runtime to be able to detect/handle the presence of the original array and the temporary copy in the device data environment, descriptor flags/properties might be used to mark the copy's descriptor as such and provide a link to the original array (or its descriptor). It may be problematic to maintain such flags/properties, in general, because of the repacking that may happen, especially, in C code, where the flags/properties might be dropped. Moreover, a copy array might be repacked into another copy array multiple times, so a descriptor might need to keep a chain of associated arrays and it will have to be maintained as well.<br>An alternative to tracking the original-copy "association" might be compiler generated code notifying the OpenACC/OpenMP offload runtime about the copy being created/deleted for the original array, so that the offload runtime can disallow repacking or report an error when the repacking is definitely causing the program to behave incorrectly. The compiler may report the "association" to the runtime through callbacks provided by `TempCopyIsSafe` attribute interface, and this will require proper bookkeeping in the runtime specific to the array repacking. |
+| There may be some uses for an API allowing to statically determine whether a given descriptor (SSA value) represent the repacked copy of the original array. For example, it may be in the form of an API in the OpenACC `MappableType` interface. This can be done with some limitations for the values produced by `fir.pack_array` that are dynamic (i.e. the copy is created conditionally based on the runtime checks). |
+| The compiler can also try to statically determine the conditions where the array repacking might be unsafe, e.g. a presence of memory barriers or operations carrying implicit memory barriers, presence of atomic operations between the `pack/unpack` operations may indicate non-trivial handling of the array memory. Such checks may result in the removal of `pack/unpack` operations, and they can probably be done in a mandatory pass (not an optimization pass). At the same time, the result of the checks may depend on other optimization passes (e.g. inlining), so the behavior may be inconsistent between different optimization levels. |
+
 ### Lowering Fortran to FIR
 
 Fortran code:
