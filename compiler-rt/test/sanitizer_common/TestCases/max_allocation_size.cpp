@@ -46,6 +46,9 @@
 // Symbolizer needs to allocated memory when reporting.
 // UNSUPPORTED: internal_symbolizer
 
+// The llvm-symbolizer on AIX can not symbolize the pc to asan's source.
+// XFAIL: target={{.*aix.*}}
+
 #include <assert.h>
 #include <errno.h>
 #include <limits>

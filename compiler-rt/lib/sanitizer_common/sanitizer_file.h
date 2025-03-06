@@ -79,7 +79,8 @@ bool SupportsColoredOutput(fd_t fd);
 const char *GetPwd();
 bool FileExists(const char *filename);
 bool DirExists(const char *path);
-char *FindPathToBinary(const char *name);
+char *FindPathToBinaryOrLibrary(const char *name,
+                                const char *env_string = "PATH");
 bool IsPathSeparator(const char c);
 bool IsAbsolutePath(const char *path);
 // Returns true on success, false on failure.

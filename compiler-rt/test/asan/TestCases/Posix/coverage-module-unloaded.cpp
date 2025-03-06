@@ -11,6 +11,9 @@
 // XFAIL: android
 // UNSUPPORTED: ios
 
+// FIXME: support -fsanitize-coverage on AIX
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <dlfcn.h>
 #include <stdint.h>

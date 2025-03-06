@@ -3,6 +3,9 @@
 // Older versions of Android do not have certain posix_spawn* functions.
 // UNSUPPORTED: android
 
+// AIX reports EINVAL for the posix_spawnp() even without asan.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <spawn.h>
 #include <stdio.h>

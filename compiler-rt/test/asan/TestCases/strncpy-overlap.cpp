@@ -28,6 +28,9 @@
 
 // UNSUPPORTED: android
 
+// AIX does not intercept strncpy.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <string.h>
 
 

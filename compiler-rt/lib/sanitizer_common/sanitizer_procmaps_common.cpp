@@ -12,7 +12,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||                \
-    SANITIZER_SOLARIS
+    SANITIZER_SOLARIS || SANITIZER_AIX
 
 #include "sanitizer_common.h"
 #include "sanitizer_placement_new.h"
@@ -140,6 +140,11 @@ void MemoryMappingLayout::DumpListOfModules(
     uptr base_address = (i ? segment.start : 0) - segment.offset;
     LoadedModule cur_module;
     cur_module.set(cur_name, base_address);
+#if SANITIZER_AIX
+    // Instructions in AIX shared libraries don't start 0x0.
+    if (segment.IsShared() && segment.IsExecutable())
+      cur_module.set_instr_start(InstructionStart);
+#endif
     segment.AddAddressRanges(&cur_module);
     modules->push_back(cur_module);
   }

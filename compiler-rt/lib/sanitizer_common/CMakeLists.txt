@@ -2,6 +2,7 @@
 # These components are shared between AddressSanitizer and ThreadSanitizer.
 
 set(SANITIZER_SOURCES_NOTERMINATION
+  sanitizer_aix.cpp
   sanitizer_allocator.cpp
   sanitizer_common.cpp
   sanitizer_deadlock_detector1.cpp
@@ -25,6 +26,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
   sanitizer_printf.cpp
+  sanitizer_procmaps_aix.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
@@ -95,6 +97,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_thread_history.cpp
+  sanitizer_unwind_aix.cpp
   sanitizer_unwind_linux_libcdep.cpp
   sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
@@ -107,6 +110,7 @@ set(SANITIZER_IMPL_HEADERS
   sancov_flags.h
   sancov_flags.inc
   sanitizer_addrhashmap.h
+  sanitizer_aix.h
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
@@ -238,6 +242,11 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=570
                SANITIZER_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                SANITIZER_CFLAGS)
+
+# Suppress -Watomic-alignment warnings by not treating them as errors
+if (CMAKE_SYSTEM_NAME MATCHES "AIX")
+  list(APPEND SANITIZER_CFLAGS "-Wno-error=atomic-alignment")
+endif()
 
 if(APPLE)
   set(OS_OPTION OS ${SANITIZER_COMMON_SUPPORTED_OS})

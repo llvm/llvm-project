@@ -73,7 +73,9 @@ static void ioctl_table_fill() {
   _(TIOCNXCL, NONE, 0);
   _(TIOCOUTQ, WRITE, sizeof(int));
   _(TIOCPKT, READ, sizeof(int));
+#if !SANITIZER_AIX
   _(TIOCSCTTY, NONE, 0);
+#endif
   _(TIOCSETD, READ, sizeof(int));
   _(TIOCSPGRP, READ, pid_t_sz);
   _(TIOCSTI, READ, sizeof(char));

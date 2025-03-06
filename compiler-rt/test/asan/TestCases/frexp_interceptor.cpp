@@ -2,6 +2,9 @@
 
 // Test the frexp() interceptor.
 
+// AIX does not intercept frexp
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

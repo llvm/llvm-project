@@ -4,6 +4,10 @@
 // Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
 // XFAIL: !compiler-rt-optimized
 
+// For this case, do_another_bad_thing(which calls malloc) is compiled to a shared library,
+// and intercepting symbols in a shared library is still unsupported.
+// UNSUPPORTED: target={{.*aix.*}}
+
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -std=c++11 -fPIC -shared -o %t-so.so
 // RUN: %clangxx -O0 %s -std=c++11 -c -o %t.o
 // RUN: %clangxx_asan -O0 %t.o %libdl -o %t
@@ -83,27 +87,27 @@ int main(int argc, char *argv[]) {
   // After this line ASan is activated and starts detecting errors.
   void *fn = dlsym(dso, "do_another_bad_thing");
   if (!fn) {
-    fprintf(stderr, "dlsym failed: %s\n", dlerror());
-    return 1;
+	  fprintf(stderr, "dlsym failed: %s\n", dlerror());
+	  return 1;
   }
 
   // After activation: redzones.
   for (int i = 1; i < HoneyPotSize; ++i) {
-    honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
-    test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, true);
+	  honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
+	  test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, true);
   }
   {
-    char *p = (char *)malloc(HoneyPotBlockSize);
-    test_malloc_shadow(p, HoneyPotBlockSize, true);
-    free(p);
+	  char *p = (char *)malloc(HoneyPotBlockSize);
+	  test_malloc_shadow(p, HoneyPotBlockSize, true);
+	  free(p);
   }
   for (int i = 1; i < HoneyPotSize; ++i)
-    free(honeyPot[i]);
+	  free(honeyPot[i]);
 
   // Pre-existing allocations got redzones, too.
   for (size_t sz = 1; sz < nPtrs; ++sz) {
-    test_malloc_shadow(ptrs[sz], sz, true);
-    free(ptrs[sz]);
+	  test_malloc_shadow(ptrs[sz], sz, true);
+	  free(ptrs[sz]);
   }
 
   // Test that ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 has effect.
@@ -116,7 +120,7 @@ int main(int argc, char *argv[]) {
   // CHECK: READ of size 1
   // CHECK: {{#0 .* in do_another_bad_thing}}
   // CHECK: is located 5 bytes after 100-byte region
-  // CHECK: in do_another_bad_thing
+  // CHECK: in {{do_another_bad_thing|.do_another_bad_thing}}
 
   return 0;
 }

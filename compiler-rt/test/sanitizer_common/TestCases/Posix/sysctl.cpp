@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: linux, target={{.*solaris.*}}
+// AIX does not have sys/sysctl.h
+// UNSUPPORTED: linux, target={{.*(solaris|aix).*}}
 
 #include <sys/param.h>
 #include <sys/types.h>

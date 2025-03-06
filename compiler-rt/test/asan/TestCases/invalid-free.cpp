@@ -1,9 +1,12 @@
 // RUN: %clangxx_asan -O0 %s -o %t
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MALLOC-CTX
+// RUN: %if target={{.*aix.*}} %{ %env_asan_opts=enable_unmalloced_free_check=1 %} not %run %t 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK --check-prefix=MALLOC-CTX
 
 // Also works if no malloc context is available.
-// RUN: %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=0 not %run %t 2>&1 | FileCheck %s
-// RUN: %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=1 not %run %t 2>&1 | FileCheck %s
+// RUN: %if target={{.*aix.*}} %{ %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=0:enable_unmalloced_free_check=1 %} %else \
+// RUN:   %{ %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=0 %} not %run %t 2>&1 | FileCheck %s
+// RUN: %if target={{.*aix.*}} %{ %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=1:enable_unmalloced_free_check=1 %} %else \
+// RUN:  %{ %env_asan_opts=malloc_context_size=0:fast_unwind_on_malloc=1 %} not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
 #include <stdlib.h>

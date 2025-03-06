@@ -17,6 +17,9 @@
 // THUMB starts background thead only for Asan.
 // XFAIL: target=thumb{{.*}} && !asan
 
+// AIX does not use background thread.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>

@@ -28,7 +28,7 @@ int main() {
 #  define PTR_FMT "0x%08x"
 # endif
 // Solaris libc omits the leading 0x.
-#elif defined(__sun__) && defined(__svr4__)
+#elif (defined(__sun__) && defined(__svr4__)) || defined(_AIX)
 # define PTR_FMT "0x%p"
 #else
 # define PTR_FMT "%p"

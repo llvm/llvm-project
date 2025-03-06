@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: darwin, target={{.*(linux|solaris).*}}
+// AIX does not have stringlist.h.
+// UNSUPPORTED: darwin, target={{.*(linux|solaris|aix).*}}
 
 #include <assert.h>
 #include <errno.h>

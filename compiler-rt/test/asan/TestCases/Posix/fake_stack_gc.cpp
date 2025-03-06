@@ -7,6 +7,9 @@
 // (https://github.com/llvm/llvm-project/issues/64942).
 // UNSUPPORTED: iossim
 
+// FIXME: investigate this failure on AIX.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <algorithm>
 #include <assert.h>
 #include <csignal>

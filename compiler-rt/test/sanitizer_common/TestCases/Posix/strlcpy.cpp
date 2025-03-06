@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 
-// UNSUPPORTED: target={{.*linux.*}}
+// AIX does not define strlcpy.
+// UNSUPPORTED: target={{.*(linux|aix).*}}
 
 #include <stdio.h>
 #include <stdlib.h>

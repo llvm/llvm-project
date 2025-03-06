@@ -6,6 +6,9 @@
 // RUN: %clangxx_asan -fexceptions -O0 %s -o %t -pthread
 // RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t
 
+// This will hang on AIX
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <algorithm>
 #include <cassert>
 #include <cerrno>

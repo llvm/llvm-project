@@ -6,6 +6,9 @@
 // REQUIRES: compiler-rt-optimized
 // REQUIRES: stable-runtime
 
+// AIX does not intercept strncpy.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <string.h>
 #include <stdlib.h>
 
