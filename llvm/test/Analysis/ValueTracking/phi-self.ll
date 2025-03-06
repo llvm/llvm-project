@@ -3,12 +3,13 @@
 
 ; Test `%r` can be replaced by `%nonpoison`.
 
-define i32 @other_noundef() {
-; CHECK-LABEL: define i32 @other_noundef() {
+define i32 @other_noundef(i32 noundef %arg) {
+; CHECK-LABEL: define i32 @other_noundef(
+; CHECK-SAME: i32 noundef [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[START:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[NONPOISON:%.*]] = phi i32 [ 0, %[[START]] ], [ [[NONPOISON]], %[[BB0:.*]] ], [ 1, %[[BB1:.*]] ]
+; CHECK-NEXT:    [[NONPOISON:%.*]] = phi i32 [ 0, %[[START]] ], [ [[NONPOISON]], %[[BB0:.*]] ], [ [[ARG]], %[[BB1:.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
 ; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[BB0]]
@@ -25,7 +26,7 @@ start:
   br label %loop
 
 loop:
-  %nonpoison = phi i32 [ 0, %start ], [ %nonpoison, %bb0 ], [ 1, %bb1 ]
+  %nonpoison = phi i32 [ 0, %start ], [ %nonpoison, %bb0 ], [ %arg, %bb1 ]
   %i = call i32 @opaque()
   switch i32 %i, label %exit [
   i32 0, label %bb0
@@ -43,18 +44,21 @@ bb1:
   br label %loop
 }
 
-define i32 @other_poison() {
-; CHECK-LABEL: define i32 @other_poison() {
-; CHECK-NEXT:  [[START:.*:]]
+define i32 @other_poison(i32 %arg) {
+; CHECK-LABEL: define i32 @other_poison(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[START:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[MAYPOISON:%.*]] = phi i32 [ 0, %[[START]] ], [ [[MAYPOISON]], %[[BB0:.*]] ], [ [[ARG]], %[[BB1:.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @opaque()
 ; CHECK-NEXT:    switch i32 [[I]], label %[[EXIT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[BB0:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
+; CHECK-NEXT:      i32 0, label %[[BB0]]
+; CHECK-NEXT:      i32 1, label %[[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[R:%.*]] = freeze i32 [[MAYPOISON]]
+; CHECK-NEXT:    ret i32 [[R]]
 ; CHECK:       [[BB0]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[BB1]]:
@@ -64,7 +68,7 @@ start:
   br label %loop
 
 loop:
-  %maypoison = phi i32 [ 0, %start ], [ %maypoison, %bb0 ], [ poison, %bb1 ]
+  %maypoison = phi i32 [ 0, %start ], [ %maypoison, %bb0 ], [ %arg, %bb1 ]
   %i = call i32 @opaque()
   switch i32 %i, label %exit [
   i32 0, label %bb0
