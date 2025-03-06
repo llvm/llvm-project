@@ -3600,6 +3600,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":DLTIDialect",
         ":DialectUtils",
+        ":FuncDialect",
         ":FuncTransforms",
         ":IR",
         ":LinalgDialect",
