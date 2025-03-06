@@ -33,15 +33,15 @@ static_assert(std::is_same<std::decay<id>::type, id>::value, "");
 static_assert(std::is_same<std::decay<I>::type, I>::value, "");
 static_assert(std::is_same<std::decay<id(&)[5]>::type, id*>::value, "");
 
-// __libcpp_is_referenceable
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<id>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<id*>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<id&>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<id&&>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<I>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<I*>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<I&>::value, "");
-LIBCPP_STATIC_ASSERT(std::__libcpp_is_referenceable<I&&>::value, "");
+// __is_referenceable_v
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id*>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id&>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id&&>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I*>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I&>, "");
+LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I&&>, "");
 
 // remove_all_extents
 static_assert(std::is_same<std::remove_all_extents<id>::type, id>::value, "");
