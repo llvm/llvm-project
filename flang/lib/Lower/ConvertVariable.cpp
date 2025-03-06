@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -1985,22 +1986,6 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                       replace);
 }
 
-static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
-  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  if (cudaAttr) {
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
-      return kPinnedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
-      return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
-      return kManagedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Lower specification expressions and attributes of variable \p var and
 /// add it to the symbol map. For a global or an alias, the address must be
 /// pre-computed and provided in \p preAlloc. A dummy argument for the current
@@ -2091,7 +2076,7 @@ void Fortran::lower::mapSymbolAttributes(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
         converter.getLoweringOptions().getLowerToHighLevelFIR(),
-        getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
