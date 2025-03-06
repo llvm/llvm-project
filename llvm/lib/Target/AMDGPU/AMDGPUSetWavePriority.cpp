@@ -19,6 +19,7 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
@@ -40,15 +41,11 @@ struct MBBInfo {
 
 using MBBInfoSet = DenseMap<const MachineBasicBlock *, MBBInfo>;
 
-class AMDGPUSetWavePriority : public MachineFunctionPass {
+class AMDGPUSetWavePriority {
 public:
   static char ID;
 
-  AMDGPUSetWavePriority() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "Set wave priority"; }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool run(MachineFunction &MF);
 
 private:
   MachineInstr *BuildSetprioMI(MachineBasicBlock &MBB,
@@ -58,15 +55,30 @@ private:
   const SIInstrInfo *TII;
 };
 
+class AMDGPUSetWavePriorityLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUSetWavePriorityLegacy() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "Set wave priority"; }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    return AMDGPUSetWavePriority().run(MF);
+  }
+};
+
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUSetWavePriority, DEBUG_TYPE, "Set wave priority", false,
-                false)
+INITIALIZE_PASS(AMDGPUSetWavePriorityLegacy, DEBUG_TYPE, "Set wave priority",
+                false, false)
 
-char AMDGPUSetWavePriority::ID = 0;
+char AMDGPUSetWavePriorityLegacy::ID = 0;
 
 FunctionPass *llvm::createAMDGPUSetWavePriorityPass() {
-  return new AMDGPUSetWavePriority();
+  return new AMDGPUSetWavePriorityLegacy();
 }
 
 MachineInstr *
@@ -96,12 +108,20 @@ static bool isVMEMLoad(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI) && MI.mayLoad();
 }
 
-bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+llvm::AMDGPUSetWavePriorityPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPUSetWavePriority().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
   const unsigned HighPriority = 3;
   const unsigned LowPriority = 0;
 
   Function &F = MF.getFunction();
-  if (skipFunction(F) || !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+  if (!AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
