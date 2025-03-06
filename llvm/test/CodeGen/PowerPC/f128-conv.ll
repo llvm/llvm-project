@@ -10,8 +10,8 @@
 @umem = global [5 x i64] [i64 560, i64 100, i64 34, i64 2, i64 5], align 8
 @swMem = global [5 x i32] [i32 5, i32 2, i32 3, i32 4, i32 0], align 4
 @uwMem = global [5 x i32] [i32 5, i32 2, i32 3, i32 4, i32 0], align 4
-@uhwMem = local_unnamed_addr global [5 x i16] [i16 5, i16 2, i16 3, i16 4, i16 0], align 2
-@ubMem = local_unnamed_addr global [5 x i8] c"\05\02\03\04\00", align 1
+@uhwMem = global [5 x i16] [i16 5, i16 2, i16 3, i16 4, i16 0], align 2
+@ubMem = global [5 x i8] c"\05\02\03\04\00", align 1
 
 ; Function Attrs: norecurse nounwind
 define void @sdwConv2qp(ptr nocapture %a, i64 %b) {
@@ -134,9 +134,9 @@ define void @sdwConv2qp_02(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, ptr getelementptr inbounds
+  %i = load i64, ptr getelementptr inbounds
                         ([5 x i64], ptr @mem, i64 0, i64 2), align 8
-  %conv = sitofp i64 %0 to fp128
+  %conv = sitofp i64 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -172,8 +172,8 @@ define void @sdwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, ptr %b, align 8
-  %conv = sitofp i64 %0 to fp128
+  %i = load i64, ptr %b, align 8
+  %conv = sitofp i64 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -343,9 +343,9 @@ define void @udwConv2qp_02(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, ptr getelementptr inbounds
+  %i = load i64, ptr getelementptr inbounds
                         ([5 x i64], ptr @umem, i64 0, i64 4), align 8
-  %conv = uitofp i64 %0 to fp128
+  %conv = uitofp i64 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -381,8 +381,8 @@ define void @udwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, ptr %b, align 8
-  %conv = uitofp i64 %0 to fp128
+  %i = load i64, ptr %b, align 8
+  %conv = uitofp i64 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -462,8 +462,8 @@ define ptr @sdwConv2qp_testXForm(ptr returned %sink,
                                     ptr nocapture readonly %a) {
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %a, i64 73333
-  %0 = load i64, ptr %add.ptr, align 8
-  %conv = sitofp i64 %0 to fp128
+  %i = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %i to fp128
   store fp128 %conv, ptr %sink, align 16
   ret ptr %sink
 
@@ -506,8 +506,8 @@ define ptr @udwConv2qp_testXForm(ptr returned %sink,
                                     ptr nocapture readonly %a) {
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %a, i64 73333
-  %0 = load i64, ptr %add.ptr, align 8
-  %conv = uitofp i64 %0 to fp128
+  %i = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %i to fp128
   store fp128 %conv, ptr %sink, align 16
   ret ptr %sink
 
@@ -579,8 +579,8 @@ define void @swConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i32, ptr %b, align 4
-  %conv = sitofp i32 %0 to fp128
+  %i = load i32, ptr %b, align 4
+  %conv = sitofp i32 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -621,9 +621,9 @@ define void @swConv2qp_03(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i32, ptr getelementptr inbounds
+  %i = load i32, ptr getelementptr inbounds
                         ([5 x i32], ptr @swMem, i64 0, i64 3), align 4
-  %conv = sitofp i32 %0 to fp128
+  %conv = sitofp i32 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -695,8 +695,8 @@ define void @uwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i32, ptr %b, align 4
-  %conv = uitofp i32 %0 to fp128
+  %i = load i32, ptr %b, align 4
+  %conv = uitofp i32 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -737,9 +737,9 @@ define void @uwConv2qp_03(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i32, ptr getelementptr inbounds
+  %i = load i32, ptr getelementptr inbounds
                         ([5 x i32], ptr @uwMem, i64 0, i64 3), align 4
-  %conv = uitofp i32 %0 to fp128
+  %conv = uitofp i32 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -780,8 +780,8 @@ define void @uwConv2qp_04(ptr nocapture %a,
 ; CHECK-P8-NEXT:    blr
                           i32 zeroext %b, ptr nocapture readonly %c) {
 entry:
-  %0 = load i32, ptr %c, align 4
-  %add = add i32 %0, %b
+  %i = load i32, ptr %c, align 4
+  %add = add i32 %i, %b
   %conv = uitofp i32 %add to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
@@ -855,8 +855,8 @@ define void @uhwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, ptr %b, align 2
-  %conv = uitofp i16 %0 to fp128
+  %i = load i16, ptr %b, align 2
+  %conv = uitofp i16 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -897,9 +897,9 @@ define void @uhwConv2qp_03(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i16, ptr getelementptr inbounds
+  %i = load i16, ptr getelementptr inbounds
                         ([5 x i16], ptr @uhwMem, i64 0, i64 3), align 2
-  %conv = uitofp i16 %0 to fp128
+  %conv = uitofp i16 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -941,8 +941,8 @@ define void @uhwConv2qp_04(ptr nocapture %a, i16 zeroext %b,
                            ptr nocapture readonly %c) {
 entry:
   %conv = zext i16 %b to i32
-  %0 = load i16, ptr %c, align 2
-  %conv1 = zext i16 %0 to i32
+  %i = load i16, ptr %c, align 2
+  %conv1 = zext i16 %i to i32
   %add = add nuw nsw i32 %conv1, %conv
   %conv2 = sitofp i32 %add to fp128
   store fp128 %conv2, ptr %a, align 16
@@ -1016,8 +1016,8 @@ define void @ubConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, ptr %b, align 1
-  %conv = uitofp i8 %0 to fp128
+  %i = load i8, ptr %b, align 1
+  %conv = uitofp i8 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -1058,9 +1058,9 @@ define void @ubConv2qp_03(ptr nocapture %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i8, ptr getelementptr inbounds
+  %i = load i8, ptr getelementptr inbounds
                       ([5 x i8], ptr @ubMem, i64 0, i64 2), align 1
-  %conv = uitofp i8 %0 to fp128
+  %conv = uitofp i8 %i to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -1068,6 +1068,7 @@ entry:
 
 ; Function Attrs: norecurse nounwind
 define void @ubConv2qp_04(ptr nocapture %a, i8 zeroext %b,
+                          ptr nocapture readonly %c) {
 ; CHECK-LABEL: ubConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lbz r5, 0(r5)
@@ -1099,11 +1100,10 @@ define void @ubConv2qp_04(ptr nocapture %a, i8 zeroext %b,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          ptr nocapture readonly %c) {
 entry:
   %conv = zext i8 %b to i32
-  %0 = load i8, ptr %c, align 1
-  %conv1 = zext i8 %0 to i32
+  %i = load i8, ptr %c, align 1
+  %conv1 = zext i8 %i to i32
   %add = add nuw nsw i32 %conv1, %conv
   %conv2 = sitofp i32 %add to fp128
   store fp128 %conv2, ptr %a, align 16
@@ -1145,8 +1145,8 @@ define double @qpConv2dp(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptrunc fp128 %0 to double
+  %i = load fp128, ptr %a, align 16
+  %conv = fptrunc fp128 %i to double
   ret double %conv
 }
 
@@ -1184,8 +1184,8 @@ define void @qpConv2dp_02(ptr nocapture %res) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr @f128global, align 16
-  %conv = fptrunc fp128 %0 to double
+  %i = load fp128, ptr @f128global, align 16
+  %conv = fptrunc fp128 %i to double
   store double %conv, ptr %res, align 8
   ret void
 }
@@ -1230,8 +1230,8 @@ define void @qpConv2dp_03(ptr nocapture %res, i32 signext %idx) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr @f128Array, align 16
-  %conv = fptrunc fp128 %0 to double
+  %i = load fp128, ptr @f128Array, align 16
+  %conv = fptrunc fp128 %i to double
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr %res, i64 %idxprom
   store double %conv, ptr %arrayidx, align 8
@@ -1274,9 +1274,9 @@ define void @qpConv2dp_04(ptr nocapture readonly %a, ptr nocapture readonly %b, 
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
+  %i = load fp128, ptr %a, align 16
   %1 = load fp128, ptr %b, align 16
-  %add = fadd fp128 %0, %1
+  %add = fadd fp128 %i, %1
   %conv = fptrunc fp128 %add to double
   store double %conv, ptr %res, align 8
   ret void
@@ -1309,8 +1309,8 @@ define float @qpConv2sp(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptrunc fp128 %0 to float
+  %i = load fp128, ptr %a, align 16
+  %conv = fptrunc fp128 %i to float
   ret float %conv
 }
 
@@ -1349,8 +1349,8 @@ define void @qpConv2sp_02(ptr nocapture %res) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr @f128global, align 16
-  %conv = fptrunc fp128 %0 to float
+  %i = load fp128, ptr @f128global, align 16
+  %conv = fptrunc fp128 %i to float
   store float %conv, ptr %res, align 4
   ret void
 }
@@ -1397,8 +1397,8 @@ define void @qpConv2sp_03(ptr nocapture %res, i32 signext %idx) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr getelementptr inbounds ([4 x fp128], ptr @f128Array, i64 0, i64 3), align 16
-  %conv = fptrunc fp128 %0 to float
+  %i = load fp128, ptr getelementptr inbounds ([4 x fp128], ptr @f128Array, i64 0, i64 3), align 16
+  %conv = fptrunc fp128 %i to float
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr %res, i64 %idxprom
   store float %conv, ptr %arrayidx, align 4
@@ -1442,15 +1442,15 @@ define void @qpConv2sp_04(ptr nocapture readonly %a, ptr nocapture readonly %b, 
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
+  %i = load fp128, ptr %a, align 16
   %1 = load fp128, ptr %b, align 16
-  %add = fadd fp128 %0, %1
+  %add = fadd fp128 %i, %1
   %conv = fptrunc fp128 %add to float
   store float %conv, ptr %res, align 4
   ret void
 }
 
-define half @trunc(fp128 %a) unnamed_addr {
+define half @trunc(fp128 %a) {
 ; CHECK-LABEL: trunc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
@@ -1485,11 +1485,11 @@ define half @trunc(fp128 %a) unnamed_addr {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = fptrunc fp128 %a to half
-  ret half %0
+  %i = fptrunc fp128 %a to half
+  ret half %i
 }
 
-define fp128 @ext(half %a) unnamed_addr {
+define fp128 @ext(half %a) {
 ; CHECK-LABEL: ext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1510,8 +1510,8 @@ define fp128 @ext(half %a) unnamed_addr {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = fpext half %a to fp128
-  ret fp128 %0
+  %i = fpext half %a to fp128
+  ret fp128 %i
 }
 
 @f128Glob = common global fp128 0xL00000000000000000000000000000000, align 16
@@ -1572,8 +1572,8 @@ define void @dpConv2qp_02(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load double, ptr %a, align 8
-  %conv = fpext double %0 to fp128
+  %i = load double, ptr %a, align 8
+  %conv = fpext double %i to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
@@ -1612,8 +1612,8 @@ define void @dpConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) {
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr %a, i64 %idxprom
-  %0 = load double, ptr %arrayidx, align 8
-  %conv = fpext double %0 to fp128
+  %i = load double, ptr %arrayidx, align 8
+  %conv = fpext double %i to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
@@ -1750,8 +1750,8 @@ define void @spConv2qp_02(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load float, ptr %a, align 4
-  %conv = fpext float %0 to fp128
+  %i = load float, ptr %a, align 4
+  %conv = fpext float %i to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
@@ -1790,8 +1790,8 @@ define void @spConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) {
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
-  %0 = load float, ptr %arrayidx, align 4
-  %conv = fpext float %0 to fp128
+  %i = load float, ptr %arrayidx, align 4
+  %conv = fpext float %i to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
@@ -2208,8 +2208,8 @@ define i128 @qpConv2i128(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptosi fp128 %0 to i128
+  %i = load fp128, ptr %a, align 16
+  %conv = fptosi fp128 %i to i128
   ret i128 %conv
 }
 
@@ -2246,8 +2246,8 @@ define i128 @qpConv2ui128(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptoui fp128 %0 to i128
+  %i = load fp128, ptr %a, align 16
+  %conv = fptoui fp128 %i to i128
   ret i128 %conv
 }
 
@@ -2276,8 +2276,8 @@ define i1 @qpConv2ui1(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptoui fp128 %0 to i1
+  %i = load fp128, ptr %a, align 16
+  %conv = fptoui fp128 %i to i1
   ret i1 %conv
 }
 
@@ -2306,7 +2306,7 @@ define i1 @qpConv2si1(ptr nocapture readonly %a) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, ptr %a, align 16
-  %conv = fptosi fp128 %0 to i1
+  %i = load fp128, ptr %a, align 16
+  %conv = fptosi fp128 %i to i1
   ret i1 %conv
 }
