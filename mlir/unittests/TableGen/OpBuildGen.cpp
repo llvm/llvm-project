@@ -303,8 +303,8 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   // place works.
   auto op7b = builder.create<test::TableGenBuildOp7>(loc, TypeRange{},
                                                      ValueRange{}, attrs);
-  verifyOp(op7b, {}, {}, attrs);
   ASSERT_EQ(op7b.getProperties().getAttr0(), attrs[0].getValue());
+  verifyOp(op7b, {}, {}, attrs);
 }
 
 } // namespace mlir
