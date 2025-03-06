@@ -38,7 +38,7 @@ Expected<int> OutputRedirector::GetWriteFileDescriptor() {
   return m_fd;
 }
 
-Error OutputRedirector::RedirectTo(std::FILE *override,
+Error OutputRedirector::RedirectTo(std::FILE *file_override,
                                    std::function<void(StringRef)> callback) {
   assert(m_fd == kInvalidDescriptor && "Output readirector already started.");
   int new_fd[2];
