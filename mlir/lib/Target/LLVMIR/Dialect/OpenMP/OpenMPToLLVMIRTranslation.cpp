@@ -45,6 +45,8 @@
 #include <optional>
 #include <utility>
 
+#define DEBUG_TYPE "openmp-to-llvmir"
+#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
 using namespace mlir;
 
 namespace {
