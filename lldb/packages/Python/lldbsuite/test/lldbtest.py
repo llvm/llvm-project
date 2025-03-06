@@ -1394,7 +1394,7 @@ class Base(unittest.TestCase):
         return self.isLoongArch() and "lasx" in self.getCPUInfo()
 
     def isRISCV(self):
-        """Returns true if the architecture is RISCV64 or RISCV32.""" 
+        """Returns true if the architecture is RISCV64 or RISCV32."""
         return self.getArchitecture() in ["riscv64", "riscv32"]
 
     def getArchitecture(self):
