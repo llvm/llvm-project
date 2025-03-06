@@ -73,7 +73,6 @@ process at the start of the debug session instead of setting the pid manually:
   "type": "lldb-dap",
   "request": "attach",
   "name": "Attach to PID",
-  "program": "/tmp/a.out",
   "pid": "${command:pickProcess}"
 }
 ```
