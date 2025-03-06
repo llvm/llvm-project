@@ -35,8 +35,8 @@ define fp128 @extendsfkf2_f16(half %a) {
 ; CHECK-LABEL: extendsfkf2_f16:
 ; CHECK: __extendsfkf2
 entry:
-  %0 = fpext half %a to fp128
-  ret fp128 %0
+  %i = fpext half %a to fp128
+  ret fp128 %i
 }
 
 define fp128 @extendsfkf2(float %a) {
@@ -57,8 +57,8 @@ define half @trunctfhf2(fp128 %a) {
 ; CHECK-LABEL: trunctfhf2:
 ; CHECK: __trunctfhf2
 entry:
-  %0 = fptrunc fp128 %a to half
-  ret half %0
+  %i = fptrunc fp128 %a to half
+  ret half %i
 }
 
 define float @trunckfsf2(fp128 %a) {
