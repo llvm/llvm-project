@@ -1056,7 +1056,6 @@ CLAUSE_NOT_ON_DECLS(Delete)
 CLAUSE_NOT_ON_DECLS(Detach)
 CLAUSE_NOT_ON_DECLS(Device)
 CLAUSE_NOT_ON_DECLS(DeviceNum)
-CLAUSE_NOT_ON_DECLS(DeviceType)
 CLAUSE_NOT_ON_DECLS(Finalize)
 CLAUSE_NOT_ON_DECLS(FirstPrivate)
 CLAUSE_NOT_ON_DECLS(Host)
@@ -1114,6 +1113,15 @@ void OpenACCDeclClauseInstantiator::VisitNoHostClause(
   NewClause = OpenACCNoHostClause::Create(SemaRef.getASTContext(),
                                           ParsedClause.getBeginLoc(),
                                           ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  // Nothing to transform here, just create a new version of 'C'.
+  NewClause = OpenACCDeviceTypeClause::Create(
+      SemaRef.getASTContext(), C.getClauseKind(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), C.getArchitectures(),
+      ParsedClause.getEndLoc());
 }
 
 void OpenACCDeclClauseInstantiator::VisitWorkerClause(
