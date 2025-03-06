@@ -44,6 +44,8 @@
 #include <optional>
 #include <utility>
 
+#define DEBUG_TYPE "openmp-to-llvmir"
+#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
 using namespace mlir;
 
 namespace {
@@ -4793,6 +4795,17 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     collectPrivatizationDecls(targetOp, privateDecls);
     for (mlir::Value privateVar : targetOp.getPrivateVars())
       mlirPrivateVars.push_back(privateVar);
+    LLVM_DEBUG(PDBGS() << "Types of each PrivateDecl\n");
+    LLVM_DEBUG(
+        for (omp::PrivateClauseOp &privDecl : privateDecls) {
+          if (!privDecl.readsFromMold())
+            continue;
+          mlir::Type mlirType = privDecl.getType();
+          llvm::Type *llvmType = moduleTranslation.convertType(mlirType);
+          PDBGS() << "MLIR Type = " << mlirType << "\n";
+          PDBGS() << "LLVM Type = " << *llvmType << "\n";
+        }
+               );
 
     llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
         builder, moduleTranslation, privateBlockArgs, privateDecls,
