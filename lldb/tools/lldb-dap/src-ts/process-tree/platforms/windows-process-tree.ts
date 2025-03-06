@@ -3,20 +3,18 @@ import { BaseProcessTree, ProcessTreeParser } from "../base-process-tree";
 
 export class WindowsProcessTree extends BaseProcessTree {
   protected override getCommand(): string {
-    return path.join(
-      process.env["WINDIR"] || "C:\\Windows",
-      "System32",
-      "wbem",
-      "WMIC.exe",
-    );
+    return "PowerShell";
   }
 
   protected override getCommandArguments(): string[] {
-    return ["process", "get", "CommandLine,CreationDate,ProcessId"];
+    return [
+      "-Command",
+      'Get-CimInstance -ClassName Win32_Process | Format-Table ProcessId, @{Label="CreationDate";Expression={"{0:yyyyMddHHmmss}" -f $_.CreationDate}}, CommandLine | Out-String -width 9999',
+    ];
   }
 
   protected override createParser(): ProcessTreeParser {
-    const lineRegex = /^(.*)\s+([0-9]+)\.[0-9]+[+-][0-9]+\s+([0-9]+)$/;
+    const lineRegex = /^([0-9]+)\s+([0-9]+)\s+(.*)$/;
 
     return (line) => {
       const matches = lineRegex.exec(line.trim());
@@ -24,9 +22,9 @@ export class WindowsProcessTree extends BaseProcessTree {
         return;
       }
 
-      const id = Number(matches[3]);
+      const id = Number(matches[1]);
       const start = Number(matches[2]);
-      let fullCommandLine = matches[1].trim();
+      let fullCommandLine = matches[3].trim();
       if (isNaN(id) || !fullCommandLine) {
         return;
       }
@@ -35,7 +33,7 @@ export class WindowsProcessTree extends BaseProcessTree {
       if (fullCommandLine[0] === '"') {
         const end = fullCommandLine.indexOf('"', 1);
         if (end > 0) {
-          command = fullCommandLine.slice(1, end - 1);
+          command = fullCommandLine.slice(1, end);
         }
       } else {
         const end = fullCommandLine.indexOf(" ");
