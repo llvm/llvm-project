@@ -147,7 +147,12 @@ _Static_assert(__atomic_always_lock_free(2, (int[2]){}), "");
 void dummyfn();
 _Static_assert(__atomic_always_lock_free(2, dummyfn) || 1, "");
 
-
+typedef _Atomic(float __attribute__((vector_size(16)))) atomic_vector_float;
+typedef _Atomic(double __attribute__((vector_size(16)))) atomic_vector_double;
+typedef _Atomic(int __attribute__((vector_size(16)))) atomic_vector_int;
+typedef float __attribute__((ext_vector_type(4))) vector_float;
+typedef double __attribute__((ext_vector_type(2))) vector_double;
+typedef int __attribute__((ext_vector_type(4))) vector_int;
 
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
@@ -156,7 +161,10 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
        _Atomic(int*) *p, _Atomic(float) *f, _Atomic(double) *d,
        _Atomic(long double) *ld,
        int *I, const int *CI,
-       int **P, float *F, double *D, struct S *s1, struct S *s2) {
+       int **P, float *F, double *D, struct S *s1, struct S *s2,
+       atomic_vector_float* vf, atomic_vector_double* vd, 
+       atomic_vector_int* vi, vector_float* evf, 
+       vector_double* evd, vector_int* evi) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
   __c11_atomic_init(ci, 5); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
 
@@ -224,6 +232,13 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_fetch_add(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_add(d, 1.0, memory_order_seq_cst);
   __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+
+  vector_float fvec = {1.0f, 1.0f, 1.0f, 1.0f};
+  vector_double dvec = {1.0, 1.0};
+  vector_int ivec = {1, 1, 1, 1};
+  __c11_atomic_fetch_add(vf, fvec, memory_order_seq_cst);
+  __c11_atomic_fetch_add(vd, dvec, memory_order_seq_cst);
+  __c11_atomic_fetch_add(vi, ivec, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
   __c11_atomic_fetch_min(i, 1, memory_order_seq_cst);
   __c11_atomic_fetch_min(p, 1, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer or supported floating point type}}
   __c11_atomic_fetch_min(f, 1.0f, memory_order_seq_cst);
@@ -240,6 +255,9 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_fetch_sub(P, 3, memory_order_seq_cst);
   __atomic_fetch_sub(F, 3, memory_order_seq_cst);
   __atomic_fetch_sub(s1, 3, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+  __atomic_fetch_sub(evf, fvec, memory_order_seq_cst);
+  __atomic_fetch_sub(evd, dvec, memory_order_seq_cst);
+  __atomic_fetch_sub(evi, ivec, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_min(F, 3, memory_order_seq_cst);
   __atomic_fetch_min(D, 3, memory_order_seq_cst);
   __atomic_fetch_max(F, 3, memory_order_seq_cst);
