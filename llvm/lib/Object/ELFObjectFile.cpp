@@ -781,7 +781,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
 std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   std::string Err;
   const auto Triple = makeTriple();
-  const auto *T = TargetRegistry::lookupTarget(Triple.str(), Err);
+  const auto *T = TargetRegistry::lookupTarget(Triple, Err);
   if (!T)
     return {};
   uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;

@@ -248,6 +248,10 @@ Bug Fixes in This Version
   (#GH125500).
 - Fixed clang crash when #embed data does not fit into an array
   (#GH128987).
+- Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer incorrectly
+  considered an error in C23 mode and are allowed as an extension in earlier language modes.
+
+- Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -274,6 +278,7 @@ Bug Fixes to C++ Support
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
+- Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,6 +365,8 @@ Fixed Point Support in Clang
 
 AST Matchers
 ------------
+
+- Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 
 clang-format
 ------------
