@@ -15,29 +15,15 @@
 
 namespace mlir::link {
 
-using InternalizeCallbackFn =
-    std::function<void(ModuleOp, const StringSet<> &)>;
-
 /// These are gathered alphabetically sorted linker options
 class LinkerConfig {
 public:
-  /// Allow operation with no registered dialects.
-  /// This option is for convenience during testing only and discouraged in
-  /// general.
   LinkerConfig &allowUnregisteredDialects(bool allow) {
     allowUnregisteredDialectsFlag = allow;
     return *this;
   }
   bool shouldAllowUnregisteredDialects() const {
     return allowUnregisteredDialectsFlag;
-  }
-
-  LinkerConfig &internalizeLinkedSymbols(bool allow) {
-    internalizeLinkedSymbolsFlag = allow;
-    return *this;
-  }
-  bool shouldInternalizeLinkedSymbols() const {
-    return internalizeLinkedSymbolsFlag;
   }
 
   LinkerConfig &linkOnlyNeeded(bool allow) {
@@ -47,12 +33,7 @@ public:
   bool shouldLinkOnlyNeeded() const { return linkOnlyNeededFlag; }
 
 protected:
-  /// Allow operation with no registered dialects.
-  /// This option is for convenience during testing only and discouraged in
-  /// general.
   bool allowUnregisteredDialectsFlag = false;
-
-  bool internalizeLinkedSymbolsFlag = false;
 
   bool linkOnlyNeededFlag = false;
 };
@@ -72,7 +53,6 @@ public:
 
   struct LinkFileConfig {
     unsigned flags = Flags::None;
-    bool internalize = false;
   };
 
   Linker(const LinkerConfig &config, MLIRContext *context)

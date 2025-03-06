@@ -82,11 +82,6 @@ struct LinkerCLOptions : public LinkerConfig {
         cl::location(allowUnregisteredDialectsFlag), cl::init(false),
         cl::cat(getCategory()));
 
-    static cl::opt<bool, true> internalizeLinkedSymbols(
-        "internalize", cl::desc("Internalize linked symbols"),
-        cl::location(internalizeLinkedSymbolsFlag), cl::init(false),
-        cl::cat(getCategory()));
-
     static cl::opt<bool, true> linkOnlyNeeded(
         "only-needed", cl::desc("Link only needed symbols"),
         cl::location(linkOnlyNeededFlag), cl::init(false),

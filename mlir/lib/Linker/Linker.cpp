@@ -75,8 +75,7 @@ class ModuleLinker {
   }
 
 public:
-  ModuleLinker(IRMover &mover, OwningOpRef<Operation *> src, unsigned flags,
-               InternalizeCallbackFn internalizeCallback = {})
+  ModuleLinker(IRMover &mover, OwningOpRef<Operation *> src, unsigned flags)
       : mover(mover), src(std::move(src)), flags(flags) {}
   LogicalResult run();
 };
@@ -293,7 +292,7 @@ unsigned Linker::getFlags() const {
 }
 
 Linker::LinkFileConfig Linker::linkFileConfig(unsigned fileFlags) const {
-  return {fileFlags, config.shouldInternalizeLinkedSymbols()};
+  return {.flags = fileFlags};
 }
 
 Linker::LinkFileConfig Linker::firstFileConfig(unsigned fileFlags) const {
