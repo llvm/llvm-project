@@ -63,9 +63,6 @@ class VEAsmParser : public MCTargetAsmParser {
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
-
   // Custom parse functions for VE specific operands.
   ParseStatus parseMEMOperand(OperandVector &Operands);
   ParseStatus parseMEMAsOperand(OperandVector &Operands);
@@ -1585,24 +1582,4 @@ unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
     break;
   }
   return Match_InvalidOperand;
-}
-
-MCSymbolRefExpr::VariantKind
-VEAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("hi", MCSymbolRefExpr::VK_VE_HI32)
-      .Case("lo", MCSymbolRefExpr::VK_VE_LO32)
-      .Case("pc_hi", MCSymbolRefExpr::VK_VE_PC_HI32)
-      .Case("pc_lo", MCSymbolRefExpr::VK_VE_PC_LO32)
-      .Case("got_hi", MCSymbolRefExpr::VK_VE_GOT_HI32)
-      .Case("got_lo", MCSymbolRefExpr::VK_VE_GOT_LO32)
-      .Case("gotoff_hi", MCSymbolRefExpr::VK_VE_GOTOFF_HI32)
-      .Case("gotoff_lo", MCSymbolRefExpr::VK_VE_GOTOFF_LO32)
-      .Case("plt_hi", MCSymbolRefExpr::VK_VE_PLT_HI32)
-      .Case("plt_lo", MCSymbolRefExpr::VK_VE_PLT_LO32)
-      .Case("tls_gd_hi", MCSymbolRefExpr::VK_VE_TLS_GD_HI32)
-      .Case("tls_gd_lo", MCSymbolRefExpr::VK_VE_TLS_GD_LO32)
-      .Case("tpoff_hi", MCSymbolRefExpr::VK_VE_TPOFF_HI32)
-      .Case("tpoff_lo", MCSymbolRefExpr::VK_VE_TPOFF_LO32)
-      .Default(MCSymbolRefExpr::VK_Invalid);
 }

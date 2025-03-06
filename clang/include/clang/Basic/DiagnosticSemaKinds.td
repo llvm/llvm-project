@@ -3343,6 +3343,9 @@ def err_attribute_argument_out_of_range : Error<
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;
+def warn_init_priority_reserved : Warning<
+  "requested 'init_priority' %0 is reserved for internal use">,
+  InGroup<DiagGroup<"init-priority-reserved">>, DefaultError;
 def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
 def err_attribute_only_once_per_parameter : Error<
@@ -10706,6 +10709,11 @@ def err_vector_incorrect_num_elements : Error<
   "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
+def err_vector_incorrect_bit_count : Error<
+  "incorrect number of bits in vector operand (expected %select{|a multiple of}0 %1 bits, have %2)">;
+def err_integer_incorrect_bit_count : Error<
+  "incorrect number of bits in integer (expected %0 bits, have %1)">;
+
 def err_invalid_neon_type_code : Error<
   "incompatible constant for this __builtin_neon function">;
 def err_argument_invalid_range : Error<
@@ -10794,6 +10802,23 @@ def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
 def err_non_variable_decl_in_for : Error<
   "non-variable declaration in 'for' loop">;
+
+def ext_c23_non_local_variable_decl_in_for : Extension<
+  "declaration of non-local variable in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_local_variable_decl_in_for : Warning<
+  "declaration of non-local variable in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
+def ext_c23_non_variable_decl_in_for : Extension<
+  "non-variable declaration in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_variable_decl_in_for : Warning<
+  "non-variable declaration in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
 def err_toomany_element_decls : Error<
   "only one element declaration is allowed">;
 def err_selector_element_not_lvalue : Error<
@@ -12812,6 +12837,7 @@ def err_acc_duplicate_clause_disallowed
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
+def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute/Combined Construct">;
@@ -12844,9 +12870,12 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
-def err_acc_not_a_var_ref_use_device
-    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
-            "name or array name">;
+def err_acc_not_a_var_ref_use_device_declare
+    : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
+            "construct}0 is not a valid variable name or array name">;
+def err_acc_not_a_var_ref_cache
+    : Error<"OpenACC variable in cache directive is not a valid sub-array or "
+            "array element">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -13014,6 +13043,23 @@ def note_acc_atomic_mismatch_compound_operand
            "side of assignment|<not possible>|on left hand side of compound "
            "assignment|on left hand side of assignment}0('%1') from the first "
            "statement">;
+def err_acc_declare_required_clauses
+    : Error<"no valid clauses specified in OpenACC 'declare' directive">;
+def err_acc_declare_clause_at_global
+    : Error<"OpenACC '%0' clause on a 'declare' directive is not allowed at "
+            "global or namespace scope">;
+def err_acc_link_not_extern
+    : Error<"variable referenced by 'link' clause not in global or namespace "
+            "scope must be marked 'extern'">;
+def err_acc_declare_extern
+    : Error<"'extern' variable may not be referenced by '%0' clause on an "
+            "OpenACC 'declare' directive">;
+def err_acc_declare_same_scope
+    : Error<"variable appearing in '%0' clause of OpenACC 'declare' directive "
+            "must be in the same scope as the directive">;
+def err_acc_multiple_references
+    : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
+            "was already referenced">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

@@ -111,7 +111,6 @@ class PPCAsmParser : public MCTargetAsmParser {
 
   const MCExpr *extractModifierFromExpr(const MCExpr *E,
                                         PPCMCExpr::VariantKind &Variant);
-  const MCExpr *fixupVariantKind(const MCExpr *E);
   bool parseExpression(const MCExpr *&EVal);
 
   bool parseOperand(OperandVector &Operands);
@@ -156,8 +155,6 @@ public:
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
   const MCExpr *applyModifierToExpr(const MCExpr *E,
                                     MCSymbolRefExpr::VariantKind,
                                     MCContext &Ctx) override;
@@ -1387,32 +1384,32 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    switch (SRE->getKind()) {
-    case MCSymbolRefExpr::VK_PPC_LO:
+    switch ((PPCMCExpr::VariantKind)SRE->getKind()) {
+    case PPCMCExpr::VK_PPC_LO:
       Variant = PPCMCExpr::VK_PPC_LO;
       break;
-    case MCSymbolRefExpr::VK_PPC_HI:
+    case PPCMCExpr::VK_PPC_HI:
       Variant = PPCMCExpr::VK_PPC_HI;
       break;
-    case MCSymbolRefExpr::VK_PPC_HA:
+    case PPCMCExpr::VK_PPC_HA:
       Variant = PPCMCExpr::VK_PPC_HA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGH:
+    case PPCMCExpr::VK_PPC_HIGH:
       Variant = PPCMCExpr::VK_PPC_HIGH;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHA:
+    case PPCMCExpr::VK_PPC_HIGHA:
       Variant = PPCMCExpr::VK_PPC_HIGHA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHER:
+    case PPCMCExpr::VK_PPC_HIGHER:
       Variant = PPCMCExpr::VK_PPC_HIGHER;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHERA:
+    case PPCMCExpr::VK_PPC_HIGHERA:
       Variant = PPCMCExpr::VK_PPC_HIGHERA;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHEST:
+    case PPCMCExpr::VK_PPC_HIGHEST:
       Variant = PPCMCExpr::VK_PPC_HIGHEST;
       break;
-    case MCSymbolRefExpr::VK_PPC_HIGHESTA:
+    case PPCMCExpr::VK_PPC_HIGHESTA:
       Variant = PPCMCExpr::VK_PPC_HIGHESTA;
       break;
     default:
@@ -1458,56 +1455,6 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
   llvm_unreachable("Invalid expression kind!");
 }
 
-/// Find all VK_TLSGD/VK_TLSLD symbol references in expression and replace
-/// them by VK_PPC_TLSGD/VK_PPC_TLSLD.  This is necessary to avoid having
-/// _GLOBAL_OFFSET_TABLE_ created via ELFObjectWriter::RelocNeedsGOT.
-/// FIXME: This is a hack.
-const MCExpr *PPCAsmParser::fixupVariantKind(const MCExpr *E) {
-  MCContext &Context = getParser().getContext();
-
-  switch (E->getKind()) {
-  case MCExpr::Target:
-  case MCExpr::Constant:
-    return E;
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
-    MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-
-    switch (SRE->getKind()) {
-    case MCSymbolRefExpr::VK_TLSGD:
-      Variant = MCSymbolRefExpr::VK_PPC_TLSGD;
-      break;
-    case MCSymbolRefExpr::VK_TLSLD:
-      Variant = MCSymbolRefExpr::VK_PPC_TLSLD;
-      break;
-    default:
-      return E;
-    }
-    return MCSymbolRefExpr::create(&SRE->getSymbol(), Variant, Context);
-  }
-
-  case MCExpr::Unary: {
-    const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
-    const MCExpr *Sub = fixupVariantKind(UE->getSubExpr());
-    if (Sub == UE->getSubExpr())
-      return E;
-    return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
-  }
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
-    const MCExpr *LHS = fixupVariantKind(BE->getLHS());
-    const MCExpr *RHS = fixupVariantKind(BE->getRHS());
-    if (LHS == BE->getLHS() && RHS == BE->getRHS())
-      return E;
-    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
-  }
-  }
-
-  llvm_unreachable("Invalid expression kind!");
-}
-
 /// This differs from the default "parseExpression" in that it handles
 /// modifiers.
 bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
@@ -1515,8 +1462,6 @@ bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   // Handle \code @l/@ha \endcode
   if (getParser().parseExpression(EVal))
     return true;
-
-  EVal = fixupVariantKind(EVal);
 
   PPCMCExpr::VariantKind Variant;
   const MCExpr *E = extractModifierFromExpr(EVal, Variant);
@@ -1903,105 +1848,26 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-MCSymbolRefExpr::VariantKind
-PPCAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("dtprel", MCSymbolRefExpr::VK_DTPREL)
-      .Case("got", MCSymbolRefExpr::VK_GOT)
-      .Case("pcrel", MCSymbolRefExpr::VK_PCREL)
-      .Case("plt", MCSymbolRefExpr::VK_PLT)
-      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
-      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
-      .Case("tprel", MCSymbolRefExpr::VK_TPREL)
-      .Case("l", MCSymbolRefExpr::VK_PPC_LO)
-      .Case("h", MCSymbolRefExpr::VK_PPC_HI)
-      .Case("ha", MCSymbolRefExpr::VK_PPC_HA)
-      .Case("high", MCSymbolRefExpr::VK_PPC_HIGH)
-      .Case("higha", MCSymbolRefExpr::VK_PPC_HIGHA)
-      .Case("higher", MCSymbolRefExpr::VK_PPC_HIGHER)
-      .Case("highera", MCSymbolRefExpr::VK_PPC_HIGHERA)
-      .Case("highest", MCSymbolRefExpr::VK_PPC_HIGHEST)
-      .Case("highesta", MCSymbolRefExpr::VK_PPC_HIGHESTA)
-      .Case("got@l", MCSymbolRefExpr::VK_PPC_GOT_LO)
-      .Case("got@h", MCSymbolRefExpr::VK_PPC_GOT_HI)
-      .Case("got@ha", MCSymbolRefExpr::VK_PPC_GOT_HA)
-      .Case("local", MCSymbolRefExpr::VK_PPC_LOCAL)
-      .Case("tocbase", MCSymbolRefExpr::VK_PPC_TOCBASE)
-      .Case("toc", MCSymbolRefExpr::VK_PPC_TOC)
-      .Case("toc@l", MCSymbolRefExpr::VK_PPC_TOC_LO)
-      .Case("toc@h", MCSymbolRefExpr::VK_PPC_TOC_HI)
-      .Case("toc@ha", MCSymbolRefExpr::VK_PPC_TOC_HA)
-      .Case("u", MCSymbolRefExpr::VK_PPC_U)
-      // .Case("l", MCSymbolRefExpr::VK_PPC_L) VK_PPC_LO?
-      .Case("tls", MCSymbolRefExpr::VK_PPC_TLS)
-      .Case("dtpmod", MCSymbolRefExpr::VK_PPC_DTPMOD)
-      .Case("tprel@l", MCSymbolRefExpr::VK_PPC_TPREL_LO)
-      .Case("tprel@h", MCSymbolRefExpr::VK_PPC_TPREL_HI)
-      .Case("tprel@ha", MCSymbolRefExpr::VK_PPC_TPREL_HA)
-      .Case("tprel@high", MCSymbolRefExpr::VK_PPC_TPREL_HIGH)
-      .Case("tprel@higha", MCSymbolRefExpr::VK_PPC_TPREL_HIGHA)
-      .Case("tprel@higher", MCSymbolRefExpr::VK_PPC_TPREL_HIGHER)
-      .Case("tprel@highera", MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA)
-      .Case("tprel@highest", MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST)
-      .Case("tprel@highesta", MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA)
-      .Case("dtprel@l", MCSymbolRefExpr::VK_PPC_DTPREL_LO)
-      .Case("dtprel@h", MCSymbolRefExpr::VK_PPC_DTPREL_HI)
-      .Case("dtprel@ha", MCSymbolRefExpr::VK_PPC_DTPREL_HA)
-      .Case("dtprel@high", MCSymbolRefExpr::VK_PPC_DTPREL_HIGH)
-      .Case("dtprel@higha", MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA)
-      .Case("dtprel@higher", MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER)
-      .Case("dtprel@highera", MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA)
-      .Case("dtprel@highest", MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST)
-      .Case("dtprel@highesta", MCSymbolRefExpr::VK_PPC_DTPREL_HIGHESTA)
-      .Case("got@tprel", MCSymbolRefExpr::VK_PPC_GOT_TPREL)
-      .Case("got@tprel@l", MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO)
-      .Case("got@tprel@h", MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI)
-      .Case("got@tprel@ha", MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA)
-      .Case("got@dtprel", MCSymbolRefExpr::VK_PPC_GOT_DTPREL)
-      .Case("got@dtprel@l", MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO)
-      .Case("got@dtprel@h", MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI)
-      .Case("got@dtprel@ha", MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA)
-      .Case("got@tlsgd", MCSymbolRefExpr::VK_PPC_GOT_TLSGD)
-      .Case("got@tlsgd@l", MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO)
-      .Case("got@tlsgd@h", MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI)
-      .Case("got@tlsgd@ha", MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA)
-      .Case("got@tlsld", MCSymbolRefExpr::VK_PPC_GOT_TLSLD)
-      .Case("got@tlsld@l", MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO)
-      .Case("got@tlsld@h", MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI)
-      .Case("got@tlsld@ha", MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA)
-      .Case("got@pcrel", MCSymbolRefExpr::VK_PPC_GOT_PCREL)
-      .Case("got@tlsgd@pcrel", MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL)
-      .Case("got@tlsld@pcrel", MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL)
-      .Case("got@tprel@pcrel", MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL)
-      .Case("tls@pcrel", MCSymbolRefExpr::VK_PPC_TLS_PCREL)
-      .Case("notoc", MCSymbolRefExpr::VK_PPC_NOTOC)
-      .Default(MCSymbolRefExpr::VK_Invalid);
-}
-
 const MCExpr *
 PPCAsmParser::applyModifierToExpr(const MCExpr *E,
                                   MCSymbolRefExpr::VariantKind Variant,
                                   MCContext &Ctx) {
-  switch (Variant) {
-  case MCSymbolRefExpr::VK_PPC_LO:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HI:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGH:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHER:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHERA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHEST:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, Ctx);
-  case MCSymbolRefExpr::VK_PPC_HIGHESTA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, Ctx);
-  default:
-    return nullptr;
+  if (isa<MCConstantExpr>(E)) {
+    switch (PPCMCExpr::VariantKind(Variant)) {
+    case PPCMCExpr::VariantKind::VK_PPC_LO:
+    case PPCMCExpr::VariantKind::VK_PPC_HI:
+    case PPCMCExpr::VariantKind::VK_PPC_HA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGH:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHER:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHERA:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHEST:
+    case PPCMCExpr::VariantKind::VK_PPC_HIGHESTA:
+      break;
+    default:
+      return nullptr;
+    }
   }
+
+  return PPCMCExpr::create(PPCMCExpr::VariantKind(Variant), E, Ctx);
 }

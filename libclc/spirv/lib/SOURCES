@@ -48,7 +48,6 @@ math/fma.cl
 ../../generic/lib/math/frexp.cl
 ../../generic/lib/math/half_rsqrt.cl
 ../../generic/lib/math/half_sqrt.cl
-../../generic/lib/math/clc_hypot.cl
 ../../generic/lib/math/hypot.cl
 ../../generic/lib/math/ilogb.cl
 ../../generic/lib/math/ldexp.cl

@@ -1079,6 +1079,20 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
   llvm.return %0 : f32
 }
 
+// CHECK-LABEL: @ptrmask
+llvm.func @ptrmask(%p: !llvm.ptr, %mask: i64) -> !llvm.ptr {
+  // CHECK: call ptr @llvm.ptrmask.p0.i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.ptr, i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK-LABEL: @vector_ptrmask
+llvm.func @vector_ptrmask(%p: !llvm.vec<8 x ptr>, %mask: vector<8 x i64>) -> !llvm.vec<8 x ptr> {
+  // CHECK: call <8 x ptr> @llvm.ptrmask.v8p0.v8i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.vec<8 x ptr>, vector<8 x i64>) -> !llvm.vec<8 x ptr>
+  llvm.return %0 : !llvm.vec<8 x ptr>
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
@@ -1272,6 +1286,8 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr captures(none))
 
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
+// CHECK-DAG: declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+// CHECK-DAG: declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)

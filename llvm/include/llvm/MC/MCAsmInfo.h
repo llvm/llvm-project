@@ -15,6 +15,8 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -61,6 +63,11 @@ public:
                   /// target.
     ACLS_SingleQuotePrefix, /// The desired character is prefixed by a single
                             /// quote, e.g., `'A`.
+  };
+
+  struct VariantKindDesc {
+    uint32_t Kind;
+    StringRef Name;
   };
 
 protected:
@@ -417,6 +424,10 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
+  llvm::DenseMap<uint32_t, StringRef> VariantKindToName;
+  llvm::StringMap<uint32_t> NameToVariantKind;
+  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -696,6 +707,9 @@ public:
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
+
+  StringRef getVariantKindName(uint32_t Kind) const;
+  uint32_t getVariantKindForName(StringRef Name) const;
 };
 
 } // end namespace llvm
