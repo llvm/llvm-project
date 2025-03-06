@@ -28,8 +28,8 @@ public:
     ++count_;
     return p_(a);
   }
-  TEST_CONSTEXPR std::size_t count() const { return count_; }
-  TEST_CONSTEXPR void reset() { count_ = 0; }
+  TEST_CONSTEXPR_CXX14 std::size_t count() const { return count_; }
+  TEST_CONSTEXPR_CXX14 void reset() { count_ = 0; }
 
 private:
   Predicate p_;
@@ -43,17 +43,17 @@ public:
   typedef Arg2 second_argument_type;
   typedef bool result_type;
 
-    TEST_CONSTEXPR binary_counting_predicate(Predicate p) : p_(p), count_(0) {}
-    TEST_CONSTEXPR_CXX14 bool operator()(const Arg1& a1, const Arg2& a2) const {
-      ++count_;
-      return p_(a1, a2);
-    }
-    TEST_CONSTEXPR std::size_t count() const { return count_; }
-    TEST_CONSTEXPR_CXX14 void reset() { count_ = 0; }
+  TEST_CONSTEXPR binary_counting_predicate(Predicate p) : p_(p), count_(0) {}
+  TEST_CONSTEXPR_CXX14 bool operator()(const Arg1& a1, const Arg2& a2) const {
+    ++count_;
+    return p_(a1, a2);
+  }
+  TEST_CONSTEXPR std::size_t count() const { return count_; }
+  TEST_CONSTEXPR_CXX14 void reset() { count_ = 0; }
 
-  private:
-    Predicate p_;
-    mutable std::size_t count_;
+private:
+  Predicate p_;
+  mutable std::size_t count_;
 };
 
 #if TEST_STD_VER > 14

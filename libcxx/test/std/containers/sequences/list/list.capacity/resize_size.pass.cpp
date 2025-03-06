@@ -12,7 +12,6 @@
 
 #include <list>
 #include <cassert>
-#include <type_traits>
 
 #include "test_macros.h"
 #include "DefaultOnly.h"
@@ -35,7 +34,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(l.back() == 0);
   }
 #if TEST_STD_VER >= 11
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     {
       std::list<DefaultOnly> l(10);
       l.resize(5);
