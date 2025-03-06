@@ -93,7 +93,16 @@ define i32 @test_atomicrmw_or_0_local(ptr addrspace(3) %ptr) {
 define i32 @test_atomicrmw_or_1_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_1_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 1 seq_cst, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+; CHECK-NEXT:    [[RES]] = extractvalue { i32, i1 } [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 1 seq_cst
@@ -103,7 +112,16 @@ define i32 @test_atomicrmw_or_1_global_system(ptr addrspace(1) %ptr) {
 define i32 @test_atomicrmw_or_var_global_system(ptr addrspace(1) %ptr, i32 %val) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_var_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 [[VAL]] seq_cst, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], [[VAL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+; CHECK-NEXT:    [[RES]] = extractvalue { i32, i1 } [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 %val seq_cst
