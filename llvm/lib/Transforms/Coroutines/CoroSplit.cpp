@@ -1962,9 +1962,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
             F.getContext(), "coro.return.normal", &F, NewSuspendBB);
         Builder.CreateCondBr(NullAllocator, PoplessReturnBB, NormalReturnBB);
         IRBuilder<> PoplessBuilder(PoplessReturnBB);
-        auto *WrapRetV = PoplessBuilder.CreateIntrinsic(
-            RetV->getType(), Intrinsic::coro_return, {RetV});
-        PoplessBuilder.CreateRet(WrapRetV);
+        auto &Context = F.getContext();
+        auto *VoidTy = Type::getVoidTy(Context);
+        auto *RetPopless =
+            PoplessBuilder.CreateIntrinsic(VoidTy, Intrinsic::ret_popless, {});
+        RetPopless->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
+        PoplessBuilder.CreateRet(RetV);
         IRBuilder<> NormalBuilder(NormalReturnBB);
         NormalBuilder.CreateRet(RetV);
       } else {
