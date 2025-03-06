@@ -3107,6 +3107,39 @@ let TargetPrefix = "aarch64" in {
     }
   }
 
+  class SME_FP8_OuterProduct_Intrinsic_Single_Single
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty],
+          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_OuterProduct_Intrinsic_Single_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty],
+          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  class SME_FP8_OuterProduct_Intrinsic_Multi_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty],
+          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_fp8_fmop4a_za16_1x1 : SME_FP8_OuterProduct_Intrinsic_Single_Single;
+  def int_aarch64_sme_fp8_fmop4a_za32_1x1 : SME_FP8_OuterProduct_Intrinsic_Single_Single;
+  def int_aarch64_sme_fp8_fmop4a_za16_1x2 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+  def int_aarch64_sme_fp8_fmop4a_za32_1x2 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+  def int_aarch64_sme_fp8_fmop4a_za16_2x1 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+  def int_aarch64_sme_fp8_fmop4a_za32_2x1 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+  def int_aarch64_sme_fp8_fmop4a_za16_2x2 : SME_FP8_OuterProduct_Intrinsic_Multi_Multi;
+  def int_aarch64_sme_fp8_fmop4a_za32_2x2 : SME_FP8_OuterProduct_Intrinsic_Multi_Multi;
+
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
@@ -4096,6 +4129,7 @@ let TargetPrefix = "aarch64" in {
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                             [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+
   //
   // CVT from FP8 to half-precision/BFloat16 multi-vector
   //

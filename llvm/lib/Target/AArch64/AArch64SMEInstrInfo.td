@@ -1090,8 +1090,8 @@ let Predicates = [HasSME_TMOP, HasSMEF8F16], Uses = [FPMR, FPCR] in {
   def FTMOPA_M2ZZZI_BtoH : sme_tmopa_16b<0b01001, ZZ_b_mul_r, ZPR8, "ftmopa">;
 }
 
-let Predicates = [HasSME_MOP4, HasSMEF8F16], Uses = [FPMR, FPCR] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a">;
+let Predicates = [HasSME_MOP4, HasSMEF8F16] in {
+  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za16">;
 }
 
 let Predicates = [HasSME_TMOP, HasSMEF16F16] in {
@@ -1108,10 +1108,8 @@ let Predicates = [HasSME2, HasSVEBFSCALE] in {
   defm BFMUL : sme2_bfmul_multi<"bfmul">;
 }
 
-let Uses = [FPMR, FPCR] in {
 let Predicates = [HasSME_MOP4, HasSMEF8F32] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a">;
-}
+  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za32">;
 }
 
 let Predicates = [HasSME_MOP4, HasSMEB16B16] in {
