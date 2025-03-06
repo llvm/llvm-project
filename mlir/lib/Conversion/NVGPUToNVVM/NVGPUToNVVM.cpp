@@ -895,12 +895,12 @@ struct NVGPUMBarrierArriveNoCompleteLowering
   }
 };
 
-/// Lowers `nvgpu.mbarrier.test.wait` to `nvvm.mbarrier.test.wait`
-struct NVGPUMBarrierTestWaitLowering
-    : public MBarrierBasePattern<nvgpu::MBarrierTestWaitOp> {
-  using MBarrierBasePattern<nvgpu::MBarrierTestWaitOp>::MBarrierBasePattern;
+/// Lowers `nvgpu.mbarrier.test` to `nvvm.mbarrier.test.wait`
+struct NVGPUMBarrierTestLowering
+    : public MBarrierBasePattern<nvgpu::MBarrierTestOp> {
+  using MBarrierBasePattern<nvgpu::MBarrierTestOp>::MBarrierBasePattern;
   LogicalResult
-  matchAndRewrite(nvgpu::MBarrierTestWaitOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::MBarrierTestOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
     Value barrier =
@@ -1708,7 +1708,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init
       NVGPUMBarrierArriveLowering,           // nvgpu.mbarrier.arrive
       NVGPUMBarrierArriveNoCompleteLowering, // nvgpu.mbarrier.arrive.no_complete
-      NVGPUMBarrierTestWaitLowering,         // nvgpu.mbarrier.test_wait_parity
+      NVGPUMBarrierTestLowering,             // nvgpu.mbarrier.test
       NVGPUMBarrierTryWaitParityLowering,    // nvgpu.mbarrier.try_wait_parity
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
       NVGPUTmaAsyncStoreOpLowering,          // nvgpu.tma.async.store

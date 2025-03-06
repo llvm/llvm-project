@@ -539,22 +539,6 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
   let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
 }
 
-def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
-  let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
-  let description = [{
-    Checks whether the mbarrier object has completed the phase. It is is a 
-    non-blocking instruction which tests for the completion of the phase.
-
-    Example:
-    ```mlir
-      %isComplete = nvgpu.mbarrier.test.wait %barrier, %token : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>, !nvgpu.mbarrier.token
-    ```
-  }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, NVGPU_MBarrierToken:$token, Index:$mbarId);
-  let results = (outs I1:$waitComplete);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $token attr-dict `:` type($barriers) `,` type($token)";
-}
-
 def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
   let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive`.";
   let description = [{
@@ -612,6 +596,22 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
   }];
   let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId, Optional<I1>:$predicate);
   let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
+}
+
+def NVGPU_MBarrierTestOp : NVGPU_Op<"mbarrier.test", []> {
+  let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
+  let description = [{
+    Checks whether the mbarrier object has completed the phase. It is is a 
+    non-blocking instruction which tests for the completion of the phase.
+
+    Example:
+    ```mlir
+      %isComplete = nvgpu.mbarrier.test %barrier, %token : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>, !nvgpu.mbarrier.token
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, NVGPU_MBarrierToken:$token, Index:$mbarId);
+  let results = (outs I1:$waitComplete);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $token attr-dict `:` type($barriers) `,` type($token)";
 }
 
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
