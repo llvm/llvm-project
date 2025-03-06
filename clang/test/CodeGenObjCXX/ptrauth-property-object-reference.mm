@@ -44,9 +44,7 @@ struct TCPPObject
 // CHECK: store ptr %[[AGG_RESULT]], ptr %[[RESULT_PTR]], align 8
 // CHECK: store ptr %[[SELF]], ptr %[[SELF_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[SELF_ADDR]], align 8
-// CHECK: %[[IVAR:.*]] = load i32, ptr @"OBJC_IVAR_$_MyDocument._cppObject", align 8,
-// CHECK: %[[IVAR_CONV:.*]] = sext i32 %[[IVAR]] to i64
-// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 %[[IVAR_CONV]]
+// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 0
 // CHECK: call void @objc_copyCppObjectAtomic(ptr noundef %[[AGG_RESULT]], ptr noundef %[[ADD_PTR]], ptr noundef @__copy_helper_atomic_property_.ptrauth)
 
 // CHECK-LABEL: define internal void @__assign_helper_atomic_property_(ptr noundef %0, ptr noundef %1) #
@@ -61,8 +59,6 @@ struct TCPPObject
 // CHECK: store ptr %[[SELF]], ptr %[[SELF_ADDR]], align 8
 // CHECK: store ptr %[[MYPROPERTY]], ptr %[[MYPROPERTY_INDIRECT]]_addr, align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[SELF_ADDR]], align 8
-// CHECK: %[[IVAR:.*]] = load i32, ptr @"OBJC_IVAR_$_MyDocument._cppObject", align 8,
-// CHECK: %[[IVAR_CONV:.*]] = sext i32 %[[IVAR]] to i64
-// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 %[[IVAR_CONV]]
+// CHECK: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 0
 // CHECK: call void @objc_copyCppObjectAtomic(ptr noundef %[[ADD_PTR]], ptr noundef %[[MYPROPERTY]], ptr noundef @__assign_helper_atomic_property_.ptrauth)
 // CHECK: ret void
