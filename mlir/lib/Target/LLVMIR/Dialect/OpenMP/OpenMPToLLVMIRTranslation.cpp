@@ -1718,10 +1718,18 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(teamsOp.getOperation());
   // Check that all uses of the reduction block arg has the same distribute op
   // parent.
+  llvm::SmallVector<mlir::Operation *> debugUses;
   Operation *distOp = nullptr;
   for (auto ra : iface.getReductionBlockArgs())
     for (auto &use : ra.getUses()) {
       auto *useOp = use.getOwner();
+      // Ignore debug uses.
+      if (mlir::isa<LLVM::DbgDeclareOp>(useOp) ||
+          mlir::isa<LLVM::DbgValueOp>(useOp)) {
+        debugUses.push_back(useOp);
+        continue;
+      }
+
       auto currentDistOp = useOp->getParentOfType<omp::DistributeOp>();
       // Use is not inside a distribute op - return false
       if (!currentDistOp)
@@ -1733,6 +1741,12 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
 
       distOp = currentOp;
     }
+
+  // If we are going to use distribute reduction then remove any debug uses of
+  // the reduction parameters in teamsOp. Otherwise they will be left without
+  // any mapped value in moduleTranslation and will eventually error out.
+  for (auto use : debugUses)
+    use->erase();
   return true;
 }
 
