@@ -309,10 +309,10 @@ for.body:
 ;     im = i;
 ;   }
 ; }
-define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b) {
-; CHECK-LABEL: @induction_assignment(
+define void @phi_refers_another_induction(ptr noundef noalias %a, ptr noundef noalias %b) {
+; CHECK-LABEL: @phi_refers_another_induction(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
 ; CHECK:       for.body.peel.begin:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
 ; CHECK:       for.body.peel:
@@ -333,10 +333,10 @@ define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[ENTRY_PEEL_NEWPH:%.*]]
 ; CHECK:       entry.peel.newph:
-; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY1]] ]
-; CHECK-NEXT:    [[IM_010:%.*]] = phi i32 [ [[TMP2]], [[ENTRY_PEEL_NEWPH]] ], [ [[TMP5:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IM_010:%.*]] = phi i32 [ [[TMP2]], [[ENTRY_PEEL_NEWPH]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext nneg i32 [[IM_010]] to i64
@@ -348,7 +348,7 @@ define void @induction_assignment(ptr noundef noalias %a, ptr noundef noalias %b
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP5]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY1]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
@@ -376,6 +376,102 @@ for.body:
 for.cond.cleanup:
   ret void
 }
+
+; Check that unnecessary peeling doesn't occur if there exist a comparison
+; instruction between an induction and another induction. The original code is
+; as below. Both i and j are inductions, but the comparison i < j is not an
+; induction.
+;
+; val = 42;
+; for (i=0,j=100; i<10000; i+=2,j+=1) {
+;   a[i] = val;
+;   val = i < j;
+; }
+;
+define void @dont_peel_cmp_ind_ind(ptr noundef %a) {
+; CHECK-LABEL: @dont_peel_cmp_ind_ind(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV_0:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_0_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 100, [[ENTRY]] ], [ [[IV_1_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ 42, [[ENTRY]] ], [ [[VAL_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[IV_0]]
+; CHECK-NEXT:    store i32 10, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IV_0_NEXT]] = add nuw nsw i64 [[IV_0]], 2
+; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i64 [[IV_1]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_0_NEXT]], [[IV_1_NEXT]]
+; CHECK-NEXT:    [[VAL_NEXT]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp slt i64 [[IV_0_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv.0 = phi i64 [ 0, %entry ], [ %iv.0.next, %for.body ]
+  %iv.1 = phi i64 [ 100, %entry ] , [ %iv.1.next, %for.body ]
+  %val = phi i32 [ 42, %entry ], [ %val.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i32, ptr %a, i64 %iv.0
+  store i32 10, ptr %arrayidx, align 4
+  %iv.0.next = add nsw nuw i64 %iv.0, 2
+  %iv.1.next = add nsw nuw i64 %iv.1, 1
+  %val.next.cmp = icmp slt i64 %iv.0.next, %iv.1.next
+  %val.next = zext i1 %val.next.cmp to i32
+  %exitcond = icmp slt i64 %iv.0.next, 10000
+  br i1 %exitcond, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
+; Check that unnecessary peeling doesn't occur if there is an instruction that
+; is neither an add nor a sub and has an induction on its operand. The original
+; code is like as below. If the operator is either an add or a sub, then the
+; result would be an induction, so peeling makes sense. In this case, however,
+; the operator is a bitshift.
+;
+; val = 42;
+; for (i=0; i<10000; i++) {
+;   a[i] = val;
+;   val = 1 << i;
+; }
+;
+define void @dont_peel_shl_invariant_ind(ptr noundef %a) {
+; CHECK-LABEL: @dont_peel_shl_invariant_ind(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VAL_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i64, ptr [[A:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[VAL]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[VAL_NEXT]] = shl nuw nsw i64 1, [[IV]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %val = phi i64 [ 0, %entry ], [ %val.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw i64, ptr %a, i64 %iv
+  store i64 %val, ptr %arrayidx, align 4
+  %iv.next = add nsw nuw i64 %iv, 1
+  %val.next = shl nsw nuw i64 1, %iv
+  %cmp = icmp slt i64 %iv.next, 10000
+  br i1 %cmp, label %for.body, label %exit
+
+exit:
+  ret void
+}
+
 
 ; Check that the unnecessary peeling occurs in the following case. The cause is
 ; that the analyzer determines a casted IV as a non-IV.

@@ -189,19 +189,31 @@ public:
   std::optional<unsigned> calculateIterationsToPeel();
 
 protected:
-  using PeelCounter = std::optional<unsigned>;
+  enum class PeelCounterType {
+    Invariant,
+    Induction,
+  };
+
+  using PeelCounterValue = std::pair<unsigned, PeelCounterType>;
+  using PeelCounter = std::optional<PeelCounterValue>;
   const PeelCounter Unknown = std::nullopt;
 
   // Add 1 respecting Unknown and return Unknown if result over MaxIterations
   PeelCounter addOne(PeelCounter PC) const {
     if (PC == Unknown)
       return Unknown;
-    return (*PC + 1 <= MaxIterations) ? PeelCounter{*PC + 1} : Unknown;
+    auto [Val, Ty] = *PC;
+    return (Val + 1 <= MaxIterations) ? PeelCounter({Val + 1, Ty}) : Unknown;
   }
 
-  // Calculate the number of iterations after which the given value
-  // becomes an invariant.
+  // Return a value representing zero for the given counter type.
+  PeelCounter makeZero(PeelCounterType Ty) const { return PeelCounter({0, Ty}); }
+
+  // Calculate the number of iterations after which the given value becomes an invariant or an induction.
   PeelCounter calculate(const Value &);
+
+  // Auxiliary function to calculate the number of iterations for a comparison instruction or a binary operator.
+  PeelCounter mergeTwoCounter(const Instruction &CmpOrBinaryOp, const PeelCounterValue &LHS, const PeelCounterValue &RHS) const;
 
   // Returns true if the \p Phi is an induction in the target loop. This is a
   // lightweight check and possible to detect an IV in some cases.
@@ -273,6 +285,29 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
   return VisitBinOp;
 }
 
+PhiAnalyzer::PeelCounter PhiAnalyzer::mergeTwoCounter(const Instruction &CmpOrBinaryOp, const PeelCounterValue &LHS, const PeelCounterValue &RHS) const {
+  auto &[LVal, LTy] = LHS;
+  auto &[RVal, RTy] = RHS;
+  unsigned NewVal = std::max(LVal, RVal);
+
+  // If either the type of LHS or the type of RHS is an induction, then the
+  // result of this instruction is also an induction only if it is an addition
+  // or a subtraction (after peeling enough times). Otherwise it can be a value
+  // that is neither an invariant nor an induction.
+  //
+  // If both the type of LHS and the type of RHS are invariants, then the
+  // result is also an invariant.
+  if (LTy == PeelCounterType::Induction || RTy == PeelCounterType::Induction) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(&CmpOrBinaryOp)) {
+      if (BinOp->getOpcode() == Instruction::Add ||
+          BinOp->getOpcode() == Instruction::Sub)
+        return PeelCounter({NewVal, PeelCounterType::Induction});
+    }
+    return Unknown;
+  }
+  return PeelCounter({NewVal, PeelCounterType::Invariant});
+}
+
 // This function calculates the number of iterations after which the value
 // becomes an invariant. The pre-calculated values are memorized in a map.
 // N.B. This number will be Unknown or <= MaxIterations.
@@ -298,7 +333,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
 
   if (L.isLoopInvariant(&V))
     // Loop invariant so known at start.
-    return (IterationsToInvarianceOrInduction[&V] = 0);
+    return (IterationsToInvarianceOrInduction[&V] = makeZero(PeelCounterType::Invariant));
   if (const PHINode *Phi = dyn_cast<PHINode>(&V)) {
     if (Phi->getParent() != L.getHeader()) {
       // Phi is not in header block so Unknown.
@@ -309,7 +344,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
 
     // If Phi is an induction, register it as a starting point.
     if (isInductionPHI(Phi))
-      return (IterationsToInvarianceOrInduction[&V] = 0);
+      return (IterationsToInvarianceOrInduction[&V] = makeZero(PeelCounterType::Induction));
 
     // We need to analyze the input from the back edge and add 1.
     Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
@@ -327,12 +362,11 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
       PeelCounter RHS = calculate(*I->getOperand(1));
       if (RHS == Unknown)
         return Unknown;
-      return (IterationsToInvarianceOrInduction[I] = {std::max(*LHS, *RHS)});
+      return (IterationsToInvarianceOrInduction[I] = mergeTwoCounter(*I, *LHS, *RHS));
     }
     if (I->isCast())
       // Cast instructions get the value of the operand.
-      return (IterationsToInvarianceOrInduction[I] =
-                  calculate(*I->getOperand(0)));
+      return (IterationsToInvarianceOrInduction[I] = calculate(*I->getOperand(0)));
   }
   // TODO: handle more expressions
 
@@ -347,9 +381,9 @@ std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   for (auto &PHI : L.getHeader()->phis()) {
     PeelCounter ToInvarianceOrInduction = calculate(PHI);
     if (ToInvarianceOrInduction != Unknown) {
-      assert(*ToInvarianceOrInduction <= MaxIterations &&
-             "bad result in phi analysis");
-      Iterations = std::max(Iterations, *ToInvarianceOrInduction);
+      unsigned Val = ToInvarianceOrInduction->first;
+      assert(Val <= MaxIterations && "bad result in phi analysis");
+      Iterations = std::max(Iterations, Val);
       if (Iterations == MaxIterations)
         break;
     }
