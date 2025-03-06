@@ -245,7 +245,9 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
-# Search for pthread library
+# Different platform may have different name for the POSIX thread library.
+# For example, libpthread.a on AIX. Search for it as it is needed when
+# building the shared flang_rt.runtime.so.
 find_package(Threads REQUIRED)
 
 # function checks
