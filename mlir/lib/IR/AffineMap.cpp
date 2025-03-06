@@ -9,6 +9,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -649,6 +650,28 @@ bool AffineMap::isPermutation() const {
   if (getNumDims() != getNumResults())
     return false;
   return isProjectedPermutation();
+}
+
+struct CheckCoefficients : public AffineExprVisitor<CheckCoefficients> {
+  CheckCoefficients() {}
+
+  void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
+    visit(expr.getLHS());
+    visit(expr.getRHS());
+    if (expr.getKind() == mlir::AffineExprKind::Mul)
+      isNonPositiveCoefficients |=
+          cast<AffineConstantExpr>(expr.getRHS()).getValue() <= 0;
+  }
+  bool isNonPositiveCoefficients = false;
+};
+
+bool AffineMap::isNonPositiveCoefficients() const {
+
+  return llvm::any_of(getResults(), [](AffineExpr e) {
+    CheckCoefficients t;
+    t.visit(e);
+    return t.isNonPositiveCoefficients;
+  });
 }
 
 AffineMap AffineMap::getSubMap(ArrayRef<unsigned> resultPos) const {
