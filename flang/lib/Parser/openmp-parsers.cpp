@@ -27,6 +27,8 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser P for a wrapper class, invoke P, and if it succeeds return
+// the wrapped object.
 template <typename Parser> struct UnwrapParser {
   static_assert(
       Parser::resultType::WrapperTrait::value && "Wrapper class required");

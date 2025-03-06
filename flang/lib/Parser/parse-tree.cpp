@@ -256,15 +256,17 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
 OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
   std::string_view nameView{name.source.begin(), name.source.size()};
   std::string nameLower{ToLowerCaseLetters(nameView)};
-  // If the name was actually "unknown" then accept it, otherwise flag
-  // OMPD_unknown (the default return value from getOpenMPDirectiveKind)
-  // as an error.
-  if (nameLower != "unknown") {
-    v = llvm::omp::getOpenMPDirectiveKind(nameLower);
-    assert(v != llvm::omp::Directive::OMPD_unknown && "Unrecognized directive");
-  } else {
-    v = llvm::omp::Directive::OMPD_unknown;
-  }
+  // The function getOpenMPDirectiveKind will return OMPD_unknown in two cases:
+  // (1) if the given string doesn't match any actual directive, or
+  // (2) if the given string was "unknown".
+  // The Verbatim(<token>) parser will succeed as long as the given token
+  // matches the source.
+  // Since using "construct<OmpDirectiveName>(verbatim(...))" will succeed
+  // if the verbatim parser succeeds, in order to get OMPD_unknown the
+  // token given to Verbatim must be invalid. Because it's an internal issue
+  // asserting is ok.
+  v = llvm::omp::getOpenMPDirectiveKind(nameLower);
+  assert(v != llvm::omp::Directive::OMPD_unknown && "Invalid directive name");
   source = name.source;
 }
 
