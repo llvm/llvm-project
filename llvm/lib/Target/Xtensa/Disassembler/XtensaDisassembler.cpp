@@ -73,8 +73,8 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static const unsigned MRDecoderTable[] = {Xtensa::M0, Xtensa::M1, Xtensa::M2,
-                                          Xtensa::M3};
+static const MCPhysReg MRDecoderTable[] = {Xtensa::M0, Xtensa::M1, Xtensa::M2,
+                                           Xtensa::M3};
 
 static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
@@ -82,12 +82,12 @@ static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo >= std::size(MRDecoderTable))
     return MCDisassembler::Fail;
 
-  unsigned Reg = MRDecoderTable[RegNo];
+  MCPhysReg Reg = MRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static const unsigned MR01DecoderTable[] = {Xtensa::M0, Xtensa::M1};
+static const MCPhysReg MR01DecoderTable[] = {Xtensa::M0, Xtensa::M1};
 
 static DecodeStatus DecodeMR01RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
@@ -95,20 +95,20 @@ static DecodeStatus DecodeMR01RegisterClass(MCInst &Inst, uint64_t RegNo,
   if (RegNo > 2)
     return MCDisassembler::Fail;
 
-  unsigned Reg = MR01DecoderTable[RegNo];
+  MCPhysReg Reg = MR01DecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
 
-static const unsigned MR23DecoderTable[] = {Xtensa::M2, Xtensa::M3};
+static const MCPhysReg MR23DecoderTable[] = {Xtensa::M2, Xtensa::M3};
 
 static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
-  if ((RegNo < 2) || (RegNo > 3))
+  if (RegNo != 2 && RegNo != 3)
     return MCDisassembler::Fail;
 
-  unsigned Reg = MR23DecoderTable[RegNo - 2];
+  MCPhysReg Reg = MR23DecoderTable[RegNo - 2];
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
