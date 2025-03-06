@@ -410,8 +410,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         TmpInst.setOpcode(Xtensa::L32R);
         const MCExpr *Value = MCConstantExpr::create(ImmOp64, getContext());
         MCSymbol *Sym = getContext().createTempSymbol();
-        const MCExpr *Expr = MCSymbolRefExpr::create(
-            Sym, MCSymbolRefExpr::VK_None, getContext());
+        const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
         const MCExpr *OpExpr = XtensaMCExpr::create(
             Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
         TmpInst.addOperand(Inst.getOperand(0));

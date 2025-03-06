@@ -1010,7 +1010,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       const MCExpr *Exp = MCSymbolRefExpr::create(PICOffset, OutContext);
       const MCExpr *PB =
         MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
-                                MCSymbolRefExpr::VK_None,
                                 OutContext);
       const MCOperand TR = TmpInst.getOperand(1);
       const MCOperand PICR = TmpInst.getOperand(0);
@@ -1404,16 +1403,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::PPC32GOT: {
     MCSymbol *GOTSymbol =
         OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
-    const MCExpr *SymGotTlsL =
-        PPCMCExpr::create(PPCMCExpr::VK_PPC_LO,
-                          MCSymbolRefExpr::create(
-                              GOTSymbol, MCSymbolRefExpr::VK_None, OutContext),
-                          OutContext);
-    const MCExpr *SymGotTlsHA =
-        PPCMCExpr::create(PPCMCExpr::VK_PPC_HA,
-                          MCSymbolRefExpr::create(
-                              GOTSymbol, MCSymbolRefExpr::VK_None, OutContext),
-                          OutContext);
+    const MCExpr *SymGotTlsL = PPCMCExpr::create(
+        PPCMCExpr::VK_PPC_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext),
+        OutContext);
+    const MCExpr *SymGotTlsHA = PPCMCExpr::create(
+        PPCMCExpr::VK_PPC_HA, MCSymbolRefExpr::create(GOTSymbol, OutContext),
+        OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addExpr(SymGotTlsL));
