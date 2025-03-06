@@ -3546,7 +3546,7 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   char *newStr;
   CXIdxClientFile file;
   unsigned line, column;
-  size_t len;
+  size_t datalen;
 
   name = info->name;
   if (!name)
