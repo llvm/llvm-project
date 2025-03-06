@@ -73,8 +73,6 @@
 
 using namespace llvm;
 
-static std::atomic<unsigned> GlobalUniqueCallSite;
-
 static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
     cl::desc("NVPTX Specific: schedule for register pressue"), cl::init(false));
@@ -500,7 +498,7 @@ static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI) {
+    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -1474,7 +1472,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned FirstVAArg = CLI.NumFixedArgs; // position of the first variadic
   unsigned VAOffset = 0;                  // current offset in the param array
 
-  unsigned UniqueCallSite = GlobalUniqueCallSite.fetch_add(1);
+  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
   SDValue TempChain = Chain;
   Chain = DAG.getCALLSEQ_START(Chain, UniqueCallSite, 0, dl);
   SDValue InGlue = Chain.getValue(1);
