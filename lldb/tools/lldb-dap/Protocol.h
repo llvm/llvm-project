@@ -316,6 +316,36 @@ struct Source {
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 llvm::json::Value toJSON(const Source &);
 
+// MARK: Events
+
+// "ExitedEvent": {
+//   "allOf": [ { "$ref": "#/definitions/Event" }, {
+//     "type": "object",
+//     "description": "The event indicates that the debuggee has exited and
+//     returns its exit code.", "properties": {
+//       "event": {
+//         "type": "string",
+//         "enum": [ "exited" ]
+//       },
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "exitCode": {
+//             "type": "integer",
+//             "description": "The exit code returned from the debuggee."
+//           }
+//         },
+//         "required": [ "exitCode" ]
+//       }
+//     },
+//     "required": [ "event", "body" ]
+//   }]
+// }
+struct ExitedEventBody {
+  int exitCode;
+};
+llvm::json::Value toJSON(const ExitedEventBody &);
+
 // MARK: Requests
 
 // "SourceArguments": {

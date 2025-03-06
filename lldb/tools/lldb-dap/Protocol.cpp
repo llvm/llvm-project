@@ -315,6 +315,10 @@ bool fromJSON(const llvm::json::Value &Params, Source &S, llvm::json::Path P) {
          O.mapOptional("sourceReference", S.sourceReference);
 }
 
+llvm::json::Value toJSON(const ExitedEventBody &EEB) {
+  return llvm::json::Object{{"exitCode", EEB.exitCode}};
+}
+
 bool fromJSON(const llvm::json::Value &Params, SourceArguments &SA,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);

@@ -58,6 +58,9 @@ typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
 
+/// A debug adapter initiated event.
+template <typename T> using OutgoingEvent = std::function<void(const T &)>;
+
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 /// Buffer size for handling output events.
@@ -123,21 +126,21 @@ struct Variables {
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -206,6 +209,14 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
+
+  /// Typed Events Handlers
+  /// @{
+
+  /// onExited sends an event that the debuggee has exited.
+  OutgoingEvent<protocol::ExitedEventBody> onExited;
+
+  /// @}
 
   DAP(std::string name, llvm::StringRef path, std::ofstream *log,
       lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
@@ -345,6 +356,10 @@ struct DAP {
     request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
   }
 
+  /// Registeres an event handler for sending Debug Adapter Protocol events.
+  template <typename Body>
+  OutgoingEvent<Body> RegisterEvent(llvm::StringLiteral Event);
+
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
 
@@ -377,6 +392,16 @@ struct DAP {
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 };
+
+template <typename Body>
+OutgoingEvent<Body> DAP::RegisterEvent(llvm::StringLiteral Event) {
+  return [&, Event](const Body &B) {
+    protocol::Event Evt;
+    Evt.event = Event;
+    Evt.rawBody = std::move(B);
+    SendJSON(std::move(Evt));
+  };
+}
 
 } // namespace lldb_dap
 
