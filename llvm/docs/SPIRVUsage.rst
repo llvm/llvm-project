@@ -286,6 +286,28 @@ representing an ``OpConstant`` id operand, a ``spirv.Literal`` type, representin
 literal operand, or any other type, representing the id of that type as an operand.
 ``spirv.IntegralConstant`` and ``spirv.Literal`` may not be used outside of this context.
 
+For example, ``OpTypeArray`` (opcode 28) takes an id for the element type and an id for the element
+length, so an array of 16 integers could be declared as:
+
+``target("spirv.Type", i32, target("spirv.IntegralConstant", i32, 16), 28, 64, 32)``
+
+This will be lowered to:
+
+``OpTypeArray %int %int_16``
+
+``OpTypeVector`` takes an id for the component type and a literal for the component count, so a
+4-integer vector could be declared as:
+
+``target("spirv.Type", i32, target("spirv.Literal", 4), 23, 16, 32)``
+
+This will be lowered to:
+
+``OpTypeVector %int 4``
+
+See `Target Extension Types for Inline SPIR-V and Decorated Types`_ for further details.
+
+.. _Target Extension Types for Inline SPIR-V and Decorated Types: https://github.com/llvm/wg-hlsl/blob/main/proposals/0017-inline-spirv-and-decorated-types.md
+
 .. _spirv-intrinsics:
 
 Target Intrinsics

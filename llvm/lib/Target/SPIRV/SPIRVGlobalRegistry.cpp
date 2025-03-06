@@ -1414,18 +1414,22 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateUnknownType(
     return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
   ResVReg = createTypeVReg(MIRBuilder);
 
-  MachineInstrBuilder MIB =
-      MIRBuilder.buildInstr(SPIRV::UNKNOWN_type).addDef(ResVReg).addImm(Opcode);
-  for (MCOperand Operand : Operands) {
-    if (Operand.isReg()) {
-      MIB.addUse(Operand.getReg());
-    } else if (Operand.isImm()) {
-      MIB.addImm(Operand.getImm());
-    }
-  }
-
   DT.add(Ty, &MIRBuilder.getMF(), ResVReg);
-  return MIB;
+
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::UNKNOWN_type)
+                                  .addDef(ResVReg)
+                                  .addImm(Opcode);
+    for (MCOperand Operand : Operands) {
+      if (Operand.isReg()) {
+        MIB.addUse(Operand.getReg());
+      } else if (Operand.isImm()) {
+        MIB.addImm(Operand.getImm());
+      }
+    }
+
+    return MIB;
+  });
 }
 
 const MachineInstr *

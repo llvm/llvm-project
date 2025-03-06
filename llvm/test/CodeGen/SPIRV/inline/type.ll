@@ -16,11 +16,10 @@
 ; CHECK: OpUnknown(28, 4) [[array_t:%[0-9]+]] [[image_t]] [[uint32_4]]
 %ArrayTex2D = type target("spirv.Type", %type_2d_image, %integral_constant_4, 28, 0, 0)
 
-; CHECK: [[getTexArray_t:%[0-9]+]] = OpTypeFunction [[array_t]]
-
 ; CHECK: OpUnknown(21, 4) [[int_t:%[0-9]+]] 32 1
 %int_t = type target("spirv.Type", %literal_32, %literal_true, 21, 0, 0)
 
+; CHECK: [[getTexArray_t:%[0-9]+]] = OpTypeFunction [[array_t]]
 ; CHECK: [[getInt_t:%[0-9]+]] = OpTypeFunction [[int_t]]
 
 ; CHECK: [[getTexArray:%[0-9]+]] = OpFunction [[array_t]] None [[getTexArray_t]]
@@ -31,8 +30,6 @@ declare %int_t @getInt()
 
 define void @main() #1 {
 entry:
-  %images = alloca %ArrayTex2D
-
 ; CHECK: {{%[0-9]+}} = OpFunctionCall [[array_t]] [[getTexArray]]
   %retTex = call %ArrayTex2D @getTexArray()
 

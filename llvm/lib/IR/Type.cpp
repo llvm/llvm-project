@@ -975,13 +975,16 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     auto Size = Ty->getIntParameter(1);
     auto Alignment = Ty->getIntParameter(2);
 
-    // LLVM expects variables that can be allocated to have an alignment and
-    // size. Default to using a 32-bit int as the layout type if none are
-    // present.
-    llvm::Type *LayoutType = Type::getInt32Ty(C);
-    if (Size > 0 && Alignment > 0)
+    llvm::Type *LayoutType;
+    if (Size > 0 && Alignment > 0) {
       LayoutType =
           ArrayType::get(Type::getIntNTy(C, Alignment), Size * 8 / Alignment);
+    } else {
+      // LLVM expects variables that can be allocated to have an alignment and
+      // size. Default to using a 32-bit int as the layout type if none are
+      // present.
+      LayoutType = Type::getInt32Ty(C);
+    }
 
     return TargetTypeInfo(LayoutType, TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);

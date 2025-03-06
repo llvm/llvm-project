@@ -111,10 +111,10 @@ void SPIRVMCCodeEmitter::encodeUnknownType(const MCInst &MI,
                                            SmallVectorImpl<char> &CB,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  // Encode the first 32 SPIR-V bytes with the number of args and the opcode.
+  // Encode the first 32 SPIR-V bits with the number of args and the opcode.
   const uint64_t OpCode = MI.getOperand(1).getImm();
   const uint32_t NumWords = MI.getNumOperands();
-  const uint32_t FirstWord = (0xFF & NumWords) << 16 | (0xFF & OpCode);
+  const uint32_t FirstWord = (0xFFFF & NumWords) << 16 | (0xFFFF & OpCode);
 
   // encoding: <opcode+len> <result type> [<operand0> <operand1> ...]
   support::endian::write(CB, FirstWord, llvm::endianness::little);
