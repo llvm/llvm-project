@@ -557,6 +557,11 @@
     ],
     "commands": [
       {
+        "command": "lldb-dap.attachToProcess",
+        "title": "Attach to Process...",
+        "category": "LLDB DAP"
+      },
+      {
         "command": "lldb-dap.pickProcess",
         "title": "Pick Process",
         "category": "LLDB DAP"

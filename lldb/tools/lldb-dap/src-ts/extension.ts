@@ -7,6 +7,7 @@ import {
 } from "./debug-adapter-factory";
 import { DisposableContext } from "./disposable-context";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
+import { attachToProcess } from "./commands/attach-to-process";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -47,6 +48,12 @@ export class LLDBDapExtension extends DisposableContext {
 
     this.pushSubscription(
       vscode.commands.registerCommand("lldb-dap.pickProcess", pickProcess),
+    );
+    this.pushSubscription(
+      vscode.commands.registerCommand(
+        "lldb-dap.attachToProcess",
+        attachToProcess,
+      ),
     );
   }
 }
