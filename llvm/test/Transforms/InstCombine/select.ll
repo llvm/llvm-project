@@ -4901,3 +4901,41 @@ define i32 @src_simplify_2x_at_once_and(i32 %x, i32 %y) {
   %cond = select i1 %and0, i32 %sub, i32 %xor
   ret i32 %cond
 }
+
+define void @select_freeze_poison_parameter(ptr noundef %addr.src, ptr %addr.tgt, i1 %cond) {
+; CHECK-LABEL: @select_freeze_poison_parameter(
+; CHECK-NEXT:    [[ADDR_SRC:%.*]] = select i1 [[COND:%.*]], ptr [[ADDR_SRC1:%.*]], ptr null
+; CHECK-NEXT:    store ptr [[ADDR_SRC]], ptr [[ADDR_TGT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %freeze = freeze ptr poison
+  %select.addr = select i1 %cond, ptr %addr.src, ptr %freeze
+  store ptr %select.addr, ptr %addr.tgt
+  ret void
+}
+
+@glb = global ptr null
+
+define void @select_freeze_poison_global(ptr %addr.tgt, i1 %cond) {
+; CHECK-LABEL: @select_freeze_poison_global(
+; CHECK-NEXT:    [[SELECT_ADDR:%.*]] = select i1 [[COND:%.*]], ptr @glb, ptr null
+; CHECK-NEXT:    store ptr [[SELECT_ADDR]], ptr [[ADDR_TGT:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %freeze = freeze ptr poison
+  %select.addr = select i1 %cond, ptr @glb, ptr %freeze
+  store ptr %select.addr, ptr %addr.tgt
+  ret void
+}
+
+define void @select_freeze_poison_constant(ptr %addr.tgt, i1 %cond) {
+; CHECK-LABEL: @select_freeze_poison_constant(
+; CHECK-NEXT:    [[SELECT_ADDR:%.*]] = select i1 [[COND:%.*]], i32 72, i32 0
+; CHECK-NEXT:    store i32 [[SELECT_ADDR]], ptr [[ADDR_TGT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %freeze = freeze i32 poison
+  %select.addr = select i1 %cond, i32 72, i32 %freeze
+  store i32 %select.addr, ptr %addr.tgt
+  ret void
+}

@@ -139,15 +139,13 @@ void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
 }
 
 StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
-  if (!VariantKindToName.empty())
-    return VariantKindToName.find(Kind)->second;
-  return MCSymbolRefExpr::getVariantKindName(
-      MCSymbolRefExpr::VariantKind(Kind));
+  auto It = VariantKindToName.find(Kind);
+  assert(It != VariantKindToName.end() &&
+         "ensure the VariantKind is set in initializeVariantKinds");
+  return It->second;
 }
 
 uint32_t MCAsmInfo::getVariantKindForName(StringRef Name) const {
-  if (NameToVariantKind.empty())
-    return MCSymbolRefExpr::getVariantKindForName(Name);
   auto It = NameToVariantKind.find(Name.lower());
   if (It != NameToVariantKind.end())
     return It->second;
