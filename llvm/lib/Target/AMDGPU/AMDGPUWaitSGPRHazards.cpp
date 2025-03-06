@@ -165,8 +165,13 @@ public:
   }
 
   unsigned mergeMasks(unsigned Mask1, unsigned Mask2) {
-    unsigned Mask = Mask1 & Mask2;
-
+    unsigned Mask = 0xffff;
+    Mask = AMDGPU::DepCtr::encodeFieldSaSdst(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(Mask1),
+                       AMDGPU::DepCtr::decodeFieldSaSdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaVcc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaVcc(Mask2)));
     Mask = AMDGPU::DepCtr::encodeFieldVmVsrc(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVmVsrc(Mask1),
                        AMDGPU::DepCtr::decodeFieldVmVsrc(Mask2)));
@@ -176,6 +181,12 @@ public:
     Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
                        AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldHoldCnt(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1),
+                       AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2)));
+    Mask = AMDGPU::DepCtr::encodeFieldVaSsrc(
+        Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSsrc(Mask1),
+                       AMDGPU::DepCtr::decodeFieldVaSsrc(Mask2)));
     return Mask;
   }
 
@@ -377,13 +388,17 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
-          if (MI != MI->getParent()->begin()) {
-            MachineInstr &PrevMI = *std::prev(MI);
-            if (PrevMI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-              Mask = mergeMasks(Mask, PrevMI.getOperand(0).getImm());
-              PrevMI.eraseFromParent();
+          if (MI != MBB.instr_begin()) {
+            MachineBasicBlock::instr_iterator It = std::prev(MI);
+            while (It != MBB.instr_begin() && It->isDebugInstr())
+              --It;
+            if (It->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
+              Mask = mergeMasks(Mask, It->getOperand(0).getImm());
+              It->getOperand(0).setImm(Mask);
+              continue;
             }
           }
+
           auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
                                TII->get(AMDGPU::S_WAITCNT_DEPCTR))
                            .addImm(Mask);
