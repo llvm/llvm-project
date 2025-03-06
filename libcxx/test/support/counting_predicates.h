@@ -28,8 +28,8 @@ public:
     ++count_;
     return p_(a);
   }
-  TEST_CONSTEXPR std::size_t count() const { return count_; }
-  TEST_CONSTEXPR void reset() { count_ = 0; }
+  TEST_CONSTEXPR_CXX14 std::size_t count() const { return count_; }
+  TEST_CONSTEXPR_CXX14 void reset() { count_ = 0; }
 
 private:
   Predicate p_;
