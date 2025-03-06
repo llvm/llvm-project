@@ -1119,9 +1119,10 @@ def ExtVectorTypeDocs : Documentation {
 
 The ext_vector_type(N) attribute specifies that a type is a vector with N
 elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
-allows element access via [] or x, y, z, w for graphics-style indexing. This
-attribute enables efficient SIMD operations and is usable in general-purpose
-code.
+allows element access the array subscript operator ``[]``, ``sN`` where ``N`` is
+a hexadecimal value, or ``x``, ``y``, ``z``, ``w`` for graphics-style indexing.
+This attribute enables efficient SIMD operations and is usable in
+general-purpose code.
 
 .. code-block:: c++
 
@@ -1133,6 +1134,14 @@ code.
     }
     return sum;
   }
+
+The vector type also supports swizzling up to sixteen elements. This can be done
+using the object accessors.
+.. code-block:: c++
+
+  using f16_x16 = _Float16 __attribute__((ext_vector_type(16)));
+
+  f16_x16 reverse(f16_x16 v) { return v.sfedcba9876543210; }
   }];
 }
 
