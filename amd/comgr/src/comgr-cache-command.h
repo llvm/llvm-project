@@ -33,42 +33,46 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_ENV_H
-#define COMGR_ENV_H
+#ifndef COMGR_CACHE_COMMAND_H
+#define COMGR_CACHE_COMMAND_H
 
-#include "llvm/ADT/StringRef.h"
+#include "amd_comgr.h"
+
+#include <clang/Driver/Action.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/SHA256.h>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace COMGR {
-namespace env {
+class CachedCommandAdaptor {
+public:
+  using ActionClass = clang::driver::Action::ActionClass;
+  using HashAlgorithm = llvm::SHA256;
+  using Identifier = llvm::SmallString<64>;
 
-/// Return whether the environment requests temps be saved.
-bool shouldSaveTemps();
-bool shouldSaveLLVMTemps();
+  llvm::Expected<Identifier> getIdentifier() const;
 
-/// If the environment requests logs be redirected, return the string identifier
-/// of where to redirect. Otherwise return @p None.
-std::optional<llvm::StringRef> getRedirectLogs();
+  virtual bool canCache() const = 0;
+  virtual llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) = 0;
+  virtual llvm::Expected<llvm::StringRef> readExecuteOutput() = 0;
+  virtual amd_comgr_status_t execute(llvm::raw_ostream &LogS) = 0;
 
-/// Return whether the environment requests verbose logging.
-bool shouldEmitVerboseLogs();
+  virtual ~CachedCommandAdaptor() = default;
 
-/// Return whether the environment requests time statistics collection.
-bool needTimeStatistics();
+  // helper to work around the comgr-xxxxx string appearing in files
+  static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
+  static void addString(HashAlgorithm &H, llvm::StringRef S);
+  static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
 
-/// If environment variable LLVM_PATH is set, return the environment variable,
-/// otherwise return the default LLVM path.
-llvm::StringRef getLLVMPath();
-
-/// If environment variable AMD_COMGR_CACHE_POLICY is set, return the
-/// environment variable, otherwise return empty
-llvm::StringRef getCachePolicy();
-
-/// If environment variable AMD_COMGR_CACHE_DIR is set, return the environment
-/// variable, otherwise return the default path: On Linux it's typically
-/// $HOME/.cache/comgr_cache (depends on XDG_CACHE_HOME)
-llvm::StringRef getCacheDirectory();
-
-} // namespace env
+protected:
+  virtual ActionClass getClass() const = 0;
+  virtual void addOptionsIdentifier(HashAlgorithm &) const = 0;
+  virtual llvm::Error addInputIdentifier(HashAlgorithm &) const = 0;
+};
 } // namespace COMGR
 
-#endif // COMGR_ENV_H
+#endif

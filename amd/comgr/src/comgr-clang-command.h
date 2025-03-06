@@ -33,42 +33,54 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_ENV_H
-#define COMGR_ENV_H
+#ifndef COMGR_CLANG_COMMAND_H
+#define COMGR_CLANG_COMMAND_H
 
-#include "llvm/ADT/StringRef.h"
+#include "comgr-cache-command.h"
+
+#include <llvm/Support/VirtualFileSystem.h>
+
+namespace clang {
+class DiagnosticOptions;
+namespace driver {
+class Command;
+} // namespace driver
+} // namespace clang
 
 namespace COMGR {
-namespace env {
+class ClangCommand final : public CachedCommandAdaptor {
+public:
+  using ExecuteFnTy = std::function<amd_comgr_status_t(
+      clang::driver::Command &, llvm::raw_ostream &, clang::DiagnosticOptions &,
+      llvm::vfs::FileSystem &)>;
 
-/// Return whether the environment requests temps be saved.
-bool shouldSaveTemps();
-bool shouldSaveLLVMTemps();
+private:
+  clang::driver::Command &Command;
+  clang::DiagnosticOptions &DiagOpts;
+  llvm::vfs::FileSystem &VFS;
+  ExecuteFnTy ExecuteImpl;
 
-/// If the environment requests logs be redirected, return the string identifier
-/// of where to redirect. Otherwise return @p None.
-std::optional<llvm::StringRef> getRedirectLogs();
+  // To avoid copies, store the output of execute, such that readExecuteOutput
+  // can return a reference.
+  std::unique_ptr<llvm::MemoryBuffer> Output;
 
-/// Return whether the environment requests verbose logging.
-bool shouldEmitVerboseLogs();
+public:
+  ClangCommand(clang::driver::Command &Command,
+               clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
+               ExecuteFnTy &&ExecuteImpl);
 
-/// Return whether the environment requests time statistics collection.
-bool needTimeStatistics();
+  bool canCache() const override;
+  llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) override;
+  llvm::Expected<llvm::StringRef> readExecuteOutput() override;
+  amd_comgr_status_t execute(llvm::raw_ostream &LogS) override;
 
-/// If environment variable LLVM_PATH is set, return the environment variable,
-/// otherwise return the default LLVM path.
-llvm::StringRef getLLVMPath();
+  ~ClangCommand() override = default;
 
-/// If environment variable AMD_COMGR_CACHE_POLICY is set, return the
-/// environment variable, otherwise return empty
-llvm::StringRef getCachePolicy();
-
-/// If environment variable AMD_COMGR_CACHE_DIR is set, return the environment
-/// variable, otherwise return the default path: On Linux it's typically
-/// $HOME/.cache/comgr_cache (depends on XDG_CACHE_HOME)
-llvm::StringRef getCacheDirectory();
-
-} // namespace env
+protected:
+  ActionClass getClass() const override;
+  void addOptionsIdentifier(HashAlgorithm &) const override;
+  llvm::Error addInputIdentifier(HashAlgorithm &) const override;
+};
 } // namespace COMGR
 
-#endif // COMGR_ENV_H
+#endif

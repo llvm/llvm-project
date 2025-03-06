@@ -477,6 +477,9 @@ static void codegen(const CodegenConfig &Conf, TargetMachine *TM,
 
   if (DwoOut)
     DwoOut->keep();
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const CodegenConfig &CodegenC, TargetMachine *TM,

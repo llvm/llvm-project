@@ -37,12 +37,13 @@
  ******************************************************************************/
 
 #include "comgr-compiler.h"
+#include "comgr-cache.h"
+#include "comgr-clang-command.h"
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
-#include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -54,6 +55,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/FrontendTool/Utils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -720,6 +722,15 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+std::string getStableCUID(const DataSet *InSet) {
+  using Hash = CachedCommandAdaptor::HashAlgorithm;
+  Hash H;
+  for (const DataObject *Input : InSet->DataObjects) {
+    CachedCommandAdaptor::addFileContents(H,
+                                          StringRef{Input->Data, Input->Size});
+  }
+  return toHex(H.final());
+}
 } // namespace
 
 amd_comgr_status_t
@@ -771,9 +782,17 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
+  auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    if (auto Status = executeCommand(Job, LogS, *DiagOpts, *VFS)) {
-      return Status;
+    ClangCommand C(Job, *DiagOpts, *VFS, executeCommand);
+    if (Cache) {
+      if (auto Status = Cache->execute(C, LogS)) {
+        return Status;
+      }
+    } else {
+      if (auto Status = C.execute(LogS)) {
+        return Status;
+      }
     }
   }
   return AMD_COMGR_STATUS_SUCCESS;
@@ -1025,6 +1044,10 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
     Args.push_back("--offload-device-only");
+    // Pass a cuid that depends on the input files
+    // Otherwise, a random (which depends on the /tmp/comgr-xxxxx path) cuid is
+    // generated which causes a cache miss on every run.
+    Args.push_back(Saver.save("-cuid=" + getStableCUID(InSet)).data());
     break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

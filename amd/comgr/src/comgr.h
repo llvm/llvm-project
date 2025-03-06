@@ -315,6 +315,10 @@ public:
   long unsigned int RodataOffset;
 };
 
+// get a string identifying comgr: this is a combination of comgr's version,
+// device-libs contents and opencl-c.h contents.
+llvm::StringRef getComgrHashIdentifier();
+
 } // namespace COMGR
 
 #endif // header guard
