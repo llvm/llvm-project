@@ -13436,6 +13436,10 @@ public:
                             bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
+  /// Substitute an expression as if it is a address-of-operand, which makes it
+  /// act like a CXXIdExpression rather than an attempt to call.
+  ExprResult SubstCXXIdExpr(Expr *E,
+                            const MultiLevelTemplateArgumentList &TemplateArgs);
 
   // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
   // to disable constraint evaluation, then restore the state.

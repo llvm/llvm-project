@@ -47,7 +47,7 @@ LIBC_INLINE constexpr T accumulate(int base, const uint8_t *digits,
                                    size_t size) {
   T value{};
   for (; size; ++digits, --size) {
-    value *= static_cast<unsigned int>(base);
+    value *= base;
     value += *digits;
   }
   return value;

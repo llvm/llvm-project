@@ -31,10 +31,6 @@ bool AArch64MCSymbolizer::tryAddingSymbolicOperand(
   if (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst))
     return false;
 
-  // TODO: add handling for linker "relaxation". At the moment, relocations
-  // corresponding to "relaxed" instructions are excluded from BinaryFunction
-  // relocation list.
-
   const uint64_t InstOffset = InstAddress - Function.getAddress();
   const Relocation *Relocation = Function.getRelocationAt(InstOffset);
 
@@ -48,6 +44,21 @@ bool AArch64MCSymbolizer::tryAddingSymbolicOperand(
     Inst.addOperand(MCOperand::createExpr(
         BC.MIB->getTargetExprFor(Inst, Expr, *Ctx, RelType)));
   };
+
+  // The linker can convert ADRP+ADD and ADRP+LDR instruction sequences into
+  // NOP+ADR. After the conversion, the linker might keep the relocations and
+  // if we try to symbolize ADR's operand using outdated relocations, we might
+  // get unexpected results. Hence, we check for the conversion/relaxation, and
+  // ignore the relocation. The symbolization is done based on the PC-relative
+  // value of the operand instead.
+  if (Relocation && BC.MIB->isADR(Inst)) {
+    if (Relocation->Type == ELF::R_AARCH64_ADD_ABS_LO12_NC ||
+        Relocation->Type == ELF::R_AARCH64_LD64_GOT_LO12_NC) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation at 0x"
+                        << Twine::utohexstr(InstAddress) << '\n');
+      Relocation = nullptr;
+    }
+  }
 
   if (Relocation) {
     addOperand(Relocation->Symbol, Relocation->Addend, Relocation->Type);

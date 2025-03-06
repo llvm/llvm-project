@@ -358,7 +358,7 @@ public:
   /// model and taking into account binding information from
   /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
@@ -528,7 +528,7 @@ public:
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -628,7 +628,7 @@ public:
   }
 
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();

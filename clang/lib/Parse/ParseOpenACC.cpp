@@ -1441,6 +1441,7 @@ Parser::ParseOpenACCDirective() {
   Parser::OpenACCWaitParseInfo WaitInfo;
   Parser::OpenACCCacheParseInfo CacheInfo;
   OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
+  ExprResult RoutineName;
 
   getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
@@ -1464,13 +1465,16 @@ Parser::ParseOpenACCDirective() {
     case OpenACCDirectiveKind::Routine: {
       // Routine has an optional paren-wrapped name of a function in the local
       // scope. We parse the name, emitting any diagnostics
-      ExprResult RoutineName = ParseOpenACCIDExpression();
+      RoutineName = ParseOpenACCIDExpression();
       // If the routine name is invalid, just skip until the closing paren to
       // recover more gracefully.
-      if (RoutineName.isInvalid())
+      if (!RoutineName.isUsable()) {
         T.skipToEnd();
-      else
+      } else {
         T.consumeClose();
+        RoutineName =
+            getActions().OpenACC().ActOnRoutineName(RoutineName.get());
+      }
       break;
     }
     case OpenACCDirectiveKind::Cache:
@@ -1496,19 +1500,27 @@ Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present, plus set up return value.
-  OpenACCDirectiveParseInfo ParseInfo{
-      DirKind,
-      StartLoc,
-      DirLoc,
-      T.getOpenLocation(),
-      T.getCloseLocation(),
-      /*EndLoc=*/SourceLocation{},
-      (DirKind == OpenACCDirectiveKind::Wait ? WaitInfo.QueuesLoc
-                                             : CacheInfo.ReadOnlyLoc),
-      AtomicKind,
-      (DirKind == OpenACCDirectiveKind::Wait ? WaitInfo.getAllExprs()
-                                             : CacheInfo.Vars),
-      ParseOpenACCClauseList(DirKind)};
+  OpenACCDirectiveParseInfo ParseInfo{DirKind,
+                                      StartLoc,
+                                      DirLoc,
+                                      T.getOpenLocation(),
+                                      T.getCloseLocation(),
+                                      /*EndLoc=*/SourceLocation{},
+                                      (DirKind == OpenACCDirectiveKind::Wait
+                                           ? WaitInfo.QueuesLoc
+                                           : CacheInfo.ReadOnlyLoc),
+                                      AtomicKind,
+                                      {},
+                                      {}};
+
+  if (DirKind == OpenACCDirectiveKind::Wait)
+    ParseInfo.Exprs = WaitInfo.getAllExprs();
+  else if (DirKind == OpenACCDirectiveKind::Cache)
+    ParseInfo.Exprs = std::move(CacheInfo.Vars);
+  else if (DirKind == OpenACCDirectiveKind::Routine && RoutineName.isUsable())
+    ParseInfo.Exprs = llvm::SmallVector<Expr *>(1, RoutineName.get());
+
+  ParseInfo.Clauses = ParseOpenACCClauseList(DirKind);
 
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
          "Didn't parse all OpenACC Clauses");
@@ -1532,8 +1544,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
     return nullptr;
 
   return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.EndLoc,
-      DirInfo.Clauses));
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
+      DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
+      DirInfo.RParenLoc, DirInfo.EndLoc, DirInfo.Clauses));
 }
 
 // Parse OpenACC Directive on a Statement.
