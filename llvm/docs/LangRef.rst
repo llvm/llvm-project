@@ -5826,6 +5826,8 @@ Hexagon:
 
 LoongArch:
 
+- ``u``: Print an LASX register.
+- ``w``: Print an LSX register.
 - ``z``: Print $zero register if operand is zero, otherwise print it normally.
 
 MSP430:
