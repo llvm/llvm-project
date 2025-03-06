@@ -1751,7 +1751,7 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
 void OmpVisitor::CreateTempSymbol(
     const parser::CharBlock &name, const DeclTypeSpec &dts) {
-  ObjectEntityDetails details;
+  ObjectEntityDetails details{};
   details.set_type(dts);
 
   MakeSymbol(name, Attrs{}, std::move(details));
@@ -1770,16 +1770,16 @@ void OmpVisitor::ProcessReductionSpecifier(
   // Creating a new scope in case the combiner expression (or clauses) use
   // reerved identifiers, like "omp_in". This is a temporary solution until
   // we deal with these in a more thorough way.
-  auto &typeList = std::get<parser::OmpTypeNameList>(spec.t);
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
   for (auto &t : typeList.v) {
     PushScope(Scope::Kind::OtherConstruct, nullptr);
     BeginDeclTypeSpec();
     // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
     Walk(t.u);
 
-    auto *typeSpec = GetDeclTypeSpec();
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
     assert(typeSpec && "We should have a type here");
-    const parser::CharBlock ompVarNames[] = {
+    const parser::CharBlock ompVarNames[]{
         {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}};
 
     for (auto &nm : ompVarNames) {

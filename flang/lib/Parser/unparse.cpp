@@ -2708,10 +2708,11 @@ public:
   void Unparse(const OmpInitializerClause &x) {
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
-    if (const auto *assignment = std::get_if<AssignmentStmt>(&x.u))
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
       Walk(assignment->t, "=");
-    else
+    } else {
       Walk(x.u);
+    }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
