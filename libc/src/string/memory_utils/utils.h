@@ -307,7 +307,8 @@ LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
 template <size_t SIZE, typename T1, typename T2>
 void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
                                size_t &count) {
-  adjust(static_cast<ptrdiff_t>(distance_to_next_aligned<SIZE>(p1)), p1, p2, count);
+  adjust(static_cast<ptrdiff_t>(distance_to_next_aligned<SIZE>(p1)), p1, p2,
+         count);
   p1 = assume_aligned<SIZE>(p1);
 }
 
