@@ -2095,15 +2095,13 @@ public:
   /// depending on the generated condition.
   BasicBlock *emitSCEVChecks(BasicBlock *Bypass,
                              BasicBlock *LoopVectorPreHeader) {
-    if (!SCEVCheckCond)
+    using namespace llvm::PatternMatch;
+    if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
       return nullptr;
 
     Value *Cond = SCEVCheckCond;
     // Mark the check as used, to prevent it from being removed during cleanup.
     SCEVCheckCond = nullptr;
-    if (auto *C = dyn_cast<ConstantInt>(Cond))
-      if (C->isZero())
-        return nullptr;
 
     auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
 
