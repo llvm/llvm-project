@@ -12,6 +12,7 @@ declare float @llvm.nvvm.ldu.global.f.f32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare double @llvm.nvvm.ldu.global.f.f64.p1(ptr addrspace(1) %ptr, i32 %align)
 declare half @llvm.nvvm.ldu.global.f.f16.p1(ptr addrspace(1) %ptr, i32 %align)
 declare <2 x half> @llvm.nvvm.ldu.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 %align)
+declare <2 x float> @llvm.nvvm.ldu.global.f.v2f32.p1(ptr addrspace(1) %ptr, i32 %align)
 
 declare i8 @llvm.nvvm.ldg.global.i.i8.p1(ptr addrspace(1) %ptr, i32 %align)
 declare i16 @llvm.nvvm.ldg.global.i.i16.p1(ptr addrspace(1) %ptr, i32 %align)
@@ -22,6 +23,7 @@ declare float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %ptr, i32 %align)
 declare double @llvm.nvvm.ldg.global.f.f64.p1(ptr addrspace(1) %ptr, i32 %align)
 declare half @llvm.nvvm.ldg.global.f.f16.p1(ptr addrspace(1) %ptr, i32 %align)
 declare <2 x half> @llvm.nvvm.ldg.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 %align)
+declare <2 x float> @llvm.nvvm.ldg.global.f.v2f32.p1(ptr addrspace(1) %ptr, i32 %align)
 
 define i8 @test_ldu_i8(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_i8(
@@ -154,11 +156,25 @@ define <2 x half> @test_ldu_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_v2f16_param_0];
-; CHECK-NEXT:    ldu.global.u32 %r1, [%rd1];
+; CHECK-NEXT:    ldu.global.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call <2 x half> @llvm.nvvm.ldu.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 4)
   ret <2 x half> %val
+}
+
+define <2 x float> @test_ldu_v2f32(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: test_ldu_v2f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_v2f32_param_0];
+; CHECK-NEXT:    ldu.global.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %val = tail call <2 x float> @llvm.nvvm.ldu.global.f.v2f32.p1(ptr addrspace(1) %ptr, i32 8)
+  ret <2 x float> %val
 }
 
 define i8 @test_ldg_i8(ptr addrspace(1) %ptr) {
@@ -291,11 +307,25 @@ define <2 x half> @test_ldg_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %val = tail call <2 x half> @llvm.nvvm.ldg.global.f.v2f16.p1(ptr addrspace(1) %ptr, i32 4)
   ret <2 x half> %val
+}
+
+define <2 x float> @test_ldg_v2f32(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: test_ldg_v2f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_v2f32_param_0];
+; CHECK-NEXT:    ld.global.nc.b64 %rd2, [%rd1];
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-NEXT:    ret;
+  %val = tail call <2 x float> @llvm.nvvm.ldg.global.f.v2f32.p1(ptr addrspace(1) %ptr, i32 8)
+  ret <2 x float> %val
 }
 
 @g = addrspace(1) global i32 0
