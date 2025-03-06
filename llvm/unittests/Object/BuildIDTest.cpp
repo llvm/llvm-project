@@ -30,7 +30,7 @@ static Expected<ELFObjectFile<ELFT>> toBinary(SmallVectorImpl<char> &Storage,
   return ELFObjectFile<ELFT>::create(MemoryBufferRef(OS.str(), "dummyELF"));
 }
 
-static StringRef optionalSectionHeaderELF(bool WithSec) {
+static StringRef getInvalidNoteELF(bool WithShdr) {
   static std::string WithSection(R"(
 --- !ELF
 FileHeader:
@@ -56,16 +56,15 @@ Sections:
   - Type:         SectionHeaderTable
     NoHeaders:    true
 )");
-  if (WithSec)
+  if (WithShdr)
     return WithSection;
-  else
-    return WithoutSection;
+  return WithoutSection;
 }
 
-TEST(BuildIDTest, InvalidNoteFileSizeTest) {
+TEST(BuildIDTest, InvalidPhdrFileSizeWithShdrs) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
-      toBinary<ELF64LE>(Storage, optionalSectionHeaderELF(true));
+      toBinary<ELF64LE>(Storage, getInvalidNoteELF(true));
   ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
   BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
   EXPECT_EQ(
@@ -73,10 +72,10 @@ TEST(BuildIDTest, InvalidNoteFileSizeTest) {
       "\xAB\xB5\x0D\x82\xB6\xBD\xC8\x61");
 }
 
-TEST(BuildIDTest, OnlyInvalidProgramHeader) {
+TEST(BuildIDTest, InvalidPhdrFileSizeNoShdrs) {
   SmallString<0> Storage;
   Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
-      toBinary<ELF64LE>(Storage, optionalSectionHeaderELF(false));
+      toBinary<ELF64LE>(Storage, getInvalidNoteELF(false));
   ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
   BuildIDRef BuildID = getBuildID(&ElfOrErr.get());
   EXPECT_EQ(
@@ -101,7 +100,7 @@ Sections:
   - Name:         .note.gnu.build-id
     Type:         SHT_NOTE
     AddressAlign: 0x04
-    Offset:       0x8000
+    ShOffset:     0x8000
     Notes:
       - Name:     "GNU"
         Desc:     "abb50d82b6bdc861"
