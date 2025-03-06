@@ -1261,7 +1261,6 @@ void Gang() {
 
 }
 
-  // expected-warning@+6{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
   // expected-warning@+5{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
   // expected-note@+3{{previous clause is here}}
@@ -1270,7 +1269,6 @@ void Gang() {
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
-  // expected-warning@+5{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
   // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
   // expected-note@+3{{previous clause is here}}
   // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
