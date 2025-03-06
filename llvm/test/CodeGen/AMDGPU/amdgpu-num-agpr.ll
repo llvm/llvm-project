@@ -15,7 +15,7 @@ define amdgpu_kernel void @min_num_agpr_0_0__amdgpu_no_agpr() #0 {
   ret void
 }
 
-attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,0" "amdgpu-no-agpr" }
+attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0,0" }
 
 ; Check parse of single entry 0
 
@@ -26,16 +26,16 @@ define amdgpu_kernel void @min_num_agpr_0__amdgpu_no_agpr() #1 {
   ret void
 }
 
-attributes #1 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0" "amdgpu-no-agpr" }
+attributes #1 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="0" }
 
 
 ; Undefined use
-define amdgpu_kernel void @min_num_agpr_1_1__amdgpu_no_agpr() #2 {
+define amdgpu_kernel void @min_num_agpr_1_1() #2 {
   call void asm sideeffect "; clobber $0","~{a0}"(), !srcloc !{i32 3}
   ret void
 }
 
-attributes #2 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,1" "amdgpu-no-agpr" }
+attributes #2 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="1,1" }
 
 ; Check parse of single entry 4, interpreted as the minimum. Total budget is 64.
 ; WARN: warning: <unknown>:0:0: failed to meet occupancy target given by 'amdgpu-waves-per-eu' in 'min_num_agpr_4__amdgpu_no_agpr': desired occupancy was 8, final occupancy is 7
@@ -48,7 +48,7 @@ define amdgpu_kernel void @min_num_agpr_4__amdgpu_no_agpr() #3 {
   ret void
 }
 
-attributes #3 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="4" "amdgpu-no-agpr" }
+attributes #3 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="4" }
 
 
 ; Allocation granularity requires rounding this to use 4 AGPRs, so the
@@ -79,7 +79,7 @@ define amdgpu_kernel void @min_num_agpr_64_64__amdgpu_no_agpr() #5 {
   ret void
 }
 
-attributes #5 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="64,64" "amdgpu-no-agpr" }
+attributes #5 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-flat-work-group-size"="64,64" "amdgpu-agpr-alloc"="64,64" }
 
 ; No free VGPRs
 ; WARN: warning: inline asm clobber list contains reserved registers: v0 at line 7
