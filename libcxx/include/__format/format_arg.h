@@ -277,9 +277,9 @@ public:
 };
 
 template <class _Context>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
+class [[__libcpp_template_vis]] _LIBCPP_NO_SPECIALIZATIONS basic_format_arg {
 public:
-  class _LIBCPP_TEMPLATE_VIS handle;
+  class [[__libcpp_template_vis]] handle;
 
   _LIBCPP_HIDE_FROM_ABI basic_format_arg() noexcept : __type_{__format::__arg_t::__none} {}
 
@@ -355,7 +355,7 @@ public:
 };
 
 template <class _Context>
-class _LIBCPP_TEMPLATE_VIS basic_format_arg<_Context>::handle {
+class [[__libcpp_template_vis]] basic_format_arg<_Context>::handle {
 public:
   _LIBCPP_HIDE_FROM_ABI void format(basic_format_parse_context<char_type>& __parse_ctx, _Context& __ctx) const {
     __handle_.__format_(__parse_ctx, __ctx, __handle_.__ptr_);
@@ -372,10 +372,9 @@ private:
 // the "variant" in a handle to stay conforming. See __arg_t for more details.
 template <class _Visitor, class _Context>
 #  if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-_LIBCPP_DEPRECATED_IN_CXX26
+[[__libcpp_deprecated_in_cxx26()]]
 #  endif
-    _LIBCPP_HIDE_FROM_ABI decltype(auto)
-    visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
+_LIBCPP_HIDE_FROM_ABI decltype(auto) visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
   switch (__arg.__type_) {
 #  if _LIBCPP_HAS_INT128
   case __format::__arg_t::__i128: {

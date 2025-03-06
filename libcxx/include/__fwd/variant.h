@@ -21,16 +21,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS variant;
+class [[__libcpp_template_vis]] variant;
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_size;
+struct [[__libcpp_template_vis]] variant_size;
 
 template <class _Tp>
 inline constexpr size_t variant_size_v = variant_size<_Tp>::value;
 
 template <size_t _Ip, class _Tp>
-struct _LIBCPP_TEMPLATE_VIS variant_alternative;
+struct [[__libcpp_template_vis]] variant_alternative;
 
 template <size_t _Ip, class _Tp>
 using variant_alternative_t = typename variant_alternative<_Ip, _Tp>::type;

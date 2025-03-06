@@ -68,7 +68,7 @@ struct __find_max_align<__type_list<_Head, _Tail...>, _Len>
           __select_align<_Len, _Head::value, __find_max_align<__type_list<_Tail...>, _Len>::value>::value> {};
 
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
-struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS aligned_storage {
+struct [[__libcpp_deprecated_in_cxx23(), __libcpp_template_vis]] _LIBCPP_NO_SPECIALIZATIONS aligned_storage {
   union _ALIGNAS(_Align) type {
     unsigned char __data[(_Len + _Align - 1) / _Align * _Align];
   };
@@ -78,7 +78,7 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIO
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
-using aligned_storage_t _LIBCPP_DEPRECATED_IN_CXX23 = typename aligned_storage<_Len, _Align>::type;
+using aligned_storage_t [[__libcpp_deprecated_in_cxx23()]] = typename aligned_storage<_Len, _Align>::type;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 #endif

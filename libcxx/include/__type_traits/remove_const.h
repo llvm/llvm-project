@@ -27,11 +27,11 @@ template <class _Tp>
 using __remove_const_t _LIBCPP_NODEBUG = __remove_const(_Tp);
 #else
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_const {
+struct [[__libcpp_template_vis]] remove_const {
   typedef _Tp type;
 };
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_const<const _Tp> {
+struct [[__libcpp_template_vis]] remove_const<const _Tp> {
   typedef _Tp type;
 };
 

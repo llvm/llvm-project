@@ -182,7 +182,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     no_link                            = ENOLINK,
     no_lock_available                  = ENOLCK,
     // clang-format off
-    no_message_available _LIBCPP_DEPRECATED =
+    no_message_available [[__libcpp_deprecated()]] =
     _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH
 #ifdef ENODATA
                                               ENODATA
@@ -196,7 +196,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     no_protocol_option = ENOPROTOOPT,
     no_space_on_device = ENOSPC,
     // clang-format off
-    no_stream_resources _LIBCPP_DEPRECATED =
+    no_stream_resources [[__libcpp_deprecated()]] =
     _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH
 #ifdef ENOSR
                                               ENOSR
@@ -213,7 +213,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     not_a_directory           = ENOTDIR,
     not_a_socket              = ENOTSOCK,
     // clang-format off
-    not_a_stream _LIBCPP_DEPRECATED =
+    not_a_stream [[__libcpp_deprecated()]] =
     _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH
 #ifdef ENOSTR
                                       ENOSTR
@@ -241,7 +241,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     result_out_of_range            = ERANGE,
     state_not_recoverable          = ENOTRECOVERABLE,
     // clang-format off
-    stream_timeout _LIBCPP_DEPRECATED =
+    stream_timeout [[__libcpp_deprecated()]] =
     _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH
 #ifdef ETIME
                                         ETIME

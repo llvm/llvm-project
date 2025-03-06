@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_trivially_copyable
+struct [[__libcpp_template_vis]] _LIBCPP_NO_SPECIALIZATIONS is_trivially_copyable
     : public integral_constant<bool, __is_trivially_copyable(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17

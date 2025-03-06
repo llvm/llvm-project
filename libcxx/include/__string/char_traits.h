@@ -78,7 +78,7 @@ exposition-only to document what members a char_traits specialization should pro
 // char_traits<char>
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char> {
+struct [[__libcpp_template_vis]] char_traits<char> {
   using char_type  = char;
   using int_type   = int;
   using off_type   = streamoff;
@@ -236,7 +236,7 @@ struct __char_traits_base {
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, wint_t, static_cast<wint_t>(WEOF)> {
+struct [[__libcpp_template_vis]] char_traits<wchar_t> : __char_traits_base<wchar_t, wint_t, static_cast<wint_t>(WEOF)> {
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
     if (__n == 0)
@@ -260,7 +260,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, w
 #if _LIBCPP_HAS_CHAR8_T
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
+struct [[__libcpp_template_vis]] char_traits<char8_t>
     : __char_traits_base<char8_t, unsigned int, static_cast<unsigned int>(EOF)> {
   static _LIBCPP_HIDE_FROM_ABI constexpr int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) noexcept {
@@ -280,7 +280,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 #endif // _LIBCPP_HAS_CHAR8_T
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
+struct [[__libcpp_template_vis]] char_traits<char16_t>
     : __char_traits_base<char16_t, uint_least16_t, static_cast<uint_least16_t>(0xFFFF)> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
@@ -315,7 +315,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t char_traits<char16_t>::length(const 
 }
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
+struct [[__libcpp_template_vis]] char_traits<char32_t>
     : __char_traits_base<char32_t, uint_least32_t, static_cast<uint_least32_t>(0xFFFFFFFF)> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;

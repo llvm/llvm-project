@@ -235,7 +235,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 #endif // _LIBCPP_STD_VER
 
 template <class _Alloc>
-struct _LIBCPP_TEMPLATE_VIS allocator_traits {
+struct [[__libcpp_template_vis]] allocator_traits {
   using allocator_type                         = _Alloc;
   using value_type                             = typename allocator_type::value_type;
   using pointer                                = __pointer<value_type, allocator_type>;

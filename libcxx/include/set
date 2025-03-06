@@ -573,7 +573,7 @@ template <class _Key, class _Compare, class _Allocator>
 class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
-class _LIBCPP_TEMPLATE_VIS set {
+class [[__libcpp_template_vis]] set {
 public:
   // types:
   typedef _Key key_type;
@@ -611,9 +611,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   _LIBCPP_HIDE_FROM_ABI set() _NOEXCEPT_(
       is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
@@ -1035,7 +1035,7 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
 };
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
-class _LIBCPP_TEMPLATE_VIS multiset {
+class [[__libcpp_template_vis]] multiset {
 public:
   // types:
   typedef _Key key_type;
@@ -1072,9 +1072,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI multiset() _NOEXCEPT_(

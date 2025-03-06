@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) lock_guard {
+class [[__libcpp_template_vis]] _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) lock_guard {
 public:
   typedef _Mutex mutex_type;
 

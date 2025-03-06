@@ -29,12 +29,12 @@
 #  if _LIBCPP_STD_VER >= 20
 
 using __standard_header_ccomplex
-    _LIBCPP_DEPRECATED_("removed in C++20. Include <complex> instead.") _LIBCPP_NODEBUG = void;
-using __use_standard_header_ccomplex _LIBCPP_NODEBUG                                    = __standard_header_ccomplex;
+    [[__libcpp_deprecated("removed in C++20. Include <complex> instead.")]] _LIBCPP_NODEBUG = void;
+using __use_standard_header_ccomplex _LIBCPP_NODEBUG = __standard_header_ccomplex;
 
 #  elif _LIBCPP_STD_VER >= 17
 
-using __standard_header_ccomplex _LIBCPP_DEPRECATED_("Include <complex> instead.") _LIBCPP_NODEBUG = void;
+using __standard_header_ccomplex [[__libcpp_deprecated("Include <complex> instead.")]] _LIBCPP_NODEBUG = void;
 using __use_standard_header_ccomplex _LIBCPP_NODEBUG = __standard_header_ccomplex;
 
 #  endif

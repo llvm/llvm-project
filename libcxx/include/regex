@@ -996,7 +996,7 @@ template <regex_constants::error_type _Ev>
 }
 
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS regex_traits {
+struct [[__libcpp_template_vis]] regex_traits {
 public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
@@ -1305,10 +1305,10 @@ template <class _CharT>
 class __node;
 
 template <class _BidirectionalIterator>
-class _LIBCPP_TEMPLATE_VIS sub_match;
+class [[__libcpp_template_vis]] sub_match;
 
 template <class _BidirectionalIterator, class _Allocator = allocator<sub_match<_BidirectionalIterator> > >
-class _LIBCPP_TEMPLATE_VIS match_results;
+class [[__libcpp_template_vis]] match_results;
 
 template <class _CharT>
 struct __state {
@@ -2263,7 +2263,7 @@ template <class _CharT, class _Traits>
 class __lookahead;
 
 template <class _CharT, class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS basic_regex;
+class [[__libcpp_template_vis]] basic_regex;
 
 typedef basic_regex<char> regex;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -2271,7 +2271,7 @@ typedef basic_regex<wchar_t> wregex;
 #  endif
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(regex)
+class [[__libcpp_template_vis]] _LIBCPP_PREFERRED_NAME(regex)
     _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wregex)) basic_regex {
 public:
   // types:
@@ -4191,7 +4191,7 @@ typedef sub_match<wstring::const_iterator> wssub_match;
 #  endif
 
 template <class _BidirectionalIterator>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(csub_match)
+class [[__libcpp_template_vis]] _LIBCPP_PREFERRED_NAME(csub_match)
     _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcsub_match)) _LIBCPP_PREFERRED_NAME(ssub_match)
         _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wssub_match)) sub_match
     : public pair<_BidirectionalIterator, _BidirectionalIterator> {
@@ -4537,7 +4537,7 @@ typedef match_results<wstring::const_iterator> wsmatch;
 #  endif
 
 template <class _BidirectionalIterator, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(cmatch) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcmatch))
+class [[__libcpp_template_vis]] _LIBCPP_PREFERRED_NAME(cmatch) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcmatch))
     _LIBCPP_PREFERRED_NAME(smatch) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsmatch)) match_results {
 public:
   typedef _Allocator allocator_type;
@@ -5322,7 +5322,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
 template <class _BidirectionalIterator,
           class _CharT  = typename iterator_traits<_BidirectionalIterator>::value_type,
           class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS regex_iterator;
+class [[__libcpp_template_vis]] regex_iterator;
 
 typedef regex_iterator<const char*> cregex_iterator;
 typedef regex_iterator<string::const_iterator> sregex_iterator;
@@ -5332,7 +5332,7 @@ typedef regex_iterator<wstring::const_iterator> wsregex_iterator;
 #  endif
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(cregex_iterator)
+class [[__libcpp_template_vis]] _LIBCPP_PREFERRED_NAME(cregex_iterator)
     _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcregex_iterator)) _LIBCPP_PREFERRED_NAME(sregex_iterator)
         _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_iterator)) regex_iterator {
 public:
@@ -5452,7 +5452,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
 template <class _BidirectionalIterator,
           class _CharT  = typename iterator_traits<_BidirectionalIterator>::value_type,
           class _Traits = regex_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS regex_token_iterator;
+class [[__libcpp_template_vis]] regex_token_iterator;
 
 typedef regex_token_iterator<const char*> cregex_token_iterator;
 typedef regex_token_iterator<string::const_iterator> sregex_token_iterator;
@@ -5462,7 +5462,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #  endif
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(cregex_token_iterator)
+class [[__libcpp_template_vis]] _LIBCPP_PREFERRED_NAME(cregex_token_iterator)
     _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcregex_token_iterator))
         _LIBCPP_PREFERRED_NAME(sregex_token_iterator)
             _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_token_iterator)) regex_token_iterator {

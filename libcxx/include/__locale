@@ -173,7 +173,7 @@ inline _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale& __l) {
 // template <class _CharT> class collate;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS collate : public locale::facet {
+class [[__libcpp_template_vis]] collate : public locale::facet {
 public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
@@ -245,7 +245,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
 // template <class CharT> class collate_byname;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS collate_byname;
+class [[__libcpp_template_vis]] collate_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI collate_byname<char> : public collate<char> {
@@ -449,7 +449,7 @@ public:
 };
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS ctype;
+class [[__libcpp_template_vis]] ctype;
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
@@ -616,7 +616,7 @@ protected:
 // template <class CharT> class ctype_byname;
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS ctype_byname;
+class [[__libcpp_template_vis]] ctype_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype_byname<char> : public ctype<char> {
@@ -742,7 +742,7 @@ public:
 // template <class internT, class externT, class stateT> class codecvt;
 
 template <class _InternT, class _ExternT, class _StateT>
-class _LIBCPP_TEMPLATE_VIS codecvt;
+class [[__libcpp_template_vis]] codecvt;
 
 // template <> class codecvt<char, char, mbstate_t>
 
@@ -909,7 +909,7 @@ protected:
 // template <> class codecvt<char16_t, char, mbstate_t> // deprecated in C++20
 
 template <>
-class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char, mbstate_t>
+class [[__libcpp_deprecated_in_cxx20()]] _LIBCPP_EXPORTED_FROM_ABI codecvt<char16_t, char, mbstate_t>
     : public locale::facet, public codecvt_base {
 public:
   typedef char16_t intern_type;
@@ -1072,7 +1072,7 @@ protected:
 // template <> class codecvt<char32_t, char, mbstate_t> // deprecated in C++20
 
 template <>
-class _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char, mbstate_t>
+class [[__libcpp_deprecated_in_cxx20()]] _LIBCPP_EXPORTED_FROM_ABI codecvt<char32_t, char, mbstate_t>
     : public locale::facet, public codecvt_base {
 public:
   typedef char32_t intern_type;
@@ -1235,7 +1235,7 @@ protected:
 // template <class _InternT, class _ExternT, class _StateT> class codecvt_byname
 
 template <class _InternT, class _ExternT, class _StateT>
-class _LIBCPP_TEMPLATE_VIS codecvt_byname : public codecvt<_InternT, _ExternT, _StateT> {
+class [[__libcpp_template_vis]] codecvt_byname : public codecvt<_InternT, _ExternT, _StateT> {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit codecvt_byname(const char* __nm, size_t __refs = 0)
       : codecvt<_InternT, _ExternT, _StateT>(__nm, __refs) {}
@@ -1255,9 +1255,9 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
 #endif
-extern template class _LIBCPP_DEPRECATED_IN_CXX20
+extern template class __attribute__((__libcpp_deprecated_in_cxx20()))
 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
-extern template class _LIBCPP_DEPRECATED_IN_CXX20
+extern template class __attribute__((__libcpp_deprecated_in_cxx20()))
 _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #if _LIBCPP_HAS_CHAR8_T
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20
@@ -1411,7 +1411,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<32> : public codecvt<char32_t
 // template <class charT> class numpunct
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS numpunct;
+class [[__libcpp_template_vis]] numpunct;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
@@ -1476,7 +1476,7 @@ protected:
 // template <class charT> class numpunct_byname
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS numpunct_byname;
+class [[__libcpp_template_vis]] numpunct_byname;
 
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {

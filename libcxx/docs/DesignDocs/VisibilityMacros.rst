@@ -64,7 +64,7 @@ Visibility Macros
   ABI, we should create a new _LIBCPP_HIDE_FROM_ABI_AFTER_XXX macro, and we can
   use it to start removing symbols from the ABI after that stable version.
 
-**_LIBCPP_TEMPLATE_VIS**
+**__libcpp_template_vis**
   Mark a type's typeinfo and vtable as having default visibility.
   This macro has no effect on the visibility of the type's member functions.
 
@@ -80,7 +80,7 @@ Visibility Macros
   an extern template declaration as being exported by the libc++ library.
   This attribute must be specified on all extern class template declarations.
 
-  This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
+  This macro is used to override the `__libcpp_template_vis` attribute
   specified on the primary template and to export the member functions produced
   by the explicit instantiation in the dylib.
 

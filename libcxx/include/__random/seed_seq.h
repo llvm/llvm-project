@@ -30,7 +30,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-class _LIBCPP_TEMPLATE_VIS seed_seq {
+class [[__libcpp_template_vis]] seed_seq {
 public:
   // types
   typedef uint32_t result_type;

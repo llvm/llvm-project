@@ -28,15 +28,15 @@ template <class _Tp>
 using __remove_extent_t _LIBCPP_NODEBUG = __remove_extent(_Tp);
 #else
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_extent {
+struct [[__libcpp_template_vis]] remove_extent {
   typedef _Tp type;
 };
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_extent<_Tp[]> {
+struct [[__libcpp_template_vis]] remove_extent<_Tp[]> {
   typedef _Tp type;
 };
 template <class _Tp, size_t _Np>
-struct _LIBCPP_TEMPLATE_VIS remove_extent<_Tp[_Np]> {
+struct [[__libcpp_template_vis]] remove_extent<_Tp[_Np]> {
   typedef _Tp type;
 };
 
