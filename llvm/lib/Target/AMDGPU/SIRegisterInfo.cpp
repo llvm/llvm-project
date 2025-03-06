@@ -3912,12 +3912,10 @@ SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
 
 unsigned SIRegisterInfo::getSGPRHazardAvoidanceStrategy(
     const MachineFunction &MF) const {
-  if (SGPRHazardAvoidanceStrategy.getNumOccurrences()) {
+  if (SGPRHazardAvoidanceStrategy.getNumOccurrences())
     return SGPRHazardAvoidanceStrategy;
-  } else {
-    return MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-sgpr-hazard-regalloc", 0);
-  }
+  return MF.getFunction().getFnAttributeAsParsedInteger(
+    "amdgpu-sgpr-hazard-regalloc", 0);
 }
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
