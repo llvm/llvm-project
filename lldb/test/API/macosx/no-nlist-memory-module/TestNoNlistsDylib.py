@@ -20,45 +20,31 @@ class NoNlistsTestCase(TestBase):
 
         exe = os.path.realpath(self.getBuildArtifact("a.out"))
 
-        popen = self.spawnSubprocess(exe)
-        pid = popen.pid
+        # Use a file as a synchronization point between test and inferior.
+        pid_file_path = lldbutil.append_to_process_working_directory(
+            self, "pid_file_%d" % (int(time.time()))
+        )
+        self.addTearDownHook(
+            lambda: self.run_platform_command("rm %s" % (pid_file_path))
+        )
 
-        self.dbg.SetAsync(False)
+        # Spawn a new process
+        popen = self.spawnSubprocess(exe, [pid_file_path])
 
-        m_no_nlist = lldb.SBModule()
-        m_has_nlist = lldb.SBModule()
-        target = lldb.SBTarget()
-        process = lldb.SBProcess()
-        reattach_count = 0
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
-        # Attach to the process, see if we have a memory module
-        # for libno-nlists.dylib and libhas-nlists.dylib.
-        # If not, detach, delete the Target, and flush the orphaned
-        # modules from the Debugger so we don't hold on to a reference
-        # of the on-disk binary.
-
-        # If we haven't succeeded after ten attemps of attaching and
-        # detaching, fail the test.
-        while (not m_no_nlist.IsValid() or m_no_nlist.IsFileBacked()) and (
-            not m_has_nlist.IsValid() or m_has_nlist.IsFileBacked()
-        ):
-            if process.IsValid():
-                process.Detach()
-                self.dbg.DeleteTarget(target)
-                self.dbg.MemoryPressureDetected()
-                time.sleep(2)
-
-            self.runCmd("process attach -p " + str(pid))
-            target = self.dbg.GetSelectedTarget()
-            process = target.GetProcess()
-            m_no_nlist = target.FindModule(lldb.SBFileSpec("libno-nlists.dylib"))
-            m_has_nlist = target.FindModule(lldb.SBFileSpec("libhas-nlists.dylib"))
-
-            reattach_count = reattach_count + 1
-            if reattach_count > 10:
-                break
+        self.runCmd("process attach -p " + str(pid))
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+        m_no_nlist = target.FindModule(lldb.SBFileSpec("libno-nlists.dylib"))
+        m_has_nlist = target.FindModule(lldb.SBFileSpec("libhas-nlists.dylib"))
 
         self.assertTrue(process, PROCESS_IS_VALID)
+
+        if self.TraceOn():
+            self.runCmd("image list")
+            self.runCmd("target modules dump symtab libno-nlists.dylib")
+            self.runCmd("target modules dump symtab libhas-nlists.dylib")
 
         # Test that we found libno-nlists.dylib, it is a memory
         # module, and that it has no symbols.
