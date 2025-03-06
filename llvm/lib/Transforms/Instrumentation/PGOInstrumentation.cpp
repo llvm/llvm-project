@@ -1517,7 +1517,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     CoveredBlocksToProcess.pop();
     for (auto *BB : InverseDependencies[CoveredBlock]) {
       // If CoveredBlock is covered then BB is covered.
-      auto &Cov = Coverage[BB];
+      bool &Cov = Coverage[BB];
       if (Cov)
         continue;
       Cov = true;
