@@ -40,37 +40,36 @@
 #include "src/stdfix/roundulr.h"
 #include "src/stdfix/roundur.h"
 
-using LIBC_NAMESPACE::absr;
-using LIBC_NAMESPACE::abshr;
-using LIBC_NAMESPACE::abslr;
-using LIBC_NAMESPACE::absk;
 using LIBC_NAMESPACE::abshk;
+using LIBC_NAMESPACE::abshr;
+using LIBC_NAMESPACE::absk;
 using LIBC_NAMESPACE::abslk;
-using LIBC_NAMESPACE::roundr;
-using LIBC_NAMESPACE::roundhr;
-using LIBC_NAMESPACE::roundlr;
-using LIBC_NAMESPACE::roundk;
-using LIBC_NAMESPACE::roundhk;
-using LIBC_NAMESPACE::roundlk;
-using LIBC_NAMESPACE::roundur;
-using LIBC_NAMESPACE::rounduhr;
-using LIBC_NAMESPACE::roundulr;
-using LIBC_NAMESPACE::rounduk;
-using LIBC_NAMESPACE::rounduhk;
-using LIBC_NAMESPACE::roundulk;
-using LIBC_NAMESPACE::countlsr;
-using LIBC_NAMESPACE::countlshr;
-using LIBC_NAMESPACE::countlslr;
-using LIBC_NAMESPACE::countlsk;
+using LIBC_NAMESPACE::abslr;
+using LIBC_NAMESPACE::absr;
 using LIBC_NAMESPACE::countlshk;
+using LIBC_NAMESPACE::countlshr;
+using LIBC_NAMESPACE::countlsk;
 using LIBC_NAMESPACE::countlslk;
-using LIBC_NAMESPACE::countlsur;
-using LIBC_NAMESPACE::countlsuhr;
-using LIBC_NAMESPACE::countlsulr;
-using LIBC_NAMESPACE::countlsuk;
+using LIBC_NAMESPACE::countlslr;
+using LIBC_NAMESPACE::countlsr;
 using LIBC_NAMESPACE::countlsuhk;
+using LIBC_NAMESPACE::countlsuhr;
+using LIBC_NAMESPACE::countlsuk;
 using LIBC_NAMESPACE::countlsulk;
-
+using LIBC_NAMESPACE::countlsulr;
+using LIBC_NAMESPACE::countlsur;
+using LIBC_NAMESPACE::roundhk;
+using LIBC_NAMESPACE::roundhr;
+using LIBC_NAMESPACE::roundk;
+using LIBC_NAMESPACE::roundlk;
+using LIBC_NAMESPACE::roundlr;
+using LIBC_NAMESPACE::roundr;
+using LIBC_NAMESPACE::rounduhk;
+using LIBC_NAMESPACE::rounduhr;
+using LIBC_NAMESPACE::rounduk;
+using LIBC_NAMESPACE::roundulk;
+using LIBC_NAMESPACE::roundulr;
+using LIBC_NAMESPACE::roundur;
 
 TEST(LlvmLibcAbsfxTest, Basic) {
   ASSERT_EQ(absfx(-0.5r), absr(-0.5r));
@@ -112,4 +111,3 @@ TEST(LlvmLibcCountlsfxTest, Basic) {
   ASSERT_EQ(countlsfx(0.5uhk), countlsuhk(0.5uhk));
   ASSERT_EQ(countlsfx(0.5ulk), countlsulk(0.5ulk));
 }
-
