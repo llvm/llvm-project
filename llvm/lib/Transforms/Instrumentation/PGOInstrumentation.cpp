@@ -1564,7 +1564,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     // successors, e.g., when a block calls a function that may call exit(). In
     // those cases, BFI could find its successor to be covered while BCI could
     // find its successor to be dead.
-    auto &Cov = Coverage[&BB];
+    const bool &Cov = Coverage[&BB];
     if (Cov == IsBlockDead(BB).value_or(false)) {
       LLVM_DEBUG(
           dbgs() << "Found inconsistent block covearge for " << BB.getName()
