@@ -571,7 +571,6 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 
 std::pair<unsigned, unsigned>
 SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
@@ -592,7 +591,6 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
 
-    // TODO: Replace amdgpu-no-agpr with amdgpu-agpr-alloc=0
     // TODO: Move this logic into subtarget on IR function
     //
     // TODO: The lower bound should probably force the number of required
@@ -603,11 +601,7 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
 
     if (MinNumAGPRs == DefaultNumAGPR.first) {
       // Default to splitting half the registers if AGPRs are required.
-
-      if (MFI->mayNeedAGPRs())
-        MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
-      else
-        MinNumAGPRs = 0;
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
     } else {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);

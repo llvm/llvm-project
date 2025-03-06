@@ -1698,11 +1698,6 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
                                                       emits this attribute when all the three numbers are >= 1.
 
-     "amdgpu-no-agpr"                                 Indicates the function will not require allocating AGPRs. This is only
-                                                      relevant on subtargets with AGPRs. The behavior is undefined if a
-                                                      function which requires AGPRs is reached through any function marked
-                                                      with this attribute.
-
      "amdgpu-hidden-argument"                         This attribute is used internally by the backend to mark function arguments
                                                       as hidden. Hidden arguments are managed by the compiler and are not part of
                                                       the explicit arguments supplied by the user.
@@ -1721,7 +1716,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       The behavior is undefined if a function which requires more AGPRs than the
                                                       lower bound is reached through any function marked with a higher value of this
                                                       attribute. A minimum value of 0 indicates the function does not require
-                                                      any AGPRs. A minimum of 0 is equivalent to "amdgpu-no-agpr".
+                                                      any AGPRs.
 
                                                       This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
 
