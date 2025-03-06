@@ -568,7 +568,7 @@ root signature space consumption.
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
       uint32_t OffsetInDescriptorsFromTableStart;
-      Copy// New flags for Version 1.1
+      // New flags for Version 1.1
       enum Flags {
         None                        = 0x0,
         // Descriptors are static and known at root signature creation
