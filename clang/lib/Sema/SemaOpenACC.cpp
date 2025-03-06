@@ -1497,7 +1497,7 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(RoutineName)) {
     const ValueDecl *VD = DRE->getDecl();
 
-    if (const auto *FD = dyn_cast<FunctionDecl>(VD))
+    if (isa<FunctionDecl>(VD))
       return RoutineName;
 
     // Allow lambdas.
