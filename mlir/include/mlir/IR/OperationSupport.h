@@ -1195,6 +1195,9 @@ public:
   /// conflicts across all regions
   OpPrintingFlags &printUniqueSSAIDs(bool enable = true);
 
+  /// Print SSA IDs using their NameLoc, if provided, as prefix.
+  OpPrintingFlags &printNameLocAsPrefix(bool enable = true);
+
   /// Return if the given ElementsAttr should be elided.
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 

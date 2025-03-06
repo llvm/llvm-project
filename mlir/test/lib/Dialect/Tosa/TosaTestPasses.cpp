@@ -163,7 +163,12 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   int32_t shift;
 
   // Obtain the quantized scale = multiplier and shift.
-  computeMultiplierAndShift(opTensorScale, multiplier, shift, 32);
+  if (!computeMultiplierAndShift(opTensorScale, multiplier, shift, 32))
+    return failure();
+
+  bool input_unsigned =
+      newTosaConv2DOp.getResult().getType().isUnsignedInteger();
+  bool output_unsigned = outputType.isUnsignedInteger();
 
   auto newTosaRescaleOp = rewriter.create<tosa::RescaleOp>(
       op->getLoc(), outputType, newTosaConv2DOp.getResult(),
@@ -171,7 +176,8 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       rewriter.getDenseI32ArrayAttr({multiplier}),
       rewriter.getDenseI8ArrayAttr({static_cast<int8_t>(shift)}),
       rewriter.getBoolAttr(true), rewriter.getBoolAttr(true),
-      rewriter.getBoolAttr(false));
+      rewriter.getBoolAttr(false), rewriter.getBoolAttr(input_unsigned),
+      rewriter.getBoolAttr(output_unsigned));
 
   rewriter.replaceOp(op, {newTosaRescaleOp.getResult()});
   return success();

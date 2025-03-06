@@ -3316,6 +3316,14 @@ def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Documentation = [RISCVVectorCCDocs];
 }
 
+def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vls_cc">,
+                  C23<"riscv", "vls_cc">,
+                  Clang<"riscv_vls_cc">];
+ let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
+ let Documentation = [RISCVVLSCCDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -5017,4 +5025,12 @@ def Atomic : StmtAttr {
   let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
   let Documentation = [AtomicDocs];
   let StrictEnumParameters = 1;
+}
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targetted by a `routine`
+  // directive, so it dones't have a spelling and is always implicit.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
 }

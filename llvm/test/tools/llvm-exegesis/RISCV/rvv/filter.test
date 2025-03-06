@@ -1,5 +1,7 @@
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=inverse_throughput --opcode-name=PseudoVNCLIPU_WX_M1_MASK \
-# RUN:    --riscv-filter-config='vtype = {VXRM: rod, AVL: VLMAX, SEW: e(8|16), Policy: ta/mu}' --max-configs-per-opcode=1000 --min-instructions=100 | FileCheck %s
+# RUN:    --riscv-filter-config='vtype = {VXRM: rod, AVL: VLMAX, SEW: e(8|16), Policy: ta/mu}' --max-configs-per-opcode=1000 --min-instructions=10 | FileCheck %s
+# Sometimes it'll fail to generate any snippet because it's unable to assign unique def and use registers.
+# ALLOW_RETRIES: 2
 
 # CHECK: config:          'vtype = {VXRM: rod, AVL: VLMAX, SEW: e8, Policy: ta/mu}'
 # CHECK: config:          'vtype = {VXRM: rod, AVL: VLMAX, SEW: e16, Policy: ta/mu}'

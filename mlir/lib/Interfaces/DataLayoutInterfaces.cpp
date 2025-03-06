@@ -51,7 +51,7 @@ mlir::detail::getDefaultTypeSize(Type type, const DataLayout &dataLayout,
 llvm::TypeSize
 mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) {
-  if (isa<IntegerType, FloatType>(type))
+  if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
 
   if (auto ctype = dyn_cast<ComplexType>(type)) {
@@ -254,6 +254,15 @@ mlir::detail::getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface()) {
     return Attribute();
   }
+
+  return entry.getValue();
+}
+
+// Returns the mangling mode if specified in the given entry.
+// If the entry is empty, an empty attribute is returned.
+Attribute mlir::detail::getDefaultManglingMode(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
 
   return entry.getValue();
 }
@@ -612,6 +621,22 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   return *allocaMemorySpace;
 }
 
+mlir::Attribute mlir::DataLayout::getManglingMode() const {
+  checkValid();
+  if (manglingMode)
+    return *manglingMode;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getManglingModeIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    manglingMode = iface.getManglingMode(entry);
+  else
+    manglingMode = detail::getDefaultManglingMode(entry);
+  return *manglingMode;
+}
+
 mlir::Attribute mlir::DataLayout::getProgramMemorySpace() const {
   checkValid();
   if (programMemorySpace)
@@ -720,7 +745,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
       continue;
     }
 
-    if (isa<IntegerType, FloatType>(sampleType)) {
+    if (sampleType.isIntOrFloat()) {
       for (DataLayoutEntryInterface entry : kvp.second) {
         auto value = dyn_cast<DenseIntElementsAttr>(entry.getValue());
         if (!value || !value.getElementType().isSignlessInteger(64)) {

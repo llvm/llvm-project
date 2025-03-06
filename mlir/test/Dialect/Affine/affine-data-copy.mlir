@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
 // Small buffer size to trigger fine copies.
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
 
 // Test affine data copy with a memref filter. We use a test pass that invokes
 // affine data copy utility on the input loop nest.
@@ -417,5 +417,17 @@ func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
   // CHECK:   affine.store %[[SELECT]], %[[TARGET]][] : memref<i1>
   // CHECK: }
   // CHECK: memref.dealloc %[[FAST_MEMREF]] : memref<480xi1>
+  return
+}
+
+// CHECK-LABEL: func @memref_def_inside
+func.func @memref_def_inside(%arg0: index) {
+  %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // No copy generation can happen at this depth given the definition inside.
+  affine.for %arg1 = 0 to 29 {
+    %alloc_7 = memref.alloc() : memref<1xf32>
+    // CHECK: affine.store {{.*}} : memref<1xf32>
+    affine.store %0, %alloc_7[0] : memref<1xf32>
+  }
   return
 }

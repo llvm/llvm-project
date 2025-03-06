@@ -511,7 +511,7 @@ public:
     AM.ScalableOffset = BaseOffset.getScalable();
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) {
