@@ -1924,21 +1924,17 @@ public:
                                  "vector.memcheck");
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
-      if (DiffChecks) {
-        Value *RuntimeVF = nullptr;
-        MemRuntimeCheckCond = addDiffRuntimeChecks(
-            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
-            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
-              if (!RuntimeVF)
-                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
-              return RuntimeVF;
-            },
-            IC);
-      } else {
-        MemRuntimeCheckCond = addRuntimeChecks(
-            MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
-            MemCheckExp, VectorizerParams::HoistRuntimeChecks);
-      }
+      MemRuntimeCheckCond =
+          DiffChecks
+              ? addDiffRuntimeChecks(
+                    MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
+                    [VF](IRBuilderBase &B, unsigned Bits) {
+                      return getRuntimeVF(B, B.getIntNTy(Bits), VF);
+                    },
+                    IC)
+              : addRuntimeChecks(MemCheckBlock->getTerminator(), L,
+                                 RtPtrChecking.getChecks(), MemCheckExp,
+                                 VectorizerParams::HoistRuntimeChecks);
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
              "claimed checks are required");
