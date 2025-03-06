@@ -287,7 +287,7 @@ define void @urem_uniform() {
 
 define void @srem_const() {
 ; CHECK-LABEL: 'srem_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = srem <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4i64 = srem <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -404,7 +404,7 @@ define void @urem_const() {
 
 define void @srem_uniformconst() {
 ; CHECK-LABEL: 'srem_uniformconst'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2i64 = srem <2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i64 = srem <4 x i64> undef, splat (i64 7)
@@ -520,7 +520,7 @@ define void @urem_uniformconst() {
 
 define void @srem_constpow2() {
 ; CHECK-LABEL: 'srem_constpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = srem <2 x i64> undef, <i64 8, i64 16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4i64 = srem <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
@@ -636,7 +636,7 @@ define void @urem_constpow2() {
 
 define void @srem_uniformconstpow2() {
 ; CHECK-LABEL: 'srem_uniformconstpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2i64 = srem <2 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i64 = srem <4 x i64> undef, splat (i64 16)
@@ -752,7 +752,7 @@ define void @urem_uniformconstpow2() {
 
 define void @srem_constnegpow2() {
 ; CHECK-LABEL: 'srem_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2i64 = srem <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4i64 = srem <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -868,7 +868,7 @@ define void @urem_constnegpow2() {
 
 define void @srem_uniformconstnegpow2() {
 ; CHECK-LABEL: 'srem_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = srem i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = srem i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = srem i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2i64 = srem <2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i64 = srem <4 x i64> undef, splat (i64 -16)

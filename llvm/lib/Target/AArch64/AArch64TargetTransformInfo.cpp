@@ -3586,14 +3586,15 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                  Op1Info.getNoProps(), Op2Info.getNoProps());
       // add/cmp/csel/csneg should have similar cost while asr/negs/and should
       // have similar cost.
-      if (LT.second.isScalarInteger()) {
+      auto VT = TLI->getValueType(DL, Ty);
+      if (LT.second.isScalarInteger() && VT.getSizeInBits() <= 64) {
         if (Op2Info.isPowerOf2()) {
           return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
                                   : (3 * AsrCost + AddCost);
         } else {
           return MulCost + AsrCost + 2 * AddCost;
         }
-      } else {
+      } else if (VT.isVector()) {
         InstructionCost UsraCost = 2 * AsrCost;
         if (Op2Info.isPowerOf2()) {
           // Division with scalable types corresponds to native 'asrd'
@@ -3606,9 +3607,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                       ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) *
                             AsrCost
                       : 2 * AddCost);
-        } else if (LT.second.is128BitVector() &&
-                   LT.second.getScalarType() == MVT::i64) {
-          auto VT = TLI->getValueType(DL, Ty);
+        } else if (LT.second == MVT::v2i64) {
           return VT.getVectorNumElements() *
                  getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
                                         Op1Info.getNoProps(),

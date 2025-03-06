@@ -287,7 +287,7 @@ define void @udiv_uniform() {
 
 define void @sdiv_const() {
 ; CHECK-LABEL: 'sdiv_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 6, i64 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 4, i64 5, i64 6, i64 7>
@@ -404,7 +404,7 @@ define void @udiv_const() {
 
 define void @sdiv_uniformconst() {
 ; CHECK-LABEL: 'sdiv_uniformconst'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2i64 = sdiv <2 x i64> undef, splat (i64 7)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i64 = sdiv <4 x i64> undef, splat (i64 7)
@@ -520,7 +520,7 @@ define void @udiv_uniformconst() {
 
 define void @sdiv_constpow2() {
 ; CHECK-LABEL: 'sdiv_constpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 8, i64 16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
@@ -636,7 +636,7 @@ define void @udiv_constpow2() {
 
 define void @sdiv_uniformconstpow2() {
 ; CHECK-LABEL: 'sdiv_uniformconstpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2i64 = sdiv <2 x i64> undef, splat (i64 16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4i64 = sdiv <4 x i64> undef, splat (i64 16)
@@ -752,7 +752,7 @@ define void @udiv_uniformconstpow2() {
 
 define void @sdiv_constnegpow2() {
 ; CHECK-LABEL: 'sdiv_constnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2i64 = sdiv <2 x i64> undef, <i64 -8, i64 -16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sdiv <4 x i64> undef, <i64 -2, i64 -4, i64 -8, i64 -16>
@@ -868,7 +868,7 @@ define void @udiv_constnegpow2() {
 
 define void @sdiv_uniformconstnegpow2() {
 ; CHECK-LABEL: 'sdiv_uniformconstnegpow2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %I128 = sdiv i128 undef, -16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %I128 = sdiv i128 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = sdiv i64 undef, -16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2i64 = sdiv <2 x i64> undef, splat (i64 -16)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i64 = sdiv <4 x i64> undef, splat (i64 -16)
