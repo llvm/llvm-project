@@ -618,12 +618,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             loc, rewriter.getIntegerAttr(
                      getElementTypeOrSelf(dstTy),
                      APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())));
-        auto intMax = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getIntegerAttr(
-                     getElementTypeOrSelf(dstTy),
-                     APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
         auto maxClamped =
-            rewriter.create<arith::SelectOp>(loc, overflow, intMax, conv);
+            rewriter.create<arith::SelectOp>(loc, overflow, intMin, conv);
         return rewriter.create<arith::SelectOp>(loc, underflow, intMin,
                                                 maxClamped);
       }
@@ -647,8 +643,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                      APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
                          .getSExtValue()));
 
+        auto overflow = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UGT, rounded, intMaxFP);
+        Value maxClampedFP = rewriter.create<arith::SelectOp>(loc, overflow, intMinFP, rounded);
+
         Value clamped =
-            clampFloatHelper(loc, rounded, intMinFP, intMaxFP, rewriter);
+            clampFloatHelper(loc, maxClampedFP, intMinFP, intMaxFP, rewriter);
         return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
       }
 
@@ -664,17 +663,17 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                            .getSExtValue()) +
                        1.0f));
 
-      auto intMax = rewriter.create<arith::ConstantOp>(
+      auto intMin = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
                    getElementTypeOrSelf(dstTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())));
+                   APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())));
       auto minClampedFP =
           rewriter.create<arith::MaximumFOp>(loc, rounded, intMinFP);
       auto minClamped =
           rewriter.create<arith::FPToSIOp>(loc, dstTy, minClampedFP);
       auto overflow = rewriter.create<arith::CmpFOp>(
           loc, arith::CmpFPredicate::UGE, rounded, intMaxPlusOneFP);
-      return rewriter.create<arith::SelectOp>(loc, overflow, intMax,
+      return rewriter.create<arith::SelectOp>(loc, overflow, intMin,
                                               minClamped);
     }
 
