@@ -728,6 +728,25 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
+class UserReductionDetails : public WithBindName {
+public:
+  using TypeVector = std::vector<const DeclTypeSpec *>;
+  UserReductionDetails() = default;
+
+  void AddType(const DeclTypeSpec *type) { typeList_.push_back(type); }
+  const TypeVector &GetTypeList() const { return typeList_; }
+
+  bool SupportsType(const DeclTypeSpec *type) const {
+    for (auto t : typeList_)
+      if (t == type)
+        return true;
+    return false;
+  }
+
+private:
+  TypeVector typeList_;
+};
+
 class UnknownDetails {};
 
 using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
@@ -735,7 +754,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     ObjectEntityDetails, ProcEntityDetails, AssocEntityDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
-    TypeParamDetails, MiscDetails>;
+    TypeParamDetails, MiscDetails, UserReductionDetails>;
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
