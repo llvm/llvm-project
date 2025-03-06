@@ -1432,6 +1432,7 @@ tbnz	w3, #28, test
 b        #4
 b        #-4
 b        #134217724
+bl       test
 
 #------------------------------------------------------------------------------
 # Unconditional branch (register)
@@ -1443,12 +1444,6 @@ ret      x10
 ret
 eret
 drps
-
-#------------------------------------------------------------------------------
-# Unconditional branch (label)
-#------------------------------------------------------------------------------
-
-bl test
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -2686,13 +2681,13 @@ bl test
 # CHECK-NEXT:  1      1     0.50                        b	#4
 # CHECK-NEXT:  1      1     0.50                        b	#-4
 # CHECK-NEXT:  1      1     0.50                        b	#134217724
+# CHECK-NEXT:  2      1     0.50                        bl	test
 # CHECK-NEXT:  1      1     0.50                        br	x20
 # CHECK-NEXT:  2      1     0.50                        blr	xzr
 # CHECK-NEXT:  1      1     0.50                  U     ret	x10
 # CHECK-NEXT:  1      1     0.50                  U     ret
 # CHECK-NEXT:  1      1     0.50                  U     eret
 # CHECK-NEXT:  1      1     0.50                  U     drps
-# CHECK-NEXT:  2      1     0.50                        bl	test
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V1UnitB
@@ -3947,10 +3942,10 @@ bl test
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b	#4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b	#-4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b	#134217724
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     bl	test
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     br	x20
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     blr	xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ret	x10
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ret
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     eret
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     drps
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     bl	test
