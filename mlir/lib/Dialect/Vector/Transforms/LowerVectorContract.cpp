@@ -764,7 +764,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
       if (r == 0) {
-        // We only need to extract the rows of the RHS once
+        // We only need to extract the columns of the RHS once
         // and then re-use them later.
         Value b = rank == 1
                       ? rhs
