@@ -794,10 +794,12 @@ public:
       next();
       return I;
     }
+    /// Accesses entry at specific index (1-based internally, 0-based
+    /// externally). For example how this is used in parallelForEach.
     reference operator[](size_type idx) {
       return CurrentIndex->getNameTableEntry(idx + 1);
     }
-
+    /// Computes difference between iterators (used in parallelForEach).
     difference_type operator-(const NameIterator &other) const {
       assert(CurrentIndex == other.CurrentIndex);
       return this->CurrentName - other.CurrentName;
