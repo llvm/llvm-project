@@ -124,10 +124,7 @@ void LaunchRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.SendJSON(llvm::json::Value(std::move(response)));
 
   if (!status.Fail()) {
-    if (dap.is_attach)
-      SendProcessEvent(dap, Attach); // this happens when doing runInTerminal
-    else
-      SendProcessEvent(dap, Launch);
+    dap.onProcess();
   }
   dap.SendJSON(CreateEventObject("initialized"));
 }

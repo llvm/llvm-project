@@ -178,7 +178,7 @@ static void EventThreadFunction(DAP &dap) {
               // Run any exit LLDB commands the user specified in the
               // launch.json
               dap.RunExitCommands();
-              SendProcessExitedEvent(dap, process);
+              dap.onExited();
               dap.SendTerminatedEvent();
               done = true;
             }

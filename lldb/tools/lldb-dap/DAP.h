@@ -58,6 +58,9 @@ typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
 
+/// A debug adapter initiated event.
+template <typename... Args> using OutgoingEvent = std::function<void(Args...)>;
+
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 /// Buffer size for handling output events.
@@ -228,6 +231,17 @@ struct DAP {
   /// @{
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
+  /// @}
+
+  /// Typed Events Handlers
+  /// @{
+
+  /// onExited sends an event that the debuggee has exited.
+  OutgoingEvent<> onExited;
+  /// onProcess sends an event that indicates that the debugger has begun
+  /// debugging a new process.
+  OutgoingEvent<> onProcess;
+
   /// @}
 
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);

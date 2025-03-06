@@ -14,10 +14,6 @@
 namespace lldb_dap {
 struct DAP;
 
-enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
-
-void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
-
 void SendThreadStoppedEvent(DAP &dap);
 
 void SendTerminatedEvent(DAP &dap);
@@ -25,8 +21,6 @@ void SendTerminatedEvent(DAP &dap);
 void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process);
 
 void SendContinuedEvent(DAP &dap);
-
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 
 } // namespace lldb_dap
 

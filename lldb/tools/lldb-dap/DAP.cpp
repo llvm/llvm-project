@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "DAPLog.h"
+#include "Events/EventHandler.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
@@ -82,7 +83,9 @@ DAP::DAP(llvm::StringRef path, std::ofstream *log,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode),
+      onExited(ExitedEventHandler(*this)),
+      onProcess(ProcessEventHandler(*this)) {}
 
 DAP::~DAP() = default;
 

@@ -37,6 +37,9 @@ add_lldb_tool(lldb-dap
   Transport.cpp
   Watchpoint.cpp
 
+  Events/ExitedEventHandler.cpp
+  Events/ProcessEventHandler.cpp
+
   Handler/ResponseHandler.cpp
   Handler/AttachRequestHandler.cpp
   Handler/BreakpointLocationsHandler.cpp
@@ -75,8 +78,9 @@ add_lldb_tool(lldb-dap
   Handler/VariablesRequestHandler.cpp
   
   Protocol/ProtocolBase.cpp
-  Protocol/ProtocolTypes.cpp
+  Protocol/ProtocolEvents.cpp
   Protocol/ProtocolRequests.cpp
+  Protocol/ProtocolTypes.cpp
 
   LINK_LIBS
     liblldb

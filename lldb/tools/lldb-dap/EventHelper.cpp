@@ -32,87 +32,6 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-// "ProcessEvent": {
-//   "allOf": [
-//     { "$ref": "#/definitions/Event" },
-//     {
-//       "type": "object",
-//       "description": "Event message for 'process' event type. The event
-//                       indicates that the debugger has begun debugging a
-//                       new process. Either one that it has launched, or one
-//                       that it has attached to.",
-//       "properties": {
-//         "event": {
-//           "type": "string",
-//           "enum": [ "process" ]
-//         },
-//         "body": {
-//           "type": "object",
-//           "properties": {
-//             "name": {
-//               "type": "string",
-//               "description": "The logical name of the process. This is
-//                               usually the full path to process's executable
-//                               file. Example: /home/myproj/program.js."
-//             },
-//             "systemProcessId": {
-//               "type": "integer",
-//               "description": "The system process id of the debugged process.
-//                               This property will be missing for non-system
-//                               processes."
-//             },
-//             "isLocalProcess": {
-//               "type": "boolean",
-//               "description": "If true, the process is running on the same
-//                               computer as the debug adapter."
-//             },
-//             "startMethod": {
-//               "type": "string",
-//               "enum": [ "launch", "attach", "attachForSuspendedLaunch" ],
-//               "description": "Describes how the debug engine started
-//                               debugging this process.",
-//               "enumDescriptions": [
-//                 "Process was launched under the debugger.",
-//                 "Debugger attached to an existing process.",
-//                 "A project launcher component has launched a new process in
-//                  a suspended state and then asked the debugger to attach."
-//               ]
-//             }
-//           },
-//           "required": [ "name" ]
-//         }
-//       },
-//       "required": [ "event", "body" ]
-//     }
-//   ]
-// }
-void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
-  lldb::SBFileSpec exe_fspec = dap.target.GetExecutable();
-  char exe_path[PATH_MAX];
-  exe_fspec.GetPath(exe_path, sizeof(exe_path));
-  llvm::json::Object event(CreateEventObject("process"));
-  llvm::json::Object body;
-  EmplaceSafeString(body, "name", std::string(exe_path));
-  const auto pid = dap.target.GetProcess().GetProcessID();
-  body.try_emplace("systemProcessId", (int64_t)pid);
-  body.try_emplace("isLocalProcess", true);
-  const char *startMethod = nullptr;
-  switch (launch_method) {
-  case Launch:
-    startMethod = "launch";
-    break;
-  case Attach:
-    startMethod = "attach";
-    break;
-  case AttachForSuspendedLaunch:
-    startMethod = "attachForSuspendedLaunch";
-    break;
-  }
-  body.try_emplace("startMethod", startMethod);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
 // Send a thread stopped event for all threads as long as the process
 // is stopped.
 void SendThreadStoppedEvent(DAP &dap) {
@@ -231,15 +150,6 @@ void SendContinuedEvent(DAP &dap) {
   llvm::json::Object body;
   body.try_emplace("threadId", (int64_t)dap.focus_tid);
   body.try_emplace("allThreadsContinued", true);
-  event.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(event)));
-}
-
-// Send a "exited" event to indicate the process has exited.
-void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
-  llvm::json::Object event(CreateEventObject("exited"));
-  llvm::json::Object body;
-  body.try_emplace("exitCode", (int64_t)process.GetExitStatus());
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }

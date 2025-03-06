@@ -201,7 +201,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
-    SendProcessEvent(dap, Attach);
+    dap.onProcess();
     dap.SendJSON(CreateEventObject("initialized"));
   }
 }

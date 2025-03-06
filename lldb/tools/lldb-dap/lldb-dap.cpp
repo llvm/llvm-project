@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "DAPLog.h"
 #include "EventHelper.h"
+#include "Events/EventHandler.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
 #include "Transport.h"
