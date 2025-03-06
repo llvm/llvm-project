@@ -27,6 +27,8 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser P for a wrapper class, invoke P, and if it succeeds return
+// the wrapped object.
 template <typename Parser> struct UnwrapParser {
   static_assert(
       Parser::resultType::WrapperTrait::value && "Wrapper class required");
@@ -1029,7 +1031,7 @@ TYPE_PARSER(sourced(
         // lists absent in the parsed result.
         // E.g. for FLUSH(x) SEQ_CST it would find no clauses following
         // the directive name, parse the argument list "(x)" and stop.
-        applyFunction(makeFlushFromOldSyntax1,
+        applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax1,
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
             maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
