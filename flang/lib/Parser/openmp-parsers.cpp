@@ -995,17 +995,17 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
-OmpDirectiveSpecification static makeFlushFromOldSyntax1(
-    Verbatim &&text, std::optional<OmpClauseList> &&clauses,
+OmpDirectiveSpecification static makeFlushFromOldSyntax1(Verbatim &&text,
+    std::optional<OmpClauseList> &&clauses,
     std::optional<std::list<OmpArgument>> &&args,
     OmpDirectiveSpecification::Flags &&flags) {
   return OmpDirectiveSpecification{OmpDirectiveName(text), std::move(args),
-                                   std::move(clauses), std::move(flags)};
+      std::move(clauses), std::move(flags)};
 }
 
 TYPE_PARSER(sourced(
     // Parse the old syntax: FLUSH [clauses] [(objects)]
-    construct<OmpDirectiveSpecification>( //
+    construct<OmpDirectiveSpecification>(
         // Force this old-syntax parser to fail for FLUSH followed by '('.
         // Otherwise it could succeed on the new syntax but have one of
         // lists absent in the parsed result.
@@ -1021,8 +1021,7 @@ TYPE_PARSER(sourced(
         sourced(OmpDirectiveNameParser{}),
         maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
         maybe(Parser<OmpClauseList>{}),
-        pure(OmpDirectiveSpecification::Flags::None))
-))
+        pure(OmpDirectiveSpecification::Flags::None))))
 
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 

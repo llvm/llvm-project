@@ -2102,7 +2102,7 @@ public:
         Put(")");
       }
     }};
-    auto unparseClauses{[&]() {
+    auto unparseClauses{[&]() { //
       Walk(std::get<std::optional<OmpClauseList>>(x.t));
     }};
 
