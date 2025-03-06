@@ -922,11 +922,10 @@ template <typename ELFT>
 static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
                                  ArrayRef<uint8_t> &desc, ELFFileBase *f,
                                  const uint8_t *base,
-                                 ArrayRef<uint8_t> *data = nullptr,
-                                 StringRef sectionName = ".note.gnu.property") {
+                                 ArrayRef<uint8_t> *data = nullptr) {
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
     auto diag = Err(ctx);
-    diag << f->getName() << ":(" << sectionName << "+0x"
+    diag << f->getName() << ":(" << ".note.gnu.property+0x"
          << Twine::utohexstr(place - base) << "): ";
     return diag;
   };
@@ -954,13 +953,14 @@ static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
       // the data variable as there is no InputSection to collect the
       // data from. As such, these are ignored. They are needed either
       // when loading a shared library oject.
-      if (!f->aarch64PauthAbiCoreInfo.empty() && data != nullptr) {
+      ArrayRef<uint8_t> contents = data ? *data : desc;
+      if (!f->aarch64PauthAbiCoreInfo.empty()) {
         return void(
-            err(data->data())
+            err(contents.data())
             << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
                "not supported");
-      } else if (size != 16 && data != nullptr) {
-        return void(err(data->data())
+      } else if (size != 16) {
+        return void(err(contents.data())
                     << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
                        "is invalid: expected 16 bytes, but got "
                     << size);
@@ -1010,8 +1010,7 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
     const uint8_t *base = sec.content().data();
-    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data,
-                               sec.name);
+    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
@@ -1448,9 +1447,8 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
 // be collected from this is irrelevant for a dynamic object.
 template <typename ELFT>
 void SharedFile::parseGnuAndFeatures(const uint8_t *base,
-                                     const typename ELFT::PhdrRange headers,
-                                     const typename ELFT::Shdr *sHeader) {
-  if (numElfPhdrs == 0 || sHeader == nullptr)
+                                     const typename ELFT::PhdrRange headers) {
+  if (numElfPhdrs == 0)
     return;
   uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
@@ -1461,12 +1459,12 @@ void SharedFile::parseGnuAndFeatures(const uint8_t *base,
       continue;
     const typename ELFT::Note note(
         *reinterpret_cast<const typename ELFT::Nhdr *>(base +
-                                                       headers[i].p_vaddr));
+                                                       headers[i].p_offset));
     if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
       continue;
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
-    ArrayRef<uint8_t> desc = note.getDesc(sHeader->sh_addralign);
+    ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
     parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, this, base);
   }
 }
@@ -1520,7 +1518,6 @@ template <class ELFT> void SharedFile::parse() {
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
   const Elf_Shdr *verneedSec = nullptr;
-  const Elf_Shdr *noteSec = nullptr;
   symbols = std::make_unique<Symbol *[]>(numSymbols);
 
   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
@@ -1540,9 +1537,6 @@ template <class ELFT> void SharedFile::parse() {
       break;
     case SHT_GNU_verneed:
       verneedSec = &sec;
-      break;
-    case SHT_NOTE:
-      noteSec = &sec;
       break;
     }
   }
@@ -1590,7 +1584,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
-  parseGnuAndFeatures<ELFT>(obj.base(), getELFPhdrs<ELFT>(), noteSec);
+  parseGnuAndFeatures<ELFT>(obj.base(), getELFPhdrs<ELFT>());
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
