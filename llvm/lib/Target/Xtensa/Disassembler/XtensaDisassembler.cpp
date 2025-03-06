@@ -73,8 +73,50 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static const unsigned MRDecoderTable[] = {Xtensa::M0, Xtensa::M1, Xtensa::M2,
+                                          Xtensa::M3};
+
+static DecodeStatus DecodeMRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  if (RegNo >= std::size(MRDecoderTable))
+    return MCDisassembler::Fail;
+
+  unsigned Reg = MRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static const unsigned MR01DecoderTable[] = {Xtensa::M0, Xtensa::M1};
+
+static DecodeStatus DecodeMR01RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo > 2)
+    return MCDisassembler::Fail;
+
+  unsigned Reg = MR01DecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static const unsigned MR23DecoderTable[] = {Xtensa::M2, Xtensa::M3};
+
+static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if ((RegNo < 2) || (RegNo > 3))
+    return MCDisassembler::Fail;
+
+  unsigned Reg = MR23DecoderTable[RegNo - 2];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 const MCPhysReg SRDecoderTable[] = {
-    Xtensa::SAR, 3, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
+    Xtensa::SAR, 3,  Xtensa::ACCLO,      16, Xtensa::ACCHI,       17,
+    Xtensa::M0,  32, Xtensa::M1,         33, Xtensa::M2,          34,
+    Xtensa::M3,  35, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,

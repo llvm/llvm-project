@@ -849,3 +849,8 @@ let Constraints = "$dr = $r,@earlyclobber $dr" in {
   def MOVT : RRR_Inst<0x00, 0x03, 0x0D, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
                    "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
 }
+
+//===----------------------------------------------------------------------===//
+// DSP Instructions
+//===----------------------------------------------------------------------===//
+include "XtensaDSPInstrInfo.td"
