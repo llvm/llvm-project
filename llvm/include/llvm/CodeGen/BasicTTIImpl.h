@@ -1691,6 +1691,29 @@ public:
     return Cost;
   }
 
+  InstructionCost getActiveLaneMaskCost(Type *RetTy, Type *ArgTy,
+                                        TTI::TargetCostKind CostKind) {
+    EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
+    EVT ArgVT = getTLI()->getValueType(DL, ArgTy, true);
+
+    // If we're not expanding the intrinsic then we assume this is cheap
+    // to implement.
+    if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgVT))
+      return getTypeLegalizationCost(RetTy).first;
+
+    // Create the expanded types that will be used to calculate the uadd_sat
+    // operation.
+    Type *ExpRetTy =
+        VectorType::get(ArgTy, cast<VectorType>(RetTy)->getElementCount());
+    IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {},
+                                  FastMathFlags());
+    InstructionCost Cost =
+        thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
+                                        CmpInst::ICMP_ULT, CostKind);
+    return Cost;
+  }
+
   /// Get intrinsic cost based on arguments.
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind) {
@@ -1987,25 +2010,8 @@ public:
       return Cost;
     }
     case Intrinsic::get_active_lane_mask: {
-      EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
-      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
-
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandGetActiveLaneMask(ResVT, ArgType)) {
-        return getTypeLegalizationCost(RetTy).first;
-      }
-
-      // Create the expanded types that will be used to calculate the uadd_sat
-      // operation.
-      Type *ExpRetTy = VectorType::get(
-          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
-      IntrinsicCostAttributes Attrs(Intrinsic::uadd_sat, ExpRetTy, {}, FMF);
-      InstructionCost Cost =
-          thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, ExpRetTy, RetTy,
-                                          CmpInst::ICMP_ULT, CostKind);
-      return Cost;
+      return thisT()->getActiveLaneMaskCost(RetTy, ICA.getArgTypes()[0],
+                                            CostKind);
     }
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
@@ -2394,6 +2400,9 @@ public:
           thisT()->getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
       return Cost;
     }
+    case Intrinsic::get_active_lane_mask:
+      return thisT()->getActiveLaneMaskCost(RetTy, ICA.getArgTypes()[0],
+                                            CostKind);
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;
