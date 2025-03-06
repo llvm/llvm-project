@@ -334,19 +334,19 @@ static const load_command *NextCommand(const load_command *lc) {
   return (const load_command *)((const char *)lc + lc->cmdsize);
 }
 
-#ifdef MH_MAGIC_64
+#  ifdef MH_MAGIC_64
 static const size_t header_size = sizeof(mach_header_64);
-#else
+#  else
 static const size_t header_size = sizeof(mach_header);
-#endif
+#  endif
 
 static void FindUUID(const load_command *first_lc, const mach_header *hdr,
                      u8 *uuid_output) {
   unsigned short curcmd = 0;
   for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
        curcmd++, lc = NextCommand(lc)) {
-
-    CHECK_LT((const char*)lc, (const char*)hdr + header_size + hdr->sizeofcmds);
+    CHECK_LT((const char *)lc,
+             (const char *)hdr + header_size + hdr->sizeofcmds);
 
     if (lc->cmd != LC_UUID)
       continue;
@@ -363,8 +363,8 @@ static bool IsModuleInstrumented(const load_command *first_lc,
   unsigned short curcmd = 0;
   for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
        curcmd++, lc = NextCommand(lc)) {
-
-    CHECK_LT((const char*)lc, (const char*)hdr + header_size + hdr->sizeofcmds);
+    CHECK_LT((const char *)lc,
+             (const char *)hdr + header_size + hdr->sizeofcmds);
 
     if (lc->cmd != LC_LOAD_DYLIB)
       continue;
@@ -413,11 +413,10 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
           continue;
         }
       }
-      FindUUID((const load_command *)data_.current_load_cmd_addr,
-               hdr, data_.current_uuid);
+      FindUUID((const load_command *)data_.current_load_cmd_addr, hdr,
+               data_.current_uuid);
       data_.current_instrumented = IsModuleInstrumented(
-          (const load_command *)data_.current_load_cmd_addr,
-          hdr);
+          (const load_command *)data_.current_load_cmd_addr, hdr);
     }
 
     while (data_.current_load_cmd_count > 0) {
