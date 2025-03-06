@@ -1540,7 +1540,7 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       m_compiler->getTargetOpts().Features);
 
   if (auto *options = m_expr.GetOptions())
-    execution_unit_sp->SetPreferredModules(
+    execution_unit_sp->AppendPreferredSymbolContexts(
         options->GetPreferredSymbolContexts());
 
   ClangExpressionHelper *type_system_helper =

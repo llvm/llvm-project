@@ -162,10 +162,10 @@ public:
     return m_jitted_global_variables;
   }
 
-  void SetPreferredModules(SymbolContextList const &modules) {
-    for (auto const &m : modules)
-      if (m.module_sp)
-        m_preferred_modules.Append(m.module_sp);
+  void AppendPreferredSymbolContexts(SymbolContextList const &contexts) {
+    for (auto const &ctx : contexts)
+      if (ctx.module_sp)
+        m_preferred_modules.Append(ctx.module_sp);
   }
 
 private:

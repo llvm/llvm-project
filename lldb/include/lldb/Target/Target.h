@@ -333,8 +333,8 @@ public:
     m_language = SourceLanguage(language_type);
   }
 
-  void SetPreferredSymbolContexts(SymbolContextList modules) {
-    m_preferred_lookup_contexts = std::move(modules);
+  void SetPreferredSymbolContexts(SymbolContextList contexts) {
+    m_preferred_lookup_contexts = std::move(contexts);
   }
 
   const SymbolContextList &GetPreferredSymbolContexts() const {
