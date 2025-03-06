@@ -850,6 +850,10 @@ static void relaxCall36(Ctx &ctx, const InputSection &sec, size_t i,
     return;
 
   const uint32_t nextInsn = read32le(sec.content().data() + r.offset + 4);
+  // To ensure behavior consistency with ld.bfd, we add an assert here.
+  // https://github.com/llvm/llvm-project/pull/123576#discussion_r1974854075
+  assert(isJirl(nextInsn) &&
+         "The second instruction related to R_LARCH_CALL36 must be JIRL");
   if (getD5(nextInsn) == R_RA) {
     // convert jirl to bl
     sec.relaxAux->relocTypes[i] = R_LARCH_B26;
