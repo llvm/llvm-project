@@ -213,69 +213,17 @@ bool LineTable::FindLineEntryByAddress(const Address &so_addr,
   if (index_ptr != nullptr)
     *index_ptr = UINT32_MAX;
 
-  bool success = false;
+  uint32_t idx = lower_bound(so_addr);
+  if (idx >= GetSize())
+    return false;
 
-  if (so_addr.GetModule().get() == m_comp_unit->GetModule().get()) {
-    Entry search_entry;
-    search_entry.file_addr = so_addr.GetFileAddress();
-    if (search_entry.file_addr != LLDB_INVALID_ADDRESS) {
-      entry_collection::const_iterator begin_pos = m_entries.begin();
-      entry_collection::const_iterator end_pos = m_entries.end();
-      entry_collection::const_iterator pos = std::lower_bound(
-          begin_pos, end_pos, search_entry, Entry::EntryAddressLessThan);
-      if (pos != end_pos) {
-        if (pos != begin_pos) {
-          if (pos->file_addr != search_entry.file_addr)
-            --pos;
-          else if (pos->file_addr == search_entry.file_addr) {
-            // If this is a termination entry, it shouldn't match since entries
-            // with the "is_terminal_entry" member set to true are termination
-            // entries that define the range for the previous entry.
-            if (pos->is_terminal_entry) {
-              // The matching entry is a terminal entry, so we skip ahead to
-              // the next entry to see if there is another entry following this
-              // one whose section/offset matches.
-              ++pos;
-              if (pos != end_pos) {
-                if (pos->file_addr != search_entry.file_addr)
-                  pos = end_pos;
-              }
-            }
+  addr_t file_addr = so_addr.GetFileAddress();
+  if (m_entries[idx].file_addr > file_addr)
+    return false;
 
-            if (pos != end_pos) {
-              // While in the same section/offset backup to find the first line
-              // entry that matches the address in case there are multiple
-              while (pos != begin_pos) {
-                entry_collection::const_iterator prev_pos = pos - 1;
-                if (prev_pos->file_addr == search_entry.file_addr &&
-                    prev_pos->is_terminal_entry == false)
-                  --pos;
-                else
-                  break;
-              }
-            }
-          }
-        }
-        else
-        {
-          // There might be code in the containing objfile before the first
-          // line table entry.  Make sure that does not get considered part of
-          // the first line table entry.
-          if (pos->file_addr > so_addr.GetFileAddress())
-            return false;
-        }
-
-        // Make sure we have a valid match and that the match isn't a
-        // terminating entry for a previous line...
-        if (pos != end_pos && pos->is_terminal_entry == false) {
-          uint32_t match_idx = std::distance(begin_pos, pos);
-          success = ConvertEntryAtIndexToLineEntry(match_idx, line_entry);
-          if (index_ptr != nullptr && success)
-            *index_ptr = match_idx;
-        }
-      }
-    }
-  }
+  bool success = ConvertEntryAtIndexToLineEntry(idx, line_entry);
+  if (index_ptr != nullptr && success)
+    *index_ptr = idx;
   return success;
 }
 

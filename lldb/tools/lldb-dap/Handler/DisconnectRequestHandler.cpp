@@ -57,14 +57,15 @@ namespace lldb_dap {
 //                     acknowledgement, so no body field is required."
 //   }]
 // }
-void DisconnectRequestHandler::operator()(const llvm::json::Object &request) {
+void DisconnectRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");
 
   bool defaultTerminateDebuggee = dap.is_attach ? false : true;
-  bool terminateDebuggee =
-      GetBoolean(arguments, "terminateDebuggee", defaultTerminateDebuggee);
+  bool terminateDebuggee = GetBoolean(arguments, "terminateDebuggee")
+                               .value_or(defaultTerminateDebuggee);
 
   lldb::SBError error = dap.Disconnect(terminateDebuggee);
   if (error.Fail())

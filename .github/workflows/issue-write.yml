@@ -25,7 +25,7 @@ jobs:
       )
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
@@ -39,7 +39,7 @@ jobs:
 
       - name: 'Comment on PR'
         if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@v3
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

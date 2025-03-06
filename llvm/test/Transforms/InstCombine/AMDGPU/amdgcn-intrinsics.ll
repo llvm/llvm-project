@@ -2845,14 +2845,14 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 @gv = constant i32 0
 
-define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
+define amdgpu_kernel void @readfirstlane_constant(i32 %arg, ptr %ptr) {
 ; CHECK-LABEL: @readfirstlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
-; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 undef, ptr undef, align 4
+; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 123, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 undef, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2860,11 +2860,11 @@ define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
   %imm = call i32 @llvm.amdgcn.readfirstlane(i32 123)
   %constexpr = call i32 @llvm.amdgcn.readfirstlane(i32 ptrtoint (ptr @gv to i32))
   %undef = call i32 @llvm.amdgcn.readfirstlane(i32 undef)
-  store volatile i32 %var, ptr undef
-  store volatile i32 %zero, ptr undef
-  store volatile i32 %imm, ptr undef
-  store volatile i32 %constexpr, ptr undef
-  store volatile i32 %undef, ptr undef
+  store volatile i32 %var, ptr %ptr
+  store volatile i32 %zero, ptr %ptr
+  store volatile i32 %imm, ptr %ptr
+  store volatile i32 %constexpr, ptr %ptr
+  store volatile i32 %undef, ptr %ptr
   ret void
 }
 
@@ -2931,14 +2931,14 @@ bb1:
 
 declare i32 @llvm.amdgcn.readlane(i32, i32)
 
-define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
+define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
 ; CHECK-LABEL: @readlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
-; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr undef, align 4
-; CHECK-NEXT:    store volatile i32 undef, ptr undef, align 4
+; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 123, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 ptrtoint (ptr @gv to i32), ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 undef, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %var = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 7)
@@ -2946,11 +2946,11 @@ define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
   %imm = call i32 @llvm.amdgcn.readlane(i32 123, i32 %lane)
   %constexpr = call i32 @llvm.amdgcn.readlane(i32 ptrtoint (ptr @gv to i32), i32 %lane)
   %undef = call i32 @llvm.amdgcn.readlane(i32 undef, i32 %lane)
-  store volatile i32 %var, ptr undef
-  store volatile i32 %zero, ptr undef
-  store volatile i32 %imm, ptr undef
-  store volatile i32 %constexpr, ptr undef
-  store volatile i32 %undef, ptr undef
+  store volatile i32 %var, ptr %ptr
+  store volatile i32 %zero, ptr %ptr
+  store volatile i32 %imm, ptr %ptr
+  store volatile i32 %constexpr, ptr %ptr
+  store volatile i32 %undef, ptr %ptr
   ret void
 }
 
@@ -5671,6 +5671,14 @@ define i1 @test_is_shared_undef() nounwind {
   ret i1 %val
 }
 
+define i1 @test_is_shared_poison() nounwind {
+; CHECK-LABEL: @test_is_shared_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.shared(ptr poison)
+  ret i1 %val
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.is.private
 ; --------------------------------------------------------------------
@@ -5690,6 +5698,14 @@ define i1 @test_is_private_undef() nounwind {
 ; CHECK-NEXT:    ret i1 undef
 ;
   %val = call i1 @llvm.amdgcn.is.private(ptr undef)
+  ret i1 %val
+}
+
+define i1 @test_is_private_poison() nounwind {
+; CHECK-LABEL: @test_is_private_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %val = call i1 @llvm.amdgcn.is.private(ptr poison)
   ret i1 %val
 }
 

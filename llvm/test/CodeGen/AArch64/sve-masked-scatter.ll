@@ -83,10 +83,7 @@ define void @masked_scatter_splat_constant_pointer (<vscale x 4 x i1> %pg) {
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z0.d]
 ; CHECK-NEXT:    ret
 vector.body:
-  call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef,
-    <vscale x 4 x ptr> shufflevector (<vscale x 4 x ptr> insertelement (<vscale x 4 x ptr> poison, ptr null, i32 0), <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer),
-    i32 4,
-    <vscale x 4 x i1> %pg)
+  call void @llvm.masked.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> undef, <vscale x 4 x ptr> zeroinitializer, i32 4, <vscale x 4 x i1> %pg)
   ret void
 }
 

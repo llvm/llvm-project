@@ -30,11 +30,6 @@ namespace mlir {
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 
-/// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
-/// dialect to be convertible to Arith. For example, `shape.num_elements` get
-/// transformed to `shape.reduce`, which can be lowered to SCF and Arith.
-std::unique_ptr<Pass> createShapeToShapeLowering();
-
 /// Collects a set of patterns to rewrite ops within the Shape dialect.
 void populateShapeRewritePatterns(RewritePatternSet &patterns);
 
@@ -45,11 +40,6 @@ void populateShapeRewritePatterns(RewritePatternSet &patterns);
 //
 // After this pass, no cstr_ operations exist.
 void populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns);
-std::unique_ptr<OperationPass<func::FuncOp>> createRemoveShapeConstraintsPass();
-
-/// Outline the shape computation part by adding shape.func and populate
-/// conrresponding mapping infomation into ShapeMappingAnalysis.
-std::unique_ptr<OperationPass<ModuleOp>> createOutlineShapeComputationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
