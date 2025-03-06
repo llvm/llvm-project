@@ -36,25 +36,18 @@ using namespace llvm;
 
 namespace {
 
-void updateDomTreeForScalableExpansion(DominatorTree *DT, BasicBlock *Preheader,
-                                       BasicBlock *Loop, BasicBlock *Exit) {
-  DT->addNewBlock(Loop, Preheader);
-  DT->changeImmediateDominator(Exit, Loop);
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-}
-
 /// Expand a reduction on a scalable vector into a loop
 /// that iterates over one element after the other.
 Value *expandScalableReduction(IRBuilderBase &Builder, IntrinsicInst *II,
                                Value *Acc, Value *Vec,
                                Instruction::BinaryOps BinOp,
-                               DominatorTree *DT) {
+                               DomTreeUpdater &DTU) {
   ScalableVectorType *VecTy = cast<ScalableVectorType>(Vec->getType());
 
   // Split the original BB in two and create a new BB between them,
   // which will be a loop.
   BasicBlock *BeforeBB = II->getParent();
-  BasicBlock *AfterBB = SplitBlock(BeforeBB, II, DT);
+  BasicBlock *AfterBB = SplitBlock(BeforeBB, II, &DTU);
   BasicBlock *LoopBB = BasicBlock::Create(Builder.getContext(), "rdx.loop",
                                           BeforeBB->getParent(), AfterBB);
   BeforeBB->getTerminator()->setSuccessor(0, LoopBB);
@@ -87,9 +80,9 @@ Value *expandScalableReduction(IRBuilderBase &Builder, IntrinsicInst *II,
   Value *Done = Builder.CreateCmp(CmpInst::ICMP_EQ, IVInc, NumElts, "exitcond");
   Builder.CreateCondBr(Done, AfterBB, LoopBB);
 
-  if (DT)
-    updateDomTreeForScalableExpansion(DT, BeforeBB, LoopBB, AfterBB);
-
+  DTU.applyUpdates({{DominatorTree::Insert, BeforeBB, LoopBB},
+                    {DominatorTree::Insert, LoopBB, AfterBB},
+                    {DominatorTree::Delete, BeforeBB, AfterBB}});
   return Rdx;
 }
 
@@ -99,7 +92,7 @@ Value *expandScalableReduction(IRBuilderBase &Builder, IntrinsicInst *II,
 Value *expandScalableTreeReduction(
     IRBuilderBase &Builder, IntrinsicInst *II, std::optional<Value *> Acc,
     Value *Vec, Instruction::BinaryOps BinOp,
-    function_ref<bool(Constant *)> IsNeutralElement, DominatorTree *DT,
+    function_ref<bool(Constant *)> IsNeutralElement, DomTreeUpdater &DTU,
     std::optional<unsigned> FixedVScale) {
   ScalableVectorType *VecTy = cast<ScalableVectorType>(Vec->getType());
   ScalableVectorType *VecTyX2 = ScalableVectorType::get(
@@ -133,7 +126,7 @@ Value *expandScalableTreeReduction(
   // Split the original BB in two and create a new BB between them,
   // which will be a loop.
   BasicBlock *BeforeBB = II->getParent();
-  BasicBlock *AfterBB = SplitBlock(BeforeBB, II, DT);
+  BasicBlock *AfterBB = SplitBlock(BeforeBB, II, &DTU);
   BasicBlock *LoopBB = BasicBlock::Create(Builder.getContext(), "rdx.loop",
                                           BeforeBB->getParent(), AfterBB);
   BeforeBB->getTerminator()->setSuccessor(0, LoopBB);
@@ -186,15 +179,16 @@ Value *expandScalableTreeReduction(
     if (auto *C = dyn_cast<Constant>(*Acc); !C || !IsNeutralElement(C))
       FinalVal = Builder.CreateBinOp(BinOp, *Acc, FinalVal, "rdx.final");
 
-  if (DT)
-    updateDomTreeForScalableExpansion(DT, BeforeBB, LoopBB, AfterBB);
+  DTU.applyUpdates({{DominatorTree::Insert, BeforeBB, LoopBB},
+                    {DominatorTree::Insert, LoopBB, AfterBB},
+                    {DominatorTree::Delete, BeforeBB, AfterBB}});
 
   return FinalVal;
 }
 
 std::pair<bool, bool> expandReductions(Function &F,
                                        const TargetTransformInfo *TTI,
-                                       DominatorTree *DT) {
+                                       DomTreeUpdater &DTU) {
   bool Changed = false, CFGChanged = false;
   SmallVector<IntrinsicInst *, 4> Worklist;
   for (auto &I : instructions(F)) {
@@ -270,9 +264,9 @@ std::pair<bool, bool> expandReductions(Function &F,
                   llvm_unreachable("Binop not handled");
                 }
               },
-              DT, FixedVScale);
+              DTU, FixedVScale);
         else
-          Rdx = expandScalableReduction(Builder, II, Acc, Vec, RdxOpcode, DT);
+          Rdx = expandScalableReduction(Builder, II, Acc, Vec, RdxOpcode, DTU);
         break;
       }
 
@@ -335,7 +329,7 @@ std::pair<bool, bool> expandReductions(Function &F,
         Rdx = expandScalableTreeReduction(
             Builder, II, std::nullopt, Vec, Instruction::BinaryOps(RdxOpcode),
             [](Constant *C) -> bool { llvm_unreachable("No accumulator!"); },
-            DT, FixedVScale);
+            DTU, FixedVScale);
         break;
       }
 
@@ -363,6 +357,11 @@ std::pair<bool, bool> expandReductions(Function &F,
     II->eraseFromParent();
     Changed = true;
   }
+
+  if (DTU.hasDomTree() && DTU.hasPendingUpdates()) {
+    DTU.flush();
+    assert(DTU.getDomTree().verify(DominatorTree::VerificationLevel::Fast));
+  }
   return {CFGChanged, Changed};
 }
 
@@ -376,7 +375,9 @@ public:
   bool runOnFunction(Function &F) override {
     const auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto *DTA = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-    return expandReductions(F, TTI, DTA ? &DTA->getDomTree() : nullptr).second;
+    DomTreeUpdater DTU(DTA ? &DTA->getDomTree() : nullptr,
+                       DomTreeUpdater::UpdateStrategy::Lazy);
+    return expandReductions(F, TTI, DTU).second;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -402,7 +403,8 @@ PreservedAnalyses ExpandReductionsPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   const auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
-  auto [CFGChanged, Changed] = expandReductions(F, &TTI, DT);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  auto [CFGChanged, Changed] = expandReductions(F, &TTI, DTU);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
