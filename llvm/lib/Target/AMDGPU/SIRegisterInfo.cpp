@@ -3915,7 +3915,7 @@ unsigned SIRegisterInfo::getSGPRHazardAvoidanceStrategy(
   if (SGPRHazardAvoidanceStrategy.getNumOccurrences())
     return SGPRHazardAvoidanceStrategy;
   return MF.getFunction().getFnAttributeAsParsedInteger(
-    "amdgpu-sgpr-hazard-regalloc", 0);
+      "amdgpu-sgpr-hazard-regalloc", 0);
 }
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
