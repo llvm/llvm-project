@@ -2248,9 +2248,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   SDValue EVL = LD->getVectorLength();
   EVT MemoryVT = LD->getMemoryVT();
 
-  EVT LoMemVT, HiMemVT;
   bool HiIsEmpty = false;
-  std::tie(LoMemVT, HiMemVT) =
+  auto [LoMemVT, HiMemVT] =
       DAG.GetDependentSplitDestVTs(MemoryVT, LoVT, &HiIsEmpty);
 
   // Split Mask operand
@@ -2265,8 +2264,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   }
 
   // Split EVL operand
-  SDValue EVLLo, EVLHi;
-  std::tie(EVLLo, EVLHi) = DAG.SplitEVL(EVL, LD->getValueType(0), dl);
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(EVL, LD->getValueType(0), dl);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       LD->getPointerInfo(), MachineMemOperand::MOLoad,
