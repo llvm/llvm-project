@@ -357,7 +357,7 @@ public:
   virtual bool CanProvideValue();
 
   // Subclasses must implement the functions below.
-  virtual std::optional<uint64_t> GetByteSize() = 0;
+  virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 

@@ -190,8 +190,12 @@ class PGOCtxProfileReader final {
   Error unsupported(const Twine &);
 
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
-  readContext(bool ExpectIndex);
-  bool canReadContext();
+  readProfile(PGOCtxProfileBlockIDs Kind);
+
+  bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
+  Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
+
+  Error loadContexts(CtxProfContextualProfiles &);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
@@ -201,7 +205,6 @@ public:
   Expected<PGOCtxProfile> loadProfiles();
 };
 
-void convertCtxProfToYaml(raw_ostream &OS,
-                          const PGOCtxProfContext::CallTargetMapTy &);
+void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &);
 } // namespace llvm
 #endif

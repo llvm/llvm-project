@@ -181,7 +181,7 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
 
   if (Mode == PrintMode::Everything)
     OS << "\nCurrent Profile:\n";
-  convertCtxProfToYaml(OS, C.contexts());
+  convertCtxProfToYaml(OS, C.profiles());
   OS << "\n";
   if (Mode == PrintMode::YAML)
     return PreservedAnalyses::all();

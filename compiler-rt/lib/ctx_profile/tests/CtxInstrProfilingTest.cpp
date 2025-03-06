@@ -183,11 +183,18 @@ TEST_F(ContextTest, Dump) {
   public:
     ContextRoot *const Root;
     const size_t Entries;
+
+    int EnteredSectionCount = 0;
+    int ExitedSectionCount = 0;
+
     bool State = false;
+
     TestProfileWriter(ContextRoot *Root, size_t Entries)
         : Root(Root), Entries(Entries) {}
 
     void writeContextual(const ContextNode &Node) override {
+      EXPECT_EQ(EnteredSectionCount, 1);
+      EXPECT_EQ(ExitedSectionCount, 0);
       EXPECT_FALSE(Root->Taken.TryLock());
       EXPECT_EQ(Node.guid(), 1U);
       EXPECT_EQ(Node.counters()[0], Entries);
@@ -205,7 +212,13 @@ TEST_F(ContextTest, Dump) {
       EXPECT_EQ(SN.subContexts()[0], nullptr);
       State = true;
     }
+    void startContextSection() override { ++EnteredSectionCount; }
+    void endContextSection() override {
+      EXPECT_EQ(EnteredSectionCount, 1);
+      ++ExitedSectionCount;
+    }
   };
+
   TestProfileWriter W(&Root, 1);
   EXPECT_FALSE(W.State);
   __llvm_ctx_profile_fetch(W);
@@ -217,4 +230,6 @@ TEST_F(ContextTest, Dump) {
   EXPECT_FALSE(W2.State);
   __llvm_ctx_profile_fetch(W2);
   EXPECT_TRUE(W2.State);
+  EXPECT_EQ(W2.EnteredSectionCount, 1);
+  EXPECT_EQ(W2.ExitedSectionCount, 1);
 }

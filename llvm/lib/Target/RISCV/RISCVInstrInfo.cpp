@@ -953,14 +953,23 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
+unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
+                            bool Imm) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    return Imm ? RISCV::CV_BEQIMM : RISCV::BEQ;
+    if (!Imm)
+      return RISCV::BEQ;
+    if (STI.hasVendorXCVbi())
+      return RISCV::CV_BEQIMM;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_NE:
-    return Imm ? RISCV::CV_BNEIMM : RISCV::BNE;
+    if (!Imm)
+      return RISCV::BNE;
+    if (STI.hasVendorXCVbi())
+      return RISCV::CV_BNEIMM;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -974,7 +983,7 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
 
 const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
                                              bool Imm) const {
-  return get(RISCVCC::getBrCond(CC, Imm));
+  return get(RISCVCC::getBrCond(STI, CC, Imm));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1649,6 +1658,14 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   switch (MI.getOpcode()) {
   default:
+    break;
+  case RISCV::ADD:
+    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+        MI.getOperand(2).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     break;
   case RISCV::ADDI:
     // Operand 1 can be a frameindex but callers expect registers

@@ -244,6 +244,9 @@ def OMPC_Indirect : Clause<"indirect"> {
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
 }
+def OMPC_Initializer : Clause<"initializer"> {
+  let flangClass = "OmpInitializerClause";
+}
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";
   let flangClass = "OmpInReductionClause";
@@ -668,6 +671,9 @@ def OMP_DeclareMapper : Directive<"declare mapper"> {
   let category = CA_Declarative;
 }
 def OMP_DeclareReduction : Directive<"declare reduction"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Initializer>,
+  ];
   let association = AS_None;
   let category = CA_Declarative;
 }
