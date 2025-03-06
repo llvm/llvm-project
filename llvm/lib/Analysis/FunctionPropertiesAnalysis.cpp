@@ -30,12 +30,12 @@ cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
 
-cl::opt<unsigned> BigBasicBlockInstructionThreshold(
+static cl::opt<unsigned> BigBasicBlockInstructionThreshold(
     "big-basic-block-instruction-threshold", cl::Hidden, cl::init(500),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered big."));
 
-cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
+static cl::opt<unsigned> MediumBasicBlockInstructionThreshold(
     "medium-basic-block-instruction-threshold", cl::Hidden, cl::init(15),
     cl::desc("The minimum number of instructions a basic block should contain "
              "before being considered medium-sized."));

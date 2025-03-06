@@ -511,7 +511,7 @@ public:
     AM.ScalableOffset = BaseOffset.getScalable();
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) {
@@ -2056,12 +2056,33 @@ public:
     }
     case Intrinsic::experimental_vector_match:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-    case Intrinsic::sincos: {
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi: {
       Type *Ty = getContainedTypes(RetTy).front();
       EVT VT = getTLI()->getValueType(DL, Ty);
-      RTLIB::Libcall LC = RTLIB::getSINCOS(VT.getScalarType());
-      if (auto Cost =
-              getMultipleResultIntrinsicVectorLibCallCost(ICA, CostKind, LC))
+
+      RTLIB::Libcall LC = [&] {
+        switch (ICA.getID()) {
+        case Intrinsic::modf:
+          return RTLIB::getMODF;
+        case Intrinsic::sincos:
+          return RTLIB::getSINCOS;
+        case Intrinsic::sincospi:
+          return RTLIB::getSINCOSPI;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+      }()(VT.getScalarType());
+
+      std::optional<unsigned> CallRetElementIndex;
+      // The first element of the modf result is returned by value in the
+      // libcall.
+      if (ICA.getID() == Intrinsic::modf)
+        CallRetElementIndex = 0;
+
+      if (auto Cost = getMultipleResultIntrinsicVectorLibCallCost(
+              ICA, CostKind, LC, CallRetElementIndex))
         return *Cost;
       // Otherwise, fallback to default scalarization cost.
       break;

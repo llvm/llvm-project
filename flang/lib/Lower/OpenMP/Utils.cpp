@@ -354,14 +354,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     // type.
     if (fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
             fir::unwrapPassByRefType(curValue.getType()))) {
-      mlir::Value idxConst = firOpBuilder.createIntegerConstant(
-          clauseLocation, firOpBuilder.getIndexType(),
-          indices[currentIndicesIdx]);
-      mlir::Type memberTy =
-          recordType.getTypeList().at(indices[currentIndicesIdx]).second;
+      fir::IntOrValue idxConst = mlir::IntegerAttr::get(
+          firOpBuilder.getI32Type(), indices[currentIndicesIdx]);
+      mlir::Type memberTy = recordType.getType(indices[currentIndicesIdx]);
       curValue = firOpBuilder.create<fir::CoordinateOp>(
           clauseLocation, firOpBuilder.getRefType(memberTy), curValue,
-          idxConst);
+          llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
 
       // Skip mapping and the subsequent load if we're the final member or not
       // a type with a descriptor such as a pointer/allocatable. If we're a
