@@ -821,7 +821,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
   // if mask is a logical scalar, we can check its value before the main loop
   // and either ignore the fact it is there or exit early.
   if (maskRank == 0) {
-    mlir::Type logical = builder.getI1Type();
+    mlir::Type i1Type = builder.getI1Type();
+    mlir::Type logical = maskElemType;
     mlir::IndexType idxTy = builder.getIndexType();
 
     fir::SequenceType::Shape singleElement(1, 1);
@@ -834,8 +835,9 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
     mlir::Value condAddr =
         builder.create<fir::CoordinateOp>(loc, logicalRefTy, array, indx);
     mlir::Value cond = builder.create<fir::LoadOp>(loc, condAddr);
+    mlir::Value condI1 = builder.create<fir::ConvertOp>(loc, i1Type, cond);
 
-    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cond,
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, condI1,
                                                /*withElseRegion=*/true);
 
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
