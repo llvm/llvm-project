@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS nativecodegen)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_mlir_unittest(MLIRTargetLLVMTests
+  Offload.cpp
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
