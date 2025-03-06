@@ -583,9 +583,6 @@ bool handleConstMemberCall(const CallExpr *CE,
     return true;
   }
 
-  bool IsBooleanOrPointer =
-      CE->getType()->isBooleanType() || CE->getType()->isPointerType();
-
   // Cache if the const method returns a reference
   if (CE->isGLValue()) {
     const FunctionDecl *DirectCallee = CE->getDirectCallee();
@@ -595,14 +592,14 @@ bool handleConstMemberCall(const CallExpr *CE,
     StorageLocation &Loc =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
             *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-              if (IsBooleanOrPointer) {
-                State.Env.setValue(Loc, *State.Env.createValue(CE->getType()));
-              }
+              // no-op
+              // NOTE: if we want to support const ref to pointers or bools
+              // we should initialize their values here.
             });
 
     State.Env.setStorageLocation(*CE, Loc);
     return true;
-  } else if (IsBooleanOrPointer) {
+  } else if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
     // Cache if the const method returns a boolean or pointer type.
     Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
                                                                  State.Env);
