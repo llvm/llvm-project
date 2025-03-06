@@ -10709,6 +10709,11 @@ def err_vector_incorrect_num_elements : Error<
   "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
+def err_vector_incorrect_bit_count : Error<
+  "incorrect number of bits in vector operand (expected %select{|a multiple of}0 %1 bits, have %2)">;
+def err_integer_incorrect_bit_count : Error<
+  "incorrect number of bits in integer (expected %0 bits, have %1)">;
+
 def err_invalid_neon_type_code : Error<
   "incompatible constant for this __builtin_neon function">;
 def err_argument_invalid_range : Error<
