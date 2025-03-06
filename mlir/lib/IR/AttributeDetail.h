@@ -23,7 +23,6 @@
 #include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <mutex>
 
