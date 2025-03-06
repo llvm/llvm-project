@@ -23660,20 +23660,21 @@ static SDValue combineVScale1Load(LoadSDNode *LD, SelectionDAG &DAG,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const AArch64Subtarget *Subtarget) {
   EVT MemVT = LD->getMemoryVT();
-  if (!DCI.isBeforeLegalize() || !Subtarget->hasNEON() ||
-      !MemVT.isScalableVector() || LD->getExtensionType() != ISD::NON_EXTLOAD ||
+  if (!DCI.isBeforeLegalize() || !Subtarget->isLittleEndian() ||
+      !Subtarget->hasNEON() || !MemVT.isScalableVector() ||
+      LD->getExtensionType() != ISD::NON_EXTLOAD ||
       MemVT.getSizeInBits().getKnownMinValue() != 128 ||
       Subtarget->getMaxSVEVectorSizeInBits() != 128)
     return SDValue();
 
   SDLoc DL(LD);
-  MVT NewVT = MVT::getVectorVT(MemVT.getVectorElementType().getSimpleVT(),
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getVectorElementType(),
                                MemVT.getVectorMinNumElements());
   SDValue NewLoad = DAG.getLoad(
       NewVT, DL, LD->getChain(), LD->getBasePtr(), LD->getPointerInfo(),
       LD->getOriginalAlign(), LD->getMemOperand()->getFlags(), LD->getAAInfo());
   SDValue Insert = convertToScalableVector(DAG, MemVT, NewLoad);
-  return DAG.getMergeValues({Insert, SDValue(cast<SDNode>(NewLoad), 1)}, DL);
+  return DAG.getMergeValues({Insert, NewLoad.getValue(1)}, DL);
 }
 
 // Perform TBI simplification if supported by the target and try to break up
@@ -23980,21 +23981,21 @@ static SDValue combineVScale1Store(StoreSDNode *ST, SelectionDAG &DAG,
                                    const AArch64Subtarget *Subtarget) {
   SDValue Value = ST->getValue();
   EVT ValueVT = Value.getValueType();
-  if (ST->isVolatile() || !Subtarget->isLittleEndian() ||
-      !DCI.isBeforeLegalize() || !Subtarget->hasNEON() ||
-      !ValueVT.isScalableVector() || ST->isTruncatingStore() ||
+  if (!DCI.isBeforeLegalize() || !Subtarget->isLittleEndian() ||
+      !Subtarget->hasNEON() || !ValueVT.isScalableVector() ||
+      ST->isTruncatingStore() ||
       ValueVT.getSizeInBits().getKnownMinValue() != 128 ||
       Subtarget->getMaxSVEVectorSizeInBits() != 128)
     return SDValue();
 
   SDLoc DL(ST);
-  MVT NewVT = MVT::getVectorVT(ValueVT.getVectorElementType().getSimpleVT(),
-                               ValueVT.getVectorMinNumElements());
+  EVT NewVT =
+      EVT::getVectorVT(*DAG.getContext(), ValueVT.getVectorElementType(),
+                       ValueVT.getVectorMinNumElements());
   SDValue NewValue = convertFromScalableVector(DAG, NewVT, Value);
-  SDValue NewStore = DAG.getStore(
-      ST->getChain(), DL, NewValue, ST->getBasePtr(), ST->getPointerInfo(),
-      ST->getOriginalAlign(), ST->getMemOperand()->getFlags(), ST->getAAInfo());
-  return NewStore;
+  return DAG.getStore(ST->getChain(), DL, NewValue, ST->getBasePtr(),
+                      ST->getPointerInfo(), ST->getOriginalAlign(),
+                      ST->getMemOperand()->getFlags(), ST->getAAInfo());
 }
 
 static unsigned getFPSubregForVT(EVT VT) {
