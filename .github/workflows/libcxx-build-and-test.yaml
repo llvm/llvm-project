@@ -100,10 +100,6 @@ jobs:
           - config: 'generic-cxx26'
             cc: 'clang-19'
             cxx: 'clang++-19'
-          # Release transition
-          - config: 'generic-cxx23'
-            cc: 'clang-18'
-            cxx: 'clang++-18'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
