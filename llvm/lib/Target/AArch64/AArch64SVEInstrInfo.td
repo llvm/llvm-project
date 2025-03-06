@@ -1827,51 +1827,7 @@ let Predicates = [HasSVE] in {
   defm : adrXtwShiftPat<nxv2i64, nxv2i1, 3>;
 } // End HasSVE
 
-multiclass SVEVecStoreLanePat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
-                              ValueType VTy, ValueType STy,
-                              ValueType SubRegTy,
-                              SubRegIndex SubRegIdx, Operand IndexType,
-                              Instruction STR,
-                              Instruction DUP, AsmVectorIndexOpnd DUPIdxTy> {
-  // Same as Neon VecStoreLane0Pat but without matching VecListOne128.
-  def : Pat<(storeop (STy (vector_extract VTy:$Vt, (i64 0))),
-                     (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
-            (STR (SubRegTy (EXTRACT_SUBREG $Vt, SubRegIdx)),
-                  GPR64sp:$Rn, IndexType:$offset)>;
-
-  // Only used for streaming[-compatible] SVE -- when NEON is available we avoid a DUP.
-  // Non-zero immediate index:
-  def : Pat<(storeop (STy (vector_extract VTy:$Vt, DUPIdxTy:$idx)),
-                     (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
-            (STR (SubRegTy (EXTRACT_SUBREG (DUP $Vt, DUPIdxTy:$idx), SubRegIdx)),
-                  GPR64sp:$Rn, IndexType:$offset)>;
-}
-
 let Predicates = [HasSVE_or_SME] in {
-
-  let AddedComplexity = 19 in {
-    // Lane 0 truncating stores
-    // i32 -> i16
-    defm : SVEVecStoreLanePat<am_indexed16,  truncstorei16, nxv4i32, i32, f16, hsub, uimm12s4, STRHui, DUP_ZZI_S, sve_elm_idx_extdup_s>;
-    defm : SVEVecStoreLanePat<am_unscaled16, truncstorei16, nxv4i32, i32, f16, hsub, simm9, STURHi, DUP_ZZI_S, sve_elm_idx_extdup_s>;
-    // i64 -> i32
-    defm : SVEVecStoreLanePat<am_indexed32,  truncstorei32, nxv2i64, i64, f32, ssub, uimm12s4, STRSui, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-    defm : SVEVecStoreLanePat<am_unscaled32, truncstorei32, nxv2i64, i64, f32, ssub, simm9, STURSi, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-    // i64 -> i16
-    defm : SVEVecStoreLanePat<am_indexed16,  truncstorei16, nxv2i64, i64, f16, hsub, uimm12s4, STRHui, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-    defm : SVEVecStoreLanePat<am_unscaled16, truncstorei16, nxv2i64, i64, f16, hsub, simm9, STURHi, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-    // i16 -> i16 (technically a truncate as the extracted type is i32)
-    defm : SVEVecStoreLanePat<am_indexed16,  truncstorei16, nxv8i16, i32, f16, hsub, uimm12s4, STRHui, DUP_ZZI_H, sve_elm_idx_extdup_h>;
-    defm : SVEVecStoreLanePat<am_unscaled16, truncstorei16, nxv8i16, i32, f16, hsub, simm9, STURHi, DUP_ZZI_H, sve_elm_idx_extdup_h>;
-
-    // Lane 0 stores
-    // i32
-    defm : SVEVecStoreLanePat<am_indexed32,  store, nxv4i32, i32, f32, ssub, uimm12s4, STRSui, DUP_ZZI_S, sve_elm_idx_extdup_s>;
-    defm : SVEVecStoreLanePat<am_unscaled32, store, nxv4i32, i32, f32, ssub, simm9, STURSi, DUP_ZZI_S, sve_elm_idx_extdup_s>;
-    // i64
-    defm : SVEVecStoreLanePat<am_indexed64,  store, nxv2i64, i64, f64, dsub, uimm12s4, STRDui, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-    defm : SVEVecStoreLanePat<am_unscaled64, store, nxv2i64, i64, f64, dsub, simm9, STURDi, DUP_ZZI_D, sve_elm_idx_extdup_d>;
-  }
 
   defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
 
