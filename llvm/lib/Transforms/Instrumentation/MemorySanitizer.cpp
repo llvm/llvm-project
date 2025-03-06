@@ -4071,12 +4071,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowArgs.append(1, SrcShadowPtr);
     ShadowArgs.append(1, Mask);
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
-    // The intrinsic may require floating-point but shadows can be arbitrary
-    // bit patterns, of which some would be interpreted as "invalid"
-    // floating-point values (NaN etc.); we assume the intrinsic will happily
-    // copy them.
+    CallInst *CI;
+    // The AVX masked load intrinsics do not have integer variants. We use the
+    // floating-point variants, and assume that the intrinsic will happily copy
+    // the shadows even if they are interpreted as "invalid" floating-point
+    // values (NaN etc.).
+    CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
 
     if (!MS.TrackOrigins)
@@ -4240,6 +4240,82 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
+  }
+
+  // Handle Arm NEON vector load intrinsics (vld*).
+  //
+  // The WithLane instructions (ld[234]lane) are similar to:
+  //     call {<4 x i32>, <4 x i32>, <4 x i32>}
+  //          @llvm.aarch64.neon.ld3lane.v4i32.p0
+  //              (<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, i64 %lane, ptr
+  //              %A)
+  //
+  // The non-WithLane instructions (ld[234], ld1x[234], ld[234]r) are similar
+  // to:
+  //     call {<8 x i8>, <8 x i8>} @llvm.aarch64.neon.ld2.v8i8.p0(ptr %A)
+  void handleNEONVectorLoad(IntrinsicInst &I, bool WithLane) {
+    unsigned int numArgs = I.arg_size();
+
+    // Return type is a struct of vectors of integers or floating-point
+    assert(I.getType()->isStructTy());
+    [[maybe_unused]] StructType *RetTy = cast<StructType>(I.getType());
+    assert(RetTy->getNumElements() > 0);
+    assert(isa<FixedVectorType>(RetTy->getElementType(0)));
+    assert(RetTy->getElementType(0)->isIntOrIntVectorTy() ||
+           RetTy->getElementType(0)->isFPOrFPVectorTy());
+    for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
+      assert(RetTy->getElementType(i) == RetTy->getElementType(0));
+
+    if (WithLane) {
+      // 2, 3 or 4 vectors, plus lane number, plus input pointer
+      assert(numArgs >= 4);
+      assert(numArgs <= 6);
+
+      // Return type is a struct of the input vectors
+      assert(RetTy->getNumElements() + 2 == numArgs);
+      for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
+        assert(I.getArgOperand(i)->getType() == RetTy->getElementType(0));
+    } else
+      assert(numArgs == 1);
+
+    IRBuilder<> IRB(&I);
+
+    SmallVector<Value *, 6> ShadowArgs;
+    if (WithLane) {
+      for (unsigned int i = 0; i < numArgs - 2; i++)
+        ShadowArgs.push_back(getShadow(I.getArgOperand(i)));
+
+      // Lane number, passed verbatim
+      Value *LaneNumber = I.getArgOperand(numArgs - 2);
+      ShadowArgs.push_back(LaneNumber);
+
+      // TODO: blend shadow of lane number into output shadow?
+      insertShadowCheck(LaneNumber, &I);
+    }
+
+    Value *Src = I.getArgOperand(numArgs - 1);
+    assert(Src->getType()->isPointerTy() && "Source is not a pointer!");
+
+    const Align Alignment = Align(1);
+
+    Type *SrcShadowTy = getShadowTy(Src);
+    Value *SrcShadowPtr, *SrcOriginPtr;
+    std::tie(SrcShadowPtr, SrcOriginPtr) =
+        getShadowOriginPtr(Src, IRB, SrcShadowTy, Alignment, /*isStore*/ false);
+    ShadowArgs.push_back(SrcShadowPtr);
+
+    CallInst *CI;
+    // The NEON vector load instructions handled by this function all have
+    // integer variants. It is easier to use those rather than trying to cast
+    // a struct of vectors of floats into a struct of vectors of integers.
+    CI = IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
+    setShadow(&I, CI);
+
+    if (!MS.TrackOrigins)
+      return;
+
+    Value *PtrSrcOrigin = IRB.CreateLoad(MS.OriginTy, SrcOriginPtr);
+    setOrigin(&I, PtrSrcOrigin);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
@@ -4945,6 +5021,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_uaddlv:
       handleVectorReduceIntrinsic(I, /*AllowShadowCast=*/true);
       break;
+
+    case Intrinsic::aarch64_neon_ld1x2:
+    case Intrinsic::aarch64_neon_ld1x3:
+    case Intrinsic::aarch64_neon_ld1x4:
+    case Intrinsic::aarch64_neon_ld2:
+    case Intrinsic::aarch64_neon_ld3:
+    case Intrinsic::aarch64_neon_ld4:
+    case Intrinsic::aarch64_neon_ld2r:
+    case Intrinsic::aarch64_neon_ld3r:
+    case Intrinsic::aarch64_neon_ld4r: {
+      handleNEONVectorLoad(I, /*WithLane=*/false);
+      break;
+    }
+
+    case Intrinsic::aarch64_neon_ld2lane:
+    case Intrinsic::aarch64_neon_ld3lane:
+    case Intrinsic::aarch64_neon_ld4lane: {
+      handleNEONVectorLoad(I, /*WithLane=*/true);
+      break;
+    }
 
     // Saturating extract narrow
     case Intrinsic::aarch64_neon_sqxtn:
