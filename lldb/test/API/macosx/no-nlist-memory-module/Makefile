@@ -16,4 +16,4 @@ build-libhas-nlists: has-nlists.c
 	$(LD) -dynamiclib -o libhas-nlists.dylib has-nlists.o  -install_name "@executable_path/libhas-nlists.dylib"
 
 clean::
-	rm -rf has-nlists.o no-nlists.o no-nlist-sect.o main.o main.s a.out a.out.dSYM libno-nlists.dylib libno-nlists.dylib.dSYM libhas-nlists.dylib libhas-nlists.dylib.dSYM
+	rm -rf *.o *.dylib a.out *.dSYM
