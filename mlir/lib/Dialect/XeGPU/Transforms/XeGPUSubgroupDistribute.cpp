@@ -93,12 +93,12 @@ public:
 
 void SGMap::print(raw_ostream &os) const {
   if (isAssigned()) {
-    os << "Layout: ";
+    os << "wi_layout: ";
     layout.print(os);
-    os << ", Data: ";
+    os << ", wi_data: ";
     data.print(os);
   } else
-    os << "Not initialized";
+    os << "Not assigned.";
 }
 
 SGMap SGMap::meet(const SGMap &lhs, const SGMap &rhs) {
@@ -447,13 +447,20 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
         // Skip ops that do not have results
         if (op->getResults().empty())
           return;
-        auto layouts = getSGMap(op->getResult(0));
         os << "op    : ";
-        op->print(os);
+        /// For control-flow ops, print the op name only.
+        if (isa<BranchOpInterface>(op) || isa<RegionBranchOpInterface>(op))
+          os << op->getName();
+        else
+          op->print(os);
         os << "\n";
-        os << "sg_map: ";
-        layouts.print(os);
-        os << "\n";
+        /// Print the sg_map for each result.
+        for (auto [i, r] : llvm::enumerate(op->getResults())) {
+          auto layout = getSGMap(r);
+          os << "sg_map for result #" << i << ": ";
+          layout.print(os);
+          os << "\n";
+        }
       });
     }
   }
