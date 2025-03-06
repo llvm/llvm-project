@@ -197,14 +197,6 @@ def Tosa_PadOpQuantInfoBuilder : OpBuilder<
                             input, paddings);
   }]>;
 
-def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$paddings,
-       "Value":$pad_value),
-  [{
-    buildExplicitValuePadOpWithQuantInfo($_builder, $_state, outputType,
-                                         input, paddings, pad_value);
-  }]>;
-
 // Wrapper over base I32EnumAttr to set common fields.
 class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
      : I32EnumAttr<name, description, cases> {
