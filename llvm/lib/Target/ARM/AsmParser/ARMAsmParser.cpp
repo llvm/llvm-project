@@ -12438,9 +12438,9 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError("expected variable after '.tlsdescseq' directive");
 
-  const MCSymbolRefExpr *SRE =
-    MCSymbolRefExpr::create(Parser.getTok().getIdentifier(),
-                            MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
+  auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
+  const auto *SRE = MCSymbolRefExpr::create(
+      Sym, MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())
