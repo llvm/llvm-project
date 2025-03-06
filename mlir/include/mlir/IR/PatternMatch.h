@@ -265,7 +265,6 @@ class SplitMatchAndRewriteImpl : public PatternT {
 } // namespace detail
 
 /// RewritePattern is the common base class for all DAG to DAG replacements.
-
 class RewritePattern : public Pattern {
 public:
   using OperationT = Operation *;
