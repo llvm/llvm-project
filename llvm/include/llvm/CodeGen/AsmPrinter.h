@@ -338,6 +338,10 @@ public:
     DwarfUsesRelocationsAcrossSections = Enable;
   }
 
+  // Returns a section suffix (hot or unlikely) for the constant if profiles
+  // are available. Returns empty string otherwise.
+  StringRef getConstantSectionSuffix(const Constant *C) const;
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//

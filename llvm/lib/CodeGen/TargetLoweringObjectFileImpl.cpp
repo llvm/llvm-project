@@ -1074,35 +1074,35 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
 MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
-    StringRef SectionPrefix) const {
+    StringRef SectionSuffix) const {
   // TODO: Share code between this function and
   // MCObjectInfo::initELFMCObjectFileInfo.
-  if (SectionPrefix.empty())
+  if (SectionSuffix.empty())
     return getSectionForConstant(DL, Kind, C, Alignment);
 
   auto &Context = getContext();
   if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(".rodata.cst4." + SectionPrefix,
+    return Context.getELFSection(".rodata.cst4." + SectionSuffix,
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
   if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(".rodata.cst8." + SectionPrefix,
+    return Context.getELFSection(".rodata.cst8." + SectionSuffix,
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
   if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(".rodata.cst16." + SectionPrefix,
+    return Context.getELFSection(".rodata.cst16." + SectionSuffix,
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
   if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(".rodata.cst32." + SectionPrefix,
+    return Context.getELFSection(".rodata.cst32." + SectionSuffix,
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(".rodata" + SectionPrefix, ELF::SHT_PROGBITS,
+    return Context.getELFSection(".rodata." + SectionSuffix, ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC);
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return Context.getELFSection(".data.rel.ro" + SectionPrefix,
+  return Context.getELFSection(".data.rel.ro." + SectionSuffix,
                                ELF::SHT_PROGBITS,
                                ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }
