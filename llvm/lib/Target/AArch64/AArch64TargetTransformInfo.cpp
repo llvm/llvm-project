@@ -884,12 +884,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     const auto LegalisationCost = getTypeLegalizationCost(RetTy);
     if (OpInfoZ.isUniform()) {
-      // FIXME: The costs could be lower if the codegen is better.
       static const CostTblEntry FshlTbl[] = {
-          {Intrinsic::fshl, MVT::v4i32, 3}, // ushr + shl + orr
-          {Intrinsic::fshl, MVT::v2i64, 3}, {Intrinsic::fshl, MVT::v16i8, 4},
-          {Intrinsic::fshl, MVT::v8i16, 4}, {Intrinsic::fshl, MVT::v2i32, 3},
-          {Intrinsic::fshl, MVT::v8i8, 4},  {Intrinsic::fshl, MVT::v4i16, 4}};
+          {Intrinsic::fshl, MVT::v4i32, 2}, // shl + usra
+          {Intrinsic::fshl, MVT::v2i64, 2}, {Intrinsic::fshl, MVT::v16i8, 2},
+          {Intrinsic::fshl, MVT::v8i16, 2}, {Intrinsic::fshl, MVT::v2i32, 2},
+          {Intrinsic::fshl, MVT::v8i8, 2},  {Intrinsic::fshl, MVT::v4i16, 2}};
       // Costs for both fshl & fshr are the same, so just pass Intrinsic::fshl
       // to avoid having to duplicate the costs.
       const auto *Entry =
