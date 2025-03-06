@@ -399,3 +399,24 @@ bool mlir::isSpeculatable(Operation *op) {
 bool mlir::isPure(Operation *op) {
   return isSpeculatable(op) && isMemoryEffectFree(op);
 }
+
+//===----------------------------------------------------------------------===//
+// LocalEffects Utilities
+//===----------------------------------------------------------------------===//
+
+bool mlir::detail::hasLocalEffectsDefaultImpl(Operation *op) {
+  assert(isa<LocalEffectsOpInterface>(op) &&
+         "Operator does not implement LocalEffectsOpInterface");
+
+  // Recurse into the regions and ensure that all nested ops have local effects.
+  for (auto &region : op->getRegions()) {
+    for (auto &nestedOp : region.getOps()) {
+      auto localEffectsOp = dyn_cast<LocalEffectsOpInterface>(nestedOp);
+      auto hasLocalEffects = localEffectsOp && localEffectsOp.hasLocalEffects();
+      if (!isPure(&nestedOp) && !hasLocalEffects) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

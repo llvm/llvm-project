@@ -457,6 +457,15 @@ bool isSpeculatable(Operation *op);
 /// This function is the C++ equivalent of the `Pure` trait.
 bool isPure(Operation *op);
 
+//===----------------------------------------------------------------------===//
+// LocalEffects Utilities
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+/// Default implementation of `hasLocalEffects` method.
+bool hasLocalEffectsDefaultImpl(Operation *op);
+} // namespace detail
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

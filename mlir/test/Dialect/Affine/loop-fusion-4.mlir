@@ -548,6 +548,36 @@ func.func @sibling_reduction(%input : memref<10xf32>, %output : memref<10xf32>, 
 
 // -----
 
+// Check that presence of a Linalg operator in a block does not prevent
+// fusion from happening in this block.
+
+// ALL-LABEL: func @fusion_in_block_containing_linalg
+func.func @fusion_in_block_containing_linalg(%arg0: memref<5xi8>, %arg1: memref<5xi8>) {
+  %c15_i8 = arith.constant 15 : i8
+  %alloc = memref.alloc() : memref<5xi8>
+  affine.for %arg3 = 0 to 5 {
+    affine.store %c15_i8, %alloc[%arg3] : memref<5xi8>
+  }
+  affine.for %arg3 = 0 to 5 {
+    %0 = affine.load %alloc[%arg3] : memref<5xi8>
+    %1 = affine.load %arg0[%arg3] : memref<5xi8>
+    %2 = arith.muli %0, %1 : i8
+    affine.store %2, %alloc[%arg3] : memref<5xi8>
+  }
+  // ALL:       affine.for
+  // ALL-NEXT:    affine.store
+  // ALL-NEXT:    affine.load
+  // ALL-NEXT:    affine.load
+  // ALL-NEXT:    arith.muli
+  // ALL-NEXT:    affine.store
+  // ALL-NEXT:  }
+  linalg.elemwise_binary ins(%alloc, %alloc: memref<5xi8>, memref<5xi8>) outs(%arg1: memref<5xi8>)
+  // ALL-NEXT:  linalg.elemwise_binary
+  return
+}
+
+// -----
+
 // From  https://github.com/llvm/llvm-project/issues/54541
 
 #map = affine_map<(d0) -> (d0 mod 65536)>
