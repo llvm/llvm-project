@@ -1075,6 +1075,81 @@ func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vecto
 
 // -----
 
+func.func @fold_vector_transfer_gather_broadcast(%A: memref<?x?xf32>, %idx: vector<4xindex>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK-NOT: vector.broadcast
+  %bidx = vector.broadcast %idx : vector<4xindex> to vector<4x4xindex>
+
+  // CHECK: vector.transfer_gather
+  // CHECK-SAME: memref<?x?xf32>, vector<4x4xf32>, vector<4xindex>
+  %1 = vector.transfer_gather %A[%c0, %c0](%bidx), %f0 
+      { gather_dims = [0], index_maps = [affine_map<(d0, d1) -> (d0, d1)>] }
+      : memref<?x?xf32>, vector<4x4xf32>, vector<4x4xindex>
+
+      return %1 : vector<4x4xf32>
+}
+
+func.func @fold_vector_transfer_gather_transpose(%A: memref<?x?xf32>, %idx: vector<4x4xindex>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK-NOT: vector.transpose
+  %tidx = vector.transpose %idx, [1, 0] : vector<4x4xindex> to vector<4x4xindex>
+
+  // CHECK: vector.transfer_gather
+  // CHECK-SAME: memref<?x?xf32>, vector<4x4xf32>, vector<4x4xindex>
+  %1 = vector.transfer_gather %A[%c0, %c0](%tidx), %f0 
+      { gather_dims = [0], index_maps = [affine_map<(d0, d1) -> (d0, d1)>] }
+      : memref<?x?xf32>, vector<4x4xf32>, vector<4x4xindex>
+
+      return %1 : vector<4x4xf32>
+}
+
+func.func @fold_vector_transfer_gather_step(%A: memref<?x?xf32>, %idx : vector<4x4xindex>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK-NOT: vector.step
+  %sidx = vector.step : vector<4xindex>
+
+  // CHECK: vector.transfer_gather
+  // CHECK-SAME: memref<?x?xf32>, vector<4x4xf32>, vector<4x4xindex>
+  %1 = vector.transfer_gather %A[%c0, %c0](%sidx, %idx), %f0 
+      { gather_dims = [0, 1], index_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0, d1)>] }
+      : memref<?x?xf32>, vector<4x4xf32>, vector<4xindex>, vector<4x4xindex>
+
+      return %1 : vector<4x4xf32>
+}
+
+func.func @fold_vector_transfer_gather_single_element(%A: memref<?x?xf32>, %idx : vector<1x1xindex>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK: vector.transfer_read
+  %1 = vector.transfer_gather %A[%c0, %c0](%idx), %f0 
+      { gather_dims = [0], index_maps = [affine_map<(d0, d1) -> (0, 0)>] }
+      : memref<?x?xf32>, vector<4x4xf32>, vector<1x1xindex>
+
+  return %1 : vector<4x4xf32>
+}
+
+func.func @fold_vector_transfer_gather_contigious(%A: memref<?x?xf32>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK-NOT: vector.transfer_gather
+  // CHECK: vector.transfer_read
+  %1 = vector.transfer_gather %A[%c0, %c0](), %f0 
+      { gather_dims = [], index_maps = [] }
+      : memref<?x?xf32>, vector<4x4xf32>
+
+  return %1 : vector<4x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: bitcast_folding
 //  CHECK-SAME:   %[[A:.*]]: vector<4x8xf32>
 //  CHECK-SAME:   %[[B:.*]]: vector<2xi32>
