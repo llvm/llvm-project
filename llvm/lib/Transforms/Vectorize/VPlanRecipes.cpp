@@ -2234,8 +2234,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
     Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
 
-    Value *Start = llvm::getRecurrenceIdentity(Kind, ElementTy,
-                                               RdxDesc.getFastMathFlags());
+    Value *Start =
+        getRecurrenceIdentity(Kind, ElementTy, RdxDesc.getFastMathFlags());
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
