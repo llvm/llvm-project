@@ -1025,10 +1025,10 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     return false;
 
   // We're looking for a simple add recurrence.
-  BinaryOperator *IncInstruction;
+  Instruction *IncInstruction;
   Value *Start, *IncrementPerRound;
   if (!matchSimpleRecurrence(Phi, IncInstruction, Start, IncrementPerRound) ||
-      IncInstruction->getOpcode() != Instruction::Add)
+      IncInstruction->getOpcode() != Instruction::Add || !isa<BinaryOperator>(IncInstruction))
     return false;
 
   int IncrementingBlock = Phi->getIncomingValue(0) == IncInstruction ? 0 : 1;
