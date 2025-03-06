@@ -854,4 +854,181 @@ bb.3:
 }
 
 
+define amdgpu_kernel void @v8i8_mfma_i8(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst, ptr addrspace(1) %arg) {
+; GFX942-LABEL: v8i8_mfma_i8:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX942-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v3, 3, v4
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v4
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[8:9]
+; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB14_2
+; GFX942-NEXT:  ; %bb.1: ; %bb.1
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[10:11]
+; GFX942-NEXT:  .LBB14_2: ; %bb.2
+; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[14:15], 0x0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_accvgpr_write_b32 a0, s0
+; GFX942-NEXT:    v_accvgpr_write_b32 a1, s1
+; GFX942-NEXT:    v_accvgpr_write_b32 a2, s2
+; GFX942-NEXT:    v_accvgpr_write_b32 a3, s3
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_mfma_i32_16x16x32_i8 a[0:3], v[0:1], v[0:1], a[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-NEXT:    s_nop 6
+; GFX942-NEXT:    global_store_dwordx4 v2, a[0:3], s[12:13]
+; GFX942-NEXT:    s_endpgm
+entry:
+  %idx = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep1 = getelementptr <8 x i8>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i8>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i8>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i8>, ptr addrspace(1) %gep2
+  %cmp = icmp ult i32 %idx, 15
+  br i1 %cmp, label %bb.1, label %bb.2
+bb.1:
+  br label %bb.2
+
+bb.2:
+  %tmp5 = phi <8 x i8> [ %vec1, %entry ], [ %vec2, %bb.1 ]
+  %mfmaop = bitcast <8 x i8> %tmp5 to i64
+  %in.1 = load <4 x i32>, ptr addrspace(1) %arg
+  %mai.1 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x32.i8(i64 %mfmaop, i64 %mfmaop, <4 x i32> %in.1, i32 1, i32 2, i32 3)
+  store <4 x i32> %mai.1, ptr addrspace(1) %dst, align 4
+  ret void
+}
+
+; Demonstrates that even if the intrinsic is not an 8 bit intrinsic, we will still apply type coercion
+
+define amdgpu_kernel void @v8i8_mfma_half(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst, ptr addrspace(1) %arg) {
+; GFX942-LABEL: v8i8_mfma_half:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx8 s[36:43], s[4:5], 0x24
+; GFX942-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v3, 3, v4
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v4
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[36:37]
+; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB15_2
+; GFX942-NEXT:  ; %bb.1: ; %bb.1
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[38:39]
+; GFX942-NEXT:  .LBB15_2: ; %bb.2
+; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-NEXT:    s_load_dwordx16 s[16:31], s[42:43], 0x0
+; GFX942-NEXT:    s_load_dwordx16 s[0:15], s[42:43], 0x40
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_accvgpr_write_b32 a0, s16
+; GFX942-NEXT:    v_accvgpr_write_b32 a1, s17
+; GFX942-NEXT:    v_accvgpr_write_b32 a2, s18
+; GFX942-NEXT:    v_accvgpr_write_b32 a3, s19
+; GFX942-NEXT:    v_accvgpr_write_b32 a4, s20
+; GFX942-NEXT:    v_accvgpr_write_b32 a5, s21
+; GFX942-NEXT:    v_accvgpr_write_b32 a6, s22
+; GFX942-NEXT:    v_accvgpr_write_b32 a7, s23
+; GFX942-NEXT:    v_accvgpr_write_b32 a8, s24
+; GFX942-NEXT:    v_accvgpr_write_b32 a9, s25
+; GFX942-NEXT:    v_accvgpr_write_b32 a10, s26
+; GFX942-NEXT:    v_accvgpr_write_b32 a11, s27
+; GFX942-NEXT:    v_accvgpr_write_b32 a12, s28
+; GFX942-NEXT:    v_accvgpr_write_b32 a13, s29
+; GFX942-NEXT:    v_accvgpr_write_b32 a14, s30
+; GFX942-NEXT:    v_accvgpr_write_b32 a15, s31
+; GFX942-NEXT:    v_accvgpr_write_b32 a16, s0
+; GFX942-NEXT:    v_accvgpr_write_b32 a17, s1
+; GFX942-NEXT:    v_accvgpr_write_b32 a18, s2
+; GFX942-NEXT:    v_accvgpr_write_b32 a19, s3
+; GFX942-NEXT:    v_accvgpr_write_b32 a20, s4
+; GFX942-NEXT:    v_accvgpr_write_b32 a21, s5
+; GFX942-NEXT:    v_accvgpr_write_b32 a22, s6
+; GFX942-NEXT:    v_accvgpr_write_b32 a23, s7
+; GFX942-NEXT:    v_accvgpr_write_b32 a24, s8
+; GFX942-NEXT:    v_accvgpr_write_b32 a25, s9
+; GFX942-NEXT:    v_accvgpr_write_b32 a26, s10
+; GFX942-NEXT:    v_accvgpr_write_b32 a27, s11
+; GFX942-NEXT:    v_accvgpr_write_b32 a28, s12
+; GFX942-NEXT:    v_accvgpr_write_b32 a29, s13
+; GFX942-NEXT:    v_accvgpr_write_b32 a30, s14
+; GFX942-NEXT:    v_accvgpr_write_b32 a31, s15
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_mfma_f32_32x32x4_2b_f16 a[0:31], v[0:1], v[0:1], a[0:31] cbsz:1 abid:2 blgp:3
+; GFX942-NEXT:    s_nop 7
+; GFX942-NEXT:    s_nop 7
+; GFX942-NEXT:    s_nop 2
+; GFX942-NEXT:    global_store_dwordx4 v2, a[28:31], s[40:41] offset:112
+; GFX942-NEXT:    global_store_dwordx4 v2, a[24:27], s[40:41] offset:96
+; GFX942-NEXT:    global_store_dwordx4 v2, a[20:23], s[40:41] offset:80
+; GFX942-NEXT:    global_store_dwordx4 v2, a[16:19], s[40:41] offset:64
+; GFX942-NEXT:    global_store_dwordx4 v2, a[12:15], s[40:41] offset:48
+; GFX942-NEXT:    global_store_dwordx4 v2, a[8:11], s[40:41] offset:32
+; GFX942-NEXT:    global_store_dwordx4 v2, a[4:7], s[40:41] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v2, a[0:3], s[40:41]
+; GFX942-NEXT:    s_endpgm
+entry:
+  %idx = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep1 = getelementptr <8 x i8>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i8>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i8>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i8>, ptr addrspace(1) %gep2
+  %cmp = icmp ult i32 %idx, 15
+  br i1 %cmp, label %bb.1, label %bb.2
+bb.1:
+  br label %bb.2
+
+bb.2:
+  %tmp5 = phi <8 x i8> [ %vec1, %entry ], [ %vec2, %bb.1 ]
+  %mfmaop = bitcast <8 x i8> %tmp5 to <4 x half>
+  %in.1 = load <32 x float>, ptr addrspace(1) %arg
+  %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half> %mfmaop, <4 x half> %mfmaop, <32 x float> %in.1, i32 1, i32 2, i32 3)
+  store <32 x float> %mai.1, ptr addrspace(1) %dst, align 4
+  ret void
+}
+
+
+define amdgpu_kernel void @v8i8_intrinsic(ptr addrspace(1) %src1, ptr addrspace(1) %src2, ptr addrspace(1) nocapture %dst) {
+; GFX942-LABEL: v8i8_intrinsic:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX942-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v3, 3, v4
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[0:1]
+; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v4
+; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB16_2
+; GFX942-NEXT:  ; %bb.1: ; %bb.1
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v3, s[2:3]
+; GFX942-NEXT:  .LBB16_2: ; %bb.2
+; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[0:1], v[0:1]
+; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX942-NEXT:    s_endpgm
+entry:
+  %idx = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep1 = getelementptr <8 x i8>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i8>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i8>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i8>, ptr addrspace(1) %gep2
+  %cmp = icmp ult i32 %idx, 15
+  br i1 %cmp, label %bb.1, label %bb.2
+bb.1:
+  br label %bb.2
+
+bb.2:
+  %tmp5 = phi <8 x i8> [ %vec1, %entry ], [ %vec2, %bb.1 ]
+  %op = bitcast <8 x i8> %tmp5 to <2 x float>
+  %result = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %op, <2 x float> %op, <2 x float> %op)
+  store <2 x float> %result, ptr addrspace(1) %dst, align 8
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
