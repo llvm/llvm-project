@@ -82,7 +82,7 @@ define ptx_kernel void @foo7(ptr noalias readonly %from, ptr %to) {
 ; SM20-LABEL: .visible .entry foo8(
 ; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo8(
-; SM35: ld.global.nc.u32
+; SM35: ld.global.nc.b32
 define ptx_kernel void @foo8(ptr noalias readonly %from, ptr %to) {
   %1 = load <2 x i16>, ptr %from
   store <2 x i16> %1, ptr %to
@@ -132,7 +132,7 @@ define ptx_kernel void @foo12(ptr noalias readonly %from, ptr %to) {
 ; SM20-LABEL: .visible .entry foo13(
 ; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo13(
-; SM35: ld.global.nc.u32
+; SM35: ld.global.nc.b32
 define ptx_kernel void @foo13(ptr noalias readonly %from, ptr %to) {
   %1 = load <4 x i8>, ptr %from
   store <4 x i8> %1, ptr %to
