@@ -62,7 +62,7 @@ func.func @test_extf_truncf_op(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegp
 }
 
 // -----
-func.func @test_load_gather_op(%a: memref<8x16xf16>, %b : memref<256xf16>, %c : memref<8x16xf32>) {
+func.func @test_load_gather_op_1(%a: memref<8x16xf16>, %b : memref<256xf16>, %c : memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %6 = xegpu.create_nd_tdesc %a[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
   %7 = xegpu.load_nd %6 : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
@@ -77,12 +77,31 @@ func.func @test_load_gather_op(%a: memref<8x16xf16>, %b : memref<256xf16>, %c : 
 }
 
 // -----
-func.func @test_store_scatter_op(%c: memref<128xf32>){
+func.func @test_load_gather_op_2(%arg0: memref<256xf32>, %arg1: !xegpu.tensor_desc<16xf32>){
+  %0 = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
+  %1 = arith.constant dense<1>: vector<16xi1>
+  %2 = xegpu.create_tdesc %arg0, %0 : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<chunk_size = 1>>
+  %3 = xegpu.load %2, %1 : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<chunk_size = 1>>, vector<16xi1> -> vector<16xf32>
+  xegpu.store_nd %3, %arg1 : vector<16xf32>, !xegpu.tensor_desc<16xf32>
+  return
+}
+
+// -----
+func.func @test_store_scatter_op_1(%c: memref<128xf32>){
   %cst = arith.constant dense<1.000000e+00> : vector<8x16xf32>
   %1 = arith.constant dense<1> : vector<16xi1>
   %2 = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
   %3 = xegpu.create_tdesc %c, %2 : memref<128xf32>, vector<16xindex> -> !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<chunk_size = 8>>
   xegpu.store %cst, %3, %1 <{transpose}> : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<chunk_size = 8>>, vector<16xi1>
+  return
+}
+
+// -----
+func.func @test_store_scatter_op_2(%arg0: vector<16xf32>, %arg1: memref<256xf32>){
+  %0 = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
+  %1 = arith.constant dense<1>: vector<16xi1>
+  %2 = xegpu.create_tdesc %arg1, %0 : memref<256xf32>, vector<16xindex> -> !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<chunk_size = 1>>
+  xegpu.store %arg0, %2, %1 : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<chunk_size = 1>>, vector<16xi1>
   return
 }
 
@@ -191,7 +210,7 @@ func.func @test_if_op_2(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tenso
 }
 
 // -----
-func.func @test(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: vector<16x16xf16>, %arg3: i1) -> vector<8x16xf32> {
+func.func @test_if_op_3(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: vector<16x16xf16>, %arg3: i1, %arg4: !xegpu.tensor_desc<8x16xf32>){
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg3 -> (vector<16x16xf16>) {
     %3 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
@@ -200,30 +219,26 @@ func.func @test(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<1
     scf.yield %arg2 : vector<16x16xf16>
   }
   %2 = xegpu.dpas %0, %1 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-  return %2 : vector<8x16xf32>
+  xegpu.store_nd %2, %arg4 : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  return
 }
 
 // -----
-func.func @test(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: vector<16x16xf16>, %arg3: i1) -> vector<8x16xf32> {
-  %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
-  %1 = scf.if %arg3 -> (vector<8x16xf32>) {
-    %2 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-    %3 = arith.addf %2, %arg2 : vector<16x16xf16>
-    %4 = xegpu.dpas %0, %3 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-    scf.yield %4 : vector<8x16xf32>
-  } else {
-    %2 = xegpu.dpas %0, %arg2 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-    scf.yield %2 : vector<8x16xf32>
-  }
-  return %1 : vector<8x16xf32>
+
+func.func @test_vector_reduction_1(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
+  %0 = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %1 = vector.multi_reduction <add>, %arg0, %0 [0] : vector<16x16xf32> to vector<16xf32>
+  xegpu.store_nd %1, %arg1 : vector<16xf32>, !xegpu.tensor_desc<16xf32>
+  return
 }
 
+
+
 // -----
-func.func @test(%arg0: !xegpu.tensor_desc<8x16xi16>, %arg1: !xegpu.tensor_desc<16x16xi16>) -> vector<8x16xf32> {
-  %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xi16> -> vector<8x16xi16>
-  %1 = xegpu.load_nd %arg1  : !xegpu.tensor_desc<16x16xi16> -> vector<16x16xi16>
-  %2 = arith.bitcast %0 : vector<8x16xi16> to vector<8x16xf16>
-  %3 = arith.bitcast %1 : vector<16x16xi16> to vector<16x16xf16>
-  %4 = xegpu.dpas %2, %3 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
-  return %4 : vector<8x16xf32>
+
+func.func @test_vector_reduction_2(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
+  %0 = arith.constant dense<0.000000e+00> : vector<16xf32>
+  %1 = vector.multi_reduction <add>, %arg0, %0 [1] : vector<16x16xf32> to vector<16xf32>
+  xegpu.store_nd %1, %arg1 : vector<16xf32>, !xegpu.tensor_desc<16xf32>
+  return
 }
