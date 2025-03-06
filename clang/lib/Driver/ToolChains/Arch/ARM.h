@@ -57,6 +57,7 @@ FloatABI getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
 void setFloatABIInTriple(const Driver &D, const llvm::opt::ArgList &Args,
                          llvm::Triple &triple);
 bool isHardTPSupported(const llvm::Triple &Triple);
+bool isHardTPAndThumb2(const llvm::Triple &Triple);
 ReadTPMode getReadTPMode(const Driver &D, const llvm::opt::ArgList &Args,
                          const llvm::Triple &Triple, bool ForAS);
 void setArchNameInTriple(const Driver &D, const llvm::opt::ArgList &Args,
