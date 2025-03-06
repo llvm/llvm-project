@@ -174,7 +174,7 @@ TEST_CONSTEXPR_CXX26 void test_emplacable_concept_with_alloc() {
 #endif
 }
 
-TEST_CONSTEXPR_CXX26 void test_ctor_under_alloc() {
+void test_ctor_under_alloc() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -205,7 +205,7 @@ TEST_CONSTEXPR_CXX26 void test_ctor_under_alloc() {
 #endif
 }
 
-TEST_CONSTEXPR_CXX26 void test_ctor_under_alloc_with_alloc() {
+void test_ctor_under_alloc_with_alloc() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
