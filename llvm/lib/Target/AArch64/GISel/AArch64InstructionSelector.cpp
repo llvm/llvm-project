@@ -7617,7 +7617,12 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
 
   CodeModel::Model CM = MF.getTarget().getCodeModel();
   // Check if we can fold in the ADD of small code model ADRP + ADD address.
-  if (CM == CodeModel::Small) {
+  // HACK: ld64 on Darwin doesn't support relocations on PRFM, so we can't fold
+  // globals into the offset.
+  MachineInstr *RootParent = Root.getParent();
+  if (CM == CodeModel::Small &&
+      !(RootParent->getOpcode() == AArch64::G_AARCH64_PREFETCH &&
+        STI.isTargetDarwin())) {
     auto OpFns = tryFoldAddLowIntoImm(*RootDef, Size, MRI);
     if (OpFns)
       return OpFns;

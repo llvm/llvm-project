@@ -207,7 +207,7 @@ __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, __done)) {
+  while (__gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
       uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
       if (__first == __x) {

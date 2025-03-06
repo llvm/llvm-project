@@ -175,6 +175,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 float4 acos(float4);
 
 //===----------------------------------------------------------------------===//
+// AddUint64 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T AddUint64(T a, T b)
+/// \brief Implements unsigned 64-bit integer addition using pairs of unsigned
+/// 32-bit integers.
+/// \param x [in] The first unsigned 32-bit integer pair(s)
+/// \param y [in] The second unsigned 32-bit integer pair(s)
+///
+/// This function takes one or two pairs (low, high) of unsigned 32-bit integer
+/// values and returns pairs (low, high) of unsigned 32-bit integer
+/// values representing the result of unsigned 64-bit integer addition.
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t2 AddUint64(uint32_t2, uint32_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t4 AddUint64(uint32_t4, uint32_t4);
+
+//===----------------------------------------------------------------------===//
 // all builtins
 //===----------------------------------------------------------------------===//
 
