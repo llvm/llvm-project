@@ -1483,80 +1483,6 @@ static bool interp__builtin_ptrauth_string_discriminator(
   return true;
 }
 
-// FIXME: This implementation is not complete.
-// The Compiler instance we create cannot access the current stack frame, local
-// variables, function parameters, etc. We also need protection from
-// side-effects, fatal errors, etc.
-static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const Function *Func,
-                                       const CallExpr *Call) {
-  const Expr *Arg = Call->getArg(0);
-  QualType ArgType = Arg->getType();
-
-  auto returnInt = [&S, Call](bool Value) -> bool {
-    pushInteger(S, Value, Call->getType());
-    return true;
-  };
-
-  // __builtin_constant_p always has one operand. The rules which gcc follows
-  // are not precisely documented, but are as follows:
-  //
-  //  - If the operand is of integral, floating, complex or enumeration type,
-  //    and can be folded to a known value of that type, it returns 1.
-  //  - If the operand can be folded to a pointer to the first character
-  //    of a string literal (or such a pointer cast to an integral type)
-  //    or to a null pointer or an integer cast to a pointer, it returns 1.
-  //
-  // Otherwise, it returns 0.
-  //
-  // FIXME: GCC also intends to return 1 for literals of aggregate types, but
-  // its support for this did not work prior to GCC 9 and is not yet well
-  // understood.
-  if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
-      ArgType->isAnyComplexType() || ArgType->isPointerType() ||
-      ArgType->isNullPtrType()) {
-    auto PrevDiags = S.getEvalStatus().Diag;
-    S.getEvalStatus().Diag = nullptr;
-    InterpStack Stk;
-    Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
-    auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
-    S.getEvalStatus().Diag = PrevDiags;
-    if (Res.isInvalid()) {
-      C.cleanup();
-      Stk.clear();
-      return returnInt(false);
-    }
-
-    if (!Res.empty()) {
-      const APValue &LV = Res.toAPValue();
-      if (LV.isLValue()) {
-        APValue::LValueBase Base = LV.getLValueBase();
-        if (Base.isNull()) {
-          // A null base is acceptable.
-          return returnInt(true);
-        } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
-          if (!isa<StringLiteral>(E))
-            return returnInt(false);
-          return returnInt(LV.getLValueOffset().isZero());
-        } else if (Base.is<TypeInfoLValue>()) {
-          // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
-          // evaluate to true.
-          return returnInt(true);
-        } else {
-          // Any other base is not constant enough for GCC.
-          return returnInt(false);
-        }
-      }
-    }
-
-    // Otherwise, any constant value is good enough.
-    return returnInt(true);
-  }
-
-  return returnInt(false);
-}
-
 static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                                          const InterpFrame *Frame,
                                          const Function *Func,
@@ -2465,11 +2391,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     if (!interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, F, Call))
-      return false;
-    break;
-
-  case Builtin::BI__builtin_constant_p:
-    if (!interp__builtin_constant_p(S, OpPC, Frame, F, Call))
       return false;
     break;
 
