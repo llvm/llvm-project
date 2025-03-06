@@ -2048,12 +2048,18 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+  // Map to detect redundant values returned by GetVF.
+  DenseMap<Type *, Value *> SeenVFs;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
+    Value *VF = SeenVFs.lookup(Ty);
+    if (!VF) {
+      VF = GetVF(ChkBuilder, Ty->getScalarSizeInBits());
+      SeenVFs.insert({Ty, VF});
+    }
     // Compute VF * IC * AccessSize.
     auto *VFTimesICTimesSize =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
+        ChkBuilder.CreateMul(VF, ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
         Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
