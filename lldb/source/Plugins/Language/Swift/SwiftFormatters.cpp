@@ -2050,8 +2050,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
 
   ExecutionContext exe_ctx = valobj.GetExecutionContextRef().Lock(true);
-  std::optional<uint64_t> opt_type_size =
-    simd_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> opt_type_size = llvm::expectedToOptional(
+      simd_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!opt_type_size)
     return false;
   uint64_t type_size = *opt_type_size;
@@ -2065,8 +2065,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   if (!arg_type)
     return false;
 
-  std::optional<uint64_t> opt_arg_size =
-      arg_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> opt_arg_size = llvm::expectedToOptional(
+      arg_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!opt_arg_size)
     return false;
   uint64_t arg_size = *opt_arg_size;
