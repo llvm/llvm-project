@@ -20,7 +20,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64D_NOPAIR
 
-define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_addr #0 {
+define void @testi(ptr %a) {
 ; RV32I-LABEL: testi:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -314,13 +314,13 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64D_NOPAIR-NEXT:    .cfi_def_cfa_offset 0
 ; RV64D_NOPAIR-NEXT:    ret
 entry:
-  %arrayidx = getelementptr inbounds i8*, i8** %a, i64 1
-  %0 = load i8*, i8** %arrayidx, align 16
-  %1 = load i8*, i8** %a, align 16
-  %arrayidx2 = getelementptr inbounds i8*, i8** %a, i64 3
-  %2 = load i8*, i8** %arrayidx2, align 16
-  %arrayidx3 = getelementptr inbounds i8*, i8** %a, i64 2
-  %3 = load i8*, i8** %arrayidx3, align 8
-  tail call void asm sideeffect "", "{x18},{x19},{x20},{x21}"(i8* %0, i8* %1, i8* %2, i8* %3)
+  %arrayidx = getelementptr inbounds ptr, ptr %a, i64 1
+  %0 = load ptr, ptr %arrayidx, align 16
+  %1 = load ptr, ptr %a, align 16
+  %arrayidx2 = getelementptr inbounds ptr, ptr %a, i64 3
+  %2 = load ptr, ptr %arrayidx2, align 16
+  %arrayidx3 = getelementptr inbounds ptr, ptr %a, i64 2
+  %3 = load ptr, ptr %arrayidx3, align 8
+  tail call void asm sideeffect "", "{x18},{x19},{x20},{x21}"(ptr %0, ptr %1, ptr %2, ptr %3)
   ret void
 }
