@@ -43,7 +43,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory Ir2BCat("ir2builder Options");
+static cl::OptionCategory Ir2BCat("ir2builder Options");
 
 /// LLVM IR to convert.
 static cl::opt<std::string>
@@ -125,6 +125,7 @@ static cl::opt<bool>
                     "\"was not declared\" errors"),
            cl::init(true), cl::cat(Ir2BCat));
 
+namespace {
 /// \brief Transpiler from LLVM IR into IRBuilder API calls.
 /// The main purpose for this class is to hold variable counter and variable
 /// names for needed resources, such as LLVMContext.
@@ -139,7 +140,7 @@ private:
   std::vector<std::string> PhiIncomings;
 
   inline bool hasName(const Value *Op) {
-    return !isa<Constant>(Op) && !isa<InlineAsm>(Op);
+    return !isa<Constant, InlineAsm>(Op);
   }
 
   void outputAttr(Attribute Att, raw_ostream &OS);
@@ -183,6 +184,7 @@ public:
   ///       in a TODO comment.
   void convert(const Instruction *I, raw_ostream &OS);
 };
+}
 
 std::string IR2Builder::getNextVar() { return "v0" + std::to_string(VarI++); }
 
@@ -195,13 +197,13 @@ static std::string escape(std::string S) {
   return Tmp;
 }
 
-static std::string sanitize(std::string S) {
+static std::string sanitize(std::string &S) {
   std::stringstream SS;
-  for (size_t I = 0; I < S.size(); ++I) {
-    if (!std::isalnum(S[I]))
-      SS << "_" << static_cast<unsigned>(S[I]) << "_";
+  for (auto C: S) {
+    if (!std::isalnum(C))
+      SS << "_" << static_cast<unsigned>(C) << "_";
     else
-      SS << S[I];
+      SS << C;
   }
   return SS.str();
 }
@@ -516,8 +518,9 @@ std::string IR2Builder::asStr(CallingConv::ID CC) {
 
 std::string IR2Builder::asStr(const Type *T) {
   std::string TCall;
-  if (auto IT = dyn_cast<IntegerType>(T)) {
+  if (auto *IT = dyn_cast<IntegerType>(T)) {
     switch (IT->getBitWidth()) {
+    case 1:
     case 8:
     case 16:
     case 32:
@@ -534,6 +537,10 @@ std::string IR2Builder::asStr(const Type *T) {
     TCall = "getFloatTy()";
   else if (T->isDoubleTy())
     TCall = "getDoubleTy()";
+  else if (T->isHalfTy())
+    TCall = "getHalfTy()";
+  else if (T->isBFloatTy())
+    TCall = "getBFloatTy()";
   else if (auto ST = dyn_cast<StructType>(T)) {
     std::string Elements = LLVMPrefix + "ArrayRef<Type *>(";
     if (ST->getNumElements() > 1)
@@ -575,10 +582,6 @@ std::string IR2Builder::asStr(const Type *T) {
     return TCall;
   } else if (T->isPointerTy())
     TCall = "getPtrTy()";
-  else if (T->isHalfTy())
-    return formatv("{0}Type::getHalfTy({1})", LLVMPrefix, Ctx);
-  else if (T->isBFloatTy())
-    return formatv("{0}Type::getBFloatTy({1})", LLVMPrefix, Ctx);
   else if (T->isX86_FP80Ty())
     return formatv("{0}Type::getX86_FP80Ty({1})", LLVMPrefix, Ctx);
   else if (T->isFP128Ty())
@@ -600,13 +603,13 @@ std::string IR2Builder::asStr(const Type *T) {
 }
 
 std::string IR2Builder::asStr(const Constant *C) {
-  if (auto CI = dyn_cast<ConstantInt>(C)) {
+  if (auto *CI = dyn_cast<ConstantInt>(C)) {
     // TODO: Sign has to be determined.
     auto CVal = CI->getValue();
     return formatv("{0}ConstantInt::get({1}, {2})", LLVMPrefix,
                    asStr(C->getType()), CVal.getSExtValue());
   }
-  if (auto CF = dyn_cast<ConstantFP>(C)) {
+  if (auto *CF = dyn_cast<ConstantFP>(C)) {
     auto CVal = CF->getValue();
     double DVal = CVal.convertToDouble();
     std::string Val = std::to_string(DVal);
@@ -616,7 +619,7 @@ std::string IR2Builder::asStr(const Constant *C) {
     return formatv("{0}ConstantFP::get({1}, {2})", LLVMPrefix,
                    asStr(C->getType()), Val);
   }
-  if (auto AT = dyn_cast<ConstantAggregate>(C)) {
+  if (auto *AT = dyn_cast<ConstantAggregate>(C)) {
     std::string Values;
     bool First = true;
     for (unsigned I = 0; I < AT->getNumOperands(); ++I) {
@@ -727,13 +730,13 @@ std::string IR2Builder::asStr(const Constant *C) {
     return formatv("{0}PoisonValue::get({1})", LLVMPrefix, asStr(C->getType()));
   if (isa<UndefValue>(C))
     return formatv("{0}UndefValue::get({1})", LLVMPrefix, asStr(C->getType()));
-  if (auto ba = dyn_cast<BlockAddress>(C))
+  if (auto *BA = dyn_cast<BlockAddress>(C))
     return formatv("{0}BlockAddress::get({1}, {2})", LLVMPrefix,
-                   asStr(ba->getFunction()), asStr(ba->getBasicBlock()));
+                   asStr(BA->getFunction()), asStr(BA->getBasicBlock()));
   if (isa<ConstantPointerNull>(C))
     return formatv("{0}ConstantPointerNull::get({1})", LLVMPrefix,
                    asStr(C->getType()));
-  if (auto CTN = dyn_cast<ConstantTargetNone>(C)) {
+  if (auto *CTN = dyn_cast<ConstantTargetNone>(C)) {
     auto CTNType = CTN->getType();
 
     std::string TypeStr = "{";
@@ -764,7 +767,7 @@ std::string IR2Builder::asStr(const Constant *C) {
   if (isa<ConstantTokenNone>(C)) {
     return formatv("{0}ConstantTokenNone::get({1})", LLVMPrefix, Ctx);
   }
-  if (auto CE = dyn_cast<ConstantExpr>(C)) {
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     (void)CE;
     return "/* TODO: ConstantExpr creation */";
     // TODO: Dunno how to create this... Fails either on out of range or
@@ -773,21 +776,21 @@ std::string IR2Builder::asStr(const Constant *C) {
     // std::to_string(CE->getOpcode()) + ", " +
     //       asStr(CE->getOperand(0)) + ", " + asStr(CE->getOperand(1)) + ")";
   }
-  if (auto CE = dyn_cast<ConstantPtrAuth>(C)) {
+  if (auto *CE = dyn_cast<ConstantPtrAuth>(C)) {
     (void)CE;
     return "/* TODO: ConstantPtrAuth value creation */";
   }
-  if (auto CE = dyn_cast<DSOLocalEquivalent>(C)) {
+  if (auto *CE = dyn_cast<DSOLocalEquivalent>(C)) {
     (void)CE;
     return "/* TODO: DSOLocalEquivalent value creation */";
   }
-  if (auto CE = dyn_cast<NoCFIValue>(C)) {
+  if (auto *CE = dyn_cast<NoCFIValue>(C)) {
     (void)CE;
     return "/* TODO: NoCFIValue value creation */";
   }
-  if (auto CE = dyn_cast<GlobalValue>(C)) {
+  if (auto *CE = dyn_cast<GlobalValue>(C)) {
     // This should not really happen as asStr for Value should be always called.
-    return asStr(dyn_cast<Value>(CE));
+    return asStr(cast<Value>(CE));
   }
 
   return "/* TODO: Constant creation */";
@@ -813,7 +816,7 @@ std::string IR2Builder::asStr(const InlineAsm *Op) {
 }
 
 std::string IR2Builder::asStr(const Metadata *Op) {
-  if (auto MDN = dyn_cast<MDNode>(Op)) {
+  if (auto *MDN = dyn_cast<MDNode>(Op)) {
     std::string Args = "{";
     bool First = true;
     for (unsigned I = 0; I < MDN->getNumOperands(); ++I) {
@@ -825,10 +828,10 @@ std::string IR2Builder::asStr(const Metadata *Op) {
     Args += "}";
     return formatv("{0}MDNode::get({1}, {2})", LLVMPrefix, Ctx, Args);
   }
-  if (auto VAM = dyn_cast<ValueAsMetadata>(Op))
+  if (auto *VAM = dyn_cast<ValueAsMetadata>(Op))
     return formatv("{0}ValueAsMetadata::get({1})", LLVMPrefix,
                    asStr(VAM->getValue()));
-  if (auto MDS = dyn_cast<MDString>(Op))
+  if (auto *MDS = dyn_cast<MDString>(Op))
     return formatv("{0}MDString::get({1}, \"{2}\")", LLVMPrefix, Ctx,
                    escape(MDS->getString().str()));
 
@@ -850,10 +853,10 @@ std::string IR2Builder::asStr(const Value *Op) {
   if (!Op)
     return "nullptr";
   if (isa<Constant>(Op) && !isa<GlobalValue>(Op))
-    return asStr(dyn_cast<Constant>(Op));
-  if (auto InA = dyn_cast<InlineAsm>(Op))
+    return asStr(cast<Constant>(Op));
+  if (auto *InA = dyn_cast<InlineAsm>(Op))
     return asStr(InA);
-  if (auto Mtd = dyn_cast<MetadataAsValue>(Op)) {
+  if (auto *Mtd = dyn_cast<MetadataAsValue>(Op)) {
     return formatv("{0}MetadataAsValue::get({1}, {2})", LLVMPrefix, Ctx,
                    asStr(Mtd->getMetadata()));
   }
@@ -982,7 +985,7 @@ int main(int argc, char** argv) {
       if (G.hasInitializer()) {
         // In case of BlockAddress initializer we need to declare the function
         // and basic block so it can be used.
-        if (auto BA = dyn_cast<BlockAddress>(G.getInitializer())) {
+        if (auto *BA = dyn_cast<BlockAddress>(G.getInitializer())) {
           OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
                         asStr(BA->getFunction()), ModName,
                         BA->getFunction()->getName(),
@@ -1139,7 +1142,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
       Call = "CreateRet(" + Op1 + ")";
   } break;
   case Instruction::Br: {
-    const BranchInst *BI = dyn_cast<BranchInst>(I);
+    const BranchInst *BI = cast<BranchInst>(I);
     if (BI->isUnconditional()) {
       Call = formatv("CreateBr({0})", Op1);
     } else {
@@ -1147,7 +1150,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     }
   } break;
   case Instruction::Switch: {
-    auto SwI = dyn_cast<SwitchInst>(I);
+    auto *SwI = cast<SwitchInst>(I);
     Call = formatv("CreateSwitch({0}, {1}, {2})", Op1, Op2,
                    std::to_string(SwI->getNumCases()));
 
@@ -1162,7 +1165,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     return;
   } break;
   case Instruction::IndirectBr: {
-    auto InbrI = dyn_cast<IndirectBrInst>(I);
+    auto *InbrI = cast<IndirectBrInst>(I);
     Call =
         formatv("CreateIndirectBr({0}, {1})", Op1, InbrI->getNumDestinations());
     std::string InbrVar = getNextVar();
@@ -1173,7 +1176,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     }
   } break;
   case Instruction::Invoke: {
-    auto InvI = dyn_cast<InvokeInst>(I);
+    auto *InvI = dyn_cast<InvokeInst>(I);
     std::string Args = "{";
     bool First = true;
     for (unsigned I = 0; I < InvI->arg_size(); ++I) {
@@ -1199,7 +1202,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = "CreateUnreachable()";
   } break;
   case Instruction::CleanupRet: {
-    auto CurI = dyn_cast<CleanupReturnInst>(I);
+    auto *CurI = cast<CleanupReturnInst>(I);
     Call = formatv("CreateCleanupRet({0}, {1})", Op1,
                    asStr(CurI->getUnwindDest()));
   } break;
@@ -1207,7 +1210,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateCatchRet({0}, {1})", Op1, Op2);
   } break;
   case Instruction::CatchSwitch: {
-    auto SwI = dyn_cast<CatchSwitchInst>(I);
+    auto *SwI = cast<CatchSwitchInst>(I);
     Call = formatv("CreateCatchSwitch({0}, {1}, {2})", Op1, Op2,
                    std::to_string(SwI->getNumHandlers()));
 
@@ -1219,7 +1222,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     return;
   } break;
   case Instruction::CallBr: {
-    auto CallBRI = dyn_cast<CallBrInst>(I);
+    auto *CallBRI = cast<CallBrInst>(I);
     std::string Inddest = "{";
     bool First = true;
     for (unsigned I = 0; I < CallBRI->getNumIndirectDests(); ++I) {
@@ -1308,7 +1311,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateXor({0}, {1})", Op1, Op2);
   } break;
   case Instruction::Alloca: {
-    auto AlI = dyn_cast<AllocaInst>(I);
+    auto *AlI = cast<AllocaInst>(I);
     auto Val = AlI->getArraySize();
     auto ValStr = Val ? asStr(Val) : "nullptr";
     Call =
@@ -1316,17 +1319,17 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
                 AlI->getAddressSpace(), ValStr);
   } break;
   case Instruction::Load: {
-    auto LI = dyn_cast<LoadInst>(I);
+    auto *LI = cast<LoadInst>(I);
     Call = formatv("CreateLoad({0}, {1}, {2})", asStr(I->getType()), Op1,
                    toStr(LI->isVolatile()));
   } break;
   case Instruction::Store: {
-    auto SI = dyn_cast<StoreInst>(I);
+    auto *SI = dyn_cast<StoreInst>(I);
     Call = formatv("CreateStore({0}, {1}, {2})", Op1, Op2,
                    toStr(SI->isVolatile()));
   } break;
   case Instruction::GetElementPtr: {
-    auto GEPI = dyn_cast<GetElementPtrInst>(I);
+    auto *GEPI = dyn_cast<GetElementPtrInst>(I);
     std::string StrList = formatv("{0}ArrayRef<{0}Value*>(", LLVMPrefix);
     if (I->getNumOperands() > 2)
       StrList += "{";
@@ -1345,12 +1348,12 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
                    toStr(GEPI->isInBounds()));
   } break;
   case Instruction::Fence: {
-    auto FI = dyn_cast<FenceInst>(I);
+    auto *FI = dyn_cast<FenceInst>(I);
     Call = formatv("CreateFence({0}, {1})", asStr(FI->getOrdering()),
                    asStr(FI->getSyncScopeID()));
   } break;
   case Instruction::AtomicCmpXchg: {
-    auto AcmpxI = dyn_cast<AtomicCmpXchgInst>(I);
+    auto *AcmpxI = dyn_cast<AtomicCmpXchgInst>(I);
     Call = formatv(
         "CreateAtomicCmpXchg({0}, {1}, {2}, Align({3}), {4}, {5}, {6})", Op1,
         Op2, Op3, AcmpxI->getAlign().value(),
@@ -1358,7 +1361,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
         asStr(AcmpxI->getFailureOrdering()), asStr(AcmpxI->getSyncScopeID()));
   } break;
   case Instruction::AtomicRMW: {
-    auto ArmwI = dyn_cast<AtomicRMWInst>(I);
+    auto *ArmwI = dyn_cast<AtomicRMWInst>(I);
     Call = formatv("CreateAtomicRMW({0}, {1}, {2}, Align({3}), {4}, {5})",
                    asStr(ArmwI->getOperation()), Op1, Op2,
                    ArmwI->getAlign().value(), asStr(ArmwI->getOrdering()),
@@ -1405,7 +1408,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateAddrSpaceCast({0}, {1})", Op1, asStr(I->getType()));
   } break;
   case Instruction::CleanupPad: {
-    auto CupI = dyn_cast<CleanupPadInst>(I);
+    auto *CupI = dyn_cast<CleanupPadInst>(I);
     std::string ArgsStr = "{";
     bool First = true;
     for (unsigned I = 0; I < CupI->arg_size(); ++I) {
@@ -1418,7 +1421,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateCleanupPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::CatchPad: {
-    auto CapI = dyn_cast<CatchPadInst>(I);
+    auto *CapI = dyn_cast<CatchPadInst>(I);
     std::string ArgsStr = "{";
     bool First = true;
     for (unsigned I = 0; I < CapI->arg_size(); ++I) {
@@ -1431,17 +1434,17 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateCatchPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::ICmp: {
-    auto CmpI = dyn_cast<CmpInst>(I);
+    auto *CmpI = dyn_cast<CmpInst>(I);
     std::string CmpPredicate = LLVMPrefix + asStr(CmpI->getPredicate());
     Call = formatv("CreateICmp({0}, {1}, {2})", CmpPredicate, Op1, Op2);
   } break;
   case Instruction::FCmp: {
-    auto CmpI = dyn_cast<CmpInst>(I);
+    auto *CmpI = dyn_cast<CmpInst>(I);
     std::string CmpPredicate = LLVMPrefix + asStr(CmpI->getPredicate());
     Call = formatv("CreateFCmp({0}, {1}, {2})", CmpPredicate, Op1, Op2);
   } break;
   case Instruction::PHI: {
-    auto PhI = dyn_cast<PHINode>(I);
+    auto *PhI = dyn_cast<PHINode>(I);
     std::string PhVar = asStr(PhI);
     OS << formatv("auto {0} = {1}.CreatePHI({2}, {3});\n", PhVar, Builder,
                   asStr(I->getType()), PhI->getNumIncomingValues());
@@ -1460,7 +1463,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     return;
   } break;
   case Instruction::Call: {
-    auto FcI = dyn_cast<CallBase>(I);
+    auto *FcI = dyn_cast<CallBase>(I);
     std::string ArgDecl = "";
     if (FcI->arg_size() > 0) {
       ArgDecl = getNextVar();
@@ -1493,13 +1496,13 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     }
     */
 
-    auto Fun = dyn_cast<Function>(I->getOperand(I->getNumOperands() - 1));
+    auto *Fun = dyn_cast<Function>(I->getOperand(I->getNumOperands() - 1));
     std::string FunDecl = getNextVar();
     if (!Fun)
       Fun = FcI->getCalledFunction();
 
     if (!Fun) {
-      if (auto InA = dyn_cast<InlineAsm>(FcI->getCalledOperand())) {
+      if (auto *InA = dyn_cast<InlineAsm>(FcI->getCalledOperand())) {
         if (ArgDecl.empty()) {
           Call = formatv("CreateCall({0}, {1})", asStr(InA->getFunctionType()),
                          asStr(I->getOperand(I->getNumOperands() - 1)));
@@ -1517,7 +1520,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
               "CreateCall({0}, {1}, {2})", asStr(FcI->getFunctionType()),
               asStr(I->getOperand(I->getNumOperands() - 1)), ArgDecl);
         }
-      } else if (auto GA = dyn_cast<GlobalAlias>(FcI->getCalledOperand())) {
+      } else if (auto *GA = dyn_cast<GlobalAlias>(FcI->getCalledOperand())) {
         Fun = dyn_cast<Function>(GA->getAliaseeObject());
         assert(Fun && "Global alias is not a function");
         OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
@@ -1564,7 +1567,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateInsertElement({0}, {1}, {2})", Op1, Op2, Op3);
   } break;
   case Instruction::ShuffleVector: {
-    auto SvI = dyn_cast<ShuffleVectorInst>(I);
+    auto *SvI = cast<ShuffleVectorInst>(I);
     std::string MaskStr = "{";
     bool First = true;
     for (int I : SvI->getShuffleMask()) {
@@ -1577,7 +1580,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateShuffleVector({0}, {1}, {2})", Op1, Op2, MaskStr);
   } break;
   case Instruction::ExtractValue: {
-    auto EvI = dyn_cast<ExtractValueInst>(I);
+    auto *EvI = cast<ExtractValueInst>(I);
     std::string ArgStr = "{";
     bool IsFirst = true;
     for (auto ind : EvI->getIndices()) {
@@ -1590,7 +1593,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateExtractValue({0}, {1})", Op1, ArgStr);
   } break;
   case Instruction::InsertValue: {
-    auto IvI = dyn_cast<InsertValueInst>(I);
+    auto *IvI = cast<InsertValueInst>(I);
     std::string ArgStr = "{";
     bool IsFirst = true;
     for (auto Ind : IvI->getIndices()) {
@@ -1603,7 +1606,7 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     Call = formatv("CreateInsertValue({0}, {1}, {2})", Op1, Op2, ArgStr);
   } break;
   case Instruction::LandingPad: {
-    auto LPI = dyn_cast<LandingPadInst>(I);
+    auto *LPI = dyn_cast<LandingPadInst>(I);
     std::string LPVar = asStr(I);
     OS << formatv("auto {0} = {1}.CreateLandingPad({2}, {3});\n", LPVar,
                   Builder, asStr(I->getType()), LPI->getNumClauses());
