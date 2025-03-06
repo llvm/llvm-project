@@ -1935,11 +1935,6 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   return true;
 }
 
-static bool isXDLWMMAInst(const MachineInstr &MI) {
-  return (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI)) &&
-         AMDGPU::getWMMAIsXDL(MI.getOpcode());
-}
-
 static bool isCoexecutableVALUInst(const MachineInstr &MI) {
   return  SIInstrInfo::isVALU(MI) && !SIInstrInfo::isTRANS(MI) &&
           !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI); // What else?
@@ -1948,7 +1943,7 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
                                        const SIInstrInfo *TII, unsigned Latency,
                                        unsigned Category) {
-  assert (isXDLWMMAInst(MI) && (Latency == 8 || Latency == 16) &&
+  assert (SIInstrInfo::isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
           "Handle me if the xdl wmma instruction latency changes");
 
   switch (Category) {
@@ -1959,13 +1954,13 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
           //   WMMA_*BF8FP8
           //   WMMA_*BF8BF8
           //   WMMA_*F8F6F4 if SRCA & SRCB != F8
-    return SIInstrInfo::isWMMA(MI) && Latency == 8;
+    return Latency == 8 && SIInstrInfo::isWMMA(MI);
 
   case 1: // Dense WMMA Instructions:
           //   WMMA_IU8
           //   WMMA_IU4
           //   WMMA_*F8F6F4 if SRCA OR SRCB == F8
-    return SIInstrInfo::isWMMA(MI) && Latency == 16;
+    return Latency == 16 && SIInstrInfo::isWMMA(MI);
 
   case 2: // Dense SWMMAC Instructions
           //   SWMMAC_*F16, SWMMAC_*BF16,
@@ -1973,12 +1968,12 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
           //   SWMMAC_*BF8FP8
           //   SWMMAC_*FP8BF8
           //   SWMMAC_*BF8BF8
-    return SIInstrInfo::isSWMMAC(MI) && Latency == 8;
+    return Latency == 8 && SIInstrInfo::isSWMMAC(MI);
 
   case 3: // Sparse WMMA Instructions:
           //   SWMMAC_IU8
           //   SWMMAC_IU4
-    return SIInstrInfo::isSWMMAC(MI) && Latency == 16;
+    return Latency == 16 && SIInstrInfo::isSWMMAC(MI);
   default:
     break;
   } // end switch.
@@ -1990,19 +1985,23 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (!AMDGPU::isGFX1250(ST))
     return false;
 
-  if (!isXDLWMMAInst(*MI) && !isCoexecutableVALUInst(*MI))
+  if (!SIInstrInfo::isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  // Refer to SPG 4.6.12.1. Requirements for WMMA data hazards
-  const unsigned WMMALimits[] = {5 , 9, 3, 5};
-  const unsigned VALULimits[] = {4, 8, 2, 4 };
+  // WaitStates here is the number of V_NOPs or unrelated VALU instructions must
+  // be in between the first WMMA and the second instruction to cover the haward
+  // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
+  // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
+  // numbers, which depends on the category of the first WMMA.
+  const unsigned WMMAWaitStates[] = {5, 9, 3, 5};
+  const unsigned VALUWaitStates[] = {4, 8, 2, 4};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
-    if (!isXDLWMMAInst(I))
+    if (!SIInstrInfo::isXDLWMMA(I))
       return false;
 
     unsigned Latency = TSchedModel.computeInstrLatency(&I);
@@ -2027,7 +2026,7 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   };
 
   auto IsVALUHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
-    if (!isXDLWMMAInst(I))
+    if (!SIInstrInfo::isXDLWMMA(I))
       return false;
 
     unsigned Latency = TSchedModel.computeInstrLatency(&I);
@@ -2066,22 +2065,24 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   };
 
   int WaitStatesNeeded = -1;
-  if (isXDLWMMAInst(*MI)) {
+  if (SIInstrInfo::isXDLWMMA(*MI)) {
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
       WaitStatesNeeded =
-          WMMALimits[Category] -
-          getWaitStatesSince(IsWMMAHazardFn, WMMALimits[Category], true);
+        WMMAWaitStates[Category] -
+        getWaitStatesSince(IsWMMAHazardFn, WMMAWaitStates[Category],
+                           true /*CountVALUOnly*/);
     }
   } else { // Must be a co-executable VALU.
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
       WaitStatesNeeded =
-          VALULimits[Category] -
-          getWaitStatesSince(IsVALUHazardFn, VALULimits[Category], true);
+          VALUWaitStates[Category] -
+          getWaitStatesSince(IsVALUHazardFn, VALUWaitStates[Category],
+                             true /*CountVALUOnly*/);
     }
   }
 
   // WaitStatesNeeded now is the number of V_NOPs we need to insert, negative
-  // means not needd.
+  // means not needed.
   for (int i = 0; i < WaitStatesNeeded; i++)
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::V_NOP_e32));
 
