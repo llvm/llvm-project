@@ -2769,6 +2769,23 @@ namespace {
 
 } // end anonymous namespace
 
+StringRef AsmPrinter::getConstantSectionSuffix(const Constant *C) const {
+  SmallString<8> SectionNameSuffix;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    if (C && SDPI && PSI) {
+      auto Count = SDPI->getConstantProfileCount(C);
+      if (Count) {
+        if (PSI->isHotCount(*Count)) {
+          SectionNameSuffix.append("hot");
+        } else if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(C)) {
+          SectionNameSuffix.append("unlikely");
+        }
+      }
+    }
+  }
+  return SectionNameSuffix.str();
+}
+
 /// EmitConstantPool - Print to the current output stream assembly
 /// representations of the constants in the constant pool MCP. This is
 /// used to print out constants which have been "spilled to memory" by
@@ -2792,7 +2809,7 @@ void AsmPrinter::emitConstantPool() {
       C = CPE.Val.ConstVal;
 
     MCSection *S = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), Kind, C, Alignment);
+        getDataLayout(), Kind, C, Alignment, getConstantSectionSuffix(C));
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.

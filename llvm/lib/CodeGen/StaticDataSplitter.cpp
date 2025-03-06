@@ -10,7 +10,7 @@
 // for the following types of static data:
 // - Jump tables
 // - Module-internal global variables
-// - Constant pools (TODO)
+// - Constant pools
 //
 // For the original RFC of this pass please see
 // https://discourse.llvm.org/t/rfc-profile-guided-static-data-partitioning/83744
@@ -69,6 +69,11 @@ class StaticDataSplitter : public MachineFunctionPass {
 
   void annotateStaticDataWithoutProfiles(const MachineFunction &MF);
 
+  // Returns the constant if the operand refers to a global variable or constant
+  // that gets lowered to static data sections. Otherwise, return nullptr.
+  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
+                              const MachineConstantPool *MCP);
+
 public:
   static char ID;
 
@@ -112,21 +117,52 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+const Constant *
+StaticDataSplitter::getConstant(const MachineOperand &Op,
+                                const TargetMachine &TM,
+                                const MachineConstantPool *MCP) {
+  if (!Op.isGlobal() && !Op.isCPI())
+    return nullptr;
+
+  if (Op.isGlobal()) {
+    // Find global variables with local linkage.
+    const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
+    // Skip 'special' global variables conservatively because they are
+    // often handled specially, and skip those not in static data
+    // sections.
+    if (!GV || GV->getName().starts_with("llvm.") ||
+        !inStaticDataSection(GV, TM))
+      return nullptr;
+    return GV;
+  }
+  assert(Op.isCPI() && "Op must be constant pool index in this branch");
+  int CPI = Op.getIndex();
+  if (CPI == -1)
+    return nullptr;
+
+  assert(MCP != nullptr && "Constant pool info is not available.");
+  const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
+
+  if (CPE.isMachineConstantPoolEntry())
+    return nullptr;
+
+  return CPE.Val.ConstVal;
+}
+
 bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   int NumChangedJumpTables = 0;
 
-  const TargetMachine &TM = MF.getTarget();
   MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
 
   // Jump table could be used by either terminating instructions or
   // non-terminating ones, so we walk all instructions and use
   // `MachineOperand::isJTI()` to identify jump table operands.
-  // Similarly, `MachineOperand::isCPI()` can identify constant pool usages
-  // in the same loop.
+  // Similarly, `MachineOperand::isCPI()` is used to identify constant pool
+  // usages in the same loop.
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isJTI() && !Op.isGlobal())
+        if (!Op.isJTI() && !Op.isGlobal() && !Op.isCPI())
           continue;
 
         std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
@@ -148,17 +184,9 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
           if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
             ++NumChangedJumpTables;
-        } else {
-          // Find global variables with local linkage.
-          const GlobalVariable *GV =
-              getLocalLinkageGlobalVariable(Op.getGlobal());
-          // Skip 'special' global variables conservatively because they are
-          // often handled specially, and skip those not in static data
-          // sections.
-          if (!GV || GV->getName().starts_with("llvm.") ||
-              !inStaticDataSection(GV, TM))
-            continue;
-          SDPI->addConstantProfileCount(GV, Count);
+        } else if (const Constant *C =
+                       getConstant(Op, MF.getTarget(), MF.getConstantPool())) {
+          SDPI->addConstantProfileCount(C, Count);
         }
       }
     }
@@ -206,14 +234,10 @@ void StaticDataSplitter::annotateStaticDataWithoutProfiles(
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isGlobal())
-          continue;
-        const GlobalVariable *GV =
-            getLocalLinkageGlobalVariable(Op.getGlobal());
-        if (!GV || GV->getName().starts_with("llvm.") ||
-            !inStaticDataSection(GV, MF.getTarget()))
-          continue;
-        SDPI->addConstantProfileCount(GV, std::nullopt);
+        const Constant *C =
+            getConstant(Op, MF.getTarget(), MF.getConstantPool());
+        if (C)
+          SDPI->addConstantProfileCount(C, std::nullopt);
       }
     }
   }
