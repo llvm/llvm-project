@@ -27,9 +27,7 @@ define void @test_v3f32(<3 x float> %input, ptr %output) {
 ; CHECK-NOT: ld.param.f32 [[E3:%f[0-9]+]], [retval0+12];
   store <3 x float> %call, ptr %output, align 8
 ; CHECK-DAG: st.f32 [{{%rd[0-9]}}+8],
-; -- This is suboptimal. We should do st.v2.f32 instead
-;    of combining 2xf32 info i64.
-; CHECK-DAG: st.u64 [{{%rd[0-9]}}],
+; CHECK-DAG: st.v2.f32 [{{%rd[0-9]}}], {[[E0]], [[E1]]}
 ; CHECK: ret;
   ret void
 }
