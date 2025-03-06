@@ -75,6 +75,12 @@ bool CIRGenFunction::isTrivialInitializer(const Expr *init) {
 
 void CIRGenFunction::emitAutoVarInit(
     const CIRGenFunction::AutoVarEmission &emission) {
+  assert(emission.Variable && "emission was not valid!");
+
+  // If this was emitted as a global constant, we're done.
+  if (emission.wasEmittedAsGlobal())
+    return;
+
   const VarDecl &d = *emission.Variable;
 
   QualType type = d.getType();
@@ -209,22 +215,17 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
 
 void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
                                     LValue lvalue, bool capturedByInit) {
-  Qualifiers::ObjCLifetime lifetime = Qualifiers::ObjCLifetime::OCL_None;
   assert(!cir::MissingFeatures::objCLifetime());
 
-  if (!lifetime) {
-    SourceLocRAIIObject locRAII{*this, loc};
-    mlir::Value value = emitScalarExpr(init);
-    if (capturedByInit) {
-      cgm.errorNYI(init->getSourceRange(), "emitScalarInit: captured by init");
-      return;
-    }
-    assert(!cir::MissingFeatures::emitNullabilityCheck());
-    emitStoreThroughLValue(RValue::get(value), lvalue, true);
+  SourceLocRAIIObject locRAII{*this, loc};
+  mlir::Value value = emitScalarExpr(init);
+  if (capturedByInit) {
+    cgm.errorNYI(init->getSourceRange(), "emitScalarInit: captured by init");
     return;
   }
-
-  cgm.errorNYI(loc, "emitScalarInit: ObjCLifetime");
+  assert(!cir::MissingFeatures::emitNullabilityCheck());
+  emitStoreThroughLValue(RValue::get(value), lvalue, true);
+  return;
 }
 
 void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,

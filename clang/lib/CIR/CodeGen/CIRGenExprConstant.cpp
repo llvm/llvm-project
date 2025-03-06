@@ -169,20 +169,10 @@ static QualType getNonMemoryType(CIRGenModule &cgm, QualType type) {
 //                             ConstantEmitter
 //===----------------------------------------------------------------------===//
 
-mlir::Attribute ConstantEmitter::validateAndPopAbstract(mlir::Attribute c,
-                                                        AbstractState saved) {
-  abstract = saved.oldValue;
-
-  // No validation necessary for now.
-  // No cleanup to do for now.
-  return c;
-}
-
 mlir::Attribute
 ConstantEmitter::tryEmitAbstractForInitializer(const VarDecl &d) {
-  AbstractState state = pushAbstract();
-  mlir::Attribute c = tryEmitPrivateForVarInit(d);
-  return validateAndPopAbstract(c, state);
+  AbstractStateRAII state(*this, true);
+  return tryEmitPrivateForVarInit(d);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
@@ -241,11 +231,10 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
 mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
                                               const APValue &value,
                                               QualType destType) {
-  AbstractState state = pushAbstract();
+  AbstractStateRAII state(*this, true);
   mlir::Attribute c = tryEmitPrivate(value, destType);
-  c = validateAndPopAbstract(c, state);
   if (!c)
-    cgm.errorNYI(loc, "emitAbstract failed");
+    cgm.errorNYI(loc, "emitAbstract failed, emit null constaant");
   return c;
 }
 
@@ -266,8 +255,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
   switch (value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
-    // TODO(cir): LLVM models out-of-lifetime and indeterminate values as
-    // 'undef'. Find out what's better for CIR.
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate none or indeterminate");
     return {};
   case APValue::Int: {

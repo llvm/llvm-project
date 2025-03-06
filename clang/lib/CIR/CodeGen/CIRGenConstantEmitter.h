@@ -82,15 +82,17 @@ public:
   mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &d);
 
 private:
-  struct AbstractState {
+  class AbstractStateRAII {
+    ConstantEmitter &emitter;
     bool oldValue;
+
+  public:
+    AbstractStateRAII(ConstantEmitter &emitter, bool value)
+        : emitter(emitter), oldValue(emitter.abstract) {
+      emitter.abstract = value;
+    }
+    ~AbstractStateRAII() { emitter.abstract = oldValue; }
   };
-  AbstractState pushAbstract() {
-    AbstractState saved = {abstract};
-    abstract = true;
-    return saved;
-  }
-  mlir::Attribute validateAndPopAbstract(mlir::Attribute C, AbstractState save);
 };
 
 } // namespace clang::CIRGen
