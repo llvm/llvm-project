@@ -32,7 +32,7 @@ define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
