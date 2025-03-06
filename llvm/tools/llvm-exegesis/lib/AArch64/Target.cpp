@@ -28,8 +28,8 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an immediate value into a register.
 static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
-  assert(Value.getZExtValue() < (1 << 16) &&
-         "Value must be in the range of the immediate opcode");
+  assert (Value.getBitWidth() <= RegBitWidth &&
+          "Value must fit in the Register");
   return MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
