@@ -733,11 +733,13 @@ ENVIRONMENT
 
 .. envvar:: CPATH
 
-  This environment variable specifies additional header file search paths which
-  behave as if they were specified with the :option:`-I\<directory\>` option at
-  the end of the driver command line. Paths are delimited by the platform
-  dependent delimiter as used in the ``PATH`` environment variable. Empty
-  components in the environment variable are ignored.
+  This environment variable specifies additional (non-system) header search
+  paths to be used to find included header files. These paths are searched after
+  paths specified with the :option:`-I\<directory\>` option, but before any
+  system header search paths. Paths are delimited by the platform dependent
+  delimiter as used in the ``PATH`` environment variable. Empty entries in the
+  delimited path list are ignored. The treatment of empty entries differs from
+  gcc which treats them as specifying the compiler's current working directory.
 
 .. envvar:: C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
 
