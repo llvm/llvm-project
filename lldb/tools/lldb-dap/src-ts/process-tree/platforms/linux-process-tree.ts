@@ -28,6 +28,7 @@ export class LinuxProcessTree extends BaseProcessTree {
         return;
       }
 
+      // ps will list "-" as the command if it does not know where the executable is located
       const command = line.slice(commandOffset, argumentsOffset).trim();
       if (command === "-") {
         return;
