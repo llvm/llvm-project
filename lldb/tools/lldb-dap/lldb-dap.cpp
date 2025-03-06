@@ -385,7 +385,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       auto error = dap->Disconnect();
       if (error.Fail()) {
         client_failed = true;
-        llvm::errs() << "DAP client " << dap->name
+        llvm::errs() << "DAP client " << dap->client_name
                      << " disconnected failed: " << error.GetCString() << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.
