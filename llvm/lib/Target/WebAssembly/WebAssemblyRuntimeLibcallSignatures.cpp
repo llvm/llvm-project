@@ -285,7 +285,6 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::MODF_F64] = f64_func_f64_iPTR;
     Table[RTLIB::MODF_F128] = i64_i64_func_i64_i64_iPTR;
 
-
     // Conversion
     // All F80 and PPCF128 routines are unsupported.
     Table[RTLIB::FPEXT_F64_F128] = i64_i64_func_f64;
