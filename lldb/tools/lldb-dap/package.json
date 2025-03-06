@@ -147,7 +147,7 @@
           "program": "./bin/lldb-dap.exe"
         },
         "variables": {
-          "PickProcess": "lldb-dap.pickProcess"
+          "pickProcess": "lldb-dap.pickProcess"
         },
         "configurationAttributes": {
           "launch": {
@@ -527,7 +527,7 @@
               "type": "lldb-dap",
               "request": "attach",
               "name": "${1:Attach}",
-              "pid": "^\"\\${command:PickProcess}\""
+              "pid": "^\"\\${command:pickProcess}\""
             }
           },
           {
