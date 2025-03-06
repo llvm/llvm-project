@@ -1006,10 +1006,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 llvm::DIType *CGDebugInfo::CreateType(const SubstTemplateTypeParmType *Ty,
                                       llvm::DIFile *U) {
   llvm::DIType *debugType = getOrCreateType(Ty->getReplacementType(), U);
-  auto *Tty =
-      dyn_cast<ClassTemplateSpecializationDecl>(Ty->getAssociatedDecl());
-  llvm::DIType *Scope =
-      CGDebugInfo::getOrCreateType(QualType(Tty->getTypeForDecl(), 0), U);
+  llvm::DIScope *Scope = static_cast<llvm::DIScope*>(U);
+  if(auto *Tty = dyn_cast<ClassTemplateSpecializationDecl>(Ty->getAssociatedDecl()))
+    Scope = CGDebugInfo::getOrCreateType(QualType(Tty->getTypeForDecl(), 0), U);
   return DBuilder.createTemplateTypeParameterAsType(
       Scope, Ty->getReplacedParameter()->getName(), debugType);
 }
@@ -2305,7 +2304,7 @@ CGDebugInfo::CollectTemplateParams(std::optional<TemplateArgs> OArgs,
     case TemplateArgument::Type: {
       if (CGM.getCodeGenOpts().DebugTemplateParameterAsType) {
         llvm::DIType *debugType = getOrCreateType(TA.getAsType(), Unit);
-        llvm::DIScope *Scope = RealDecl ? RealDecl : Unit;
+        llvm::DIScope *Scope = RealDecl!=nullptr ? static_cast<llvm::DIScope*>(RealDecl) : static_cast<llvm::DIScope*>(Unit);
         llvm::DIType *TemplateType =
             DBuilder.createTemplateTypeParameterAsType(Scope, Name, debugType);
         TemplateParams.push_back(TemplateType);

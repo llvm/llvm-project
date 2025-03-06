@@ -36,7 +36,8 @@ int main () {
 // CHECK: [[TPARAM]] = !DIDerivedType(tag: DW_TAG_template_type_parameter, name: "T", {{.*}}baseType: [[INT]])
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "val2_",{{.*}}baseType: [[INT]]
 
-// CHECK: !DILocalVariable(name: "A",{{.*}}type: [[TPARAM]])
+// CHECK: !DILocalVariable(name: "A",{{.*}}type: [[TPARAM3:![0-9]+]])
+// CHECK: [[TPARAM3]] = !DIDerivedType(tag: DW_TAG_template_type_parameter, name: "T", {{.*}}baseType: [[INT]])
 
 // CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TClass<double>"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "val_",{{.*}}baseType: [[TPARAM2:![0-9]+]]
@@ -49,4 +50,4 @@ int main () {
 // CHECK: [[TPTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[TPARAM]]
 
 // CHECK: distinct !DISubprogram(name: "bar<int>"
-// CHECK: !DILocalVariable(name: "tp",{{.*}}type: [[TPARAM]])
+// CHECK: !DILocalVariable(name: "tp",{{.*}}type: [[TPARAM3]])
