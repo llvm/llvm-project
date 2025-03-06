@@ -352,7 +352,7 @@ static LogicalResult verifyConvOp(T op) {
 
 LogicalResult tosa::ConstOp::verify() {
 
-  auto attrType = llvm::dyn_cast<TensorType>(getValueAttr().getType());
+  auto attrType = llvm::dyn_cast<TensorType>(getValuesAttr().getType());
   auto outputType = llvm::dyn_cast<TensorType>(getOutput().getType());
 
   if (!attrType || !outputType) {
@@ -1179,8 +1179,8 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
 
   SmallVector<int64_t> paddingValues;
   // If the paddings value is not a constant, all dimensions must be dynamic.
-  if (!tosa::getConstShapeValue(adaptor.getPadding().getDefiningOp(),
-                                paddingValues)) {
+  if (!tosa::getConstShapeValues(adaptor.getPadding().getDefiningOp(),
+                                 paddingValues)) {
     outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
@@ -1252,8 +1252,8 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
   SmallVector<int64_t> start;
   SmallVector<int64_t> size;
 
-  if (!tosa::getConstShapeValue(adaptor.getStart().getDefiningOp(), start) ||
-      !tosa::getConstShapeValue(adaptor.getSize().getDefiningOp(), size)) {
+  if (!tosa::getConstShapeValues(adaptor.getStart().getDefiningOp(), start) ||
+      !tosa::getConstShapeValues(adaptor.getSize().getDefiningOp(), size)) {
     auto rank = cast<tosa::shapeType>(adaptor.getSize().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
@@ -1561,8 +1561,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
   llvm::SmallVector<int64_t> newShapeValue;
-  if (!tosa::getConstShapeValue(adaptor.getShape().getDefiningOp(),
-                                newShapeValue)) {
+  if (!tosa::getConstShapeValues(adaptor.getShape().getDefiningOp(),
+                                 newShapeValue)) {
     auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
@@ -1611,7 +1611,7 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   RankedTensorType outputType = getType();
 
   SmallVector<int64_t> shapeValues;
-  if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeValues)) {
+  if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeValues)) {
     // skip following checks if shape is not constant
     return mlir::success();
   }
@@ -1916,11 +1916,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     return failure();
 
   SmallVector<int64_t> scaleInt, offsetInt, borderInt;
-  if (!tosa::getConstShapeValue(adaptor.getScale().getDefiningOp(), scaleInt) ||
-      !tosa::getConstShapeValue(adaptor.getOffset().getDefiningOp(),
-                                offsetInt) ||
-      !tosa::getConstShapeValue(adaptor.getBorder().getDefiningOp(),
-                                borderInt)) {
+  if (!tosa::getConstShapeValues(adaptor.getScale().getDefiningOp(),
+                                 scaleInt) ||
+      !tosa::getConstShapeValues(adaptor.getOffset().getDefiningOp(),
+                                 offsetInt) ||
+      !tosa::getConstShapeValues(adaptor.getBorder().getDefiningOp(),
+                                 borderInt)) {
     return failure();
   }
 
@@ -1960,9 +1961,9 @@ LogicalResult tosa::ResizeOp::verify() {
   SmallVector<int64_t> scaleValues;
   SmallVector<int64_t> offsetValues;
   SmallVector<int64_t> borderValues;
-  if (!tosa::getConstShapeValue(getScale().getDefiningOp(), scaleValues) ||
-      !tosa::getConstShapeValue(getOffset().getDefiningOp(), offsetValues) ||
-      !tosa::getConstShapeValue(getBorder().getDefiningOp(), borderValues)) {
+  if (!tosa::getConstShapeValues(getScale().getDefiningOp(), scaleValues) ||
+      !tosa::getConstShapeValues(getOffset().getDefiningOp(), offsetValues) ||
+      !tosa::getConstShapeValues(getBorder().getDefiningOp(), borderValues)) {
     // Skip following checks if shape is not constant
     return success();
   }
@@ -3051,14 +3052,14 @@ OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
 
 LogicalResult tosa::ConstShapeOp::verify() {
   // check one dimensional rank
-  auto valuesRank = getValue().getType().getRank();
+  auto valuesRank = getValues().getType().getRank();
   if (valuesRank != 1)
-    return emitOpError("expect elements in attribute value with rank 1");
-  // check that number of elements in value attr equal to rank of result shape
-  auto count = getValue().getNumElements();
+    return emitOpError("expect elements in attribute values with rank 1");
+  // check that number of elements in values attr equal to rank of result shape
+  auto count = getValues().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
   if (!(count == rank || (count == 1 && rank == 0))) {
-    return emitOpError("expect number of elements in attribute value (")
+    return emitOpError("expect number of elements in attribute values (")
            << count << ") to be equal to the rank (" << rank
            << ") for the result shape type";
   }
