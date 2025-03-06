@@ -31,7 +31,3 @@ Kareem, Ron
 a3165398db07 AMDGPU: Fix overly conservative immediate operand check
 Matt
 ---
-breaks rocRAND build
-Revert "DAG: Use phi to create vregs instead of the constant input
-Matt
----
