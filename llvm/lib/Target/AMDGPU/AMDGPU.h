@@ -213,7 +213,7 @@ extern char &SILowerControlFlowLegacyID;
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
-void initializeSILateBranchLoweringPass(PassRegistry &);
+void initializeSILateBranchLoweringLegacyPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
 void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
@@ -382,6 +382,14 @@ class SIInsertHardClausesPass : public PassInfoMixin<SIInsertHardClausesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+class SILateBranchLoweringPass
+    : public PassInfoMixin<SILateBranchLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
