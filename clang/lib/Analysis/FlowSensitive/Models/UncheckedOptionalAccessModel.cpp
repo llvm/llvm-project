@@ -551,6 +551,9 @@ void transferCallReturningOptional(const CallExpr *E,
   setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
+// Returns true if the const accessor is handled by caching.
+// Returns false if we could not cache. We should perform default handling
+// in that case.
 bool handleConstMemberCall(const CallExpr *CE,
                            dataflow::RecordStorageLocation *RecordLoc,
                            const MatchFinder::MatchResult &Result,
@@ -558,71 +561,74 @@ bool handleConstMemberCall(const CallExpr *CE,
   if (RecordLoc == nullptr)
     return false;
 
-  // If the const method returns an optional or reference to an optional.
-  if (isSupportedOptionalType(CE->getType())) {
-    const FunctionDecl *DirectCallee = CE->getDirectCallee();
-    if (DirectCallee == nullptr)
-      return false;
-    StorageLocation &Loc =
-        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-              setHasValue(cast<RecordStorageLocation>(Loc),
-                          State.Env.makeAtomicBoolValue(), State.Env);
-            });
-    if (CE->isGLValue()) {
-      // If the call to the const method returns a reference to an optional,
-      // link the call expression to the cached StorageLocation.
-      State.Env.setStorageLocation(*CE, Loc);
-    } else {
-      // If the call to the const method returns an optional by value, we
-      // need to use CopyRecord to link the optional to the result object
-      // of the call expression.
-      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
-      copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
-    }
-    return true;
-  }
-
-  // Cache if the const method returns a reference
+  // Cache if the const method returns a reference.
   if (CE->isGLValue()) {
     const FunctionDecl *DirectCallee = CE->getDirectCallee();
     if (DirectCallee == nullptr)
       return false;
 
+    // Initialize the optional's "has_value" property to true if the type is
+    // optional, otherwise no-op. If we want to support const ref to pointers or
+    // bools we should initialize their values here too.
+    auto Init = [&](StorageLocation &Loc) {
+      if (isSupportedOptionalType(CE->getType()))
+        setHasValue(cast<RecordStorageLocation>(Loc),
+                    State.Env.makeAtomicBoolValue(), State.Env);
+    };
     StorageLocation &Loc =
         State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-              // no-op
-              // NOTE: if we want to support const ref to pointers or bools
-              // we should initialize their values here.
-            });
+            *RecordLoc, DirectCallee, State.Env, Init);
 
     State.Env.setStorageLocation(*CE, Loc);
     return true;
-  } else if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
-    // Cache if the const method returns a boolean or pointer type.
-    Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
-                                                                 State.Env);
-    if (Val == nullptr)
-      return false;
-    State.Env.setValue(*CE, *Val);
-    return true;
+  } else {
+    // PRValue cases:
+    if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
+      // If the const method returns a boolean or pointer type.
+      Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(
+          *RecordLoc, CE, State.Env);
+      if (Val == nullptr)
+        return false;
+      State.Env.setValue(*CE, *Val);
+      return true;
+    } else if (isSupportedOptionalType(CE->getType())) {
+      // If the const method returns an optional by value.
+      const FunctionDecl *DirectCallee = CE->getDirectCallee();
+      if (DirectCallee == nullptr)
+        return false;
+      StorageLocation &Loc =
+          State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+              *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+                setHasValue(cast<RecordStorageLocation>(Loc),
+                            State.Env.makeAtomicBoolValue(), State.Env);
+              });
+      // Use copyRecord to link the optional to the result object of the call
+      // expression.
+      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
+      copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+      return true;
+    }
   }
 
   return false;
 }
 
+void handleConstMemberCallWithFallbacks(
+    const CallExpr *CE, dataflow::RecordStorageLocation *RecordLoc,
+    const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
+  if (handleConstMemberCall(CE, RecordLoc, Result, State))
+    return;
+  // Perform default handling if the call returns an optional, but wasn't
+  // handled by caching.
+  if (isSupportedOptionalType(CE->getType()))
+    transferCallReturningOptional(CE, Result, State);
+}
+
 void transferConstMemberCall(const CXXMemberCallExpr *MCE,
                              const MatchFinder::MatchResult &Result,
                              LatticeTransferState &State) {
-  if (!handleConstMemberCall(
-          MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result,
-          State)) {
-    // Perform default handling if the call returns an optional,
-    // but wasn't handled.
-    if (isSupportedOptionalType(MCE->getType()))
-      transferCallReturningOptional(MCE, Result, State);
-  }
+  handleConstMemberCallWithFallbacks(
+      MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
 }
 
 void transferConstMemberOperatorCall(const CXXOperatorCallExpr *OCE,
@@ -630,12 +636,7 @@ void transferConstMemberOperatorCall(const CXXOperatorCallExpr *OCE,
                                      LatticeTransferState &State) {
   auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
       State.Env.getStorageLocation(*OCE->getArg(0)));
-  if (!handleConstMemberCall(OCE, RecordLoc, Result, State)) {
-    // Perform default handling if the call returns an optional,
-    // but wasn't handled.
-    if (isSupportedOptionalType(OCE->getType()))
-      transferCallReturningOptional(OCE, Result, State);
-  }
+  handleConstMemberCallWithFallbacks(OCE, RecordLoc, Result, State);
 }
 
 void handleNonConstMemberCall(const CallExpr *CE,
