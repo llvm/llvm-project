@@ -525,9 +525,12 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                   GetThunkKindName(thunk_kind));
     AddressRange sym_addr_range(sc.symbol->GetAddress(),
                                 sc.symbol->GetByteSize());
-    return std::make_shared<ThreadPlanStepInRange>(thread, sym_addr_range, sc,
+    ThreadPlanSP new_plan_sp = std::make_shared<ThreadPlanStepInRange>(thread, sym_addr_range, sc,
                                                    nullptr, eOnlyDuringStepping,
                                                    eLazyBoolNo, eLazyBoolNo);
+    static_cast<ThreadPlanStepInRange *>(new_plan_sp.get())
+        ->GetFlags().Clear(ThreadPlanShouldStopHere::eStepOutPastThunks);
+    return new_plan_sp;     
   }
   }
 
