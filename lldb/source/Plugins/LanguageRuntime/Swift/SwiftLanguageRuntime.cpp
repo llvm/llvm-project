@@ -1761,8 +1761,8 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression(
     return;
   }
   ConstString BoolName("bool");
-  std::optional<uint64_t> bool_size =
-      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+  std::optional<uint64_t> bool_size = llvm::expectedToOptional(
+      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr));
   if (!bool_size)
     return;
 
@@ -1836,8 +1836,8 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
     return;
   }
   ConstString BoolName("bool");
-  std::optional<uint64_t> bool_size =
-      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr);
+  std::optional<uint64_t> bool_size = llvm::expectedToOptional(
+      ts->GetBuiltinTypeByName(BoolName).GetByteSize(nullptr));
   if (!bool_size)
     return;
 

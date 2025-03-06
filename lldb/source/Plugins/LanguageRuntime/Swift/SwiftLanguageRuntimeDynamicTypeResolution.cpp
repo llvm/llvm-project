@@ -381,7 +381,8 @@ public:
       return nullptr;
     TypeSystemSwiftTypeRef &typesystem = *m_ts;
     // Build a TypeInfo for the Clang type.
-    auto size = clang_type.GetByteSize(exe_scope);
+    std::optional<uint64_t> size =
+        llvm::expectedToOptional(clang_type.GetByteSize(exe_scope));
     auto bit_align = clang_type.GetTypeBitAlign(exe_scope);
     std::vector<swift::reflection::FieldInfo> fields;
     if (clang_type.IsAggregateType()) {
@@ -1214,9 +1215,11 @@ llvm::Expected<CompilerType> SwiftLanguageRuntime::GetChildCompilerTypeAtIndex(
   if (auto pack_element_type = ts->GetSILPackElementAtIndex(type, idx)) {
     llvm::raw_string_ostream os(child_name);
     os << '.' << idx;
-    child_byte_size =
-        GetBitSize(pack_element_type, exe_ctx.GetBestExecutionContextScope())
-            .value_or(0);
+    auto size_or_err =
+        GetBitSize(pack_element_type, exe_ctx.GetBestExecutionContextScope());
+    if (!size_or_err)
+      return size_or_err.takeError();
+    child_byte_size = *size_or_err;
     int stack_dir = -1;
     child_byte_offset = ts->GetPointerByteSize() * idx * stack_dir;
     child_bitfield_bit_size = 0;
@@ -2203,7 +2206,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
 
 
   if (use_local_buffer)
-    PushLocalBuffer(existential_address, in_value.GetByteSize().value_or(0));
+    PushLocalBuffer(
+        existential_address,
+        llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
 
   swift::remote::RemoteAddress remote_existential(existential_address);
 
@@ -2451,7 +2456,7 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Expressions | LLDBLog::Types),
           type_ref_or_err.takeError(),
-          "Couldn't get rype ref when binding generic type parameters: {0}");
+          "Couldn't get type ref when binding generic type parameters: {0}");
       failure = true;
       return;
     }
@@ -2616,8 +2621,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
   if (!exe_scope)
     return false;
-  std::optional<uint64_t> size =
-      bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> size = llvm::expectedToOptional(
+      bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return false;
   AddressType address_type;
@@ -2633,7 +2638,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
     if (in_value_buffer.empty())
       return false;
     // If the dynamic type doesn't in the buffer we can't use it either.
-    if (in_value_buffer.size() < bound_type.GetByteSize(exe_scope))
+    if (in_value_buffer.size() <
+        llvm::expectedToOptional(bound_type.GetByteSize(exe_scope)).value_or(0))
       return false;
 
     value_type = Value::GetValueTypeFromAddressType(address_type);
@@ -2739,8 +2745,9 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
       }
 
       if (use_local_buffer)
-        PushLocalBuffer(existential_address,
-                        in_value.GetByteSize().value_or(0));
+        PushLocalBuffer(
+            existential_address,
+            llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
 
       // Read the value witness table and check if the data is inlined in
       // the existential container or not.
@@ -3260,7 +3267,10 @@ SwiftLanguageRuntime::GetTypeRef(CompilerType type,
   auto type_ref_or_err = reflection_ctx->GetTypeRef(
       dem, node, module_holder->GetDescriptorFinder());
   if (!type_ref_or_err)
-    return type_ref_or_err.takeError();
+    return llvm::joinErrors(
+        llvm::createStringError("cannot get typeref for type %s",
+                                type.GetMangledTypeName().GetCString()),
+        type_ref_or_err.takeError());
 
   if (log && log->GetVerbose()) {
     std::stringstream ss;
@@ -3466,14 +3476,12 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
   return llvm::createStringError("cannot resolve type alias via reflection");
 }
 
-std::optional<uint64_t>
+llvm::Expected<uint64_t>
 SwiftLanguageRuntime::GetBitSize(CompilerType type,
                                  ExecutionContextScope *exe_scope) {
   auto type_info_or_err = GetSwiftRuntimeTypeInfo(type, exe_scope);
-  if (!type_info_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), type_info_or_err.takeError(), "{0}");
-    return {};
-  }
+  if (!type_info_or_err)
+    return type_info_or_err.takeError();
 
   return type_info_or_err->getSize() * 8;
 }

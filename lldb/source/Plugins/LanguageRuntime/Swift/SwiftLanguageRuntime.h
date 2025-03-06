@@ -413,7 +413,7 @@ public:
                                         ExecutionContext *exe_ctx);
 
   /// Ask Remote Mirrors for the size of a Swift type.
-  std::optional<uint64_t> GetBitSize(CompilerType type,
+  llvm::Expected<uint64_t> GetBitSize(CompilerType type,
                                       ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
