@@ -10426,11 +10426,11 @@ def warn_type_safety_null_pointer_required : Warning<
 
 // Generic selections.
 def ext_assoc_type_incomplete : Extension<
-  "ISO C requires a complete type in a '_Generic' association; %0 is an "
-  "incomplete type">;
+  "incomplete type %0 in a '_Generic' association is a C2y extension">,
+  InGroup<C2y>;
 def warn_c2y_compat_assoc_type_incomplete : Warning<
-  "use of an incomplete type in a '_Generic' association is incompatible with "
-  "C standards before C2y; %0 is an incomplete type">,
+  "use of incomplete type %0 in a '_Generic' association is incompatible with "
+  "C standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore;
 def err_assoc_type_nonobject : Error<
   "type %0 in generic association not an object type">;
