@@ -198,3 +198,21 @@ end subroutine
 ! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f64> to !llvm.ptr
 ! CHECK: %[[ATOMIC:.*]] = llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i64
 ! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][1] : !llvm.struct<(i64, i1)> 
+
+
+attributes(global) subroutine __ldXX(b)
+  integer, device :: b(*)
+  integer, device :: x(4)
+
+  x(1:4) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:4) = __ldlu(b(i:j))
+  x(1:4) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxx
+! CHECK: __ldca_i4x4
+! CHECK: __ldcg_i4x4
+! CHECK: __ldcs_i4x4
+! CHECK: __ldlu_i4x4
