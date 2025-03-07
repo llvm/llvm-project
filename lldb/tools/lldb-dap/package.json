@@ -174,14 +174,14 @@
               },
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
               },
               "debugAdapterArgs": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable."
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
               },
               "program": {
                 "type": "string",
@@ -379,14 +379,14 @@
               },
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
               },
               "debugAdapterArgs": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable."
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
               },
               "program": {
                 "type": "string",
