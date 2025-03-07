@@ -643,8 +643,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
                      APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
                          .getSExtValue()));
 
-        auto overflow = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UGT, rounded, intMaxFP);
-        Value maxClampedFP = rewriter.create<arith::SelectOp>(loc, overflow, intMinFP, rounded);
+        auto overflow = rewriter.create<arith::CmpFOp>(
+            loc, arith::CmpFPredicate::UGT, rounded, intMaxFP);
+        Value maxClampedFP =
+            rewriter.create<arith::SelectOp>(loc, overflow, intMinFP, rounded);
 
         Value clamped =
             clampFloatHelper(loc, maxClampedFP, intMinFP, intMaxFP, rewriter);
