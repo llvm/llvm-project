@@ -119,7 +119,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
   // register is used last. When moving instructions up, we need to
   // make sure all its defs (including dead def) will not cross its
   // last use when moving up.
-  DenseMap<unsigned, std::pair<unsigned, MachineInstr *>> UseMap;
+  DenseMap<Register, std::pair<unsigned, MachineInstr *>> UseMap;
 
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())

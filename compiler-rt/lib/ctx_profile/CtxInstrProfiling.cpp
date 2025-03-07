@@ -298,6 +298,7 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
 
+  Writer.startContextSection();
   for (int I = 0, E = AllContextRoots.Size(); I < E; ++I) {
     auto *Root = AllContextRoots[I];
     __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> TakenLock(
@@ -308,6 +309,7 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
     }
     Writer.writeContextual(*Root->FirstNode);
   }
+  Writer.endContextSection();
   return true;
 }
 

@@ -342,8 +342,7 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(
-        Triple(F.getParent()->getTargetTriple()));
+    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:

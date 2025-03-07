@@ -21,7 +21,7 @@ permissions:
 jobs:
   analysis:
     name: Scorecard analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     permissions:
       # Needed to upload the results to code-scanning dashboard.
