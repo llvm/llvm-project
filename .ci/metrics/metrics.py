@@ -14,13 +14,27 @@ from github import Auth
 GRAFANA_URL = (
     "https://influx-prod-13-prod-us-east-0.grafana.net/api/v1/push/influx/write"
 )
-GITHUB_PROJECT = "llvm/llvm-project"
-WORKFLOWS_TO_TRACK = ["LLVM Premerge Checks"]
 SCRAPE_INTERVAL_SECONDS = 5 * 60
 
 # Number of builds to fetch per page. Since we scrape regularly, this can
 # remain small.
 BUILDKITE_GRAPHQL_BUILDS_PER_PAGE = 10
+
+# Lists the Github workflows we want to track. Maps the Github job name to
+# the metric name prefix in grafana.
+# This metric name is also used as a key in the job->name map.
+GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks"}
+
+# Lists the Github jobs to track for a given workflow. The key is the stable
+# name (metric name) of the workflow (see GITHUB_WORKFLOW_TO_TRACK).
+# Each value is a map to link the github job name to the corresponding metric
+# name.
+GITHUB_JOB_TO_TRACK = {
+    "github_llvm_premerge_checks": {
+        "Linux Premerge Checks (Test Only - Please Ignore Results)": "premerge_linux",
+        "Windows Premerge Checks (Test Only - Please Ignore Results)": "premerge_windows",
+    }
+}
 
 # Lists the BuildKite jobs we want to track. Maps the BuildKite job name to
 # the metric name in Grafana. This is important not to lose metrics history
@@ -179,7 +193,7 @@ def buildkite_get_metrics(
 
     last_recorded_build = last_cursor
     output = []
-    for build in builds:
+    for build in reversed(builds):
         info = buildkite_get_build_info(build["number"])
         last_recorded_build = build["cursor"]
         for job in info["jobs"]:
@@ -196,7 +210,7 @@ def buildkite_get_metrics(
             queue_time = (started_at - scheduled_at).seconds
             run_time = (finished_at - started_at).seconds
             status = bool(job["passed"])
-            created_at_ns = int(created_at.timestamp()) * 10**9
+            finished_at_ns = int(finished_at.timestamp()) * 10**9
             workflow_id = build["number"]
             workflow_name = "Github pull requests"
             output.append(
@@ -205,7 +219,7 @@ def buildkite_get_metrics(
                     queue_time,
                     run_time,
                     status,
-                    created_at_ns,
+                    finished_at_ns,
                     workflow_id,
                     workflow_name,
                 )
@@ -231,7 +245,7 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
     # is not documented (See #70540).
     # "queued" seems to be the info we want.
     for queued_workflow in github_repo.get_workflow_runs(status="queued"):
-        if queued_workflow.name not in WORKFLOWS_TO_TRACK:
+        if queued_workflow.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
         for queued_workflow_job in queued_workflow.jobs():
             job_name = queued_workflow_job.name
@@ -249,7 +263,7 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
                     running_job_counts[job_name] += 1
 
     for running_workflow in github_repo.get_workflow_runs(status="in_progress"):
-        if running_workflow.name not in WORKFLOWS_TO_TRACK:
+        if running_workflow.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
         for running_workflow_job in running_workflow.jobs():
             job_name = running_workflow_job.name
@@ -284,70 +298,54 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
     )
     return workflow_metrics
 
-def get_per_workflow_metrics(
-    github_repo: github.Repository, workflows_to_track: dict[str, int]
-):
+
+def get_per_workflow_metrics(github_repo: github.Repository, last_workflow_id: str):
     """Gets the metrics for specified Github workflows.
 
-    This function takes in a list of workflows to track, and optionally the
-    workflow ID of the last tracked invocation. It grabs the relevant data
-    from Github, returning it to the caller.
+    This function loads the last workflows from GitHub up to
+    `last_workflow_id` and logs their metrics if they are referenced in
+    GITHUB_WORKFLOW_TO_TRACK.
+    The function returns a list of metrics, and the most recent processed
+    workflow.
+    If `last_workflow_id` is None, no metrics are returned, and the last
+    completed github workflow ID is returned. This is used once when the
+    program starts.
 
     Args:
       github_repo: A github repo object to use to query the relevant information.
-      workflows_to_track: A dictionary mapping workflow names to the last
-        invocation ID where metrics have been collected, or None to collect the
-        last five results.
+      last_workflow_id: the last workflow we checked.
 
     Returns:
       Returns a list of JobMetrics objects, containing the relevant metrics about
       the workflow.
     """
     workflow_metrics = []
+    last_checked_workflow_id = last_workflow_id
 
-    workflows_to_include = set(workflows_to_track.keys())
-
-    for workflow_run in iter(github_repo.get_workflow_runs()):
-        if len(workflows_to_include) == 0:
+    for workflow_run in iter(github_repo.get_workflow_runs(status="completed")):
+        last_checked_workflow_id = workflow_run.id
+        # If we saw this workflow already, break. We also break if no
+        # workflow has been seen, as this means the script just started.
+        if last_workflow_id == workflow_run.id or last_workflow_id is None:
             break
 
-        if workflow_run.status != "completed":
+        # This workflow is not interesting to us. Skipping.
+        if workflow_run.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
 
-        # This workflow was already sampled for this run, or is not tracked at
-        # all. Ignoring.
-        if workflow_run.name not in workflows_to_include:
-            continue
+        workflow_key = GITHUB_WORKFLOW_TO_TRACK[workflow_run.name]
 
-        # There were no new workflow invocations since the previous scrape.
-        # The API returns a sorted list with the most recent invocations first,
-        # so we can stop looking for this particular workflow. Continue to grab
-        # information on the other workflows of interest, if present.
-        if workflows_to_track[workflow_run.name] == workflow_run.id:
-            workflows_to_include.remove(workflow_run.name)
-            continue
+        for workflow_job in workflow_run.jobs():
+            # This job is not interesting, skipping.
+            if workflow_job.name not in GITHUB_JOB_TO_TRACK[workflow_key]:
+                continue
 
-        workflow_jobs = workflow_run.jobs()
-        if workflow_jobs.totalCount == 0:
-            continue
-
-        if (
-            workflows_to_track[workflow_run.name] is None
-            or workflows_to_track[workflow_run.name] == workflow_run.id
-        ):
-            workflows_to_include.remove(workflow_run.name)
-        if (
-            workflows_to_track[workflow_run.name] is not None
-            and len(workflows_to_include) == 0
-        ):
-            break
-
-        for workflow_job in workflow_jobs:
             created_at = workflow_job.created_at
             started_at = workflow_job.started_at
             completed_at = workflow_job.completed_at
-
             job_result = int(workflow_job.conclusion == "success")
+            job_key = GITHUB_JOB_TO_TRACK[workflow_key][workflow_job.name]
+
             if job_result:
                 # We still might want to mark the job as a failure if one of the steps
                 # failed. This is required due to use setting continue-on-error in
@@ -377,7 +375,7 @@ def get_per_workflow_metrics(
 
             workflow_metrics.append(
                 JobMetrics(
-                    workflow_run.name + "-" + workflow_job.name,
+                    workflow_key + "-" + job_key,
                     queue_time.seconds,
                     run_time.seconds,
                     job_result,
@@ -387,7 +385,7 @@ def get_per_workflow_metrics(
                 )
             )
 
-    return workflow_metrics
+    return workflow_metrics, last_checked_workflow_id
 
 def upload_metrics(workflow_metrics, metrics_userid, api_key):
     """Upload metrics to Grafana.
@@ -441,12 +439,10 @@ def main():
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
     buildkite_token = os.environ["BUILDKITE_TOKEN"]
 
-    # The last buildkite build recorded.
+    # This script only records workflows/jobs/builds finished after it
+    # started. So we need to keep track of the last known build.
     buildkite_last_cursor = None
-
-    workflows_to_track = {}
-    for workflow_to_track in WORKFLOWS_TO_TRACK:
-        workflows_to_track[workflow_to_track] = None
+    github_last_workflow_id = None
 
     # Enter the main loop. Every five minutes we wake up and dump metrics for
     # the relevant jobs.
@@ -454,20 +450,17 @@ def main():
         github_object = Github(auth=auth)
         github_repo = github_object.get_repo("llvm/llvm-project")
 
-        current_metrics, buildkite_last_cursor = buildkite_get_metrics(
+        buildkite_metrics, buildkite_last_cursor = buildkite_get_metrics(
             buildkite_token, buildkite_last_cursor
         )
-        current_metrics += get_per_workflow_metrics(github_repo, workflows_to_track)
-        current_metrics += get_sampled_workflow_metrics(github_repo)
+        github_metrics, github_last_workflow_id = get_per_workflow_metrics(
+            github_repo, github_last_workflow_id
+        )
+        sampled_metrics = get_sampled_workflow_metrics(github_repo)
 
-        upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
-        logging.info(f"Uploaded {len(current_metrics)} metrics")
-
-        for workflow_metric in reversed(current_metrics):
-            if isinstance(workflow_metric, JobMetrics):
-                workflows_to_track[
-                    workflow_metric.workflow_name
-                ] = workflow_metric.workflow_id
+        metrics = buildkite_metrics + github_metrics + sampled_metrics
+        upload_metrics(metrics, grafana_metrics_userid, grafana_api_key)
+        logging.info(f"Uploaded {len(metrics)} metrics")
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)
 
