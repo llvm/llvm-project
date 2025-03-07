@@ -1728,7 +1728,7 @@ static Error elf2yaml(raw_ostream &Out, const object::ELFFile<ELFT> &Obj,
 
   std::unique_ptr<ELFYAML::Object> YAML(YAMLOrErr.get());
   yaml::Output Yout(Out, nullptr, /*WrapColumn*/
-                    (covmap::Decoder::enabled ? 160 : 70));
+                    (covmap::Decoder::enabled ? 200 : 70));
   Yout << *YAML;
 
   return Error::success();

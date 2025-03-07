@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -53,20 +54,14 @@ struct CounterTy {
     Add,
   };
 
-  /// Optional in detailed view, since most Tag can be determined from
-  /// other optional fields.
-  std::optional<TagTy> Tag;
-
-  /// Internal use.
-  std::optional<uint64_t> Val;
-
-  std::optional<uint64_t> RefOpt;
-  std::optional<uint64_t> SubOpt;
-  std::optional<uint64_t> AddOpt;
+  TagTy Tag;
+  uint64_t Val;
 
   virtual ~CounterTy() {}
 
   virtual void mapping(llvm::yaml::IO &IO);
+
+  uint64_t getExtTagVal() const { return (Tag == Zero && Val != 0 ? Val : 0); }
 
   /// Holds Val for extensions.
   Error decodeOrTag(DecoderContext &Data);
@@ -124,8 +119,7 @@ struct RecTy : CounterTy {
   /// Stored in ColumnEnd:31.
   std::optional<bool> isGap;
 
-  std::optional<LocTy> Loc;  ///< Absolute line numbers.
-  std::optional<LocTy> dLoc; ///< Differential line numbers.
+  LocTy dLoc; ///< Differential line numbers.
 
   void mapping(llvm::yaml::IO &IO) override;
 
@@ -136,8 +130,6 @@ struct RecTy : CounterTy {
 
 /// {NumRecs, Recs...}
 struct FileRecsTy {
-  std::optional<unsigned> Index;       ///< Shown in detailed view.
-  std::optional<std::string> Filename; ///< Resolved by FileIDs.
   std::vector<RecTy> Recs;
 
   void mapping(llvm::yaml::IO &IO);
@@ -145,11 +137,10 @@ struct FileRecsTy {
 
 /// An element of CovFun array.
 struct CovFunTy {
-  std::optional<llvm::yaml::Hex64> NameRef;     ///< Hash value of the symbol.
-  std::optional<std::string> FuncName;          ///< Resolved by symtab.
-  llvm::yaml::Hex64 FuncHash;                   ///< Signature of this function.
-  llvm::yaml::Hex64 FilenamesRef;               ///< Pointer to CovMap
-  std::optional<std::vector<unsigned>> FileIDs; ///< Resolved by CovMap
+  llvm::yaml::Hex64 NameRef;      ///< Hash value of the symbol.
+  llvm::yaml::Hex64 FuncHash;     ///< Signature of this function.
+  llvm::yaml::Hex64 FilenamesRef; ///< Pointer to CovMap
+  std::vector<unsigned> FileIDs;  ///< Resolved by CovMap
   std::vector<ExpressionTy> Expressions;
   std::vector<FileRecsTy> Files; ///< 2-dimension array of Recs.
 
@@ -168,42 +159,18 @@ struct CovMapTy {
   /// format. Calculate and store with Filenames.
   llvm::yaml::Hex64 FilenamesRef;
 
-  std::optional<uint32_t> Version;
+  uint32_t Version;
 
   /// Raw Filenames (and storage of Files)
-  std::optional<std::vector<std::string>> Filenames;
-
-  /// Since Version5: Filenames[0] is the working directory (or
-  /// zero-length string). Note that indices in CovFun::FileIDs is
-  /// base on Filenames. (Then, +0, as WD, is not expected to appear)
-  std::optional<std::string> WD;
-  /// This may be ArrayRef in Decoder since Filenames has been
-  /// filled. On the other hand in Encoder, this should be a vector
-  /// since YAML parser doesn't endorse references.
-  std::optional<std::vector<std::string>> Files;
+  std::vector<std::string> Filenames;
 
   void mapping(llvm::yaml::IO &IO);
-
-  bool useWD() const { return (!Version || *Version >= 4); }
-  StringRef getWD() const { return (WD ? *WD : StringRef()); }
 
   Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
                             endianness Endianness);
 
-  /// Generate Accumulated list with WD.
-  /// Returns a single element {WD} if AccFiles is not given.
-  std::vector<std::string>
-  generateAccFilenames(const std::optional<ArrayRef<StringRef>> &AccFilesOpt =
-                           std::nullopt) const;
-  /// Regenerate Filenames with WD.
-  /// Use Files if it is not None. Or given AccFiles is used.
-  void
-  regenerateFilenames(const std::optional<ArrayRef<StringRef>> &AccFilesOpt);
-
   /// Encode Filenames. This is mostly used just to obtain FilenamesRef.
-  std::pair<uint64_t, std::string> encodeFilenames(
-      const std::optional<ArrayRef<StringRef>> &AccFilesOpt = std::nullopt,
-      bool Compress = false) const;
+  std::pair<uint64_t, std::string> encodeFilenames(bool Compress = false) const;
 
   void encode(raw_ostream &OS, endianness Endianness) const;
 };
@@ -262,7 +229,7 @@ protected:
 
 public:
   Decoder(endianness Endianness) : Endianness(Endianness) {}
-  virtual ~Decoder() {}
+  virtual ~Decoder();
 
   /// Returns DecoderImpl.
   static std::unique_ptr<Decoder> get(endianness Endianness,
@@ -279,26 +246,6 @@ public:
 
   /// Suppress emission of CovMap unless enabled.
   static bool enabled;
-};
-
-class Encoder {
-protected:
-  endianness Endianness;
-
-public:
-  Encoder(endianness Endianness) : Endianness(Endianness) {}
-  virtual ~Encoder() {}
-
-  /// Returns EncoderImpl.
-  static std::unique_ptr<Encoder> get(endianness Endianness);
-
-  /// Called from the Sections loop.
-  virtual void collect(ELFYAML::Chunk *Chunk) = 0;
-
-  /// Resolves names from CovFuns in advance of Emitter. It'd be too
-  /// late to resolve sections in Emitter since they are immutable
-  /// then.
-  virtual void fixup() = 0;
 };
 
 /// Returns whether Name is interested.

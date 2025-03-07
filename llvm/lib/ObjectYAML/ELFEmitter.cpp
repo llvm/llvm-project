@@ -772,13 +772,6 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
   // valid SHN_UNDEF entry since SHT_NULL == 0.
   SHeaders.resize(Doc.getSections().size());
 
-  auto CovMapEncoder = covmap::Encoder::get(ELFT::Endianness);
-  for (auto &Chunk : Doc.Chunks) {
-    if (isa<ELFYAML::CovMapSectionBase>(Chunk.get()))
-      CovMapEncoder->collect(Chunk.get());
-  }
-  CovMapEncoder->fixup();
-
   for (const std::unique_ptr<ELFYAML::Chunk> &D : Doc.Chunks) {
     if (ELFYAML::Fill *S = dyn_cast<ELFYAML::Fill>(D.get())) {
       S->Offset = alignToOffset(CBA, /*Align=*/1, S->Offset);
