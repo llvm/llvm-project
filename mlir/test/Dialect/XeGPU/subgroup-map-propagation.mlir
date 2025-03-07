@@ -58,7 +58,7 @@ func.func @test_dpas_op_2(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
@@ -68,7 +68,7 @@ func.func @test_dpas_op_2(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
@@ -94,7 +94,7 @@ func.func @test_transpose_op_1(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>
 // CHECK: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
@@ -104,11 +104,11 @@ func.func @test_transpose_op_1(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: op    : %[[T2:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %[[T1]]  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: op    : %[[T4:.*]] = vector.transpose %[[T3]], [1, 0] : vector<16x16xf16> to vector<16x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
 // CHECK-NEXT: op    : %[[T5:.*]] = xegpu.dpas %[[T2]], %[[T4]], %[[CST]] : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
@@ -158,7 +158,7 @@ func.func @test_extf_truncf_op(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegp
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: argument: <block argument> of type 'memref<256xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
@@ -172,7 +172,7 @@ func.func @test_extf_truncf_op(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegp
 // CHECK-NEXT: op    : %[[CST0:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T2:.*]] = xegpu.create_tdesc %{{.*}}, %[[CST]] : memref<256xf16>, vector<16xindex> -> !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>>
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [2, 1]
+// CHECK-NEXT: sg_map for result #0: wi_layout: [16, 1], wi_data: [1, 2]
 // CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load %[[T2]], %[[CST0]] <{transpose}> : !xegpu.tensor_desc<16x16xf16, #xegpu.scatter_tdesc_attr<chunk_size = 16 : i64>>, vector<16xi1> -> vector<16x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
 // CHECK-NEXT: op    : %[[T4:.*]] = xegpu.dpas %[[T1]], %[[T3]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
