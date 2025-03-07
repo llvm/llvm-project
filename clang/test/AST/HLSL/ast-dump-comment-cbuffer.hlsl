@@ -21,7 +21,6 @@ cbuffer A {
 
 // AST: HLSLBufferDecl {{.*}} line:11:9 cbuffer A
 // AST-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// AST-NEXT: HLSLResourceAttr {{.*}} Implicit CBuffer
 // AST-NEXT: FullComment
 // AST-NEXT: ParagraphComment
 // AST-NEXT: TextComment {{.*}} Text=" CBuffer decl."
