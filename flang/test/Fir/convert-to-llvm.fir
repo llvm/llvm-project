@@ -711,11 +711,11 @@ func.func @convert_from_float(%arg0 : f32) {
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f64
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f80
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f128
-// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i1
-// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i8
-// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i16
-// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i32
-// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i64
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i1
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i8
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i16
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i32
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i64
 
 // -----
 
