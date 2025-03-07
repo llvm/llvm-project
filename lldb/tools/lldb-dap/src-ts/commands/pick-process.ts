@@ -26,9 +26,16 @@ export async function pickProcess(
       processes.sort((a, b) => b.start - a.start);
       // Filter by program if requested
       if (typeof configuration?.program === "string") {
-        processes = processes.filter(
-          (proc) => proc.command === configuration.program,
-        );
+        const program = configuration.program;
+        const programBaseName = path.basename(program);
+        processes = processes
+          .filter((proc) => path.basename(proc.command) === programBaseName)
+          .sort((a, b) => {
+            // Bring exact command matches to the top
+            const aIsExactMatch = a.command === program ? 1 : 0;
+            const bIsExactMatch = b.command === program ? 1 : 0;
+            return bIsExactMatch - aIsExactMatch;
+          });
         // Show a better message if all processes were filtered out
         if (processes.length === 0) {
           return [
