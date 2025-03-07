@@ -213,7 +213,8 @@ define void @vector_reverse_i64(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; RV64-UF2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP20]]
 ; RV64-UF2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i32 0
 ; RV64-UF2-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP22]], 4294967292
+; RV64-UF2-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP22]], 4
+; RV64-UF2-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP24]], -1
 ; RV64-UF2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i64 [[TMP26]]
 ; RV64-UF2-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vscale.i32()
 ; RV64-UF2-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP25]], 4
@@ -226,7 +227,8 @@ define void @vector_reverse_i64(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; RV64-UF2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP20]]
 ; RV64-UF2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 0
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP33]], 4294967292
+; RV64-UF2-NEXT:    [[TMP44:%.*]] = mul i64 [[TMP33]], 4
+; RV64-UF2-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP44]], -1
 ; RV64-UF2-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i64 [[TMP37]]
 ; RV64-UF2-NEXT:    [[TMP36:%.*]] = call i32 @llvm.vscale.i32()
 ; RV64-UF2-NEXT:    [[TMP40:%.*]] = mul i32 [[TMP36]], 4
@@ -483,7 +485,8 @@ define void @vector_reverse_f32(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; RV64-UF2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP20]]
 ; RV64-UF2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i32 0
 ; RV64-UF2-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP22]], 4294967292
+; RV64-UF2-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP22]], 4
+; RV64-UF2-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP24]], -1
 ; RV64-UF2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[TMP26]]
 ; RV64-UF2-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vscale.i32()
 ; RV64-UF2-NEXT:    [[TMP29:%.*]] = mul i32 [[TMP25]], 4
@@ -496,7 +499,8 @@ define void @vector_reverse_f32(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; RV64-UF2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP20]]
 ; RV64-UF2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[TMP32]], i32 0
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP33]], 4294967292
+; RV64-UF2-NEXT:    [[TMP44:%.*]] = mul i64 [[TMP33]], 4
+; RV64-UF2-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP44]], -1
 ; RV64-UF2-NEXT:    [[TMP39:%.*]] = getelementptr inbounds float, ptr [[TMP32]], i64 [[TMP37]]
 ; RV64-UF2-NEXT:    [[TMP36:%.*]] = call i32 @llvm.vscale.i32()
 ; RV64-UF2-NEXT:    [[TMP40:%.*]] = mul i32 [[TMP36]], 4
