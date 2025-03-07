@@ -380,7 +380,7 @@ def get_per_workflow_metrics(github_repo: github.Repository, last_workflow_id: s
 
             workflow_metrics.append(
                 JobMetrics(
-                    workflow_key + "-" + job_key,
+                    workflow_key + "_" + job_key,
                     queue_time.seconds,
                     run_time.seconds,
                     job_result,
