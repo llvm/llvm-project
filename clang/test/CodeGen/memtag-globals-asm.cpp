@@ -21,6 +21,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 // RUN: %clang_cc1 -O3 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
 // RUN:   -fsanitize=memtag-globals -o %t.out %s
@@ -43,6 +44,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 /// Ensure that emulated TLS also doesn't get sanitized.
 // RUN: %clang_cc1 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
@@ -271,6 +273,13 @@ int f(int x) {
   // CHECK-Q-DAG: ldr   {{.*}}, [[[REG_O2]]]
       function_int;
 }
+
+// CHECK-S: .memtag global_overaligned_char
+// CHECK-S: .globl global_overaligned_char
+// CHECK-S: .p2align 4, 0x0
+// CHECK-S: .size global_overaligned_char, 16
+// CHECK-S: .p2align 4, 0x0
+alignas(16) char global_overaligned_char;
 
 typedef void (*func_t)(void);
 #define CONSTRUCTOR(section_name) \
