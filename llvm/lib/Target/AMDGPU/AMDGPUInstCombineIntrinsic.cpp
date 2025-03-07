@@ -1131,8 +1131,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
 
     // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
-    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse() &&
-        IID != Intrinsic::amdgcn_ds_bpermute) {
+    if (auto *BC = dyn_cast<BitCastInst>(Src);
+        BC && BC->hasOneUse() && IID != Intrinsic::amdgcn_ds_bpermute) {
       Value *BCSrc = BC->getOperand(0);
 
       // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
