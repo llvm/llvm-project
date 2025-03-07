@@ -1127,7 +1127,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
-static bool isSubVectorPackedInI32(EVT EltVT) {
+static bool isSubVectorPackedInInteger(EVT EltVT) {
   // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
   // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
   // vectorized loads/stores with the actual element type for i8/i16 as that
@@ -1135,7 +1135,9 @@ static bool isSubVectorPackedInI32(EVT EltVT) {
   // In order to load/store such vectors efficiently, in Type Legalization
   // we split the vector into word-sized chunks (v2x16/v4i8). Now, we will
   // lower to PTX as vectors of b32.
-  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8;
+  // We also consider v2f32 as an upsized type, which may be used in packed
+  // (f32x2) instructions.
+  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8 || EltVT == MVT::v2f32;
 }
 
 static unsigned getLoadStoreVectorNumElts(SDNode *N) {
@@ -1187,9 +1189,11 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   unsigned FromTypeWidth = TotalWidth / getLoadStoreVectorNumElts(N);
 
-  if (isSubVectorPackedInI32(EltVT)) {
+  if (isSubVectorPackedInInteger(EltVT)) {
     assert(ExtensionType == ISD::NON_EXTLOAD);
-    EltVT = MVT::i32;
+    FromTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(FromTypeWidth);
+    FromType = NVPTX::PTXLdStInstCode::Untyped;
   }
 
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
@@ -1497,8 +1501,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   SDValue N2 = N->getOperand(NumElts + 1);
   unsigned ToTypeWidth = TotalWidth / NumElts;
 
-  if (isSubVectorPackedInI32(EltVT)) {
-    EltVT = MVT::i32;
+  if (isSubVectorPackedInInteger(EltVT)) {
+    ToTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(ToTypeWidth);
   }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
