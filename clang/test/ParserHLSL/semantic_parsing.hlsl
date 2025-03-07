@@ -3,5 +3,5 @@
 // expected-error@+1 {{expected HLSL Semantic identifier}}
 void Entry(int GI : ) { }
 
-// expected-error@+1 {{unknown HLSL semantic 'sv_iwantapony'}}
+// expected-error@+1 {{unknown HLSL semantic 'SV_IWantAPony'}}
 void Pony(int GI : SV_IWantAPony) { }
