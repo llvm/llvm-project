@@ -1981,8 +1981,8 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
-  TargetMBB->setIsEHCatchretTarget(true);
-  DAG.getMachineFunction().setHasEHCatchret(true);
+  TargetMBB->setIsEHContTarget(true);
+  DAG.getMachineFunction().setHasEHContTarget(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);

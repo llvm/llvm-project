@@ -121,7 +121,7 @@ private:
 } // namespace
 
 TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(Triple(M.getTargetTriple())),
+    : TargetTriple(M.getTargetTriple()),
       AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
