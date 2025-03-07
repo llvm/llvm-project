@@ -63,6 +63,7 @@
 #include <bitset>
 #include <cctype>
 #include <numeric>
+#include <tuple>
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
@@ -44745,31 +44746,59 @@ bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
 
 // Helper to peek through bitops/trunc/setcc to determine size of source vector.
 // Allows combineBitcastvxi1 to determine what size vector generated a <X x i1>.
-static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
-                                      bool AllowTruncate) {
+static bool
+checkBitcastSrcVectorSize(SDValue Src, unsigned Size, bool AllowTruncate,
+                          std::map<std::tuple<SDValue, unsigned, bool>, bool>
+                              &BitcastSrcVectorSizeMap) {
+  auto Tp = std::make_tuple(Src, Size, AllowTruncate);
+  if (BitcastSrcVectorSizeMap.count(Tp))
+    return BitcastSrcVectorSizeMap[Tp];
   switch (Src.getOpcode()) {
   case ISD::TRUNCATE:
-    if (!AllowTruncate)
+    if (!AllowTruncate) {
+      BitcastSrcVectorSizeMap[Tp] = false;
       return false;
+    }
     [[fallthrough]];
-  case ISD::SETCC:
-    return Src.getOperand(0).getValueSizeInBits() == Size;
-  case ISD::FREEZE:
-    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate);
+  case ISD::SETCC: {
+    auto Ret = Src.getOperand(0).getValueSizeInBits() == Size;
+    BitcastSrcVectorSizeMap[Tp] = Ret;
+    return Ret;
+  }
+  case ISD::FREEZE: {
+    auto Ret = checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate,
+                                         BitcastSrcVectorSizeMap);
+    BitcastSrcVectorSizeMap[Tp] = Ret;
+    return Ret;
+  }
   case ISD::AND:
   case ISD::XOR:
-  case ISD::OR:
-    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate) &&
-           checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate);
-  case ISD::SELECT:
-  case ISD::VSELECT:
-    return Src.getOperand(0).getScalarValueSizeInBits() == 1 &&
-           checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate) &&
-           checkBitcastSrcVectorSize(Src.getOperand(2), Size, AllowTruncate);
-  case ISD::BUILD_VECTOR:
-    return ISD::isBuildVectorAllZeros(Src.getNode()) ||
-           ISD::isBuildVectorAllOnes(Src.getNode());
+  case ISD::OR: {
+    auto Ret1 = checkBitcastSrcVectorSize(
+        Src.getOperand(0), Size, AllowTruncate, BitcastSrcVectorSizeMap);
+    auto Ret2 = checkBitcastSrcVectorSize(
+        Src.getOperand(1), Size, AllowTruncate, BitcastSrcVectorSizeMap);
+    BitcastSrcVectorSizeMap[Tp] = Ret1 && Ret2;
+    return Ret1 && Ret2;
   }
+  case ISD::SELECT:
+  case ISD::VSELECT: {
+    auto Ret1 = checkBitcastSrcVectorSize(
+        Src.getOperand(1), Size, AllowTruncate, BitcastSrcVectorSizeMap);
+    auto Ret2 = checkBitcastSrcVectorSize(
+        Src.getOperand(2), Size, AllowTruncate, BitcastSrcVectorSizeMap);
+    auto Ret3 = Src.getOperand(0).getScalarValueSizeInBits() == 1;
+    BitcastSrcVectorSizeMap[Tp] = Ret1 && Ret2 && Ret3;
+    return Ret1 && Ret2 && Ret3;
+  }
+  case ISD::BUILD_VECTOR: {
+    auto Ret = ISD::isBuildVectorAllZeros(Src.getNode()) ||
+               ISD::isBuildVectorAllOnes(Src.getNode());
+    BitcastSrcVectorSizeMap[Tp] = Ret;
+    return Ret;
+  }
+  }
+  BitcastSrcVectorSizeMap[Tp] = false;
   return false;
 }
 
@@ -44925,6 +44954,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   // (v16i8 shuffle <0,2,4,6,8,10,12,14,u,u,...,u> (v16i8 bitcast t0), undef)
   MVT SExtVT;
   bool PropagateSExt = false;
+  std::map<std::tuple<SDValue, unsigned, bool>, bool> BitcastSrcVectorSizeMap;
   switch (SrcVT.getSimpleVT().SimpleTy) {
   default:
     return SDValue();
@@ -44936,7 +44966,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
     if (Subtarget.hasAVX() &&
-        checkBitcastSrcVectorSize(Src, 256, Subtarget.hasAVX2())) {
+        checkBitcastSrcVectorSize(Src, 256, Subtarget.hasAVX2(),
+                                  BitcastSrcVectorSizeMap)) {
       SExtVT = MVT::v4i64;
       PropagateSExt = true;
     }
@@ -44948,8 +44979,9 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
-    if (Subtarget.hasAVX() && (checkBitcastSrcVectorSize(Src, 256, true) ||
-                               checkBitcastSrcVectorSize(Src, 512, true))) {
+    if (Subtarget.hasAVX() &&
+        (checkBitcastSrcVectorSize(Src, 256, true, BitcastSrcVectorSizeMap) ||
+         checkBitcastSrcVectorSize(Src, 512, true, BitcastSrcVectorSizeMap))) {
       SExtVT = MVT::v8i32;
       PropagateSExt = true;
     }
@@ -44974,7 +45006,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
       break;
     }
     // Split if this is a <64 x i8> comparison result.
-    if (checkBitcastSrcVectorSize(Src, 512, false)) {
+    if (checkBitcastSrcVectorSize(Src, 512, false, BitcastSrcVectorSizeMap)) {
       SExtVT = MVT::v64i8;
       break;
     }
