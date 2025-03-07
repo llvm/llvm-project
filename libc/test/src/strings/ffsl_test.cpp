@@ -23,6 +23,7 @@ TEST(LlvmLibcFfslTest, SimpleFfsl) {
   ASSERT_EQ(ffsl(0x00200000L), 22);
   ASSERT_EQ(ffsl(0x04000000L), 27);
   ASSERT_EQ(ffsl(0x80000000L), 32);
+#ifdef __LP64__
   ASSERT_EQ(ffsl(0x0000000100000000L), 33);
   ASSERT_EQ(ffsl(0x0000002000000000L), 38);
   ASSERT_EQ(ffsl(0x0000040000000000L), 43);
@@ -31,6 +32,7 @@ TEST(LlvmLibcFfslTest, SimpleFfsl) {
   ASSERT_EQ(ffsl(0x0020000000000000L), 54);
   ASSERT_EQ(ffsl(0x0400000000000000L), 59);
   ASSERT_EQ(ffsl(0x8000000000000000L), 64);
+#endif
   ASSERT_EQ(ffsl(0xfbe71L), 1);
   ASSERT_EQ(ffsl(0xfbe70L), 5);
   ASSERT_EQ(ffsl(0x10L), 5);
