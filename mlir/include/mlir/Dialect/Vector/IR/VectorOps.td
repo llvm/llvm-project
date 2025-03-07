@@ -718,6 +718,7 @@ def Vector_ExtractOp :
   let results = (outs AnyType:$result);
 
   let builders = [
+    OpBuilder<(ins "Value":$source)>,
     OpBuilder<(ins "Value":$source, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "OpFoldResult":$position)>,
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$position)>,
@@ -913,6 +914,7 @@ def Vector_InsertOp :
   let results = (outs AnyVectorOfAnyRank:$result);
 
   let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$dest)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "OpFoldResult":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<int64_t>":$position)>,
