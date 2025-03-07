@@ -4011,15 +4011,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       // Fill in any known bits from range information. There are 3 types being
       // used. The results VT (same vector elt size as BitWidth), the loaded
       // MemoryVT (which may or may not be vector) and the range VTs original
-      // type. The range matadata needs the full range (i.e
+      // type. The range metadata needs the full range (i.e
       // MemoryVT().getSizeInBits()), which is truncated to the correct elt size
       // if it is know. These are then extended to the original VT sizes below.
       if (const MDNode *MD = LD->getRanges()) {
+        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
+
+        // FIXME: If loads are modified (e.g. type legalization)
+        // so that the load type no longer matches the range metadata type, the
+        // range metadata should be updated to match the new load width.
+        Known0 = Known0.trunc(Lower->getBitWidth());
         computeKnownBitsFromRangeMetadata(*MD, Known0);
         if (VT.isVector()) {
-          // Handle truncation to the first demanded element.
-          // TODO: Figure out which demanded elements are covered
-          if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
+          if (!getDataLayout().isLittleEndian())
             break;
           Known0 = Known0.trunc(BitWidth);
         }

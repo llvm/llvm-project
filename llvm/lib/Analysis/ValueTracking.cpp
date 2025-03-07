@@ -430,15 +430,14 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
         mdconst::extract<ConstantInt>(Ranges.getOperand(2 * i + 1));
     ConstantRange Range(Lower->getValue(), Upper->getValue());
     unsigned RangeBitWidth = Lower->getBitWidth();
-    // BitWidth > RangeBitWidth can happen if Known is set to the width of a
-    // vector load but Ranges describes a vector element.
-    assert(BitWidth >= RangeBitWidth);
 
     // The first CommonPrefixBits of all values in Range are equal.
     unsigned CommonPrefixBits =
         (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countl_zero();
-    APInt Mask = APInt::getBitsSet(BitWidth, RangeBitWidth - CommonPrefixBits,
-                                   RangeBitWidth);
+    // BitWidth must equal RangeBitWidth.  Otherwise Mask will be set
+    // incorrectly.
+    assert(BitWidth == RangeBitWidth && "BitWidth must equal RangeBitWidth");
+    APInt Mask = APInt::getHighBitsSet(BitWidth, CommonPrefixBits);
     APInt UnsignedMax = Range.getUnsignedMax().zextOrTrunc(BitWidth);
     Known.One &= UnsignedMax & Mask;
     Known.Zero &= ~UnsignedMax & Mask;
