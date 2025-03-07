@@ -318,14 +318,14 @@ INSTANTIATE_TEST_SUITE_P(
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r52", "armv8-r", "neon-fp-armv8",
-                                   ARM::AEK_NONE | ARM::AEK_CRC | ARM::AEK_MP |
-                                       ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   ARM::AEK_CRC | ARM::AEK_MP | ARM::AEK_VIRT |
+                                       ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP | ARM::AEK_SIMD,
                                    "8-R"),
         ARMCPUTestParams<uint64_t>("cortex-r52plus", "armv8-r", "neon-fp-armv8",
-                                   ARM::AEK_NONE | ARM::AEK_CRC | ARM::AEK_MP |
-                                       ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   ARM::AEK_CRC | ARM::AEK_MP | ARM::AEK_VIRT |
+                                       ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP | ARM::AEK_SIMD,
                                    "8-R"),
         ARMCPUTestParams<uint64_t>("sc300", "armv7-m", "none",
                                    ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB, "7-M"),
@@ -801,7 +801,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"fp", "nofp", nullptr, nullptr},
                               {"idiv", "noidiv", nullptr, nullptr},
                               {"mp", "nomp", nullptr, nullptr},
-                              {"simd", "nosimd", nullptr, nullptr},
+                              {"simd", "nosimd", "+neon", "-neon"},
                               {"sec", "nosec", nullptr, nullptr},
                               {"virt", "novirt", nullptr, nullptr},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
@@ -1046,7 +1046,6 @@ TEST(TargetParserTest, ARMPrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("invalid"));
   // Should not include anything that lacks a feature name. Checking a few here
   // but not all as if one is hidden correctly the rest should be.
-  EXPECT_EQ(std::string::npos, captured.find("simd"));
   EXPECT_EQ(std::string::npos, captured.find("maverick"));
   EXPECT_EQ(std::string::npos, captured.find("xscale"));
 }
