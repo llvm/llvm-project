@@ -1073,6 +1073,11 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
         op, "unsupported caes where operation and insertion point are not in "
             "the same basic block");
   }
+  // If `insertionPoint` does not dominate `op`, do nothing
+  if (!dominance.properlyDominates(insertionPoint, op)) {
+    return rewriter.notifyMatchFailure(op,
+                                       "insertion point does not dominate op");
+  }
 
   // Find the backward slice of operation for each `Value` the operation
   // depends on. Prune the slice to only include operations not already
@@ -1080,6 +1085,9 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
   BackwardSliceOptions options;
   options.inclusive = true;
   options.omitUsesFromAbove = false;
+  // Since current support is to only move within a same basic block,
+  // the slices dont need to look past block arguments.
+  options.omitBlockArguments = true;
   options.filter = [&](Operation *sliceBoundaryOp) {
     return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
   };

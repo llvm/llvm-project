@@ -33,8 +33,8 @@ transform::TestMoveOperandDeps::apply(TransformRewriter &rewriter,
   Operation *moveBefore = *state.getPayloadOps(getInsertionPoint()).begin();
   if (failed(moveOperationDependencies(rewriter, op, moveBefore))) {
     auto listener = cast<ErrorCheckingTrackingListener>(rewriter.getListener());
-    std::string errorMsg = listener->checkAndResetError().getMessage();
-    return emitSilenceableFailure(op, errorMsg);
+    std::string errorMsg = listener->getLatestMatchFailureMessage();
+    (void)emitRemark(errorMsg);
   }
   return DiagnosedSilenceableFailure::success();
 }

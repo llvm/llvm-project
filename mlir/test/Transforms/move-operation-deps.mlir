@@ -1,4 +1,4 @@
-// RUN: mlir-opt --allow-unregistered-dialect --transform-interpreter --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --allow-unregistered-dialect --transform-interpreter --split-input-file --verify-diagnostics %s | FileCheck %s
 
 // Check simple move of dependent operation before insertion.
 func.func @simple_move() -> f32 {
@@ -95,7 +95,7 @@ module attributes {transform.with_named_sequence} {
 func.func @move_region_dependencies() -> f32 {
   %0 = "before"() : () -> (f32)
   %1 = "moved_op_1"() : () -> (f32)
-  %2 = "moved_op"() ({
+  %2 = "moved_op_2"() ({
     "yield"(%1) : (f32) -> ()
   }) : () -> (f32)
   %3 = "foo"() ({
@@ -139,6 +139,7 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %op2 = transform.structured.match ops{["before"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
+    // expected-remark@+1{{cannot move dependencies before operation in backward slice of op}}
     transform.test.move_operand_deps %op1 before %op2
         : !transform.any_op, !transform.any_op
     transform.yield
@@ -147,7 +148,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @move_region_dependencies() -> f32 {
+// Fail when the "before" operation is part of the operation slice (computed
+// when looking through implicitly captured values).
+func.func @do_not_move_slice() -> f32 {
   %0 = "before"() : () -> (f32)
   %1 = "moved_op"() ({
     "yield"(%0) : (f32) -> ()
@@ -164,6 +167,32 @@ module attributes {transform.with_named_sequence} {
         : (!transform.any_op) -> !transform.any_op
     %op2 = transform.structured.match ops{["before"]} in %arg0
         : (!transform.any_op) -> !transform.any_op
+    // expected-remark@+1{{cannot move dependencies before operation in backward slice of op}}
+    transform.test.move_operand_deps %op1 before %op2
+        : !transform.any_op, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Dont move ops when insertion point does not dominate the op
+func.func @do_not_move() -> f32 {
+  %1 = "moved_op"() : () -> (f32)
+  %2 = "foo"() ({
+    "yield"(%1) : (f32) -> ()
+  }) : () -> (f32)
+  %3 = "before"() : () -> f32
+  return %2 : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["foo"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    // expected-remark@+1{{insertion point does not dominate op}}
     transform.test.move_operand_deps %op1 before %op2
         : !transform.any_op, !transform.any_op
     transform.yield
