@@ -30,6 +30,15 @@ template <class _Tp, class _Up>
 struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
     : public true_type {};
 
+template <class _Tp, class _Up, bool = true, bool = __is_core_convertible<_Tp, _Up>::value>
+inline const bool __is_nothrow_core_convertible_v = false;
+
+template <class _Tp, class _Up>
+inline const bool __is_nothrow_core_convertible_v<_Tp,
+                                                  _Up,
+                                                  noexcept(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)())),
+                                                  true> = true;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
