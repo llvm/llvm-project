@@ -644,6 +644,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("tolower", tgtok::XToLower)
           .Case("toupper", tgtok::XToUpper)
           .Case("repr", tgtok::XRepr)
+          .Case("select", tgtok::XSelect)
           .Default(tgtok::Error);
 
   return Kind != tgtok::Error ? Kind
