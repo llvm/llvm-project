@@ -412,8 +412,8 @@ void ModuloScheduleExpander::generateExistingPhis(
                             InitVal, NewReg);
       auto It = VRMap[CurStageNum].find(LoopVal);
       if (It != VRMap[CurStageNum].end()) {
-        llvm::Register &Reg = VRMap[CurStageNum][Def];
-        Reg = It->second;
+        llvm::Register Reg = It->second;
+        VRMap[CurStageNum][Def] = Reg;
       }
     }
     // Adjust the number of Phis needed depending on the number of prologs left,
