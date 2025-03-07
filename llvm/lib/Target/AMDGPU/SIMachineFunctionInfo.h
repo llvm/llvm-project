@@ -299,6 +299,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
 
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -350,6 +352,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
+                       MFI.ScratchReservedForDynamicVGPRs, 0);
   }
 };
 
