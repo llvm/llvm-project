@@ -261,12 +261,12 @@ getXCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     if (!SymFlags)
       return SymFlags.takeError();
 
-    // By default, only shared library with F_SHROBJ in the xcoff header will
-    // have SF_Exported. On AIX, we require the linker with the help of an
-    // export list to determine the visibility of the symbol. This mimics the
-    // behaviour of -bautoexp and CreateExportList utilities. In the abscence of
-    // the export list, this is the best we can do.
-    // TODO: Revisit
+    // TODO: Revisit symbol visibility
+    // On AIX, symbols with C_EXT and C_WEAKEXT symbols have no specified
+    // visibility are considered to have Default scope for LinkGraph. When the
+    // object is not a DSO, symbol visibility is not specified. In the absence
+    // of an Export List, its reasonable to minimic roughly the behaviour of
+    // -bexpall or CreateExportList.
     *SymFlags |= JITSymbolFlags::Exported;
 
     I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
