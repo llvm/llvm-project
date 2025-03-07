@@ -694,7 +694,7 @@ bool fromJSON(const llvm::json::Value &value,
          o.map("user_id", section.user_id) &&
          o.map("file_offset", section.file_offset) &&
          o.map("file_size", section.file_size) &&
-         o.map("log2align", section.log2align) &&
+         o.map("alignment", section.log2align) &&
          o.map("flags", section.flags) && o.map("fake", section.fake) &&
          o.map("encrypted", section.encrypted) &&
          o.map("thread_specific", section.thread_specific);

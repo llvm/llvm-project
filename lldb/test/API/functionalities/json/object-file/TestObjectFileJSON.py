@@ -100,7 +100,7 @@ class TestObjectFileJSON(TestBase):
                             "type": "code",
                             "address": TEXT_file_addr,
                             "size": text_size,
-                            "log2align": 2,
+                            "alignment": 2,
                             "read": True,
                             "write": False,
                             "execute": True,
