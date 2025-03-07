@@ -50,6 +50,20 @@ template <typename Parser> constexpr auto unwrap(const Parser &p) {
   return UnwrapParser<Parser>(p);
 }
 
+// Check (without advancing the parsing location) if the next thing in the
+// input would be accepted by the "checked" parser, and if so, run the "parser"
+// parser.
+// The intended use is with the "checker" parser being some token, followed
+// by a more complex parser that consumes the token plus more things, e.g.
+// "PARALLEL"_id >= Parser<OmpDirectiveSpecification>{}.
+//
+// The >= has a higher precedence than ||, so it can be used just like >>
+// in an alternatives parser without parentheses.
+template <typename PA, typename PB>
+constexpr auto operator>=(PA checker, PB parser) {
+  return lookAhead(checker) >> parser;
+}
+
 /// Parse OpenMP directive name (this includes compound directives).
 struct OmpDirectiveNameParser {
   using resultType = OmpDirectiveName;
@@ -575,6 +589,9 @@ TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
+TYPE_PARSER(construct<OmpCancellationConstructTypeClause>(
+    OmpDirectiveNameParser{}, maybe(parenthesized(scalarLogicalExpr))))
+
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
     "PRIVATE" >> pure(OmpDefaultClause::DataSharingAttribute::Private) ||
@@ -985,22 +1002,18 @@ TYPE_PARSER( //
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     // Cancellable constructs
-    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-        construct<OmpCancellationConstructTypeClause>( //
-            construct<OmpDirectiveName>(verbatim("DO"_id)),
-            maybe(parenthesized(scalarLogicalExpr))))) ||
-    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-        construct<OmpCancellationConstructTypeClause>( //
-            construct<OmpDirectiveName>(verbatim("PARALLEL"_id)),
-            maybe(parenthesized(scalarLogicalExpr))))) ||
-    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-        construct<OmpCancellationConstructTypeClause>( //
-            construct<OmpDirectiveName>(verbatim("SECTIONS"_id)),
-            maybe(parenthesized(scalarLogicalExpr))))) ||
-    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-        construct<OmpCancellationConstructTypeClause>( //
-            construct<OmpDirectiveName>(verbatim("TASKGROUP"_id)),
-            maybe(parenthesized(scalarLogicalExpr))))))
+    "DO"_id >=
+        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+            Parser<OmpCancellationConstructTypeClause>{})) ||
+    "PARALLEL"_id >=
+        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+            Parser<OmpCancellationConstructTypeClause>{})) ||
+    "SECTIONS"_id >=
+        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+            Parser<OmpCancellationConstructTypeClause>{})) ||
+    "TASKGROUP"_id >=
+        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+            Parser<OmpCancellationConstructTypeClause>{})))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
