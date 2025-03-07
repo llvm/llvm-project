@@ -11,18 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
-    let name = "olRetainEvent";
-    let desc = "Increment the event's reference count.";
-    let details = [];
-    let params = [
-        Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>
-    ];
-    let returns = [];
-}
-
-def : Function {
-    let name = "olReleaseEvent";
-    let desc = "Decrement the event's reference count, and free it if the reference count reaches 0.";
+    let name = "olDestroyEvent";
+    let desc = "Destroy the event and free all underlying resources.";
     let details = [];
     let params = [
         Param<"ol_event_handle_t", "Event", "handle of the event", PARAM_IN>

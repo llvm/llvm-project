@@ -10,13 +10,13 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olReleaseProgramTest = OffloadProgramTest;
+using olDestroyProgramTest = OffloadProgramTest;
 
-TEST_F(olReleaseProgramTest, Success) {
-  ASSERT_SUCCESS(olRetainProgram(Program));
-  ASSERT_SUCCESS(olReleaseProgram(Program));
+TEST_F(olDestroyProgramTest, Success) {
+  ASSERT_SUCCESS(olDestroyProgram(Program));
+  Program = nullptr;
 }
 
-TEST_F(olReleaseProgramTest, InvalidNullHandle) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olReleaseProgram(nullptr));
+TEST_F(olDestroyProgramTest, InvalidNullHandle) {
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olDestroyProgram(nullptr));
 }

@@ -84,7 +84,7 @@ struct OffloadProgramTest : OffloadDeviceTest {
 
   void TearDown() override {
     if (Program) {
-      olReleaseProgram(Program);
+      olDestroyProgram(Program);
     }
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }
@@ -101,7 +101,7 @@ struct OffloadKernelTest : OffloadProgramTest {
 
   void TearDown() override {
     if (Kernel) {
-      olReleaseKernel(Kernel);
+      olDestroyKernel(Kernel);
     }
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
   }
@@ -117,7 +117,7 @@ struct OffloadQueueTest : OffloadDeviceTest {
 
   void TearDown() override {
     if (Queue) {
-      olReleaseQueue(Queue);
+      olDestroyQueue(Queue);
     }
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }

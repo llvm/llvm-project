@@ -49,15 +49,11 @@ ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue);
 
-ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue);
-
-ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue);
+ol_impl_result_t olDestroyQueue_impl(ol_queue_handle_t Queue);
 
 ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue);
 
-ol_impl_result_t olRetainEvent_impl(ol_event_handle_t Event);
-
-ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event);
+ol_impl_result_t olDestroyEvent_impl(ol_event_handle_t Event);
 
 ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event);
 
@@ -77,14 +73,10 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
                                       const void *ProgData, size_t ProgDataSize,
                                       ol_program_handle_t *Program);
 
-ol_impl_result_t olRetainProgram_impl(ol_program_handle_t Program);
-
-ol_impl_result_t olReleaseProgram_impl(ol_program_handle_t Program);
+ol_impl_result_t olDestroyProgram_impl(ol_program_handle_t Program);
 
 ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
                                      const char *KernelName,
                                      ol_kernel_handle_t *Kernel);
 
-ol_impl_result_t olRetainKernel_impl(ol_kernel_handle_t Kernel);
-
-ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel);
+ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel);
