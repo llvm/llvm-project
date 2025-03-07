@@ -238,13 +238,13 @@ public:
   LogicalResult visitOperation(Operation *op, ArrayRef<SGMapLattice *> operands,
                                ArrayRef<const SGMapLattice *> results) override;
 
-  void visitBranchOperand(OpOperand &operand) override{};
+  void visitBranchOperand(OpOperand &operand) override {};
 
-  void visitCallOperand(OpOperand &operand) override{};
+  void visitCallOperand(OpOperand &operand) override {};
 
   void visitExternalCall(CallOpInterface call,
                          ArrayRef<SGMapLattice *> operands,
-                         ArrayRef<const SGMapLattice *> results) override{};
+                         ArrayRef<const SGMapLattice *> results) override {};
 
   void setToExitState(SGMapLattice *lattice) override {
     (void)lattice->meet(SGMap());
