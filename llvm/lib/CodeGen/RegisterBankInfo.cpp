@@ -100,9 +100,8 @@ RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
 }
 
 const TargetRegisterClass *
-RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
+RegisterBankInfo::getMinimalPhysRegClass(MCRegister Reg,
                                          const TargetRegisterInfo &TRI) const {
-  assert(Reg.isPhysical() && "Reg must be a physreg");
   const auto [RegRCIt, Inserted] = PhysRegMinimalRCs.try_emplace(Reg);
   if (Inserted)
     RegRCIt->second = TRI.getMinimalPhysRegClassLLT(Reg, LLT());

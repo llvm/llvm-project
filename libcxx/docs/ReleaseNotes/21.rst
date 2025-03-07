@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
+- P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 
 Improvements and New Features
@@ -57,6 +58,8 @@ Improvements and New Features
 
 Deprecations and Removals
 -------------------------
+
+- ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
 
 Upcoming Deprecations and Removals
 ----------------------------------

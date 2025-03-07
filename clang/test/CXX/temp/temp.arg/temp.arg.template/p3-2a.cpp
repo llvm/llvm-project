@@ -13,12 +13,12 @@ template<F> struct W { }; // #W
 S1<X> s11;
 S1<Y> s12;
 // expected-error@-1 {{template template argument 'Y' is more constrained than template template parameter 'P'}}
-// expected-note@#S1 {{'P' declared here}}
+// expected-note@#S1 {{template parameter is declared here}}
 // expected-note@#Y {{'Y' declared here}}
 S1<Z> s13;
 S1<W> s14;
 // expected-error@-1 {{template template argument 'W' is more constrained than template template parameter 'P'}}
-// expected-note@#S1 {{'P' declared here}}
+// expected-note@#S1 {{template parameter is declared here}}
 // expected-note@#W {{'W' declared here}}
 // expected-note@#F 1-2{{similar constraint expressions not considered equivalent}}
 // expected-note@#C 1-2{{similar constraint}}
@@ -43,12 +43,12 @@ template<template<typename T> requires C<T> class P> struct S4 { }; // #S4
 S4<X> s41;
 S4<Y> s42;
 // expected-error@-1 {{template template argument 'Y' is more constrained than template template parameter 'P'}}
-// expected-note@#S4 {{'P' declared here}}
+// expected-note@#S4 {{template parameter is declared here}}
 // expected-note@#Y {{'Y' declared here}}
 S4<Z> s43;
 S4<W> s44;
 // expected-error@-1 {{template template argument 'W' is more constrained than template template parameter 'P'}}
-// expected-note@#S4 {{'P' declared here}}
+// expected-note@#S4 {{template parameter is declared here}}
 // expected-note@#W {{'W' declared here}}
 
 template<template<typename T> requires C<T> typename U> struct S5 {

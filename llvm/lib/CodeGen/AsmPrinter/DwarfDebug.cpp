@@ -2210,6 +2210,14 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     }
   }
 
+  auto RecordSourceLine = [&](auto &DL, auto Flags) {
+    SmallString<128> LocationString;
+    raw_svector_ostream OS(LocationString);
+    DL.print(OS);
+
+    const MDNode *Scope = DL.getScope();
+    recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags, LocationString);
+  };
   // When we emit a line-0 record, we don't update PrevInstLoc; so look at
   // the last line number actually emitted, to see if it was line 0.
   unsigned LastAsmLine =
@@ -2237,8 +2245,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // But we might be coming back to it after a line 0 record.
     if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
       // Reinstate the source location but not marked as a statement.
-      const MDNode *Scope = DL.getScope();
-      recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+      RecordSourceLine(DL, Flags);
     }
     return;
   }
@@ -2289,8 +2296,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
     Flags |= DWARF2_FLAG_IS_STMT;
 
-  const MDNode *Scope = DL.getScope();
-  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+  RecordSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
@@ -2425,7 +2431,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
 static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                              const MDNode *S, unsigned Flags, unsigned CUID,
                              uint16_t DwarfVersion,
-                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs) {
+                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs,
+                             StringRef Comment = {}) {
   StringRef Fn;
   unsigned FileNo = 1;
   unsigned Discriminator = 0;
@@ -2439,7 +2446,7 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                  .getOrCreateSourceID(Scope->getFile());
   }
   Asm.OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
-                                         Discriminator, Fn);
+                                         Discriminator, Fn, Comment);
 }
 
 const MachineInstr *
@@ -2770,10 +2777,10 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 // Register a source line with debug info. Returns the  unique label that was
 // emitted and which provides correspondence to the source line list.
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
-                                  unsigned Flags) {
+                                  unsigned Flags, StringRef Location) {
   ::recordSourceLine(*Asm, Line, Col, S, Flags,
                      Asm->OutStreamer->getContext().getDwarfCompileUnitID(),
-                     getDwarfVersion(), getUnits());
+                     getDwarfVersion(), getUnits(), Location);
 }
 
 //===----------------------------------------------------------------------===//
