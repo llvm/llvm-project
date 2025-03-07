@@ -48,6 +48,23 @@ export class LLDBDapConfigurationProvider
       // Remove the property even if the user explicitly requested it.
       if (debugConfiguration.waitFor === true) {
         delete debugConfiguration.pid;
+        if (!("program" in debugConfiguration)) {
+          return vscode.window
+            .showErrorMessage(
+              "Failed to attach to process: 'waitFor' requires that a 'program' be provided . Please update your launch configuration.",
+              { modal: true },
+              "Configure",
+            )
+            .then((userChoice) => {
+              switch (userChoice) {
+                case "Configure":
+                  // returning null from resolveDebugConfiguration() causes VS Code to open the launch configuration
+                  return null;
+                default:
+                  return undefined;
+              }
+            });
+        }
       }
     }
     return debugConfiguration;
