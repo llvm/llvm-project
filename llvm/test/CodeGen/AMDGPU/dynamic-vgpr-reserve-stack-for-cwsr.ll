@@ -177,8 +177,7 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
   ret void
 }
 
-; Non-entry functions and graphics shaders can't run on a compute queue,
-; so they don't need to worry about CWSR.
+; Non-entry functions and graphics shaders don't need to worry about CWSR.
 define amdgpu_gs void @amdgpu_gs() #0 {
 ; CHECK-LABEL: amdgpu_gs:
 ; CHECK:       ; %bb.0:
