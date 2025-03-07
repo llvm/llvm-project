@@ -1208,27 +1208,27 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     if (privatize) {
       // DataSharingProcessor::processStep2() may create operations before/after
       // the one passed as argument. We need to treat loop wrappers and their
-      // nested loop as a unit, so we need to pass the top level wrapper (if
+      // nested loop as a unit, so we need to pass the bottom level wrapper (if
       // present). Otherwise, these operations will be inserted within a
       // wrapper region.
-      mlir::Operation *privatizationTopLevelOp = &op;
+      mlir::Operation *privatizationBottomLevelOp = &op;
       if (auto loopNest = llvm::dyn_cast<mlir::omp::LoopNestOp>(op)) {
         llvm::SmallVector<mlir::omp::LoopWrapperInterface> wrappers;
         loopNest.gatherWrappers(wrappers);
         if (!wrappers.empty())
-          privatizationTopLevelOp = &*wrappers.back();
+          privatizationBottomLevelOp = &*wrappers.front();
       }
 
       if (!info.dsp) {
         assert(tempDsp.has_value());
-        tempDsp->processStep2(privatizationTopLevelOp, isLoop);
+        tempDsp->processStep2(privatizationBottomLevelOp, isLoop);
       } else {
         if (isLoop && regionArgs.size() > 0) {
           for (const auto &regionArg : regionArgs) {
             info.dsp->pushLoopIV(info.converter.getSymbolAddress(*regionArg));
           }
         }
-        info.dsp->processStep2(privatizationTopLevelOp, isLoop);
+        info.dsp->processStep2(privatizationBottomLevelOp, isLoop);
       }
     }
   }
@@ -2741,18 +2741,20 @@ static void genCompositeDistributeParallelDoSimd(
   genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
                      parallelClauseOps, parallelReductionSyms);
 
-  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
-                           /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/true, symTable);
-  dsp.processStep1(&parallelClauseOps);
+  DataSharingProcessor parallelItemDSP(
+      converter, semaCtx, parallelItem->clauses, eval,
+      /*shouldCollectPreDeterminedSymbols=*/false,
+      /*useDelayedPrivatization=*/true, symTable);
+  parallelItemDSP.processStep1(&parallelClauseOps);
 
   EntryBlockArgs parallelArgs;
-  parallelArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  parallelArgs.priv.syms = parallelItemDSP.getDelayedPrivSymbols();
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.syms = parallelReductionSyms;
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
   genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
-                parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
+                parallelClauseOps, parallelArgs, &parallelItemDSP,
+                /*isComposite=*/true);
 
   // Clause processing.
   mlir::omp::DistributeOperands distributeClauseOps;
@@ -2768,6 +2770,11 @@ static void genCompositeDistributeParallelDoSimd(
   llvm::SmallVector<const semantics::Symbol *> simdReductionSyms;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
+
+  DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
+                                   /*shouldCollectPreDeterminedSymbols=*/true,
+                                   /*useDelayedPrivatization=*/true, symTable);
+  simdItemDSP.processStep1(&simdClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2790,7 +2797,8 @@ static void genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
+  simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -2802,7 +2810,8 @@ static void genCompositeDistributeParallelDoSimd(
                 {{distributeOp, distributeArgs},
                  {wsloopOp, wsloopArgs},
                  {simdOp, simdArgs}},
-                llvm::omp::Directive::OMPD_distribute_parallel_do_simd, dsp);
+                llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
+                simdItemDSP);
 }
 
 static void genCompositeDistributeSimd(lower::AbstractConverter &converter,

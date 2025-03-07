@@ -7,110 +7,149 @@
 #ifndef PCH_HELPER
 #define PCH_HELPER
 auto Lambda = [](){};
-#pragma acc routine(Lambda)
+#pragma acc routine(Lambda) worker nohost
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' '(lambda at
+// CHECK-NEXT: worker clause
+// CHECK-NEXT: nohost clause
 int function();
-#pragma acc routine (function)
+#pragma acc routine (function) nohost vector
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
+// CHECK-NEXT: nohost clause
+// CHECK-NEXT: vector clause
 
 namespace NS {
   // CHECK-NEXT: NamespaceDecl
   int NSFunc();
 auto Lambda = [](){};
 }
-#pragma acc routine(NS::NSFunc)
+#pragma acc routine(NS::NSFunc) seq
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'NSFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'NS'
-#pragma acc routine(NS::Lambda)
+// CHECK-NEXT: seq clause
+#pragma acc routine(NS::Lambda) gang
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'NS::(lambda at
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'NS'
+// CHECK-NEXT: gang clause
+
+constexpr int getInt() { return 1; }
 
 struct S {
   void MemFunc();
   static void StaticMemFunc();
-  constexpr static auto Lambda = [](){};
-#pragma acc routine(S::MemFunc)
+  constexpr static auto Lambda = [](){ return 1; };
+#pragma acc routine(S::MemFunc) gang(dim: 1)
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
-#pragma acc routine(S::StaticMemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(S::StaticMemFunc) gang(dim:getInt())
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
-#pragma acc routine(S::Lambda)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(S::Lambda) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: worker clause
 
-#pragma acc routine(MemFunc)
-// CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
+#pragma acc routine(MemFunc) gang(dim: 1)
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'void ()'
-#pragma acc routine(StaticMemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(StaticMemFunc) gang(dim:Lambda())
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'void ()'
-#pragma acc routine(Lambda)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(Lambda) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
+// CHECK-NEXT: worker clause
 };
 
-#pragma acc routine(S::MemFunc)
+#pragma acc routine(S::MemFunc) gang(dim: 1)
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
-#pragma acc routine(S::StaticMemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(S::StaticMemFunc) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
-#pragma acc routine(S::Lambda)
+// CHECK-NEXT: worker clause
+#pragma acc routine(S::Lambda) vector
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: vector
 
 template<typename T>
 struct DepS {
   T MemFunc();
   static T StaticMemFunc();
-  constexpr static auto Lambda = [](){};
+  constexpr static auto Lambda = [](){return 1;};
 
-#pragma acc routine(Lambda)
+#pragma acc routine(Lambda) gang(dim: Lambda())
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const auto'
-#pragma acc routine(MemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: CallExpr{{.*}}'<dependent type>'
+#pragma acc routine(MemFunc) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'T ()'
-#pragma acc routine(StaticMemFunc)
+// CHECK-NEXT: worker clause
+#pragma acc routine(StaticMemFunc) seq
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
+// CHECK-NEXT: seq clause
 
-#pragma acc routine(DepS::Lambda)
+#pragma acc routine(DepS::Lambda) gang(dim:1)
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const auto'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
-#pragma acc routine(DepS::MemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(DepS::MemFunc) gang
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
-#pragma acc routine(DepS::StaticMemFunc)
+// CHECK-NEXT: gang clause
+#pragma acc routine(DepS::StaticMemFunc) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
+// CHECK-NEXT: worker clause
 
-#pragma acc routine(DepS<T>::Lambda)
+#pragma acc routine(DepS<T>::Lambda) vector
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const auto'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
-#pragma acc routine(DepS<T>::MemFunc)
+// CHECK-NEXT: vector clause
+#pragma acc routine(DepS<T>::MemFunc) seq
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
-#pragma acc routine(DepS<T>::StaticMemFunc)
+// CHECK-NEXT: seq clause
+#pragma acc routine(DepS<T>::StaticMemFunc) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
+// CHECK-NEXT: worker clause
 
 // Instantiation:
 // CHECK: ClassTemplateSpecializationDecl{{.*}}struct DepS
@@ -118,68 +157,92 @@ struct DepS {
 
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const DepS<int>::
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'int ()'
+// CHECK-NEXT: worker clause
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
+// CHECK-NEXT: seq clause
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const DepS<int>::
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: gang clause
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: worker clause
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const DepS<int>::
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: vector clause 
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: seq clause 
 
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: worker clause
 };
 
-#pragma acc routine(DepS<int>::Lambda)
+#pragma acc routine(DepS<int>::Lambda) gang(dim:1)
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const DepS<int>::
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
-#pragma acc routine(DepS<int>::MemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+#pragma acc routine(DepS<int>::MemFunc) worker
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
-#pragma acc routine(DepS<int>::StaticMemFunc)
+// CHECK-NEXT: worker clause
+#pragma acc routine(DepS<int>::StaticMemFunc) vector
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: vector clause
 
 template<typename T>
 void TemplFunc() {
-#pragma acc routine(T::MemFunc)
+#pragma acc routine(T::MemFunc) gang(dim:T::Lambda())
 // CHECK: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
-#pragma acc routine(T::StaticMemFunc)
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: CallExpr{{.*}}'<dependent type>'
+#pragma acc routine(T::StaticMemFunc) nohost worker
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
-#pragma acc routine(T::Lambda)
+// CHECK-NEXT: nohost clause
+// CHECK-NEXT: worker clause
+#pragma acc routine(T::Lambda) seq nohost
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
+// CHECK-NEXT: seq clause
+// CHECK-NEXT: nohost clause
 
 // Instantiation:
 // CHECK: FunctionDecl{{.*}} TemplFunc 'void ()' implicit_instantiation
@@ -187,14 +250,23 @@ void TemplFunc() {
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'MemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: gang clause
+// CHECK-NEXT: ConstantExpr{{.*}}'int'
+// CHECK-NEXT: value: Int 1
+
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: nohost clause
+// CHECK-NEXT: worker clause
+
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: seq clause
+// CHECK-NEXT: nohost clause
 }
 
 void usage() {
@@ -202,3 +274,4 @@ void usage() {
   TemplFunc<S>();
 }
 #endif
+

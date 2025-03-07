@@ -948,3 +948,11 @@ def OpConvertHandleToSamplerINTEL: Op<6530, (outs ID:$res), (ins TYPE:$type, ID:
                   "$res = OpConvertHandleToSamplerINTEL $type $operand">;
 def OpConvertHandleToSampledImageINTEL: Op<6531, (outs ID:$res), (ins TYPE:$type, ID:$operand),
                   "$res = OpConvertHandleToSampledImageINTEL $type $operand">;
+
+// SPV_INTEL_memory_access_aliasing
+def OpAliasDomainDeclINTEL: Op<5911, (outs ID:$res), (ins variable_ops),
+                  "$res = OpAliasDomainDeclINTEL">;
+def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variable_ops),
+                  "$res = OpAliasScopeDeclINTEL $AliasDomain">;
+def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
+                  "$res = OpAliasScopeListDeclINTEL">;
