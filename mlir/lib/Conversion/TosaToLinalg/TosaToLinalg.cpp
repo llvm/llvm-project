@@ -138,7 +138,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
     auto shift_val = cast<tosa::MulOp>(op).getShift();
-    ElementsAttr shift_elem;
+    DenseElementsAttr shift_elem;
     if (!shift_val.getImpl() ||
         !matchPattern(shift_val, m_Constant(&shift_elem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
@@ -1389,8 +1389,24 @@ public:
     }
 
     // The shift and multiplier values.
-    SmallVector<int32_t> multiplierValues(op.getMultiplier());
-    SmallVector<int8_t> shiftValues(op.getShift());
+    DenseElementsAttr shiftElems;
+    if (!matchPattern(op.getShift(), m_Constant(&shiftElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant shift input values");
+
+    DenseElementsAttr multiplierElems;
+    if (!matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant multiplier input values");
+
+    llvm::SmallVector<int8_t> shiftValues =
+        llvm::to_vector(shiftElems.getValues<int8_t>());
+    // explicit cast is required here
+    llvm::SmallVector<int32_t> multiplierValues = llvm::to_vector(
+        llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
+                        [](IntegerAttr attr) -> int32_t {
+                          return static_cast<int32_t>(attr.getInt());
+                        }));
 
     // If we shift by more than the bitwidth, this just sets to 0.
     for (int i = 0, s = multiplierValues.size(); i < s; i++) {
