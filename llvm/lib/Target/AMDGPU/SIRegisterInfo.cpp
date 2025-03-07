@@ -2750,7 +2750,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                  MI, /*RestoreAfter=*/false, 0,
                                                  /*AllowSpill=*/false);
-          if (!TmpReg.isValid())
+          if (!TmpReg)
             break;
           DstReg = TmpReg;
         }
