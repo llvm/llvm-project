@@ -1390,15 +1390,19 @@ void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
   ++errorCounter;
 }
 
-std::string transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
-  return matchFailureMsg;
+std::string
+transform::ErrorCheckingTrackingListener::getLatestMatchFailureMessage() {
+  if (!matchFailure) {
+    return "";
+  }
+  return matchFailure->str();
 }
 
 void transform::ErrorCheckingTrackingListener::notifyMatchFailure(
-  Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
   Diagnostic diag(loc, DiagnosticSeverity::Remark);
   reasonCallback(diag);
-  matchFailureMsg = diag.str();
+  matchFailure = std::move(diag);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1074,17 +1074,17 @@ public:
   /// resets the error state to "success".
   DiagnosedSilenceableFailure checkAndResetError();
 
-  /// Return the latest match notification message.
+  /// Return the latest match notification message. Returns an empty string
+  /// when no error message was captured.
   std::string getLatestMatchFailureMessage();
 
   /// Return "true" if this tracking listener had a failure.
   bool failed() const;
 
 protected:
-
   void
   notifyMatchFailure(Location loc,
-    function_ref<void(Diagnostic &)> reasonCallback) override;
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
 
   void
   notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
@@ -1099,7 +1099,7 @@ private:
   int64_t errorCounter = 0;
 
   /// Latest message from match failure notification.
-  std::string matchFailureMsg = "";
+  std::optional<Diagnostic> matchFailure;
 };
 
 /// This is a special rewriter to be used in transform op implementations,
