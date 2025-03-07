@@ -17,6 +17,7 @@ add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
+  Common.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
   HeuristicResolver.cpp
