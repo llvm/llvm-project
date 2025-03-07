@@ -24,10 +24,16 @@ public:
   /// Creates writable file descriptor that will invoke the given callback on
   /// each write in a background thread.
   ///
+  /// \param[in] file_override
+  ///     Updates the file descriptor to the redirection pipe, if not null.
+  ///
+  /// \param[in] callback
+  ///     A callback invoked when any data is written to the file handle.
+  ///
   /// \return
   ///     \a Error::success if the redirection was set up correctly, or an error
   ///     otherwise.
-  llvm::Error RedirectTo(std::FILE *overrideFile,
+  llvm::Error RedirectTo(std::FILE *file_override,
                          std::function<void(llvm::StringRef)> callback);
 
   llvm::Expected<int> GetWriteFileDescriptor();
