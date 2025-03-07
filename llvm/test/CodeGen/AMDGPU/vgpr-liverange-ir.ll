@@ -548,7 +548,7 @@ sw.bb:                                            ; preds = %if.then9
   br label %sw.bb18
 
 sw.bb18:                                          ; preds = %sw.bb, %if.then9
-  %a.sroa.0.0 = phi <4 x i8> [ %a.sroa.0.0.vecblend, %sw.bb ], [ undef, %if.then9 ]
+  %a.sroa.0.0 = phi <4 x i8> [ %a.sroa.0.0.vecblend, %sw.bb ], [ poison, %if.then9 ]
   %a.sroa.0.0.vec.extract61 = shufflevector <4 x i8> %a.sroa.0.0, <4 x i8> zeroinitializer, <3 x i32> <i32 undef, i32 1, i32 undef>
   %i19 = insertelement <3 x i8> %a.sroa.0.0.vec.extract61, i8 0, i64 0
   %i20 = select <3 x i1> zeroinitializer, <3 x i8> zeroinitializer, <3 x i8> %i19

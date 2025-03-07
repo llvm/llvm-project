@@ -307,7 +307,7 @@ false:
   br label %exit
 
 exit:
-  %s1 = phi { i64, i64} [ undef, %entry ], [ %s0, %false]
+  %s1 = phi { i64, i64} [ poison, %entry ], [ %s0, %false]
   %v0 = extractvalue { i64, i64 } %s1, 0
   %v1 = extractvalue { i64, i64 } %s1, 1
   tail call void asm sideeffect "; use $0", "v"(i64 %v0)

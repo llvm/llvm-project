@@ -18,11 +18,11 @@ main_body:
   br i1 %8, label %LOOP, label %ENDIF
 
 Flow1:                                            ; preds = %ENDIF19, %ENDIF16
-  %9 = phi float [ %115, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %10 = phi float [ %114, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %11 = phi float [ %113, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %12 = phi float [ %112, %ENDIF19 ], [ undef, %ENDIF16 ]
-  %13 = phi float [ %111, %ENDIF19 ], [ undef, %ENDIF16 ]
+  %9 = phi float [ %115, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %10 = phi float [ %114, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %11 = phi float [ %113, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %12 = phi float [ %112, %ENDIF19 ], [ poison, %ENDIF16 ]
+  %13 = phi float [ %111, %ENDIF19 ], [ poison, %ENDIF16 ]
   %14 = phi i1 [ false, %ENDIF19 ], [ true, %ENDIF16 ]
   br label %Flow
 
@@ -140,11 +140,11 @@ Flow:                                             ; preds = %Flow1, %LOOP
   %102 = phi float [ %temp2.1, %Flow1 ], [ %temp2.1, %LOOP ]
   %103 = phi float [ %temp1.1, %Flow1 ], [ %temp1.1, %LOOP ]
   %104 = phi float [ %temp.1, %Flow1 ], [ %temp.1, %LOOP ]
-  %105 = phi float [ %9, %Flow1 ], [ undef, %LOOP ]
-  %106 = phi float [ %10, %Flow1 ], [ undef, %LOOP ]
-  %107 = phi float [ %11, %Flow1 ], [ undef, %LOOP ]
-  %108 = phi float [ %12, %Flow1 ], [ undef, %LOOP ]
-  %109 = phi float [ %13, %Flow1 ], [ undef, %LOOP ]
+  %105 = phi float [ %9, %Flow1 ], [ poison, %LOOP ]
+  %106 = phi float [ %10, %Flow1 ], [ poison, %LOOP ]
+  %107 = phi float [ %11, %Flow1 ], [ poison, %LOOP ]
+  %108 = phi float [ %12, %Flow1 ], [ poison, %LOOP ]
+  %109 = phi float [ %13, %Flow1 ], [ poison, %LOOP ]
   %110 = phi i1 [ %14, %Flow1 ], [ true, %LOOP ]
   br i1 %110, label %Flow2, label %LOOP
 
