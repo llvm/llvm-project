@@ -24,7 +24,6 @@ namespace cir {
 static BackendAction
 getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   switch (Action) {
-  case CIRGenAction::OutputType::EmitCIR:
   case CIRGenAction::OutputType::EmitMLIR:
     assert(false &&
            "Unsupported output type for getBackendActionFromOutputType!");
@@ -85,28 +84,28 @@ public:
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    auto emitMLIR = [&](mlir::Operation *MlirMod) {
+      assert(MlirMod &&
+             "MLIR module does not exist, but lowering did not fail?");
+      assert(OutputStream && "Missing output stream when emitting MLIR!");
+      // FIXME: we cannot roundtrip prettyForm=true right now.
+      mlir::OpPrintingFlags Flags;
+      Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+      MlirMod->print(*OutputStream, Flags);
+    };
+
     switch (Action) {
-    case CIRGenAction::OutputType::EmitCIR:
-      assert(CI.getFrontendOpts().MLIRTargetDialect == frontend::MLIR_CIR);
     case CIRGenAction::OutputType::EmitMLIR: {
       switch (CI.getFrontendOpts().MLIRTargetDialect) {
-      case frontend::MLIR_CIR:
-        if (OutputStream && MlirModule) {
-          mlir::OpPrintingFlags Flags;
-          Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-          MlirModule->print(*OutputStream, Flags);
-        }
+      case frontend::MLIR_CORE:
+        emitMLIR(lowerFromCIRToMLIR(MlirModule, MlirCtx));
         break;
-      case frontend::MLIR_Core:
-        mlir::ModuleOp LoweredMlirModule =
-            lowerFromCIRToMLIR(MlirModule, MlirCtx);
-        assert(OutputStream && "No output stream when lowering to MLIR!");
-        // FIXME: we cannot roundtrip prettyForm=true right now.
-        mlir::OpPrintingFlags Flags;
-        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        LoweredMlirModule->print(*OutputStream, Flags);
+      case frontend::MLIR_CIR:
+        emitMLIR(MlirModule);
         break;
       }
+      break;
     }
     case CIRGenAction::OutputType::EmitLLVM:
     case CIRGenAction::OutputType::EmitBC:
@@ -140,8 +139,6 @@ getOutputStream(CompilerInstance &CI, StringRef InFile,
   switch (Action) {
   case CIRGenAction::OutputType::EmitAssembly:
     return CI.createDefaultOutputFile(false, InFile, "s");
-  case CIRGenAction::OutputType::EmitCIR:
-    return CI.createDefaultOutputFile(false, InFile, "cir");
   case CIRGenAction::OutputType::EmitMLIR:
     return CI.createDefaultOutputFile(false, InFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
@@ -170,10 +167,6 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 void EmitAssemblyAction::anchor() {}
 EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
     : CIRGenAction(OutputType::EmitAssembly, MLIRCtx) {}
-
-void EmitCIRAction::anchor() {}
-EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
 
 void EmitMLIRAction::anchor() {}
 EmitMLIRAction::EmitMLIRAction(mlir::MLIRContext *MLIRCtx)

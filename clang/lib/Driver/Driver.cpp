@@ -5127,8 +5127,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_emit_cir))
-      return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
+    if (Args.hasArg(options::OPT_emit_mlir_EQ))
+      return C.MakeAction<CompileJobAction>(Input, types::TY_MLIR);
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))

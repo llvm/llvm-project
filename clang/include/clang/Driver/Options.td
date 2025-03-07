@@ -2985,15 +2985,16 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
-  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
-def emit_mlir_EQ : Joined<["-"], "emit-mlir=">, Visibility<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Build ASTs and then generate/lower to the selected MLIR dialect, emit the .mlir or .cir file. "
+def emit_mlir_EQ : Joined<["-"], "emit-mlir=">, Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
+  HelpText<"Build ASTs and then generate/lower to the selected MLIR dialect, emit the .mlir file. "
   "Allowed values are `core` for MLIR core dialects and `cir` for ClangIR">,
   Values<"core,cir">,
   NormalizedValuesScope<"clang::frontend">,
-  NormalizedValues<["MLIR_Core", "MLIR_CIR"]>,
-  MarshallingInfoEnum<FrontendOpts<"MLIRTargetDialect">, "MLIR_CIR">;
+  NormalizedValues<["MLIR_CORE", "MLIR_CIR"]>,
+  MarshallingInfoEnum<FrontendOpts<"MLIRTargetDialect">, "MLIR_CORE">;
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
+  Group<Action_Group>, Alias<emit_mlir_EQ>, AliasArgs<["cir"]>,
+  HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
 def flto_EQ : Joined<["-"], "flto=">,
