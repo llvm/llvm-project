@@ -9,11 +9,10 @@ program detach02
     use omp_lib, only: omp_event_handle_kind
     integer(omp_event_handle_kind)          :: event_01, event_02
 
-    !TODO: Throw following error for the versions 5.0 and 5.1
-    !ERR: At most one DETACH clause can appear on the TASK directive
-    !!$omp task detach(event_01) detach(event_02)
-    !    x = x + 1
-    !!$omp end task
+    !ERROR: At most one DETACH clause can appear on the TASK directive
+    !$omp task detach(event_01) detach(event_02)
+       x = x + 1
+    !$omp end task
 
     !ERROR: Clause MERGEABLE is not allowed if clause DETACH appears on the TASK directive
     !$omp task detach(event_01) mergeable
