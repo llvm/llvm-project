@@ -38,6 +38,9 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
+- For ARM targets, when using cc1as, the features included in the selected CPU or
+  Arch's FPU are now loaded and utilized. If you wish not to use a specific feature,
+  this will need appending to the command line used.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -463,6 +466,7 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Arch.
 
 Android Support
 ^^^^^^^^^^^^^^^
