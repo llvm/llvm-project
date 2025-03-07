@@ -551,7 +551,6 @@ public:
   READ_FEATURE(OpenMPAtomicConstruct)
   READ_FEATURE(OpenMPBlockConstruct)
   READ_FEATURE(OpenMPCancelConstruct)
-  READ_FEATURE(OpenMPCancelConstruct::If)
   READ_FEATURE(OpenMPCancellationPointConstruct)
   READ_FEATURE(OpenMPConstruct)
   READ_FEATURE(OpenMPCriticalConstruct)
