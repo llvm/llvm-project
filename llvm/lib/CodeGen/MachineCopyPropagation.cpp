@@ -973,10 +973,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
     // It's possible that the previous transformation has resulted in a no-op
     // register move (i.e. one where source and destination registers are the
-    // same). If so, delete it.
+    // same and are not referring to a reserved register). If so, delete it.
     CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
     if (CopyOperands &&
-        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg()) {
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg() &&
+        !MRI->isReserved(CopyOperands->Source->getReg())) {
       MI.eraseFromParent();
       NumDeletes++;
       Changed = true;
