@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/CovMap.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
@@ -20,13 +18,10 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,21 +33,7 @@ using namespace llvm::coverage::yaml;
 using namespace llvm::covmap;
 
 void CounterTy::encode(raw_ostream &OS) const {
-  std::pair<unsigned, uint64_t> C;
-  if (RefOpt)
-    C = {Ref, *RefOpt};
-  else if (SubOpt)
-    C = {Sub, *SubOpt};
-  else if (AddOpt)
-    C = {Add, *AddOpt};
-  else if (Tag && *Tag == Zero)
-    C = {Zero, 0u};
-  else if (Tag && Val)
-    C = {*Tag, *Val};
-  else
-    llvm_unreachable("Null value cannot be met");
-
-  encodeULEB128(C.first | (C.second << 2), OS);
+  encodeULEB128(Tag | (Val << 2), OS);
 }
 
 void DecisionTy::encode(raw_ostream &OS) const {
@@ -90,18 +71,10 @@ void RecTy::encode(uint64_t &StartLoc, raw_ostream &OS) const {
 
   assert((!isGap || *isGap) && "Don't set isGap=false");
   uint32_t Gap = (isGap ? (1u << 31) : 0u);
-  if (Loc) {
-    encodeULEB128((*Loc)[0] - StartLoc, OS);
-    encodeULEB128((*Loc)[1], OS);
-    encodeULEB128((*Loc)[2] - (*Loc)[0], OS);
-    encodeULEB128((*Loc)[3] | Gap, OS);
-    StartLoc = (*Loc)[0];
-  } else {
-    encodeULEB128((*dLoc)[0], OS);
-    encodeULEB128((*dLoc)[1], OS);
-    encodeULEB128((*dLoc)[2], OS);
-    encodeULEB128((*dLoc)[3] | Gap, OS);
-  }
+  encodeULEB128(dLoc[0], OS);
+  encodeULEB128(dLoc[1], OS);
+  encodeULEB128(dLoc[2], OS);
+  encodeULEB128(dLoc[3] | Gap, OS);
 }
 
 void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
@@ -109,9 +82,8 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   std::string Body;
   raw_string_ostream SS(Body);
 
-  assert(FileIDs);
-  encodeULEB128(FileIDs->size(), SS);
-  for (auto I : *FileIDs)
+  encodeULEB128(FileIDs.size(), SS);
+  for (auto I : FileIDs)
     encodeULEB128(I, SS);
 
   encodeULEB128(Expressions.size(), SS);
@@ -128,12 +100,11 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   }
 
   // Emit the Header
-  uint64_t NameRef = (this->NameRef ? static_cast<uint64_t>(*this->NameRef)
-                                    : MD5Hash(*this->FuncName));
+  uint64_t NameRef = this->NameRef;
   uint32_t DataSize = Body.size();
-  /* this->FuncHash */
+  uint64_t FuncHash = this->FuncHash;
   char CoverageMapping = 0; // dummy
-  /* this->FilenamesRef */
+  uint64_t FilenamesRef = this->FilenamesRef;
 
 #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Initializer)                  \
   if (sizeof(Name) > 1) {                                                      \
@@ -146,50 +117,11 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   OS << std::move(Body);
 }
 
-std::vector<std::string> CovMapTy::generateAccFilenames(
-    const std::optional<ArrayRef<StringRef>> &AccFilesOpt) const {
-  std::vector<std::string> Result;
-  if (useWD())
-    Result.push_back(getWD().str());
-  // Returns {WD} if AccFiles is None.
-  if (AccFilesOpt) {
-    for (auto &Filename : *AccFilesOpt)
-      Result.push_back(Filename.str());
-  }
-  return Result;
-}
-
-void CovMapTy::regenerateFilenames(
-    const std::optional<ArrayRef<StringRef>> &AccFilesOpt) {
-  assert(!this->Filenames);
-  if (this->Files) {
-    auto &CovMapFilenames = this->Filenames.emplace(generateAccFilenames());
-    assert(CovMapFilenames.size() <= 1);
-    for (auto &&File : *this->Files)
-      CovMapFilenames.push_back(std::move(File));
-  } else {
-    // Encode Accfiles, that comes from CovFun.
-    this->Filenames = generateAccFilenames(AccFilesOpt);
-  }
-}
-
 std::pair<uint64_t, std::string>
-CovMapTy::encodeFilenames(const std::optional<ArrayRef<StringRef>> &AccFilesOpt,
-                          bool Compress) const {
-  ArrayRef<std::string> TempFilenames;
-  std::vector<std::string> AccFilenames; // Storage
-
-  if (AccFilesOpt) {
-    AccFilenames = generateAccFilenames(AccFilesOpt);
-    TempFilenames = AccFilenames;
-  } else {
-    assert(this->Filenames);
-    TempFilenames = ArrayRef(*this->Filenames);
-  }
-
+CovMapTy::encodeFilenames(bool Compress) const {
   std::string FilenamesBlob;
   llvm::raw_string_ostream OS(FilenamesBlob);
-  CoverageFilenamesSectionWriter(TempFilenames).write(OS, Compress);
+  CoverageFilenamesSectionWriter(this->Filenames).write(OS, Compress);
 
   return {llvm::IndexedInstrProf::ComputeHash(FilenamesBlob), FilenamesBlob};
 }
@@ -200,8 +132,7 @@ void CovMapTy::encode(raw_ostream &OS, endianness Endianness) const {
   uint32_t NRecords = 0;
   uint32_t FilenamesSize = FilenamesBlob.size();
   uint32_t CoverageSize = 0;
-  uint32_t Version =
-      (this->Version ? *this->Version : INSTR_PROF_COVMAP_VERSION);
+  uint32_t Version = this->Version;
   struct {
 #define COVMAP_HEADER(Type, LLVMType, Name, Initializer) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -220,11 +151,8 @@ void CovMapTy::encode(raw_ostream &OS, endianness Endianness) const {
 }
 
 void CounterTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapOptional("Tag", Tag);
-  IO.mapOptional("Val", Val);
-  IO.mapOptional("Ref", RefOpt);
-  IO.mapOptional("Sub", SubOpt);
-  IO.mapOptional("Add", AddOpt);
+  IO.mapRequired("Tag", Tag);
+  IO.mapRequired("Val", Val);
 }
 
 void DecisionTy::mapping(llvm::yaml::IO &IO) {
@@ -233,8 +161,7 @@ void DecisionTy::mapping(llvm::yaml::IO &IO) {
 }
 
 void RecTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapOptional("Loc", Loc);
-  IO.mapOptional("dLoc", dLoc);
+  IO.mapRequired("dLoc", dLoc);
   IO.mapOptional("isGap", isGap);
   CounterTy::mapping(IO);
   IO.mapOptional("ExtTag", ExtTag);
@@ -245,27 +172,22 @@ void RecTy::mapping(llvm::yaml::IO &IO) {
 }
 
 void FileRecsTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapOptional("Index", Index);
-  IO.mapOptional("Filename", Filename);
   IO.mapRequired("Regions", Recs);
 }
 
 void CovFunTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapOptional("NameRef", NameRef);
-  IO.mapOptional("FuncName", FuncName);
+  IO.mapRequired("NameRef", NameRef);
   IO.mapRequired("FuncHash", FuncHash);
   IO.mapRequired("FilenamesRef", FilenamesRef);
-  IO.mapOptional("FileIDs", FileIDs);
+  IO.mapRequired("FileIDs", FileIDs);
   IO.mapRequired("Expressions", Expressions);
   IO.mapRequired("Files", Files);
 }
 
 void CovMapTy::mapping(llvm::yaml::IO &IO) {
   IO.mapRequired("FilenamesRef", FilenamesRef);
-  IO.mapOptional("Version", Version);
-  IO.mapOptional("Filenames", Filenames);
-  IO.mapOptional("WD", WD);
-  IO.mapOptional("Files", Files);
+  IO.mapRequired("Version", Version);
+  IO.mapRequired("Filenames", Filenames);
 }
 
 #define ECase(N, X) IO.enumCase(Value, #X, N::X)
@@ -364,106 +286,7 @@ struct CovFunSection : ELFYAML::CovMapSectionBase {
     return Error::success();
   }
 };
-
-class CovMapFilenamesResolver {
-  DenseMap<uint64_t, SetVector<StringRef>> FilenamesByCovMap;
-  std::vector<CovFunTy *> UnresolvedCovFuns;
-
-protected:
-  DenseMap<uint64_t, struct CovMapTy *> CovMapByRef;
-
-public:
-  void collectCovMap(std::vector<CovMapTy> &CovMaps) {
-    for (auto &CovMap : CovMaps)
-      CovMapByRef[CovMap.FilenamesRef] = &CovMap;
-  }
-
-  void collectCovFunFilenames(std::vector<CovFunTy> &CovFuns) {
-    for (auto &CovFun : CovFuns) {
-      auto &Filenames = FilenamesByCovMap[CovFun.FilenamesRef];
-      for (const auto &File : CovFun.Files) {
-        if (!File.Filename)
-          goto skip;
-        Filenames.insert(*File.Filename);
-      }
-      UnresolvedCovFuns.push_back(&CovFun);
-    skip:;
-    }
-  }
-
-  void encFixup() {
-    for (auto &[_, CovMap] : CovMapByRef) {
-      auto FilenamesI = FilenamesByCovMap.find(CovMap->FilenamesRef);
-      if (FilenamesI != FilenamesByCovMap.end()) {
-        // Check Filenames satisfies covfuns
-        DenseSet<StringRef> FilenamesSet;
-        if (CovMap->Files) {
-          for (const auto &Filename : *CovMap->Files)
-            FilenamesSet.insert(Filename);
-        } else if (CovMap->Filenames) {
-          for (const auto &Filename : *CovMap->Filenames)
-            FilenamesSet.insert(Filename);
-        }
-
-        for (const auto &Filename : FilenamesI->second) {
-          if (!FilenamesSet.contains(Filename)) {
-            // If not, regenerate Filenames.
-            CovMap->Files.reset();
-            CovMap->Filenames.reset();
-            break;
-          }
-        }
-      }
-
-      if (!CovMap->Filenames) {
-        // Regenerate.
-        // Use Files if exists.
-        // Use CovFuns (FilenamesI) otherwise.
-        assert(CovMap->Files || FilenamesI != FilenamesByCovMap.end());
-        CovMap->regenerateFilenames(
-            CovMap->Files ? std::nullopt : FilenamesI->second.getArrayRef());
-      }
-      auto [FilenamesRef, FilenamesBlob] = CovMap->encodeFilenames();
-      assert(CovMap->FilenamesRef == FilenamesRef);
-    }
-
-    // Fill FileIDs
-    for (auto *CovFun : UnresolvedCovFuns) {
-      assert(CovMapByRef[CovFun->FilenamesRef]);
-      assert(CovMapByRef[CovFun->FilenamesRef]->Filenames);
-      const auto &CovMapFilenames =
-          *CovMapByRef[CovFun->FilenamesRef]->Filenames;
-      auto &FileIDs = CovFun->FileIDs.emplace();
-      for (const auto &File : CovFun->Files) {
-        auto I = std::find(CovMapFilenames.begin(), CovMapFilenames.end(),
-                           File.Filename);
-        assert(I != CovMapFilenames.end());
-        FileIDs.push_back(std::distance(CovMapFilenames.begin(), I));
-      }
-      assert(CovFun->Files.size() == FileIDs.size());
-    }
-  }
-};
-
-class EncoderImpl : public Encoder, CovMapFilenamesResolver {
-public:
-  EncoderImpl(endianness Endianness) : Encoder(Endianness) {}
-
-  void collect(ELFYAML::Chunk *Chunk) override {
-    if (auto S = dyn_cast<CovMapSection>(Chunk)) {
-      collectCovMap(S->CovMaps);
-    } else if (auto S = dyn_cast<CovFunSection>(Chunk)) {
-      collectCovFunFilenames(S->CovFuns);
-    }
-  }
-
-  void fixup() override { encFixup(); }
-};
 } // namespace
-
-std::unique_ptr<Encoder> Encoder::get(endianness Endianness) {
-  return std::make_unique<EncoderImpl>(Endianness);
-}
 
 bool covmap::nameMatches(StringRef Name) {
   return (PrfNamesSection::nameMatches(Name) ||
