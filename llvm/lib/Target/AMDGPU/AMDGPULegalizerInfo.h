@@ -118,7 +118,8 @@ public:
       Register DstReg, MachineIRBuilder &B,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
+      bool ClustersKnownToBeUsed) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
