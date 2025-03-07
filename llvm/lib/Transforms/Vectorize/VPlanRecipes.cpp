@@ -2253,11 +2253,14 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
                                 CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
+  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
   // TODO: Support non-unit-reverse strided accesses.
-  int64_t Step = Strided ? -1 * CurrentPart : CurrentPart;
-  Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Step);
+  Value *Index =
+      Strided
+          ? Builder.CreateMul(Increment, ConstantInt::getSigned(IndexTy, -1))
+          : Increment;
   Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, Increment, "", getGEPNoWrapFlags());
+      Builder.CreateGEP(IndexedTy, Ptr, Index, "", getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
