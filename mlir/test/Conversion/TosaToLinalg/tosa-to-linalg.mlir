@@ -1996,6 +1996,34 @@ func.func @test_cast_fp32_i64(%arg0: tensor<1xf32>) -> (tensor<1xi64>) {
 
 // -----
 
+// CHECK-LABEL: @test_simple_f64
+func.func @test_simple_f64(%arg0: tensor<1xf64>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: [[ROUND:%.+]] = math.roundeven {{%.+}} : f64
+  // CHECK: [[CSTMINF:%.+]] = arith.constant -9.2233720368547758E+18 : f64
+  // CHECK: [[CSTMAXP1:%.+]] = arith.constant 9.2233720368547758E+18 : f64
+  // CHECK: [[CSTMIN:%.+]] = arith.constant -9223372036854775808 : i64
+  // CHECK: [[MAX:%.+]] = arith.maximumf [[ROUND]], [[CSTMINF]] : f64
+  // CHECK: [[CONV:%.+]] = arith.fptosi [[MAX]] : f64 to i64
+  // CHECK: [[CMP:%.+]] = arith.cmpf uge, [[ROUND]], [[CSTMAXP1]] : f64
+  // CHECK: arith.select [[CMP]], [[CSTMIN]], [[CONV]] : i64
+  %0 = tosa.cast %arg0 : (tensor<1xf64>) -> tensor<1xi64>
+
+  // CHECK: linalg.generic
+  // CHECK: [[ROUND:%.+]] = math.roundeven {{%.+}} : f64
+  // CHECK: [[CSTMIN:%.+]] = arith.constant 0xC1E0000000000000 : f64
+  // CHECK: [[CSTMAX:%.+]] = arith.constant 0x41DFFFFFFFC00000 : f64
+  // CHECK: [[OVERFLOW:%.+]] = arith.cmpf ugt, [[ROUND]], [[CSTMAX]] : f64
+  // CHECK: [[CLAMPMAX:%.+]] = arith.select [[OVERFLOW]], [[CSTMIN]], [[ROUND]] : f64
+  // CHECK: [[MIN:%.+]] = arith.minimumf [[CLAMPMAX]], [[CSTMAX]] : f64
+  // CHECK: [[CLAMP:%.+]] = arith.maximumf [[MIN]], [[CSTMIN]] : f64
+  // CHECK: arith.fptosi [[CLAMP]] : f64 to i32
+  %1 = tosa.cast %arg0 : (tensor<1xf64>) -> tensor<1xi32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @reduce_min_nan_propagate
 func.func @reduce_min_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
   // CHECK: linalg.reduce
