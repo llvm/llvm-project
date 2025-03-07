@@ -6374,7 +6374,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
 }
 
 TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
-  M->setTargetTriple("amdgcn-amd-amdhsa");
+  M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(
       OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
@@ -6673,7 +6673,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
 }
 
 TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
-  M->setTargetTriple("amdgcn-amd-amdgpu");
+  M->setTargetTriple(Triple("amdgcn-amd-amdgpu"));
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(
       OpenMPIRBuilderConfig(/*IsTargetDevice=*/true, /*IsGPU=*/false,
@@ -6770,7 +6770,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
 }
 
 TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
-  M->setTargetTriple("amdgcn-amd-amdhsa");
+  M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.setConfig(
       OpenMPIRBuilderConfig(true, false, false, false, false, false, false));

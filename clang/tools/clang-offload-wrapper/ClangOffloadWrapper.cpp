@@ -375,7 +375,7 @@ private:
 public:
   BinaryWrapper(StringRef Target, StringRef ToolName)
       : M("offload.wrapper.object", C), ToolName(ToolName) {
-    M.setTargetTriple(Target);
+    M.setTargetTriple(Triple(Target));
     // Look for llvm-objcopy in the same directory, from which
     // clang-offload-wrapper is invoked. This helps OpenMP offload
     // LIT tests.
