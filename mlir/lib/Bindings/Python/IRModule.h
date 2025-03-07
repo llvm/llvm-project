@@ -11,6 +11,7 @@
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
 #include <optional>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -171,6 +172,12 @@ public:
 
   int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
   MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
+
+  std::string _mlir_thread_pool_ptr() const {
+    std::stringstream ss;
+    ss << ownedThreadPool.get();
+    return ss.str();
+  }
 
 private:
   std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;

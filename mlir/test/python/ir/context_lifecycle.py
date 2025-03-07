@@ -55,9 +55,18 @@ gc.collect()
 tp = mlir.ir.ThreadPool()
 assert tp.get_max_concurrency() > 0
 c5 = mlir.ir.Context()
-c5.enable_multithreading(False)
 c5.set_thread_pool(tp)
+assert c5.get_num_threads() == tp.get_max_concurrency()
+assert c5._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
 c6 = mlir.ir.Context()
-c6.enable_multithreading(False)
 c6.set_thread_pool(tp)
-assert mlir.ir.Context._get_live_count() == 2
+assert c6.get_num_threads() == tp.get_max_concurrency()
+assert c6._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
+c7 = mlir.ir.Context(thread_pool=tp)
+assert c7.get_num_threads() == tp.get_max_concurrency()
+assert c7._mlir_thread_pool_ptr() == tp._mlir_thread_pool_ptr()
+assert mlir.ir.Context._get_live_count() == 3
+c5 = None
+c6 = None
+c7 = None
+gc.collect()
