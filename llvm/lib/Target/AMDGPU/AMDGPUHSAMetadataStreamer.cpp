@@ -230,9 +230,9 @@ void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
   Kern[".language_version"] = LanguageVersion;
 }
 
-void MetadataStreamerMsgPackV4::emitKernelAttrs(const Function &Func,
+void MetadataStreamerMsgPackV4::emitKernelAttrs(const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-
+  const Function &Func = MF.getFunction();
   if (auto *Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
   if (auto *Node = Func.getMetadata("work_group_size_hint"))
@@ -572,7 +572,7 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
     Kern[".symbol"] = Kern.getDocument()->getNode(
         (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
-    emitKernelAttrs(Func, Kern);
+    emitKernelAttrs(MF, Kern);
     emitKernelArgs(MF, Kern);
   }
 
@@ -698,10 +698,11 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 
-void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
+void MetadataStreamerMsgPackV5::emitKernelAttrs(const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV4::emitKernelAttrs(Func, Kern);
+  MetadataStreamerMsgPackV4::emitKernelAttrs(MF, Kern);
 
+  const Function &Func = MF.getFunction();
   if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
@@ -717,32 +718,17 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerMsgPackV6::emitKernelAttrs(const Function &Func,
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV5::emitKernelAttrs(Func, Kern);
+  MetadataStreamerMsgPackV5::emitKernelAttrs(MF, Kern);
 
-  // .cluster_dims_*
-  {
-    auto Attr = Func.getFnAttribute("amdgpu-cluster-dims");
-    if (Attr.isValid()) {
-      auto AttrStr = Attr.getValueAsString();
-      SmallVector<StringRef, 3> ClusterDims;
-      AttrStr.split(ClusterDims, ',');
-      assert(ClusterDims.size() == 3 && "expect 3d value");
-
-      // TODO: We can't use getAsInteger for now because it doesn't use the
-      // length of a slice as end mark. Instead, it reads all the way to the end
-      // of a string.
-      auto ClusterDimsNode = HSAMetadataDoc->getArrayNode();
-      ClusterDimsNode.push_back(
-          Kern.getDocument()->getNode(std::stoi(ClusterDims[0].str())));
-      ClusterDimsNode.push_back(
-          Kern.getDocument()->getNode(std::stoi(ClusterDims[1].str())));
-      ClusterDimsNode.push_back(
-          Kern.getDocument()->getNode(std::stoi(ClusterDims[2].str())));
-
-      Kern[".cluster_dims"] = ClusterDimsNode;
-    }
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  if (std::optional<std::array<unsigned, 3>> Dims = MFI.getClusterDims()) {
+    msgpack::ArrayDocNode ClusterDimsNode = HSAMetadataDoc->getArrayNode();
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[0]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[1]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[2]));
+    Kern[".cluster_dims"] = ClusterDimsNode;
   }
 }
 
