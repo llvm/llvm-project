@@ -1904,11 +1904,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
          "Invalid number of operands");
   assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
-  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
   if (Src.isUndef())
