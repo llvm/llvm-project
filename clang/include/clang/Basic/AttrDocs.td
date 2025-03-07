@@ -1127,13 +1127,13 @@ general-purpose code.
 .. code-block:: c++
 
   template <typename T, uint32_t N>
-  constexpr T simd_reduce(T [[clang::ext_vector_type(N)]] v) {
+  constexpr T simd_reduce(T __attribute__((ext_vector_type(N))) v) {
     static_assert((N & (N - 1)) == 0, "N must be a power of two");
     if constexpr (N == 1) {
       return v[0];
     } else {
-      T [[clang::ext_vector_type(N / 2)]] reduced = v.hi + v.lo;
-      return simd_reduce<T, N / 2>(reduced);
+      T __attribute__((ext_vector_type(N / 2))) reduced = v.hi + v.lo;
+      return simd_reduce(reduced);
     }
   }
 
