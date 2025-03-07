@@ -39,14 +39,16 @@ export class LLDBDapConfigurationProvider
     debugConfiguration: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.DebugConfiguration> {
-    // Default "pid" to ${command:pickProcess} if neither "pid" nor "program" are specified
-    // in an "attach" request.
-    if (
-      debugConfiguration.request === "attach" &&
-      !("pid" in debugConfiguration) &&
-      !("program" in debugConfiguration)
-    ) {
-      debugConfiguration.pid = "${command:pickProcess}";
+    if (debugConfiguration.request === "attach") {
+      // Use the process picker by default in attach mode to select the pid.
+      if (!("pid" in debugConfiguration)) {
+        debugConfiguration.pid = "${command:pickProcess}";
+      }
+      // The process picker cannot be used in "waitFor" mode.
+      // Remove the property even if the user explicitly requested it.
+      if (debugConfiguration.waitFor === true) {
+        delete debugConfiguration.pid;
+      }
     }
     return debugConfiguration;
   }
