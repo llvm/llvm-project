@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -625,18 +626,11 @@ bool InsertStackProtectors(const TargetMachine *TM, Function *F,
     HasIRCheck = true;
 
     // If we're instrumenting a block with a tail call, the check has to be
-    // inserted before the call rather than between it and the return. The
-    // verifier guarantees that a tail call is either directly before the
-    // return or with a single correct bitcast of the return value in between so
-    // we don't need to worry about many situations here.
+    // inserted before the call rather than between it and the return.
     Instruction *Prev = CheckLoc->getPrevNonDebugInstruction();
-    if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
-      CheckLoc = Prev;
-    else if (Prev) {
-      Prev = Prev->getPrevNonDebugInstruction();
-      if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
+    if (auto *CI = dyn_cast_if_present<CallInst>(Prev))
+      if (CI->isTailCall() && isInTailCallPosition(*CI, *TM))
         CheckLoc = Prev;
-    }
 
     // Generate epilogue instrumentation. The epilogue intrumentation can be
     // function-based or inlined depending on which mechanism the target is
