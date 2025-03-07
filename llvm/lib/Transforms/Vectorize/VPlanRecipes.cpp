@@ -2690,11 +2690,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
       return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty, Ptr,
                                             IsMasked, Alignment, Ctx.CostKind,
                                             &Ingredient);
-    else
-      return Ctx.TTI.getAddressComputationCost(Ty) +
-             Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
-                                            IsMasked, Alignment, Ctx.CostKind,
-                                            &Ingredient);
+
+    return Ctx.TTI.getAddressComputationCost(Ty) +
+           Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
+                                          IsMasked, Alignment, Ctx.CostKind,
+                                          &Ingredient);
   }
 
   InstructionCost Cost = 0;
