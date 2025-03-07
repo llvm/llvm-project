@@ -100,7 +100,8 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
   return PushPopKind::None;
 }
 
-bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(const MachineFunction &MF) const {
+bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(
+    const MachineFunction &MF) const {
   switch (getInterruptStackKind(MF)) {
   case InterruptStackKind::QCINest:
   case InterruptStackKind::QCINoNest:
@@ -122,7 +123,6 @@ bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(const MachineFunction &MF) c
   return false;
 }
 
-
 void RISCVMachineFunctionInfo::initializeBaseYamlFields(
     const yaml::RISCVMachineFunctionInfo &YamlMFI) {
   VarArgsFrameIndex = YamlMFI.VarArgsFrameIndex;
@@ -136,4 +136,3 @@ void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
 bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
   return is_contained(SExt32Registers, Reg);
 }
-
