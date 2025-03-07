@@ -272,6 +272,10 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
+// FIXME: Make these configurable, based on verbosity level.
+const int MAX_CONTEXTS_EMITTED = 2;
+const bool OMIT_SHARED_CONTEXTS = true;
+
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
@@ -279,12 +283,38 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
   bool isContext{attachmentIsContext_};
+  int contextsEmitted{isContext ? 1 : 0};
+  // Emit attachments.
   for (const Message *attachment{attachment_.get()}; attachment;
-       attachment = attachment->attachment_.get()) {
+      attachment = attachment->attachment_.get()) {
     Severity severity = isContext ? Severity::Context : attachment->severity();
-    sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
-        attachment->ToString(), Prefix(severity), PrefixColor(severity),
-        echoSourceLine);
+    auto emitAttachment = [&]() {
+      sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
+          attachment->ToString(), Prefix(severity), PrefixColor(severity),
+          echoSourceLine);
+    };
+    // TODO isContext is not used correctly here.
+    if (attachment->attachmentIsContext_) {
+      // Truncate the number of contexts emitted.
+      if (contextsEmitted <= MAX_CONTEXTS_EMITTED) {
+        emitAttachment();
+        contextsEmitted += 1;
+      }
+      if (OMIT_SHARED_CONTEXTS) {
+        // Skip less specific contexts at the same location.
+        for (const Message *next_attachment{attachment->attachment_.get()};
+            next_attachment && next_attachment->attachmentIsContext_ &&
+            next_attachment->AtSameLocation(*attachment);
+            next_attachment = next_attachment->attachment_.get()) {
+          attachment = next_attachment;
+        }
+        // NB, this loop increments `attachment` one more time after the
+        // previous loop is done advancing it to the last context at the same
+        // location.
+      }
+    } else {
+      emitAttachment();
+    }
   }
 }
 
@@ -298,7 +328,7 @@ bool Message::operator==(const Message &that) const {
   }
   const Message *thatAttachment{that.attachment_.get()};
   for (const Message *attachment{attachment_.get()}; attachment;
-       attachment = attachment->attachment_.get()) {
+      attachment = attachment->attachment_.get()) {
     if (!thatAttachment || !attachment->AtSameLocation(*thatAttachment) ||
         attachment->ToString() != thatAttachment->ToString() ||
         attachment->severity() != thatAttachment->severity()) {

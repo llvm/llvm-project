@@ -12,14 +12,14 @@
 ! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: IMPLICIT statement
 ! CHECK-NEXT:   END PROGRAM
 ! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: implicit part
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: specification part
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: main program
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
+
+
+
+
+
+
+
+
+
 
 END PROGRAM
