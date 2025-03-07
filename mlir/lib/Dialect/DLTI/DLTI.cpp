@@ -340,6 +340,7 @@ combineOneSpec(DataLayoutSpecInterface spec,
            "unexpected data layout entry for built-in type");
 
     auto interface = cast<DataLayoutTypeInterface>(typeSample);
+    // TODO: Revisit this method and call once issue #130321 gets resolved.
     if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
                                  spec, entriesForID))
       return failure();
