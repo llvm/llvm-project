@@ -2538,7 +2538,7 @@ protected:
   bool Reverse;
 
   /// Whether the accessed addresses are evenly spaced apart by a fixed stride.
-  bool Strided;
+  bool Strided = false;
 
   /// Whether the memory access is masked.
   bool IsMasked = false;
