@@ -1447,8 +1447,7 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
 
 MaybeAlign
 AArch64AsmPrinter::getRequiredGlobalAlignment(const GlobalVariable &GV) {
-  return GV.isTagged() && GV.getAlign().valueOrOne() < 16 ? MaybeAlign(16)
-                                                          : std::nullopt;
+  return GV.isTagged() ? MaybeAlign(16) : std::nullopt;
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset

@@ -797,7 +797,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
   if (OverAlignment) {
     assert(!GV->hasSection());
     Size = alignTo(Size, *OverAlignment);
-    Alignment = *OverAlignment;
+    if (Alignment < *OverAlignment)
+      Alignment = *OverAlignment;
   }
 
   for (auto &Handler : Handlers)
