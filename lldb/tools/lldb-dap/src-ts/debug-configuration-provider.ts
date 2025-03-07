@@ -1,29 +1,7 @@
 import * as vscode from "vscode";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
-
-/**
- * Shows an error message to the user that optionally allows them to open their
- * launch.json to configure it.
- *
- * @param message The error message to display to the user
- * @returns `undefined` if the debug session should stop or `null` if the launch.json should be opened
- */
-async function showErrorWithConfigureButton(
-  message: string,
-): Promise<null | undefined> {
-  const userSelection = await vscode.window.showErrorMessage(
-    message,
-    { modal: true },
-    "Configure",
-  );
-
-  if (userSelection === "Configure") {
-    return null; // Stops the debug session and opens the launch.json for editing
-  }
-
-  return undefined; // Only stops the debug session
-}
+import { showErrorWithConfigureButton } from "./ui/error-messages";
 
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
