@@ -1,4 +1,4 @@
-//===------- Offload API tests - olReleaseKernel --------------------------===//
+//===------- Offload API tests - olDestroyQueue ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,13 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olReleaseKernelTest = OffloadKernelTest;
+using olDestroyQueueTest = OffloadQueueTest;
 
-TEST_F(olReleaseKernelTest, Success) {
-  ASSERT_SUCCESS(olRetainKernel(Kernel));
-  ASSERT_SUCCESS(olReleaseKernel(Kernel));
+TEST_F(olDestroyQueueTest, Success) {
+  ASSERT_SUCCESS(olDestroyQueue(Queue));
+  Queue = nullptr;
 }
 
-TEST_F(olReleaseKernelTest, InvalidNullHandle) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olReleaseKernel(nullptr));
+TEST_F(olDestroyQueueTest, InvalidNullHandle) {
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olDestroyQueue(nullptr));
 }

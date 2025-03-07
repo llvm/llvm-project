@@ -23,5 +23,5 @@ TEST_F(olCreateProgramTest, Success) {
                                  DeviceBin->getBufferSize(), &Program));
   ASSERT_NE(Program, nullptr);
 
-  ASSERT_SUCCESS(olReleaseProgram(Program));
+  ASSERT_SUCCESS(olDestroyProgram(Program));
 }

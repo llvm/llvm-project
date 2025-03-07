@@ -536,15 +536,7 @@ operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_retain_queue_params_t *params) {
-  os << ".Queue = ";
-  printPtr(os, *params->pQueue);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_release_queue_params_t *params) {
+           const struct ol_destroy_queue_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   return os;
@@ -559,15 +551,7 @@ operator<<(llvm::raw_ostream &os, const struct ol_wait_queue_params_t *params) {
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_retain_event_params_t *params) {
-  os << ".Event = ";
-  printPtr(os, *params->pEvent);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_release_event_params_t *params) {
+           const struct ol_destroy_event_params_t *params) {
   os << ".Event = ";
   printPtr(os, *params->pEvent);
   return os;
@@ -648,15 +632,7 @@ operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_retain_program_params_t *params) {
-  os << ".Program = ";
-  printPtr(os, *params->pProgram);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_release_program_params_t *params) {
+           const struct ol_destroy_program_params_t *params) {
   os << ".Program = ";
   printPtr(os, *params->pProgram);
   return os;
@@ -678,15 +654,7 @@ operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_retain_kernel_params_t *params) {
-  os << ".Kernel = ";
-  printPtr(os, *params->pKernel);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_release_kernel_params_t *params) {
+           const struct ol_destroy_kernel_params_t *params) {
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
   return os;

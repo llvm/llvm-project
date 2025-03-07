@@ -22,10 +22,10 @@ struct olEnqueueKernelLaunchTest : OffloadQueueTest {
 
   void TearDown() override {
     if (Kernel) {
-      olReleaseKernel(Kernel);
+      olDestroyKernel(Kernel);
     }
     if (Program) {
-      olReleaseProgram(Program);
+      olDestroyProgram(Program);
     }
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());
   }
