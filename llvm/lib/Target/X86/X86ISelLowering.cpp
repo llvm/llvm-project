@@ -6153,12 +6153,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       return true;
     }
     // Handle CONCAT(SUB0, SUB1).
-    // Limit this to vXi64 vector cases to make the most of cross lane shuffles.
+    // Limit to vXi64/splat cases to make the most of cross lane shuffles.
     if (Depth > 0 && InsertIdx == NumSubElts && NumElts == (2 * NumSubElts) &&
-        NumBitsPerElt == 64 && Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
         Src.getOperand(0).isUndef() &&
         Src.getOperand(1).getValueType() == SubVT &&
         Src.getConstantOperandVal(2) == 0 &&
+        (NumBitsPerElt == 64 || Src.getOperand(1) == Sub) &&
         SDNode::areOnlyUsersOf({N.getNode(), Src.getNode()}, Sub.getNode())) {
       for (int i = 0; i != (int)NumSubElts; ++i)
         Mask.push_back(i);
@@ -13776,6 +13777,14 @@ static SDValue lowerV8I16GeneralSingleInputShuffle(
       DWordPairs.resize(2, std::make_pair(-1, -1));
       int PSHUFHalfMask[4] = {DWordPairs[0].first, DWordPairs[0].second,
                               DWordPairs[1].first, DWordPairs[1].second};
+      // For splat, ensure we widen the PSHUFDMask to allow vXi64 folds.
+      if (ShuffleVectorSDNode::isSplatMask(PSHUFDMask) &&
+          ShuffleVectorSDNode::isSplatMask(PSHUFHalfMask)) {
+        int SplatIdx = ShuffleVectorSDNode::getSplatMaskIndex(PSHUFHalfMask);
+        std::fill(PSHUFHalfMask, PSHUFHalfMask + 4, SplatIdx);
+        PSHUFDMask[0] = PSHUFDMask[2] = DOffset + 0;
+        PSHUFDMask[1] = PSHUFDMask[3] = DOffset + 1;
+      }
       if ((NumHToL + NumHToH) == 0)
         return ShuffleDWordPairs(PSHUFHalfMask, PSHUFDMask, X86ISD::PSHUFLW);
       if ((NumLToL + NumLToH) == 0)
@@ -31874,7 +31883,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 
   IRBuilder<> Builder(AI);
   Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -31896,21 +31904,10 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // otherwise, we might be able to be more aggressive on relaxed idempotent
   // rmw. In practice, they do not look useful, so we don't try to be
   // especially clever.
-  if (SSID == SyncScope::SingleThread)
-    // FIXME: we could just insert an ISD::MEMBARRIER here, except we are at
-    // the IR level, so we must wrap it in an intrinsic.
-    return nullptr;
 
-  if (!Subtarget.hasMFence())
-    // FIXME: it might make sense to use a locked operation here but on a
-    // different cache-line to prevent cache-line bouncing. In practice it
-    // is probably a small win, and x86 processors without mfence are rare
-    // enough that we do not bother.
-    return nullptr;
-
-  Function *MFence =
-      llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse2_mfence);
-  Builder.CreateCall(MFence, {});
+  // Use `fence seq_cst` over `llvm.x64.sse2.mfence` here to get the correct
+  // lowering for SSID == SyncScope::SingleThread and !hasMFence
+  Builder.CreateFence(AtomicOrdering::SequentiallyConsistent, SSID);
 
   // Finally we can emit the atomic load.
   LoadInst *Loaded = Builder.CreateAlignedLoad(
@@ -42605,6 +42602,43 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
     }
 
+    return SDValue();
+  }
+  case X86ISD::VPERMV: {
+    // Combine VPERMV to VPERMV3 if the source operand can be freely split.
+    SmallVector<int, 32> Mask;
+    SmallVector<SDValue, 2> SrcOps, SubOps;
+    SDValue Src = peekThroughBitcasts(N.getOperand(1));
+    if ((Subtarget.hasVLX() || VT.is512BitVector()) &&
+        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask) &&
+        collectConcatOps(Src.getNode(), SubOps, DAG)) {
+      assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
+      assert(SrcOps.size() == 1 && "Unexpected shuffle ops");
+      assert((SubOps.size() == 2 || SubOps.size() == 4) &&
+             "Unexpected split ops");
+      // Bail if we were permuting a widened vector.
+      if (SubOps[1].isUndef() &&
+          (SubOps.size() == 2 || (SubOps[2].isUndef() && SubOps[3].isUndef())))
+        return SDValue();
+      // Bail if any subops would have folded into the concat.
+      if (any_of(SubOps, [](SDValue Op) { return isShuffleFoldableLoad(Op); }))
+        return SDValue();
+      // Concat 4x128 back to 2x256.
+      if (SubOps.size() == 4) {
+        SubOps[0] = concatSubVectors(SubOps[0], SubOps[1], DAG, DL);
+        SubOps[1] = concatSubVectors(SubOps[2], SubOps[3], DAG, DL);
+      }
+      // Convert mask to 2 operand shuffle.
+      int HalfElts = NumElts / 2;
+      for (int &M : Mask)
+        M += M >= HalfElts ? HalfElts : 0;
+      SDValue Lo = widenSubVector(SubOps[0], false, Subtarget, DAG, DL,
+                                  VT.getSizeInBits());
+      SDValue Hi = widenSubVector(SubOps[1], false, Subtarget, DAG, DL,
+                                  VT.getSizeInBits());
+      return lowerShuffleWithPERMV(DL, VT, Mask, DAG.getBitcast(VT, Lo),
+                                   DAG.getBitcast(VT, Hi), Subtarget, DAG);
+    }
     return SDValue();
   }
   case X86ISD::VPERMV3: {
@@ -57902,9 +57936,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     switch (Op0.getOpcode()) {
     case ISD::VECTOR_SHUFFLE: {
-      if (NumOps == 2 && VT.is256BitVector() &&
+      // TODO: Relax VBMI requirement for repeated shuffle ops - currently
+      // limited to targets that should always have good cross lane shuffles.
+      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1) ||
+           (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
+            Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
+            Subtarget.hasVBMI()))) {
         int NumSubElts = Op0.getValueType().getVectorNumElements();
         SmallVector<int> NewMask;
         for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {

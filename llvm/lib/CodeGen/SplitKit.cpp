@@ -598,25 +598,27 @@ bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
   if (!UseMI)
     return false;
 
-  Register Reg = Edit->getReg();
-  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  // Currently code assumes rematerialization only happens for a def at 0.
+  const unsigned DefOperandIdx = 0;
+  // We want to compute the static register class constraint for the instruction
+  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
+  // site, then rematerializing it will increase the constraints.
+  const TargetRegisterClass *DefConstrainRC =
+      DefMI->getRegClassConstraint(DefOperandIdx, &TII, &TRI);
+  if (!DefConstrainRC)
+    return false;
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Edit->getReg());
 
   // We want to find the register class that can be inflated to after the split
   // occurs in recomputeRegClass
   const TargetRegisterClass *SuperRC =
       TRI.getLargestLegalSuperClass(RC, *MBB.getParent());
 
-  // We want to compute the static register class constraint for the instruction
-  // def. If it is a smaller subclass than getLargestLegalSuperClass at the use
-  // site, then rematerializing it will increase the constraints.
-  const TargetRegisterClass *DefConstrainRC =
-      DefMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
-                                                /*ExploreBundle=*/true);
-
+  Register DefReg = DefMI->getOperand(DefOperandIdx).getReg();
   const TargetRegisterClass *UseConstrainRC =
-      UseMI->getRegClassConstraintEffectForVReg(Reg, SuperRC, &TII, &TRI,
+      UseMI->getRegClassConstraintEffectForVReg(DefReg, SuperRC, &TII, &TRI,
                                                 /*ExploreBundle=*/true);
-
   return UseConstrainRC->hasSubClass(DefConstrainRC);
 }
 
