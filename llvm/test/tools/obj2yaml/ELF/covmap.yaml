@@ -33,6 +33,7 @@ Sections:
 # COVMAP: FuncHash:      0xAFC772D567676299
         FuncHash:        0xAFC772D567676299
         FilenamesRef:    0x70DA2CAFD8CE198E
+# RAW:  FileIDs:         [ 1, 1 ]
 # COVMAP: Expressions:
         Expressions:
 # RAW:    - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 1 } ]
@@ -53,6 +54,7 @@ Sections:
 # COVMAP:   Regions:
             Regions:
 # LOC:     Loc: [ 3, 17, 14, 2 ]
+# RAWONLY-NOT: Loc: [ 3, 17, 14, 2 ]
 # DLOC:   dLoc: [ 3, 17, 11, 2 ]
 # RAW:     Tag: Ref, Val: 0
 # DETONLY: Ref: 0
@@ -62,6 +64,7 @@ Sections:
 # RAW:     Tag: Add, Val: 0
 # DETONLY: Add: 0
               - { Loc: [ 6, 6, 11, 4 ], Add: 0 }
+# RAW:    Tag: Zero, Val: 3,
 # COVMAP: Expansion: 1
               - { Loc: [ 7, 9, 7, 13 ], Expansion: 1 }
 # COVMAP: isGap: true
@@ -73,11 +76,12 @@ Sections:
 # RAW:      Tag: Sub, Val: 3
 # DETONLY:  Sub: 3
               - { Loc: [ 8, 17, 10, 5 ], isGap: true, Sub: 3 }
+# RAW:    Tag: Zero, Val: 4,
 # COVMAP: ExtTag: Skip
               - { Loc: [ 9, 1, 9, 1 ], ExtTag: Skip }
               - { Loc: [ 10, 5, 11, 4 ], Sub: 3 }
               - { Loc: [ 11, 12, 11, 17 ], Sub: 3 }
-# RAW: ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
+# RAW:    Tag: Zero, Val: 8, ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
 # DETONLY: Branch: [ { Ref: 1 }, { Sub: 6 } ]
               - { Loc: [ 11, 12, 11, 17 ], Branch: [ { Ref: 1 }, { Sub: 6 } ] }
               - { Loc: [ 11, 19, 12, 3 ], isGap: true, Sub: 6 }
@@ -86,6 +90,7 @@ Sections:
 # LOC:    Loc: [ 13, 3, 13, 12 ]
 # DLOC:  dLoc: [ 1, 3, 0, 12 ]
 # COVMAP: Tag: Zero
+# RAW:    Val: 0
               - { Loc: [ 13, 3, 13, 12 ], Tag: Zero }
 # DET:    - Index:           1
           - Index:           1
@@ -95,18 +100,19 @@ Sections:
             Regions:
               - { Loc: [ 1, 17, 1, 41 ], Add: 0 }
               - { Loc: [ 1, 18, 1, 32 ], Add: 0 }
-# RAW:      ExtTag: Decision
+# RAW:    Tag: Zero, Val: 10, ExtTag: Decision
 # COVMAP: Decision: { BIdx: 5, NCond: 3 } }
               - { Loc: [ 1, 18, 1, 40 ], Decision: { BIdx: 5, NCond: 3 } }
               - { Loc: [ 1, 19, 1, 22 ], Add: 0 }
-# RAW: ExtTag: MCDCBranch
-# RAW:     Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ]
+# RAW:    Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ]
 # DETONLY: Branch: [ { Sub: 7 }, { Ref: 5 } ]
 # COVMAP: MCDC: [ 1, 2, 3 ]
               - { Loc: [ 1, 19, 1, 22 ], Branch: [ { Sub: 7 }, { Ref: 5 } ], MCDC: [ 1, 2, 3 ] }
               - { Loc: [ 1, 26, 1, 31 ], Ref: 5 }
               - { Loc: [ 1, 26, 1, 31 ], Branch: [ { Tag: Zero }, { Ref: 6 } ], MCDC: [ 3, 2, 0 ] }
               - { Loc: [ 1, 36, 1, 40 ], Ref: 3 }
+# LOC:     Loc: [ 1, 36, 1, 40 ]
+# DLOC:   dLoc: [ 0, 36, 0, 40 ]
               - { Loc: [ 1, 36, 1, 40 ], Branch: [ { Ref: 4 }, { Tag: Zero } ], MCDC: [ 2, 0, 0 ] }
 # CHECK:             __llvm_covmap
   - Name:            __llvm_covmap
@@ -132,9 +138,9 @@ Sections:
 # PLAIN-NOT: CovMap:
 # PLAIN-NOT: PrfNames:
 # PLAIN: Content:
-# CovMap: ProfNames
+# COVMAP: PrfNames
     PrfNames:
-# CovMap: - - _Z4funci
+# COVMAP: - - _Z4funci
       - - _Z4funci
   - Type:            SectionHeaderTable
     Sections:

@@ -35,6 +35,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -121,6 +122,10 @@ struct CounterTy {
   virtual ~CounterTy() {}
 
   virtual void mapping(llvm::yaml::IO &IO);
+
+  uint64_t getExtTagVal() const {
+    return (((!Tag || *Tag == Zero) && Val && *Val != 0) ? *Val : 0);
+  }
 
   /// Holds Val for extensions.
   Error decodeOrTag(DecoderContext &Data);
@@ -335,7 +340,7 @@ protected:
 
 public:
   Decoder(endianness Endianness) : Endianness(Endianness) {}
-  virtual ~Decoder() {}
+  virtual ~Decoder();
 
   /// Returns DecoderImpl.
   static std::unique_ptr<Decoder>

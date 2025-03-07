@@ -43,6 +43,8 @@ using namespace llvm::covmap;
 
 bool Decoder::enabled;
 
+Decoder::~Decoder() {}
+
 // DataExtractor w/ single Cursor
 struct coverage::yaml::DecoderContext : DataExtractor,
                                         DataExtractor::Cursor,
@@ -74,10 +76,10 @@ void CounterTy::encode(raw_ostream &OS) const {
     C = {Sub, *SubOpt};
   else if (AddOpt)
     C = {Add, *AddOpt};
-  else if (Tag && *Tag == Zero)
-    C = {Zero, 0u};
   else if (Tag && Val)
     C = {*Tag, *Val};
+  else if (Tag && *Tag == Zero)
+    C = {Zero, 0u};
   else
     llvm_unreachable("Null value cannot be met");
 
@@ -90,29 +92,26 @@ Error CounterTy::decodeOrTag(DecoderContext &Data) {
     return COrErr.takeError();
   auto T = static_cast<TagTy>(*COrErr & 0x03);
   auto V = (*COrErr >> 2);
-  if (T == Zero) {
-    if (V == 0)
-      Tag = Zero; // w/o Val
-    else
-      Val = V; // w/o Tag
+  if (Data.Raw) {
+    Tag = T;
+    Val = V;
   } else {
-    if (Data.Raw) {
-      Tag = T;
-      Val = V;
-    } else {
-      switch (T) {
-      case Zero:
-        llvm_unreachable("Zero should be handled in advance");
-      case Ref:
-        RefOpt = V;
-        break;
-      case Sub:
-        SubOpt = V;
-        break;
-      case Add:
-        AddOpt = V;
-        break;
-      }
+    switch (T) {
+    case Zero:
+      if (V)
+        Val = V;
+      else
+        Tag = Zero;
+      break;
+    case Ref:
+      RefOpt = V;
+      break;
+    case Sub:
+      SubOpt = V;
+      break;
+    case Add:
+      AddOpt = V;
+      break;
     }
   }
 
@@ -122,11 +121,10 @@ Error CounterTy::decodeOrTag(DecoderContext &Data) {
 Error CounterTy::decode(DecoderContext &Data) {
   if (auto E = decodeOrTag(Data))
     return E;
-  if (!this->Tag && this->Val)
+  if (auto V = getExtTagVal())
     return make_error<CoverageMapError>(
         coveragemap_error::malformed,
-        "Counter::Zero shouldn't have the Val: 0x" +
-            Twine::utohexstr(*this->Val));
+        "Counter::Zero shouldn't have the Val: 0x" + Twine::utohexstr(V));
   return Error::success();
 }
 
@@ -217,14 +215,23 @@ Error RecTy::decode(DecoderContext &Data) {
   // Decode tagged CounterTy
   if (auto E = CounterTy::decodeOrTag(Data))
     return E;
-  if (!this->Val || this->Tag) {
+  auto V = getExtTagVal();
+  if (V == 0) {
     // Compatible to CounterTy
-  } else if (*this->Val & 1u) {
-    Expansion = (*this->Val >> 1);
-    this->Val.reset();
+  } else if (V & 1u) {
+    Expansion = (V >> 1);
+    if (!Data.Raw) {
+      assert(!this->Tag || *this->Tag == Zero);
+      this->Tag.reset();
+      this->Val.reset();
+    }
   } else {
-    auto Tag = *this->Val >> 1;
-    this->Val.reset();
+    auto Tag = (V >> 1);
+    if (!Data.Raw) {
+      assert(!this->Tag || *this->Tag == Zero);
+      this->Tag.reset();
+      this->Val.reset();
+    }
     switch (Tag) {
     case Skip:
       ExtTag = Skip; // w/o Val
@@ -301,9 +308,10 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   std::string Body;
   raw_string_ostream SS(Body);
 
-  assert(FileIDs);
-  encodeULEB128(FileIDs->size(), SS);
-  for (auto I : *FileIDs)
+  assert(this->FileIDs);
+  auto &FileIDs = *this->FileIDs;
+  encodeULEB128(FileIDs.size(), SS);
+  for (auto I : FileIDs)
     encodeULEB128(I, SS);
 
   encodeULEB128(Expressions.size(), SS);
@@ -323,9 +331,9 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   uint64_t NameRef = (this->NameRef ? static_cast<uint64_t>(*this->NameRef)
                                     : MD5Hash(*this->FuncName));
   uint32_t DataSize = Body.size();
-  /* this->FuncHash */
+  uint64_t FuncHash = this->FuncHash;
   char CoverageMapping = 0; // dummy
-  /* this->FilenamesRef */
+  uint64_t FilenamesRef = this->FilenamesRef;
 
 #define COVMAP_FUNC_RECORD(Type, LLVMType, Name, Initializer)                  \
   if (sizeof(Name) > 1) {                                                      \
@@ -421,14 +429,14 @@ Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
   // Decode body.
   assert(CovMapByRef.contains(this->FilenamesRef));
   auto &CovMap = *CovMapByRef[this->FilenamesRef];
-  FileIDs.emplace();
+  auto &FileIDs = this->FileIDs.emplace();
 
   auto NumFilesOrErr = Data.getULEB128();
   if (!NumFilesOrErr)
     return NumFilesOrErr.takeError();
   for (unsigned I = 0, E = *NumFilesOrErr; I != E; ++I) {
     if (auto IDOrErr = Data.getULEB128())
-      FileIDs->push_back(*IDOrErr);
+      FileIDs.push_back(*IDOrErr);
     else
       return IDOrErr.takeError();
   }
@@ -451,7 +459,7 @@ Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
     auto &File = Files.emplace_back();
     if (Data.Detailed) {
       File.Index = FileIdx; // Sequential number.
-      File.Filename = (*CovMap.Filenames)[(*FileIDs)[FileIdx]];
+      File.Filename = (*CovMap.Filenames)[FileIDs[FileIdx]];
     }
 
     // Decode subarray.
@@ -471,7 +479,7 @@ Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
 
   // Hide FileIDs.
   if (!Data.Raw)
-    FileIDs.reset();
+    this->FileIDs.reset();
 
   assert(Data.tell() == ExpectedEndOffset);
   return Data.tell();
@@ -524,20 +532,19 @@ Expected<uint64_t> CovMapTy::decode(const ArrayRef<uint8_t> Content,
   if (!Data)
     return Data.takeError();
   this->FilenamesRef = MD5Hash(FnBlob);
-  this->Filenames.emplace();
-  if (auto E = RawCoverageFilenamesReader(FnBlob, *this->Filenames)
+  auto &Filenames = this->Filenames.emplace();
+  if (auto E = RawCoverageFilenamesReader(FnBlob, Filenames)
                    .read(static_cast<CovMapVersion>(Version)))
     return E;
 
   if (Param.Detailed && useWD()) {
-    assert(this->Filenames->size() >= 1);
-    auto FilenamesI = this->Filenames->begin();
+    assert(Filenames.size() >= 1);
+    auto FilenamesI = Filenames.begin();
     StringRef WD = *FilenamesI++;
     if (!WD.empty())
       this->WD = WD;
     // Use Filenames as a storage.
-    this->Files.emplace(
-        MutableArrayRef(&*FilenamesI, &*this->Filenames->end()));
+    this->Files.emplace(MutableArrayRef(&*FilenamesI, &*Filenames.end()));
   }
 
   Offset = Data.tell();
