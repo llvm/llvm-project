@@ -832,8 +832,7 @@ Error LLJITBuilderState::prepareForConstruction() {
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
       CreateObjectLinkingLayer =
-          [](ExecutionSession &ES,
-             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
+          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
         return std::make_unique<ObjectLinkingLayer>(ES);
       };
     }
@@ -951,7 +950,7 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer) {
-    auto Layer = S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
+    auto Layer = S.CreateObjectLinkingLayer(ES);
     if (Layer && S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
       auto *RTDyldLayer =
           dyn_cast_or_null<RTDyldObjectLinkingLayer>(Layer.get().get());

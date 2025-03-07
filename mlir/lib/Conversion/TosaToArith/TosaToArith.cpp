@@ -28,7 +28,7 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValue());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValues());
     return success();
   }
 };

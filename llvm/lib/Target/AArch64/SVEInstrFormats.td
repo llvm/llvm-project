@@ -5452,6 +5452,19 @@ multiclass sve_int_dup_fpimm_pred<string asm> {
                   (!cast<Instruction>(NAME # _S) ZPR32:$Zd, PPRAny:$Pg, fpimm32:$imm8), 1>;
   def : InstAlias<"fmov $Zd, $Pg/m, $imm8",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPRAny:$Pg, fpimm64:$imm8), 1>;
+
+  def : Pat<(nxv8f16 (vselect nxv8i1:$pg, (splat_vector fpimm16:$imm8), nxv8f16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, fpimm16:$imm8)>;
+  def : Pat<(nxv4f16 (vselect nxv4i1:$pg, (splat_vector fpimm16:$imm8), nxv4f16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, fpimm16:$imm8)>;
+  def : Pat<(nxv2f16 (vselect nxv2i1:$pg, (splat_vector fpimm16:$imm8), nxv2f16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, fpimm16:$imm8)>;
+  def : Pat<(nxv4f32 (vselect nxv4i1:$pg, (splat_vector fpimm32:$imm8), nxv4f32:$zd)),
+            (!cast<Instruction>(NAME # _S) $zd, $pg, fpimm32:$imm8)>;
+  def : Pat<(nxv2f32 (vselect nxv2i1:$pg, (splat_vector fpimm32:$imm8), nxv2f32:$zd)),
+            (!cast<Instruction>(NAME # _S) $zd, $pg, fpimm32:$imm8)>;
+  def : Pat<(nxv2f64 (vselect nxv2i1:$pg, (splat_vector fpimm64:$imm8), nxv2f64:$zd)),
+            (!cast<Instruction>(NAME # _D) $zd, $pg, fpimm64:$imm8)>;
 }
 
 class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,

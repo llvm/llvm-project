@@ -628,15 +628,14 @@ def bolt_optimize(args):
                 sys.stdout.write(line)
             process.check_returncode()
 
-            output = subprocess.check_output(
-                [opts.readelf, "--file-header", input], universal_newlines=True
-            )
-            if re.search(r"Type:\s*((Shared)|(DYN))", output):
-                # force using the instrumented version
+            # Shared library must be preloaded to be covered.
+            if ".so" in input:
                 preloads.append(instrumented_output)
 
         if preloads:
-            print("Patching execution environment for dynamic library")
+            print(
+                f"Patching execution environment for dynamic libraries: {' '.join(preloads)}"
+            )
             environ["LD_PRELOAD"] = os.pathsep.join(preloads)
 
     args = [

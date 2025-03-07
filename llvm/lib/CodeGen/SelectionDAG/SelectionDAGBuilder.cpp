@@ -1981,8 +1981,8 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
-  TargetMBB->setIsEHCatchretTarget(true);
-  DAG.getMachineFunction().setHasEHCatchret(true);
+  TargetMBB->setIsEHContTarget(true);
+  DAG.getMachineFunction().setHasEHContTarget(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);
@@ -12020,7 +12020,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
       if (const auto *C = dyn_cast<Constant>(PHIOp)) {
         Register &RegOut = ConstantsOut[C];
         if (!RegOut) {
-          RegOut = FuncInfo.CreateRegs(C);
+          RegOut = FuncInfo.CreateRegs(&PN);
           // We need to zero/sign extend ConstantInt phi operands to match
           // assumptions in FunctionLoweringInfo::ComputePHILiveOutRegInfo.
           ISD::NodeType ExtendType = ISD::ANY_EXTEND;

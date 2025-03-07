@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -797,8 +798,67 @@ void Fortran::lower::defaultInitializeAtRuntime(
         })
         .end();
   } else {
-    mlir::Value box = builder.createBox(loc, exv);
-    fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    /// For "simpler" types, relying on "_FortranAInitialize"
+    /// leads to poor runtime performance. Hence optimize
+    /// the same.
+    const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+    mlir::Type symTy = converter.genType(sym);
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && !Fortran::semantics::IsPolymorphic(sym) &&
+        declTy->category() ==
+            Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
+        !mlir::isa<fir::SequenceType>(symTy) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      std::string globalName = fir::NameUniquer::doGenerated(
+          (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
+           fir::kDerivedTypeInitSuffix)
+              .str());
+      mlir::Location loc = genLocation(converter, sym);
+      mlir::StringAttr linkage = builder.createInternalLinkage();
+      fir::GlobalOp global = builder.getNamedGlobal(globalName);
+      if (!global && details->init()) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              fir::ExtendedValue initVal = genInitializerExprValue(
+                  converter, loc, details->init().value(), stmtCtx);
+              mlir::Value castTo =
+                  builder.createConvert(loc, symTy, fir::getBase(initVal));
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      } else if (!global) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              mlir::Value initVal = genDefaultInitializerValue(
+                  converter, loc, sym, symTy, stmtCtx);
+              mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      }
+      auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                  global.getSymbol());
+      fir::LoadOp load = builder.create<fir::LoadOp>(loc, addrOf.getResult());
+      // FIXME: Use memcpy instead of store.
+      builder.create<fir::StoreOp>(loc, load, fir::getBase(exv));
+    } else {
+      mlir::Value box = builder.createBox(loc, exv);
+      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    }
   }
 }
 
@@ -1926,22 +1986,6 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                       replace);
 }
 
-static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
-  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  if (cudaAttr) {
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
-      return kPinnedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
-      return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
-      return kManagedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
-}
-
 /// Lower specification expressions and attributes of variable \p var and
 /// add it to the symbol map. For a global or an alias, the address must be
 /// pre-computed and provided in \p preAlloc. A dummy argument for the current
@@ -2032,7 +2076,7 @@ void Fortran::lower::mapSymbolAttributes(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
         converter.getLoweringOptions().getLowerToHighLevelFIR(),
-        getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
