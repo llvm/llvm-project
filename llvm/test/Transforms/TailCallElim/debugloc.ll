@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=debugify,tailcallelim -S | FileCheck %s
-; RUN: opt < %s -passes=debugify,tailcallelim -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 define void @foo() {
 entry:

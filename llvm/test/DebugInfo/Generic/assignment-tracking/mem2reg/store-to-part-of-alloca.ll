@@ -1,5 +1,4 @@
 ; RUN: opt -passes=mem2reg -S %s -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators -passes=mem2reg -S %s -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; CHECK: #dbg_value(i64 0, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 

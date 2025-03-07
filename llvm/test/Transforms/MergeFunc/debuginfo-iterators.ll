@@ -1,6 +1,6 @@
+; RUN: opt -S -passes=mergefunc,inline --experimental-debuginfo-iterators < %s | FileCheck %s
 ;; Ensure that the MergeFunctions pass creates thunks with the appropriate debug
 ;; info format set (which would otherwise assert when inlining those thunks).
-; RUN: opt -S -passes=mergefunc,inline --try-experimental-debuginfo-iterators < %s | FileCheck %s
 
 declare void @f1()
 declare void @f2()

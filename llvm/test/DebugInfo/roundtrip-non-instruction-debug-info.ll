@@ -13,9 +13,9 @@
 
 ;; Test also that the new flag is independent of the flag that enables use of
 ;; these non-instruction debug info during LLVM passes.
-; RUN: opt --passes=verify -S --try-experimental-debuginfo-iterators --write-experimental-debuginfo=false < %s \
+; RUN: opt --passes=verify -S --experimental-debuginfo-iterators --write-experimental-debuginfo=false < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,OLDDBG --implicit-check-not=llvm.dbg --implicit-check-not=#dbg
-; RUN: opt --passes=verify -S --try-experimental-debuginfo-iterators --write-experimental-debuginfo=true < %s \
+; RUN: opt --passes=verify -S --experimental-debuginfo-iterators --write-experimental-debuginfo=true < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,NEWDBG --implicit-check-not=llvm.dbg --implicit-check-not=#dbg
 
 ;; Test that the preserving flag overrides the write flag.

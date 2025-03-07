@@ -206,13 +206,6 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -365,13 +358,6 @@ int main(int argc, char **argv) {
               "not supported, please use `llc -passes=<pipeline>` (or the `-p` "
               "alias for a more concise version).\n";
     return 1;
-  }
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
   }
 
   if (TimeTrace)
