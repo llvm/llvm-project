@@ -221,8 +221,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  TargetOptions TargetOpts = Conf.Options;
+  if (TargetOpts.MCOptions.ABIName.empty()) {
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
+  }
+
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple.str(), Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple.str(), Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");
