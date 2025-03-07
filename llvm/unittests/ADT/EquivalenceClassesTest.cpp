@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -64,6 +65,19 @@ TEST(EquivalenceClassesTest, TwoSets) {
         EXPECT_TRUE(EqClasses.isEquivalent(i, j));
       else
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
+}
+
+TEST(EquivalenceClassesTest, MembersIterator) {
+  EquivalenceClasses<int> EC;
+  EC.unionSets(1, 2);
+  EC.insert(4);
+  EC.insert(5);
+  EC.unionSets(5, 1);
+  EXPECT_EQ(EC.getNumClasses(), 2u);
+
+  EquivalenceClasses<int>::iterator I = EC.findValue(EC.getLeaderValue(1));
+  EXPECT_THAT(EC.members(I), testing::ElementsAre(5, 1, 2));
+  EXPECT_EQ(EC.members(EC.end()).begin(), EC.member_end());
 }
 
 // Type-parameterized tests: Run the same test cases with different element
