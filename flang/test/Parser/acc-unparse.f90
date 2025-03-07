@@ -1,5 +1,3 @@
-! -fopenacc unsupported on AMD downstream
-! UNSUPPORTED: true
 ! RUN: %flang_fc1 -fopenacc -fdebug-unparse %s | FileCheck %s
 
 ! Test unparse does not crash with OpenACC directives.

@@ -58,8 +58,6 @@ config.excludes = [
     "README.txt",
     "LICENSE.txt",
     "debuginfo-tests",
-    "SemaOpenACC",              # unsupported on AMD downstream
-    "ParserOpenACC",            # unsupported on AMD downstream
 ]
 
 # test_source_root: The root path where tests are located.

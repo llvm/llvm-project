@@ -132,6 +132,11 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fno_offload_global_filtering,
                    options::OPT_funsigned, options::OPT_fno_unsigned});
 
+  if (Args.hasArg(options::OPT_fopenacc)) {
+     const Driver &D = getToolChain().getDriver();
+     D.Diag(diag::warn_openacc_experimental);
+  }
+
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
