@@ -5059,18 +5059,39 @@ define void @shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2OR512VL-LABEL: shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27_04_12_20_28_05_13_21_29_06_14_22_30_07_15_23_31:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2OR512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,8,1,9,2,10,3,11,4,12,5,13,6,14,7,15]
-; AVX2OR512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2OR512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX2OR512VL-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; AVX2OR512VL-NEXT:    vmovdqa %xmm0, 16(%rdi)
-; AVX2OR512VL-NEXT:    vmovdqa %xmm2, (%rdi)
-; AVX2OR512VL-NEXT:    vzeroupper
-; AVX2OR512VL-NEXT:    retq
+; AVX2-LABEL: shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27_04_12_20_28_05_13_21_29_06_14_22_30_07_15_23_31:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,8,1,9,2,10,3,11,4,12,5,13,6,14,7,15]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX2-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX2-NEXT:    vmovdqa %xmm0, 16(%rdi)
+; AVX2-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27_04_12_20_28_05_13_21_29_06_14_22_30_07_15_23_31:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,8,1,9,2,10,3,11,4,12,5,13,6,14,7,15]
+; AVX512VLBW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; AVX512VLBW-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX512VLBW-NEXT:    vmovdqa %xmm0, 16(%rdi)
+; AVX512VLBW-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI-LABEL: shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27_04_12_20_28_05_13_21_29_06_14_22_30_07_15_23_31:
+; AVX512VLVBMI:       # %bb.0:
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,8,16,24,1,9,17,25,2,10,18,26,3,11,19,27,4,12,20,28,5,13,21,29,6,14,22,30,7,15,23,31]
+; AVX512VLVBMI-NEXT:    vpermb %ymm0, %ymm1, %ymm0
+; AVX512VLVBMI-NEXT:    vmovdqa %ymm0, (%rdi)
+; AVX512VLVBMI-NEXT:    vzeroupper
+; AVX512VLVBMI-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: shuffle_v32i8_store_00_08_16_24_01_09_17_25_02_10_18_26_03_11_19_27_04_12_20_28_05_13_21_29_06_14_22_30_07_15_23_31:
 ; XOPAVX1:       # %bb.0:
