@@ -121,3 +121,43 @@ define amdgpu_ps <32 x i1> @test_graphics_v32i1_negative(<32 x i1> %x) {
   %r = call <32 x i1> @llvm.amdgcn.readfirstlane(<32 x i1> %x)
   ret <32 x i1> %r
 }
+
+; Test i1 arguments in non-entry functions.
+
+define amdgpu_gfx i1 @test_callable_i1(i1 inreg %x) {
+; CHECK-LABEL: define amdgpu_gfx i1 @test_callable_i1(
+; CHECK-SAME: i1 inreg [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i1 [[X]]
+;
+  %r = call i1 @llvm.amdgcn.readfirstlane(i1 %x)
+  ret i1 %r
+}
+
+define amdgpu_gfx <32 x i1> @test_callable_v32i1(<32 x i1> inreg %x) {
+; CHECK-LABEL: define amdgpu_gfx <32 x i1> @test_callable_v32i1(
+; CHECK-SAME: <32 x i1> inreg [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret <32 x i1> [[X]]
+;
+  %r = call <32 x i1> @llvm.amdgcn.readfirstlane(<32 x i1> %x)
+  ret <32 x i1> %r
+}
+
+define amdgpu_gfx i1 @test_callable_i1_negative(i1 %x) {
+; CHECK-LABEL: define amdgpu_gfx i1 @test_callable_i1_negative(
+; CHECK-SAME: i1 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.amdgcn.readfirstlane.i1(i1 [[X]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %r = call i1 @llvm.amdgcn.readfirstlane(i1 %x)
+  ret i1 %r
+}
+
+define amdgpu_gfx <32 x i1> @test_callable_v32i1_negative(<32 x i1> %x) {
+; CHECK-LABEL: define amdgpu_gfx <32 x i1> @test_callable_v32i1_negative(
+; CHECK-SAME: <32 x i1> [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[R:%.*]] = call <32 x i1> @llvm.amdgcn.readfirstlane.v32i1(<32 x i1> [[X]])
+; CHECK-NEXT:    ret <32 x i1> [[R]]
+;
+  %r = call <32 x i1> @llvm.amdgcn.readfirstlane(<32 x i1> %x)
+  ret <32 x i1> %r
+}
