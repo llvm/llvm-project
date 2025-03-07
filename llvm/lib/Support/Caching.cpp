@@ -90,9 +90,15 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             ModuleName(ModuleName), Task(Task) {}
 
       Error commit() override {
+<<<<<<< HEAD
         if (Committed)
           return Error::success();
         Committed = true;
+=======
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
+>>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
 
         // Make sure the stream is closed before committing it.
         OS.reset();
@@ -118,7 +124,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         // AddBuffer a copy of the bytes we wrote in that case. We do this
         // instead of just using the existing file, because the pruner might
         // delete the file before we get a chance to use it.
-        Error E = TempFile.keep(ObjectPathName);
+        E = TempFile.keep(ObjectPathName);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();
           if (EC != errc::permission_denied)
@@ -142,6 +148,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
+<<<<<<< HEAD
       }
 
       ~CacheStream() {
@@ -154,6 +161,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
           return;
         if (Error Err = commit())
           report_fatal_error(Twine(toString(std::move(Err))));
+=======
+>>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
       }
     };
 

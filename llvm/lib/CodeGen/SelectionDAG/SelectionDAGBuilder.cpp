@@ -1970,7 +1970,11 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   bool IsCoreCLR = Pers == EHPersonality::CoreCLR;
   bool IsSEH = isAsynchronousEHPersonality(Pers);
   MachineBasicBlock *CatchPadMBB = FuncInfo.MBB;
-  if (!IsSEH)
+  if (IsSEH) {
+    // For SEH, EHCont Guard needs to know that this catchpad is a target.
+    CatchPadMBB->setIsEHContTarget(true);
+    DAG.getMachineFunction().setHasEHContTarget(true);
+  } else
     CatchPadMBB->setIsEHScopeEntry();
   // In MSVC C++ and CoreCLR, catchblocks are funclets and need prologues.
   if (IsMSVCCXX || IsCoreCLR)
@@ -1981,8 +1985,6 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
-  TargetMBB->setIsEHContTarget(true);
-  DAG.getMachineFunction().setHasEHContTarget(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);
@@ -1995,6 +1997,10 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
                               getControlRoot(), DAG.getBasicBlock(TargetMBB)));
     return;
   }
+
+  // For non-SEH, EHCont Guard needs to know that this catchret is a target.
+  TargetMBB->setIsEHContTarget(true);
+  DAG.getMachineFunction().setHasEHContTarget(true);
 
   // Figure out the funclet membership for the catchret's successor.
   // This will be used by the FuncletLayout pass to determine how to order the

@@ -682,7 +682,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
 
-        if not self.getArchitecture() == "aarch64":
+        if not (self.getArchitecture() == "aarch64" or self.isRISCV()):
             self.assertTrue("offset" in reg_info)
 
         self.assertTrue("encoding" in reg_info)

@@ -625,18 +625,28 @@ void OmpStructureChecker::CheckHintClause(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
-  PushContextAndClauseSets(x.source, std::get<llvm::omp::Directive>(x.t));
+  // OmpDirectiveSpecification exists on its own only in METADIRECTIVE.
+  // In other cases it's a part of other constructs that handle directive
+  // context stack by themselves.
+  if (GetDirectiveNest(MetadirectiveNest)) {
+    PushContextAndClauseSets(
+        std::get<parser::OmpDirectiveName>(x.t).source, x.DirId());
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {
-  dirContext_.pop_back();
+  if (GetDirectiveNest(MetadirectiveNest)) {
+    dirContext_.pop_back();
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
+  EnterDirectiveNest(MetadirectiveNest);
   PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
+  ExitDirectiveNest(MetadirectiveNest);
   dirContext_.pop_back();
 }
 

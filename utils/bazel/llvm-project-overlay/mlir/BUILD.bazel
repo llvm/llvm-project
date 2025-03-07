@@ -3630,6 +3630,27 @@ td_library(
     ],
 )
 
+td_library(
+    name = "NVGPUTypesTdFiles",
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPUTypes.td"],
+    includes = ["include"],
+    deps = [
+        ":InferTypeOpInterfaceTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+td_library(
+    name = "NVGPUOpsTdFiles",
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPUOps.td"],
+    includes = ["include"],
+    deps = [
+        ":InferTypeOpInterfaceTdFiles",
+        ":NVGPUTypesTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "NVGPUIncGen",
     tbl_outs = [
@@ -3649,11 +3670,11 @@ gentbl_cc_library(
         ),
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/NVGPU/IR/NVGPU.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUOps.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc",
         ),
         (
             ["-gen-op-doc"],
@@ -3661,11 +3682,11 @@ gentbl_cc_library(
         ),
         (
             ["-gen-typedef-decls"],
-            "include/mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.h.inc",
         ),
         (
             ["-gen-typedef-defs"],
-            "include/mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc",
         ),
         (
             ["-gen-enum-decls"],
@@ -3685,8 +3706,12 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/NVGPU/IR/NVGPU.td",
-    deps = [":NVGPUTdFiles"],
+    td_file = "include/mlir/Dialect/NVGPU/IR/NVGPUOps.td",
+    deps = [
+        ":NVGPUOpsTdFiles",
+        ":NVGPUTdFiles",
+        ":NVGPUTypesTdFiles",
+    ],
 )
 
 gentbl_cc_library(
