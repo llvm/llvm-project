@@ -4270,7 +4270,6 @@ libc_function(
     hdrs = ["src/string/strcpy.h"],
     deps = [
         ":__support_common",
-        ":memcpy",
         ":string_memory_utils",
         ":string_utils",
     ],
