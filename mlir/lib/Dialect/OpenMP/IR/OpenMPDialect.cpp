@@ -1458,8 +1458,8 @@ uint64_t mapTypeToBitFlag(uint64_t value,
 /// Parses a map_entries map type from a string format back into its numeric
 /// value.
 ///
-/// map-clause = `map_clauses (  ( `(` `always, `? `close, `? `present, `? (
-/// `to` | `from` | `delete` `)` )+ `)` )
+/// map-clause = `map_clauses (  ( `(` `always, `? `implicit, `? `ompx_hold, `?
+/// `close, `? `present, `? ( `to` | `from` | `delete` `)` )+ `)` )
 static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
   llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -1476,6 +1476,9 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
 
     if (mapTypeMod == "implicit")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+
+    if (mapTypeMod == "ompx_hold")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
 
     if (mapTypeMod == "close")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
@@ -1526,6 +1529,9 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
   if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
     mapTypeStrs.push_back("implicit");
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD))
+    mapTypeStrs.push_back("ompx_hold");
   if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
     mapTypeStrs.push_back("close");

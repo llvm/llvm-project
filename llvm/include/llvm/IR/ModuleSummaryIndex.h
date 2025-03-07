@@ -1295,8 +1295,7 @@ class CfiFunctionIndex {
 public:
   CfiFunctionIndex() = default;
 
-  template <typename It>
-  CfiFunctionIndex(It B, It E) : Index(B, E) {}
+  template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
 
   std::set<std::string, std::less<>>::const_iterator begin() const {
     return Index.begin();
