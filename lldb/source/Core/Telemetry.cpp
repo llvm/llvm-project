@@ -67,9 +67,9 @@ void CommandInfo::serialize(Serializer &serializer) const {
   serializer.write("command_id", command_id);
   serializer.write("command_name", command_name);
   if (original_command.has_value())
-    serializer.write("original_command", original_command);
+    serializer.write("original_command", original_command.value());
   if (args.has_value())
-    serializer.write("args", args);
+    serializer.write("args", args.value());
   if (ret_status.has_value())
     serializer.write("ret_status", ret_status.value());
   if (error_data.has_value())
