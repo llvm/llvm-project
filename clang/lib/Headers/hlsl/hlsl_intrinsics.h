@@ -122,13 +122,9 @@ const inline float distance(vector<float, N> X, vector<float, N> Y) {
 /// parameter.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half fmod(half X, half Y) {
-  return __detail::fmod_impl(X, Y);
-}
+const inline half fmod(half X, half Y) { return __detail::fmod_impl(X, Y); }
 
-const inline float fmod(float X, float Y) {
-  return __detail::fmod_impl(X, Y);
-}
+const inline float fmod(float X, float Y) { return __detail::fmod_impl(X, Y); }
 
 template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
