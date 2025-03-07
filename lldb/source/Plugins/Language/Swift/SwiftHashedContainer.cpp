@@ -202,6 +202,9 @@ HashedCollectionConfig::RegisterSummaryProviders(
                 m_emptyStorage_demangled, flags, false);
   AddCXXSummary(swift_category_sp, summaryProvider,
                 m_summaryProviderName.AsCString(),
+                m_nativeStorageRoot_demangled, flags, false);
+  AddCXXSummary(swift_category_sp, summaryProvider,
+                m_summaryProviderName.AsCString(),
                 m_deferredBridgedStorage_demangledRegex, flags, true);
 
   flags.SetSkipPointers(false);
@@ -231,6 +234,9 @@ HashedCollectionConfig::RegisterSyntheticChildrenCreators(
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_nativeStorage_demangledRegex, flags, true);
+  AddCXXSynthetic(swift_category_sp, creator,
+                  m_syntheticChildrenName.AsCString(),
+                  m_nativeStorageRoot_demangled, flags, false);
   AddCXXSynthetic(swift_category_sp, creator,
                   m_syntheticChildrenName.AsCString(),
                   m_emptyStorage_demangled, flags, false);
@@ -648,18 +654,22 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
     return CreateNativeHandler(valobj_sp, storage_sp);
   }
 
-  ValueObjectSP variant_sp =
-    valobj_sp->GetChildMemberWithName(g__variant, true);
-  if (!variant_sp)
-    return nullptr;
+  lldb::addr_t storage_location = LLDB_INVALID_ADDRESS;
+  if (type_name_cs == m_nativeStorageRoot_demangled)
+    storage_location = valobj_sp->GetPointerValue();
+  else {
+    ValueObjectSP variant_sp =
+        valobj_sp->GetChildMemberWithName(g__variant, true);
+    if (!variant_sp)
+      return nullptr;
 
-  ValueObjectSP bobject_sp =
-    variant_sp->GetChildAtNamePath({g_object, g_rawValue});
-  if (!bobject_sp)
-    return nullptr;
+    ValueObjectSP bobject_sp =
+        variant_sp->GetChildAtNamePath({g_object, g_rawValue});
+    if (!bobject_sp)
+      return nullptr;
 
-  lldb::addr_t storage_location =
-    bobject_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    storage_location = bobject_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  }
   if (storage_location == LLDB_INVALID_ADDRESS)
     return nullptr;
 

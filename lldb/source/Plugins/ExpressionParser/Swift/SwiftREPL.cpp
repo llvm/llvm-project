@@ -509,13 +509,30 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
     options.SetRevealEmptyAggregates(false);
     options.SetHidePointerValue(true);
     options.SetVariableFormatDisplayLanguage(lldb::eLanguageTypeSwift);
-    options.SetDeclPrintingHelper([](ConstString type_name,
-                                     ConstString var_name,
-                                     const DumpValueObjectOptions &options,
-                                     Stream &stream) -> bool {
+    options.SetDeclPrintingHelper([&](ConstString type_name,
+                                      ConstString var_name,
+                                      const DumpValueObjectOptions &options,
+                                      Stream &stream) -> bool {
       if (!type_name || !var_name)
         return false;
 
+      // Try to get the SwiftASTContext representation of the type. It
+      // will hide Objective-C implemention details that are not
+      // publicly declared in the SDK.
+      if (valobj_sp) {
+        auto static_valobj_sp = valobj_sp->GetStaticValue();
+        auto dynamic_valobj_sp =
+            valobj_sp->GetDynamicValue(lldb::eDynamicCanRunTarget);
+        if (static_valobj_sp && dynamic_valobj_sp) {
+          CompilerType static_type = static_valobj_sp->GetCompilerType();
+          CompilerType dynamic_type = dynamic_valobj_sp->GetCompilerType();
+          auto ts =
+              dynamic_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+          if (ts &&
+              ts->IsImportedType(dynamic_type.GetOpaqueQualType(), nullptr))
+            type_name = static_type.GetDisplayTypeName();
+        }
+      }
       std::string type_name_str(type_name ? type_name.GetCString() : "");
       for (auto iter = type_name_str.find(" *"); iter != std::string::npos;
            iter = type_name_str.find(" *")) {

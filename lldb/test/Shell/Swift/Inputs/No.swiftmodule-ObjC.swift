@@ -11,7 +11,7 @@ func f() {
   // FIXME: (ObjCClass) object = {{.*}}Hello from Objective-C!
   let object = ObjCClass()
   // The Objective-C runtime recognizes this as a tagged pointer.
-  // CHECK-DAG: (NSNumber) inlined = {{.*}}Int64(42)
+  // CHECK-DAG: ({{.*}}NS{{.*}}Number) inlined = {{.*}}Int64(42)
   let inlined = NSNumber(value: 42)
   // CHECK-DAG: (CMYK) enumerator = .yellow
   let enumerator = yellow

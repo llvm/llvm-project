@@ -182,7 +182,7 @@ public:
 
 protected:
   // Constructors and destructors
-  SwiftASTContext(std::string description,
+  SwiftASTContext(std::string description, lldb::ModuleSP module_sp,
                   TypeSystemSwiftTypeRefSP typeref_typesystem);
 
 public:
@@ -923,6 +923,20 @@ protected:
 
   CompilerType GetAsClangType(ConstString mangled_name);
 
+  /// Retrieve the stored properties for the given nominal type declaration.
+  llvm::ArrayRef<swift::VarDecl *>
+  GetStoredProperties(swift::NominalTypeDecl *nominal);
+
+  SwiftEnumDescriptor *GetCachedEnumInfo(lldb::opaque_compiler_type_t type);
+
+  friend class CompilerType;
+
+  void ApplyDiagnosticOptions();
+
+  /// Apply a PathMappingList dictionary on all search paths in the
+  /// ClangImporterOptions.
+  void RemapClangImporterOptions(const PathMappingList &path_map);
+
   /// Data members.
   /// @{
   std::weak_ptr<TypeSystemSwiftTypeRef> m_typeref_typesystem;
@@ -993,8 +1007,6 @@ protected:
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;
 
-  /// @}
-
   /// Record the set of stored properties for each nominal type declaration
   /// for which we've asked this question.
   ///
@@ -1004,19 +1016,7 @@ protected:
   llvm::DenseMap<swift::NominalTypeDecl *, std::vector<swift::VarDecl *>>
       m_stored_properties;
 
-  /// Retrieve the stored properties for the given nominal type declaration.
-  llvm::ArrayRef<swift::VarDecl *>
-  GetStoredProperties(swift::NominalTypeDecl *nominal);
-
-  SwiftEnumDescriptor *GetCachedEnumInfo(lldb::opaque_compiler_type_t type);
-
-  friend class CompilerType;
-
-  void ApplyDiagnosticOptions();
-
-  /// Apply a PathMappingList dictionary on all search paths in the
-  /// ClangImporterOptions.
-  void RemapClangImporterOptions(const PathMappingList &path_map);
+  /// @}
 };
 
 /// Deprecated.
@@ -1033,9 +1033,9 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
   /// \}
 
-  SwiftASTContextForModule(std::string description,
+  SwiftASTContextForModule(std::string description, lldb::ModuleSP module_sp,
                            TypeSystemSwiftTypeRefSP typeref_typesystem)
-      : SwiftASTContext(description, typeref_typesystem) {}
+      : SwiftASTContext(description, module_sp, typeref_typesystem) {}
   virtual ~SwiftASTContextForModule();
 };
 
@@ -1053,6 +1053,7 @@ public:
   /// \}
 
   SwiftASTContextForExpressions(std::string description,
+                                lldb::ModuleSP module_sp,
                                 TypeSystemSwiftTypeRefSP typeref_typesystem);
   virtual ~SwiftASTContextForExpressions();
 

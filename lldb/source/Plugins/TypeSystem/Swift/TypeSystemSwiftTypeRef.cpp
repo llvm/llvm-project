@@ -386,11 +386,12 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
   return RemangleAsType(dem, type, flavor);
 }
 
-TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
+TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref,
+                                               SymbolContext sc) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
   decl_context.push_back({CompilerContextKind::AnyType, ConstString(name_ref)});
-  return LookupClangType(name_ref, decl_context, /*ignore_modules=*/true);
+  return LookupClangType(name_ref, decl_context, /*ignore_modules=*/true, sc);
 }
 
 /// Look up one Clang type in a module.
@@ -410,8 +411,10 @@ static TypeSP LookupClangType(Module &m,
 
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(
     StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
-    bool ignore_modules, ExecutionContext *exe_ctx) {
-  Module *m = GetModule();
+    bool ignore_modules, SymbolContext sc) {
+  Module *m = sc.module_sp.get();
+  if (!m)
+    m = GetModule();
   if (!m)
     return {};
   return ::LookupClangType(const_cast<Module &>(*m), decl_context,
@@ -420,23 +423,14 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(
 
 TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
     StringRef name_ref, llvm::ArrayRef<CompilerContext> decl_context,
-    bool ignore_modules, ExecutionContext *exe_ctx) {
+    bool ignore_modules, SymbolContext sc) {
   // Check the cache first. Negative results are also cached.
   TypeSP result;
   ConstString name(name_ref);
   if (m_clang_type_cache.Lookup(name.AsCString(), result))
     return result;
 
-  TargetSP target_sp = GetTargetWP().lock();
-  if (!target_sp)
-    return {};
-
-  ModuleSP cur_module;
-  if (exe_ctx)
-    if (StackFrame *frame = exe_ctx->GetFramePtr())
-      cur_module =
-          frame->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
-
+  ModuleSP cur_module = sc.module_sp;
   auto lookup = [&](const ModuleSP &m) -> bool {
     // Already visited this.
     if (m == cur_module)
@@ -457,7 +451,9 @@ TypeSP TypeSystemSwiftTypeRefForExpressions::LookupClangType(
     if (!lookup(cur_module))
       return result;
 
-  target_sp->GetImages().ForEach(lookup);
+  if (TargetSP target_sp = GetTargetWP().lock())
+    target_sp->GetImages().ForEach(lookup);
+
   return result;
 }
 
