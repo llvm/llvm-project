@@ -42,16 +42,16 @@ cl::opt<bool> ImprovedFSDiscriminator(
              "encoding)"));
 }
 
-char MIRAddFSDiscriminators::ID = 0;
+char MIRAddFSDiscriminatorsLegacy::ID = 0;
 
-INITIALIZE_PASS(MIRAddFSDiscriminators, DEBUG_TYPE,
+INITIALIZE_PASS(MIRAddFSDiscriminatorsLegacy, DEBUG_TYPE,
                 "Add MIR Flow Sensitive Discriminators",
                 /* cfg = */ false, /* is_analysis = */ false)
 
-char &llvm::MIRAddFSDiscriminatorsID = MIRAddFSDiscriminators::ID;
+char &llvm::MIRAddFSDiscriminatorsID = MIRAddFSDiscriminatorsLegacy::ID;
 
 FunctionPass *llvm::createMIRAddFSDiscriminatorsPass(FSDiscriminatorPass P) {
-  return new MIRAddFSDiscriminators(P);
+  return new MIRAddFSDiscriminatorsLegacy(P);
 }
 
 // TODO(xur): Remove this once we switch to ImprovedFSDiscriminator.
@@ -86,6 +86,18 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
     Ret = hashCombine(Ret, xxh3_64bits(DIL->getSubprogramLinkageName()));
   }
   return Ret;
+}
+
+PreservedAnalyses
+MIRAddFSDiscriminatorsPass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &) {
+  if (MIRAddFSDiscriminators(Pass).runOnMachineFunction(MF))
+    return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool MIRAddFSDiscriminatorsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return MIRAddFSDiscriminators(Pass).runOnMachineFunction(MF);
 }
 
 // Traverse the CFG and assign FD discriminators. If two instructions

@@ -108,6 +108,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIRFSDiscriminator.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -1437,6 +1438,32 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
 Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
+}
+
+Expected<FSDiscriminatorPass>
+parseFSDiscriminatorPassOptions(PassBuilder &PB, StringRef Params) {
+  if (Params == "Base")
+    return FSDiscriminatorPass::Base;
+  if (Params.consume_front("Pass")) {
+    switch (Params.front()) {
+    case '0':
+      return FSDiscriminatorPass::Pass0;
+    case '1':
+      return FSDiscriminatorPass::Pass1;
+    case '2':
+      return FSDiscriminatorPass::Pass2;
+    case '3':
+      return FSDiscriminatorPass::Pass3;
+    case '4':
+      return FSDiscriminatorPass::Pass4;
+    default:
+      if (Params == "Last")
+        return FSDiscriminatorPass::PassLast;
+    }
+  }
+  return make_error<StringError>(
+      formatv("invalid FSDiscriminator pass parameter '{0}' ", Params).str(),
+      inconvertibleErrorCode());
 }
 
 } // namespace

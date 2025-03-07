@@ -179,7 +179,7 @@ void initializeLowerIntrinsicsPass(PassRegistry &);
 void initializeLowerInvokeLegacyPassPass(PassRegistry &);
 void initializeLowerSwitchLegacyPassPass(PassRegistry &);
 void initializeKCFIPass(PassRegistry &);
-void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
+void initializeMIRAddFSDiscriminatorsLegacyPass(PassRegistry &);
 void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRNamerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry &);
