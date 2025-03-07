@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
-// XFAIL: *
 void foo() {
   int Array[5];
   // CHECK: #pragma acc cache(readonly: Array[1], Array[1:2])

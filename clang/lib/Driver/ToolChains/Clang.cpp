@@ -4028,6 +4028,7 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
   if (!Args.hasArg(options::OPT_fopenacc))
     return;
 
+  D.Diag(diag::warn_openacc_experimental);
   CmdArgs.push_back("-fopenacc");
 
   if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override)) {

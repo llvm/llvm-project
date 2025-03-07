@@ -3737,8 +3737,10 @@ def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
 // FlangOption + FC1 + ClangOption + CC1Option
 //===----------------------------------------------------------------------===//
 // Unsupported on AMD downstream
+let Visibility = [FC1Option, FlangOption, CC1Option, ClangOption] in {
 def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>, Visibility<[]>,
   HelpText<"Enable OpenACC">;
+}
 
 //===----------------------------------------------------------------------===//
 // Optimisation remark options
