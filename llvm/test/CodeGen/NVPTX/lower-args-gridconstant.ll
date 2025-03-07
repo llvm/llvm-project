@@ -134,7 +134,7 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %rd2, grid_const_escape_param_0;
-; PTX-NEXT:    mov.u64 %rd3, %rd2;
+; PTX-NEXT:    mov.b64 %rd3, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd4, %rd3;
 ; PTX-NEXT:    mov.u64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 0, 0
@@ -176,10 +176,10 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    mov.b64 %rd2, multiple_grid_const_escape_param_0;
 ; PTX-NEXT:    mov.b64 %rd3, multiple_grid_const_escape_param_2;
-; PTX-NEXT:    mov.u64 %rd4, %rd3;
+; PTX-NEXT:    mov.b64 %rd4, %rd3;
 ; PTX-NEXT:    ld.param.u32 %r1, [multiple_grid_const_escape_param_1];
 ; PTX-NEXT:    cvta.param.u64 %rd5, %rd4;
-; PTX-NEXT:    mov.u64 %rd6, %rd2;
+; PTX-NEXT:    mov.b64 %rd6, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd7, %rd6;
 ; PTX-NEXT:    add.u64 %rd8, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd9, %SPL, 0;
@@ -231,7 +231,7 @@ define ptx_kernel void @grid_const_memory_escape(ptr byval(%struct.s) align 4 %i
 ; PTX-NEXT:    mov.b64 %rd1, grid_const_memory_escape_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd2, [grid_const_memory_escape_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd3, %rd2;
-; PTX-NEXT:    mov.u64 %rd4, %rd1;
+; PTX-NEXT:    mov.b64 %rd4, %rd1;
 ; PTX-NEXT:    cvta.param.u64 %rd5, %rd4;
 ; PTX-NEXT:    st.global.u64 [%rd3], %rd5;
 ; PTX-NEXT:    ret;
@@ -257,7 +257,7 @@ define ptx_kernel void @grid_const_inlineasm_escape(ptr byval(%struct.s) align 4
 ; PTX-NEXT:    mov.b64 %rd4, grid_const_inlineasm_escape_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd5, [grid_const_inlineasm_escape_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd6, %rd5;
-; PTX-NEXT:    mov.u64 %rd7, %rd4;
+; PTX-NEXT:    mov.b64 %rd7, %rd4;
 ; PTX-NEXT:    cvta.param.u64 %rd2, %rd7;
 ; PTX-NEXT:    add.s64 %rd3, %rd2, 4;
 ; PTX-NEXT:    // begin inline asm
@@ -295,7 +295,7 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 ; PTX-NEXT:    mov.b64 %rd2, grid_const_partial_escape_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd3, [grid_const_partial_escape_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; PTX-NEXT:    mov.u64 %rd5, %rd2;
+; PTX-NEXT:    mov.b64 %rd5, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd6, %rd5;
 ; PTX-NEXT:    ld.u32 %r1, [%rd6];
 ; PTX-NEXT:    add.s32 %r2, %r1, %r1;
@@ -344,7 +344,7 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input,
 ; PTX-NEXT:    mov.b64 %rd2, grid_const_partial_escapemem_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd3, [grid_const_partial_escapemem_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd4, %rd3;
-; PTX-NEXT:    mov.u64 %rd5, %rd2;
+; PTX-NEXT:    mov.b64 %rd5, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd6, %rd5;
 ; PTX-NEXT:    ld.u32 %r1, [%rd6];
 ; PTX-NEXT:    ld.u32 %r2, [%rd6+4];
@@ -402,7 +402,7 @@ define ptx_kernel void @grid_const_phi(ptr byval(%struct.s) align 4 %input1, ptr
 ; PTX-NEXT:    mov.b64 %rd5, grid_const_phi_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd6, [grid_const_phi_param_1];
 ; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd6;
-; PTX-NEXT:    mov.u64 %rd7, %rd5;
+; PTX-NEXT:    mov.b64 %rd7, %rd5;
 ; PTX-NEXT:    cvta.param.u64 %rd8, %rd7;
 ; PTX-NEXT:    ld.global.u32 %r1, [%rd1];
 ; PTX-NEXT:    setp.lt.s32 %p1, %r1, 0;
@@ -463,14 +463,14 @@ define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 %input1,
 ; PTX-NEXT:    mov.b64 %rd6, grid_const_phi_ngc_param_0;
 ; PTX-NEXT:    ld.param.u64 %rd7, [grid_const_phi_ngc_param_2];
 ; PTX-NEXT:    cvta.to.global.u64 %rd1, %rd7;
-; PTX-NEXT:    mov.u64 %rd10, %rd6;
+; PTX-NEXT:    mov.b64 %rd10, %rd6;
 ; PTX-NEXT:    cvta.param.u64 %rd11, %rd10;
 ; PTX-NEXT:    ld.global.u32 %r1, [%rd1];
 ; PTX-NEXT:    setp.lt.s32 %p1, %r1, 0;
 ; PTX-NEXT:    @%p1 bra $L__BB10_2;
 ; PTX-NEXT:  // %bb.1: // %second
 ; PTX-NEXT:    mov.b64 %rd8, grid_const_phi_ngc_param_1;
-; PTX-NEXT:    mov.u64 %rd9, %rd8;
+; PTX-NEXT:    mov.b64 %rd9, %rd8;
 ; PTX-NEXT:    cvta.param.u64 %rd2, %rd9;
 ; PTX-NEXT:    add.s64 %rd11, %rd2, 4;
 ; PTX-NEXT:  $L__BB10_2: // %merge
@@ -529,9 +529,9 @@ define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    ld.param.u64 %rd2, [grid_const_select_param_2];
 ; PTX-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; PTX-NEXT:    mov.b64 %rd4, grid_const_select_param_1;
-; PTX-NEXT:    mov.u64 %rd5, %rd4;
+; PTX-NEXT:    mov.b64 %rd5, %rd4;
 ; PTX-NEXT:    cvta.param.u64 %rd6, %rd5;
-; PTX-NEXT:    mov.u64 %rd7, %rd1;
+; PTX-NEXT:    mov.b64 %rd7, %rd1;
 ; PTX-NEXT:    cvta.param.u64 %rd8, %rd7;
 ; PTX-NEXT:    ld.global.u32 %r1, [%rd3];
 ; PTX-NEXT:    setp.lt.s32 %p1, %r1, 0;
@@ -570,7 +570,7 @@ define ptx_kernel i32 @grid_const_ptrtoint(ptr byval(i32) %input) {
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %rd1, grid_const_ptrtoint_param_0;
-; PTX-NEXT:    mov.u64 %rd2, %rd1;
+; PTX-NEXT:    mov.b64 %rd2, %rd1;
 ; PTX-NEXT:    ld.param.u32 %r1, [grid_const_ptrtoint_param_0];
 ; PTX-NEXT:    cvta.param.u64 %rd3, %rd2;
 ; PTX-NEXT:    cvt.u32.u64 %r2, %rd3;
