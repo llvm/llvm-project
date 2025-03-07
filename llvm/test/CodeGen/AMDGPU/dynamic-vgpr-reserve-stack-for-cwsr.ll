@@ -6,7 +6,7 @@
 define amdgpu_cs void @amdgpu_cs() #0 {
 ; CHECK-LABEL: amdgpu_cs:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -18,7 +18,7 @@ define amdgpu_cs void @amdgpu_cs() #0 {
 define amdgpu_kernel void @kernel() #0 {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -30,7 +30,7 @@ define amdgpu_kernel void @kernel() #0 {
 define amdgpu_cs void @with_local() #0 {
 ; CHECK-LABEL: with_local:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 13
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -48,7 +48,7 @@ define amdgpu_cs void @with_local() #0 {
 define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK-LABEL: with_calls_inline_const:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
@@ -72,7 +72,7 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK-LABEL: with_calls_no_inline_const:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
@@ -96,7 +96,7 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
 define amdgpu_cs void @with_spills(ptr addrspace(1) %p1, ptr addrspace(1) %p2) #1 {
 ; CHECK-LABEL: with_spills:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -151,7 +151,7 @@ define amdgpu_cs void @with_spills(ptr addrspace(1) %p1, ptr addrspace(1) %p2) #
 define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-LABEL: realign_stack:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo

@@ -725,7 +725,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
         .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
-            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 1));
+            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
     // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
     // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
     // SCC, so we need to check for 0 manually.
