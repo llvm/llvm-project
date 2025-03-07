@@ -88,12 +88,12 @@
 # STRIP-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
 # STRIP-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
 # STRIP-NEXT:  2 __data           00000000
-# STRIP-NEXT:  4 __mybss          00000000
-# STRIP-NEXT:  5 __bar            00000000
-# STRIP-NEXT:  6 __ever           00000000
-# STRIP-NEXT:  7 __lookup         00000000
-# STRIP-NEXT:  8 symbol           00000000
-# STRIP-NEXT:  9 __quux           00000000
+# STRIP-NEXT:  3 __mybss          00000000
+# STRIP-NEXT:  4 __bar            00000000
+# STRIP-NEXT:  5 __ever           00000000
+# STRIP-NEXT:  6 __lookup         00000000
+# STRIP-NEXT:  7 symbol           00000000
+# STRIP-NEXT:  8 __quux           00000000
 
 # STRIP-LABEL: SYMBOL TABLE:
 # STRIP-NOT:   section$start$__FOO$__bar
@@ -109,13 +109,13 @@
 # STRIP2-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
 # STRIP2-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
 # STRIP2-NEXT:  2 __data           00000000
-# STRIP2-NEXT:  4 __mybss          00000000
-# STRIP2-NEXT:  5 __bar            00000000
-# STRIP2-NEXT:  6 __notexist       00000000
-# STRIP2-NEXT:  7 __ever           00000000
-# STRIP2-NEXT:  8 __lookup         00000000
-# STRIP2-NEXT:  9 symbol           00000000
-# STRIP2-NEXT:  10 __quux          00000000
+# STRIP2-NEXT:  3 __mybss          00000000
+# STRIP2-NEXT:  4 __bar            00000000
+# STRIP2-NEXT:  5 __notexist       00000000
+# STRIP2-NEXT:  6 __ever           00000000
+# STRIP2-NEXT:  7 __lookup         00000000
+# STRIP2-NEXT:  8 symbol           00000000
+# STRIP2-NEXT:  9 __quux           00000000
 
 # CHECK-LABEL: Sections:
 # CHECK-NEXT:  Idx Name           Size     VMA              Type
@@ -124,11 +124,11 @@
 # CHECK:       2 __cstring        {{[0-9a-f]*}} [[#%x, CSTRINGSTART:]] DATA
 # CHECK:       3 __aftercstring   {{[0-9a-f]*}} [[#%x, CSTRINGEND:]]
 # CHECK:       4 __data           00000008      [[#%x, DATASTART:]] DATA
-# CHECK:       6 __mybss          00008000      [[#%x, MYBSSSTART:]] BSS
-# CHECK:       7 __quux           0000002a      [[#%x, QUUXSTART:]]
-# CHECK:       8 __bar            00000059      [[#%x, BARSTART:]]
-# CHECK:       9 __uflag_sect     00000000
-# CHECK:       10 __lookup        00000000
+# CHECK:       5 __mybss          00008000      [[#%x, MYBSSSTART:]] BSS
+# CHECK:       6 __quux           0000002a      [[#%x, QUUXSTART:]]
+# CHECK:       7 __bar            00000059      [[#%x, BARSTART:]]
+# CHECK:       8 __uflag_sect     00000000
+# CHECK:       9 __lookup         00000000
 # CHECK-NOT:   symbol
 # CHECK-NOT:   __unref
 
