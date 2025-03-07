@@ -808,19 +808,15 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   Indent += 2;
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
-  auto emitULEB128 = [](DecoderTable::const_iterator I,
+  auto emitULEB128 = [](DecoderTable::const_iterator &I,
                         formatted_raw_ostream &OS) {
-    unsigned Len = 0;
-    while (*I >= 128) {
+    while (*I >= 128)
       OS << (unsigned)*I++ << ", ";
-      Len++;
-    }
     OS << (unsigned)*I++ << ", ";
-    return Len + 1;
   };
 
   // Emit 24-bit numtoskip value to OS, returning the NumToSkip value.
-  auto emitNumToSkip = [](DecoderTable::const_iterator I,
+  auto emitNumToSkip = [](DecoderTable::const_iterator &I,
                           formatted_raw_ostream &OS) {
     uint8_t Byte = *I++;
     uint32_t NumToSkip = Byte;
@@ -857,7 +853,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
                                      Table.data() + Table.size(), &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       unsigned Len = *I++;
       OS << Len << ",  // Inst{";
@@ -870,11 +866,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -882,27 +877,25 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
       // ULEB128 encoded field value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
     case MCD::OPC_CheckPredicate: {
       ++I;
       OS << Indent << "MCD::OPC_CheckPredicate, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -917,10 +910,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // Decoder index.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       auto EncI = OpcodeToEncodingID.find(Opc);
       assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
@@ -935,7 +928,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
 
       OS << "// Opcode: " << NumberedEncodings[EncodingID]
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
