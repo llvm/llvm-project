@@ -370,8 +370,6 @@ define < 2 x i32> @extract_elt13_v4i32_readfirstlane_source_simplify1_convergenc
 ; CHECK-SAME: i32 [[SRC0:%.*]], i32 [[SRC2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[T:%.*]] = call token @llvm.experimental.convergence.entry()
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[SRC0]], i64 0
-; CHECK-NEXT:    [[INS_1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>
-; CHECK-NEXT:    [[VEC1:%.*]] = call <4 x i32> @llvm.amdgcn.readfirstlane.v4i32(<4 x i32> [[INS_1]]) [ "convergencectrl"(token [[T]]) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <3 x i32> @llvm.amdgcn.readfirstlane.v3i32(<3 x i32> [[TMP2]]) [ "convergencectrl"(token [[T]]) ]
 ; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <3 x i32> [[TMP3]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 2>
