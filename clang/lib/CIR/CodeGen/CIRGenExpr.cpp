@@ -25,9 +25,77 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
+                                            bool isInit) {
+  if (!dst.isSimple()) {
+    cgm.errorNYI(dst.getPointer().getLoc(),
+                 "emitStoreThroughLValue: non-simple lvalue");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opLoadStoreObjC());
+
+  assert(src.isScalar() && "Can't emit an aggregate store with this method");
+  emitStoreOfScalar(src.getScalarVal(), dst, isInit);
+}
+
+void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
+                                       bool isVolatile, QualType ty,
+                                       bool isInit, bool isNontemporal) {
+  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+
+  if (ty->getAs<clang::VectorType>()) {
+    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar vector type");
+    return;
+  }
+
+  value = emitToMemory(value, ty);
+
+  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+
+  // Update the alloca with more info on initialization.
+  assert(addr.getPointer() && "expected pointer to exist");
+  auto srcAlloca =
+      dyn_cast_or_null<cir::AllocaOp>(addr.getPointer().getDefiningOp());
+  if (currVarDecl && srcAlloca) {
+    const VarDecl *vd = currVarDecl;
+    assert(vd && "VarDecl expected");
+    if (vd->hasInit())
+      srcAlloca.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+  }
+
+  assert(currSrcLoc && "must pass in source location");
+  builder.createStore(*currSrcLoc, value, addr.getPointer() /*, isVolatile*/);
+
+  if (isNontemporal) {
+    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opTBAA());
+}
+
+mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
+  // Bool has a different representation in memory than in registers,
+  // but in ClangIR, it is simply represented as a cir.bool value.
+  // This function is here as a placeholder for possible future changes.
+  return value;
+}
+
+void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
+                                       bool isInit) {
+  if (lvalue.getType()->isConstantMatrixType()) {
+    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
+    return;
+  }
+
+  emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
+                    lvalue.getType(), isInit, /*isNontemporal=*/false);
+}
+
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
-  assert(!cir::MissingFeatures::opLoadThreadLocal());
+  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
   assert(!cir::MissingFeatures::opLoadBooleanRepresentation());
 
@@ -115,7 +183,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
                                 /*var type*/ ty, name, alignIntAttr);
-    assert(!cir::MissingFeatures::opAllocaVarDeclContext());
+    assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
 }
