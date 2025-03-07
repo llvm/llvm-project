@@ -833,7 +833,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
                        ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND,
-                       ISD::TRUNCATE, ISD::LOAD});
+                       ISD::TRUNCATE, ISD::LOAD, ISD::BITCAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -6142,6 +6142,61 @@ static SDValue PerformTRUNCATECombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformBITCASTCombine(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  if (N->getValueType(0) != MVT::v2f32)
+    return SDValue();
+
+  SDValue Operand = N->getOperand(0);
+  if (Operand.getValueType() != MVT::i64)
+    return SDValue();
+
+  // DAGCombiner handles bitcast(ISD::LOAD) already. For these, we'll do the
+  // same thing, by changing their output values from i64 to v2f32. Then the
+  // rule for combining loads (see PerformLoadCombine) may split these loads
+  // further.
+  if (Operand.getOpcode() == NVPTXISD::LoadV2 ||
+      Operand.getOpcode() == NVPTXISD::LoadParam ||
+      Operand.getOpcode() == NVPTXISD::LoadParamV2) {
+    // check for all bitcasts
+    SmallVector<std::pair<SDNode *, unsigned /* resno */>> OldUses;
+    for (SDUse &U : Operand->uses()) {
+      SDNode *User = U.getUser();
+      if (!(User->getOpcode() == ISD::BITCAST &&
+            User->getValueType(0) == MVT::v2f32 &&
+            U.getValueType() == MVT::i64))
+        return SDValue(); // unhandled pattern
+      OldUses.push_back({User, U.getResNo()});
+    }
+
+    auto *MemN = cast<MemSDNode>(Operand);
+    SmallVector<EVT> VTs;
+    for (const auto &VT : Operand->values()) {
+      if (VT == MVT::i64)
+        VTs.push_back(MVT::v2f32);
+      else
+        VTs.push_back(VT);
+    }
+
+    SDValue NewLoad = DCI.DAG.getMemIntrinsicNode(
+        Operand.getOpcode(), SDLoc(Operand), DCI.DAG.getVTList(VTs),
+        SmallVector<SDValue>(Operand->ops()), MemN->getMemoryVT(),
+        MemN->getMemOperand());
+
+    // replace all chain/glue uses of the old load
+    for (unsigned I = 0, E = Operand->getNumValues(); I != E; ++I)
+      if (Operand->getValueType(I) != MVT::i64)
+        DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(MemN, I),
+                                          NewLoad.getValue(I));
+
+    // replace all bitcasts with values from the new load
+    for (auto &[BC, ResultNum] : OldUses)
+      DCI.CombineTo(BC, NewLoad.getValue(ResultNum), false);
+  }
+
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -6187,6 +6242,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformFP_ROUNDCombine(N, DCI);
     case ISD::TRUNCATE:
       return PerformTRUNCATECombine(N, DCI);
+    case ISD::BITCAST:
+      return PerformBITCASTCombine(N, DCI);
   }
   return SDValue();
 }
