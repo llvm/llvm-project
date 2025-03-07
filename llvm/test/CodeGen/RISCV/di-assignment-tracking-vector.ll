@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=riscv64 < %s -o - | FileCheck %s --implicit-check-not=DEBUG_VALUE
+; RUN: llc -mtriple=riscv64 < %s | FileCheck %s --implicit-check-not=DEBUG_VALUE
 
 ;; Verify that tagged and untagged non-contiguous stores are handled correctly
 ;; by assignment tracking.

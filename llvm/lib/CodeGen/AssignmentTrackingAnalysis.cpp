@@ -2190,7 +2190,8 @@ AllocaInst *getUnknownStore(const Instruction &I, const DataLayout &Layout) {
   Intrinsic::ID ID = II->getIntrinsicID();
   if (ID != Intrinsic::experimental_vp_strided_store &&
       ID != Intrinsic::masked_store && ID != Intrinsic::vp_scatter &&
-      ID != Intrinsic::masked_scatter && ID != Intrinsic::vp_store)
+      ID != Intrinsic::masked_scatter && ID != Intrinsic::vp_store &&
+      ID != Intrinsic::masked_compressstore)
     return nullptr;
   Value *MemOp = II->getArgOperand(1);
   // We don't actually use the constant offset for now, but we may in future,
