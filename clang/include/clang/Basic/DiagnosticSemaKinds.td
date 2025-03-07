@@ -12844,9 +12844,6 @@ def warn_acc_routine_unimplemented
     : Warning<"OpenACC construct 'routine' with implicit function not yet "
               "implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
-def warn_acc_clause_unimplemented
-    : Warning<"OpenACC clause '%0' not yet implemented, clause ignored">,
-      InGroup<SourceUsesOpenACC>;
 def err_acc_construct_appertainment
     : Error<"OpenACC construct '%0' cannot be used here; it can only "
             "be used in a statement context">;
@@ -13087,6 +13084,9 @@ def err_acc_routine_overload_set
 def err_acc_magic_static_in_routine
     : Error<"function static variables are not permitted in functions to which "
             "an OpenACC 'routine' directive applies">;
+def err_acc_duplicate_bind
+    : Error<"multiple 'routine' directives with 'bind' clauses are not "
+            "permitted to refer to the same function">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
