@@ -121,7 +121,7 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
 /// isn't needed, or the bit widths don't match.
 static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
                                 InstCombiner::BuilderTy &Builder,
-                                SimplifyQuery &SQ) {
+                                const SimplifyQuery &SQ) {
   const APInt *SelTC, *SelFC;
   if (!match(Sel.getTrueValue(), m_APInt(SelTC)) ||
       !match(Sel.getFalseValue(), m_APInt(SelFC)))
@@ -151,7 +151,8 @@ static Value *foldSelectICmpAnd(SelectInst &Sel, ICmpInst *Cmp,
     assert(ICmpInst::isEquality(Res->Pred) && "Not equality test?");
     AndMask = Res->Mask;
     V = Res->X;
-    KnownBits Known = computeKnownBits(V, 0, SQ.getWithInstruction(Cmp));
+    KnownBits Known =
+        computeKnownBits(V, /*Depth=*/0, SQ.getWithInstruction(&Sel));
     AndMask &= Known.getMaxValue();
     if (!AndMask.isPowerOf2())
       return nullptr;
