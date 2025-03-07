@@ -100,6 +100,29 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
   return PushPopKind::None;
 }
 
+bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(const MachineFunction &MF) const {
+  switch (getInterruptStackKind(MF)) {
+  case InterruptStackKind::QCINest:
+  case InterruptStackKind::QCINoNest:
+    // QC.C.MIENTER and QC.C.MIENTER.NEST both update FP on function entry.
+    return true;
+  default:
+    break;
+  }
+
+  switch (getPushPopKind(MF)) {
+  case PushPopKind::VendorXqccmp:
+    // When using Xqccmp, we will use `QC.CM.PUSHFP` when Frame Pointers are
+    // enabled, which will update FP.
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
+
 void RISCVMachineFunctionInfo::initializeBaseYamlFields(
     const yaml::RISCVMachineFunctionInfo &YamlMFI) {
   VarArgsFrameIndex = YamlMFI.VarArgsFrameIndex;
@@ -113,3 +136,4 @@ void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
 bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
   return is_contained(SExt32Registers, Reg);
 }
+
