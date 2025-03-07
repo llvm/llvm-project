@@ -14,8 +14,15 @@
 namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcFfsTest, SimpleFfs) {
-  ASSERT_EQ(ffs(0), 0);
-  ASSERT_EQ(ffs(1), 1);
+  ASSERT_EQ(ffs(0x00000000), 0);
+  ASSERT_EQ(ffs(0x00000001), 1);
+  ASSERT_EQ(ffs(0x00000020), 6);
+  ASSERT_EQ(ffs(0x00000400), 11);
+  ASSERT_EQ(ffs(0x00008000), 16);
+  ASSERT_EQ(ffs(0x00010000), 17);
+  ASSERT_EQ(ffs(0x00200000), 22);
+  ASSERT_EQ(ffs(0x04000000), 27);
+  ASSERT_EQ(ffs(0x80000000), 32);
   ASSERT_EQ(ffs(0xfbe71), 1);
   ASSERT_EQ(ffs(0xfbe70), 5);
   ASSERT_EQ(ffs(0x10), 5);

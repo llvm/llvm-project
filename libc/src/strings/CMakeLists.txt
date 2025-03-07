@@ -60,6 +60,8 @@ add_entrypoint_object(
     ffs.cpp
   HDRS
     ffs.h
+  DEPENDS
+    libc.src.__support.math_extras
 )
 
 add_entrypoint_object(
@@ -68,6 +70,8 @@ add_entrypoint_object(
     ffsl.cpp
   HDRS
     ffsl.h
+  DEPENDS
+    libc.src.__support.math_extras
 )
 
 add_entrypoint_object(
@@ -76,6 +80,8 @@ add_entrypoint_object(
     ffsll.cpp
   HDRS
     ffsll.h
+  DEPENDS
+    libc.src.__support.math_extras
 )
 
 add_entrypoint_object(

@@ -9,9 +9,12 @@
 #include "src/strings/ffs.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, ffs, (int i)) { return __builtin_ffs(i); }
+LLVM_LIBC_FUNCTION(int, ffs, (int i)) {
+  return first_trailing_one(static_cast<unsigned>(i));
+}
 
 } // namespace LIBC_NAMESPACE_DECL
