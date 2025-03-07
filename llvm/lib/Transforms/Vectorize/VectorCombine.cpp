@@ -2037,7 +2037,6 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
                      m_Mask(Mask))))
     return false;
 
-  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
   auto *C1VecTy = dyn_cast<FixedVectorType>(C1->getType());
   auto *C2VecTy = dyn_cast<FixedVectorType>(C2->getType());
   if (!C1VecTy || !C2VecTy || C1VecTy != C2VecTy)
@@ -2051,24 +2050,26 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
        (SI0FOp->getFastMathFlags() != SI1FOp->getFastMathFlags())))
     return false;
 
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(T1->getType());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
-      SelOp, T1->getType(), C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getCmpSelInstrCost(SelOp, T2->getType(), C2VecTy,
+      SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  OldCost += TTI.getCmpSelInstrCost(SelOp, SrcVecTy, C2VecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr,
+  OldCost += TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr,
                                 {I.getOperand(0), I.getOperand(1)}, &I);
 
-  auto *C1C2VecTy = cast<FixedVectorType>(
-      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
   InstructionCost NewCost =
-      TTI.getShuffleCost(SK, C1C2VecTy, Mask, CostKind, 0, nullptr, {C1, C2});
+      TTI.getShuffleCost(SK, C1VecTy, Mask, CostKind, 0, nullptr, {C1, C2});
   NewCost +=
-      TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr, {T1, T2});
+      TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr, {T1, T2});
   NewCost +=
-      TTI.getShuffleCost(SK, DstVecTy, Mask, CostKind, 0, nullptr, {F1, F2});
-  NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, DstVecTy,
+      TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr, {F1, F2});
+  auto *C1C2ShuffledVecTy = cast<FixedVectorType>(
+      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
+  NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two selects: " << I
