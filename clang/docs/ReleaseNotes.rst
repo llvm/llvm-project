@@ -62,6 +62,9 @@ AST Dumping Potentially Breaking Changes
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
+- The ``-Wglobal-constructors`` flag now applies to ``[[gnu::constructor]]`` and
+  ``[[gnu::destructor]]`` attributes.
+
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 
@@ -222,12 +225,15 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 
 - The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-pointer``,
   which enables warning on passing or returning pointers to guarded variables
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+
+- Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
@@ -279,6 +285,16 @@ Bug Fixes to C++ Support
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
+
+Improvements to C++ diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now more consistently adds a note pointing to the relevant template
+  parameter. Some diagnostics are reworded to better take advantage of this.
+- Template Template Parameter diagnostics now stop referring to template
+  parameters as template arguments, in some circumstances, better hiding
+  from the users template template parameter partial ordering arcana.
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

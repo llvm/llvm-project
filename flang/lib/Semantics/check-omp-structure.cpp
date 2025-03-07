@@ -1203,6 +1203,64 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     deviceConstructFound_ = true;
   }
 
+  if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    std::set<Symbol *> singleCopyprivateSyms;
+    std::set<Symbol *> endSingleCopyprivateSyms;
+    bool foundNowait{false};
+    parser::CharBlock NowaitSource;
+
+    auto catchCopyPrivateNowaitClauses = [&](const auto &dir, bool endDir) {
+      for (auto &clause : std::get<parser::OmpClauseList>(dir.t).v) {
+        if (clause.Id() == llvm::omp::Clause::OMPC_copyprivate) {
+          for (const auto &ompObject : GetOmpObjectList(clause)->v) {
+            const auto *name{parser::Unwrap<parser::Name>(ompObject)};
+            if (Symbol * symbol{name->symbol}) {
+              if (singleCopyprivateSyms.count(symbol)) {
+                if (endDir) {
+                  context_.Warn(common::UsageWarning::OpenMPUsage, name->source,
+                      "The COPYPRIVATE clause with '%s' is already used on the SINGLE directive"_warn_en_US,
+                      name->ToString());
+                } else {
+                  context_.Say(name->source,
+                      "'%s' appears in more than one COPYPRIVATE clause on the SINGLE directive"_err_en_US,
+                      name->ToString());
+                }
+              } else if (endSingleCopyprivateSyms.count(symbol)) {
+                context_.Say(name->source,
+                    "'%s' appears in more than one COPYPRIVATE clause on the END SINGLE directive"_err_en_US,
+                    name->ToString());
+              } else {
+                if (endDir) {
+                  endSingleCopyprivateSyms.insert(symbol);
+                } else {
+                  singleCopyprivateSyms.insert(symbol);
+                }
+              }
+            }
+          }
+        } else if (clause.Id() == llvm::omp::Clause::OMPC_nowait) {
+          if (foundNowait) {
+            context_.Say(clause.source,
+                "At most one NOWAIT clause can appear on the SINGLE directive"_err_en_US);
+          } else {
+            foundNowait = !endDir;
+          }
+          if (!NowaitSource.ToString().size()) {
+            NowaitSource = clause.source;
+          }
+        }
+      }
+    };
+    catchCopyPrivateNowaitClauses(beginBlockDir, false);
+    catchCopyPrivateNowaitClauses(endBlockDir, true);
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (version <= 52 && NowaitSource.ToString().size() &&
+        (singleCopyprivateSyms.size() || endSingleCopyprivateSyms.size())) {
+      context_.Say(NowaitSource,
+          "NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive"_err_en_US);
+    }
+  }
+
   switch (beginDir.v) {
   case llvm::omp::Directive::OMPD_target:
     if (CheckTargetBlockOnlyTeams(block)) {
@@ -2903,12 +2961,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
   // clause
   CheckMultListItems();
 
-  // 2.7.3 Single Construct Restriction
-  if (GetContext().directive == llvm::omp::Directive::OMPD_end_single) {
-    CheckNotAllowedIfClause(
-        llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
-  }
-
   auto testThreadprivateVarErr = [&](Symbol sym, parser::Name name,
                                      llvmOmpClause clauseTy) {
     if (sym.test(Symbol::Flag::OmpThreadprivate))
@@ -3549,15 +3601,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
-  if (llvm::omp::noWaitClauseNotAllowedSet.test(GetContext().directive)) {
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive "_err_en_US,
-        parser::ToUpperCaseLetters(
-            getClauseName(llvm::omp::Clause::OMPC_nowait).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
-  }
 }
 
 bool OmpStructureChecker::IsDataRefTypeParamInquiry(
@@ -4288,15 +4331,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_copyprivate);
   CheckCopyingPolymorphicAllocatable(
       symbols, llvm::omp::Clause::OMPC_copyprivate);
-  if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the OMP %s directive,"
-        " use it on OMP END %s directive "_err_en_US,
-        parser::ToUpperCaseLetters(
-            getClauseName(llvm::omp::Clause::OMPC_copyprivate).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {

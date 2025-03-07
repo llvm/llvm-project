@@ -2828,8 +2828,17 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``supervisor`` and ``machine``. If
-there is no parameter, then it defaults to ``machine``.
+Permissible values for this parameter are ``supervisor``, ``machine``,
+``qci-nest`` and ``qci-nonest``. If there is no parameter, then it defaults to
+``machine``.
+
+The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
+and are used for Machine-mode Interrupts and Machine-mode Non-maskable
+interrupts. These use the following instructions from Xqciint to save and
+restore interrupt state to the stack -- the ``qci-nest`` value will use
+``qc.c.mienter.nest`` and the ``qci-nonest`` value will use ``qc.c.mienter`` to
+begin the interrupt handler. Both of these will use ``qc.c.mileaveret`` to
+restore the state and return to the previous context.
 
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
@@ -2839,6 +2848,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.6
   }];
 }
 
