@@ -640,8 +640,7 @@ getCallbacks(ObjectFile &Obj, const Twine &Filename) {
   const std::string &TripleStr = TT.str();
 
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TripleStr, TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty()) {
     logAllUnhandledErrors(
         createStringError(inconvertibleErrorCode(), "Error in creating Target"),
