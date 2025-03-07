@@ -1480,6 +1480,28 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
   llvm.return
 }
 
+// ----
+
+//CHECK-LABEL: @atomic_complex_write
+//CHECK: %[[V:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: %[[X:.*]] = alloca { float, float }, i64 1, align 8
+//CHECK: %[[LOAD:.*]] = load { float, float }, ptr %[[V]], align 4
+//CHECK: %[[ALLOCA:.*]] = alloca { float, float }, align 8
+//CHECK: store { float, float } %[[LOAD]], ptr %[[ALLOCA]], align 4
+//CHECK: call void @__atomic_store(i64 8, ptr %[[X]], ptr %[[ALLOCA]], i32 0)
+
+llvm.func @atomic_complex_write() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.struct<(f32, f32)> {bindc_name = "r"} : (i64) -> !llvm.ptr
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x !llvm.struct<(f32, f32)> {bindc_name = "l"} : (i64) -> !llvm.ptr
+  %4 = llvm.mlir.constant(1 : i64) : i64
+  %5 = llvm.mlir.constant(1 : i64) : i64
+  %6 = llvm.load %1 : !llvm.ptr -> !llvm.struct<(f32, f32)>
+  omp.atomic.write %3 = %6 : !llvm.ptr, !llvm.struct<(f32, f32)>
+  llvm.return
+}
+
 // -----
 
 //CHECK: %[[X_NEW_VAL:.*]] = alloca { float, float }, align 8
