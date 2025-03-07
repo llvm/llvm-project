@@ -310,9 +310,9 @@ bool CodeGenAction::beginSourceFileAction() {
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
-      ci.getSemanticsContext().targetCharacteristics(),
-      Fortran::frontend::getAllCooked(ci), ci.getInvocation().getTargetOpts().triple,
-      kindMap, ci.getInvocation().getLoweringOpts(),
+      ci.getSemanticsContext().targetCharacteristics(), getAllCooked(ci),
+      ci.getInvocation().getTargetOpts().triple, kindMap,
+      ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
@@ -326,7 +326,7 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   // Create a parse tree and lower it to FIR
-  Fortran::frontend::parseAndLowerTree(ci, lb);
+  parseAndLowerTree(ci, lb);
 
   // Fetch module from lb, so we can set
   mlirModule = lb.getModuleAndRelease();
@@ -424,7 +424,7 @@ void PrintPreprocessedAction::executeAction() {
   llvm::raw_string_ostream outForPP{buf};
 
   CompilerInstance &ci = this->getInstance();
-  Fortran::frontend::formatOrDumpPrescanner(buf, outForPP, ci);
+  formatOrDumpPrescanner(buf, outForPP, ci);
 
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
@@ -444,13 +444,13 @@ void PrintPreprocessedAction::executeAction() {
 }
 
 void DebugDumpProvenanceAction::executeAction() {
-  Fortran::frontend::dumpProvenance(this->getInstance());
+  dumpProvenance(this->getInstance());
 }
 
 void ParseSyntaxOnlyAction::executeAction() {}
 
 void DebugUnparseNoSemaAction::executeAction() {
-  Fortran::frontend::debugUnparseNoSema(this->getInstance(), llvm::outs());
+  debugUnparseNoSema(this->getInstance(), llvm::outs());
 }
 
 void DebugUnparseAction::executeAction() {
@@ -458,17 +458,17 @@ void DebugUnparseAction::executeAction() {
   auto os{ci.createDefaultOutputFile(
       /*Binary=*/false, /*InFile=*/getCurrentFileOrBufferName())};
 
-  Fortran::frontend::debugUnparseNoSema(ci, *os);
+  debugUnparseNoSema(ci, *os);
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithSymbolsAction::executeAction() {
-  Fortran::frontend::debugUnparseWithSymbols(this->getInstance());
+  debugUnparseWithSymbols(this->getInstance());
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithModulesAction::executeAction() {
-  Fortran::frontend::debugUnparseWithModules(this->getInstance());
+  debugUnparseWithModules(this->getInstance());
   reportFatalSemanticErrors();
 }
 
@@ -492,7 +492,7 @@ void DebugDumpAllAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
   // Dump parse tree
-  Fortran::frontend::dumpTree(ci);
+  dumpTree(ci);
 
   if (!ci.getRtTyTables().schemata) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -511,11 +511,11 @@ void DebugDumpAllAction::executeAction() {
 }
 
 void DebugDumpParseTreeNoSemaAction::executeAction() {
-  Fortran::frontend::dumpTree(this->getInstance());
+  dumpTree(this->getInstance());
 }
 
 void DebugDumpParseTreeAction::executeAction() {
-  Fortran::frontend::dumpTree(this->getInstance());
+  dumpTree(this->getInstance());
 
   // Report fatal semantic errors
   reportFatalSemanticErrors();
@@ -523,7 +523,7 @@ void DebugDumpParseTreeAction::executeAction() {
 
 void DebugMeasureParseTreeAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
-  Fortran::frontend::debugMeasureParseTree(ci, getCurrentFileOrBufferName());
+  debugMeasureParseTree(ci, getCurrentFileOrBufferName());
 }
 
 void DebugPreFIRTreeAction::executeAction() {
@@ -532,11 +532,11 @@ void DebugPreFIRTreeAction::executeAction() {
     return;
   }
 
-  Fortran::frontend::dumpPreFIRTree(this->getInstance());
+  dumpPreFIRTree(this->getInstance());
 }
 
 void DebugDumpParsingLogAction::executeAction() {
-  Fortran::frontend::debugDumpParsingLog(this->getInstance());
+  debugDumpParsingLog(this->getInstance());
 }
 
 void GetDefinitionAction::executeAction() {
@@ -1368,7 +1368,7 @@ void InitOnlyAction::executeAction() {
 void PluginParseTreeAction::executeAction() {}
 
 void DebugDumpPFTAction::executeAction() {
-  Fortran::frontend::dumpPreFIRTree(this->getInstance());
+  dumpPreFIRTree(this->getInstance());
 }
 
 Fortran::parser::Parsing &PluginParseTreeAction::getParsing() {

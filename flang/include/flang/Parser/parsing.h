@@ -11,9 +11,9 @@
 
 #include "instrumented-parser.h"
 #include "message.h"
+#include "options.h"
 #include "parse-tree.h"
 #include "provenance.h"
-#include "options.h"
 #include "flang/Parser/preprocessor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>

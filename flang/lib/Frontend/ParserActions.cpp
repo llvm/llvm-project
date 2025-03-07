@@ -12,36 +12,33 @@
 
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Frontend/CompilerInstance.h"
-#include "flang/Parser/dump-parse-tree.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/unparse.h"
-#include "flang/Parser/source.h"
-#include "flang/Parser/provenance.h"
-#include "flang/Semantics/unparse-with-symbols.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Parser/dump-parse-tree.h"
+#include "flang/Parser/parsing.h"
+#include "flang/Parser/provenance.h"
+#include "flang/Parser/source.h"
+#include "flang/Parser/unparse.h"
+#include "flang/Semantics/unparse-with-symbols.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::frontend {
 
-Fortran::parser::AllCookedSources&
-getAllCooked(Fortran::frontend::CompilerInstance &ci) {
+parser::AllCookedSources &getAllCooked(CompilerInstance &ci) {
   return ci.getParsing().allCooked();
 }
 
-void parseAndLowerTree(Fortran::frontend::CompilerInstance &ci,
-                       Fortran::lower::LoweringBridge &lb) {
-  Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
+void parseAndLowerTree(CompilerInstance &ci, lower::LoweringBridge &lb) {
+  parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getSemanticsContext());
 }
 
-void dumpTree(Fortran::frontend::CompilerInstance &ci) {
+void dumpTree(CompilerInstance &ci) {
   auto &parseTree{ci.getParsing().parseTree()};
   llvm::outs() << "========================";
   llvm::outs() << " Flang: parse tree dump ";
   llvm::outs() << "========================\n";
-  Fortran::parser::DumpTree(llvm::outs(), parseTree,
-                            &ci.getInvocation().getAsFortran());
+  parser::DumpTree(llvm::outs(), parseTree, &ci.getInvocation().getAsFortran());
 }
 
 void dumpProvenance(CompilerInstance &ci) {
@@ -51,9 +48,8 @@ void dumpProvenance(CompilerInstance &ci) {
 void dumpPreFIRTree(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
-  if (auto ast{
-          Fortran::lower::createPFT(parseTree, ci.getSemanticsContext())}) {
-    Fortran::lower::dumpPFT(llvm::outs(), *ast);
+  if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext())}) {
+    lower::dumpPFT(llvm::outs(), *ast);
   } else {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
@@ -112,7 +108,7 @@ void debugMeasureParseTree(CompilerInstance &ci, llvm::StringRef filename) {
 
   auto &parseTree{ci.getParsing().parseTree()};
   MeasurementVisitor visitor;
-  Fortran::parser::Walk(parseTree, visitor);
+  parser::Walk(parseTree, visitor);
   llvm::outs() << "Parse tree comprises " << visitor.objects
                << " objects and occupies " << visitor.bytes
                << " total bytes.\n";
@@ -124,7 +120,7 @@ void debugUnparseNoSema(CompilerInstance &ci, llvm::raw_ostream &out) {
 
   // TODO: Options should come from CompilerInvocation
   Unparse(out, *parseTree,
-          /*encoding=*/Fortran::parser::Encoding::UTF_8,
+          /*encoding=*/parser::Encoding::UTF_8,
           /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
           /*preStatement=*/nullptr,
           invoc.getUseAnalyzedObjectsForUnparse() ? &invoc.getAsFortran()
@@ -134,15 +130,15 @@ void debugUnparseNoSema(CompilerInstance &ci, llvm::raw_ostream &out) {
 void debugUnparseWithSymbols(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
-  Fortran::semantics::UnparseWithSymbols(
-      llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  semantics::UnparseWithSymbols(llvm::outs(), parseTree,
+                                /*encoding=*/parser::Encoding::UTF_8);
 }
 
 void debugUnparseWithModules(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
-  Fortran::semantics::UnparseWithModules(
-      llvm::outs(), ci.getSemantics().context(), parseTree,
-      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  semantics::UnparseWithModules(llvm::outs(), ci.getSemantics().context(),
+                                parseTree,
+                                /*encoding=*/parser::Encoding::UTF_8);
 }
 
 void debugDumpParsingLog(CompilerInstance &ci) {

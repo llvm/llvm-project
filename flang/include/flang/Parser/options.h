@@ -9,12 +9,12 @@
 #ifndef FORTRAN_PARSER_OPTIONS_H_
 #define FORTRAN_PARSER_OPTIONS_H_
 
+#include "characters.h"
+#include "flang/Support/Fortran-features.h"
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include "characters.h"
-#include "flang/Support/Fortran-features.h"
 
 namespace Fortran::parser {
 

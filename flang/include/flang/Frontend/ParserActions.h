@@ -16,22 +16,22 @@
 #include <string>
 
 namespace llvm {
-    class raw_string_ostream;
-    class raw_ostream;
-    class StringRef;
+class raw_string_ostream;
+class raw_ostream;
+class StringRef;
 } // namespace llvm
 
 namespace Fortran::lower {
-    class LoweringBridge;
+class LoweringBridge;
 } // namespace Fortran::lower
 
 namespace Fortran::parser {
-    class Parsing;
-    class AllCookedSources;
+class Parsing;
+class AllCookedSources;
 } // namespace Fortran::parser
 
 namespace lower::pft {
-    class Program;
+class Program;
 } // namespace lower::pft
 
 //=== Frontend Parser helpers ===
@@ -39,9 +39,9 @@ namespace lower::pft {
 namespace Fortran::frontend {
 class CompilerInstance;
 
-Fortran::parser::AllCookedSources& getAllCooked(CompilerInstance &ci);
+parser::AllCookedSources &getAllCooked(CompilerInstance &ci);
 
-void parseAndLowerTree(CompilerInstance &ci, Fortran::lower::LoweringBridge &lb);
+void parseAndLowerTree(CompilerInstance &ci, lower::LoweringBridge &lb);
 
 void dumpTree(CompilerInstance &ci);
 
@@ -49,7 +49,9 @@ void dumpProvenance(CompilerInstance &ci);
 
 void dumpPreFIRTree(CompilerInstance &ci);
 
-void formatOrDumpPrescanner(std::string &buf, llvm::raw_string_ostream &outForPP, CompilerInstance &ci);
+void formatOrDumpPrescanner(std::string &buf,
+                            llvm::raw_string_ostream &outForPP,
+                            CompilerInstance &ci);
 
 void debugMeasureParseTree(CompilerInstance &ci, llvm::StringRef filename);
 
