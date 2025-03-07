@@ -742,10 +742,9 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"}, {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"},
-      {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisim"},
-      {"xqcisls"}};
+      {"xqcia"},   {"xqciac"},  {"xqcibm"},  {"xqcicli"}, {"xqcicm"},
+      {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqcilia"}, {"xqcilo"},
+      {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
   bool HasZcmp = Exts.count("zcmp") != 0;
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
