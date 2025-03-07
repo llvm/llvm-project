@@ -89,90 +89,56 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   return Skeleton;
 }
 
-static bool mayShadowImpl(const DeclContext *DC0, const DeclContext *DC1) {
-  return DC0 && DC0 == DC1;
+namespace {
+struct Entry {
+  const NamedDecl *ND;
+  bool FromDerivedClass;
+};
 }
 
-static bool mayShadowImpl(const NamedDecl *ND0, const NamedDecl *ND1) {
-  return isa<TemplateTypeParmDecl>(ND0) || isa<TemplateTypeParmDecl>(ND1);
-}
+using DeclsWithinContextMap =
+    llvm::DenseMap<const DeclContext *, llvm::SmallVector<Entry, 1>>;
 
-static bool isMemberOf(const ConfusableIdentifierCheck::ContextInfo *DC0,
-                       const ConfusableIdentifierCheck::ContextInfo *DC1) {
-  return llvm::is_contained(DC1->Bases, DC0->PrimaryContext);
-}
-
-static bool enclosesContext(const ConfusableIdentifierCheck::ContextInfo *DC0,
-                            const ConfusableIdentifierCheck::ContextInfo *DC1) {
-  if (DC0->PrimaryContext == DC1->PrimaryContext)
-    return true;
-
-  return llvm::is_contained(DC0->PrimaryContexts, DC1->PrimaryContext) ||
-         llvm::is_contained(DC1->PrimaryContexts, DC0->PrimaryContext);
-}
-
-static bool mayShadow(const NamedDecl *ND0,
-                      const ConfusableIdentifierCheck::ContextInfo *DC0,
-                      const NamedDecl *ND1,
-                      const ConfusableIdentifierCheck::ContextInfo *DC1) {
-
-  if (!DC0->Bases.empty() && !DC1->Bases.empty()) {
-    // if any of the declaration is a non-private member of the other
-    // declaration, it's shadowed by the former
-
-    if (ND1->getAccess() != AS_private && isMemberOf(DC1, DC0))
+static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
+                         const DeclContext *DC, Entry E) {
+  auto &Decls = DeclsWithinContext[DC];
+  if (!Decls.empty() &&
+      Decls.back().ND->getIdentifier() == E.ND->getIdentifier()) {
+    // Already have a declaration with this identifier in this context. Don't
+    // track another one. This means that if an outer name is confusable with an
+    // inner name, we'll only diagnose the outer name once, pointing at the
+    // first inner declaration with that name.
+    if (Decls.back().FromDerivedClass && !E.FromDerivedClass) {
+      // Prefer the declaration that's not from the derived class, because that
+      // conflicts with more declarations.
+      Decls.back() = E;
       return true;
-
-    if (ND0->getAccess() != AS_private && isMemberOf(DC0, DC1))
-      return true;
-  }
-
-  if (!mayShadowImpl(DC0->NonTransparentContext, DC1->NonTransparentContext) &&
-      !mayShadowImpl(ND0, ND1))
+    }
     return false;
-
-  return enclosesContext(DC0, DC1);
+  }
+  Decls.push_back(E);
+  return true;
 }
 
-const ConfusableIdentifierCheck::ContextInfo *
-ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
-  const DeclContext *PrimaryContext = DC->getPrimaryContext();
-  auto [It, Inserted] = ContextInfos.try_emplace(PrimaryContext);
-  if (!Inserted)
-    return &It->second;
-
-  ContextInfo &Info = It->second;
-  Info.PrimaryContext = PrimaryContext;
-  Info.NonTransparentContext = PrimaryContext;
-
-  while (Info.NonTransparentContext->isTransparentContext()) {
-    Info.NonTransparentContext = Info.NonTransparentContext->getParent();
-    if (!Info.NonTransparentContext)
-      break;
-  }
-
-  if (Info.NonTransparentContext)
-    Info.NonTransparentContext =
-        Info.NonTransparentContext->getPrimaryContext();
-
+static void addToEnclosingContexts(DeclsWithinContextMap &DeclsWithinContext,
+                                   const DeclContext *DC, const NamedDecl *ND) {
   while (DC) {
-    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC))
-      Info.PrimaryContexts.push_back(DC->getPrimaryContext());
+    DC = DC->getNonTransparentContext()->getPrimaryContext();
+    if (!addToContext(DeclsWithinContext, DC, {ND, false}))
+      return;
+
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
+      RD = RD->getDefinition();
+      if (RD) {
+        RD->forallBases([&](const CXXRecordDecl *Base) {
+          addToContext(DeclsWithinContext, Base, {ND, true});
+          return true;
+        });
+      }
+    }
+
     DC = DC->getParent();
   }
-
-  if (const auto *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
-    RD = RD->getDefinition();
-    if (RD) {
-      Info.Bases.push_back(RD);
-      RD->forallBases([&](const CXXRecordDecl *Base) {
-        Info.Bases.push_back(Base);
-        return false;
-      });
-    }
-  }
-
-  return &Info;
 }
 
 void ConfusableIdentifierCheck::check(
@@ -181,7 +147,7 @@ void ConfusableIdentifierCheck::check(
   if (!ND)
     return;
 
-  IdentifierInfo *NDII = ND->getIdentifier();
+  const IdentifierInfo *NDII = ND->getIdentifier();
   if (!NDII)
     return;
 
@@ -189,29 +155,68 @@ void ConfusableIdentifierCheck::check(
   if (NDName.empty())
     return;
 
-  const ContextInfo *Info = getContextInfo(ND->getDeclContext());
-
-  llvm::SmallVector<Entry> &Mapped = Mapper[skeleton(NDName)];
-  for (const Entry &E : Mapped) {
-    if (!mayShadow(ND, Info, E.Declaration, E.Info))
-      continue;
-
-    const IdentifierInfo *ONDII = E.Declaration->getIdentifier();
-    StringRef ONDName = ONDII->getName();
-    if (ONDName == NDName)
-      continue;
-
-    diag(ND->getLocation(), "%0 is confusable with %1") << ND << E.Declaration;
-    diag(E.Declaration->getLocation(), "other declaration found here",
-         DiagnosticIDs::Note);
-  }
-
-  Mapped.push_back({ND, Info});
+  NameToDecls[NDII].push_back(ND);
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
-  Mapper.clear();
-  ContextInfos.clear();
+  llvm::StringMap<llvm::SmallVector<const IdentifierInfo*, 1>> SkeletonToNames;
+  // Compute the skeleton for each identifier.
+  for (auto &[Ident, Decls] : NameToDecls) {
+    SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);
+  }
+
+  // Visit each skeleton with more than one identifier.
+  for (auto &[Skel, Idents] : SkeletonToNames) {
+    if (Idents.size() < 2) {
+      continue;
+    }
+
+    // Find the declaration contexts that transitively contain each identifier.
+    DeclsWithinContextMap DeclsWithinContext;
+    for (const IdentifierInfo *II : Idents) {
+      for (const NamedDecl *ND : NameToDecls[II]) {
+        addToEnclosingContexts(DeclsWithinContext, ND->getDeclContext(), ND);
+      }
+    }
+
+    // Check to see if any declaration is declared in a context that
+    // transitively contains another declaration with a different identifier but
+    // the same skeleton.
+    for (const IdentifierInfo *II : Idents) {
+      for (const NamedDecl *OuterND : NameToDecls[II]) {
+        const DeclContext *OuterDC = OuterND->getDeclContext()
+                                         ->getNonTransparentContext()
+                                         ->getPrimaryContext();
+        for (Entry Inner : DeclsWithinContext[OuterDC]) {
+          // Don't complain if the identifiers are the same.
+          if (OuterND->getIdentifier() == Inner.ND->getIdentifier())
+            continue;
+
+          // Don't complain about a derived-class name shadowing a base class
+          // private member.
+          if (OuterND->getAccess() == AS_private && Inner.FromDerivedClass)
+            continue;
+
+          // If the declarations are in the same context, only diagnose the
+          // later one.
+          if (OuterDC->Equals(
+                  Inner.ND->getDeclContext()->getNonTransparentContext()) &&
+              Inner.ND->getASTContext()
+                  .getSourceManager()
+                  .isBeforeInTranslationUnit(Inner.ND->getLocation(),
+                                             OuterND->getLocation()))
+            continue;
+
+          diag(Inner.ND->getLocation(), "%0 is confusable with %1")
+              << Inner.ND << OuterND;
+          diag(OuterND->getLocation(), "other declaration found here",
+                DiagnosticIDs::Note);
+        }
+      }
+    }
+  }
+
+  NameToDecls.clear();
 }
 
 void ConfusableIdentifierCheck::registerMatchers(
