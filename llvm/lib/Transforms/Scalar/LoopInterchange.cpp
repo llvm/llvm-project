@@ -1135,18 +1135,16 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
   if (CostMap.contains(InnerLoop) && CostMap.contains(OuterLoop)) {
+    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+      return std::nullopt;
     unsigned InnerIndex = 0, OuterIndex = 0;
     InnerIndex = CostMap.find(InnerLoop)->second;
     OuterIndex = CostMap.find(OuterLoop)->second;
     LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
                       << ", OuterIndex = " << OuterIndex << "\n");
-    if (InnerIndex < OuterIndex)
-      return std::optional<bool>(true);
     assert(InnerIndex != OuterIndex && "CostMap should assign unique "
                                        "numbers to each loop");
-    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-      return std::nullopt;
-    return std::optional<bool>(false);
+    return std::optional<bool>(InnerIndex < OuterIndex);
   }
   return std::nullopt;
 }
@@ -1198,6 +1196,10 @@ bool LoopInterchangeProfitability::isProfitable(
   // profitable for InstrOrderCost. Likewise, if InstrOrderCost failed to
   // analysis the profitability then only, isProfitableForVectorization
   // will decide.
+  //
+  // For a loop A and B, once isProfitable(A, B) returns true,
+  // isProfitable(B, A) must never return true. If this happens, it triggers the
+  // LoopInterchange to undo its own transformation.
   std::optional<bool> shouldInterchange =
       isProfitablePerLoopCacheAnalysis(CostMap, CC);
   if (!shouldInterchange.has_value()) {
