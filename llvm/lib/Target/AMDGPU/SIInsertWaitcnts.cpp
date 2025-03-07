@@ -301,10 +301,11 @@ class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
                   HardwareLimits Limits, RegisterEncoding Encoding,
-                  const unsigned *WaitEventMaskForInst,
+                  unsigned LaneSharedSize, const unsigned *WaitEventMaskForInst,
                   InstCounterType SmemAccessCounter)
       : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        Encoding(Encoding), WaitEventMaskForInst(WaitEventMaskForInst),
+        Encoding(Encoding), LaneSharedSize(LaneSharedSize),
+        WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
   unsigned getWaitCountMax(InstCounterType T) const {
@@ -509,6 +510,7 @@ private:
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
   RegisterEncoding Encoding = {};
+  unsigned LaneSharedSize = 0;
   const unsigned *WaitEventMaskForInst;
   InstCounterType SmemAccessCounter;
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
@@ -869,7 +871,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
   }
 #endif
 
-  Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
+  Result.first = IsLaneShared ? 0 : LaneSharedSize;
   int MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
   if (GprIdxImmedVals[Idx].has_value()) {
     auto OffsetSrcIdx =
@@ -891,7 +893,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     // TODO-GFX13:
     // We want to build an event-queue and apply alias analysis to
     // get more accurate result in this case.
-    Result.second = Encoding.LaneSharedSize;
+    Result.second = LaneSharedSize;
   } else {
     // TODO-GFX13: we expect to scan implicit defs/uses on VGPRs
     // that should provide more accurate interval for private objects.
@@ -925,7 +927,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0 + Encoding.LaneSharedSize;
+    Result.first = Reg - Encoding.VGPR0 + LaneSharedSize;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
@@ -3021,6 +3023,8 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
   Encoding.LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
+  unsigned LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
+
   BlockInfos.clear();
   bool Modified = false;
 
@@ -3065,7 +3069,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
+        ST, MaxCounter, Limits, Encoding, LaneSharedSize, WaitEventMaskForInst,
         SmemAccessCounter);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
@@ -3104,11 +3108,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       } else {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-              SmemAccessCounter);
+              ST, MaxCounter, Limits, Encoding, LaneSharedSize,
+              WaitEventMaskForInst, SmemAccessCounter);
         else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits, Encoding,
-                                      WaitEventMaskForInst, SmemAccessCounter);
+          *Brackets =
+              WaitcntBrackets(ST, MaxCounter, Limits, Encoding, LaneSharedSize,
+                              WaitEventMaskForInst, SmemAccessCounter);
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
