@@ -9,7 +9,7 @@ export class LinuxProcessTree extends BaseProcessTree {
     return [
       "-axo",
       // The length of exe must be large enough or data will be truncated.
-      `pid=PID,lstart=START,exe:128=COMMAND,args=ARGUMENTS`,
+      `pid=PID,state=STATE,lstart=START,exe:128=COMMAND,args=ARGUMENTS`,
     ];
   }
 
@@ -23,8 +23,14 @@ export class LinuxProcessTree extends BaseProcessTree {
         return;
       }
 
-      const pid = /^\s*([0-9]+)\s*/.exec(line);
-      if (!pid) {
+      const pidAndState = /^\s*([0-9]+)\s+([a-zA-Z<>+]+)\s+/.exec(line);
+      if (!pidAndState) {
+        return;
+      }
+
+      // Make sure the process isn't in a trace/debug or zombie state as we cannot attach to them
+      const state = pidAndState[2];
+      if (state.includes("X") || state.includes("Z")) {
         return;
       }
 
@@ -35,10 +41,12 @@ export class LinuxProcessTree extends BaseProcessTree {
       }
 
       return {
-        id: Number(pid[1]),
+        id: Number(pidAndState[1]),
         command,
         arguments: line.slice(argumentsOffset).trim(),
-        start: Date.parse(line.slice(pid[0].length, commandOffset).trim()),
+        start: Date.parse(
+          line.slice(pidAndState[0].length, commandOffset).trim(),
+        ),
       };
     };
   }
