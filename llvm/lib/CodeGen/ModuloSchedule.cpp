@@ -412,7 +412,7 @@ void ModuloScheduleExpander::generateExistingPhis(
                             InitVal, NewReg);
       auto It = VRMap[CurStageNum].find(LoopVal);
       if (It != VRMap[CurStageNum].end()) {
-        llvm::Register Reg = It->second;
+        Register Reg = It->second;
         VRMap[CurStageNum][Def] = Reg;
       }
     }
