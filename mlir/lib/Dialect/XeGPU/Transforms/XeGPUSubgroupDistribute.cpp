@@ -144,7 +144,7 @@ SGMap SGMap::getTransposedLayout(ArrayRef<int64_t> permutation) const {
     newLayout.layout.push_back(layout.layout[idx]);
     newData.layout.push_back(data.layout[idx]);
   }
-  return SGMap(newLayout, data);
+  return SGMap(newLayout, newData);
 }
 
 ///===----------------------------------------------------------------------===///
