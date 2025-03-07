@@ -413,7 +413,7 @@ func.func @test_binary_op_2(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.t
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T7:.*]] = xegpu.update_nd_offset %{{.*}} : !xegpu.tensor_desc<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
-// CHECK-NEXT: op    : %[[T8:.*]] = xegpu.update_nd_offset %{{.8}} : !xegpu.tensor_desc<16x16xf16>
+// CHECK-NEXT: op    : %[[T8:.*]] = xegpu.update_nd_offset %{{.*}} : !xegpu.tensor_desc<16x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
 // CHECK-NEXT: op    : scf.for
 // CHECK-NEXT: sg_map for result #0: Not assigned.
@@ -442,6 +442,25 @@ func.func @test_for_op(%arg0: memref<8x128xf16>, %arg1: memref<128x16xf16>, %arg
 }
 
 // -----
+// CHECK: function: test_if_op_1:
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: argument: <block argument> of type 'i1' at index: 2
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 3
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: op    : scf.if
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.dpas %[[T0]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 func.func @test_if_op_1(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg2 -> (vector<16x16xf16>) {
@@ -457,6 +476,27 @@ func.func @test_if_op_1(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tenso
 }
 
 // -----
+// CHECK: function: test_if_op_2:
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type 'i1' at index: 2
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 3
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 4
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T4:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : scf.if
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.dpas %[[T0]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 func.func @test_if_op_2(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: i1, %arg3: !xegpu.tensor_desc<8x16xf32>, %arg4: !xegpu.tensor_desc<16x16xf16>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg2 -> (vector<16x16xf16>) {
@@ -473,6 +513,25 @@ func.func @test_if_op_2(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tenso
 }
 
 // -----
+// CHECK: function: test_if_op_3:
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf16>' at index: 0
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16x16xf16>' at index: 1
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: argument: <block argument> of type 'vector<16x16xf16>' at index: 2
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: argument: <block argument> of type 'i1' at index: 3
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<8x16xf32>' at index: 4
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T3:.*]] = xegpu.load_nd %{{.*}}  : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: op    : scf.if
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: op    : %[[T2:.*]] = xegpu.dpas %[[T0]], %{{.*}} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 func.func @test_if_op_3(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: vector<16x16xf16>, %arg3: i1, %arg4: !xegpu.tensor_desc<8x16xf32>) {
   %0 = xegpu.load_nd %arg0  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
   %1 = scf.if %arg3 -> (vector<16x16xf16>) {
@@ -487,6 +546,15 @@ func.func @test_if_op_3(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tenso
 }
 
 // -----
+// CHECK: function: test_vector_reduction_1:
+// CHECK-NEXT: argument: <block argument> of type 'vector<16x16xf32>' at index: 0
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = vector.multi_reduction <add>, %{{.*}}, %[[CST]] [0] : vector<16x16xf32> to vector<16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 func.func @test_vector_reduction_1(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
   %0 = vector.multi_reduction <add>, %arg0, %cst [0] : vector<16x16xf32> to vector<16xf32>
@@ -495,6 +563,14 @@ func.func @test_vector_reduction_1(%arg0: vector<16x16xf32>, %arg1: !xegpu.tenso
 }
 
 // -----
+// CHECK: argument: <block argument> of type 'vector<16x16xf32>' at index: 0
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
+// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: op    : %[[T0:.*]] = vector.multi_reduction <add>, %{{.*}}, %[[CST]] [1] : vector<16x16xf32> to vector<16xf32>
+// CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 func.func @test_vector_reduction_2(%arg0: vector<16x16xf32>, %arg1: !xegpu.tensor_desc<16xf32>) {
   %cst = arith.constant dense<0.000000e+00> : vector<16xf32>
   %0 = vector.multi_reduction <add>, %arg0, %cst [1] : vector<16x16xf32> to vector<16xf32>
