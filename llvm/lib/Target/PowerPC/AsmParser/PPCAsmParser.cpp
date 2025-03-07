@@ -1539,8 +1539,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
       if (!(parseOptionalToken(AsmToken::Identifier) &&
             Tok.getString().compare_insensitive("plt") == 0))
         return Error(Tok.getLoc(), "expected 'plt'");
-      EVal = MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_PLT,
-                                     getContext());
+      EVal = MCSymbolRefExpr::create(getContext().getOrCreateSymbol(TlsGetAddr),
+                                     MCSymbolRefExpr::VK_PLT, getContext());
       if (parseOptionalToken(AsmToken::Plus)) {
         const MCExpr *Addend = nullptr;
         SMLoc EndLoc;

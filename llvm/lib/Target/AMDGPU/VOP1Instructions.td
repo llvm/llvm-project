@@ -867,6 +867,7 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
@@ -1701,7 +1702,6 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-let SubtargetPredicate = HasPrngInst in
 defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;

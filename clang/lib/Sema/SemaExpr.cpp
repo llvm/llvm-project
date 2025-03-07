@@ -11247,6 +11247,10 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   if (S.getLangOpts().OpenCL)
     return;
 
+  if (Opc == BO_Shr &&
+      LHS.get()->IgnoreParenImpCasts()->getType()->isBooleanType())
+    S.Diag(Loc, diag::warn_shift_bool) << LHS.get()->getSourceRange();
+
   // Check right/shifter operand
   Expr::EvalResult RHSResult;
   if (RHS.get()->isValueDependent() ||
@@ -14924,7 +14928,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
 
     if (const auto *BI = dyn_cast<BinaryOperator>(LHSExpr);
         BI && BI->isComparisonOp())
-      Diag(OpLoc, diag::warn_consecutive_comparison);
+      Diag(OpLoc, diag::warn_consecutive_comparison)
+          << BI->getOpcodeStr() << BinaryOperator::getOpcodeStr(Opc);
 
     break;
   case BO_EQ:

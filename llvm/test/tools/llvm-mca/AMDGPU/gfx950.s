@@ -188,7 +188,6 @@ v_smfmac_f32_32x32x32_bf8_fp8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 v_smfmac_f32_32x32x32_fp8_bf8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 v_smfmac_f32_32x32x32_fp8_fp8 v[0:15], v[2:3], v[4:7], v1 cbsz:3 abid:1
 
-
 # CHECK:     [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x32_f16 a[0:3], a[0:3], a[0:3], a[0:3] blgp:1
 # CHECK-NEXT: -      -      -      -      -      -     4.00  v_mfma_f32_16x16x32_f16 a[0:3], v[0:3], v[0:3], a[4:7]

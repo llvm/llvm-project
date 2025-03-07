@@ -140,6 +140,25 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let UseNamedOperandTable = 1;
 }
 
+// 32-bit materialize immediate which supports AGPR or VGPR. Typically
+// this should just expand to V_MOV_B32, unless $vdst happens to be
+// allocated to an AGPR in which case it will lower to
+// V_ACCVGPR_WRITE_B32. This should always use an inline immediate
+// operand, as v_accvgpr_write_b32 does not support literal constants.
+def AV_MOV_B32_IMM_PSEUDO
+    : VPseudoInstSI<(outs AV_32:$vdst), (ins VCSrc_b32:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+
+  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
+  // this tricks the rematerialize logic into working for it.
+  let VOP3 = 1;
+  let isMoveImm = 1;
+  let SchedRW = [Write32Bit];
+  let Size = 4;
+  let UseNamedOperandTable = 1;
+}
+
 // 64-bit vector move with dpp. Expanded post-RA.
 def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {
   let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.

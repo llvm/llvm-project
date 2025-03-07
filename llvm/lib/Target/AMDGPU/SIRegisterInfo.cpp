@@ -579,9 +579,10 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 
 std::pair<unsigned, unsigned>
 SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxNumAGPRs = MaxNumVGPRs;
+  const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
   unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
@@ -593,16 +594,43 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->mayNeedAGPRs()) {
-      MaxNumVGPRs /= 2;
-      MaxNumAGPRs = MaxNumVGPRs;
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: Move this logic into subtarget on IR function
+    //
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) = AMDGPU::getIntegerPairAttribute(
+        MF.getFunction(), "amdgpu-agpr-alloc", DefaultNumAGPR,
+        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
     } else {
-      if (MaxNumVGPRs > NumArchVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - NumArchVGPRs;
-        MaxNumVGPRs = NumArchVGPRs;
-      } else
-        MaxNumAGPRs = 0;
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, NumArchVGPRs);
     }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, NumArchVGPRs), MaxNumAGPRs);
+
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= NumArchVGPRs && MaxNumVGPRs <= NumArchVGPRs &&
+           "invalid register counts");
+  } else if (ST.hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
   }
 
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);

@@ -733,8 +733,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   }
 
   if (!TemplateParamLists.empty()) {
-    // FIXME: There's no rule against this, but there are also no rules that
-    // would actually make it usable, so we reject it for now.
+    // C++17 [temp]/1:
+    //   A template defines a family of class, functions, or variables, or an
+    //   alias for a family of types.
+    //
+    // Structured bindings are not included.
     Diag(TemplateParamLists.front()->getTemplateLoc(),
          diag::err_decomp_decl_template);
     return nullptr;

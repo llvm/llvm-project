@@ -17,7 +17,7 @@
 !                        if this is the last iteration
 ! CHECK:                 fir.if %{{.*}} {
 !                          store loop IV
-! CHECK:                   fir.store %{{.*}} to %[[VAL_18]]#1 : !fir.ref<i32>
+! CHECK:                   hlfir.assign %{{.*}} to %[[VAL_18]]#1 : i32, !fir.ref<i32>
 !                          assign private variable to original copy: realloc
 ! CHECK:                   %[[VAL_23:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                   %[[VAL_24:.*]] = fir.box_addr %[[VAL_23]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
