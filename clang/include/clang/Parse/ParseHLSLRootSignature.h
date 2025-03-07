@@ -116,10 +116,10 @@ private:
   /// Returns true if there was an error reported.
   bool ConsumeExpectedToken(TokenKind Expected,
                             unsigned DiagID = diag::err_expected,
-                            StringRef DiagMsg = "");
+                            TokenKind Context = TokenKind::invalid);
   bool ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
                             unsigned DiagID = diag::err_expected,
-                            StringRef DiagMsg = "");
+                            TokenKind Context = TokenKind::invalid);
 
   /// Peek if the next token is of the expected kind and if it is then consume
   /// it.
