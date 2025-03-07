@@ -311,8 +311,8 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   let arguments = (ins
     Tosa_Tensor3D:$a,
     Tosa_Tensor3D:$b,
-    OptionalAttr<I32Attr>:$a_zp,
-    OptionalAttr<I32Attr>:$b_zp
+    Tosa_ScalarIntOrFloatTensor:$a_zp,
+    Tosa_ScalarIntOrFloatTensor:$b_zp
   );
 
   let results = (outs
@@ -323,6 +323,13 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getAZeroPoint();
+    FailureOr<int64_t> getBZeroPoint();
+    LogicalResult verifyAZeroPoint(int64_t zp);
+    LogicalResult verifyBZeroPoint(int64_t zp);
+  }];
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
   let hasVerifier = 1;
@@ -2234,28 +2241,58 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
   let summary = "Cast operation";
 
   let description = [{
-    Performs a set of permissible cast operations
+    Casts a tensor from one data type to another.
+    * This table is showing the supported conversions from the TOSA Specification.
+    * The MLIR dialect here can be used to represent other conversions. 
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|
-    | signed 8 to bool         | int8    | Boolean |
-    | signed 16 to bool        | int16   | Boolean |
-    | signed 32 to bool        | int32   | Boolean |
-    | bool to 8                | Boolean | int8    |
-    | bool to 16               | Boolean | int16   |
-    | bool to 32               | Boolean | int32   |
-    | signed 8 to signed 16    | int8    | int16   |
-    | signed 8 to signed 32    | int8    | int32   |
-    | signed 16 to signed 8    | int16   | int8    |
-    | signed 16 to signed 32   | int16   | int32   |
-    | signed 32 to signed 8    | int32   | int8    |
-    | signed 32 to signed 16   | int32   | int16   |
-    | float to signed 8        | float   | int8    |
-    | float to signed 16       | float   | int16   |
-    | signed 8 to float        | int8    | float   |
-    | signed 16 to float       | int16   | float   |
-    | float 32 to float 64     | float32 | float64 |
-    | float 64 to float 32     | float64 | float32 |
+    | fp16 to fp32             | float16 | float32 |
+    | fp16 to int 16           | float16 | int16   |
+    | fp16 to int 32           | float16 | int32   |
+    | fp16 to int 8            | float16 | int8    |
+    | fp32 to fp16             | float32 | float16 |
+    | fp32 to int 16           | float32 | int16   |
+    | fp32 to int 32           | float32 | int32   |
+    | fp32 to int 8            | float32 | int8    |
+    | int 16 to fp16           | int16   | float16 |
+    | int 16 to fp32           | int16   | float32 |
+    | int 32 to fp16           | int32   | float16 |
+    | int 32 to fp32           | int32   | float32 |
+    | int 8 to fp16            | int8    | float16 |
+    | int 8 to fp32            | int8    | float32 |
+    | bool to int 16           | Boolean | int16   |
+    | bool to int 32           | Boolean | int32   |
+    | bool to int 8            | Boolean | int8    |
+    | int 16 to bool           | int16   | Boolean |
+    | int 16 to int 32         | int16   | int32   |
+    | int 16 to int 8          | int16   | int8    |
+    | int 32 to bool           | int32   | Boolean |
+    | int 32 to int 16         | int32   | int16   |
+    | int 32 to int 8          | int32   | int8    |
+    | int 8 to bool            | int8    | Boolean |
+    | int 8 to int 16          | int8    | int16   |
+    | int 8 to int 32          | int8    | int32   |
+    | bf16 to fp32             | bf16    | float32 |
+    | bf16 to int 16           | bf16    | int16   |
+    | bf16 to int 32           | bf16    | int32   |
+    | bf16 to int 8            | bf16    | int8    |
+    | fp32 to bf16             | float32 | bf16    |
+    | int 16 to bf16           | int16   | bf16    |
+    | int 32 to bf16           | int32   | bf16    |
+    | int 8 to bf16            | int8    | bf16    |
+    | bf16 to fp8e4m3          | bf16    | fp8e4m3 |
+    | fp8e4m3 to bf16          | fp8e4m3 | bf16    |
+    | bf16 to fp8e5m2          | bf16    | fp8e5m2 |
+    | fp8e5m2 to bf16          | fp8e5m2 | bf16    |
+    | fp16 to fp8e4m3          | float16 | fp8e4m3 |
+    | fp32 to fp8e4m3          | float32 | fp8e4m3 |
+    | fp8e4m3 to fp16          | fp8e4m3 | float16 |
+    | fp8e4m3 to fp32          | fp8e4m3 | float32 |
+    | fp16 to fp8e5m2          | float16 | fp8e5m2 |
+    | fp32 to fp8e5m2          | float32 | fp8e5m2 |
+    | fp8e5m2 to fp16          | fp8e5m2 | float16 |
+    | fp8e5m2 to fp32          | fp8e5m2 | float32 |
   }];
 
   let arguments = (ins
