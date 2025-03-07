@@ -114,8 +114,6 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       MCRegister Reg = CS.getReg();
@@ -128,7 +126,13 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      const bool IsLiveIn = SaveBlock.isLiveIn(Reg);
+      bool IsLiveIn = false;
+      for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+        if (SaveBlock.isLiveIn(*R)) {
+          IsLiveIn = true;
+          break;
+        }
+      }
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
                               RC, TRI, Register());
 
