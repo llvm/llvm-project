@@ -798,6 +798,12 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
+      break;
     case Triple::hexagon:
       JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
       GlobDatReloc = ELF::R_HEX_GLOB_DAT;
@@ -833,10 +839,18 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
         consumeError(PltContents.takeError());
         return {};
       }
+      std::optional<llvm::endianness> InstrEndianness;
+      if (const auto *Elf32BE = dyn_cast<ELF32BEObjectFile>(this)) {
+        if (!Elf32BE->isRelocatableObject() &&
+            (Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8)) {
+          InstrEndianness = endianness::little;
+        }
+      }
+
       llvm::append_range(
-          PltEntries,
-          MIA->findPltEntries(Section.getAddress(),
-                              arrayRefFromStringRef(*PltContents), Triple));
+          PltEntries, MIA->findPltEntries(Section.getAddress(),
+                                          arrayRefFromStringRef(*PltContents),
+                                          Triple, InstrEndianness));
     }
   }
 

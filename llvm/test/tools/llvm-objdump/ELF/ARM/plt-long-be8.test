@@ -1,0 +1,84 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
+
+# CHECK: Disassembly of section .text:
+# CHECK: b   {{.*}} <func1@plt>
+# CHECK: bl  {{.*}} <func2@plt>
+# CHECK: beq {{.*}} <func3@plt>
+
+# CHECK: Disassembly of section .plt:
+# CHECK: <func1@plt>:
+# CHECK: <func2@plt>:
+# CHECK: <func3@plt>:
+
+# Test PLT section with long entries parsing on armeb with be8
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2MSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5, EF_ARM_BE8 ]
+  Entry:           0x100C
+Sections:
+  - Name:            .rel.plt
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x9C
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x1111110C
+        Symbol:          func1
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x11111110
+        Symbol:          func2
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x11111114
+        Symbol:          func3
+        Type:            R_ARM_JUMP_SLOT
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Offset:          0x11000
+    Content:         1EFF2FE11EFF2FE11EFF2FE1030400EA060400EB0904000A
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    AddressAlign:    0x10
+    Offset:          0x12000
+    Content:         04E02DE504E09FE50EE08FE008F0BEE51110F0F0D4D4D4D4D4D4D4D4D4D4D4D404C09FE50FC08CE000F09CE51110F0E004C09FE50FC08CE000F09CE51110F0D404C09FE50FC08CE000F09CE51110F0C8
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x11111100
+    AddressAlign:    0x4
+    Offset:          0x21100
+    Content:         '000000000000000000000000000020000000200000002000'
+DynamicSymbols:
+  - Name:            func1
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1000
+  - Name:            func2
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1004
+  - Name:            func3
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1008
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x100C
+...

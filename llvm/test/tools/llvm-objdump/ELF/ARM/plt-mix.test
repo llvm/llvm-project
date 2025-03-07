@@ -1,0 +1,93 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
+
+# CHECK: Disassembly of section .text:
+# CHECK: b   {{.*}} <func1@plt>
+# CHECK: bl  {{.*}} <func2@plt>
+# CHECK: beq {{.*}} <func3@plt>
+
+# CHECK: Disassembly of section .plt:
+# CHECK: <func1@plt>:
+# CHECK-NEXT: ldr
+# CHECK-NEXT: add
+# CHECK-NEXT: ldr
+# CHECK: <func2@plt>:
+# CHECK-NEXT: add
+# CHECK-NEXT: add
+# CHECK-NEXT: ldr
+# CHECK: <func3@plt>:
+# CHECK-NEXT: add
+# CHECK-NEXT: add
+# CHECK-NEXT: ldr
+
+# Test PLT section with mixed long and short entries parsing on arm
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5 ]
+  Entry:           0x100C
+Sections:
+  - Name:            .rel.plt
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x9C
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x800202C
+        Symbol:          func1
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x8002030
+        Symbol:          func2
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x8002034
+        Symbol:          func3
+        Type:            R_ARM_JUMP_SLOT
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Offset:          0x11000
+    Content:         1EFF2FE11EFF2FE11EFF2FE1030400EA060400EB0904000A
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    AddressAlign:    0x10
+    Offset:          0x12000
+    Content:         04E02DE504E09FE50EE08FE008F0BEE510000008D4D4D4D4D4D4D4D4D4D4D4D404C09FE50FC08CE000F09CE5000000087FC68FE2FFCA8CE2F8FFBCE5D4D4D4D47FC68FE2FFCA8CE2ECFFBCE5D4D4D4D4
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x8002020
+    AddressAlign:    0x4
+    Offset:          0x22020
+    Content:         '000000000000000000000000002000000020000000200000'
+DynamicSymbols:
+  - Name:            func1
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1000
+  - Name:            func2
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1004
+  - Name:            func3
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1008
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x100C
+...

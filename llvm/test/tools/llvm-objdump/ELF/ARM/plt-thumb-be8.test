@@ -1,0 +1,97 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
+
+# CHECK: Disassembly of section .text:
+# CHECK: bl    {{.*}} <func1@plt>
+# CHECK: bl    {{.*}} <func2@plt>
+# CHECK: bl    {{.*}} <func3@plt>
+# CHECK: b.w   {{.*}} <func1@plt>
+# CHECK: b.w   {{.*}} <func2@plt>
+# CHECK: b.w   {{.*}} <func3@plt>
+# CHECK: beq.w {{.*}} <func1@plt>
+# CHECK: beq.w {{.*}} <func2@plt>
+# CHECK: beq.w {{.*}} <func3@plt>
+
+# CHECK: Disassembly of section .plt:
+# CHECK: <func1@plt>:
+# CHECK: <func2@plt>:
+# CHECK: <func3@plt>:
+
+# Test PLT section parsing on thumbeb with be8
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2MSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5, EF_ARM_BE8 ]
+  Entry:           0x1021D
+Sections:
+  - Name:            .rel.plt
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x1FC
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x302F4
+        Symbol:          func1
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x302F8
+        Symbol:          func2
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x302FC
+        Symbol:          func3
+        Type:            R_ARM_JUMP_SLOT
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10214
+    AddressAlign:    0x4
+    Content:         704770477047D4D400F020F800F026F800F02CF800F01AB800F020B800F026B800F0148000F01A8000F02080
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10240
+    AddressAlign:    0x10
+    Content:         00B5DFF808E0FE445EF808FF00020098D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D440F2880CC0F2020CFC44DCF800F0FCE740F27C0CC0F2020CFC44DCF800F0FCE740F2700CC0F2020CFC44DCF800F0FCE7
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x302E8
+    AddressAlign:    0x4
+    Content:         '000000000000000000000000000102400001024000010240'
+  - Name:            .ARM.attributes
+    Type:            SHT_ARM_ATTRIBUTES
+    AddressAlign:    0x1
+    Content:         410000002D616561626900010000002305636F727465782D6D3333000611074D080009030A081B01220124012E01
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4C4C4420312E3000
+DynamicSymbols:
+  - Name:            func1
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10215
+  - Name:            func2
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10217
+  - Name:            func3
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10219
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1021D
+...

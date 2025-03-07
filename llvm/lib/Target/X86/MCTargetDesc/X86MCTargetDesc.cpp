@@ -512,9 +512,10 @@ public:
 
   bool clearsSuperRegisters(const MCRegisterInfo &MRI, const MCInst &Inst,
                             APInt &Mask) const override;
-  std::vector<std::pair<uint64_t, uint64_t>>
-  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override;
+  std::vector<std::pair<uint64_t, uint64_t>> findPltEntries(
+      uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+      const Triple &TargetTriple,
+      std::optional<llvm::endianness> InstrEndiannessHint) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
@@ -627,10 +628,10 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   return Result;
 }
 
-std::vector<std::pair<uint64_t, uint64_t>>
-X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
-                                   ArrayRef<uint8_t> PltContents,
-                                   const Triple &TargetTriple) const {
+std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
+    uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+    const Triple &TargetTriple,
+    std::optional<llvm::endianness> InstrEndianness) const {
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);

@@ -1,0 +1,81 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
+
+# CHECK: Disassembly of section .text:
+# CHECK: b   {{.*}} <func1@plt>
+# CHECK: bl  {{.*}} <func2@plt>
+# CHECK: beq {{.*}} <func3@plt>
+
+# CHECK: Disassembly of section .plt:
+# CHECK: <func1@plt>:
+# CHECK: <func2@plt>:
+# CHECK: <func3@plt>:
+
+# Test PLT section parsing on armeb
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2MSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5 ]
+  Entry:           0x10220
+Sections:
+  - Name:            .rel.plt
+    Type:            SHT_REL
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x1FC
+    Link:            .dynsym
+    AddressAlign:    0x4
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x302E4
+        Symbol:          func1
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x302E8
+        Symbol:          func2
+        Type:            R_ARM_JUMP_SLOT
+      - Offset:          0x302EC
+        Symbol:          func3
+        Type:            R_ARM_JUMP_SLOT
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10214
+    AddressAlign:    0x4
+    Content:         E12FFF1EE12FFF1EE12FFF1EEA00000AEB00000D0A000010
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10230
+    AddressAlign:    0x10
+    Content:         E52DE004E28FE600E28EEA20E5BEF0A4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4D4E28FC600E28CCA20E5BCF08CD4D4D4D4E28FC600E28CCA20E5BCF080D4D4D4D4E28FC600E28CCA20E5BCF074D4D4D4D4
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x302D8
+    AddressAlign:    0x4
+    Content:         '000000000000000000000000000102300001023000010230'
+DynamicSymbols:
+  - Name:            func1
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10214
+  - Name:            func2
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10218
+  - Name:            func3
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1021C
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10220
+...
