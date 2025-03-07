@@ -24,11 +24,7 @@ class TestCase(lldbtest.TestBase):
         )
 
         # Step over should reach every line in the interval [10, 20]
-        expected_line_nums = [10, 11, 12, 13, 14, 15]
-        # FIXME: for some reason we loop back to the start of the do block after the last statement.
-        # rdar://140159600
-        expected_line_nums += [8]
-        expected_line_nums += [17, 18, 19, 20]
+        expected_line_nums = range(10, 21)
         for expected_line_num in expected_line_nums:
             thread.StepOver()
             stop_reason = thread.GetStopReason()
