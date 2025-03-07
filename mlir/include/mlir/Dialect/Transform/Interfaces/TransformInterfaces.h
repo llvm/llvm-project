@@ -1081,10 +1081,9 @@ public:
   bool failed() const;
 
 protected:
-
   void
   notifyMatchFailure(Location loc,
-    function_ref<void(Diagnostic &)> reasonCallback) override;
+                     function_ref<void(Diagnostic &)> reasonCallback) override;
 
   void
   notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
