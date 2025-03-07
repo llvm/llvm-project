@@ -5377,10 +5377,11 @@ OpenMPIRBuilder::getOpenMPDefaultSimdAlign(const Triple &TargetTriple,
   return 0;
 }
 
-void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
-                                MapVector<Value *, Value *> AlignedVars,
-                                Value *IfCond, OrderKind Order,
-                                ConstantInt *Simdlen, ConstantInt *Safelen) {
+void OpenMPIRBuilder::applySimd(
+    CanonicalLoopInfo *CanonicalLoop, MapVector<Value *, Value *> AlignedVars,
+    Value *IfCond, OrderKind Order, ConstantInt *Simdlen, ConstantInt *Safelen,
+    OpenMPIRBuilder::NonTemporalBodyGenCallbackTy NontemporalCBFunc,
+    ArrayRef<Value *> NontemporalVarsIn) {
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -5478,6 +5479,13 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   }
 
   addLoopMetadata(CanonicalLoop, LoopMDList);
+
+  // Set nontemporal metadata to load and stores of nontemporal values
+  if (NontemporalVarsIn.size()) {
+    MDNode *NontemporalNode = MDNode::getDistinct(Ctx, {});
+    for (BasicBlock *BB : Reachable)
+      NontemporalCBFunc(BB, NontemporalNode);
+  }
 }
 
 /// Create the TargetMachine object to query the backend for optimization
