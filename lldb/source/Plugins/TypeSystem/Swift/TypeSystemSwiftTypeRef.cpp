@@ -374,6 +374,18 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   }
 }
 
+CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
+    llvm::StringRef mangled_name) {
+  Demangler dem;
+  NodePointer node = dem.demangleSymbol(mangled_name);
+  NodePointer type = swift_demangle::NodeAtPath(
+      node, {Node::Kind::Global, Node::Kind::TypeMetadata, Node::Kind::Type});
+  if (!type)
+    return {};
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+  return RemangleAsType(dem, type, flavor);
+}
+
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.

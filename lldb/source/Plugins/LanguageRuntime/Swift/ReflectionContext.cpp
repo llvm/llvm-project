@@ -363,6 +363,12 @@ public:
     return llvm::createStringError("could not read type from metadata");
   }
 
+  std::optional<swift::remote::RemoteAbsolutePointer>
+  ReadPointer(lldb::addr_t instance_address) override {
+    auto ptr = m_reflection_ctx.readPointer(instance_address);
+    return ptr;
+  }
+
   std::optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) override {
     return m_reflection_ctx.isValueInlinedInExistentialContainer(

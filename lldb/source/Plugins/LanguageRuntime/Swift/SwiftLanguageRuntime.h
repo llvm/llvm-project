@@ -637,6 +637,10 @@ protected:
       TypeAndOrName &class_type_or_name, Address &address,
       Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer);
 
+  /// Resolves the dynamic type of an embedded Swift class type.
+  CompilerType GetDynamicTypeAndAddress_EmbeddedClass(uint64_t instance_ptr,
+                                                      CompilerType class_type);
+
   /// Dynamic type resolution tends to want to generate scalar data -
   /// but there are caveats Per original comment here "Our address is
   /// the location of the dynamic type stored in memory.  It isn't a
