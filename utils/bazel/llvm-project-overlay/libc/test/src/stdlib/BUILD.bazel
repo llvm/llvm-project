@@ -4,8 +4,7 @@
 
 # Tests for LLVM libc stdlib.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
-load("//libc/test:libc_test_rules.bzl", "libc_test")
+load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -29,7 +28,7 @@ libc_test(
     libc_function_deps = ["//libc:llabs"],
 )
 
-libc_support_library(
+libc_test_library(
     name = "div_test_helper",
     hdrs = ["DivTest.h"],
     deps = ["//libc/test/UnitTest:LibcUnitTest"],
@@ -65,7 +64,7 @@ libc_test(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],
     deps = [
@@ -110,7 +109,7 @@ libc_test(
     deps = ["//libc:types_size_t"],
 )
 
-libc_support_library(
+libc_test_library(
     name = "qsort_test_helper",
     hdrs = ["SortingTest.h"],
     deps = [
@@ -148,7 +147,7 @@ libc_test(
     deps = ["//libc:types_size_t"],
 )
 
-libc_support_library(
+libc_test_library(
     name = "strfrom_test_helper",
     hdrs = ["StrfromTest.h"],
     deps = [
@@ -179,7 +178,7 @@ libc_test(
     deps = [":strfrom_test_helper"],
 )
 
-libc_support_library(
+libc_test_library(
     name = "strtol_test_helper",
     hdrs = ["StrtolTest.h"],
     deps = [
