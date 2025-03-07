@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 
 class NS_Op<string mnemonic, list<Trait> traits = []> :
@@ -117,8 +116,8 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NEXT:       << "failed to verify constraint: another region";
 
 /// Test that the uniqued constraints are being used.
-// CHECK-LABEL: OpA::verify
-// CHECK:         ::mlir::Attribute [[$B_ATTR:.*b]];
+// CHECK-LABEL: OpA::verifyInvariantsImpl
+// CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
 // CHECK:         if (::mlir::failed([[$A_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
 // CHECK-NEXT:      return ::mlir::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);
@@ -138,8 +137,8 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that the op with the same predicates but different with descriptions
 /// uses the different constraints.
-// CHECK-LABEL: OpC::verify
-// CHECK:         ::mlir::Attribute [[$B_ATTR:.*b]];
+// CHECK-LABEL: OpC::verifyInvariantsImpl
+// CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
 // CHECK:         if (::mlir::failed([[$O_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
 // CHECK-NEXT:      return ::mlir::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);

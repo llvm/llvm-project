@@ -48,7 +48,7 @@ namespace PacksAtDifferentLevels {
   int check1[X<short, int>::Inner<tuple<pair<short, unsigned short>,
                                         pair<int, unsigned int>,
                                         pair<long, unsigned long>>
-                                       >::value == 1? 1 : -1]; 
+                                       >::value == 1? 1 : -1];
 
   template<unsigned ...Values> struct unsigned_tuple { };
   template<typename ...Types>
@@ -99,7 +99,7 @@ namespace PacksAtDifferentLevels {
   int check5[X2<short, int>::Inner<int(pair<short, unsigned short>,
                                        pair<int, unsigned int>,
                                        pair<long, unsigned long>)
-                                     >::value == 1? 1 : -1]; 
+                                     >::value == 1? 1 : -1];
 
   template<typename T, typename U>
   struct some_function_object {
@@ -217,8 +217,8 @@ namespace ExpandingNonTypeTemplateParameters {
   template<typename ...Types>
   struct tuple_of_values {
     template<Types ...Values> // expected-error{{a non-type template parameter cannot have type 'float'}} \
-    // expected-note{{template parameter is declared here}}
-    struct apply { // expected-note 2{{template is declared here}}
+    // expected-note 2{{template parameter is declared here}}
+    struct apply { // expected-note {{template is declared here}}
       typedef tuple<value_c<Types, Values>...> type;
     };
   };
@@ -236,7 +236,7 @@ namespace ExpandingNonTypeTemplateParameters {
 
   tuple_of_values<int&, float&>::apply<i, i>::type tv2; // expected-error{{non-type template parameter of reference type 'float &' cannot bind to template argument of type 'int'}}
 
-  tuple_of_values<int&, float&>::apply<i>::type tv3; // expected-error{{too few template arguments for class template 'apply'}}
+  tuple_of_values<int&, float&>::apply<i>::type tv3; // expected-error{{missing template argument for template parameter}}
 
   tuple_of_values<int&, float&>::apply<i, f, i>::type tv4; // expected-error{{too many template arguments for class template 'apply'}}
 }
