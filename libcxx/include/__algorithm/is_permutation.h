@@ -11,9 +11,13 @@
 #define _LIBCPP___ALGORITHM_IS_PERMUTATION_H
 
 #include <__algorithm/comp.h>
+#include <__algorithm/count_if.h>
+#include <__algorithm/find_if.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/mismatch.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__functional/reference_wrapper.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -82,28 +86,28 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
 
   for (auto __i = __first1; __i != __last1; ++__i) {
     //  Have we already counted the number of *__i in [f1, l1)?
-    auto __match = __first1;
-    for (; __match != __i; ++__match) {
-      if (std::__invoke(__pred, std::__invoke(__proj1, *__match), std::__invoke(__proj1, *__i)))
-        break;
-    }
+    auto __match = std::find_if(__first1, __i, [&](typename iterator_traits<_Iter1>::reference __x) -> bool {
+      return std::__invoke(__pred, std::__invoke(__proj1, __x), std::__invoke(__proj1, *__i));
+    });
 
     if (__match == __i) {
       // Count number of *__i in [f2, l2)
-      _D1 __c2 = 0;
-      for (auto __j = __first2; __j != __last2; ++__j) {
-        if (std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj2, *__j)))
-          ++__c2;
-      }
+      __identity __ident1;
+      auto __predicate1 = [&](typename iterator_traits<_Iter2>::reference __x) -> bool {
+        return std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj2, __x));
+      };
+      _D1 __c2 = std::__count_if<_AlgPolicy>(__first2, __last2, __predicate1, __ident1);
       if (__c2 == 0)
         return false;
 
       // Count number of *__i in [__i, l1) (we can start with 1)
-      _D1 __c1 = 1;
-      for (auto __j = _IterOps<_AlgPolicy>::next(__i); __j != __last1; ++__j) {
-        if (std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, *__j)))
-          ++__c1;
-      }
+      __identity __ident2;
+      auto __predicate2 = [&](typename iterator_traits<_Iter1>::reference __x) -> bool {
+        return std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, __x));
+      };
+      auto __start = _IterOps<_AlgPolicy>::next(__i);
+      _D1 __c1     = std::__count_if<_AlgPolicy>(__start, __last1, __predicate2, __ident2);
+      __c1 += 1;
       if (__c1 != __c2)
         return false;
     }
@@ -117,10 +121,9 @@ template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _Fo
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2, _BinaryPredicate&& __pred) {
   // Shorten sequences as much as possible by lopping of any equal prefix.
-  for (; __first1 != __last1; ++__first1, (void)++__first2) {
-    if (!__pred(*__first1, *__first2))
-      break;
-  }
+  auto __result = std::mismatch(__first1, __last1, __first2, std::ref(__pred));
+  __first1      = __result.first;
+  __first2      = __result.second;
 
   if (__first1 == __last1)
     return true;
