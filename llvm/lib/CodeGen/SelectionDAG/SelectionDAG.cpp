@@ -5613,7 +5613,12 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (getTarget().Options.NoNaNsFPMath)
+    return true;
+  SDNodeFlags OpFlags = Op->getFlags();
+  if (SNaN && OpFlags.hasNoSNaNs())
+    return true;
+  if (OpFlags.hasNoSNaNs() && OpFlags.hasNoQNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)
@@ -7671,6 +7676,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
          N2.getOpcode() != ISD::DELETED_NODE &&
          N3.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
+
+  SDNodeFlags NewFlags = Flags;
+
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA:
@@ -7729,6 +7737,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   case ISD::SELECT:
   case ISD::VSELECT:
+    if ((N1->getFlags().hasNoSNaNs() && N2->getFlags().hasNoSNaNs()) ||
+        N3->getFlags().hasNoSNaNs())
+      NewFlags.setNoSNaNs(true);
+    if ((N1->getFlags().hasNoQNaNs() && N2->getFlags().hasNoQNaNs()) ||
+        N3->getFlags().hasNoQNaNs())
+      NewFlags.setNoQNaNs(true);
+
     if (SDValue V = simplifySelect(N1, N2, N3))
       return V;
     break;
@@ -7857,12 +7872,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     AddNodeIDNode(ID, Opcode, VTs, Ops);
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
-      E->intersectFlagsWith(Flags);
+      E->intersectFlagsWith(NewFlags);
       return SDValue(E, 0);
     }
 
     N = newSDNode<SDNode>(Opcode, DL.getIROrder(), DL.getDebugLoc(), VTs);
-    N->setFlags(Flags);
+    N->setFlags(NewFlags);
     createOperands(N, Ops);
     CSEMap.InsertNode(N, IP);
   } else {
@@ -10320,6 +10335,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Operand is DELETED_NODE!");
 #endif
 
+  SDNodeFlags NewFlags = Flags;
+
   switch (Opcode) {
   default: break;
   case ISD::BUILD_VECTOR:
@@ -10344,6 +10361,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 VT.getVectorElementCount()) &&
            "Expected select_cc with vector result to have the same sized "
            "comparison type!");
+    if (Ops[2]->getFlags().hasNoSNaNs() && Ops[3]->getFlags().hasNoSNaNs())
+      NewFlags.setNoSNaNs(true);
+    if (Ops[2]->getFlags().hasNoQNaNs() && Ops[3]->getFlags().hasNoQNaNs())
+      NewFlags.setNoQNaNs(true);
     break;
   case ISD::BR_CC:
     assert(NumOps == 5 && "BR_CC takes 5 operands!");
@@ -10410,7 +10431,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     createOperands(N, Ops);
   }
 
-  N->setFlags(Flags);
+  N->setFlags(NewFlags);
   InsertNode(N);
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
