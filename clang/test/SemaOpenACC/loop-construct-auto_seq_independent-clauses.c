@@ -33,6 +33,19 @@ void uses() {
 #pragma acc loop independent seq
   for(unsigned i = 0; i < 5; ++i);
 
+  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop seq seq
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop independent independent
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop auto auto
+  for(unsigned i = 0; i < 5; ++i);
+
   int Var;
   int *VarPtr;
 

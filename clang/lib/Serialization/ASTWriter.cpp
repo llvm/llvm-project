@@ -1136,6 +1136,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_OMP_ALLOCATE);
   RECORD(DECL_HLSL_BUFFER);
   RECORD(DECL_OPENACC_DECLARE);
+  RECORD(DECL_OPENACC_ROUTINE);
 
   // Statements and Exprs can occur in the Decls and Types block.
   AddStmtsExprs(Stream, Record);
