@@ -50,7 +50,7 @@ constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
-#else 
+#else
   T div = X / Y;
   bool ge = div >= -div;
   T frc = frac(abs(div));
@@ -62,10 +62,10 @@ template <typename T, int N>
 constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
-#else 
+#else
   vector<T, N> div = X / Y;
   vector<bool, N> ge = div >= -div;
-  vector<T, N> frc = frac(abs(div)); 
+  vector<T, N> frc = frac(abs(div));
   return select<T>(ge, frc, -frc) * Y;
 #endif
 }
