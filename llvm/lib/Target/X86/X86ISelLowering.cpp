@@ -31883,7 +31883,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 
   IRBuilder<> Builder(AI);
   Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -57937,9 +57936,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     switch (Op0.getOpcode()) {
     case ISD::VECTOR_SHUFFLE: {
-      if (NumOps == 2 && VT.is256BitVector() &&
+      // TODO: Relax VBMI requirement for repeated shuffle ops - currently
+      // limited to targets that should always have good cross lane shuffles.
+      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1) ||
+           (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
+            Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
+            Subtarget.hasVBMI()))) {
         int NumSubElts = Op0.getValueType().getVectorNumElements();
         SmallVector<int> NewMask;
         for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
