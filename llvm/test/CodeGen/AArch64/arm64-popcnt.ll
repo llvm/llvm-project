@@ -129,7 +129,6 @@ define i64 @cnt64_advsimd(i64 %x) nounwind readnone {
 ; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-BE-NEXT:    addv b0, v0.8b
-; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    fmov x0, d0
 ; CHECK-BE-NEXT:    ret
   %cnt = tail call i64 @llvm.ctpop.i64(i64 %x)
@@ -436,9 +435,9 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    mov.d v0[1], x1
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    cnt.16b v0, v0
 ; CHECK-NEXT:    addv.16b b0, v0
-; CHECK-NEXT:    mov.d x1, v0[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 ;
@@ -481,13 +480,12 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; CHECK-BE-LABEL: cnt128:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    fmov d0, x0
+; CHECK-BE-NEXT:    mov x0, xzr
 ; CHECK-BE-NEXT:    mov v0.d[1], x1
 ; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECK-BE-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-BE-NEXT:    addv b0, v0.16b
-; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-BE-NEXT:    mov x1, v0.d[1]
-; CHECK-BE-NEXT:    fmov x0, d0
+; CHECK-BE-NEXT:    fmov x1, d0
 ; CHECK-BE-NEXT:    ret
   %cnt = tail call i128 @llvm.ctpop.i128(i128 %x)
   ret i128 %cnt

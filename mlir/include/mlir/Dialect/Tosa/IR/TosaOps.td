@@ -2279,9 +2279,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 //===----------------------------------------------------------------------===//
 // Operator: rescale
 //===----------------------------------------------------------------------===//
-def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
-      DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>]> {
+def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
   let summary = "Tosa rescale operator";
 
   let description = [{
@@ -2307,10 +2305,10 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
 
   let arguments = (ins
     Tosa_Tensor:$input,
+    Tosa_1DInt16Or32Tensor:$multiplier,
+    Tosa_1DInt8Tensor:$shift,
     I32Attr:$input_zp,
     I32Attr:$output_zp,
-    DenseI32ArrayAttr:$multiplier,
-    DenseI8ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
     BoolAttr:$per_channel,
@@ -2327,6 +2325,8 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     Extension<[Tosa_EXT_INT16]>,
   ];
 
+  let hasVerifier = 1;
+
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
@@ -2338,7 +2338,7 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
 // Operator: const
 //===----------------------------------------------------------------------===//
 def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
-                                     AllShapesMatch<["value", "output"]>,
+                                     AllShapesMatch<["values", "output"]>,
                                      FirstAttrDerivedResultType]> {
   let summary = "Constant op.";
 
@@ -2350,16 +2350,16 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 
     ```mlir
     // Generic form
-    %out = "tosa.const"() {value = dense<0> : tensor<2x3xi32>} : () -> tensor<2x3xi32>
+    %out = "tosa.const"() {values = dense<0> : tensor<2x3xi32>} : () -> tensor<2x3xi32>
     ```
   }];
 
   let arguments = (ins
-    ElementsAttr:$value
+    ElementsAttr:$values
   );
 
   let results = (outs
-    TosaTensorOf<[AnyTypeOf<[Tosa_AnyNumber]>]>:$output
+    Tosa_Tensor:$output
   );
 
   list<Availability> availability = [
