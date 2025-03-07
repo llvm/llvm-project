@@ -850,6 +850,7 @@ entry:
 define void @rshrn_v4i16_5(<4 x i16> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v4i16_5:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rshrn v0.8b, v0.8h, #5
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
@@ -883,6 +884,7 @@ entry:
 define void @rshrn_v1i64_5(<1 x i64> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v1i64_5:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rshrn v0.2s, v0.2d, #5
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret

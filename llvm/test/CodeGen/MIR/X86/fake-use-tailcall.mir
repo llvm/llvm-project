@@ -8,7 +8,7 @@
 # in the return block itself into the predecessor blocks. This test enures that we do so.
 #
 # Generated from the following source with
-# clang -fextend-lifetimes -S -emit-llvm -O2 -mllvm -stop-before=codegenprepare -o test.mir test.c
+# clang -fextend-variable-liveness -S -emit-llvm -O2 -mllvm -stop-before=codegenprepare -o test.mir test.c
 #
 # extern int f0();
 # extern int f1();

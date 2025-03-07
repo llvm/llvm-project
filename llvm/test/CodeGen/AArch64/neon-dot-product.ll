@@ -103,6 +103,7 @@ entry:
 define <2 x i32> @test_vdot_lane_u32(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdot_lane_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -116,6 +117,7 @@ entry:
 define <4 x i32> @test_vdotq_lane_u32(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_lane_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -156,6 +158,7 @@ entry:
 define <2 x i32> @test_vdot_lane_u32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdot_lane_u32_zero:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -170,6 +173,7 @@ entry:
 define <4 x i32> @test_vdotq_lane_u32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_lane_u32_zero:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -213,6 +217,7 @@ entry:
 define <2 x i32> @test_vdot_lane_s32(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdot_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -226,6 +231,7 @@ entry:
 define <4 x i32> @test_vdotq_lane_s32(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -266,6 +272,7 @@ entry:
 define <2 x i32> @test_vdot_lane_s32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdot_lane_s32_zero:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -280,6 +287,7 @@ entry:
 define <4 x i32> @test_vdotq_lane_s32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: test_vdotq_lane_s32_zero:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
 ; CHECK-NEXT:    ret
 entry:

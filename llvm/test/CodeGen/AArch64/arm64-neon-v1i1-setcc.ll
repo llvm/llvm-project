@@ -8,6 +8,8 @@
 define i64 @test_sext_extr_cmp_0(<1 x i64> %v1, <1 x i64> %v2) {
 ; CHECK-LABEL: test_sext_extr_cmp_0:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    cmp x9, x8
@@ -86,6 +88,8 @@ define <1 x i64> @test_select_v1i1_3(i64 %lhs, i64 %rhs, <1 x i64> %v3) {
 define i32 @test_br_extr_cmp(<1 x i64> %v1, <1 x i64> %v2) {
 ; CHECK-LABEL: test_br_extr_cmp:
 ; CHECK:       // %bb.0: // %common.ret
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    cmp x9, x8
@@ -106,6 +110,7 @@ if.end:
 define <1 x float> @test_vselect_f32(<1 x float> %i105, <1 x float> %in) {
 ; CHECK-LABEL: test_vselect_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    fmov s2, w8
@@ -121,9 +126,12 @@ define <1 x float> @test_vselect_f32(<1 x float> %i105, <1 x float> %in) {
 define <1 x half> @test_vselect_f16(<1 x half> %i105, <1 x half> %in) {
 ; CHECK-LABEL: test_vselect_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fcvt s2, h0
+; CHECK-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-NEXT:    fcmp s2, s2
 ; CHECK-NEXT:    fcsel s0, s1, s0, vs
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
   %i179 = fcmp uno <1 x half> %i105, zeroinitializer
   %i180 = select <1 x i1> %i179, <1 x half> %in, <1 x half> %i105
@@ -135,8 +143,11 @@ define <1 x half> @test_select_f16(half %a, half %b, <1 x half> %c, <1 x half> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    // kill: def $h3 killed $h3 def $s3
+; CHECK-NEXT:    // kill: def $h2 killed $h2 def $s2
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    fcsel s0, s2, s3, eq
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
   %cmp31 = fcmp oeq half %a, %b
   %e = select i1 %cmp31, <1 x half> %c, <1 x half> %d

@@ -5,21 +5,25 @@
 define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f16:
 ; NOLSE:       // %bb.0:
-; NOLSE-NEXT:    fmov w8, s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
+; NOLSE-NEXT:    fmov w9, s0
 ; NOLSE-NEXT:  .LBB0_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; NOLSE-NEXT:    ldaxrh w9, [x0]
-; NOLSE-NEXT:    stlxrh w10, w8, [x0]
+; NOLSE-NEXT:    ldaxrh w8, [x0]
+; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB0_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    fmov s0, w9
+; NOLSE-NEXT:    fmov s0, w8
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_rmw_xchg_f16:
 ; LSE:       // %bb.0:
+; LSE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; LSE-NEXT:    fmov w8, s0
 ; LSE-NEXT:    swpalh w8, w8, [x0]
 ; LSE-NEXT:    fmov s0, w8
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
   %res = atomicrmw xchg ptr %dst, half %new seq_cst
   ret half %res
@@ -99,8 +103,8 @@ define fp128 @test_rmw_xchg_f128(ptr %dst, fp128 %new) {
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; LSE-NEXT:    mov x7, x5
 ; LSE-NEXT:    mov x6, x4
-; LSE-NEXT:    mov x4, x6
 ; LSE-NEXT:    mov x5, x7
+; LSE-NEXT:    mov x4, x6
 ; LSE-NEXT:    caspal x4, x5, x2, x3, [x0]
 ; LSE-NEXT:    cmp x5, x7
 ; LSE-NEXT:    ccmp x4, x6, #0, eq

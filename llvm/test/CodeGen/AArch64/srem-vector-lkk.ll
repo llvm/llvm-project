@@ -302,6 +302,7 @@ define <2 x i64> @fold_srem_v2i64(<2 x i64> %x) {
 define <1 x i64> @fold_srem_v1i64(<1 x i64> %x) {
 ; CHECK-LABEL: fold_srem_v1i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mov x8, #7378697629483820646 // =0x6666666666666666
 ; CHECK-NEXT:    movk x8, #26215

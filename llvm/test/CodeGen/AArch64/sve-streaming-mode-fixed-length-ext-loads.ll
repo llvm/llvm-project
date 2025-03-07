@@ -10,6 +10,7 @@ define <8 x i16> @load_zext_v8i8i16(ptr %ap)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_zext_v8i8i16:
@@ -47,6 +48,7 @@ define <4 x i32> @load_zext_v4i16i32(ptr %ap)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_zext_v4i16i32:
@@ -74,6 +76,7 @@ define <2 x i64> @load_zext_v2i32i64(ptr %ap) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_zext_v2i32i64:
@@ -137,6 +140,10 @@ define <16 x i32> @load_sext_v16i8i32(ptr %ap)  {
 ; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, x9]
 ; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, x10]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z3
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v16i8i32:
@@ -223,6 +230,8 @@ define <8 x i32> @load_sext_v8i16i32(ptr %ap)  {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v8i16i32:
@@ -389,6 +398,14 @@ define <16 x i64> @load_zext_v16i16i64(ptr %ap)  {
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x9, lsl #1]
 ; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $z3
+; CHECK-NEXT:    // kill: def $q4 killed $q4 killed $z4
+; CHECK-NEXT:    // kill: def $q5 killed $q5 killed $z5
+; CHECK-NEXT:    // kill: def $q6 killed $q6 killed $z6
+; CHECK-NEXT:    // kill: def $q7 killed $q7 killed $z7
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_zext_v16i16i64:

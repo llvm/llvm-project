@@ -252,6 +252,7 @@ define i32 @udiv_div_by_180(i32 %x)
 ; SDAG-NEXT:    movk w8, #364, lsl #16
 ; SDAG-NEXT:    umull x8, w9, w8
 ; SDAG-NEXT:    lsr x0, x8, #32
+; SDAG-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: udiv_div_by_180:
@@ -261,6 +262,7 @@ define i32 @udiv_div_by_180(i32 %x)
 ; GISEL-NEXT:    movk w8, #364, lsl #16
 ; GISEL-NEXT:    umull x8, w9, w8
 ; GISEL-NEXT:    lsr x0, x8, #32
+; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; GISEL-NEXT:    ret
 {
   %truncate = and i32 %x, 255

@@ -69,6 +69,7 @@ define i64 @add_i64_ext_ext(<1 x i64> %A, <1 x i64> %B) nounwind {
 define i32 @add_i32_ext_load(<1 x i32> %A, ptr %B) nounwind {
 ; CHECK-LABEL: add_i32_ext_load:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    add w0, w9, w8

@@ -14,8 +14,10 @@ define <4 x i8> @bitreverse_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: bitreverse_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    lsr z0.h, z0.h, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v4i8:
@@ -49,7 +51,9 @@ define <8 x i8> @bitreverse_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: bitreverse_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v8i8:
@@ -99,7 +103,9 @@ define <16 x i8> @bitreverse_v16i8(<16 x i8> %op) {
 ; CHECK-LABEL: bitreverse_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v16i8:
@@ -334,8 +340,10 @@ define <2 x i16> @bitreverse_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: bitreverse_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    lsr z0.s, z0.s, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v2i16:
@@ -360,7 +368,9 @@ define <4 x i16> @bitreverse_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: bitreverse_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v4i16:
@@ -394,7 +404,9 @@ define <8 x i16> @bitreverse_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: bitreverse_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v8i16:
@@ -533,7 +545,9 @@ define <2 x i32> @bitreverse_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: bitreverse_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v2i32:
@@ -556,7 +570,9 @@ define <4 x i32> @bitreverse_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: bitreverse_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v4i32:
@@ -629,7 +645,9 @@ define <1 x i64> @bitreverse_v1i64(<1 x i64> %op) {
 ; CHECK-LABEL: bitreverse_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v1i64:
@@ -650,7 +668,9 @@ define <2 x i64> @bitreverse_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: bitreverse_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bitreverse_v2i64:
@@ -712,8 +732,10 @@ define <2 x i16> @bswap_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: bswap_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    lsr z0.s, z0.s, #16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v2i16:
@@ -752,7 +774,9 @@ define <4 x i16> @bswap_v4i16(<4 x i16> %op) {
 ; CHECK-LABEL: bswap_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v4i16:
@@ -786,7 +810,9 @@ define <8 x i16> @bswap_v8i16(<8 x i16> %op) {
 ; CHECK-LABEL: bswap_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v8i16:
@@ -928,7 +954,9 @@ define <2 x i32> @bswap_v2i32(<2 x i32> %op) {
 ; CHECK-LABEL: bswap_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v2i32:
@@ -962,7 +990,9 @@ define <4 x i32> @bswap_v4i32(<4 x i32> %op) {
 ; CHECK-LABEL: bswap_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v4i32:
@@ -1104,7 +1134,9 @@ define <1 x i64> @bswap_v1i64(<1 x i64> %op) {
 ; CHECK-LABEL: bswap_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v1i64:
@@ -1138,7 +1170,9 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) {
 ; CHECK-LABEL: bswap_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: bswap_v2i64:

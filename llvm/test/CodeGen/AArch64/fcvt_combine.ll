@@ -305,6 +305,7 @@ define <2 x i32> @test4_sat(<2 x double> %d) {
 ; CHECK-NEXT:    fcvtzs w9, d1
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %mul.i = fmul <2 x double> %d, <double 16.000000e+00, double 16.000000e+00>
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %mul.i)

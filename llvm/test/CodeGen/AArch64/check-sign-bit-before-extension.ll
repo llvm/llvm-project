@@ -143,6 +143,7 @@ B:
 define i64 @f_i32_sign_extend_i64(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: f_i32_sign_extend_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x8, x1, x2, ge
@@ -166,6 +167,7 @@ B:
 define i64 @g_i32_sign_extend_i64(i32 %in, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: g_i32_sign_extend_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    csel x8, x1, x2, lt

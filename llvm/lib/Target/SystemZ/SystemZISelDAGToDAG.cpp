@@ -1001,6 +1001,16 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   if (Count == 1 && N->getOpcode() != ISD::AND)
     return false;
 
+  // Prefer LOAD LOGICAL INDEXED ADDRESS over RISBG in the case where we
+  // can use its displacement to pull in an addition.
+  if (Subtarget->hasMiscellaneousExtensions4() &&
+      RISBG.Rotate >= 1 && RISBG.Rotate <= 4 &&
+      RISBG.Mask == (((uint64_t)1 << 32) - 1) << RISBG.Rotate &&
+      RISBG.Input.getOpcode() == ISD::ADD)
+    if (auto *C = dyn_cast<ConstantSDNode>(RISBG.Input.getOperand(1)))
+      if (isInt<20>(C->getSExtValue()))
+        return false;
+
   // Prefer register extensions like LLC over RISBG.  Also prefer to start
   // out with normal ANDs if one instruction would be enough.  We can convert
   // these ANDs into an RISBG later if a three-address instruction is useful.
@@ -1488,8 +1498,8 @@ bool SystemZDAGToDAGISel::canUseBlockOperation(StoreSDNode *Store,
   if (V1 == V2 && End1 == End2)
     return false;
 
-  return AA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
-                       MemoryLocation(V2, End2, Store->getAAInfo()));
+  return BatchAA->isNoAlias(MemoryLocation(V1, End1, Load->getAAInfo()),
+                            MemoryLocation(V2, End2, Store->getAAInfo()));
 }
 
 bool SystemZDAGToDAGISel::storeLoadCanUseMVC(SDNode *N) const {
@@ -1886,11 +1896,11 @@ SystemZDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
     // physical CC register, which in turn is glued and chained to the
     // actual instruction that uses the CC value.  Bail out if we have
     // anything else than that.
-    SDNode *CCUser = *U->use_begin();
+    SDNode *CCUser = *U->user_begin();
     SDNode *CCRegUser = nullptr;
     if (CCUser->getOpcode() == ISD::CopyToReg ||
         cast<RegisterSDNode>(CCUser->getOperand(1))->getReg() == SystemZ::CC) {
-      for (auto *U : CCUser->uses()) {
+      for (auto *U : CCUser->users()) {
         if (CCRegUser == nullptr)
           CCRegUser = U;
         else if (CCRegUser != U)

@@ -524,6 +524,7 @@ define void @fcvt_v32f64_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @fcvt_v1f64_v1f32(<1 x double> %op1, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvt_v1f64_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret

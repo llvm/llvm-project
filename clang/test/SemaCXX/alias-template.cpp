@@ -54,18 +54,24 @@ namespace LookupFilter {
   template<typename U> using S = S<U>*; // ok
 }
 
-namespace InFunctions {
+namespace UnexpandedPack {
   template<typename...T> struct S0 {
     template<typename Z> using U = T*; // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
     U<char> u;
   };
+}
 
+namespace InvalidType {
   template<typename Z> using T1 = int;
   template<typename Z> using T2 = int[-1]; // expected-error {{array size is negative}}
+}
+
+namespace ShadowTemplateParam {
   template<typename...T> struct S3 { // expected-note {{template parameter is declared here}}
     template<typename Z> using T = int; // expected-error {{declaration of 'T' shadows template parameter}}
   };
-  template<typename Z> using Z = Z;
+  template<typename Z> // expected-note {{template parameter is declared here}}
+  using Z = Z; // expected-error {{declaration of 'Z' shadows template parameter}}
 }
 
 namespace ClassNameRedecl {
@@ -161,7 +167,10 @@ namespace SFINAE {
     f<E>();
   }
 
-  template<typename T, typename U = EnableIf<is_enum<T>>> struct fail1 {}; // expected-note {{here}}
+  template<typename T,
+    typename U = // expected-note {{template parameter is declared here}}
+      EnableIf<is_enum<T>>> // expected-note {{in instantiation of template type alias 'EnableIf' requested here}}
+  struct fail1 {};
   template<typename T> struct fail2 : DisableIf<is_enum<T>> {}; // expected-note {{here}}
 
   fail1<int> f1; // expected-note {{here}}

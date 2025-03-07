@@ -282,6 +282,7 @@ define <2 x i64> @fold_urem_v2i64(<2 x i64> %x) {
 define <1 x i64> @fold_urem_v1i64(<1 x i64> %x) {
 ; CHECK-LABEL: fold_urem_v1i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    mov x8, #-3689348814741910324 // =0xcccccccccccccccc
 ; CHECK-NEXT:    mov w10, #10 // =0xa

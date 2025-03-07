@@ -143,7 +143,8 @@ static bool shouldIncludeVariable(const DWARFUnit &Unit, const DIE &Die) {
                           Unit.getFormParams().Format);
   for (const DWARFExpression::Operation &Expr : LocExpr)
     if (Expr.getCode() == dwarf::DW_OP_addrx ||
-        Expr.getCode() == dwarf::DW_OP_form_tls_address)
+        Expr.getCode() == dwarf::DW_OP_form_tls_address ||
+        Expr.getCode() == dwarf::DW_OP_GNU_push_tls_address)
       return true;
   return false;
 }

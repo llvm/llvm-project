@@ -23,6 +23,7 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %ap
   %b = load <2 x half>, ptr %bp
@@ -40,6 +41,7 @@ define <2 x float> @masked_load_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %ap
   %b = load <2 x float>, ptr %bp
@@ -57,6 +59,7 @@ define <4 x float> @masked_load_v4f32(ptr %ap, ptr %bp) vscale_range(1,0) #0 {
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, ptr %ap
   %b = load <4 x float>, ptr %bp
@@ -182,7 +185,7 @@ define void @masked_load_v64i8(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <64 x i8>, ptr %ap
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %a, %b
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   store <64 x i8> %load, ptr %c
   ret void
 }
@@ -216,7 +219,7 @@ define void @masked_load_v32i16(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <32 x i16>, ptr %ap
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %a, %b
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   store <32 x i16> %load, ptr %c
   ret void
 }
@@ -250,7 +253,7 @@ define void @masked_load_v16i32(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <16 x i32>, ptr %ap
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %a, %b
-  %load = call <16 x i32> @llvm.masked.load.v16i32(ptr %ap, i32 8, <16 x i1> %mask, <16 x i32> undef)
+  %load = call <16 x i32> @llvm.masked.load.v16i32(ptr %ap, i32 8, <16 x i1> %mask, <16 x i32> poison)
   store <16 x i32> %load, ptr %c
   ret void
 }
@@ -284,7 +287,7 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
   %a = load <8 x i64>, ptr %ap
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %a, %b
-  %load = call <8 x i64> @llvm.masked.load.v8i64(ptr %ap, i32 8, <8 x i1> %mask, <8 x i64> undef)
+  %load = call <8 x i64> @llvm.masked.load.v8i64(ptr %ap, i32 8, <8 x i1> %mask, <8 x i64> poison)
   store <8 x i64> %load, ptr %c
   ret void
 }
@@ -389,7 +392,7 @@ define void @masked_load_sext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -424,7 +427,7 @@ define void @masked_load_sext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i8>, ptr %bp
   %mask = icmp eq <16 x i8> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = sext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -460,7 +463,7 @@ define void @masked_load_sext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i8>, ptr %bp
   %mask = icmp eq <8 x i8> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = sext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -492,7 +495,7 @@ define void @masked_load_sext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, ptr %bp
   %mask = icmp eq <16 x i16> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -527,7 +530,7 @@ define void @masked_load_sext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i16>, ptr %bp
   %mask = icmp eq <8 x i16> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -559,7 +562,7 @@ define void @masked_load_sext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp eq <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -591,7 +594,7 @@ define void @masked_load_zext_v32i8i16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -626,7 +629,7 @@ define void @masked_load_zext_v16i8i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i8>, ptr %bp
   %mask = icmp eq <16 x i8> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = zext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -662,7 +665,7 @@ define void @masked_load_zext_v8i8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i8>, ptr %bp
   %mask = icmp eq <8 x i8> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = zext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -694,7 +697,7 @@ define void @masked_load_zext_v16i16i32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i16>, ptr %bp
   %mask = icmp eq <16 x i16> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -729,7 +732,7 @@ define void @masked_load_zext_v8i16i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i16>, ptr %bp
   %mask = icmp eq <8 x i16> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -761,7 +764,7 @@ define void @masked_load_zext_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp eq <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -802,7 +805,7 @@ define void @masked_load_sext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -846,7 +849,7 @@ define void @masked_load_sext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = sext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -892,7 +895,7 @@ define void @masked_load_sext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = sext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -935,7 +938,7 @@ define void @masked_load_sext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -979,7 +982,7 @@ define void @masked_load_sext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1020,7 +1023,7 @@ define void @masked_load_sext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1061,7 +1064,7 @@ define void @masked_load_zext_v32i8i16_m16(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i16>
   store <32 x i16> %ext, ptr %c
   ret void
@@ -1105,7 +1108,7 @@ define void @masked_load_zext_v16i8i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> undef)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %ap, i32 8, <16 x i1> %mask, <16 x i8> poison)
   %ext = zext <16 x i8> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -1151,7 +1154,7 @@ define void @masked_load_zext_v8i8i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> undef)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 8, <8 x i1> %mask, <8 x i8> poison)
   %ext = zext <8 x i8> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1194,7 +1197,7 @@ define void @masked_load_zext_v16i16i32_m32(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %b, zeroinitializer
-  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> undef)
+  %load = call <16 x i16> @llvm.masked.load.v16i16(ptr %ap, i32 8, <16 x i1> %mask, <16 x i16> poison)
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr %c
   ret void
@@ -1238,7 +1241,7 @@ define void @masked_load_zext_v8i16i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> undef)
+  %load = call <8 x i16> @llvm.masked.load.v8i16(ptr %ap, i32 8, <8 x i1> %mask, <8 x i16> poison)
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1279,7 +1282,7 @@ define void @masked_load_zext_v8i32i64_m64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1296,7 +1299,7 @@ define void @masked_load_sext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <128 x i8>, ptr %bp
   %mask = icmp eq <128 x i8> %b, zeroinitializer
-  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> poison)
   %ext = sext <128 x i8> %load to <128 x i16>
   store <128 x i16> %ext, ptr %c
   ret void
@@ -1313,7 +1316,7 @@ define void @masked_load_sext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %b, zeroinitializer
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   %ext = sext <64 x i8> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1330,7 +1333,7 @@ define void @masked_load_sext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = sext <32 x i8> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1347,7 +1350,7 @@ define void @masked_load_sext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <64 x i16>, ptr %bp
   %mask = icmp eq <64 x i16> %b, zeroinitializer
-  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> poison)
   %ext = sext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1364,7 +1367,7 @@ define void @masked_load_sext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   %ext = sext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1381,7 +1384,7 @@ define void @masked_load_sext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i32>, ptr %bp
   %mask = icmp eq <32 x i32> %b, zeroinitializer
-  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> poison)
   %ext = sext <32 x i32> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1398,7 +1401,7 @@ define void @masked_load_zext_v128i8i16(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <128 x i8>, ptr %bp
   %mask = icmp eq <128 x i8> %b, zeroinitializer
-  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> undef)
+  %load = call <128 x i8> @llvm.masked.load.v128i8(ptr %ap, i32 8, <128 x i1> %mask, <128 x i8> poison)
   %ext = zext <128 x i8> %load to <128 x i16>
   store <128 x i16> %ext, ptr %c
   ret void
@@ -1415,7 +1418,7 @@ define void @masked_load_zext_v64i8i32(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <64 x i8>, ptr %bp
   %mask = icmp eq <64 x i8> %b, zeroinitializer
-  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> undef)
+  %load = call <64 x i8> @llvm.masked.load.v64i8(ptr %ap, i32 8, <64 x i1> %mask, <64 x i8> poison)
   %ext = zext <64 x i8> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1432,7 +1435,7 @@ define void @masked_load_zext_v32i8i64(ptr %ap, ptr %bp, ptr %c) vscale_range(16
 ; CHECK-NEXT:    ret
   %b = load <32 x i8>, ptr %bp
   %mask = icmp eq <32 x i8> %b, zeroinitializer
-  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> undef)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %ap, i32 8, <32 x i1> %mask, <32 x i8> poison)
   %ext = zext <32 x i8> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1449,7 +1452,7 @@ define void @masked_load_zext_v64i16i32(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <64 x i16>, ptr %bp
   %mask = icmp eq <64 x i16> %b, zeroinitializer
-  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> undef)
+  %load = call <64 x i16> @llvm.masked.load.v64i16(ptr %ap, i32 8, <64 x i1> %mask, <64 x i16> poison)
   %ext = zext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr %c
   ret void
@@ -1466,7 +1469,7 @@ define void @masked_load_zext_v32i16i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %b, zeroinitializer
-  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> undef)
+  %load = call <32 x i16> @llvm.masked.load.v32i16(ptr %ap, i32 8, <32 x i1> %mask, <32 x i16> poison)
   %ext = zext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1483,7 +1486,7 @@ define void @masked_load_zext_v32i32i64(ptr %ap, ptr %bp, ptr %c) vscale_range(1
 ; CHECK-NEXT:    ret
   %b = load <32 x i32>, ptr %bp
   %mask = icmp eq <32 x i32> %b, zeroinitializer
-  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> undef)
+  %load = call <32 x i32> @llvm.masked.load.v32i32(ptr %ap, i32 8, <32 x i1> %mask, <32 x i32> poison)
   %ext = zext <32 x i32> %load to <32 x i64>
   store <32 x i64> %ext, ptr %c
   ret void
@@ -1515,7 +1518,7 @@ define void @masked_load_sext_ugt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp ugt <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = sext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void
@@ -1547,7 +1550,7 @@ define void @masked_load_zext_sgt_v8i32i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %b = load <8 x i32>, ptr %bp
   %mask = icmp sgt <8 x i32> %b, zeroinitializer
-  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> undef)
+  %load = call <8 x i32> @llvm.masked.load.v8i32(ptr %ap, i32 8, <8 x i1> %mask, <8 x i32> poison)
   %ext = zext <8 x i32> %load to <8 x i64>
   store <8 x i64> %ext, ptr %c
   ret void

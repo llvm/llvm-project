@@ -3,8 +3,8 @@
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm),nvvm-attach-target)' \
 // RUN: | mlir-opt -gpu-async-region -gpu-to-llvm -reconcile-unrealized-casts -gpu-module-to-binary="format=%gpu_compilation_format" \
 // RUN: | mlir-opt -async-to-async-runtime -async-runtime-ref-counting \
-// RUN: | mlir-opt -convert-async-to-llvm -convert-func-to-llvm \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-opt -convert-async-to-llvm -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_async_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

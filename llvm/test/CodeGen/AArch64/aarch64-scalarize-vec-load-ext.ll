@@ -21,6 +21,7 @@ define i32 @narrow_load_v4_i32_single_ele_variable_idx(ptr %ptr, i64 %off, i32 %
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldr q0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    bfi x8, x2, #2, #2
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr w0, [x8]

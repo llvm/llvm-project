@@ -4,6 +4,7 @@
 define float @faddp_2xfloat(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -40,6 +41,7 @@ entry:
 define float @faddp_2xfloat_commute(<2 x float> %a) {
 ; CHECK-LABEL: faddp_2xfloat_commute:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -102,6 +104,7 @@ entry:
 define float @faddp_2xfloat_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_strict:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -138,6 +141,7 @@ entry:
 define float @faddp_2xfloat_commute_strict(<2 x float> %a) #0 {
 ; CHECK-LABEL: faddp_2xfloat_commute_strict:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 entry:
@@ -274,6 +278,7 @@ define <4 x half> @faddp_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %1 = fadd <8 x half> %a, %b
   %2 = shufflevector <8 x half> %1, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

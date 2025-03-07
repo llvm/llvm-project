@@ -6,6 +6,7 @@ define <4 x i16> @addls_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: addls_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    saddl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addls_v8i8_0:
@@ -26,7 +27,9 @@ entry:
 define <4 x i16> @addws_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: addws_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    saddw v0.8h, v0.8h, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addws_v8i8_0:
@@ -45,6 +48,7 @@ define <4 x i16> @addlu_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: addlu_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addlu_v8i8_0:
@@ -65,7 +69,9 @@ entry:
 define <4 x i16> @addwu_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: addwu_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    uaddw v0.8h, v0.8h, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addwu_v8i8_0:
@@ -84,6 +90,7 @@ define <4 x i16> @subls_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: subls_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ssubl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subls_v8i8_0:
@@ -104,7 +111,9 @@ entry:
 define <4 x i16> @subws_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: subws_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ssubw v0.8h, v0.8h, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subws_v8i8_0:
@@ -123,6 +132,7 @@ define <4 x i16> @sublu_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: sublu_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    usubl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sublu_v8i8_0:
@@ -143,7 +153,9 @@ entry:
 define <4 x i16> @subwu_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: subwu_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    usubw v0.8h, v0.8h, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subwu_v8i8_0:
@@ -162,6 +174,7 @@ define <4 x i16> @mulls_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: mulls_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mulls_v8i8_0:
@@ -196,6 +209,7 @@ define <4 x i16> @mullu_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-SD-LABEL: mullu_v8i8_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    umull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mullu_v8i8_0:
@@ -230,6 +244,7 @@ define <2 x i32> @addls_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: addls_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    saddl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addls_v4i16_0:
@@ -250,7 +265,9 @@ entry:
 define <2 x i32> @addws_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: addws_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    saddw v0.4s, v0.4s, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addws_v4i16_0:
@@ -269,6 +286,7 @@ define <2 x i32> @addlu_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: addlu_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    uaddl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addlu_v4i16_0:
@@ -289,7 +307,9 @@ entry:
 define <2 x i32> @addwu_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: addwu_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addwu_v4i16_0:
@@ -308,6 +328,7 @@ define <2 x i32> @subls_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: subls_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ssubl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subls_v4i16_0:
@@ -328,7 +349,9 @@ entry:
 define <2 x i32> @subws_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: subws_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ssubw v0.4s, v0.4s, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subws_v4i16_0:
@@ -347,6 +370,7 @@ define <2 x i32> @sublu_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: sublu_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    usubl v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sublu_v4i16_0:
@@ -367,7 +391,9 @@ entry:
 define <2 x i32> @subwu_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: subwu_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    usubw v0.4s, v0.4s, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subwu_v4i16_0:
@@ -386,6 +412,7 @@ define <2 x i32> @mulls_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: mulls_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mulls_v4i16_0:
@@ -420,6 +447,7 @@ define <2 x i32> @mullu_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-SD-LABEL: mullu_v4i16_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mullu_v4i16_0:
@@ -454,6 +482,7 @@ define <1 x i64> @addls_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: addls_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    saddl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addls_v2i32_0:
@@ -477,7 +506,9 @@ entry:
 define <1 x i64> @addws_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: addws_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    saddw v0.2d, v0.2d, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addws_v2i32_0:
@@ -499,6 +530,7 @@ define <1 x i64> @addlu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: addlu_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    uaddl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addlu_v2i32_0:
@@ -522,7 +554,9 @@ entry:
 define <1 x i64> @addwu_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: addwu_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    uaddw v0.2d, v0.2d, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: addwu_v2i32_0:
@@ -544,6 +578,7 @@ define <1 x i64> @subls_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: subls_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ssubl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subls_v2i32_0:
@@ -567,7 +602,9 @@ entry:
 define <1 x i64> @subws_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: subws_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    ssubw v0.2d, v0.2d, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subws_v2i32_0:
@@ -589,6 +626,7 @@ define <1 x i64> @sublu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: sublu_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    usubl v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sublu_v2i32_0:
@@ -612,7 +650,9 @@ entry:
 define <1 x i64> @subwu_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: subwu_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    usubw v0.2d, v0.2d, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: subwu_v2i32_0:
@@ -634,6 +674,7 @@ define <1 x i64> @mulls_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: mulls_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mulls_v2i32_0:
@@ -655,14 +696,24 @@ entry:
 }
 
 define <1 x i64> @mulws_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
-; CHECK-LABEL: mulws_v2i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mulws_v2i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    mul x8, x8, x9
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mulws_v2i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %s1s = sext <2 x i32> %s1 to <2 x i64>
   %t1 = shufflevector <2 x i64> %s1s, <2 x i64> poison, <1 x i32> <i32 0>
@@ -674,6 +725,7 @@ define <1 x i64> @mullu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-SD-LABEL: mullu_v2i32_0:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mullu_v2i32_0:
@@ -695,14 +747,24 @@ entry:
 }
 
 define <1 x i64> @mulwu_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
-; CHECK-LABEL: mulwu_v2i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: mulwu_v2i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    mul x8, x8, x9
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: mulwu_v2i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %s1s = zext <2 x i32> %s1 to <2 x i64>
   %t1 = shufflevector <2 x i64> %s1s, <2 x i64> poison, <1 x i32> <i32 0>

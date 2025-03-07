@@ -29,7 +29,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.chdir
     libc.src.unistd.close
-    libc.src.fcntl.open 
+    libc.src.fcntl.open
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -288,6 +288,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  setsid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    setsid_test.cpp
+  DEPENDS
+    libc.src.unistd.setsid
+)
+
+add_libc_unittest(
   symlink_test
   SUITE
     libc_unistd_unittests
@@ -385,6 +395,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  getsid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getsid_test.cpp
+  DEPENDS
+    libc.src.unistd.getsid
+)
+
+add_libc_unittest(
   getuid_test
   SUITE
     libc_unistd_unittests
@@ -427,7 +447,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -486,6 +506,18 @@ add_libc_test(
     libc.src.__support.CPP.array
     libc.src.stdio.fopencookie
     libc.src.stdio.fflush
+)
+
+add_libc_test(
+  getentropy_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getentropy_test.cpp
+  DEPENDS
+    libc.src.unistd.getentropy
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 if(LLVM_LIBC_FULL_BUILD)

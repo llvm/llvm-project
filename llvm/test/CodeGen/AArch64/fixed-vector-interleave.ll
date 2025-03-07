@@ -14,14 +14,18 @@ define <4 x half> @interleave2_v4f16(<2 x half> %vec0, <2 x half> %vec1) {
 define <8 x half> @interleave2_v8f16(<4 x half> %vec0, <4 x half> %vec1) {
 ; CHECK-SD-LABEL: interleave2_v8f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    adrp x8, .LCPI1_0
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
 ; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: interleave2_v8f16:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    zip1 v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %retval = call <8 x half> @llvm.vector.interleave2.v8f16(<4 x half> %vec0, <4 x half> %vec1)
@@ -42,6 +46,8 @@ define <16 x half> @interleave2_v16f16(<8 x half> %vec0, <8 x half> %vec1) {
 define <4 x float> @interleave2_v4f32(<2 x float> %vec0, <2 x float> %vec1) {
 ; CHECK-SD-LABEL: interleave2_v4f32:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    rev64 v1.4s, v0.4s
 ; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
@@ -49,6 +55,8 @@ define <4 x float> @interleave2_v4f32(<2 x float> %vec0, <2 x float> %vec1) {
 ;
 ; CHECK-GI-LABEL: interleave2_v4f32:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    zip1 v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %retval = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> %vec0, <2 x float> %vec1)

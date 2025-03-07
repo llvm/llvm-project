@@ -519,6 +519,7 @@ define <2 x i16> @bitcast_i32_to_v2i16(i32 %word) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    fmov s0, w0
 ; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: bitcast_i32_to_v2i16:
@@ -559,6 +560,7 @@ define <2 x i8> @bitcast_i16_to_v2i8(i16 %word) {
 ; CHECK-LE-NEXT:    umov w9, v0.b[1]
 ; CHECK-LE-NEXT:    fmov s0, w8
 ; CHECK-LE-NEXT:    mov v0.s[1], w9
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: bitcast_i16_to_v2i8:

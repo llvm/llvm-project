@@ -515,6 +515,7 @@ entry:
 define <2 x float> @test_vmul_n_f32(<2 x float> %a, float %b) #0 {
 ; CHECK-LABEL: test_vmul_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -527,6 +528,7 @@ entry:
 define <4 x float> @test_vmulq_n_f32(<4 x float> %a, float %b) #0 {
 ; CHECK-LABEL: test_vmulq_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -541,6 +543,7 @@ entry:
 define <2 x double> @test_vmulq_n_f64(<2 x double> %a, double %b) #0 {
 ; CHECK-LABEL: test_vmulq_n_f64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -553,6 +556,7 @@ entry:
 define <2 x float> @test_vfma_n_f32(<2 x float> %a, <2 x float> %b, float %n) #0 {
 ; CHECK-LABEL: test_vfma_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    fmla v0.2s, v1.2s, v2.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -565,6 +569,7 @@ entry:
 define <4 x float> @test_vfmaq_n_f32(<4 x float> %a, <4 x float> %b, float %n) #0 {
 ; CHECK-LABEL: test_vfmaq_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    fmla v0.4s, v1.4s, v2.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -579,6 +584,7 @@ entry:
 define <2 x float> @test_vfms_n_f32(<2 x float> %a, <2 x float> %b, float %n) #0 {
 ; CHECK-LABEL: test_vfms_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    fmls v0.2s, v1.2s, v2.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -592,6 +598,7 @@ entry:
 define <4 x float> @test_vfmsq_n_f32(<4 x float> %a, <4 x float> %b, float %n) #0 {
 ; CHECK-LABEL: test_vfmsq_n_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    fmls v0.4s, v1.4s, v2.s[0]
 ; CHECK-NEXT:    ret
 entry:

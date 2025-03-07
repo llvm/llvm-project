@@ -52,11 +52,13 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
@@ -64,6 +66,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v1.s[2], v0.s[0]
 ; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEON-NEXT:    mov w0, v0.s[3]
@@ -71,6 +74,7 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-NEON-NEXT:    bl ldexpf
 ; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-NEON-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEON-NEXT:    mov v0.16b, v1.16b
@@ -535,6 +539,7 @@ define double @fdiv_pow_shl_cnt32_to_dbl_okay(i32 %cnt) nounwind {
 ; CHECK-LABEL: fdiv_pow_shl_cnt32_to_dbl_okay:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #3936146074321813504 // =0x36a0000000000000
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x8, x8, x0, lsl #52
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
@@ -578,6 +583,7 @@ define fastcc i1 @quantum_hadamard(i32 %0) {
 ; CHECK-LABEL: quantum_hadamard:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #4607182418800017408 // =0x3ff0000000000000
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sub x8, x8, x0, lsl #52
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fcvt s0, d0

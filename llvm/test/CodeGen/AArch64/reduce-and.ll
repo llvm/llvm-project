@@ -29,6 +29,7 @@ define i1 @test_redand_v2i1(<2 x i1> %a) {
 ;
 ; GISEL-LABEL: test_redand_v2i1:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov w8, v0.s[1]
 ; GISEL-NEXT:    fmov w9, s0
 ; GISEL-NEXT:    and w8, w9, w8
@@ -50,6 +51,7 @@ define i1 @test_redand_v4i1(<4 x i1> %a) {
 ;
 ; GISEL-LABEL: test_redand_v4i1:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w8, v0.h[0]
 ; GISEL-NEXT:    umov w9, v0.h[1]
 ; GISEL-NEXT:    umov w10, v0.h[2]
@@ -75,6 +77,7 @@ define i1 @test_redand_v8i1(<8 x i1> %a) {
 ;
 ; GISEL-LABEL: test_redand_v8i1:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w8, v0.b[0]
 ; GISEL-NEXT:    umov w9, v0.b[1]
 ; GISEL-NEXT:    umov w10, v0.b[2]
@@ -196,11 +199,13 @@ define <16 x i1> @test_redand_ins_v16i1(<16 x i1> %a) {
 define i8 @test_redand_v1i8(<1 x i8> %a) {
 ; CHECK-LABEL: test_redand_v1i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w0, v0.b[0]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redand_v1i8:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w0, v0.b[0]
 ; GISEL-NEXT:    ret
   %and_result = call i8 @llvm.vector.reduce.and.v1i8(<1 x i8> %a)
@@ -240,6 +245,7 @@ define i8 @test_redand_v4i8(<4 x i8> %a) {
 ;
 ; GISEL-LABEL: test_redand_v4i8:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w8, v0.h[0]
 ; GISEL-NEXT:    umov w9, v0.h[1]
 ; GISEL-NEXT:    umov w10, v0.h[2]
@@ -264,6 +270,7 @@ define i8 @test_redand_v8i8(<8 x i8> %a) {
 ;
 ; GISEL-LABEL: test_redand_v8i8:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w8, v0.b[0]
 ; GISEL-NEXT:    umov w9, v0.b[1]
 ; GISEL-NEXT:    umov w10, v0.b[2]
@@ -369,6 +376,7 @@ define i16 @test_redand_v4i16(<4 x i16> %a) {
 ;
 ; GISEL-LABEL: test_redand_v4i16:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    umov w8, v0.h[0]
 ; GISEL-NEXT:    umov w9, v0.h[1]
 ; GISEL-NEXT:    umov w10, v0.h[2]
@@ -447,6 +455,7 @@ define i32 @test_redand_v2i32(<2 x i32> %a) {
 ;
 ; GISEL-LABEL: test_redand_v2i32:
 ; GISEL:       // %bb.0:
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; GISEL-NEXT:    mov w8, v0.s[1]
 ; GISEL-NEXT:    fmov w9, s0
 ; GISEL-NEXT:    and w0, w9, w8

@@ -111,8 +111,9 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/array>
+#else
 #  include <__algorithm/equal.h>
 #  include <__algorithm/fill_n.h>
 #  include <__algorithm/lexicographical_compare.h>
@@ -172,15 +173,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array {
-  using __trivially_relocatable = __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, array, void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, array, void>;
 
   // types:
-  using __self          = array;
-  using value_type      = _Tp;
-  using reference       = value_type&;
-  using const_reference = const value_type&;
-  using pointer         = value_type*;
-  using const_pointer   = const value_type*;
+  using __self _LIBCPP_NODEBUG = array;
+  using value_type             = _Tp;
+  using reference              = value_type&;
+  using const_reference        = const value_type&;
+  using pointer                = value_type*;
+  using const_pointer          = const value_type*;
 #  if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
   using iterator       = __static_bounded_iter<pointer, _Size>;
   using const_iterator = __static_bounded_iter<const_pointer, _Size>;
@@ -274,13 +276,13 @@ struct _LIBCPP_TEMPLATE_VIS array {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type __n) {
     if (__n >= _Size)
-      __throw_out_of_range("array::at");
+      std::__throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type __n) const {
     if (__n >= _Size)
-      __throw_out_of_range("array::at");
+      std::__throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
@@ -298,12 +300,12 @@ struct _LIBCPP_TEMPLATE_VIS array {
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   // types:
-  using __self          = array;
-  using value_type      = _Tp;
-  using reference       = value_type&;
-  using const_reference = const value_type&;
-  using pointer         = value_type*;
-  using const_pointer   = const value_type*;
+  using __self _LIBCPP_NODEBUG = array;
+  using value_type             = _Tp;
+  using reference              = value_type&;
+  using const_reference        = const value_type&;
+  using pointer                = value_type*;
+  using const_pointer          = const value_type*;
 #  if defined(_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY)
   using iterator       = __static_bounded_iter<pointer, 0>;
   using const_iterator = __static_bounded_iter<const_pointer, 0>;
@@ -319,7 +321,7 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-  using _EmptyType = __conditional_t<is_const<_Tp>::value, const __empty, __empty>;
+  using _EmptyType _LIBCPP_NODEBUG = __conditional_t<is_const<_Tp>::value, const __empty, __empty>;
 
   struct _ArrayInStructT {
     _Tp __data_[1];
@@ -405,12 +407,12 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type) {
-    __throw_out_of_range("array<T, 0>::at");
+    std::__throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type) const {
-    __throw_out_of_range("array<T, 0>::at");
+    std::__throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 
@@ -563,9 +565,10 @@ _LIBCPP_POP_MACROS
 #    include <concepts>
 #    include <cstdlib>
 #    include <iterator>
+#    include <new>
 #    include <type_traits>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ARRAY

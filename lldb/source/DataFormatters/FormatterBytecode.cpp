@@ -304,6 +304,9 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
       control.pop_back();
       activate_block();
       continue;
+    case op_return:
+      control.clear();
+      return pc.takeError();
 
     // Literals.
     case op_lit_uint:

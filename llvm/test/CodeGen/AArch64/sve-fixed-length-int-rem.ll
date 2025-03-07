@@ -31,6 +31,8 @@ define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: srem_v8i8:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $d1 killed $d1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_256-NEXT:    sunpklo z2.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z3.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -55,10 +57,13 @@ define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    umov w8, v2.h[7]
 ; VBITS_GE_256-NEXT:    mov v3.b[7], w8
 ; VBITS_GE_256-NEXT:    mls v0.8b, v3.8b, v1.8b
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: srem_v8i8:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $d1 killed $d1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_512-NEXT:    sunpklo z2.h, z1.b
 ; VBITS_GE_512-NEXT:    sunpklo z3.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
@@ -83,6 +88,7 @@ define <8 x i8> @srem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT:    umov w8, v2.h[7]
 ; VBITS_GE_512-NEXT:    mov v3.b[7], w8
 ; VBITS_GE_512-NEXT:    mls v0.8b, v3.8b, v1.8b
+; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = srem <8 x i8> %op1, %op2
   ret <8 x i8> %res
@@ -116,6 +122,8 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: srem_v16i8:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_256-NEXT:    sunpklo z2.h, z1.b
 ; VBITS_GE_256-NEXT:    sunpklo z3.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -133,10 +141,13 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    splice z3.h, p0, z3.h, z2.h
 ; VBITS_GE_256-NEXT:    uzp1 z2.b, z3.b, z3.b
 ; VBITS_GE_256-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: srem_v16i8:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_512-NEXT:    sunpklo z2.h, z1.b
 ; VBITS_GE_512-NEXT:    sunpklo z3.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
@@ -146,6 +157,7 @@ define <16 x i8> @srem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_512-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; VBITS_GE_512-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = srem <16 x i8> %op1, %op2
   ret <16 x i8> %res
@@ -347,22 +359,28 @@ define <8 x i16> @srem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: srem_v8i16:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z3.s, z0.h
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_256-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: srem_v8i16:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_512-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_512-NEXT:    sunpklo z3.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_GE_512-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_512-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = srem <8 x i16> %op1, %op2
   ret <8 x i16> %res
@@ -516,9 +534,12 @@ define <2 x i32> @srem_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: srem_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mls v0.2s, v2.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = srem <2 x i32> %op1, %op2
   ret <2 x i32> %res
@@ -529,9 +550,12 @@ define <4 x i32> @srem_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: srem_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = srem <4 x i32> %op1, %op2
   ret <4 x i32> %res
@@ -657,9 +681,12 @@ define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: srem_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = srem <1 x i64> %op1, %op2
   ret <1 x i64> %res
@@ -671,9 +698,12 @@ define <2 x i64> @srem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: srem_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = srem <2 x i64> %op1, %op2
   ret <2 x i64> %res
@@ -819,6 +849,8 @@ define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: urem_v8i8:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $d1 killed $d1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_256-NEXT:    uunpklo z2.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z3.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -843,10 +875,13 @@ define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    umov w8, v2.h[7]
 ; VBITS_GE_256-NEXT:    mov v3.b[7], w8
 ; VBITS_GE_256-NEXT:    mls v0.8b, v3.8b, v1.8b
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: urem_v8i8:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $d1 killed $d1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; VBITS_GE_512-NEXT:    uunpklo z2.h, z1.b
 ; VBITS_GE_512-NEXT:    uunpklo z3.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
@@ -871,6 +906,7 @@ define <8 x i8> @urem_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT:    umov w8, v2.h[7]
 ; VBITS_GE_512-NEXT:    mov v3.b[7], w8
 ; VBITS_GE_512-NEXT:    mls v0.8b, v3.8b, v1.8b
+; VBITS_GE_512-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = urem <8 x i8> %op1, %op2
   ret <8 x i8> %res
@@ -904,6 +940,8 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: urem_v16i8:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_256-NEXT:    uunpklo z2.h, z1.b
 ; VBITS_GE_256-NEXT:    uunpklo z3.h, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -921,10 +959,13 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_256-NEXT:    splice z3.h, p0, z3.h, z2.h
 ; VBITS_GE_256-NEXT:    uzp1 z2.b, z3.b, z3.b
 ; VBITS_GE_256-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: urem_v16i8:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_512-NEXT:    uunpklo z2.h, z1.b
 ; VBITS_GE_512-NEXT:    uunpklo z3.h, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
@@ -934,6 +975,7 @@ define <16 x i8> @urem_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 ; VBITS_GE_512-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_512-NEXT:    uzp1 z2.b, z2.b, z2.b
 ; VBITS_GE_512-NEXT:    mls v0.16b, v2.16b, v1.16b
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = urem <16 x i8> %op1, %op2
   ret <16 x i8> %res
@@ -1135,22 +1177,28 @@ define <8 x i16> @urem_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 ;
 ; VBITS_GE_256-LABEL: urem_v8i16:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_256-NEXT:    uunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_GE_256-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_256-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_GE_256-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: urem_v8i16:
 ; VBITS_GE_512:       // %bb.0:
+; VBITS_GE_512-NEXT:    // kill: def $q1 killed $q1 def $z1
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; VBITS_GE_512-NEXT:    uunpklo z2.s, z1.h
 ; VBITS_GE_512-NEXT:    uunpklo z3.s, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; VBITS_GE_512-NEXT:    uzp1 z2.h, z2.h, z2.h
 ; VBITS_GE_512-NEXT:    mls v0.8h, v2.8h, v1.8h
+; VBITS_GE_512-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; VBITS_GE_512-NEXT:    ret
   %res = urem <8 x i16> %op1, %op2
   ret <8 x i16> %res
@@ -1304,9 +1352,12 @@ define <2 x i32> @urem_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: urem_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mls v0.2s, v2.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = urem <2 x i32> %op1, %op2
   ret <2 x i32> %res
@@ -1317,9 +1368,12 @@ define <4 x i32> @urem_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: urem_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z1.s
 ; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = urem <4 x i32> %op1, %op2
   ret <4 x i32> %res
@@ -1445,9 +1499,12 @@ define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: urem_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = urem <1 x i64> %op1, %op2
   ret <1 x i64> %res
@@ -1459,9 +1516,12 @@ define <2 x i64> @urem_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(1,0) #
 ; CHECK-LABEL: urem_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    udiv z2.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    mls z0.d, p0/m, z2.d, z1.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %res = urem <2 x i64> %op1, %op2
   ret <2 x i64> %res

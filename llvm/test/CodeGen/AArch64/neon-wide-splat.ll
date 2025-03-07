@@ -4,6 +4,7 @@
 define <4 x i16> @shuffle1(<4 x i16> %v) {
 ; CHECK-LABEL: shuffle1:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
@@ -14,6 +15,7 @@ entry:
 define <4 x i16> @shuffle2(<4 x i16> %v) {
 ; CHECK-LABEL: shuffle2:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -71,6 +73,7 @@ entry:
 define <8 x i8> @shuffle7(<8 x i8> %v) {
 ; CHECK-LABEL: shuffle7:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.2s, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:
@@ -82,6 +85,7 @@ entry:
 define <8 x i8> @shuffle8(<8 x i8> %v) {
 ; CHECK-LABEL: shuffle8:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    dup v0.4h, v0.h[3]
 ; CHECK-NEXT:    ret
 entry:
@@ -95,6 +99,7 @@ define <8 x i8> @shuffle_not1(<16 x i8> %v) {
 ; CHECK-LABEL: shuffle_not1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %res = shufflevector <16 x i8> %v, <16 x i8> undef, <8 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9>
   ret <8 x i8> %res
@@ -126,8 +131,9 @@ entry:
 define <8 x i8> @shuffle_not4(<8 x i8> %v) {
 ; CHECK-LABEL: shuffle_not4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    adrp x8, .LCPI11_0
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ret

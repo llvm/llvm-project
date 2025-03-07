@@ -16,6 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @sext_v8i1_v8i32(<8 x i1> %a, ptr %out) {
 ; CHECK-LABEL: sext_v8i1_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -89,6 +90,7 @@ define void @sext_v8i1_v8i32(<8 x i1> %a, ptr %out) {
 define void @sext_v4i3_v4i64(<4 x i3> %a, ptr %out) {
 ; CHECK-LABEL: sext_v4i3_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -131,6 +133,7 @@ define void @sext_v4i3_v4i64(<4 x i3> %a, ptr %out) {
 define void @sext_v16i8_v16i16(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v16i8_v16i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -418,6 +421,7 @@ define void @sext_v32i8_v32i16(ptr %in, ptr %out) {
 define void @sext_v8i8_v8i32(<8 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v8i8_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -472,14 +476,15 @@ define void @sext_v8i8_v8i32(<8 x i8> %a, ptr %out) {
 define void @sext_v16i8_v16i32(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v16i8_v16i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    stp q3, q0, [x0, #32]
@@ -886,8 +891,9 @@ define void @sext_v32i8_v32i32(ptr %in, ptr %out) {
 define void @sext_v4i8_v4i64(<4 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
@@ -921,6 +927,7 @@ define void @sext_v4i8_v4i64(<4 x i8> %a, ptr %out) {
 define void @sext_v8i8_v8i64(<8 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v8i8_v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -997,30 +1004,31 @@ define void @sext_v8i8_v8i64(<8 x i8> %a, ptr %out) {
 define void @sext_v16i8_v16i64(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z4.d, z2.s
 ; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sunpklo z5.d, z3.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    sunpklo z6.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z5.d, z3.s
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    sunpklo z2.d, z2.s
+; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    sunpklo z7.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    stp q4, q2, [x0]
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
-; CHECK-NEXT:    stp q5, q3, [x0, #64]
 ; CHECK-NEXT:    stp q6, q1, [x0, #32]
+; CHECK-NEXT:    stp q5, q3, [x0, #64]
 ; CHECK-NEXT:    stp q7, q0, [x0, #96]
 ; CHECK-NEXT:    ret
 ;
@@ -1577,6 +1585,7 @@ define void @sext_v32i8_v32i64(ptr %in, ptr %out) {
 define void @sext_v8i16_v8i32(<8 x i16> %a, ptr %out) {
 ; CHECK-LABEL: sext_v8i16_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -1728,6 +1737,7 @@ define void @sext_v16i16_v16i32(ptr %in, ptr %out) {
 define void @sext_v4i16_v4i64(<4 x i16> %a, ptr %out) {
 ; CHECK-LABEL: sext_v4i16_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -1764,14 +1774,15 @@ define void @sext_v4i16_v4i64(<4 x i16> %a, ptr %out) {
 define void @sext_v8i16_v8i64(<8 x i16> %a, ptr %out) {
 ; CHECK-LABEL: sext_v8i16_v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z2.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    sunpklo z3.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    stp q3, q0, [x0, #32]
@@ -1983,6 +1994,7 @@ define void @sext_v16i16_v16i64(ptr %in, ptr %out) {
 define void @sext_v4i32_v4i64(<4 x i32> %a, ptr %out) {
 ; CHECK-LABEL: sext_v4i32_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    sunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
@@ -2078,6 +2090,7 @@ define void @sext_v8i32_v8i64(ptr %in, ptr %out) {
 define void @zext_v16i8_v16i16(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v16i8_v16i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -2365,6 +2378,7 @@ define void @zext_v32i8_v32i16(ptr %in, ptr %out) {
 define void @zext_v8i8_v8i32(<8 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v8i8_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -2419,14 +2433,15 @@ define void @zext_v8i8_v8i32(<8 x i8> %a, ptr %out) {
 define void @zext_v16i8_v16i32(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v16i8_v16i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    stp q3, q0, [x0, #32]
@@ -2833,6 +2848,7 @@ define void @zext_v32i8_v32i32(ptr %in, ptr %out) {
 define void @zext_v4i8_v4i64(<4 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v4i8_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
@@ -2872,6 +2888,7 @@ define void @zext_v4i8_v4i64(<4 x i8> %a, ptr %out) {
 define void @zext_v8i8_v8i64(<8 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v8i8_v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -2952,30 +2969,31 @@ define void @zext_v8i8_v8i64(<8 x i8> %a, ptr %out) {
 define void @zext_v16i8_v16i64(<16 x i8> %a, ptr %out) {
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z4.d, z2.s
 ; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z5.d, z3.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    uunpklo z6.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z5.d, z3.s
+; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z7.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    stp q4, q2, [x0]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    stp q5, q3, [x0, #64]
 ; CHECK-NEXT:    stp q6, q1, [x0, #32]
+; CHECK-NEXT:    stp q5, q3, [x0, #64]
 ; CHECK-NEXT:    stp q7, q0, [x0, #96]
 ; CHECK-NEXT:    ret
 ;
@@ -3585,6 +3603,7 @@ define void @zext_v32i8_v32i64(ptr %in, ptr %out) {
 define void @zext_v8i16_v8i32(<8 x i16> %a, ptr %out) {
 ; CHECK-LABEL: zext_v8i16_v8i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -3736,6 +3755,7 @@ define void @zext_v16i16_v16i32(ptr %in, ptr %out) {
 define void @zext_v4i16_v4i64(<4 x i16> %a, ptr %out) {
 ; CHECK-LABEL: zext_v4i16_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
@@ -3774,14 +3794,15 @@ define void @zext_v4i16_v4i64(<4 x i16> %a, ptr %out) {
 define void @zext_v8i16_v8i64(<8 x i16> %a, ptr %out) {
 ; CHECK-LABEL: zext_v8i16_v8i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    stp q3, q0, [x0, #32]
@@ -4017,6 +4038,7 @@ define void @zext_v16i16_v16i64(ptr %in, ptr %out) {
 define void @zext_v4i32_v4i64(<4 x i32> %a, ptr %out) {
 ; CHECK-LABEL: zext_v4i32_v4i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
@@ -4116,6 +4138,7 @@ define void @extend_and_mul(i32 %0, <2 x i64> %1, ptr %2) {
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    mov z1.s, w0
 ; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE-NEXT:    uunpklo z1.d, z1.s
 ; SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; SVE-NEXT:    str q0, [x1]
@@ -4124,6 +4147,7 @@ define void @extend_and_mul(i32 %0, <2 x i64> %1, ptr %2) {
 ; SVE2-LABEL: extend_and_mul:
 ; SVE2:       // %bb.0:
 ; SVE2-NEXT:    mov z1.s, w0
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; SVE2-NEXT:    uunpklo z1.d, z1.s
 ; SVE2-NEXT:    mul z0.d, z1.d, z0.d
 ; SVE2-NEXT:    str q0, [x1]

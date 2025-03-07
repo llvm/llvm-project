@@ -16,6 +16,7 @@ declare <1 x i64> @llvm.llrint.v1i64.v1f16(<1 x half>)
 define <2 x i64> @llrint_v1i64_v2f16(<2 x half> %x) {
 ; CHECK-LABEL: llrint_v1i64_v2f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    frintx h0, h0
 ; CHECK-NEXT:    frintx h1, h1
@@ -280,6 +281,7 @@ declare <32 x i64> @llvm.llrint.v32i64.v32f16(<32 x half>)
 define <1 x i64> @llrint_v1i64_v1f32(<1 x float> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    frintx s0, s0
 ; CHECK-NEXT:    fcvtzs x8, s0
 ; CHECK-NEXT:    fmov d0, x8
@@ -569,6 +571,8 @@ define <4 x i64> @llrint_v4i64_v4f64(<4 x double> %x) {
 ; CHECK-LABEL: llrint_v4i64_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
@@ -593,6 +597,10 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
 ; CHECK-LABEL: llrint_v8i64_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -631,6 +639,14 @@ define <16 x i64> @llrint_v16f64(<16 x double> %x) {
 ; CHECK-LABEL: llrint_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    splice z6.d, p1, z6.d, z7.d
 ; CHECK-NEXT:    splice z4.d, p1, z4.d, z5.d
@@ -703,6 +719,14 @@ define <32 x i64> @llrint_v32f64(<32 x double> %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    splice z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    splice z2.d, p1, z2.d, z3.d

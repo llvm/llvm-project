@@ -108,8 +108,11 @@ define <4 x i16> @test_undef(<8 x i16> %tmp1, <8 x i16> %tmp2) {
 ; CHECK-GI-LABEL: test_undef:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
+; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI10_0]
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %tmp3 = shufflevector <8 x i16> %tmp1, <8 x i16> %tmp2, <4 x i32> <i32 undef, i32 8, i32 5, i32 9>
   ret <4 x i16> %tmp3

@@ -2183,7 +2183,7 @@ entry:
 define <vscale x 4 x i1> @intrinsic_vmsgeu_vi_nxv4i16_i16(<vscale x 4 x i16> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vmsgeu_vi_nxv4i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    ret
 entry:

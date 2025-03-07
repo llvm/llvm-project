@@ -9,7 +9,6 @@ define void @"func"(ptr swifterror %0) #0 {
 ; CHECK-NEXT:    b {{\.?}}LBB0_2
 ; CHECK-NEXT:  {{\.?}}LBB0_1:{{.*}}%thirtythree
 ; CHECK-NEXT:  {{.*}}=>This Inner Loop Header: Depth=1
-; CHECK-NEXT:  {{.*}}implicit-def: $x0
 ; CHECK-NEXT:    b {{\.?}}LBB0_1
 ; CHECK-NEXT:  {{\.?}}LBB0_2:{{.*}}%thirtyeight
 ; CHECK-NEXT:    b {{\.?}}LBB0_3
@@ -34,7 +33,7 @@ thirtythree:
   br i1 false, label %UelOc2l.exit, label %thirtythree
 
 thirtyeight:
-  br i1 undef, label %thirtyeight, label %thirtythree
+  br i1 poison, label %thirtyeight, label %thirtythree
 }
 
 attributes #0 = { noinline optnone }

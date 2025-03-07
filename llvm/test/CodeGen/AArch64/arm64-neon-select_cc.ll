@@ -19,6 +19,8 @@ define <8x i8> @test_select_cc_v8i8_i8(i8 %a, i8 %b, <8x i8> %c, <8x i8> %d ) {
 define <8x i8> @test_select_cc_v8i8_f32(float %a, float %b, <8x i8> %c, <8x i8> %d ) {
 ; CHECK-LABEL: test_select_cc_v8i8_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $d0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $d1
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
@@ -56,6 +58,8 @@ define <16x i8> @test_select_cc_v16i8_i8(i8 %a, i8 %b, <16x i8> %c, <16x i8> %d 
 define <16x i8> @test_select_cc_v16i8_f32(float %a, float %b, <16x i8> %c, <16x i8> %d ) {
 ; CHECK-LABEL: test_select_cc_v16i8_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
@@ -68,6 +72,8 @@ define <16x i8> @test_select_cc_v16i8_f32(float %a, float %b, <16x i8> %c, <16x 
 define <16x i8> @test_select_cc_v16i8_f64(double %a, double %b, <16x i8> %c, <16x i8> %d ) {
 ; CHECK-LABEL: test_select_cc_v16i8_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
@@ -163,6 +169,8 @@ define <2x i64> @test_select_cc_v2i64(i64 %a, i64 %b, <2x i64> %c, <2x i64> %d )
 define <1 x float> @test_select_cc_v1f32(float %a, float %b, <1 x float> %c, <1 x float> %d ) {
 ; CHECK-LABEL: test_select_cc_v1f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $d0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $d1
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    ret
@@ -174,6 +182,8 @@ define <1 x float> @test_select_cc_v1f32(float %a, float %b, <1 x float> %c, <1 
 define <2 x float> @test_select_cc_v2f32(float %a, float %b, <2 x float> %c, <2 x float> %d ) {
 ; CHECK-LABEL: test_select_cc_v2f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $d0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $d1
 ; CHECK-NEXT:    fcmeq v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
@@ -186,6 +196,8 @@ define <2 x float> @test_select_cc_v2f32(float %a, float %b, <2 x float> %c, <2 
 define <4x float> @test_select_cc_v4f32(float %a, float %b, <4x float> %c, <4x float> %d ) {
 ; CHECK-LABEL: test_select_cc_v4f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v0.4s, v0.s[0]
 ; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
@@ -236,6 +248,8 @@ define <1 x double> @test_select_cc_v1f64_icmp(i64 %a, i64 %b, <1 x double> %c, 
 define <2 x double> @test_select_cc_v2f64(double %a, double %b, <2 x double> %c, <2 x double> %d ) {
 ; CHECK-LABEL: test_select_cc_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fcmeq v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    dup v0.2d, v0.d[0]
 ; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
@@ -265,6 +279,8 @@ define <2 x i32> @test_select_cc_v2i32_icmpi1(i1 %cc, <2 x i32> %a, <2 x i32> %b
 define <3 x float> @test_select_cc_v3f32_fcmp_f32(<3 x float> %a, <3 x float> %b, float %c1, float %c2) #0 {
 ; CHECK-LABEL: test_select_cc_v3f32_fcmp_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
 ; CHECK-NEXT:    fcmeq v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
@@ -277,6 +293,8 @@ define <3 x float> @test_select_cc_v3f32_fcmp_f32(<3 x float> %a, <3 x float> %b
 define <3 x float> @test_select_cc_v3f32_fcmp_f64(<3 x float> %a, <3 x float> %b, double %c1, double %c2) #0 {
 ; CHECK-LABEL: test_select_cc_v3f32_fcmp_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    fcmeq v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    dup v2.2d, v2.d[0]
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b

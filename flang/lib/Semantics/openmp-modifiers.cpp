@@ -157,6 +157,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpChunkModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpContextSelector>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"context-selector",
+      /*props=*/
+      {
+          {50, {OmpProperty::Required, OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          // The MATCH clause takes a selector as an argument, not modifier.
+          {50, {Clause::OMPC_when}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dependence-type",
@@ -402,6 +419,39 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpReductionModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_reduction}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &
+OmpGetDescriptor<parser::OmpStepComplexModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"step-complex-modifier",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"step-simple-modifier",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique, OmpProperty::Exclusive}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_linear}},
       },
   };
   return desc;

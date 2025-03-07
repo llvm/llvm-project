@@ -4,6 +4,7 @@
 define float @test_fmul_lane_ss2S_0(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmul_lane_ss2S_0:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -14,6 +15,7 @@ define float @test_fmul_lane_ss2S_0(float %a, <2 x float> %v) {
 define float @test_fmul_lane_ss2S_1(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmul_lane_ss2S_1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul s0, s0, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -24,6 +26,7 @@ define float @test_fmul_lane_ss2S_1(float %a, <2 x float> %v) {
 define float @test_fmul_lane_ss2S_1_swap(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmul_lane_ss2S_1_swap:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmul s0, s0, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -109,6 +112,7 @@ declare float @llvm.aarch64.neon.fmulx.f32(float, float)
 define float @test_fmulx_lane_f32_0(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmulx_lane_f32_0:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx s0, s0, s1
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 0
@@ -119,6 +123,7 @@ define float @test_fmulx_lane_f32_0(float %a, <2 x float> %v) {
 define float @test_fmulx_lane_f32_1(float %a, <2 x float> %v) {
 ; CHECK-LABEL: test_fmulx_lane_f32_1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmulx s0, s0, v1.s[1]
 ; CHECK-NEXT:    ret
   %tmp1 = extractelement <2 x float> %v, i32 1
@@ -202,6 +207,7 @@ define double @test_fmulx_laneq_f64_1_swap(double %a, <2 x double> %v) {
 define float @test_fmulx_horizontal_f32(<2 x float> %v) {
 ; CHECK-LABEL: test_fmulx_horizontal_f32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmulx s0, s0, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:

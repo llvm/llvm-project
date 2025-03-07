@@ -8,6 +8,7 @@ define i32 @f(i64 %0) {
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    udiv x10, x9, x8
 ; CHECK-NEXT:    msub x0, x10, x8, x9
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %2 = trunc i64 %0 to i32
   %3 = freeze i32 %2

@@ -14,11 +14,22 @@
 
 #include "WebAssemblyMCAsmInfo.h"
 #include "WebAssemblyMCTargetDesc.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
+
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_WASM_TYPEINDEX, "TYPEINDEX"},
+    {MCSymbolRefExpr::VK_WASM_TBREL, "TBREL"},
+    {MCSymbolRefExpr::VK_WASM_MBREL, "MBREL"},
+    {MCSymbolRefExpr::VK_WASM_TLSREL, "TLSREL"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_WASM_GOT_TLS, "GOT@TLS"},
+    {MCSymbolRefExpr::VK_WASM_FUNCINDEX, "FUNCINDEX"},
+};
 
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
@@ -52,4 +63,6 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   // clang, so we make sure this info is set correctly.
   if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
     ExceptionsType = ExceptionHandling::Wasm;
+
+  initializeVariantKinds(variantKindDescs);
 }

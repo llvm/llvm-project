@@ -119,6 +119,19 @@ func.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
 
 // -----
 
+func.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {in_bounds = [false]} : memref<8x16x32xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: @no_load_out_of_bounds_1D_vector(
+// CHECK:       vector.transfer_read
+
+// -----
+
 func.func @no_load_masked(%source : memref<4xf32>,
     %offset : index) -> vector<4xf32> {
   %c0 = arith.constant 0.0 : f32

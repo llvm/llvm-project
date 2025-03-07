@@ -9,6 +9,7 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov h1, v0.h[1]
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    add x0, sp, #36
@@ -45,7 +46,9 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    mov v0.h[3], v2.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
@@ -67,11 +70,14 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
 ; CHECK-NEXT:    add x0, sp, #56
 ; CHECK-NEXT:    add x19, sp, #56
 ; CHECK-NEXT:    bl frexpf
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add x0, sp, #44
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    add x0, sp, #60
 ; CHECK-NEXT:    add x20, sp, #60
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
@@ -81,6 +87,7 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    ldr s1, [sp, #44]
 ; CHECK-NEXT:    ldr q2, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x19]
 ; CHECK-NEXT:    mov v2.s[2], v0.s[0]

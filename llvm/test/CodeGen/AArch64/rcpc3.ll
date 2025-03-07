@@ -77,6 +77,7 @@ define hidden <1 x i64> @test_ldap1_1xi64_lane0(ptr nocapture noundef readonly %
 ; RCPC3-LABEL: test_ldap1_1xi64_lane0:
 ; RCPC3:       // %bb.0:
 ; RCPC3-NEXT:    ldap1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; RCPC3-NEXT:    ret
 ;
 ; NO-RCPC3-LABEL: test_ldap1_1xi64_lane0:
@@ -94,6 +95,7 @@ define hidden nofpclass(nan inf) <1 x double> @test_ldap1_1xdouble_lane0(ptr noc
 ; RCPC3-LABEL: test_ldap1_1xdouble_lane0:
 ; RCPC3:       // %bb.0:
 ; RCPC3-NEXT:    ldap1 { v0.d }[0], [x0]
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; RCPC3-NEXT:    ret
 ;
 ; NO-RCPC3-LABEL: test_ldap1_1xdouble_lane0:
@@ -179,11 +181,13 @@ define hidden void @test_stl1_1xi64_lane0(ptr nocapture noundef writeonly %a, <1
 ;
 ; RCPC3-LABEL: test_stl1_1xi64_lane0:
 ; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; RCPC3-NEXT:    stl1 { v0.d }[0], [x0]
 ; RCPC3-NEXT:    ret
 ;
 ; NO-RCPC3-LABEL: test_stl1_1xi64_lane0:
 ; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; NO-RCPC3-NEXT:    fmov x8, d0
 ; NO-RCPC3-NEXT:    stlr x8, [x0]
 ; NO-RCPC3-NEXT:    ret
@@ -196,6 +200,7 @@ define hidden void @test_stl1_1xdouble_lane0(ptr nocapture noundef writeonly %a,
 ;
 ; RCPC3-LABEL: test_stl1_1xdouble_lane0:
 ; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; RCPC3-NEXT:    stl1 { v0.d }[0], [x0]
 ; RCPC3-NEXT:    ret
 ;

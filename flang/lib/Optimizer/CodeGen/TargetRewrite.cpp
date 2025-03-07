@@ -107,7 +107,7 @@ public:
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "
@@ -134,10 +134,18 @@ public:
     mod.walk([&](mlir::Operation *op) {
       if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
         if (!hasPortableSignature(call.getFunctionType(), op))
-          convertCallOp(call);
+          convertCallOp(call, call.getFunctionType());
       } else if (auto dispatch = mlir::dyn_cast<fir::DispatchOp>(op)) {
         if (!hasPortableSignature(dispatch.getFunctionType(), op))
-          convertCallOp(dispatch);
+          convertCallOp(dispatch, dispatch.getFunctionType());
+      } else if (auto gpuLaunchFunc =
+                     mlir::dyn_cast<mlir::gpu::LaunchFuncOp>(op)) {
+        llvm::SmallVector<mlir::Type> operandsTypes;
+        for (auto arg : gpuLaunchFunc.getKernelOperands())
+          operandsTypes.push_back(arg.getType());
+        auto fctTy = mlir::FunctionType::get(&context, operandsTypes, {});
+        if (!hasPortableSignature(fctTy, op))
+          convertCallOp(gpuLaunchFunc, fctTy);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
         if (mlir::isa<mlir::FunctionType>(addr.getType()) &&
             !hasPortableSignature(addr.getType(), op))
@@ -357,8 +365,7 @@ public:
 
   // Convert fir.call and fir.dispatch Ops.
   template <typename A>
-  void convertCallOp(A callOp) {
-    auto fnTy = callOp.getFunctionType();
+  void convertCallOp(A callOp, mlir::FunctionType fnTy) {
     auto loc = callOp.getLoc();
     rewriter->setInsertionPoint(callOp);
     llvm::SmallVector<mlir::Type> newResTys;
@@ -376,7 +383,7 @@ public:
         newOpers.push_back(callOp.getOperand(0));
         dropFront = 1;
       }
-    } else {
+    } else if constexpr (std::is_same_v<std::decay_t<A>, fir::DispatchOp>) {
       dropFront = 1; // First operand is the polymorphic object.
     }
 
@@ -402,10 +409,14 @@ public:
 
     llvm::SmallVector<mlir::Type> trailingInTys;
     llvm::SmallVector<mlir::Value> trailingOpers;
+    llvm::SmallVector<mlir::Value> operands;
     unsigned passArgShift = 0;
+    if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>)
+      operands = callOp.getKernelOperands();
+    else
+      operands = callOp.getOperands().drop_front(dropFront);
     for (auto e : llvm::enumerate(
-             llvm::zip(fnTy.getInputs().drop_front(dropFront),
-                       callOp.getOperands().drop_front(dropFront)))) {
+             llvm::zip(fnTy.getInputs().drop_front(dropFront), operands))) {
       mlir::Type ty = std::get<0>(e.value());
       mlir::Value oper = std::get<1>(e.value());
       unsigned index = e.index();
@@ -507,22 +518,60 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
 
     llvm::SmallVector<mlir::Value, 1> newCallResults;
-    if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+    // TODO propagate/update call argument and result attributes.
+    if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
+      auto newCall = rewriter->create<A>(
+          loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
+          callOp.getBlockSizeOperandValues(),
+          callOp.getDynamicSharedMemorySize(), newOpers);
+      if (callOp.getClusterSizeX())
+        newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
+      if (callOp.getClusterSizeY())
+        newCall.getClusterSizeYMutable().assign(callOp.getClusterSizeY());
+      if (callOp.getClusterSizeZ())
+        newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
+      newCallResults.append(newCall.result_begin(), newCall.result_end());
+    } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
-        newCall =
-            rewriter->create<A>(loc, *callOp.getCallee(), newResTys, newOpers);
+        newCall = rewriter->create<fir::CallOp>(loc, *callOp.getCallee(),
+                                                newResTys, newOpers);
       } else {
-        // TODO: llvm dialect must be updated to propagate argument on
-        // attributes for indirect calls. See:
-        // https://discourse.llvm.org/t/should-llvm-callop-be-able-to-carry-argument-attributes-for-indirect-calls/75431
-        if (hasByValOrSRetArgs(newInTyAndAttrs))
-          TODO(loc,
-               "passing argument or result on the stack in indirect calls");
         newOpers[0].setType(mlir::FunctionType::get(
             callOp.getContext(),
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
-        newCall = rewriter->create<A>(loc, newResTys, newOpers);
+        newCall = rewriter->create<fir::CallOp>(loc, newResTys, newOpers);
+        // Set ABI argument attributes on call operation since they are not
+        // accessible via a FuncOp in indirect calls.
+        if (hasByValOrSRetArgs(newInTyAndAttrs)) {
+          llvm::SmallVector<mlir::Attribute> argAttrsArray;
+          for (const auto &arg :
+               llvm::ArrayRef<fir::CodeGenSpecifics::TypeAndAttr>(
+                   newInTyAndAttrs)
+                   .drop_front(dropFront)) {
+            mlir::NamedAttrList argAttrs;
+            const auto &attr = std::get<fir::CodeGenSpecifics::Attributes>(arg);
+            if (attr.isByVal()) {
+              mlir::Type elemType =
+                  fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+              argAttrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
+                           mlir::TypeAttr::get(elemType));
+            } else if (attr.isSRet()) {
+              mlir::Type elemType =
+                  fir::dyn_cast_ptrOrBoxEleTy(std::get<mlir::Type>(arg));
+              argAttrs.set(mlir::LLVM::LLVMDialect::getStructRetAttrName(),
+                           mlir::TypeAttr::get(elemType));
+              if (auto align = attr.getAlignment()) {
+                argAttrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                             rewriter->getIntegerAttr(
+                                 rewriter->getIntegerType(32), align));
+              }
+            }
+            argAttrsArray.emplace_back(
+                argAttrs.getDictionary(rewriter->getContext()));
+          }
+          newCall.setArgAttrsAttr(rewriter->getArrayAttr(argAttrsArray));
+        }
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap)
@@ -534,6 +583,7 @@ public:
           loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
           callOp.getOperands()[0], newOpers,
           rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           callOp.getProcedureAttrsAttr());
       if (wrap)
         newCallResults.push_back((*wrap)(dispatchOp.getOperation()));

@@ -10,11 +10,15 @@ define half @fadda_v4f16(half %start, <4 x half> %a) {
 ; FA64-LABEL: fadda_v4f16:
 ; FA64:       // %bb.0:
 ; FA64-NEXT:    ptrue p0.h, vl4
+; FA64-NEXT:    // kill: def $h0 killed $h0 def $z0
+; FA64-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; FA64-NEXT:    fadda h0, p0, h0, z1.h
+; FA64-NEXT:    // kill: def $h0 killed $h0 killed $z0
 ; FA64-NEXT:    ret
 ;
 ; NO-FA64-LABEL: fadda_v4f16:
 ; NO-FA64:       // %bb.0:
+; NO-FA64-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; NO-FA64-NEXT:    fadd h0, h0, h1
 ; NO-FA64-NEXT:    mov z2.h, z1.h[1]
 ; NO-FA64-NEXT:    fadd h0, h0, h2

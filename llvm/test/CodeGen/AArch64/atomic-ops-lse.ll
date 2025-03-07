@@ -562,6 +562,7 @@ define dso_local i8 @test_atomic_load_umin_i8(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -589,6 +590,7 @@ define dso_local i16 @test_atomic_load_umin_i16(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -880,6 +882,7 @@ define dso_local i8 @test_atomic_load_umax_i8(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -907,6 +910,7 @@ define dso_local i16 @test_atomic_load_umax_i16(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -7226,6 +7230,7 @@ define dso_local i8 @test_atomic_load_umax_i8_acq_rel(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7253,6 +7258,7 @@ define dso_local i16 @test_atomic_load_umax_i16_acq_rel(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -7384,6 +7390,7 @@ define dso_local i8 @test_atomic_load_umax_i8_acquire(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
@@ -7411,6 +7418,7 @@ define dso_local i16 @test_atomic_load_umax_i16_acquire(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
@@ -7542,6 +7550,7 @@ define dso_local i8 @test_atomic_load_umax_i8_monotonic(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
@@ -7569,6 +7578,7 @@ define dso_local i16 @test_atomic_load_umax_i16_monotonic(i16 %offset) nounwind 
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
@@ -7700,6 +7710,7 @@ define dso_local i8 @test_atomic_load_umax_i8_release(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset release
 ; CHECK-NOT: dmb
@@ -7727,6 +7738,7 @@ define dso_local i16 @test_atomic_load_umax_i16_release(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset release
 ; CHECK-NOT: dmb
@@ -7858,6 +7870,7 @@ define dso_local i8 @test_atomic_load_umax_i8_seq_cst(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -7885,6 +7898,7 @@ define dso_local i16 @test_atomic_load_umax_i16_seq_cst(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -8016,6 +8030,7 @@ define dso_local i8 @test_atomic_load_umin_i8_acq_rel(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -8043,6 +8058,7 @@ define dso_local i16 @test_atomic_load_umin_i16_acq_rel(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset acq_rel
 ; CHECK-NOT: dmb
@@ -8174,6 +8190,7 @@ define dso_local i8 @test_atomic_load_umin_i8_acquire(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset acquire
 ; CHECK-NOT: dmb
@@ -8201,6 +8218,7 @@ define dso_local i16 @test_atomic_load_umin_i16_acquire(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset acquire
 ; CHECK-NOT: dmb
@@ -8332,6 +8350,7 @@ define dso_local i8 @test_atomic_load_umin_i8_monotonic(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset monotonic
 ; CHECK-NOT: dmb
@@ -8359,6 +8378,7 @@ define dso_local i16 @test_atomic_load_umin_i16_monotonic(i16 %offset) nounwind 
 ; OUTLINE-ATOMICS-NEXT:    stxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset monotonic
 ; CHECK-NOT: dmb
@@ -8490,6 +8510,7 @@ define dso_local i8 @test_atomic_load_umin_i8_release(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset release
 ; CHECK-NOT: dmb
@@ -8517,6 +8538,7 @@ define dso_local i16 @test_atomic_load_umin_i16_release(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset release
 ; CHECK-NOT: dmb
@@ -8648,6 +8670,7 @@ define dso_local i8 @test_atomic_load_umin_i8_seq_cst(i8 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrb w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var8, i8 %offset seq_cst
 ; CHECK-NOT: dmb
@@ -8675,6 +8698,7 @@ define dso_local i16 @test_atomic_load_umin_i16_seq_cst(i16 %offset) nounwind {
 ; OUTLINE-ATOMICS-NEXT:    stlxrh w11, w10, [x8]
 ; OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB[[LOOPSTART]]
 ; OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
+; OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var16, i16 %offset seq_cst
 ; CHECK-NOT: dmb

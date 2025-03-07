@@ -1049,6 +1049,7 @@ entry:
 define <16 x i8> @test_vaddhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddhn_high_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1065,6 +1066,7 @@ entry:
 define <8 x i16> @test_vaddhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddhn_high_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1081,6 +1083,7 @@ entry:
 define <4 x i32> @test_vaddhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vaddhn_high_s64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1097,6 +1100,7 @@ entry:
 define <16 x i8> @test_vaddhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddhn_high_u16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1113,6 +1117,7 @@ entry:
 define <8 x i16> @test_vaddhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddhn_high_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1129,6 +1134,7 @@ entry:
 define <4 x i32> @test_vaddhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vaddhn_high_u64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    addhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1205,6 +1211,7 @@ entry:
 define <16 x i8> @test_vraddhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vraddhn_high_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1219,6 +1226,7 @@ entry:
 define <8 x i16> @test_vraddhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vraddhn_high_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1233,6 +1241,7 @@ entry:
 define <4 x i32> @test_vraddhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vraddhn_high_s64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1247,6 +1256,7 @@ entry:
 define <16 x i8> @test_vraddhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vraddhn_high_u16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1261,6 +1271,7 @@ entry:
 define <8 x i16> @test_vraddhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vraddhn_high_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1275,6 +1286,7 @@ entry:
 define <4 x i32> @test_vraddhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vraddhn_high_u64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    raddhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1361,6 +1373,7 @@ entry:
 define <16 x i8> @test_vsubhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubhn_high_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1377,6 +1390,7 @@ entry:
 define <8 x i16> @test_vsubhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubhn_high_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1393,6 +1407,7 @@ entry:
 define <4 x i32> @test_vsubhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vsubhn_high_s64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1409,6 +1424,7 @@ entry:
 define <16 x i8> @test_vsubhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubhn_high_u16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1425,6 +1441,7 @@ entry:
 define <8 x i16> @test_vsubhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubhn_high_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1441,6 +1458,7 @@ entry:
 define <4 x i32> @test_vsubhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vsubhn_high_u64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    subhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1517,6 +1535,7 @@ entry:
 define <16 x i8> @test_vrsubhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1531,6 +1550,7 @@ entry:
 define <8 x i16> @test_vrsubhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1545,6 +1565,7 @@ entry:
 define <4 x i32> @test_vrsubhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_s64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -1559,6 +1580,7 @@ entry:
 define <16 x i8> @test_vrsubhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_u16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.16b, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -1573,6 +1595,7 @@ entry:
 define <8 x i16> @test_vrsubhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_u32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
@@ -1587,6 +1610,7 @@ entry:
 define <4 x i32> @test_vrsubhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vrsubhn_high_u64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    rsubhn2 v0.4s, v1.2d, v2.2d
 ; CHECK-NEXT:    ret
 entry:
@@ -2513,14 +2537,13 @@ entry:
 define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coerce) {
 ; CHECK-LABEL: cmplx_mul_combined_re_im:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsr x9, x0, #16
-; CHECK-NEXT:    adrp x8, .LCPI196_0
+; CHECK-NEXT:    lsr x8, x0, #16
+; CHECK-NEXT:    movi v1.2d, #0xffff0000ffff0000
 ; CHECK-NEXT:    fmov d5, x0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI196_0]
 ; CHECK-NEXT:    rev32 v4.8h, v0.8h
-; CHECK-NEXT:    dup v1.8h, w9
-; CHECK-NEXT:    sqneg v2.8h, v1.8h
-; CHECK-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
+; CHECK-NEXT:    dup v2.8h, w8
+; CHECK-NEXT:    sqneg v3.8h, v2.8h
+; CHECK-NEXT:    bsl v1.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v5.h[0]
 ; CHECK-NEXT:    sqdmull2 v0.4s, v0.8h, v5.h[0]
 ; CHECK-NEXT:    sqdmlal v2.4s, v4.4h, v1.4h

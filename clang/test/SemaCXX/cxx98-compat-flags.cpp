@@ -1,13 +1,16 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat-pedantic -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat-pedantic -Wno-bind-to-temporary-copy -Wno-unnamed-type-template-args -Wno-local-type-template-args -Wno-binary-literal -Werror %s
 
-template<typename T> int TemplateFn(T) { return 0; }
+template<typename T> // expected-note 2{{template parameter is declared here}}
+int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
   struct S {};
   TemplateFn(S()); // expected-warning {{local type 'S' as template argument is incompatible with C++98}}
+                   // expected-note@-1 {{while substituting deduced template arguments}}
 }
 struct {} obj_of_unnamed_type; // expected-note {{here}}
 int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{unnamed type as template argument is incompatible with C++98}}
+                                                          // expected-note@-1 {{while substituting deduced template arguments}}
 
 namespace CopyCtorIssues {
   struct Private {

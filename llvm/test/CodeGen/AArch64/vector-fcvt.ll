@@ -212,6 +212,7 @@ define <4 x double> @sitofp_v4i8_double(<4 x i8> %a) {
 define <8 x double> @sitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: sitofp_v8i8_double:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.b[0]
 ; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    umov w11, v0.b[4]
@@ -388,6 +389,7 @@ define <4 x double> @uitofp_v4i8_double(<4 x i8> %a) {
 define <8 x double> @uitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: uitofp_v8i8_double:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    umov w8, v0.b[0]
 ; CHECK-NEXT:    umov w9, v0.b[2]
 ; CHECK-NEXT:    umov w11, v0.b[4]

@@ -25,6 +25,7 @@ define i16 @test_bitcast_from_half(ptr %addr) {
 define i16 @test_reg_bitcast_from_half(half %in) {
 ; CHECK-LABEL: test_reg_bitcast_from_half:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %val = bitcast half %in to i16
@@ -45,6 +46,7 @@ define half @test_reg_bitcast_to_half(i16 %in) {
 ; CHECK-LABEL: test_reg_bitcast_to_half:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
   %val = bitcast i16 %in to half
   ret half %val

@@ -1025,6 +1025,7 @@ declare <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.nxv16bf16(<vscale x 
 define <vscale x 2 x float> @extract_nxv2f32_nxv4f32_splat(float %f) {
 ; CHECK-LABEL: extract_nxv2f32_nxv4f32_splat:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x float> poison, float %f, i32 0

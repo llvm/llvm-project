@@ -14,7 +14,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: ir-bb<vector.ph>:
 ; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
 ; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
-; CHECK-NEXT:   IR %ind.end = getelementptr i8, ptr %start, i64 %n.vec
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + ir<%n.vec> * ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -83,9 +83,9 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
@@ -94,7 +94,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi ir<%ind.end>, ir<%start>
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%start>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:

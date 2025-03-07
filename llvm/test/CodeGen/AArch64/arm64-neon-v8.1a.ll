@@ -134,6 +134,7 @@ define <4 x i32> @test_sqrdmlsh_v4i32(<4 x i32> %acc, <4 x i32> %mhs, <4 x i32> 
 define <4 x i16> @test_sqrdmlah_lane_s16(<4 x i16> %acc, <4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_sqrdmlah_lane_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sqrdmulh v1.4h, v1.4h, v2.h[3]
 ; CHECK-NEXT:    sqadd v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
@@ -160,6 +161,7 @@ entry:
 define <2 x i32> @test_sqrdmlah_lane_s32(<2 x i32> %acc, <2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_sqrdmlah_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sqrdmulh v1.2s, v1.2s, v2.s[1]
 ; CHECK-NEXT:    sqadd v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
@@ -186,6 +188,7 @@ entry:
 define <4 x i16> @test_sqrdmlsh_lane_s16(<4 x i16> %acc, <4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_sqrdmlsh_lane_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sqrdmulh v1.4h, v1.4h, v2.h[3]
 ; CHECK-NEXT:    sqsub v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
@@ -212,6 +215,7 @@ entry:
 define <2 x i32> @test_sqrdmlsh_lane_s32(<2 x i32> %acc, <2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_sqrdmlsh_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    sqrdmulh v1.2s, v1.2s, v2.s[1]
 ; CHECK-NEXT:    sqsub v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
@@ -243,6 +247,7 @@ entry:
 define i16 @test_sqrdmlah_extracted_lane_s16(i16 %acc,<4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_sqrdmlah_extracted_lane_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh v0.4h, v0.4h, v1.h[1]
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    sqadd v0.4h, v1.4h, v0.4h
@@ -277,6 +282,7 @@ entry:
 define i32 @test_sqrdmlah_extracted_lane_s32(i32 %acc,<2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_sqrdmlah_extracted_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh v0.2s, v0.2s, v1.s[0]
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    sqadd s0, s1, s0
@@ -309,6 +315,7 @@ entry:
 define i16 @test_sqrdmlsh_extracted_lane_s16(i16 %acc,<4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_sqrdmlsh_extracted_lane_s16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh v0.4h, v0.4h, v1.h[1]
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    sqsub v0.4h, v1.4h, v0.4h
@@ -343,6 +350,7 @@ entry:
 define i32 @test_sqrdmlsh_extracted_lane_s32(i32 %acc,<2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_sqrdmlsh_extracted_lane_s32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqrdmulh v0.2s, v0.2s, v1.s[0]
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    sqsub s0, s1, s0
@@ -492,6 +500,7 @@ define i16 @test_sqrdmlah_extract_i16(i16 %acc, i16 %x, <4 x i16> %y_vec) {
 ; CHECK-LABEL: test_sqrdmlah_extract_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrdmulh v0.4h, v1.4h, v0.h[1]
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    sqadd v0.4h, v1.4h, v0.4h
@@ -639,6 +648,7 @@ define i16 @test_vqrdmlahh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[3]
 ; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
@@ -656,6 +666,7 @@ define i32 @test_vqrdmlahs_lane_s32(i32 %a, i32 %b, <2 x i32> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrdmlah s1, s2, v0.s[1]
 ; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
@@ -777,6 +788,7 @@ define i16 @test_vqrdmlshh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[3]
 ; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
@@ -794,6 +806,7 @@ define i32 @test_vqrdmlshs_lane_s32(i32 %a, i32 %b, <2 x i32> %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov s1, w0
 ; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    sqrdmlsh s1, s2, v0.s[1]
 ; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret

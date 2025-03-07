@@ -84,6 +84,8 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 define <2 x i32> @vec(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-LABEL: vec:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v1.s[1]
 ; CHECK-NEXT:    mov w9, v0.s[1]
 ; CHECK-NEXT:    fmov w10, s0
@@ -96,6 +98,7 @@ define <2 x i32> @vec(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; CHECK-NEXT:    csinv w9, w9, wzr, eq
 ; CHECK-NEXT:    fmov s0, w9
 ; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp = call <2 x i32> @llvm.umul.fix.sat.v2i32(<2 x i32> %x, <2 x i32> %y, i32 0)
   ret <2 x i32> %tmp

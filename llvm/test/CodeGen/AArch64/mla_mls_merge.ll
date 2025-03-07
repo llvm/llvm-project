@@ -102,6 +102,7 @@ define <4 x i16> @test_mls0(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    umlsl v0.8h, v2.8b, v3.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull.i = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> %a, <8 x i8> %b)
@@ -117,6 +118,7 @@ define <4 x i16> @test_mls1(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d) 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    smlsl v0.8h, v2.8b, v3.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull.i = tail call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %a, <8 x i8> %b)
@@ -132,6 +134,7 @@ define <2 x i32> @test_mls2(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    umlsl v0.4s, v2.4h, v3.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16> %a, <4 x i16> %b)
@@ -147,6 +150,7 @@ define <2 x i32> @test_mls3(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    smlsl v0.4s, v2.4h, v3.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %a, <4 x i16> %b)
@@ -162,6 +166,7 @@ define <1 x i64> @test_mls4(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    umlsl v0.2d, v2.2s, v3.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %a, <2 x i32> %b)
@@ -177,6 +182,7 @@ define <1 x i64> @test_mls5(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    smlsl v0.2d, v2.2s, v3.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vmull2.i = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %a, <2 x i32> %b)

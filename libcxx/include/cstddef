@@ -33,8 +33,9 @@ Types:
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cstddef>
+#else
 #  include <__config>
 #  include <version>
 
@@ -57,6 +58,6 @@ Types:
 #  include <__cstddef/nullptr_t.h>
 #  include <__cstddef/ptrdiff_t.h>
 #  include <__cstddef/size_t.h>
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CSTDDEF

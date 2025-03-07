@@ -233,6 +233,7 @@ define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b) {
 ; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
 ; CHECK-SD-NEXT:    add x8, x0, #1
 ; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_v2i8:
@@ -240,6 +241,7 @@ define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b) {
 ; CHECK-GI-NEXT:    ld1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    ldr b1, [x0, #1]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = load <2 x i8>, ptr %ptr
   ret <2 x i8> %a
@@ -270,6 +272,7 @@ define <2 x i16> @load_v2i16(ptr %ptr) {
 ; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
 ; CHECK-SD-NEXT:    add x8, x0, #2
 ; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_v2i16:
@@ -277,6 +280,7 @@ define <2 x i16> @load_v2i16(ptr %ptr) {
 ; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x0]
 ; CHECK-GI-NEXT:    ldr h1, [x0, #2]
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = load <2 x i16>, ptr %ptr
   ret <2 x i16> %a
@@ -362,6 +366,7 @@ define <7 x i8> @load_v7i8(ptr %ptr) {
 ; CHECK-GI-NEXT:    mov v0.b[5], v1.b[0]
 ; CHECK-GI-NEXT:    ldr b1, [x0, #6]
 ; CHECK-GI-NEXT:    mov v0.b[6], v1.b[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = load <7 x i8>, ptr %ptr
   ret <7 x i8> %a
@@ -380,6 +385,7 @@ define <3 x i16> @load_v3i16(ptr %ptr) {
 ; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    add x8, x0, #4
 ; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x8]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %a = load <3 x i16>, ptr %ptr
   ret <3 x i16> %a

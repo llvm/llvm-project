@@ -7,8 +7,11 @@
 define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) {
 ; CHECK-BASE-LABEL: test_select:
 ; CHECK-BASE:       // %bb.0:
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-BASE-NEXT:    cmp w0, #0
+; CHECK-BASE-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-BASE-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_select:
@@ -24,7 +27,10 @@ define bfloat @test_select_fcc(bfloat %a, bfloat %b, float %c, float %d) {
 ; CHECK-BASE-LABEL: test_select_fcc:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    fcmp s2, s3
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-BASE-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-BASE-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_select_fcc:
@@ -40,8 +46,11 @@ define bfloat @test_select_fcc(bfloat %a, bfloat %b, float %c, float %d) {
 define bfloat @test_select_icc(bfloat %a, bfloat %b, i32 %c, i32 %d) {
 ; CHECK-BASE-LABEL: test_select_icc:
 ; CHECK-BASE:       // %bb.0:
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 def $s0
 ; CHECK-BASE-NEXT:    cmp w0, w1
+; CHECK-BASE-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-BASE-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-BASE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-BASE-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_select_icc:

@@ -410,6 +410,7 @@ define %T2 @simple_struct(%T1 %0, %T2 %1, %T3, %T4) nounwind {
 ; CHECK-NEXT:     ldr     x8, [x2]
 ; CHECK-NEXT:     ldr     x10, [x3]
 ; CHECK-NEXT:     ldr     d1, [x2, #8]
+; CHECK-NEXT:                                     // kill: def $w1 killed $w1 killed $x1
 ; CHECK-NEXT:     ldr     s0, [sp, #12]
 ; CHECK-NEXT:     ldr     d2, [x3, #8]
 ; CHECK-NEXT:     mov     x2, x8
@@ -510,6 +511,7 @@ define <4 x i8> @small_vector(<4 x i8> %0) {
 ; CHECK-NEXT:     str	w0, [sp, #12]
 ; CHECK-NEXT:     ldr	s0, [sp, #12]
 ; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
+; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:     blr	x9
 ; CHECK-NEXT:     uzp1	v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:     adrp	x9, __os_arm64x_dispatch_ret

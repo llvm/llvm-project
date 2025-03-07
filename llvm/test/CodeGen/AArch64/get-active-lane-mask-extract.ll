@@ -124,7 +124,9 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-NEXT:    fmov s0, w8
 ; CHECK-SVE-NEXT:    fmov s1, w9
 ; CHECK-SVE-NEXT:    mov v0.s[1], w10
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE-NEXT:    mov v1.s[1], w11
+; CHECK-SVE-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SVE-NEXT:    b use
 ;
 ; CHECK-SVE2p1-LABEL: test_fixed_extract:
@@ -138,7 +140,9 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE2p1-NEXT:    fmov s0, w8
 ; CHECK-SVE2p1-NEXT:    fmov s1, w9
 ; CHECK-SVE2p1-NEXT:    mov v0.s[1], w10
+; CHECK-SVE2p1-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SVE2p1-NEXT:    mov v1.s[1], w11
+; CHECK-SVE2p1-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SVE2p1-NEXT:    b use
     %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
     %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)

@@ -124,7 +124,7 @@ public:
 
   /// Return the largest register class on \p RegBank which supports \p Ty and
   /// covers \p SubIdx if it exists.
-  std::optional<CodeGenRegisterClass *>
+  const CodeGenRegisterClass *
   getSuperRegForSubReg(const ValueTypeByHwMode &Ty, CodeGenRegBank &RegBank,
                        const CodeGenSubRegIndex *SubIdx,
                        bool MustBeAllocatable = false) const;

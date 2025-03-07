@@ -25,11 +25,20 @@ entry:
 define <3 x double> @max_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: max_nnan_v3f64:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
+; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
 ; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
 ; AARCH64-NEXT:    fmaxnm v2.2d, v2.2d, v5.2d
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    fmaxnm v0.2d, v0.2d, v3.2d
 ; AARCH64-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; AARCH64-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.maximumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -91,19 +100,29 @@ entry:
 define <5 x float> @max_nnan_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-LABEL: max_nnan_v5f32:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 def $q0
+; AARCH64-NEXT:    // kill: def $s5 killed $s5 def $q5
+; AARCH64-NEXT:    // kill: def $s1 killed $s1 def $q1
+; AARCH64-NEXT:    // kill: def $s6 killed $s6 def $q6
+; AARCH64-NEXT:    // kill: def $s2 killed $s2 def $q2
+; AARCH64-NEXT:    // kill: def $s7 killed $s7 def $q7
+; AARCH64-NEXT:    // kill: def $s3 killed $s3 def $q3
+; AARCH64-NEXT:    mov x8, sp
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; AARCH64-NEXT:    mov v0.s[1], v1.s[0]
 ; AARCH64-NEXT:    mov v5.s[1], v6.s[0]
-; AARCH64-NEXT:    mov x8, sp
 ; AARCH64-NEXT:    mov v0.s[2], v2.s[0]
 ; AARCH64-NEXT:    mov v5.s[2], v7.s[0]
 ; AARCH64-NEXT:    ldr s2, [sp, #8]
 ; AARCH64-NEXT:    fmaxnm v4.4s, v4.4s, v2.4s
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; AARCH64-NEXT:    mov v0.s[3], v3.s[0]
 ; AARCH64-NEXT:    ld1 { v5.s }[3], [x8]
 ; AARCH64-NEXT:    fmaxnm v0.4s, v0.4s, v5.4s
 ; AARCH64-NEXT:    mov s1, v0.s[1]
 ; AARCH64-NEXT:    mov s2, v0.s[2]
 ; AARCH64-NEXT:    mov s3, v0.s[3]
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; AARCH64-NEXT:    ret
 entry:
   %c = call nnan <5 x float> @llvm.maximumnum.v5f32(<5 x float> %a, <5 x float> %b)
@@ -165,9 +184,17 @@ entry:
 define <9 x half> @max_nnan_v9f16(<9 x half> %a, <9 x half> %b) {
 ; AARCH64-LABEL: max_nnan_v9f16:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $h0 killed $h0 def $q0
+; AARCH64-NEXT:    // kill: def $h1 killed $h1 def $q1
+; AARCH64-NEXT:    // kill: def $h2 killed $h2 def $q2
+; AARCH64-NEXT:    add x9, sp, #16
+; AARCH64-NEXT:    // kill: def $h3 killed $h3 def $q3
+; AARCH64-NEXT:    // kill: def $h4 killed $h4 def $q4
+; AARCH64-NEXT:    // kill: def $h5 killed $h5 def $q5
+; AARCH64-NEXT:    // kill: def $h6 killed $h6 def $q6
+; AARCH64-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; AARCH64-NEXT:    mov v0.h[1], v1.h[0]
 ; AARCH64-NEXT:    ldr h1, [sp, #8]
-; AARCH64-NEXT:    add x9, sp, #16
 ; AARCH64-NEXT:    ld1 { v1.h }[1], [x9]
 ; AARCH64-NEXT:    add x9, sp, #24
 ; AARCH64-NEXT:    mov v0.h[2], v2.h[0]
@@ -234,11 +261,20 @@ entry:
 define <3 x double> @min_nnan_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: min_nnan_v3f64:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
+; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
 ; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v5.2d
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    fminnm v0.2d, v0.2d, v3.2d
 ; AARCH64-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; AARCH64-NEXT:    ret
 entry:
   %c = call nnan <3 x double> @llvm.minimumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -300,19 +336,29 @@ entry:
 define <5 x float> @min_nnan_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-LABEL: min_nnan_v5f32:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 def $q0
+; AARCH64-NEXT:    // kill: def $s5 killed $s5 def $q5
+; AARCH64-NEXT:    // kill: def $s1 killed $s1 def $q1
+; AARCH64-NEXT:    // kill: def $s6 killed $s6 def $q6
+; AARCH64-NEXT:    // kill: def $s2 killed $s2 def $q2
+; AARCH64-NEXT:    // kill: def $s7 killed $s7 def $q7
+; AARCH64-NEXT:    // kill: def $s3 killed $s3 def $q3
+; AARCH64-NEXT:    mov x8, sp
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; AARCH64-NEXT:    mov v0.s[1], v1.s[0]
 ; AARCH64-NEXT:    mov v5.s[1], v6.s[0]
-; AARCH64-NEXT:    mov x8, sp
 ; AARCH64-NEXT:    mov v0.s[2], v2.s[0]
 ; AARCH64-NEXT:    mov v5.s[2], v7.s[0]
 ; AARCH64-NEXT:    ldr s2, [sp, #8]
 ; AARCH64-NEXT:    fminnm v4.4s, v4.4s, v2.4s
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; AARCH64-NEXT:    mov v0.s[3], v3.s[0]
 ; AARCH64-NEXT:    ld1 { v5.s }[3], [x8]
 ; AARCH64-NEXT:    fminnm v0.4s, v0.4s, v5.4s
 ; AARCH64-NEXT:    mov s1, v0.s[1]
 ; AARCH64-NEXT:    mov s2, v0.s[2]
 ; AARCH64-NEXT:    mov s3, v0.s[3]
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; AARCH64-NEXT:    ret
 entry:
   %c = call nnan <5 x float> @llvm.minimumnum.v5f32(<5 x float> %a, <5 x float> %b)
@@ -374,9 +420,17 @@ entry:
 define <9 x half> @min_nnan_v9f16(<9 x half> %a, <9 x half> %b) {
 ; AARCH64-LABEL: min_nnan_v9f16:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $h0 killed $h0 def $q0
+; AARCH64-NEXT:    // kill: def $h1 killed $h1 def $q1
+; AARCH64-NEXT:    // kill: def $h2 killed $h2 def $q2
+; AARCH64-NEXT:    add x9, sp, #16
+; AARCH64-NEXT:    // kill: def $h3 killed $h3 def $q3
+; AARCH64-NEXT:    // kill: def $h4 killed $h4 def $q4
+; AARCH64-NEXT:    // kill: def $h5 killed $h5 def $q5
+; AARCH64-NEXT:    // kill: def $h6 killed $h6 def $q6
+; AARCH64-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; AARCH64-NEXT:    mov v0.h[1], v1.h[0]
 ; AARCH64-NEXT:    ldr h1, [sp, #8]
-; AARCH64-NEXT:    add x9, sp, #16
 ; AARCH64-NEXT:    ld1 { v1.h }[1], [x9]
 ; AARCH64-NEXT:    add x9, sp, #24
 ; AARCH64-NEXT:    mov v0.h[2], v2.h[0]
@@ -447,6 +501,12 @@ entry:
 define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: max_v3f64:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
+; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
 ; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v2.2d
@@ -456,6 +516,9 @@ define <3 x double> @max_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; AARCH64-NEXT:    fmaxnm v2.2d, v2.2d, v1.2d
 ; AARCH64-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.maximumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -529,9 +592,17 @@ entry:
 define <5 x float> @max_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-LABEL: max_v5f32:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 def $q0
+; AARCH64-NEXT:    // kill: def $s5 killed $s5 def $q5
+; AARCH64-NEXT:    // kill: def $s1 killed $s1 def $q1
+; AARCH64-NEXT:    // kill: def $s6 killed $s6 def $q6
+; AARCH64-NEXT:    // kill: def $s2 killed $s2 def $q2
+; AARCH64-NEXT:    // kill: def $s7 killed $s7 def $q7
+; AARCH64-NEXT:    // kill: def $s3 killed $s3 def $q3
+; AARCH64-NEXT:    mov x8, sp
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; AARCH64-NEXT:    mov v0.s[1], v1.s[0]
 ; AARCH64-NEXT:    mov v5.s[1], v6.s[0]
-; AARCH64-NEXT:    mov x8, sp
 ; AARCH64-NEXT:    mov v0.s[2], v2.s[0]
 ; AARCH64-NEXT:    mov v5.s[2], v7.s[0]
 ; AARCH64-NEXT:    ldr s2, [sp, #8]
@@ -542,10 +613,12 @@ define <5 x float> @max_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-NEXT:    fminnm v1.4s, v5.4s, v5.4s
 ; AARCH64-NEXT:    fminnm v0.4s, v0.4s, v0.4s
 ; AARCH64-NEXT:    fmaxnm v4.4s, v3.4s, v2.4s
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; AARCH64-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
 ; AARCH64-NEXT:    mov s1, v0.s[1]
 ; AARCH64-NEXT:    mov s2, v0.s[2]
 ; AARCH64-NEXT:    mov s3, v0.s[3]
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; AARCH64-NEXT:    ret
 entry:
   %c = call <5 x float> @llvm.maximumnum.v5f32(<5 x float> %a, <5 x float> %b)
@@ -619,9 +692,17 @@ entry:
 define <9 x half> @max_v9f16(<9 x half> %a, <9 x half> %b) {
 ; AARCH64-LABEL: max_v9f16:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $h0 killed $h0 def $q0
+; AARCH64-NEXT:    // kill: def $h1 killed $h1 def $q1
+; AARCH64-NEXT:    // kill: def $h2 killed $h2 def $q2
+; AARCH64-NEXT:    add x9, sp, #16
+; AARCH64-NEXT:    // kill: def $h3 killed $h3 def $q3
+; AARCH64-NEXT:    // kill: def $h4 killed $h4 def $q4
+; AARCH64-NEXT:    // kill: def $h5 killed $h5 def $q5
+; AARCH64-NEXT:    // kill: def $h6 killed $h6 def $q6
+; AARCH64-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; AARCH64-NEXT:    mov v0.h[1], v1.h[0]
 ; AARCH64-NEXT:    ldr h1, [sp, #8]
-; AARCH64-NEXT:    add x9, sp, #16
 ; AARCH64-NEXT:    ld1 { v1.h }[1], [x9]
 ; AARCH64-NEXT:    add x9, sp, #24
 ; AARCH64-NEXT:    mov v0.h[2], v2.h[0]
@@ -700,6 +781,12 @@ entry:
 define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-LABEL: min_v3f64:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $d3 killed $d3 def $q3
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 def $q0
+; AARCH64-NEXT:    // kill: def $d4 killed $d4 def $q4
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 def $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 def $q2
+; AARCH64-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; AARCH64-NEXT:    mov v0.d[1], v1.d[0]
 ; AARCH64-NEXT:    mov v3.d[1], v4.d[0]
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v2.2d
@@ -709,6 +796,9 @@ define <3 x double> @min_v3f64(<3 x double> %a, <3 x double> %b) {
 ; AARCH64-NEXT:    fminnm v1.2d, v5.2d, v5.2d
 ; AARCH64-NEXT:    fminnm v2.2d, v2.2d, v1.2d
 ; AARCH64-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; AARCH64-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; AARCH64-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; AARCH64-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; AARCH64-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.minimumnum.v3f64(<3 x double> %a, <3 x double> %b)
@@ -782,9 +872,17 @@ entry:
 define <5 x float> @min_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-LABEL: min_v5f32:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 def $q0
+; AARCH64-NEXT:    // kill: def $s5 killed $s5 def $q5
+; AARCH64-NEXT:    // kill: def $s1 killed $s1 def $q1
+; AARCH64-NEXT:    // kill: def $s6 killed $s6 def $q6
+; AARCH64-NEXT:    // kill: def $s2 killed $s2 def $q2
+; AARCH64-NEXT:    // kill: def $s7 killed $s7 def $q7
+; AARCH64-NEXT:    // kill: def $s3 killed $s3 def $q3
+; AARCH64-NEXT:    mov x8, sp
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; AARCH64-NEXT:    mov v0.s[1], v1.s[0]
 ; AARCH64-NEXT:    mov v5.s[1], v6.s[0]
-; AARCH64-NEXT:    mov x8, sp
 ; AARCH64-NEXT:    mov v0.s[2], v2.s[0]
 ; AARCH64-NEXT:    mov v5.s[2], v7.s[0]
 ; AARCH64-NEXT:    ldr s2, [sp, #8]
@@ -795,10 +893,12 @@ define <5 x float> @min_v5f32(<5 x float> %a, <5 x float> %b) {
 ; AARCH64-NEXT:    fminnm v1.4s, v5.4s, v5.4s
 ; AARCH64-NEXT:    fminnm v0.4s, v0.4s, v0.4s
 ; AARCH64-NEXT:    fminnm v4.4s, v3.4s, v2.4s
+; AARCH64-NEXT:    // kill: def $s4 killed $s4 killed $q4
 ; AARCH64-NEXT:    fminnm v0.4s, v0.4s, v1.4s
 ; AARCH64-NEXT:    mov s1, v0.s[1]
 ; AARCH64-NEXT:    mov s2, v0.s[2]
 ; AARCH64-NEXT:    mov s3, v0.s[3]
+; AARCH64-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; AARCH64-NEXT:    ret
 entry:
   %c = call <5 x float> @llvm.minimumnum.v5f32(<5 x float> %a, <5 x float> %b)
@@ -872,9 +972,17 @@ entry:
 define <9 x half> @min_v9f16(<9 x half> %a, <9 x half> %b) {
 ; AARCH64-LABEL: min_v9f16:
 ; AARCH64:       // %bb.0: // %entry
+; AARCH64-NEXT:    // kill: def $h0 killed $h0 def $q0
+; AARCH64-NEXT:    // kill: def $h1 killed $h1 def $q1
+; AARCH64-NEXT:    // kill: def $h2 killed $h2 def $q2
+; AARCH64-NEXT:    add x9, sp, #16
+; AARCH64-NEXT:    // kill: def $h3 killed $h3 def $q3
+; AARCH64-NEXT:    // kill: def $h4 killed $h4 def $q4
+; AARCH64-NEXT:    // kill: def $h5 killed $h5 def $q5
+; AARCH64-NEXT:    // kill: def $h6 killed $h6 def $q6
+; AARCH64-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; AARCH64-NEXT:    mov v0.h[1], v1.h[0]
 ; AARCH64-NEXT:    ldr h1, [sp, #8]
-; AARCH64-NEXT:    add x9, sp, #16
 ; AARCH64-NEXT:    ld1 { v1.h }[1], [x9]
 ; AARCH64-NEXT:    add x9, sp, #24
 ; AARCH64-NEXT:    mov v0.h[2], v2.h[0]

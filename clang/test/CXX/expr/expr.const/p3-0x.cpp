@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++1z -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx17 %s
 
 // A converted constant expression of type T is a core constant expression,
 int nonconst = 8; // expected-note 3 {{here}}
 enum NonConstE : unsigned char { NCE = nonconst }; // expected-error {{enumerator value is not a constant expression}} expected-note {{read of non-const}}
-template<int = nonconst> struct NonConstT {}; // expected-error {{non-type template argument is not a constant expression}} expected-note {{read of non-const}}
+template<int = nonconst> struct NonConstT {}; // expected-error {{non-type template argument is not a constant expression}} expected-note {{read of non-const}} expected-note {{template parameter is declared here}}
 void NonConstF() {
   switch (nonconst) {
     case nonconst: // expected-error {{case value is not a constant expression}} expected-note {{read of non-const}}
@@ -66,7 +66,8 @@ enum class EEE : unsigned short {
   e = 123456, // expected-error {{enumerator value evaluates to 123456, which cannot be narrowed to type 'unsigned short'}}
   f = -3 // expected-error {{enumerator value evaluates to -3, which cannot be narrowed to type 'unsigned short'}}
 };
-template<unsigned char> using A = int;
+template<unsigned char> using A = int; // expected-note 4{{template parameter is declared here}}
+
 using Int = A<E6>;
 using Int = A<EE::EE32>; // expected-error {{not implicitly convertible}}
 using Int = A<(int)EE::EE32>;
@@ -78,6 +79,8 @@ using Int = A<-3>; // expected-error {{template argument evaluates to -3, which 
 // integral conversions as well as boolean conversions.
 // FIXME: Per core issue 1407, this is not correct.
 template<typename T, T v> struct Val { static constexpr T value = v; };
+// cxx17-note@-1 1{{template parameter is declared here}}
+// expected-note@-2 2{{template parameter is declared here}}
 static_assert(Val<bool, E1>::value == 1, ""); // ok
 static_assert(Val<bool, '\0'>::value == 0, ""); // ok
 static_assert(Val<bool, U'\1'>::value == 1, ""); // ok

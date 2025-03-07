@@ -1803,6 +1803,7 @@ public:
     IdentifierInfo *Name;
     SourceLocation NameLoc;
     std::optional<ParsedAttributes> Attrs;
+    SourceLocation EllipsisLoc;
   };
 
 private:

@@ -1194,6 +1194,7 @@ define i32 @t(i64 %x) {
 ; CHECK-LABEL: t:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ubfx x0, x0, #17, #28
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %s = lshr i64 %x, 13
   %t = trunc i64 %s to i32

@@ -238,7 +238,7 @@ addr_t Section::GetLoadBaseAddress(Target *target) const {
       load_base_addr += GetOffset();
   }
   if (load_base_addr == LLDB_INVALID_ADDRESS) {
-    load_base_addr = target->GetSectionLoadList().GetSectionLoadAddress(
+    load_base_addr = target->GetSectionLoadAddress(
         const_cast<Section *>(this)->shared_from_this());
   }
   return load_base_addr;
@@ -643,8 +643,7 @@ bool SectionList::ContainsSection(user_id_t sect_id) const {
 
 void SectionList::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
                        bool show_header, uint32_t depth) const {
-  bool target_has_loaded_sections =
-      target && !target->GetSectionLoadList().IsEmpty();
+  bool target_has_loaded_sections = target && target->HasLoadedSections();
   if (show_header && !m_sections.empty()) {
     s.indent(indent);
     s << llvm::formatv(
@@ -691,7 +690,10 @@ bool fromJSON(const llvm::json::Value &value,
               lldb_private::JSONSection &section, llvm::json::Path path) {
   llvm::json::ObjectMapper o(value, path);
   return o && o.map("name", section.name) && o.map("type", section.type) &&
-         o.map("size", section.address) && o.map("size", section.size);
+         o.map("address", section.address) && o.map("size", section.size) &&
+         o.map("read", section.read) && o.map("write", section.write) &&
+         o.map("execute", section.execute) &&
+         o.mapOptional("subsections", section.subsections);
 }
 
 bool fromJSON(const llvm::json::Value &value, lldb::SectionType &type,

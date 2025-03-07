@@ -105,6 +105,11 @@ struct JSONSection {
   std::optional<lldb::SectionType> type;
   std::optional<uint64_t> address;
   std::optional<uint64_t> size;
+  // Section permissions;
+  std::optional<bool> read;
+  std::optional<bool> write;
+  std::optional<bool> execute;
+  std::vector<JSONSection> subsections;
 };
 
 class Section : public std::enable_shared_from_this<Section>,

@@ -14,7 +14,9 @@ define <4 x half> @insertelement_v4f16(<4 x half> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: insertelement_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov h1, #5.00000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.h[3], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = insertelement <4 x half> %op1, half 5.0, i64 3
   ret <4 x half> %r
@@ -133,7 +135,9 @@ define <2 x float> @insertelement_v2f32(<2 x float> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: insertelement_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov s1, #5.00000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %r = insertelement <2 x float> %op1, float 5.0, i64 1
   ret <2 x float> %r

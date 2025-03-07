@@ -87,6 +87,7 @@ define bfloat @stofp_i64_bf16(i64 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp i64 %a to bfloat
@@ -115,6 +116,7 @@ define bfloat @utofp_i64_bf16(i64 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp i64 %a to bfloat
@@ -133,6 +135,7 @@ define bfloat @stofp_i32_bf16(i32 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp i32 %a to bfloat
@@ -151,6 +154,7 @@ define bfloat @utofp_i32_bf16(i32 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp i32 %a to bfloat
@@ -169,6 +173,7 @@ define bfloat @stofp_i16_bf16(i16 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp i16 %a to bfloat
@@ -187,6 +192,7 @@ define bfloat @utofp_i16_bf16(i16 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp i16 %a to bfloat
@@ -205,6 +211,7 @@ define bfloat @stofp_i8_bf16(i8 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp i8 %a to bfloat
@@ -223,6 +230,7 @@ define bfloat @utofp_i8_bf16(i8 %a) {
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp i8 %a to bfloat
@@ -280,6 +288,7 @@ define <2 x bfloat> @stofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp <2 x i64> %a to <2 x bfloat>
@@ -329,6 +338,7 @@ define <2 x bfloat> @utofp_v2i64_v2bf16(<2 x i64> %a) {
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp <2 x i64> %a to <2 x bfloat>
@@ -338,6 +348,9 @@ entry:
 define <3 x bfloat> @stofp_v3i64_v3bf16(<3 x i64> %a) {
 ; CHECK-LABEL: stofp_v3i64_v3bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    scvtf v1.2d, v2.2d
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
@@ -362,6 +375,9 @@ entry:
 define <3 x bfloat> @utofp_v3i64_v3bf16(<3 x i64> %a) {
 ; CHECK-LABEL: utofp_v3i64_v3bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ucvtf v1.2d, v2.2d
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
@@ -836,8 +852,9 @@ entry:
 define <2 x bfloat> @stofp_v2i32_v2bf16(<2 x i32> %a) {
 ; CHECK-LABEL: stofp_v2i32_v2bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ushr v2.4s, v0.4s, #16
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
@@ -852,8 +869,9 @@ entry:
 define <2 x bfloat> @utofp_v2i32_v2bf16(<2 x i32> %a) {
 ; CHECK-LABEL: utofp_v2i32_v2bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ushr v2.4s, v0.4s, #16
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
@@ -1476,6 +1494,7 @@ entry:
 define <2 x bfloat> @stofp_v2i8_v2bf16(<2 x i8> %a) {
 ; CHECK-LABEL: stofp_v2i8_v2bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w9, v0.s[1]
 ; CHECK-NEXT:    fmov w10, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
@@ -1496,6 +1515,7 @@ define <2 x bfloat> @stofp_v2i8_v2bf16(<2 x i8> %a) {
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %c = sitofp <2 x i8> %a to <2 x bfloat>
@@ -1505,6 +1525,7 @@ entry:
 define <2 x bfloat> @utofp_v2i8_v2bf16(<2 x i8> %a) {
 ; CHECK-LABEL: utofp_v2i8_v2bf16:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w9, v0.s[1]
 ; CHECK-NEXT:    fmov w10, s0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
@@ -1525,6 +1546,7 @@ define <2 x bfloat> @utofp_v2i8_v2bf16(<2 x i8> %a) {
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %c = uitofp <2 x i8> %a to <2 x bfloat>

@@ -7,6 +7,8 @@
 define void @st2q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -19,6 +21,8 @@ define void @st2q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
 define void @st2q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -32,6 +36,8 @@ define void @st2q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st2q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -45,6 +51,8 @@ define void @st2q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st2q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -58,6 +66,8 @@ define void @st2q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 define void @st2q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -71,6 +81,8 @@ define void @st2q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st2q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -84,6 +96,8 @@ define void @st2q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st2q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -97,6 +111,8 @@ define void @st2q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st2q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st2q_ss_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -111,6 +127,8 @@ define void @st2q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 define void @st2q_si_i8_off16(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st2q_si_i8_off16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #-16, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -16
@@ -124,6 +142,8 @@ define void @st2q_si_i8_off16(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st2q_si_i8_off14(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st2q_si_i8_off14:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 14
@@ -137,6 +157,8 @@ define void @st2q_si_i8_off14(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st2q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 8 x i16>, ptr %base, i64 14
@@ -150,6 +172,8 @@ define void @st2q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st2q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 4 x i32>, ptr %base, i64 14
@@ -163,6 +187,8 @@ define void @st2q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st2q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 2 x i64>, ptr %base, i64 14
@@ -176,6 +202,8 @@ define void @st2q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 define void @st2q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 8 x half>, ptr %base, i64 14
@@ -189,6 +217,8 @@ define void @st2q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st2q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 4 x float>, ptr %base, i64 14
@@ -202,6 +232,8 @@ define void @st2q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st2q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep= getelementptr <vscale x 2 x double>, ptr %base, i64 14
@@ -215,6 +247,8 @@ define void @st2q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st2q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: st2q_si_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2q { z0.q, z1.q }, p0, [x0, #14, mul vl]
 ; CHECK-NEXT:    ret
   %gep = getelementptr <vscale x 8 x bfloat>, ptr %base, i64 14
@@ -232,6 +266,9 @@ define void @st2q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 define void @st3q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -246,6 +283,9 @@ define void @st3q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
 define void @st3q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2,  <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -260,6 +300,9 @@ define void @st3q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st3q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -274,6 +317,9 @@ define void @st3q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st3q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %v2, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -288,6 +334,9 @@ define void @st3q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 define void @st3q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -302,6 +351,9 @@ define void @st3q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st3q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -316,6 +368,9 @@ define void @st3q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st3q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -330,6 +385,9 @@ define void @st3q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st3q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st3q_ss_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -344,6 +402,9 @@ define void @st3q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 define void @st3q_si_i8_off24(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i8_off24:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #-24, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -24
@@ -358,6 +419,9 @@ define void @st3q_si_i8_off24(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st3q_si_i8_off21(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i8_off21:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 21
@@ -372,6 +436,9 @@ define void @st3q_si_i8_off21(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st3q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2,  <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 21
@@ -386,6 +453,9 @@ define void @st3q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st3q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, ptr %addr, i64 21
@@ -400,6 +470,9 @@ define void @st3q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st3q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1,<vscale x 2 x i64> %v2, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 21
@@ -414,6 +487,9 @@ define void @st3q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1,<vscale 
 define void @st3q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 21
@@ -428,6 +504,9 @@ define void @st3q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st3q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 21
@@ -442,6 +521,9 @@ define void @st3q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st3q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 21
@@ -456,6 +538,9 @@ define void @st3q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st3q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st3q_si_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    st3q { z0.q - z2.q }, p0, [x0, #21, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 21
@@ -473,6 +558,10 @@ define void @st3q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 define void @st4q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -488,6 +577,10 @@ define void @st4q_ss_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale 
 define void @st4q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2, <vscale x 8 x i16> %v3, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -503,6 +596,10 @@ define void @st4q_ss_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st4q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i32> %v3, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -518,6 +615,10 @@ define void @st4q_ss_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st4q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %v2, <vscale x 2 x i64> %v3, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -533,6 +634,10 @@ define void @st4q_ss_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 define void @st4q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -548,6 +653,10 @@ define void @st4q_ss_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st4q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -563,6 +672,10 @@ define void @st4q_ss_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st4q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -578,6 +691,10 @@ define void @st4q_ss_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st4q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x i1> %pred, ptr %addr, i64 %offset) {
 ; CHECK-LABEL: st4q_ss_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, x1, lsl #4]
 ; CHECK-NEXT:    ret
   %1 = getelementptr i128, ptr %addr, i64 %offset
@@ -593,6 +710,10 @@ define void @st4q_ss_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, 
 define void @st4q_si_i8_off32(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i8_off32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #-32, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 -32
@@ -608,6 +729,10 @@ define void @st4q_si_i8_off32(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st4q_si_i8_off28(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 16 x i8> %v2,<vscale x 16 x i8> %v3, <vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i8_off28:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 28
@@ -623,6 +748,10 @@ define void @st4q_si_i8_off28(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <v
 define void @st4q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 8 x i16> %v2, <vscale x 8 x i16> %v3,  <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, ptr %addr, i64 28
@@ -638,6 +767,10 @@ define void @st4q_si_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale
 define void @st4q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 4 x i32> %v2, <vscale x 4 x i32> %v3, <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base1 = getelementptr <vscale x 4 x i32>, ptr %addr, i64 28
@@ -653,6 +786,10 @@ define void @st4q_si_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale
 define void @st4q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %v2, <vscale x 2 x i64> %v3, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, ptr %addr, i64 28
@@ -668,6 +805,10 @@ define void @st4q_si_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale
 define void @st4q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, ptr %addr, i64 28
@@ -683,6 +824,10 @@ define void @st4q_si_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vsca
 define void @st4q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2,<vscale x 4 x float> %v3,  <vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, ptr %addr, i64 28
@@ -698,6 +843,10 @@ define void @st4q_si_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vs
 define void @st4q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, ptr %addr, i64 28
@@ -713,6 +862,10 @@ define void @st4q_si_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <
 define void @st4q_si_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: st4q_si_bf16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4q { z0.q - z3.q }, p0, [x0, #28, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, ptr %addr, i64 28

@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFToLLVMIRTranslation.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/OpenACC/RegisterOpenACCExtensions.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -63,6 +64,7 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
     addFIRInlinerExtension(registry);
   addFIRToLLVMIRExtension(registry);
   cuf::registerCUFDialectTranslation(registry);
+  fir::acc::registerOpenACCExtensions(registry);
 }
 
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
@@ -110,7 +112,7 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::affine::registerAffineLoopTilingPass();
   mlir::affine::registerAffineDataCopyGenerationPass();
 
-  mlir::registerConvertAffineToStandardPass();
+  mlir::registerLowerAffinePass();
 }
 
 /// Register the interfaces needed to lower to LLVM IR.

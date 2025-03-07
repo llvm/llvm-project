@@ -14,15 +14,29 @@ target triple = "aarch64"
 
 ; Expected to not transform
 define <2 x half> @complex_add_v2f16(<2 x half> %a, <2 x half> %b) {
-; CHECK-LABEL: complex_add_v2f16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov h2, v0.h[1]
-; CHECK-NEXT:    mov h3, v1.h[1]
-; CHECK-NEXT:    fsub h1, h1, h2
-; CHECK-NEXT:    fadd h0, h3, h0
-; CHECK-NEXT:    mov v1.h[1], v0.h[0]
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: complex_add_v2f16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    mov h2, v0.h[1]
+; CHECK-SD-NEXT:    mov h3, v1.h[1]
+; CHECK-SD-NEXT:    fsub h1, h1, h2
+; CHECK-SD-NEXT:    fadd h0, h3, h0
+; CHECK-SD-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: complex_add_v2f16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-NEXT:    mov h3, v1.h[1]
+; CHECK-GI-NEXT:    fsub h1, h1, h2
+; CHECK-GI-NEXT:    fadd h0, h3, h0
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %a.real = shufflevector <2 x half> %a, <2 x half> zeroinitializer, <1 x i32> <i32 0>
   %a.imag = shufflevector <2 x half> %a, <2 x half> zeroinitializer, <1 x i32> <i32 1>

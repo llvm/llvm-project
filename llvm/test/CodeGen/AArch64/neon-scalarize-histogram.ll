@@ -6,6 +6,7 @@
 define void @histogram_i64(<2 x ptr> %buckets, i64 %inc, <2 x i1> %mask) {
 ; CHECK-LABEL: histogram_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    tbnz w8, #0, .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %else
@@ -35,6 +36,7 @@ define void @histogram_i32_literal(ptr %base, <4 x i32> %indices, <4 x i1> %mask
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dup v2.2d, x0
 ; CHECK-NEXT:    sshll v3.2d, v0.2s, #2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.h[0]
 ; CHECK-NEXT:    add v3.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    tbz w8, #0, .LBB1_2

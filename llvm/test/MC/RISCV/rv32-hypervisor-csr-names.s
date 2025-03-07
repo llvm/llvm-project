@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
@@ -219,3 +219,21 @@ csrrs t2, 0x214, zero
 csrrs t1, vsiph, zero
 # uimm12
 csrrs t2, 0x254, zero
+
+##################################
+# Hypervisor Trap Setup
+##################################
+
+# hedelegh
+# name
+# CHECK-INST: csrrs t1, hedelegh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x61]
+# CHECK-INST-ALIAS: csrr t1, hedelegh
+# uimm12
+# CHECK-INST: csrrs t2, hedelegh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x61]
+# CHECK-INST-ALIAS: csrr t2, hedelegh
+# name
+csrrs t1, hedelegh, zero
+# uimm12
+csrrs t2, 0x612, zero

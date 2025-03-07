@@ -218,14 +218,14 @@ struct DemandedFields {
   bool VLZeroness = false;
   // What properties of SEW we need to preserve.
   enum : uint8_t {
-    SEWEqual = 3,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 2, // SEW can be changed as long as it's greater
-                               // than or equal to the original value.
+    SEWEqual = 3, // The exact value of SEW needs to be preserved.
     SEWGreaterThanOrEqualAndLessThan64 =
-        1,      // SEW can be changed as long as it's greater
-                // than or equal to the original value, but must be less
-                // than 64.
-    SEWNone = 0 // We don't need to preserve SEW at all.
+        2, // SEW can be changed as long as it's greater
+           // than or equal to the original value, but must be less
+           // than 64.
+    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
+                               // than or equal to the original value.
+    SEWNone = 0                // We don't need to preserve SEW at all.
   } SEW = SEWNone;
   enum : uint8_t {
     LMULEqual = 2, // The exact value of LMUL needs to be preserved.
@@ -342,7 +342,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
 }
 #endif
 
-static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
+static bool isLMUL1OrSmaller(RISCVVType::VLMUL LMUL) {
   auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
   return Fractional || LMul == 1;
 }
@@ -564,7 +564,7 @@ class VSETVLIInfo {
   } State = Uninitialized;
 
   // Fields from VTYPE.
-  RISCVII::VLMUL VLMul = RISCVII::LMUL_1;
+  RISCVVType::VLMUL VLMul = RISCVVType::LMUL_1;
   uint8_t SEW = 0;
   uint8_t TailAgnostic : 1;
   uint8_t MaskAgnostic : 1;
@@ -627,7 +627,7 @@ public:
     return MI;
   }
 
-  void setAVL(VSETVLIInfo Info) {
+  void setAVL(const VSETVLIInfo &Info) {
     assert(Info.isValid());
     if (Info.isUnknown())
       setUnknown();
@@ -642,7 +642,7 @@ public:
   }
 
   unsigned getSEW() const { return SEW; }
-  RISCVII::VLMUL getVLMUL() const { return VLMul; }
+  RISCVVType::VLMUL getVLMUL() const { return VLMul; }
   bool getTailAgnostic() const { return TailAgnostic; }
   bool getMaskAgnostic() const { return MaskAgnostic; }
 
@@ -707,7 +707,7 @@ public:
     TailAgnostic = RISCVVType::isTailAgnostic(VType);
     MaskAgnostic = RISCVVType::isMaskAgnostic(VType);
   }
-  void setVTYPE(RISCVII::VLMUL L, unsigned S, bool TA, bool MA) {
+  void setVTYPE(RISCVVType::VLMUL L, unsigned S, bool TA, bool MA) {
     assert(isValid() && !isUnknown() &&
            "Can't set VTYPE for uninitialized or unknown");
     VLMul = L;
@@ -716,7 +716,7 @@ public:
     MaskAgnostic = MA;
   }
 
-  void setVLMul(RISCVII::VLMUL VLMul) { this->VLMul = VLMul; }
+  void setVLMul(RISCVVType::VLMUL VLMul) { this->VLMul = VLMul; }
 
   unsigned encodeVTYPE() const {
     assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
@@ -1018,7 +1018,7 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
 }
 
 static unsigned computeVLMAX(unsigned VLEN, unsigned SEW,
-                             RISCVII::VLMUL VLMul) {
+                             RISCVVType::VLMUL VLMul) {
   auto [LMul, Fractional] = RISCVVType::decodeVLMUL(VLMul);
   if (Fractional)
     VLEN = VLEN / LMul;
@@ -1043,22 +1043,18 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     if (RISCVII::hasVecPolicyOp(TSFlags)) {
       const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
       uint64_t Policy = Op.getImm();
-      assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
+      assert(Policy <=
+                 (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
              "Invalid Policy Value");
-      TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
-      MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
+      TailAgnostic = Policy & RISCVVType::TAIL_AGNOSTIC;
+      MaskAgnostic = Policy & RISCVVType::MASK_AGNOSTIC;
     }
-
-    // Some pseudo instructions force a tail agnostic policy despite having a
-    // tied def.
-    if (RISCVII::doesForceTailAgnostic(TSFlags))
-      TailAgnostic = true;
 
     if (!RISCVII::usesMaskPolicy(TSFlags))
       MaskAgnostic = true;
   }
 
-  RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
+  RISCVVType::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 
   unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
   // A Log2SEW of 0 is an operation on mask registers only.
@@ -1069,7 +1065,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
     const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
     if (VLOp.isImm()) {
       int64_t Imm = VLOp.getImm();
-      // Conver the VLMax sentintel to X0 register.
+      // Convert the VLMax sentintel to X0 register.
       if (Imm == RISCV::VLMaxSentinel) {
         // If we know the exact VLEN, see if we can use the constant encoding
         // for the VLMAX instead.  This reduces register pressure slightly.
@@ -1223,7 +1219,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
 // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
 // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
 // places.
-static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
+static VSETVLIInfo adjustIncoming(const VSETVLIInfo &PrevInfo,
+                                  const VSETVLIInfo &NewInfo,
                                   DemandedFields &Demanded) {
   VSETVLIInfo Info = NewInfo;
 
@@ -1249,8 +1246,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     // be coalesced into another vsetvli since we won't demand any fields.
     VSETVLIInfo NewInfo; // Need a new VSETVLIInfo to clear SEWLMULRatioOnly
     NewInfo.setAVLImm(1);
-    NewInfo.setVTYPE(RISCVII::VLMUL::LMUL_1, /*sew*/ 8, /*ta*/ true,
-                     /*ma*/ true);
+    NewInfo.setVTYPE(RISCVVType::LMUL_1, /*sew*/ 8, /*ta*/ true, /*ma*/ true);
     Info = NewInfo;
     return;
   }
@@ -1718,8 +1714,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       ToDelete.push_back(VLOpDef);
   };
 
-  for (MachineInstr &MI :
-       make_early_inc_range(make_range(MBB.rbegin(), MBB.rend()))) {
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
 
     if (!isVectorConfigInstr(MI)) {
       Used.doUnion(getDemanded(MI, ST));

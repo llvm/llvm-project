@@ -125,14 +125,6 @@ struct fltSemantics {
 
   /* Whether this semantics can represent signed values */
   bool hasSignedRepr = true;
-
-  // Returns true if any number described by this semantics can be precisely
-  // represented by the specified semantics. Does not take into account
-  // the value of fltNonfiniteBehavior.
-  bool isRepresentableBy(const fltSemantics &S) const {
-    return maxExponent <= S.maxExponent && minExponent >= S.minExponent &&
-           precision <= S.precision;
-  }
 };
 
 static constexpr fltSemantics semIEEEhalf = {15, -14, 11, 16};
@@ -290,6 +282,12 @@ const fltSemantics &APFloatBase::x87DoubleExtended() {
 }
 const fltSemantics &APFloatBase::Bogus() { return semBogus; }
 
+bool APFloatBase::isRepresentableBy(const fltSemantics &A,
+                                    const fltSemantics &B) {
+  return A.maxExponent <= B.maxExponent && A.minExponent >= B.minExponent &&
+         A.precision <= B.precision;
+}
+
 constexpr RoundingMode APFloatBase::rmNearestTiesToEven;
 constexpr RoundingMode APFloatBase::rmTowardPositive;
 constexpr RoundingMode APFloatBase::rmTowardNegative;
@@ -353,6 +351,11 @@ bool APFloatBase::semanticsHasInf(const fltSemantics &semantics) {
 
 bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
   return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+}
+
+bool APFloatBase::isIEEELikeFP(const fltSemantics &semantics) {
+  // Keep in sync with Type::isIEEELikeFPTy
+  return SemanticsToEnum(semantics) <= S_IEEEquad;
 }
 
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
@@ -4873,8 +4876,9 @@ DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
 }
 
 DoubleAPFloat::DoubleAPFloat(DoubleAPFloat &&RHS)
-    : Semantics(RHS.Semantics), Floats(std::move(RHS.Floats)) {
+    : Semantics(RHS.Semantics), Floats(RHS.Floats) {
   RHS.Semantics = &semBogus;
+  RHS.Floats = nullptr;
   assert(Semantics == &semPPCDoubleDouble);
 }
 
@@ -5527,7 +5531,7 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
 double APFloat::convertToDouble() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEdouble)
     return getIEEE().convertToDouble();
-  assert(getSemantics().isRepresentableBy(semIEEEdouble) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEdouble) &&
          "Float semantics is not representable by IEEEdouble");
   APFloat Temp = *this;
   bool LosesInfo;
@@ -5541,7 +5545,7 @@ double APFloat::convertToDouble() const {
 float128 APFloat::convertToQuad() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
     return getIEEE().convertToQuad();
-  assert(getSemantics().isRepresentableBy(semIEEEquad) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEquad) &&
          "Float semantics is not representable by IEEEquad");
   APFloat Temp = *this;
   bool LosesInfo;
@@ -5555,7 +5559,7 @@ float128 APFloat::convertToQuad() const {
 float APFloat::convertToFloat() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)
     return getIEEE().convertToFloat();
-  assert(getSemantics().isRepresentableBy(semIEEEsingle) &&
+  assert(isRepresentableBy(getSemantics(), semIEEEsingle) &&
          "Float semantics is not representable by IEEEsingle");
   APFloat Temp = *this;
   bool LosesInfo;

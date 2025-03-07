@@ -3320,7 +3320,7 @@ def STRH_preidx: ARMPseudoInst<(outs GPR:$Rn_wb),
 }
 
 
-
+let mayStore = 1, hasSideEffects = 0 in {
 def STRH_PRE  : AI3ldstidx<0b1011, 0, 1, (outs GPR:$Rn_wb),
                            (ins GPR:$Rt, addrmode3_pre:$addr), IndexModePre,
                            StMiscFrm, IIC_iStore_bh_ru,
@@ -3352,6 +3352,7 @@ def STRH_POST : AI3ldstidx<0b1011, 0, 0, (outs GPR:$Rn_wb),
   let Inst{3-0}   = offset{3-0};    // imm3_0/Rm
   let DecoderMethod = "DecodeAddrMode3Instruction";
 }
+} // mayStore = 1, hasSideEffects = 0
 
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in {
 def STRD_PRE : AI3ldstidx<0b1111, 0, 1, (outs GPR:$Rn_wb),
@@ -3386,6 +3387,8 @@ def STRD_POST: AI3ldstidx<0b1111, 0, 0, (outs GPR:$Rn_wb),
 } // mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1
 
 // STRT, STRBT, and STRHT
+
+let mayStore = 1, hasSideEffects = 0 in {
 
 def STRBT_POST_REG : AI2ldstidx<0, 1, 0, (outs GPR:$Rn_wb),
                    (ins GPR:$Rt, addr_offset_none:$addr, am2offset_reg:$offset),
@@ -3427,7 +3430,6 @@ def STRBT_POST
   : ARMAsmPseudo<"strbt${q} $Rt, $addr",
                  (ins GPR:$Rt, addr_offset_none:$addr, pred:$q)>;
 
-let mayStore = 1, hasSideEffects = 0 in {
 def STRT_POST_REG : AI2ldstidx<0, 0, 0, (outs GPR:$Rn_wb),
                    (ins GPR:$Rt, addr_offset_none:$addr, am2offset_reg:$offset),
                    IndexModePost, StFrm, IIC_iStore_ru,
@@ -3463,7 +3465,6 @@ def STRT_POST_IMM
   let Inst{11-0} = offset{11-0};
   let DecoderMethod = "DecodeAddrMode2IdxInstruction";
 }
-}
 
 def STRT_POST
   : ARMAsmPseudo<"strt${q} $Rt, $addr",
@@ -3492,7 +3493,6 @@ multiclass AI3strT<bits<4> op, string opc> {
   }
 }
 
-
 defm STRHT : AI3strT<0b1011, "strht">;
 
 def STL : AIstrrel<0b00, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
@@ -3501,6 +3501,8 @@ def STLB : AIstrrel<0b10, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlb", "\t$Rt, $addr", []>;
 def STLH : AIstrrel<0b11, (outs), (ins GPR:$Rt, addr_offset_none:$addr),
                     NoItinerary, "stlh", "\t$Rt, $addr", []>;
+
+} // mayStore = 1, hasSideEffects = 0
 
 //===----------------------------------------------------------------------===//
 //  Load / store multiple Instructions.
@@ -4765,6 +4767,7 @@ def : ARMV6Pat<(int_arm_smusdx GPRnopc:$Rn, GPRnopc:$Rm),
 //===----------------------------------------------------------------------===//
 //  Division Instructions (ARMv7-A with virtualization extension)
 //
+let TwoOperandAliasConstraint = "$Rn = $Rd" in {
 def SDIV : ADivA1I<0b001, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    "sdiv", "\t$Rd, $Rn, $Rm",
                    [(set GPR:$Rd, (sdiv GPR:$Rn, GPR:$Rm))]>,
@@ -4776,6 +4779,7 @@ def UDIV : ADivA1I<0b011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), IIC_iDIV,
                    [(set GPR:$Rd, (udiv GPR:$Rn, GPR:$Rm))]>,
            Requires<[IsARM, HasDivideInARM]>,
            Sched<[WriteDIV]>;
+}
 
 //===----------------------------------------------------------------------===//
 //  Misc. Arithmetic Instructions.
@@ -5630,15 +5634,19 @@ multiclass LdSt2Cop<bit load, bit Dbit, string asm, list<dag> pattern> {
   }
 }
 
+let mayLoad = 1 in {
 defm LDC   : LdStCop <1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDCL  : LdStCop <1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm LDC2  : LdSt2Cop<1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm LDC2L : LdSt2Cop<1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+}
 
+let mayStore = 1 in {
 defm STC   : LdStCop <0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STCL  : LdStCop <0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm STC2  : LdSt2Cop<0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
 defm STC2L : LdSt2Cop<0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[IsARM,PreV8]>;
+}
 
 } // DecoderNamespace = "CoProc"
 

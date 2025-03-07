@@ -14,6 +14,7 @@
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -542,7 +543,8 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       assert(ImmOffset == 0);
 
       if (Size == 8) {
-        FixupKind = MCFixupKind(X86::reloc_global_offset_table8);
+        FixupKind =
+            MCFixupKind(FirstLiteralRelocationKind + ELF::R_X86_64_GOTPC64);
       } else {
         assert(Size == 4);
         FixupKind = MCFixupKind(X86::reloc_global_offset_table);
@@ -572,15 +574,15 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
-      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
+      FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_evex)) {
     ImmOffset -= 4;
     // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
     // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
     // this needs to be a GOTPC32 relocation.
     if (startsWithGlobalOffsetTable(Expr) != GOT_None)
       FixupKind = MCFixupKind(X86::reloc_global_offset_table);
-  } else if (FixupKind == MCFixupKind(X86::reloc_riprel_6byte_relax))
-    ImmOffset -= 6;
+  }
 
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
@@ -677,7 +679,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::ADD64mr_ND:
       case X86::ADD64mr_NF_ND:
       case X86::ADD64rm_NF_ND:
-        return X86::reloc_riprel_6byte_relax;
+        return X86::reloc_riprel_4byte_relax_evex;
       }
     }();
 

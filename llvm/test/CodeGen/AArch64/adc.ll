@@ -69,6 +69,7 @@ define i128 @test_shifted(i128 %a, i128 %b) {
 define i128 @test_extended(i128 %a, i16 %b) {
 ; CHECK-LE-LABEL: test_extended:
 ; CHECK-LE:       ; %bb.0:
+; CHECK-LE-NEXT:    ; kill: def $w2 killed $w2 def $x2
 ; CHECK-LE-NEXT:    sxth x8, w2
 ; CHECK-LE-NEXT:    adds x0, x0, w2, sxth #3
 ; CHECK-LE-NEXT:    asr x9, x8, #63
@@ -78,6 +79,7 @@ define i128 @test_extended(i128 %a, i16 %b) {
 ;
 ; CHECK-BE-LABEL: test_extended:
 ; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-BE-NEXT:    sxth x8, w2
 ; CHECK-BE-NEXT:    adds x1, x1, w2, sxth #3
 ; CHECK-BE-NEXT:    asr x9, x8, #63

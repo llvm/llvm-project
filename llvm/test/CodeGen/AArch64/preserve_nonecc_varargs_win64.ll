@@ -5,10 +5,11 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; CHECK-LABEL: callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    mov x0, x5
+; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    stp x6, x7, [sp, #32]
 ; CHECK-NEXT:    str x5, [sp, #24]
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

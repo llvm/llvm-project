@@ -41,6 +41,7 @@ define void @v8i64_v8i32(<8 x i64> %a, ptr %result) {
 define void @v2i32_v2i16(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strh w9, [x0]
@@ -88,6 +89,7 @@ define void @v16i32_v16i16(<16 x i32> %a, ptr %result) {
 define void @v2i32_v2i8(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strb w9, [x0]
@@ -154,6 +156,7 @@ define void @v32i32_v32i8(<32 x i32> %a, ptr %result) {
 define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 ; CHECK-LABEL: v2i16_v2i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strb w9, [x0]

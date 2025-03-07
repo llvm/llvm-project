@@ -26,6 +26,7 @@ declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; CHECK-i32-LABEL: lrint_v2f16:
 ; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i32-NEXT:    mov h1, v0.h[1]
 ; CHECK-i32-NEXT:    frintx h0, h0
 ; CHECK-i32-NEXT:    frintx h1, h1
@@ -33,10 +34,12 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 ; CHECK-i32-NEXT:    fcvtzs w9, h1
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    mov v0.s[1], w9
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v2f16:
 ; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i64-NEXT:    mov h1, v0.h[1]
 ; CHECK-i64-NEXT:    frintx h0, h0
 ; CHECK-i64-NEXT:    frintx h1, h1
@@ -511,6 +514,7 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ;
 ; CHECK-i64-LABEL: lrint_v1f32:
 ; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-i64-NEXT:    frintx s0, s0
 ; CHECK-i64-NEXT:    fcvtzs x8, s0
 ; CHECK-i64-NEXT:    fmov d0, x8
@@ -569,6 +573,8 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; CHECK-i32-LABEL: lrint_v8f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
 ; CHECK-i32-NEXT:    movprfx z2, z0
@@ -634,6 +640,10 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 ; CHECK-i32-LABEL: lrint_v16f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
@@ -763,6 +773,14 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
 ; CHECK-i32-NEXT:    .cfi_offset w26, -64
 ; CHECK-i32-NEXT:    .cfi_offset w27, -80
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
 ; CHECK-i32-NEXT:    splice z6.d, p1, z6.d, z7.d
 ; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
@@ -1030,6 +1048,7 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; CHECK-i32-NEXT:    fcvtzs w9, d1
 ; CHECK-i32-NEXT:    fmov s0, w8
 ; CHECK-i32-NEXT:    mov v0.s[1], w9
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v2f64:
@@ -1046,6 +1065,8 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; CHECK-i32-LABEL: lrint_v4f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
 ; CHECK-i32-NEXT:    movprfx z1, z0
@@ -1066,6 +1087,8 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; CHECK-i64-LABEL: lrint_v4f64:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i64-NEXT:    ptrue p0.d, vl4
 ; CHECK-i64-NEXT:    frintx z0.d, p0/m, z0.d
@@ -1090,6 +1113,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-i32-LABEL: lrint_v8f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
@@ -1123,6 +1150,10 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; CHECK-i64-LABEL: lrint_v8f64:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i64-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i64-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-i64-NEXT:    ptrue p0.d, vl4
@@ -1161,6 +1192,14 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; CHECK-i32-LABEL: lrint_v16f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
 ; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
 ; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
@@ -1221,6 +1260,14 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 ; CHECK-i64-LABEL: lrint_v16f64:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ptrue p1.d, vl2
+; CHECK-i64-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-i64-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-i64-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-i64-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-i64-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i64-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i64-NEXT:    ptrue p0.d, vl4
 ; CHECK-i64-NEXT:    splice z6.d, p1, z6.d, z7.d
 ; CHECK-i64-NEXT:    splice z4.d, p1, z4.d, z5.d
@@ -1286,6 +1333,14 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
 ; CHECK-i32-LABEL: lrint_v32f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
 ; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
 ; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
@@ -1414,6 +1469,14 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
 ; CHECK-i64-NEXT:    .cfi_offset w30, -8
 ; CHECK-i64-NEXT:    .cfi_offset w29, -16
 ; CHECK-i64-NEXT:    ptrue p1.d, vl2
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i64-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i64-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-i64-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-i64-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-i64-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-i64-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-i64-NEXT:    ptrue p0.d, vl4
 ; CHECK-i64-NEXT:    splice z0.d, p1, z0.d, z1.d
 ; CHECK-i64-NEXT:    splice z2.d, p1, z2.d, z3.d

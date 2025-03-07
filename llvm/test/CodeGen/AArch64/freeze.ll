@@ -243,8 +243,9 @@ define <3 x i64> @freeze_v3i64() {
 ; CHECK-SD-LABEL: freeze_v3i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    fmov d2, d0
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3i64:
@@ -253,6 +254,7 @@ define <3 x i64> @freeze_v3i64() {
 ; CHECK-GI-NEXT:    add x8, x8, x8
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %y1 = freeze <3 x i64> undef
   %t1 = add <3 x i64> %y1, %y1
@@ -295,8 +297,10 @@ define <3 x ptr> @freeze_v3p0() {
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    add d2, d0, d2
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3p0:

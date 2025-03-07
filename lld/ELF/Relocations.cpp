@@ -197,8 +197,10 @@ static bool needsPlt(RelExpr expr) {
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, R_GOT_OFF, RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF,
-               RE_MIPS_GOT_OFF32, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+  return oneof<R_GOT, RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, R_GOT_OFF,
+               RE_MIPS_GOT_LOCAL_PAGE, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
+               RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC,
+               RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
                RE_AARCH64_GOT_PAGE, RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(
       expr);
 }
@@ -426,8 +428,10 @@ public:
     if (j == fdes.begin() || j[-1].inputOff + j[-1].size <= off) {
       while (i != cies.end() && i->inputOff <= off)
         ++i;
-      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off)
-        Fatal(ctx) << ".eh_frame: relocation is not in any piece";
+      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
+        Err(ctx) << ".eh_frame: relocation is not in any piece";
+        return 0;
+      }
       it = i;
     }
 
@@ -910,6 +914,25 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
                      ctx.target->symbolicRel);
 }
 
+static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
+  ctx.in.got->addEntry(sym);
+  ctx.in.got->addAuthEntry(sym);
+  uint64_t off = sym.getGotOffset(ctx);
+
+  // If preemptible, emit a GLOB_DAT relocation.
+  if (sym.isPreemptible) {
+    ctx.mainPart->relaDyn->addReloc({R_AARCH64_AUTH_GLOB_DAT, ctx.in.got.get(),
+                                     off, DynamicReloc::AgainstSymbol, sym, 0,
+                                     R_ABS});
+    return;
+  }
+
+  // Signed GOT requires dynamic relocation.
+  ctx.in.got->getPartition(ctx).relaDyn->addReloc(
+      {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off,
+       DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+}
+
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset(ctx);
@@ -954,14 +977,15 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
                                                  uint64_t relOff) const {
   // These expressions always compute a constant
-  if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
-            RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32,
-            RE_MIPS_GOT_GP_PC, RE_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-            R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
-            R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
-            RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
-            RE_LOONGARCH_PLT_PAGE_PC, RE_LOONGARCH_GOT,
-            RE_LOONGARCH_GOT_PAGE_PC>(e))
+  if (oneof<
+          R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
+          RE_MIPS_GOTREL, RE_MIPS_GOT_OFF, RE_MIPS_GOT_OFF32, RE_MIPS_GOT_GP_PC,
+          RE_AARCH64_GOT_PAGE_PC, RE_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC,
+          R_GOTONLY_PC, R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
+          R_GOTPLT_GOTREL, R_GOTPLT_PC, RE_PPC32_PLTREL, RE_PPC64_CALL_PLT,
+          RE_PPC64_RELAX_TOC, RE_RISCV_ADD, RE_AARCH64_GOT_PAGE,
+          RE_AARCH64_AUTH_GOT, RE_AARCH64_AUTH_GOT_PC, RE_LOONGARCH_PLT_PAGE_PC,
+          RE_LOONGARCH_GOT, RE_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -1075,7 +1099,11 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT);
+      if (expr == RE_AARCH64_AUTH_GOT || expr == RE_AARCH64_AUTH_GOT_PAGE_PC ||
+          expr == RE_AARCH64_AUTH_GOT_PC)
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
+      else
+        sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1266,6 +1294,27 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
   return 0;
 }
 
+static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
+                                                RelExpr expr, RelType type,
+                                                uint64_t offset, Symbol &sym,
+                                                int64_t addend) {
+  // Do not optimize signed TLSDESC to LE/IE (as described in pauthabielf64).
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
+  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
+    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+    sec->addReloc({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
+  // TLSDESC enabled.
+  if (expr == R_TLSDESC_CALL)
+    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
+
+  return 0;
+}
+
 // Notes about General Dynamic and Local Dynamic TLS models below. They may
 // require the generation of a pair of GOT entries that have associated dynamic
 // relocations. The pair of GOT entries created are of the form GOT[e0] Module
@@ -1276,6 +1325,13 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
 unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 uint64_t offset, Symbol &sym,
                                                 int64_t addend) {
+  bool isAArch64 = ctx.arg.emachine == EM_AARCH64;
+
+  if (isAArch64)
+    if (unsigned processed = handleAArch64PAuthTlsRelocation(
+            sec, expr, type, offset, sym, addend))
+      return processed;
+
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
       auto diag = Err(ctx);
@@ -1310,7 +1366,9 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+      if (isAArch64)
+        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
+      else if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
         sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
@@ -1750,8 +1808,11 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT)
+    if (flags & NEEDS_GOT) {
+      assert(!(flags & NEEDS_GOT_AUTH) &&
+             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
       addGotEntry(ctx, sym);
+    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
@@ -1772,8 +1833,19 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT)
-      addGotEntry(ctx, sym);
+    if (flags & NEEDS_GOT) {
+      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+        auto diag = Err(ctx);
+        diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
+             << "' requested, but only one type of GOT entry per symbol is "
+                "supported";
+        return;
+      }
+      if (flags & NEEDS_GOT_AUTH)
+        addGotAuthEntry(ctx, sym);
+      else
+        addGotEntry(ctx, sym);
+    }
     if (flags & NEEDS_PLT)
       addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);
@@ -1807,10 +1879,21 @@ void elf::postScanRelocations(Ctx &ctx) {
     GotSection *got = ctx.in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
+      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+        Err(ctx)
+            << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+            << "' requested, but only one type of TLSDESC entry per symbol is "
+               "supported";
+        return;
+      }
       got->addTlsDescEntry(sym);
+      RelType tlsDescRel = ctx.target->tlsDescRel;
+      if (flags & NEEDS_TLSDESC_AUTH) {
+        got->addTlsDescAuthEntry();
+        tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
+      }
       ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          ctx.target->tlsDescRel, *got, got->getTlsDescOffset(sym), sym,
-          ctx.target->tlsDescRel);
+          tlsDescRel, *got, got->getTlsDescOffset(sym), sym, tlsDescRel);
     }
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);

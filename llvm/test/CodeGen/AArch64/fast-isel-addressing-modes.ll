@@ -734,6 +734,7 @@ define i32 @load_breg_sext_mul_offreg_1(i32 %a, i64 %b) {
 define i64 @load_sext_shift_offreg_imm1(i32 %a) {
 ; CHECK-LABEL: load_sext_shift_offreg_imm1:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x8, x0, #3, #32
 ; CHECK-NEXT:    ldr x0, [x8, #8]
 ; CHECK-NEXT:    ret

@@ -49,6 +49,8 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %active.lane.mask.entry = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 100)
@@ -147,6 +149,8 @@ define %"class.std::complex" @complex_mul_predicated_v2f64(ptr %a, ptr %b, ptr %
 ; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()
@@ -249,6 +253,8 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-NEXT:    ret
 entry:
   %active.lane.mask.entry = tail call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 100)

@@ -22,15 +22,22 @@ void NormalFunc() {
 #pragma acc data default(none)
   while (Var);
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 #pragma acc exit data copyout(Var)
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 #pragma acc host_data use_device(Var)
   while (Var);
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 }
@@ -49,15 +56,22 @@ void TemplFunc() {
 #pragma acc data default(none)
   while (Var);
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 #pragma acc enter data copyin(Var)
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'T'
 #pragma acc exit data copyout(Var)
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'T'
 #pragma acc host_data use_device(Var)
   while (Var);
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'T'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 
@@ -71,14 +85,21 @@ void TemplFunc() {
   // CHECK-NEXT: VarDecl
 
   // CHECK-NEXT: OpenACCDataConstruct{{.*}}data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 
   // CHECK-NEXT: OpenACCEnterDataConstruct{{.*}} enter data
+  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 
   // CHECK-NEXT: OpenACCExitDataConstruct{{.*}} exit data
+  // CHECK-NEXT: copyout clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
 
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}} host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Var' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK: NullStmt
 }

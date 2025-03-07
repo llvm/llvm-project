@@ -8,6 +8,7 @@ define void @test(ptr %p1, i32 %v1) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fmov.2d v0, #2.00000000
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr s0, [x8]
@@ -27,6 +28,7 @@ define void @test2(ptr %p1, i32 %v1) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movi.16b v0, #63
 ; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    bfi x8, x1, #2, #2
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    ldr s0, [x8]
@@ -76,6 +78,7 @@ define <4 x float> @testv4i16(<2 x float> %l1) {
 ; CHECK-LABEL: testv4i16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movi.4h v1, #16
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov.d v1[1], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret

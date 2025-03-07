@@ -164,11 +164,8 @@ bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
-bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CxtI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     bool UseInstrInfo = true);
+bool isKnownNonEqual(const Value *V1, const Value *V2, const SimplifyQuery &SQ,
+                     unsigned Depth = 0);
 
 /// Return true if 'V & Mask' is known to be zero. We use this predicate to
 /// simplify operations downstream. Mask is known to be zero for bits that V
@@ -1002,17 +999,6 @@ bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// getGuaranteedNonPoisonOp.
 bool propagatesPoison(const Use &PoisonOp);
 
-/// Insert operands of I into Ops such that I will trigger undefined behavior
-/// if I is executed and that operand has a poison value.
-void getGuaranteedNonPoisonOps(const Instruction *I,
-                               SmallVectorImpl<const Value *> &Ops);
-
-/// Insert operands of I into Ops such that I will trigger undefined behavior
-/// if I is executed and that operand is not a well-defined value
-/// (i.e. has undef bits or poison).
-void getGuaranteedWellDefinedOps(const Instruction *I,
-                                 SmallVectorImpl<const Value *> &Ops);
-
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding
 /// a poison value at the point of execution.
@@ -1101,6 +1087,13 @@ bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
 bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
                                    Instruction *OnPathTo,
                                    DominatorTree *DT);
+
+/// Convert an integer comparison with a constant RHS into an equivalent
+/// form with the strictness flipped predicate. Return the new predicate and
+/// corresponding constant RHS if possible. Otherwise return std::nullopt.
+/// E.g., (icmp sgt X, 0) -> (icmp sle X, 1).
+std::optional<std::pair<CmpPredicate, Constant *>>
+getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C);
 
 /// Specific patterns of select instructions we can match.
 enum SelectPatternFlavor {

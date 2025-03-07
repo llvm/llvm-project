@@ -178,7 +178,7 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
     return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
-  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
+  if (T.isOSWindowsOrUEFI() && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
   if (T.isOSBinFormatXCOFF())
     return "-m:a";
@@ -738,13 +738,6 @@ Align DataLayout::getPointerPrefAlignment(unsigned AS) const {
 
 unsigned DataLayout::getPointerSize(unsigned AS) const {
   return divideCeil(getPointerSpec(AS).BitWidth, 8);
-}
-
-unsigned DataLayout::getMaxIndexSizeInBits() const {
-  unsigned MaxIndexSize = 0;
-  for (const PointerSpec &Spec : PointerSpecs)
-    MaxIndexSize = std::max(MaxIndexSize, Spec.IndexBitWidth);
-  return MaxIndexSize;
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {

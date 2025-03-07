@@ -100,6 +100,7 @@ define <4 x i64> @sel.v4i32.umull(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
 define <4 x i32> @sel.v4i32.sqdmull(<8 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: sel.v4i32.sqdmull:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    sqdmull v2.4s, v0.4h, v1.h[0]
 ; CHECK-NEXT:    sqdmlal2 v2.4s, v0.8h, v1.h[0]
 ; CHECK-NEXT:    mov v0.16b, v2.16b

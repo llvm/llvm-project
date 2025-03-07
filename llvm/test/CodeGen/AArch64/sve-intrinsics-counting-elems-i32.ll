@@ -14,7 +14,9 @@ define i32 @incb(i32 %a) {
 ;
 ; CHECK-LABEL: incb:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incb x0, vl5
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntb(i32 5)
   %conv = trunc i64 %cnt to i32
@@ -31,7 +33,9 @@ define i32 @incb_mul(i32 %a) {
 ;
 ; CHECK-LABEL: incb_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incb x0, vl8, mul #4
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntb(i32 8)
   %conv = trunc i64 %cnt to i32
@@ -53,7 +57,9 @@ define i32 @decb(i32 %a) {
 ;
 ; CHECK-LABEL: decb:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decb x0, vl6
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntb(i32 6)
   %conv = trunc i64 %cnt to i32
@@ -70,7 +76,9 @@ define i32 @decb_mul(i32 %a) {
 ;
 ; CHECK-LABEL: decb_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decb x0, vl6, mul #8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntb(i32 6)
   %conv = trunc i64 %cnt to i32
@@ -90,7 +98,9 @@ define i32 @inch(i32 %a) {
 ;
 ; CHECK-LABEL: inch:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    inch x0, #16
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cnth(i32 16)
   %conv = trunc i64 %cnt to i32
@@ -108,7 +118,9 @@ define i32 @inch_mul(i32 %a) {
 ;
 ; CHECK-LABEL: inch_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    inch x0, vl8, mul #5
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cnth(i32 8)
   %conv = trunc i64 %cnt to i32
@@ -130,7 +142,9 @@ define i32 @dech(i32 %a) {
 ;
 ; CHECK-LABEL: dech:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    dech x0, vl1
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cnth(i32 1)
   %conv = trunc i64 %cnt to i32
@@ -148,7 +162,9 @@ define i32 @dech_mul(i32 %a) {
 ;
 ; CHECK-LABEL: dech_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    dech x0, vl16, mul #7
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cnth(i32 9)
   %conv = trunc i64 %cnt to i32
@@ -170,7 +186,9 @@ define i32 @incw(i32 %a) {
 ;
 ; CHECK-LABEL: incw:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incw x0, #16
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntw(i32 16)
   %conv = trunc i64 %cnt to i32
@@ -188,7 +206,9 @@ define i32 @incw_mul(i32 %a) {
 ;
 ; CHECK-LABEL: incw_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incw x0, vl32, mul #12
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntw(i32 10)
   %conv = trunc i64 %cnt to i32
@@ -210,7 +230,9 @@ define i32 @decw(i32 %a) {
 ;
 ; CHECK-LABEL: decw:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decw x0, vl64
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntw(i32 11)
   %conv = trunc i64 %cnt to i32
@@ -227,7 +249,9 @@ define i32 @decw_mul(i32 %a) {
 ;
 ; CHECK-LABEL: decw_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decw x0, vl128, mul #16
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntw(i32 12)
   %conv = trunc i64 %cnt to i32
@@ -247,7 +271,9 @@ define i32 @incd(i32 %base) {
 ;
 ; CHECK-LABEL: incd:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incd x0, vl64
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = tail call i64 @llvm.aarch64.sve.cntd(i32 11)
   %conv = trunc i64 %cnt to i32
@@ -265,7 +291,9 @@ define i32 @incd_mul(i32 %base) {
 ;
 ; CHECK-LABEL: incd_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    incd x0, vl64, mul #15
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = tail call i64 @llvm.aarch64.sve.cntd(i32 11)
   %conv = trunc i64 %cnt to i32
@@ -287,7 +315,9 @@ define i32 @decd(i32 %a) {
 ;
 ; CHECK-LABEL: decd:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decd x0, #16
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntd(i32 16)
   %conv = trunc i64 %cnt to i32
@@ -305,7 +335,9 @@ define i32 @decd_mul(i32 %a) {
 ;
 ; CHECK-LABEL: decd_mul:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    decd x0, vl2, mul #9
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %cnt = call i64 @llvm.aarch64.sve.cntd(i32 2)
   %conv = trunc i64 %cnt to i32

@@ -55,6 +55,7 @@ define i64 @asr_zext_i1_i64(i1 %b) {
 define i64 @asr_sext_i1_i64(i1 %b) {
 ; CHECK-LABEL: asr_sext_i1_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfx x0, x0, #0, #1
 ; CHECK-NEXT:    ret
   %1 = sext i1 %b to i64
@@ -160,6 +161,7 @@ define i32 @lsl_sext_i1_i32(i1 %b) {
 define i64 @lsl_zext_i1_i64(i1 %b) {
 ; CHECK-LABEL: lsl_zext_i1_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x0, x0, #4, #1
 ; CHECK-NEXT:    ret
   %1 = zext i1 %b to i64
@@ -170,6 +172,7 @@ define i64 @lsl_zext_i1_i64(i1 %b) {
 define i64 @lsl_sext_i1_i64(i1 %b) {
 ; CHECK-LABEL: lsl_sext_i1_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x0, x0, #4, #1
 ; CHECK-NEXT:    ret
   %1 = sext i1 %b to i64
@@ -244,6 +247,7 @@ define i32 @lsl_sext_i8_i32(i8 %b) {
 define i64 @lsl_zext_i8_i64(i8 %b) {
 ; CHECK-LABEL: lsl_zext_i8_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x0, x0, #4, #8
 ; CHECK-NEXT:    ret
   %1 = zext i8 %b to i64
@@ -254,6 +258,7 @@ define i64 @lsl_zext_i8_i64(i8 %b) {
 define i64 @lsl_sext_i8_i64(i8 %b) {
 ; CHECK-LABEL: lsl_sext_i8_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x0, x0, #4, #8
 ; CHECK-NEXT:    ret
   %1 = sext i8 %b to i64
@@ -306,6 +311,7 @@ define i32 @lsl_sext_i16_i32(i16 %b) {
 define i64 @lsl_zext_i16_i64(i16 %b) {
 ; CHECK-LABEL: lsl_zext_i16_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x0, x0, #8, #16
 ; CHECK-NEXT:    ret
   %1 = zext i16 %b to i64
@@ -316,6 +322,7 @@ define i64 @lsl_zext_i16_i64(i16 %b) {
 define i64 @lsl_sext_i16_i64(i16 %b) {
 ; CHECK-LABEL: lsl_sext_i16_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x0, x0, #8, #16
 ; CHECK-NEXT:    ret
   %1 = sext i16 %b to i64
@@ -344,6 +351,7 @@ define zeroext i32 @lsl_i32(i32 %a) {
 define i64 @lsl_zext_i32_i64(i32 %b) {
 ; CHECK-LABEL: lsl_zext_i32_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x0, x0, #16, #32
 ; CHECK-NEXT:    ret
   %1 = zext i32 %b to i64
@@ -354,6 +362,7 @@ define i64 @lsl_zext_i32_i64(i32 %b) {
 define i64 @lsl_sext_i32_i64(i32 %b) {
 ; CHECK-LABEL: lsl_sext_i32_i64:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sbfiz x0, x0, #16, #32
 ; CHECK-NEXT:    ret
   %1 = sext i32 %b to i64
@@ -671,6 +680,7 @@ define i32 @ashr_zero(i32 %a) {
 define i64 @shl_zext_zero(i32 %a) {
 ; CHECK-LABEL: shl_zext_zero:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
@@ -681,6 +691,7 @@ define i64 @shl_zext_zero(i32 %a) {
 define i64 @lshr_zext_zero(i32 %a) {
 ; CHECK-LABEL: lshr_zext_zero:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
@@ -691,6 +702,7 @@ define i64 @lshr_zext_zero(i32 %a) {
 define i64 @ashr_zext_zero(i32 %a) {
 ; CHECK-LABEL: ashr_zext_zero:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64

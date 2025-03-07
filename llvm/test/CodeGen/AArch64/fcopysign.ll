@@ -6,8 +6,11 @@ define double @copysign_f64(double %a, double %b) {
 ; CHECK-LABEL: copysign_f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fneg v2.2d, v2.2d
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %c = call double @llvm.copysign.f64(double %a, double %b)
@@ -18,13 +21,19 @@ define float @copysign_f32(float %a, float %b) {
 ; CHECK-SD-LABEL: copysign_f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-SD-NEXT:    // kill: def $s1 killed $s1 def $q1
 ; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: copysign_f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v2.2s, #128, lsl #24
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $d0
+; CHECK-GI-NEXT:    // kill: def $s1 killed $s1 def $d1
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call float @llvm.copysign.f32(float %a, float %b)
@@ -44,7 +53,10 @@ define half @copysign_f16(half %a, half %b) {
 ; CHECK-GI-LABEL: copysign_f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v2.4h, #128, lsl #8
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-GI-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call half @llvm.copysign.f16(half %a, half %b)
@@ -67,28 +79,42 @@ define <3 x double> @copysign_v3f64(<3 x double> %a, <3 x double> %b) {
 ; CHECK-SD-LABEL: copysign_v3f64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v6.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fneg v1.2d, v6.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v1.16b
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: copysign_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v6.2d, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    fneg v1.2d, v6.2d
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    and x8, x8, #0x7fffffffffffffff
 ; CHECK-GI-NEXT:    and x9, x9, #0x8000000000000000
+; CHECK-GI-NEXT:    fneg v1.2d, v6.2d
 ; CHECK-GI-NEXT:    orr x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = call <3 x double> @llvm.copysign.v3f64(<3 x double> %a, <3 x double> %b)

@@ -70,7 +70,7 @@ can express this a Transformer rewrite rule:
 
 .. code-block:: c++
 
-   makeRule(functionDecl(hasName("MkX").bind("fun"),
+   makeRule(functionDecl(hasName("MkX")).bind("fun"),
 	    noopEdit(node("fun")),
 	    cat("The name ``MkX`` is not allowed for functions; please rename"));
 

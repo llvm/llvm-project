@@ -178,6 +178,7 @@ define void @vla(i32, ptr, ...) local_unnamed_addr {
 ; CHECK-NEXT:    add x29, sp, #40
 ; CHECK-NEXT:    .seh_add_fp 40
 ; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    add x8, x29, #24
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    mov x19, x1

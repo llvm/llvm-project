@@ -39,9 +39,8 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
 
       Address so_addr;
       Target *target = exe_ctx.GetTargetPtr();
-      if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
-                                                        so_addr);
+      if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(func_ptr_address, so_addr);
         if (so_addr.GetSection() == nullptr) {
           // If we have an address that doesn't correspond to any symbol,
           // it might have authentication bits.  Strip them & see if it

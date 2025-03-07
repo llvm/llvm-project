@@ -28,6 +28,8 @@ define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %r
 ; CHECK-NEXT:    and z2.d, z2.d, z5.d
 ; CHECK-NEXT:    orr z1.d, z3.d, z1.d
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fixed_bitselect_v8i32:

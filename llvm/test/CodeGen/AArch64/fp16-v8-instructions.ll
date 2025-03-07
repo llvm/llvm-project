@@ -427,6 +427,7 @@ define <8 x half> @uitofp_i64(<8 x i64> %a) #0 {
 define void @test_insert_at_zero(half %a, ptr %b) #0 {
 ; CHECK-LABEL: test_insert_at_zero:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = insertelement <8 x half> undef, half %a, i64 0

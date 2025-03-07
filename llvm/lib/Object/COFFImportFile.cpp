@@ -133,6 +133,8 @@ static uint16_t getImgRelRelocation(MachineTypes Machine) {
     return IMAGE_REL_ARM64_ADDR32NB;
   case IMAGE_FILE_MACHINE_I386:
     return IMAGE_REL_I386_DIR32NB;
+  case IMAGE_FILE_MACHINE_R4000:
+    return IMAGE_REL_MIPS_REFWORDNB;
   }
 }
 

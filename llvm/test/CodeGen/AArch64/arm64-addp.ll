@@ -27,6 +27,7 @@ define i64 @foo0(<2 x i64> %a) nounwind {
 define float @foo1(<2 x float> %a) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp.2s s0, v0
 ; CHECK-NEXT:    ret
   %lane0.i = extractelement <2 x float> %a, i32 0

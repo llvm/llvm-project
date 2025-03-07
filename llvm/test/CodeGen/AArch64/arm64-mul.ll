@@ -138,6 +138,7 @@ entry:
 define i64 @t10(i32 %a) nounwind {
 ; CHECK-LABEL: t10:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
 ; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    movk w9, #32768, lsl #16

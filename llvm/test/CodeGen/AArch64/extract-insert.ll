@@ -6,10 +6,12 @@ define i32 @trunc_i64_to_i32_le(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i32_le:
 ; BE:       // %bb.0:
 ; BE-NEXT:    lsr x0, x0, #32
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i32_le:
 ; LE:       // %bb.0:
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <4 x i32>
@@ -20,11 +22,13 @@ define i32 @trunc_i64_to_i32_le(i64 %x) {
 define i32 @trunc_i64_to_i32_be(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i32_be:
 ; BE:       // %bb.0:
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i32_be:
 ; LE:       // %bb.0:
 ; LE-NEXT:    lsr x0, x0, #32
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <4 x i32>
@@ -36,10 +40,12 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i16_le:
 ; BE:       // %bb.0:
 ; BE-NEXT:    lsr x0, x0, #48
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i16_le:
 ; LE:       // %bb.0:
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>
@@ -50,11 +56,13 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 define i16 @trunc_i64_to_i16_be(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i16_be:
 ; BE:       // %bb.0:
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i16_be:
 ; LE:       // %bb.0:
 ; LE-NEXT:    lsr x0, x0, #48
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>
@@ -97,11 +105,13 @@ define i8 @trunc_i32_to_i8_be(i32 %x) {
 define i8 @trunc_i64_to_i8_be(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i8_be:
 ; BE:       // %bb.0:
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i8_be:
 ; LE:       // %bb.0:
 ; LE-NEXT:    lsr x0, x0, #56
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <3 x i64> undef, i64 %x, i32 0
   %bc = bitcast <3 x i64> %ins to <24 x i8>

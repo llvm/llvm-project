@@ -416,8 +416,6 @@ int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
-// FIXME: Should we use narrower types for local/region, or account for when
-// unaligned access is legal?
 Type *GCNTTIImpl::getMemcpyLoopLoweringType(
     LLVMContext &Context, Value *Length, unsigned SrcAddrSpace,
     unsigned DestAddrSpace, Align SrcAlign, Align DestAlign,
@@ -426,29 +424,12 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   if (AtomicElementSize)
     return Type::getIntNTy(Context, *AtomicElementSize * 8);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
-
-  // A (multi-)dword access at an address == 2 (mod 4) will be decomposed by the
-  // hardware into byte accesses. If you assume all alignments are equally
-  // probable, it's more efficient on average to use short accesses for this
-  // case.
-  if (MinAlign == Align(2))
-    return Type::getInt16Ty(Context);
-
-  // Not all subtargets have 128-bit DS instructions, and we currently don't
-  // form them by default.
-  if (SrcAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      SrcAddrSpace == AMDGPUAS::REGION_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-      DestAddrSpace == AMDGPUAS::REGION_ADDRESS) {
-    return FixedVectorType::get(Type::getInt32Ty(Context), 2);
-  }
-
-  // Global memory works best with 16-byte accesses.
+  // 16-byte accesses achieve the highest copy throughput.
   // If the operation has a fixed known length that is large enough, it is
   // worthwhile to return an even wider type and let legalization lower it into
-  // multiple accesses, effectively unrolling the memcpy loop. Private memory
-  // also hits this, although accesses may be decomposed.
+  // multiple accesses, effectively unrolling the memcpy loop.
+  // We also rely on legalization to decompose into smaller accesses for
+  // subtargets and address spaces where it is necessary.
   //
   // Don't unroll if Length is not a constant, since unrolling leads to worse
   // performance for length values that are smaller or slightly larger than the
@@ -473,26 +454,22 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
         OpsOut, Context, RemainingBytes, SrcAddrSpace, DestAddrSpace, SrcAlign,
         DestAlign, AtomicCpySize);
 
-  Align MinAlign = std::min(SrcAlign, DestAlign);
+  Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
+  while (RemainingBytes >= 16) {
+    OpsOut.push_back(I32x4Ty);
+    RemainingBytes -= 16;
+  }
 
-  if (MinAlign != Align(2)) {
-    Type *I32x4Ty = FixedVectorType::get(Type::getInt32Ty(Context), 4);
-    while (RemainingBytes >= 16) {
-      OpsOut.push_back(I32x4Ty);
-      RemainingBytes -= 16;
-    }
+  Type *I64Ty = Type::getInt64Ty(Context);
+  while (RemainingBytes >= 8) {
+    OpsOut.push_back(I64Ty);
+    RemainingBytes -= 8;
+  }
 
-    Type *I64Ty = Type::getInt64Ty(Context);
-    while (RemainingBytes >= 8) {
-      OpsOut.push_back(I64Ty);
-      RemainingBytes -= 8;
-    }
-
-    Type *I32Ty = Type::getInt32Ty(Context);
-    while (RemainingBytes >= 4) {
-      OpsOut.push_back(I32Ty);
-      RemainingBytes -= 4;
-    }
+  Type *I32Ty = Type::getInt32Ty(Context);
+  while (RemainingBytes >= 4) {
+    OpsOut.push_back(I32Ty);
+    RemainingBytes -= 4;
   }
 
   Type *I16Ty = Type::getInt16Ty(Context);
@@ -1429,4 +1406,20 @@ unsigned GCNTTIImpl::getPrefetchDistance() const {
 
 bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
   return AMDGPU::isFlatGlobalAddrSpace(AS);
+}
+
+void GCNTTIImpl::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  SmallVector<unsigned> MaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
+  LB.push_back({"amdgpu-max-num-workgroups[0]", MaxNumWorkgroups[0]});
+  LB.push_back({"amdgpu-max-num-workgroups[1]", MaxNumWorkgroups[1]});
+  LB.push_back({"amdgpu-max-num-workgroups[2]", MaxNumWorkgroups[2]});
+  std::pair<unsigned, unsigned> FlatWorkGroupSize =
+      ST->getFlatWorkGroupSizes(F);
+  LB.push_back({"amdgpu-flat-work-group-size[0]", FlatWorkGroupSize.first});
+  LB.push_back({"amdgpu-flat-work-group-size[1]", FlatWorkGroupSize.second});
+  std::pair<unsigned, unsigned> WavesPerEU = ST->getWavesPerEU(F);
+  LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
+  LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }

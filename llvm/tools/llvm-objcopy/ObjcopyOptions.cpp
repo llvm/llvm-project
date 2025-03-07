@@ -538,6 +538,38 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   return SI;
 }
 
+static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
+  // Parse value given with --remove-note option. The format is:
+  //
+  // [name/]type_id
+  //
+  // where:
+  // <name>    - optional note name. If not given, all notes with the specified
+  //             <type_id> are removed.
+  // <type_id> - note type value, can be decimal or hexadecimal number prefixed
+  //             with 0x.
+  RemoveNoteInfo NI;
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --remove-note, note name is empty");
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
+  }
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
+    return createStringError(errc::invalid_argument,
+                             "bad note type_id for --remove-note: '%s'",
+                             TypeIdStr.str().c_str());
+  return NI;
+}
+
 // Parse input option \p ArgValue and load section data. This function
 // extracts section name and name of the file keeping section data from
 // ArgValue, loads data from the file, and stores section name and data
@@ -1220,6 +1252,29 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
         return Expr(EAddr) + *EIncr;
       };
     }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_note)) {
+    Expected<RemoveNoteInfo> NoteInfo = parseRemoveNoteInfo(Arg->getValue());
+    if (!NoteInfo)
+      return NoteInfo.takeError();
+
+    ELFConfig.NotesToRemove.push_back(*NoteInfo);
+  }
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
 
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {

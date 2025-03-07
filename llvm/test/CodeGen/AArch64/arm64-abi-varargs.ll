@@ -173,6 +173,7 @@ define void @bar(i32 %x, <4 x i32> %y) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    str w0, [sp, #60]
 ; CHECK-NEXT:    stp q0, q0, [sp, #16]
 ; CHECK-NEXT:    str x0, [sp]
@@ -240,6 +241,7 @@ define void @bar2(i32 %x, i128 %s41.coerce) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    str w0, [sp, #60]
 ; CHECK-NEXT:    stp x1, x2, [sp, #32]
 ; CHECK-NEXT:    stp x1, x2, [sp, #16]

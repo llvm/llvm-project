@@ -29,6 +29,7 @@ define <vscale x 8 x i16> @eorv_zero_fill(<vscale x 8 x i1> %pg, <vscale x 8 x i
 define <vscale x 2 x double> @fadda_zero_fill(<vscale x 2 x i1> %pg, double %init, <vscale x 2 x double> %a) #0 {
 ; CHECK-LABEL: fadda_zero_fill:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fadda d0, p0, d0, z1.d
 ; CHECK-NEXT:    ret
   %t1 = call double @llvm.aarch64.sve.fadda.nxv2f64(<vscale x 2 x i1> %pg, double %init, <vscale x 2 x double> %a)

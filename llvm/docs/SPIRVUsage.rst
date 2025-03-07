@@ -155,10 +155,14 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic min and max instruction on floating-point numbers.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
+   * - ``SPV_INTEL_bindless_images``
+     - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
      - Allows cache control information to be applied to memory access instructions.
+   * - ``SPV_INTEL_float_controls2``
+     - Adds execution modes and decorations to control floating-point computations.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
    * - ``SPV_INTEL_inline_assembly``
@@ -169,6 +173,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_media_block_io``
      - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
+   * - ``SPV_INTEL_memory_access_aliasing``
+     - Adds instructions and decorations to specify memory access aliasing, similar to alias.scope and noalias LLVM metadata.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_split_barrier``
@@ -202,7 +208,7 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_KHR_non_semantic_info``
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
 
-To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
 ``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
 
@@ -297,6 +303,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Metadata]`
      - Assigns decoration to values by associating them with metadatas. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+   * - `int_spv_assign_aliasing_decoration`
+     - None
+     - `[Type, 32-bit Integer, Metadata]`
+     - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
@@ -393,7 +403,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
-   * - `int_spv_handle_fromBinding`
+   * - `int_spv_resource_handlefrombinding`
      - spirv.Image
      - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
      - Returns the handle for the resource at the given set and binding.\
@@ -408,7 +418,7 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is \
        returned. If the return type is an n-element vector, then the first \
        n-elements of the 4-element vector are returned.
-   * - `int_spv_typedBufferStore`
+   * - `int_spv_resource_store_typedbuffer`
      - void
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
      - Stores the data to the image buffer at the given coordinate. The \

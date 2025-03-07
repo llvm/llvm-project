@@ -60,7 +60,7 @@ enum SuppressLevel {
   SUPPRESSION_LEVEL2
 };
 
-cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
+static cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
     "suppress-per-hwmode-duplicates",
     cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
     cl::values(
@@ -640,11 +640,11 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    FilterChooserMap.insert(std::pair(
+    FilterChooserMap.try_emplace(
         NO_FIXED_SEGMENTS_SENTINEL,
         std::make_unique<FilterChooser>(Owner->AllInstructions,
                                         VariableInstructions, Owner->Operands,
-                                        BitValueArray, *Owner)));
+                                        BitValueArray, *Owner));
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -667,10 +667,10 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.insert(
-        std::pair(Inst.first, std::make_unique<FilterChooser>(
-                                  Owner->AllInstructions, Inst.second,
-                                  Owner->Operands, BitValueArray, *Owner)));
+    FilterChooserMap.try_emplace(Inst.first,
+                                 std::make_unique<FilterChooser>(
+                                     Owner->AllInstructions, Inst.second,
+                                     Owner->Operands, BitValueArray, *Owner));
   }
 }
 
@@ -681,8 +681,8 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
   for (FixupList::const_reverse_iterator I = Fixups.rbegin(), E = Fixups.rend();
        I != E; ++I) {
     // Calculate the distance from the byte following the fixup entry byte
-    // to the destination. The Target is calculated from after the 16-bit
-    // NumToSkip entry itself, so subtract two  from the displacement here
+    // to the destination. The Target is calculated from after the 24-bit
+    // NumToSkip entry itself, so subtract three from the displacement here
     // to account for that.
     uint32_t FixupIdx = *I;
     uint32_t Delta = DestIdx - FixupIdx - 3;
@@ -808,19 +808,15 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   Indent += 2;
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
-  auto emitULEB128 = [](DecoderTable::const_iterator I,
+  auto emitULEB128 = [](DecoderTable::const_iterator &I,
                         formatted_raw_ostream &OS) {
-    unsigned Len = 0;
-    while (*I >= 128) {
+    while (*I >= 128)
       OS << (unsigned)*I++ << ", ";
-      Len++;
-    }
     OS << (unsigned)*I++ << ", ";
-    return Len + 1;
   };
 
   // Emit 24-bit numtoskip value to OS, returning the NumToSkip value.
-  auto emitNumToSkip = [](DecoderTable::const_iterator I,
+  auto emitNumToSkip = [](DecoderTable::const_iterator &I,
                           formatted_raw_ostream &OS) {
     uint8_t Byte = *I++;
     uint32_t NumToSkip = Byte;
@@ -829,7 +825,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
     OS << (unsigned)Byte << ", ";
     NumToSkip |= Byte << 8;
     Byte = *I++;
-    OS << utostr(Byte) << ", ";
+    OS << (unsigned)(Byte) << ", ";
     NumToSkip |= Byte << 16;
     return NumToSkip;
   };
@@ -857,7 +853,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
                                      Table.data() + Table.size(), &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       unsigned Len = *I++;
       OS << Len << ",  // Inst{";
@@ -870,11 +866,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -882,27 +877,25 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
       // ULEB128 encoded field value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
     case MCD::OPC_CheckPredicate: {
       ++I;
       OS << Indent << "MCD::OPC_CheckPredicate, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -917,10 +910,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // Decoder index.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       auto EncI = OpcodeToEncodingID.find(Opc);
       assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
@@ -935,7 +928,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
 
       OS << "// Opcode: " << NumberedEncodings[EncodingID]
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
@@ -1943,7 +1935,7 @@ static void parseVarLenInstOperand(const Record &Def,
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {
         unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(
-            std::pair(TiedReg, OpSubOpPair.second));
+            {TiedReg, OpSubOpPair.second});
         Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
       }
     }
@@ -2039,9 +2031,9 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   const DagInit *Out = Def.getValueAsDag("OutOperandList");
   const DagInit *In = Def.getValueAsDag("InOperandList");
   for (const auto &[Idx, Arg] : enumerate(Out->getArgs()))
-    InOutOperands.push_back(std::pair(Arg, Out->getArgNameStr(Idx)));
+    InOutOperands.emplace_back(Arg, Out->getArgNameStr(Idx));
   for (const auto &[Idx, Arg] : enumerate(In->getArgs()))
-    InOutOperands.push_back(std::pair(Arg, In->getArgNameStr(Idx)));
+    InOutOperands.emplace_back(Arg, In->getArgNameStr(Idx));
 
   // Search for tied operands, so that we can correctly instantiate
   // operands that are not explicitly represented in the encoding.
@@ -2146,7 +2138,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         InsnOperands.push_back(std::move(OpInfo));
     }
   }
-  Operands[Opc] = InsnOperands;
+  Operands[Opc] = std::move(InsnOperands);
 
 #if 0
   LLVM_DEBUG({
@@ -2587,7 +2579,7 @@ namespace llvm {
       if (!NumberedEncoding.HwModeName.empty())
         DecoderNamespace +=
             std::string("_") + NumberedEncoding.HwModeName.str();
-      OpcMap[std::pair(DecoderNamespace, Size)].emplace_back(
+      OpcMap[{DecoderNamespace, Size}].emplace_back(
           NEI, Target.getInstrIntValue(Def));
     } else {
       NumEncodingsOmitted++;

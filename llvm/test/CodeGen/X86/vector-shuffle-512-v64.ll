@@ -121,7 +121,7 @@ define <64 x i8> @shuffle_v64i8_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<64 x i8> %a) {
 ;
 ; AVX512DQ-LABEL: shuffle_v64i8_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovss {{.*#+}} xmm1 = [255,0,0,0]
+; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm1 = [255,0]
 ; AVX512DQ-NEXT:    vandps %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
@@ -494,9 +494,8 @@ define <64 x i8> @shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_
 ;
 ; AVX512VBMI-LABEL: shuffle_v64i8_63_zz_61_zz_59_zz_57_zz_55_zz_53_zz_51_zz_49_zz_47_zz_45_zz_43_zz_41_zz_39_zz_37_zz_35_zz_33_zz_31_zz_29_zz_27_zz_25_zz_23_zz_21_zz_19_zz_17_zz_15_zz_13_zz_11_zz_9_zz_7_zz_5_zz_3_zz_1_zz:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [63,65,61,67,59,69,57,71,55,73,53,75,51,77,49,79,47,81,45,83,43,85,41,87,39,89,37,91,35,93,33,95,31,97,29,99,27,101,25,103,23,105,21,107,19,109,17,111,15,113,13,115,11,117,9,119,7,121,5,123,3,125,1,127]
-; AVX512VBMI-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[6,7,4,5,2,3,0,1]
+; AVX512VBMI-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[15],zero,zmm0[13],zero,zmm0[11],zero,zmm0[9],zero,zmm0[7],zero,zmm0[5],zero,zmm0[3],zero,zmm0[1],zero,zmm0[31],zero,zmm0[29],zero,zmm0[27],zero,zmm0[25],zero,zmm0[23],zero,zmm0[21],zero,zmm0[19],zero,zmm0[17],zero,zmm0[47],zero,zmm0[45],zero,zmm0[43],zero,zmm0[41],zero,zmm0[39],zero,zmm0[37],zero,zmm0[35],zero,zmm0[33],zero,zmm0[63],zero,zmm0[61],zero,zmm0[59],zero,zmm0[57],zero,zmm0[55],zero,zmm0[53],zero,zmm0[51],zero,zmm0[49],zero
 ; AVX512VBMI-NEXT:    retq
   %shuffle = shufflevector <64 x i8> %a, <64 x i8> zeroinitializer, <64 x i32> <i32 63, i32 64, i32 61, i32 64, i32 59, i32 64, i32 57, i32 64, i32 55, i32 64, i32 53, i32 64, i32 51, i32 64, i32 49, i32 64, i32 47, i32 64, i32 45, i32 64, i32 43, i32 64, i32 41, i32 64, i32 39, i32 64, i32 37, i32 64, i32 35, i32 64, i32 33, i32 64, i32 31, i32 64, i32 29, i32 64, i32 27, i32 64, i32 25, i32 64, i32 23, i32 64, i32 21, i32 64, i32 19, i32 64, i32 17, i32 64, i32 15, i32 64, i32 13, i32 64, i32 11, i32 64, i32 9, i32 64, i32 7, i32 64, i32 5, i32 64, i32 3, i32 64, i32 1, i32 64>
   ret <64 x i8> %shuffle

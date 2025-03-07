@@ -18,6 +18,7 @@ add_llvm_unittest(SupportTests
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
   CrashRecoveryTest.cpp
+  Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
   Chrono.cpp
@@ -69,6 +70,7 @@ add_llvm_unittest(SupportTests
   PerThreadBumpPtrAllocatorTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
+  RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp

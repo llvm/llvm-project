@@ -92,7 +92,9 @@ define <vscale x 2 x i64> @sqdecp_b64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %
 define i32 @sqdecb_n32_i32(i32 %a) {
 ; CHECK-LABEL: sqdecb_n32_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecb x0, w0, vl3, mul #4
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecb.n32(i32 %a, i32 3, i32 4)
   ret i32 %out
@@ -101,6 +103,7 @@ define i32 @sqdecb_n32_i32(i32 %a) {
 define i64 @sqdecb_n32_i64(i32 %a) {
 ; CHECK-LABEL: sqdecb_n32_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecb x0, w0, vl3, mul #4
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecb.n32(i32 %a, i32 3, i32 4)
@@ -125,7 +128,9 @@ define i64 @sqdecb_n64(i64 %a) {
 define i32 @sqdech_n32_i32(i32 %a) {
 ; CHECK-LABEL: sqdech_n32_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdech x0, w0, vl5, mul #6
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdech.n32(i32 %a, i32 5, i32 6)
   ret i32 %out
@@ -134,6 +139,7 @@ define i32 @sqdech_n32_i32(i32 %a) {
 define i64 @sqdech_n32_i64(i32 %a) {
 ; CHECK-LABEL: sqdech_n32_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdech x0, w0, vl3, mul #4
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdech.n32(i32 %a, i32 3, i32 4)
@@ -158,7 +164,9 @@ define i64 @sqdech_n64(i64 %a) {
 define i32 @sqdecw_n32_i32(i32 %a) {
 ; CHECK-LABEL: sqdecw_n32_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecw x0, w0, vl7, mul #8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 %a, i32 7, i32 8)
   ret i32 %out
@@ -167,6 +175,7 @@ define i32 @sqdecw_n32_i32(i32 %a) {
 define i64 @sqdecw_n32_i64(i32 %a) {
 ; CHECK-LABEL: sqdecw_n32_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecw x0, w0, vl3, mul #4
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecw.n32(i32 %a, i32 3, i32 4)
@@ -191,7 +200,9 @@ define i64 @sqdecw_n64(i64 %a) {
 define i32 @sqdecd_n32_i32(i32 %a) {
 ; CHECK-LABEL: sqdecd_n32_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecd x0, w0, vl16, mul #10
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecd.n32(i32 %a, i32 9, i32 10)
   ret i32 %out
@@ -200,6 +211,7 @@ define i32 @sqdecd_n32_i32(i32 %a) {
 define i64 @sqdecd_n32_i64(i32 %a) {
 ; CHECK-LABEL: sqdecd_n32_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecd x0, w0, vl3, mul #4
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecd.n32(i32 %a, i32 3, i32 4)
@@ -224,7 +236,9 @@ define i64 @sqdecd_n64(i64 %a) {
 define i32 @sqdecp_n32_b8_i32(i32 %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b8_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.b, w0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv16i1(i32 %a, <vscale x 16 x i1> %b)
   ret i32 %out
@@ -233,6 +247,7 @@ define i32 @sqdecp_n32_b8_i32(i32 %a, <vscale x 16 x i1> %b) {
 define i64 @sqdecp_n32_b8_i64(i32 %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b8_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.b, w0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv16i1(i32 %a, <vscale x 16 x i1> %b)
@@ -244,7 +259,9 @@ define i64 @sqdecp_n32_b8_i64(i32 %a, <vscale x 16 x i1> %b) {
 define i32 @sqdecp_n32_b16_i32(i32 %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b16_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.h, w0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv8i1(i32 %a, <vscale x 8 x i1> %b)
   ret i32 %out
@@ -253,6 +270,7 @@ define i32 @sqdecp_n32_b16_i32(i32 %a, <vscale x 8 x i1> %b) {
 define i64 @sqdecp_n32_b16_i64(i32 %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b16_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.h, w0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv8i1(i32 %a, <vscale x 8 x i1> %b)
@@ -264,7 +282,9 @@ define i64 @sqdecp_n32_b16_i64(i32 %a, <vscale x 8 x i1> %b) {
 define i32 @sqdecp_n32_b32_i32(i32 %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b32_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.s, w0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv4i1(i32 %a, <vscale x 4 x i1> %b)
   ret i32 %out
@@ -273,6 +293,7 @@ define i32 @sqdecp_n32_b32_i32(i32 %a, <vscale x 4 x i1> %b) {
 define i64 @sqdecp_n32_b32_i64(i32 %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b32_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.s, w0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv4i1(i32 %a, <vscale x 4 x i1> %b)
@@ -284,7 +305,9 @@ define i64 @sqdecp_n32_b32_i64(i32 %a, <vscale x 4 x i1> %b) {
 define i32 @sqdecp_n32_b64_i32(i32 %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b64_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.d, w0
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv2i1(i32 %a, <vscale x 2 x i1> %b)
   ret i32 %out
@@ -293,6 +316,7 @@ define i32 @sqdecp_n32_b64_i32(i32 %a, <vscale x 2 x i1> %b) {
 define i64 @sqdecp_n32_b64_i64(i32 %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: sqdecp_n32_b64_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sqdecp x0, p0.d, w0
 ; CHECK-NEXT:    ret
   %out = call i32 @llvm.aarch64.sve.sqdecp.n32.nxv2i1(i32 %a, <vscale x 2 x i1> %b)

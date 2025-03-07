@@ -424,6 +424,7 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     str     x8, [sp, #40]
 ; CHECK-NEXT:     mov     x0, x8
 ; CHECK-NEXT:     ldr     s0, [sp, #44]
+; CHECK-NEXT:                                     // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #96]             // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  96
@@ -476,6 +477,7 @@ declare <4 x i8> @small_vector(<4 x i8> %0) nounwind;
 ; CHECK-NEXT:     stur	w8, [x29, #-8]
 ; CHECK-NEXT:     ldur	s0, [x29, #-8]
 ; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
+; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp	x29, x30, [sp, #48]             // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr	48

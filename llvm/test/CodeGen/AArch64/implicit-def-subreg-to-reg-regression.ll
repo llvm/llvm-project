@@ -80,6 +80,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    stp xzr, xzr, [sp]
 ; CHECK-NEXT:    stp x8, xzr, [sp, #16]
 ; CHECK-NEXT:    bl _fprintf
@@ -91,6 +92,7 @@ define void @widget(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i32 %a
 ; CHECK-NEXT:    ldr x8, [sp, #40] ; 8-byte Folded Reload
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    ; kill: def $w8 killed $w8 killed $x8 def $x8
 ; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl _fprintf
 ; CHECK-NEXT:    brk #0x1

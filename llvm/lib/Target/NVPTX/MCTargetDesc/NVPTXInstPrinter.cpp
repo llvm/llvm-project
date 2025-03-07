@@ -14,7 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/NVVMIntrinsicFlags.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -84,7 +84,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
     markup(O, Markup::Immediate) << formatImm(Op.getImm());

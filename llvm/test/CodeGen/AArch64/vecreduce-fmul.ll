@@ -7,11 +7,13 @@
 define float @mul_HalfS(<2 x float> %bin.rdx)  {
 ; CHECK-SD-LABEL: mul_HalfS:
 ; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mul_HalfS:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov s1, v0.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
@@ -22,6 +24,7 @@ define float @mul_HalfS(<2 x float> %bin.rdx)  {
 define half @mul_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-SD-NOFP16-LABEL: mul_HalfH:
 ; CHECK-SD-NOFP16:       // %bb.0:
+; CHECK-SD-NOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NOFP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s2, h0
 ; CHECK-SD-NOFP16-NEXT:    fcvt s1, h1
@@ -41,6 +44,7 @@ define half @mul_HalfH(<4 x half> %bin.rdx)  {
 ;
 ; CHECK-SD-FP16-LABEL: mul_HalfH:
 ; CHECK-SD-FP16:       // %bb.0:
+; CHECK-SD-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-FP16-NEXT:    fmul h1, h0, v0.h[1]
 ; CHECK-SD-FP16-NEXT:    fmul h1, h1, v0.h[2]
 ; CHECK-SD-FP16-NEXT:    fmul h0, h1, v0.h[3]
@@ -58,6 +62,7 @@ define half @mul_HalfH(<4 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-FP16-LABEL: mul_HalfH:
 ; CHECK-GI-FP16:       // %bb.0:
+; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]

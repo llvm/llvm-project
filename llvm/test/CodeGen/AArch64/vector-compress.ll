@@ -206,6 +206,7 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    ; kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    umov.b w9, v2[0]
 ; CHECK-NEXT:    umov.b w10, v2[1]
 ; CHECK-NEXT:    mov x12, sp
@@ -347,6 +348,7 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shl.4h v1, v1, #15
 ; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str h0, [sp, #8]
 ; CHECK-NEXT:    cmlt.4h v1, v1, #0
 ; CHECK-NEXT:    umov.h w9, v1[0]
@@ -378,6 +380,7 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    shl.4h v1, v1, #15
 ; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str h0, [sp, #8]
 ; CHECK-NEXT:    cmlt.4h v1, v1, #0
 ; CHECK-NEXT:    umov.h w9, v1[0]

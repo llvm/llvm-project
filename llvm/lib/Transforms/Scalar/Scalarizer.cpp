@@ -279,8 +279,6 @@ public:
 
   bool visit(Function &F);
 
-  bool isTriviallyScalarizable(Intrinsic::ID ID);
-
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
   bool visitInstruction(Instruction &I) { return false; }
@@ -683,19 +681,6 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
   return true;
 }
 
-bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
-  if (isTriviallyVectorizable(ID))
-    return true;
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
-  switch (ID) {
-  case Intrinsic::frexp:
-    return true;
-  }
-  return Intrinsic::isTargetIntrinsic(ID) &&
-         TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-}
-
 /// If a call to a vector typed intrinsic function, split into a scalar call per
 /// element if possible for the intrinsic.
 bool ScalarizerVisitor::splitCall(CallInst &CI) {
@@ -715,7 +700,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
 
-  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
+  if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
     return false;
 
   // unsigned NumElems = VT->getNumElements();
@@ -734,16 +719,15 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
     for (unsigned I = 1; I < CallType->getNumContainedTypes(); I++) {
       std::optional<VectorSplit> CurrVS =
           getVectorSplit(cast<FixedVectorType>(CallType->getContainedType(I)));
-      // This case does not seem to happen, but it is possible for
-      // VectorSplit.NumPacked >= NumElems. If that happens a VectorSplit
-      // is not returned and we will bailout of handling this call.
-      // The secondary bailout case is if NumPacked does not match.
-      // This can happen if ScalarizeMinBits is not set to the default.
-      // This means with certain ScalarizeMinBits intrinsics like frexp
-      // will only scalarize when the struct elements have the same bitness.
+      // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+      // VectorSplit is not returned and we will bailout of handling this call.
+      // The secondary bailout case is if NumPacked does not match. This can
+      // happen if ScalarizeMinBits is not set to the default. This means with
+      // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+      // the struct elements have the same bitness.
       if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
         return false;
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I))
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(ID, I, TTI))
         Tys.push_back(CurrVS->SplitTy);
     }
   }
@@ -794,8 +778,7 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       Tys[0] = VS->RemainderTy;
 
     for (unsigned J = 0; J != NumArgs; ++J) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J) ||
-          TTI->isTargetIntrinsicWithScalarOpAtArg(ID, J)) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
         ScalarCallOps.push_back(ScalarOperands[J]);
       } else {
         ScalarCallOps.push_back(Scattered[J][I]);
@@ -1089,7 +1072,7 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
     if (!F)
       return false;
     Intrinsic::ID ID = F->getIntrinsicID();
-    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID))
+    if (ID == Intrinsic::not_intrinsic || !isTriviallyScalarizable(ID, TTI))
       return false;
     // Note: Fall through means Operand is a`CallInst` and it is defined in
     // `isTriviallyScalarizable`.
@@ -1099,6 +1082,18 @@ bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   std::optional<VectorSplit> VS = getVectorSplit(VecType);
   if (!VS)
     return false;
+  for (unsigned I = 1; I < OpTy->getNumContainedTypes(); I++) {
+    std::optional<VectorSplit> CurrVS =
+        getVectorSplit(cast<FixedVectorType>(OpTy->getContainedType(I)));
+    // It is possible for VectorSplit.NumPacked >= NumElems. If that happens a
+    // VectorSplit is not returned and we will bailout of handling this call.
+    // The secondary bailout case is if NumPacked does not match. This can
+    // happen if ScalarizeMinBits is not set to the default. This means with
+    // certain ScalarizeMinBits intrinsics like frexp will only scalarize when
+    // the struct elements have the same bitness.
+    if (!CurrVS || CurrVS->NumPacked != VS->NumPacked)
+      return false;
+  }
   IRBuilder<> Builder(&EVI);
   Scatterer Op0 = scatter(&EVI, Op, *VS);
   assert(!EVI.getIndices().empty() && "Make sure an index exists");
