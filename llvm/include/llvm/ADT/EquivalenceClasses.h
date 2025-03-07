@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
+#include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -177,6 +178,9 @@ public:
   }
   member_iterator member_end() const {
     return member_iterator(nullptr);
+  }
+  iterator_range<member_iterator> members(iterator I) const {
+    return make_range(member_begin(I), member_end());
   }
 
   /// findValue - Return an iterator to the specified value.  If it does not
