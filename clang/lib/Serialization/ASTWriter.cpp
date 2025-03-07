@@ -8020,6 +8020,10 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
     for (auto *E : C->copy_array_elems())
       Record.AddStmt(E);
   }
+  ArrayRef<bool> PrivateFlags = C->getPrivateVariableReductionFlags();
+  Record.push_back(PrivateFlags.size());
+  for (bool Flag : PrivateFlags)
+    Record.push_back(Flag);
 }
 
 void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
