@@ -93,7 +93,7 @@ struct Entry {
   const NamedDecl *ND;
   bool FromDerivedClass;
 };
-}
+} // namespace
 
 using DeclsWithinContextMap =
     llvm::DenseMap<const DeclContext *, llvm::SmallVector<Entry, 1>>;
@@ -158,7 +158,7 @@ void ConfusableIdentifierCheck::check(
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
-  llvm::StringMap<llvm::SmallVector<const IdentifierInfo*, 1>> SkeletonToNames;
+  llvm::StringMap<llvm::SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
   // Compute the skeleton for each identifier.
   for (auto &[Ident, Decls] : NameToDecls) {
     SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);
@@ -209,7 +209,7 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
           diag(Inner.ND->getLocation(), "%0 is confusable with %1")
               << Inner.ND << OuterND;
           diag(OuterND->getLocation(), "other declaration found here",
-                DiagnosticIDs::Note);
+               DiagnosticIDs::Note);
         }
       }
     }
