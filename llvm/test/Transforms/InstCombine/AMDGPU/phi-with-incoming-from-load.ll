@@ -27,16 +27,16 @@ entry:
   %coerce = alloca %double_double, align 8, addrspace(5)
   %alpha_union = addrspacecast ptr addrspace(5) %coerce to ptr
   call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %coerce, ptr addrspace(4) align 8 %in, i64 16, i1 false)
-  %load = load i8, ptr addrspace(5) null, align 1
-  %loadedv = trunc i8 %load to i1
+  %load1 = load i8, ptr addrspace(5) null, align 1
+  %loadedv = trunc i8 %load1 to i1
   br i1 %loadedv, label %cond.end, label %cond.false
 
 cond.false:
-  %2 = load ptr, ptr addrspace(5) %coerce, align 8
+  %load2 = load ptr, ptr addrspace(5) %coerce, align 8
   br label %cond.end
 
 cond.end:
-  %cond = phi ptr [ %2, %cond.false ], [ %alpha_union, %entry ]
+  %cond = phi ptr [ %load2, %cond.false ], [ %alpha_union, %entry ]
   call void @llvm.memcpy.p0.p0.i64(ptr poison, ptr %cond, i64 16, i1 false)
   ret void
 }
