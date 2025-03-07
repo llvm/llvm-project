@@ -4115,9 +4115,12 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_PARM_VAR:
     D = ParmVarDecl::CreateDeserialized(Context, ID);
     break;
-  case DECL_DECOMPOSITION:
-    D = DecompositionDecl::CreateDeserialized(Context, ID, Record.readInt());
-    break;
+  case DECL_DECOMPOSITION: {
+    unsigned NumBindings = Record.readInt();
+    bool IsDecisionVariable = Record.readBool();
+    D = DecompositionDecl::CreateDeserialized(Context, ID, NumBindings,
+                                              IsDecisionVariable);
+  } break;
   case DECL_BINDING:
     D = BindingDecl::CreateDeserialized(Context, ID);
     break;

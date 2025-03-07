@@ -4224,15 +4224,18 @@ class DecompositionDecl final
     : public VarDecl,
       private llvm::TrailingObjects<DecompositionDecl, BindingDecl *> {
   /// The number of BindingDecl*s following this object.
-  unsigned NumBindings;
+  unsigned NumBindings : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDecisionVariable : 1;
 
   DecompositionDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                     SourceLocation LSquareLoc, QualType T,
                     TypeSourceInfo *TInfo, StorageClass SC,
-                    ArrayRef<BindingDecl *> Bindings)
+                    ArrayRef<BindingDecl *> Bindings, bool IsDecisionVariable)
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
-        NumBindings(Bindings.size()) {
+        NumBindings(Bindings.size()), IsDecisionVariable(IsDecisionVariable) {
     std::uninitialized_copy(Bindings.begin(), Bindings.end(),
                             getTrailingObjects<BindingDecl *>());
     for (auto *B : Bindings) {
@@ -4253,12 +4256,14 @@ public:
 
   static DecompositionDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation StartLoc,
-                                   SourceLocation LSquareLoc,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   StorageClass S,
-                                   ArrayRef<BindingDecl *> Bindings);
+                                   SourceLocation LSquareLoc, QualType T,
+                                   TypeSourceInfo *TInfo, StorageClass S,
+                                   ArrayRef<BindingDecl *> Bindings,
+                                   bool IsDecisionVariable);
+
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                               unsigned NumBindings);
+                                               unsigned NumBindings,
+                                               bool IsDecisionVariable);
 
   // Provide the range of bindings which may have a nested pack.
   llvm::ArrayRef<BindingDecl *> bindings() const {
@@ -4284,6 +4289,8 @@ public:
                                             std::move(PackBindings),
                                             std::move(Bindings));
   }
+
+  bool isDecisionVariable() const { return IsDecisionVariable; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 

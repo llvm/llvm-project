@@ -913,6 +913,11 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       if (CondConstant)
         incrementProfileCounter(&S);
       if (Executed) {
+        if (auto *DD = dyn_cast_if_present<DecompositionDecl>(
+                S.getConditionVariable())) {
+          assert(DD->isDecisionVariable());
+          EmitDecompositionVarInit(*DD);
+        }
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
@@ -952,10 +957,16 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // there is a 'return' within the body, but this is particularly beneficial
   // when one if-stmt is nested within another if-stmt so that all of the MC/DC
   // updates are kept linear and consistent.
-  if (!CGM.getCodeGenOpts().MCDCCoverage)
-    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH);
-  else {
+  if (!CGM.getCodeGenOpts().MCDCCoverage) {
+    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH,
+                         nullptr, S.getConditionVariable());
+  } else {
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable())) {
+      assert(DD->isDecisionVariable());
+      EmitDecompositionVarInit(*DD);
+    }
     Builder.CreateCondBr(BoolCondVal, ThenBlock, ElseBlock);
   }
 

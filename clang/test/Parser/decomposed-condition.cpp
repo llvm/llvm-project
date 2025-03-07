@@ -33,33 +33,33 @@ Na g();
 
 namespace CondInIf {
 int h() {
-  if (auto [ok, d] = f()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  if (auto [ok, d] = f()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     ;
-  if (auto [ok, d] = g()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
+  if (auto [ok, d] = g()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
     ;
-  if (auto [value] = Get()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  if (auto [value] = Get()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     return value;
 }
 } // namespace CondInIf
 
 namespace CondInWhile {
 int h() {
-  while (auto [ok, d] = f()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  while (auto [ok, d] = f()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     ;
-  while (auto [ok, d] = g()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
+  while (auto [ok, d] = g()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
     ;
-  while (auto [value] = Get()) // expected-warning{{ISO C++17 does not permit structured binding declaration in a condition}}
+  while (auto [value] = Get()) // expected-warning{{structured binding declaration in a condition is a C++2c extenstion}}
     return value;
 }
 } // namespace CondInWhile
 
 namespace CondInFor {
 int h() {
-  for (; auto [ok, d] = f();) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  for (; auto [ok, d] = f();) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     ;
-  for (; auto [ok, d] = g();) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
+  for (; auto [ok, d] = g();) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}} expected-error {{value of type 'Na' is not contextually convertible to 'bool'}}
     ;
-  for (; auto [value] = Get();) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  for (; auto [value] = Get();) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     return value;
 }
 } // namespace CondInFor
@@ -74,11 +74,11 @@ struct IntegerLike {
 
 namespace CondInSwitch {
 int h(IntegerLike x) {
-  switch (auto [ok, d] = x) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  switch (auto [ok, d] = x) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     ;
-  switch (auto [ok, d] = g()) // expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}} expected-error {{statement requires expression of integer type ('Na' invalid)}}
+  switch (auto [ok, d] = g()) // expected-warning {{structured binding declaration in a condition is a C++2c extenstion}} expected-error {{statement requires expression of integer type ('Na' invalid)}}
     ;
-  switch (auto [value] = Get()) {// expected-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+  switch (auto [value] = Get()) {// expected-warning {{structured binding declaration in a condition is a C++2c extenstion}}
   // expected-warning@-1{{switch condition has boolean value}}
   case 1:
     return value;

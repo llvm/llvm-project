@@ -529,8 +529,12 @@ def warn_cxx14_compat_decomp_decl : Warning<
 def ext_decomp_decl : ExtWarn<
   "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
 def ext_decomp_decl_cond : ExtWarn<
-  "ISO C++17 does not permit structured binding declaration in a condition">,
-  InGroup<DiagGroup<"binding-in-condition">>;
+  "structured binding declaration in a condition is a C++2c extenstion">,
+  InGroup<CXX26>;
+def warn_cxx26_decomp_decl_cond : Warning<
+  "structured binding declaration in a condition is incompatible with "
+  "C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;

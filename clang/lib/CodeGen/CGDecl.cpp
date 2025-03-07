@@ -164,10 +164,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
     assert(VD.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
-    if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      for (auto *B : DD->flat_bindings())
-        if (auto *HD = B->getHoldingVar())
-          EmitVarDecl(*HD);
+    if (auto *DD = dyn_cast<DecompositionDecl>(&VD);
+        DD && !DD->isDecisionVariable())
+      EmitDecompositionVarInit(*DD);
 
     return;
   }
@@ -2055,6 +2054,12 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   emitStoresForConstant(CGM, D, Loc.withElementType(CGM.Int8Ty),
                         type.isVolatileQualified(), Builder, constant,
                         /*IsAutoInit=*/false);
+}
+
+void CodeGenFunction::EmitDecompositionVarInit(const DecompositionDecl &DD) {
+  for (auto *B : DD.flat_bindings())
+    if (auto *HD = B->getHoldingVar())
+      EmitVarDecl(*HD);
 }
 
 /// Emit an expression as an initializer for an object (variable, field, etc.)

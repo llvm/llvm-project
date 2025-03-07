@@ -3474,6 +3474,8 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
 
+  void EmitDecompositionVarInit(const DecompositionDecl &var);
+
   /// Emits the alloca and debug information for the size expressions for each
   /// dimension of an array. It registers the association of its (1-dimensional)
   /// QualTypes and size expression's debug node, so that CGDebugInfo can
@@ -5180,7 +5182,8 @@ public:
   void EmitBranchOnBoolExpr(const Expr *Cond, llvm::BasicBlock *TrueBlock,
                             llvm::BasicBlock *FalseBlock, uint64_t TrueCount,
                             Stmt::Likelihood LH = Stmt::LH_None,
-                            const Expr *ConditionalOp = nullptr);
+                            const Expr *ConditionalOp = nullptr,
+                            const VarDecl *ConditionalDecl = nullptr);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if \p LHS is marked _Nonnull.

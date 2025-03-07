@@ -5218,16 +5218,28 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   return true;
 }
 
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD);
+
 static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
   bool OK = true;
 
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     OK &= EvaluateVarDecl(Info, VD);
 
-  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D))
-    for (auto *BD : DD->flat_bindings())
-      if (auto *VD = BD->getHoldingVar())
-        OK &= EvaluateDecl(Info, VD);
+  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
+      DD && !DD->isDecisionVariable())
+    OK &= EvaluateDecompositionDeclInit(Info, DD);
+
+  return OK;
+}
+
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD) {
+  bool OK = true;
+  for (auto *BD : DD->flat_bindings())
+    if (auto *VD = BD->getHoldingVar())
+      OK &= EvaluateDecl(Info, VD);
 
   return OK;
 }
@@ -5250,6 +5262,10 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (CondDecl && !EvaluateDecl(Info, CondDecl))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
+    return false;
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(CondDecl);
+      DD && DD->isDecisionVariable() &&
+      !EvaluateDecompositionDeclInit(Info, DD))
     return false;
   return Scope.destroy();
 }

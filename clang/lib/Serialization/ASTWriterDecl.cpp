@@ -1327,6 +1327,7 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
 void ASTDeclWriter::VisitDecompositionDecl(DecompositionDecl *D) {
   // Record the number of bindings first to simplify deserialization.
   Record.push_back(D->bindings().size());
+  Record.push_back(D->isDecisionVariable());
 
   VisitVarDecl(D);
   for (auto *B : D->bindings())
