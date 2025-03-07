@@ -60,9 +60,9 @@ def FPR64IN32X : RegisterOperand<GPRPair> {
 
 def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
 
-def ZdinxExt   : ExtInfo<"_INX", "RVZfinx", [HasStdExtZdinx, IsRV64],
+def ZdinxExt   : ExtInfo<"_INX", "Zfinx", [HasStdExtZdinx, IsRV64],
                          f64, FPR64INX, FPR32INX, FPR64INX, ?>;
-def Zdinx32Ext : ExtInfo<"_IN32X", "RV32Zdinx", [HasStdExtZdinx, IsRV32],
+def Zdinx32Ext : ExtInfo<"_IN32X", "ZdinxRV32GPRPair", [HasStdExtZdinx, IsRV32],
                          f64, FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
 
 defvar DExts     = [DExt, ZdinxExt, Zdinx32Ext];

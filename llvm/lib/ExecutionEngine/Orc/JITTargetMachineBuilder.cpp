@@ -39,7 +39,7 @@ Expected<std::unique_ptr<TargetMachine>>
 JITTargetMachineBuilder::createTargetMachine() {
 
   std::string ErrMsg;
-  auto *TheTarget = TargetRegistry::lookupTarget(TT.getTriple(), ErrMsg);
+  auto *TheTarget = TargetRegistry::lookupTarget(TT, ErrMsg);
   if (!TheTarget)
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 

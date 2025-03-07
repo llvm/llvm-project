@@ -163,15 +163,25 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   int32_t shift;
 
   // Obtain the quantized scale = multiplier and shift.
-  computeMultiplierAndShift(opTensorScale, multiplier, shift, 32);
+  if (!computeMultiplierAndShift(opTensorScale, multiplier, shift, 32))
+    return failure();
+
+  bool inputUnsigned =
+      newTosaConv2DOp.getResult().getType().isUnsignedInteger();
+  bool outputUnsigned = outputType.isUnsignedInteger();
 
   auto newTosaRescaleOp = rewriter.create<tosa::RescaleOp>(
       op->getLoc(), outputType, newTosaConv2DOp.getResult(),
-      rewriter.getI32IntegerAttr(0), rewriter.getI32IntegerAttr(outputZp),
-      rewriter.getDenseI32ArrayAttr({multiplier}),
-      rewriter.getDenseI8ArrayAttr({static_cast<int8_t>(shift)}),
-      rewriter.getBoolAttr(true), rewriter.getBoolAttr(true),
-      rewriter.getBoolAttr(false));
+      getConstTensorInt<int32_t>(rewriter, op->getLoc(), {multiplier}),
+      getConstTensorInt<int8_t>(rewriter, op->getLoc(),
+                                {static_cast<int8_t>(shift)}),
+      /* input_zp = */ rewriter.getI32IntegerAttr(0),
+      /* output_zp = */ rewriter.getI32IntegerAttr(outputZp),
+      /* scale32 = */ rewriter.getBoolAttr(true),
+      /* double_round = */ rewriter.getBoolAttr(true),
+      /* per_channel = */ rewriter.getBoolAttr(false),
+      rewriter.getBoolAttr(inputUnsigned),
+      rewriter.getBoolAttr(outputUnsigned));
 
   rewriter.replaceOp(op, {newTosaRescaleOp.getResult()});
   return success();

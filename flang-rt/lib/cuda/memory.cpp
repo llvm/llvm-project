@@ -147,7 +147,7 @@ void RTDECL(CUFDataTransferGlobalDescDesc)(Descriptor *dstDesc,
     void *deviceAddr{
         RTNAME(CUFGetDeviceAddress)((void *)dstDesc, sourceFile, sourceLine)};
     RTNAME(CUFDescriptorSync)
-    ((Descriptor *)deviceAddr, srcDesc, sourceFile, sourceLine);
+    ((Descriptor *)deviceAddr, dstDesc, sourceFile, sourceLine);
   }
 }
 }

@@ -1,4 +1,4 @@
-//===-- lldb-dap.cpp -----------------------------------------*- C++ -*-===//
+//===-- lldb-dap.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,16 +8,15 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "FifoFiles.h"
 #include "Handler/RequestHandler.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "RunInTerminal.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -38,22 +37,15 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <condition_variable>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
 #include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <ostream>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -118,8 +110,9 @@ public:
       : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
                                    InfoTable, true) {}
 };
+} // anonymous namespace
 
-void RegisterRequestCallbacks(DAP &dap) {
+static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
@@ -160,9 +153,7 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
-} // anonymous namespace
-
-static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
+static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
@@ -186,28 +177,29 @@ EXAMPLES:
 // If --launch-target is provided, this instance of lldb-dap becomes a
 // runInTerminal launcher. It will ultimately launch the program specified in
 // the --launch-target argument, which is the original program the user wanted
-// to debug. This is done in such a way that the actual debug adaptor can
+// to debug. This is done in such a way that the actual debug adapter can
 // place breakpoints at the beginning of the program.
 //
-// The launcher will communicate with the debug adaptor using a fifo file in the
+// The launcher will communicate with the debug adapter using a fifo file in the
 // directory specified in the --comm-file argument.
 //
-// Regarding the actual flow, this launcher will first notify the debug adaptor
+// Regarding the actual flow, this launcher will first notify the debug adapter
 // of its pid. Then, the launcher will be in a pending state waiting to be
-// attached by the adaptor.
+// attached by the adapter.
 //
 // Once attached and resumed, the launcher will exec and become the program
 // specified by --launch-target, which is the original target the
 // user wanted to run.
 //
 // In case of errors launching the target, a suitable error message will be
-// emitted to the debug adaptor.
-static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                      llvm::StringRef comm_file,
-                                      lldb::pid_t debugger_pid, char *argv[]) {
+// emitted to the debug adapter.
+static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                             llvm::StringRef comm_file,
+                                             lldb::pid_t debugger_pid,
+                                             char *argv[]) {
 #if defined(_WIN32)
-  llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(
+      "runInTerminal is only supported on POSIX systems");
 #else
 
   // On Linux with the Yama security module enabled, a process can only attach
@@ -219,10 +211,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #endif
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
-  if (llvm::Error err = comm_channel.NotifyPid()) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
-  }
+  if (llvm::Error err = comm_channel.NotifyPid())
+    return err;
 
   // We will wait to be attached with a timeout. We don't wait indefinitely
   // using a signal to prevent being paused forever.
@@ -231,10 +221,9 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
   int timeout_in_ms =
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
-  if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
-    llvm::errs() << llvm::toString(std::move(err)) << "\n";
-    exit(EXIT_FAILURE);
+    return err;
   }
 
   const char *target = target_arg.getValue();
@@ -242,8 +231,8 @@ static void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   std::string error = std::strerror(errno);
   comm_channel.NotifyError(error);
-  llvm::errs() << error << "\n";
-  exit(EXIT_FAILURE);
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 std::move(error));
 #endif
 }
 
@@ -435,7 +424,7 @@ int main(int argc, char *argv[]) {
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
-    printHelp(T, llvm::sys::path::filename(argv[0]));
+    PrintHelp(T, llvm::sys::path::filename(argv[0]));
     return EXIT_SUCCESS;
   }
 
@@ -471,13 +460,18 @@ int main(int argc, char *argv[]) {
         }
       }
       int target_args_pos = argc;
-      for (int i = 0; i < argc; i++)
+      for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "--launch-target") == 0) {
           target_args_pos = i + 1;
           break;
         }
-      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                argv + target_args_pos);
+      }
+      if (llvm::Error err =
+              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
+                                        argv + target_args_pos)) {
+        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+        return EXIT_FAILURE;
+      }
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
@@ -512,9 +506,24 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create a memory monitor. This can return nullptr if the host platform is
+  // not supported.
+  std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
+      lldb_private::MemoryMonitor::Create([&]() {
+        if (log)
+          *log << "memory pressure detected\n";
+        lldb::SBDebugger::MemoryPressureDetected();
+      });
+
+  if (memory_monitor)
+    memory_monitor->Start();
+
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+  auto terminate_debugger = llvm::make_scope_exit([&] {
+    if (memory_monitor)
+      memory_monitor->Stop();
+    lldb::SBDebugger::Terminate();
+  });
 
   std::vector<std::string> pre_init_commands;
   for (const std::string &arg :

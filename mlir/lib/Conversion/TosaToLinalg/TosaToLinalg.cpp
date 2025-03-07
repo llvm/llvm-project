@@ -49,6 +49,11 @@ using namespace mlir::tosa;
 // calculated result based on whether the lhs or rhs is NaN or not. In pseudo
 // code:
 //
+// In the case that the op is operating on non floating point types we ignore
+// the attribute completely, this is consistent with the TOSA spec which has
+// the following wording: "This attribute is ignored by non floating-point
+// types."
+//
 // binary<op>(lhs, rhs):
 //   result = op(lhs, rhs)
 //   if lhs == NaN return rhs
@@ -58,6 +63,10 @@ template <typename OpTy>
 static Value
 materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
                                     Value lhs, Value rhs, Value result) {
+  // NaN propagation has no meaning for non floating point types.
+  if (!isa<FloatType>(getElementTypeOrSelf(lhs)))
+    return result;
+
   auto nanMode = op.getNanMode();
   if (nanMode == "PROPAGATE")
     return result;
@@ -129,7 +138,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
     auto shift_val = cast<tosa::MulOp>(op).getShift();
-    ElementsAttr shift_elem;
+    DenseElementsAttr shift_elem;
     if (!shift_val.getImpl() ||
         !matchPattern(shift_val, m_Constant(&shift_elem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
@@ -449,6 +458,11 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
     auto clampOp = llvm::cast<tosa::ClampOp>(op);
     const auto nanMode = clampOp.getNanMode();
+
+    // NaN propagation has no meaning for non floating point types.
+    if (!isa<FloatType>(elementTy))
+      return result;
+
     // In the case of "PROPAGATE" semantics no compare and selection is
     // required.
     if (nanMode == "PROPAGATE")
@@ -1192,7 +1206,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
   bool isNanIgnoreMode = false;
   if constexpr (std::is_same_v<OpTy, tosa::ReduceMinOp> ||
                 std::is_same_v<OpTy, tosa::ReduceMaxOp>) {
-    if (op.getNanMode() == "IGNORE") {
+    // NaN propagation has no meaning for non floating point types.
+    if (isa<FloatType>(elementTy) && op.getNanMode() == "IGNORE") {
       isNanIgnoreMode = true;
       // Because the TOSA spec requires the result be NaN iff all elements in
       // the reduction are NaN we can't simply perform a compare and select.
@@ -1374,8 +1389,24 @@ public:
     }
 
     // The shift and multiplier values.
-    SmallVector<int32_t> multiplierValues(op.getMultiplier());
-    SmallVector<int8_t> shiftValues(op.getShift());
+    DenseElementsAttr shiftElems;
+    if (!matchPattern(op.getShift(), m_Constant(&shiftElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant shift input values");
+
+    DenseElementsAttr multiplierElems;
+    if (!matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant multiplier input values");
+
+    llvm::SmallVector<int8_t> shiftValues =
+        llvm::to_vector(shiftElems.getValues<int8_t>());
+    // explicit cast is required here
+    llvm::SmallVector<int32_t> multiplierValues = llvm::to_vector(
+        llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
+                        [](IntegerAttr attr) -> int32_t {
+                          return static_cast<int32_t>(attr.getInt());
+                        }));
 
     // If we shift by more than the bitwidth, this just sets to 0.
     for (int i = 0, s = multiplierValues.size(); i < s; i++) {
@@ -1563,7 +1594,7 @@ public:
     }
 
     SmallVector<int64_t> scale;
-    if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale)) {
+    if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale)) {
       return failure();
     }
 
@@ -1784,9 +1815,9 @@ public:
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
       SmallVector<int64_t> scale, offset, border;
-      if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale) ||
-          !tosa::getConstShapeValue(op.getOffset().getDefiningOp(), offset) ||
-          !tosa::getConstShapeValue(op.getBorder().getDefiningOp(), border)) {
+      if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale) ||
+          !tosa::getConstShapeValues(op.getOffset().getDefiningOp(), offset) ||
+          !tosa::getConstShapeValues(op.getBorder().getDefiningOp(), border)) {
         return rewriter.notifyMatchFailure(
             op, "tosa.resize scale/offset/border should have compile time "
                 "constant values.");
@@ -2282,7 +2313,8 @@ public:
           // In the case "IGNORE" we check if the current argument is NaN and
           // select the old index and value otherwise take the updated index and
           // value.
-          if (const auto nanMode = argmaxOp.getNanMode(); nanMode == "IGNORE") {
+          if (const auto nanMode = argmaxOp.getNanMode();
+              isa<FloatType>(inElementTy) && nanMode == "IGNORE") {
             // Unordered comparison of NaN against itself will always return
             // true.
             Value isNaN = rewriter.create<arith::CmpFOp>(
