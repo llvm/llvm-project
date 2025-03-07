@@ -333,6 +333,12 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
 
   Allocator->printStats();
   Allocator->printFragmentationInfo();
+
+  {
+    char buffer[256] = {0};
+    EXPECT_GT(Allocator->getStats(buffer, sizeof(buffer)), 0);
+    EXPECT_GT(Allocator->getFragmentationInfo(buffer, sizeof(buffer)), 0);
+  }
 }
 
 #define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \
