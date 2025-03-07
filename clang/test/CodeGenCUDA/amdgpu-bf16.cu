@@ -111,15 +111,15 @@ __device__ __bf16 test_call( __bf16 in) {
 // CHECK-NEXT:    ret void
 //
 __device__ void test_vec_assign() {
-  __bf16 __attribute__((ext_vector_type(2))) vec2_a, vec2_b;
+  __bf16 [[clang::ext_vector_type(2)]] vec2_a, vec2_b;
   vec2_a = vec2_b;
 
-  __bf16 __attribute__((ext_vector_type(4))) vec4_a, vec4_b;
+  __bf16 [[clang::ext_vector_type(4)]] vec4_a, vec4_b;
   vec4_a = vec4_b;
 
-  __bf16 __attribute__((ext_vector_type(8))) vec8_a, vec8_b;
+  __bf16 [[clang::ext_vector_type(8)]] vec8_a, vec8_b;
   vec8_a = vec8_b;
 
-  __bf16 __attribute__((ext_vector_type(16))) vec16_a, vec16_b;
+  __bf16 [[clang::ext_vector_type(16)]] vec16_a, vec16_b;
   vec16_a = vec16_b;
 }
