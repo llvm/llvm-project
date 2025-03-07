@@ -134,6 +134,38 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
   ret void
 }
 
+define amdgpu_cs void @frame_pointer_none() #1 {
+; CHECK-LABEL: frame_pointer_none:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  ret void
+}
+
+define amdgpu_cs void @frame_pointer_all() #2 {
+; CHECK-LABEL: frame_pointer_all:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  ret void
+}
+
 ; Non-entry functions and graphics shaders don't need to worry about CWSR.
 define amdgpu_gs void @amdgpu_gs() #0 {
 ; CHECK-LABEL: amdgpu_gs:
@@ -215,3 +247,5 @@ define void @default() #0 {
 declare amdgpu_gfx void @callee(i32) #0
 
 attributes #0 = { nounwind }
+attributes #1 = { nounwind "frame-pointer"="none" }
+attributes #2 = { nounwind "frame-pointer"="all" }
