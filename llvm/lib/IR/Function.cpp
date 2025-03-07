@@ -1167,6 +1167,15 @@ bool Function::nullPointerIsDefined() const {
   return hasFnAttribute(Attribute::NullPointerIsValid);
 }
 
+unsigned Function::getVScaleValue() const {
+  Attribute Attr = getFnAttribute(Attribute::VScaleRange);
+  if (!Attr.isValid())
+    return 0;
+
+  unsigned VScale = Attr.getVScaleRangeMax().value_or(0);
+  return VScale == Attr.getVScaleRangeMin() ? VScale : 0;
+}
+
 bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
   if (F && F->nullPointerIsDefined())
     return true;
