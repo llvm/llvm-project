@@ -130,13 +130,9 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 /// parameter.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half fmod(half X, half Y) {
-  return __detail::fmod_impl(X, Y);
-}
+const inline half fmod(half X, half Y) { return __detail::fmod_impl(X, Y); }
 
-const inline float fmod(float X, float Y) {
-  return __detail::fmod_impl(X, Y);
-}
+const inline float fmod(float X, float Y) { return __detail::fmod_impl(X, Y); }
 
 template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
