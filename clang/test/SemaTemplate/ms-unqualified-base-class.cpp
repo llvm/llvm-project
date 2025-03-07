@@ -84,7 +84,7 @@ int main() {
   return I;
 }
 
-template <typename Type, int TSize> class Vec {}; // expected-note {{template is declared here}}
+template <typename Type, int TSize> class Vec {}; // expected-note {{template parameter is declared here}}
 
 template <int TDim> class Index : public Vec<int, TDim> {
   // after-error@+1 {{member initializer 'Vec' does not name a non-static data member or base class}}
@@ -107,7 +107,7 @@ template <typename T> class Wrong : public Vec<T, 4> {
 template class Wrong<double>;
 
 template <typename T> class Wrong2 : public Vec<T, 4> {
-  Wrong2() : Vec<T>() {} // expected-error {{too few template arguments for class template 'Vec'}}
+  Wrong2() : Vec<T>() {} // expected-error {{missing template argument for template parameter}}
 };
 
 template class Wrong2<double>;

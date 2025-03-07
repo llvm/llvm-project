@@ -27,7 +27,8 @@ public:
   /// \return
   ///     \a Error::success if the redirection was set up correctly, or an error
   ///     otherwise.
-  llvm::Error RedirectTo(std::function<void(llvm::StringRef)> callback);
+  llvm::Error RedirectTo(std::FILE *overrideFile,
+                         std::function<void(llvm::StringRef)> callback);
 
   llvm::Expected<int> GetWriteFileDescriptor();
   void Stop();
@@ -41,6 +42,8 @@ public:
 private:
   std::atomic<bool> m_stopped = false;
   int m_fd;
+  int m_original_fd;
+  int m_restore_fd;
   std::thread m_forwarder;
 };
 

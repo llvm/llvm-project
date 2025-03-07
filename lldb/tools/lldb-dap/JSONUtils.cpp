@@ -100,34 +100,20 @@ uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
   return GetUnsigned(*obj, key, fail_value);
 }
 
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
-}
-
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return *value;
-  return fail_value;
-}
-
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetSigned(*obj, key, fail_value);
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
@@ -280,7 +266,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("type", "response");
   response.try_emplace("seq", (int64_t)0);
   EmplaceSafeString(response, "command", GetString(request, "command"));
-  const int64_t seq = GetSigned(request, "seq", 0);
+  const auto seq = GetInteger<int64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }

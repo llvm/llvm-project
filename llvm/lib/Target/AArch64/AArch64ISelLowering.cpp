@@ -8213,7 +8213,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg) {
+  if (isVarArg && DAG.getMachineFunction().getFrameInfo().hasVAStart()) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
@@ -10686,6 +10686,25 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     return convertFromScalableVector(DAG, VT, Res);
   }
 
+  // With SVE, but without Neon, extend the scalars to scalable vectors and use
+  // a SVE FCOPYSIGN.
+  if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
+      Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+      return SDValue();
+    EVT SVT = getPackedSVEVectorVT(VT);
+
+    SDValue Ins1 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In1,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue Ins2 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In2,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue FCS = DAG.getNode(ISD::FCOPYSIGN, DL, SVT, Ins1, Ins2);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, FCS,
+                       DAG.getConstant(0, DL, MVT::i64));
+  }
+
   auto BitCast = [this](EVT VT, SDValue Op, SelectionDAG &DAG) {
     if (VT.isScalableVector())
       return getSVESafeBitCast(VT, Op, DAG);
@@ -10788,7 +10807,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     if (VT == MVT::i32)
       AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, AddV,
                          DAG.getConstant(0, DL, MVT::i64));
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    else
+      AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                         DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, AddV),
+                         DAG.getConstant(0, DL, MVT::i64));
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -10797,7 +10819,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
     SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                       DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v2i64, AddV),
+                       DAG.getConstant(0, DL, MVT::i64));
+    AddV = DAG.getZExtOrTrunc(AddV, DL, VT);
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -16905,14 +16930,18 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // most one extra extend step is needed and using tbl is not profitable.
     // Similarly, bail out if partial_reduce(acc, zext(i8)) can be lowered to a
     // udot instruction.
-    if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
-      auto *SingleUser = cast<Instruction>(*I->user_begin());
-      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
-          (match(SingleUser,
-                 m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
-                     m_Value(), m_Specific(I))) &&
-           !shouldExpandPartialReductionIntrinsic(
-               cast<IntrinsicInst>(SingleUser))))
+    if (SrcWidth * 4 <= DstWidth) {
+      if (all_of(I->users(), [&](auto *U) {
+            auto *SingleUser = cast<Instruction>(&*U);
+            return (
+                match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
+                (match(SingleUser,
+                       m_Intrinsic<
+                           Intrinsic::experimental_vector_partial_reduce_add>(
+                           m_Value(), m_Specific(I))) &&
+                 !shouldExpandPartialReductionIntrinsic(
+                     cast<IntrinsicInst>(SingleUser))));
+          }))
         return false;
     }
 

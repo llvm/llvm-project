@@ -363,11 +363,6 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
   using ConvertOpToLLVMPattern<Derived>::ConvertOpToLLVMPattern;
   using ConvertOpToLLVMPattern<Derived>::isConvertibleAndHasIdentityMaps;
   using Base = LoadStoreOpLowering<Derived>;
-
-  LogicalResult match(Derived op) const override {
-    MemRefType type = op.getMemRefType();
-    return isConvertibleAndHasIdentityMaps(type) ? success() : failure();
-  }
 };
 
 /// Wrap a llvm.cmpxchg operation in a while loop so that the operation can be
@@ -662,8 +657,9 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
   }
 };
 
-struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
-  using ConvertOpToLLVMPattern<memref::CastOp>::ConvertOpToLLVMPattern;
+struct MemRefCastOpLowering
+    : public ConvertOpToLLVMPattern<memref::CastOp>::SplitMatchAndRewrite {
+  using SplitMatchAndRewrite::SplitMatchAndRewrite;
 
   LogicalResult match(memref::CastOp memRefCastOp) const override {
     Type srcType = memRefCastOp.getOperand().getType();

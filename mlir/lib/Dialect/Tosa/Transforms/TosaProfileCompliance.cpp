@@ -58,6 +58,8 @@ void ProfileInfoDepot::populateProfileInfo(tosa::ConcatOp op) {
 template <>
 void ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
   addType(op.getAccType());
   addValue(op.getOutput());
 }

@@ -53,6 +53,9 @@ public:
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
+  /// Is this a box for a pointer?
+  bool isPointer() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;

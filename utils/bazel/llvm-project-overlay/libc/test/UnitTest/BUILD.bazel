@@ -49,6 +49,7 @@ libc_support_library(
         "//libc:__support_c_string",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",

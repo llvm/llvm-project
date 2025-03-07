@@ -48,8 +48,7 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   // enabled, so we follow binutils in using the R_RISCV_32_PCREL relocation
   // for the FDE initial location.
   MCContext &Ctx = Streamer.getContext();
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
   return RISCVMCExpr::create(ME, RISCVMCExpr::VK_RISCV_32_PCREL, Ctx);
 }
