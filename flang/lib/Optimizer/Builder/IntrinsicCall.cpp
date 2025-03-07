@@ -106,6 +106,34 @@ using I = IntrinsicLibrary;
 /// argument is an optional variable in the current scope).
 static constexpr bool handleDynamicOptional = true;
 
+/// TODO: Move all CUDA Fortran intrinsic handlers into its own file similar to
+/// PPC.
+static const char __ldca_i4x4[] = "__ldca_i4x4_";
+static const char __ldca_i8x2[] = "__ldca_i8x2_";
+static const char __ldca_r2x2[] = "__ldca_r2x2_";
+static const char __ldca_r4x4[] = "__ldca_r4x4_";
+static const char __ldca_r8x2[] = "__ldca_r8x2_";
+static const char __ldcg_i4x4[] = "__ldcg_i4x4_";
+static const char __ldcg_i8x2[] = "__ldcg_i8x2_";
+static const char __ldcg_r2x2[] = "__ldcg_r2x2_";
+static const char __ldcg_r4x4[] = "__ldcg_r4x4_";
+static const char __ldcg_r8x2[] = "__ldcg_r8x2_";
+static const char __ldcs_i4x4[] = "__ldcs_i4x4_";
+static const char __ldcs_i8x2[] = "__ldcs_i8x2_";
+static const char __ldcs_r2x2[] = "__ldcs_r2x2_";
+static const char __ldcs_r4x4[] = "__ldcs_r4x4_";
+static const char __ldcs_r8x2[] = "__ldcs_r8x2_";
+static const char __ldcv_i4x4[] = "__ldcv_i4x4_";
+static const char __ldcv_i8x2[] = "__ldcv_i8x2_";
+static const char __ldcv_r2x2[] = "__ldcv_r2x2_";
+static const char __ldcv_r4x4[] = "__ldcv_r4x4_";
+static const char __ldcv_r8x2[] = "__ldcv_r8x2_";
+static const char __ldlu_i4x4[] = "__ldlu_i4x4_";
+static const char __ldlu_i8x2[] = "__ldlu_i8x2_";
+static const char __ldlu_r2x2[] = "__ldlu_r2x2_";
+static const char __ldlu_r4x4[] = "__ldlu_r4x4_";
+static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
+
 /// Table that drives the fir generation depending on the intrinsic or intrinsic
 /// module procedure one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
@@ -114,6 +142,106 @@ static constexpr bool handleDynamicOptional = true;
 /// argument must not be lowered by value. In which case, the lowering rules
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
+    {"__ldca_i4x4",
+     &I::genCUDALDXXFunc<__ldca_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_i8x2",
+     &I::genCUDALDXXFunc<__ldca_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r2x2",
+     &I::genCUDALDXXFunc<__ldca_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r4x4",
+     &I::genCUDALDXXFunc<__ldca_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r8x2",
+     &I::genCUDALDXXFunc<__ldca_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_i4x4",
+     &I::genCUDALDXXFunc<__ldcg_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_i8x2",
+     &I::genCUDALDXXFunc<__ldcg_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r2x2",
+     &I::genCUDALDXXFunc<__ldcg_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r4x4",
+     &I::genCUDALDXXFunc<__ldcg_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r8x2",
+     &I::genCUDALDXXFunc<__ldcg_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_i4x4",
+     &I::genCUDALDXXFunc<__ldcs_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_i8x2",
+     &I::genCUDALDXXFunc<__ldcs_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r2x2",
+     &I::genCUDALDXXFunc<__ldcs_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r4x4",
+     &I::genCUDALDXXFunc<__ldcs_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r8x2",
+     &I::genCUDALDXXFunc<__ldcs_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_i4x4",
+     &I::genCUDALDXXFunc<__ldcv_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_i8x2",
+     &I::genCUDALDXXFunc<__ldcv_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r2x2",
+     &I::genCUDALDXXFunc<__ldcv_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r4x4",
+     &I::genCUDALDXXFunc<__ldcv_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r8x2",
+     &I::genCUDALDXXFunc<__ldcv_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_i4x4",
+     &I::genCUDALDXXFunc<__ldlu_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_i8x2",
+     &I::genCUDALDXXFunc<__ldlu_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r2x2",
+     &I::genCUDALDXXFunc<__ldlu_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r4x4",
+     &I::genCUDALDXXFunc<__ldlu_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r8x2",
+     &I::genCUDALDXXFunc<__ldlu_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
     {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
@@ -3542,6 +3670,29 @@ IntrinsicLibrary::genCshift(mlir::Type resultType,
     fir::runtime::genCshift(builder, loc, resultIrBox, array, shift, dim);
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "CSHIFT");
+}
+
+// __LDCA, __LDCS, __LDLU, __LDCV
+template <const char *fctName, int extent>
+fir::ExtendedValue
+IntrinsicLibrary::genCUDALDXXFunc(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Type resTy = fir::SequenceType::get(extent, resultType);
+  mlir::Value arg = fir::getBase(args[0]);
+  mlir::Value res = builder.create<fir::AllocaOp>(loc, resTy);
+  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
+    arg = builder.create<fir::BoxAddrOp>(loc, arg);
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(arg.getContext(), {resTy, resTy}, {});
+  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  llvm::SmallVector<mlir::Value> funcArgs;
+  funcArgs.push_back(res);
+  funcArgs.push_back(arg);
+  builder.create<fir::CallOp>(loc, funcOp, funcArgs);
+  mlir::Value ext =
+      builder.createIntegerConstant(loc, builder.getIndexType(), extent);
+  return fir::ArrayBoxValue(res, {ext});
 }
 
 // DATE_AND_TIME
