@@ -48,3 +48,25 @@ function func2()
   !ERROR: Local variable 'local' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%comp'
   type(t) :: local
 end
+
+module m3
+  type t
+    real, allocatable :: a(:)
+    real, pointer :: p(:)
+    real arr(2)
+  end type
+ contains
+  subroutine sub(ca)
+    real, intent(in) :: ca(:)[*]
+  end
+  subroutine test(cat)
+    type(t), intent(in) :: cat[*]
+    call sub(cat%arr(1:2)) ! ok
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%arr([1]))
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%a)
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%p)
+  end
+end
