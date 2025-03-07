@@ -56,8 +56,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) worker
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) nohost
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'kernels loop' construct}}
