@@ -3464,6 +3464,19 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 struct OmpClause;
 struct OmpDirectiveSpecification;
 
+struct OmpDirectiveName {
+  // No boilerplates: this class should be copyable, movable, etc.
+  constexpr OmpDirectiveName() = default;
+  constexpr OmpDirectiveName(const OmpDirectiveName &) = default;
+  // Construct from an already parsed text. Use Verbatim for this because
+  // Verbatim's source corresponds to an actual source location.
+  // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
+  OmpDirectiveName(const Verbatim &name);
+  using WrapperTrait = std::true_type;
+  CharBlock source;
+  llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3794,9 +3807,7 @@ struct OmpDeviceModifier {
 // [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
 // the directive-name-modifier. For the sake of uniformity CANCEL can be
 // considered a valid value in 4.5 as well.
-struct OmpDirectiveNameModifier {
-  WRAPPER_CLASS_BOILERPLATE(OmpDirectiveNameModifier, llvm::omp::Directive);
-};
+using OmpDirectiveNameModifier = OmpDirectiveName;
 
 // Ref: [5.1:205-209], [5.2:166-168]
 //
@@ -4493,7 +4504,12 @@ struct OmpClauseList {
 struct OmpDirectiveSpecification {
   CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
-  std::tuple<llvm::omp::Directive, std::optional<std::list<OmpArgument>>,
+  llvm::omp::Directive DirId() const { //
+    return std::get<OmpDirectiveName>(t).v;
+  }
+  const OmpClauseList &Clauses() const;
+
+  std::tuple<OmpDirectiveName, std::optional<std::list<OmpArgument>>,
       std::optional<OmpClauseList>>
       t;
 };

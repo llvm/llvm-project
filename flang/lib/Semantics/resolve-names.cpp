@@ -1775,11 +1775,10 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
   // Disable the semantic analysis for it for now to allow the compiler to
   // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
-  auto dirId{std::get<llvm::omp::Directive>(x.t)};
   auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
-  switch (dirId) {
+  switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->front()};
