@@ -1722,7 +1722,7 @@ def EnableIf : InheritableAttr {
 }
 
 def ExtVectorType : TypeAttr {
-  let Spellings = [GNU<"ext_vector_type">];
+  let Spellings = [RegularKeyword<"__vector_type">, GNU<"ext_vector_type">];
   let Args = [ExprArgument<"NumElements">];
   let Documentation = [ExtVectorTypeDocs];
 }

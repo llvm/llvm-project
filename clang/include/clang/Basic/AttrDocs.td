@@ -1116,7 +1116,6 @@ template instantiation, so the value for ``T::number`` is known.
 def ExtVectorTypeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-
 The ext_vector_type(N) attribute specifies that a type is a vector with N
 elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
 allows element access the array subscript operator ``[]``, ``sN`` where ``N`` is
