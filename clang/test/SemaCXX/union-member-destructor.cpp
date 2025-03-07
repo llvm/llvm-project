@@ -13,7 +13,7 @@ struct VS {
   VS(short);
   VS();
 };
-VS::VS() : VS(0) { }
+VS::VS() : VS(0) { } // delegating constructors should not produce errors
 VS::VS(short) : _Tail() { } // expected-note {{in instantiation of member function 't1::VSX<int>::~VSX' requested here}}
 }
 
