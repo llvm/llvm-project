@@ -31,3 +31,7 @@ Kareem, Ron
 a3165398db07 AMDGPU: Fix overly conservative immediate operand check
 Matt
 ---
+needs spriv fix etc ...
+979c275097a6 [IR] Store Triple in Module (NFC) (#129868)
+Alex and Ron
+---
