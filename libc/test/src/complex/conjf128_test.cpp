@@ -10,8 +10,4 @@
 
 #include "src/complex/conjf128.h"
 
-#if defined(LIBC_TYPES_HAS_CFLOAT128)
-
 LIST_CONJ_TESTS(cfloat128, float128, LIBC_NAMESPACE::conjf128)
-
-#endif // LIBC_TYPES_HAS_CFLOAT128

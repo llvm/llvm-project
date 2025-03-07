@@ -90,7 +90,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to
         // handle them.
-        Clobbers.push_back(std::make_pair(Reg, &*O));
+        Clobbers.push_back(std::make_pair(Reg.id(), &*O));
       } else {
         assert(O->isUse());
         if (O->isKill())
@@ -139,8 +139,8 @@ LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
-                             MCPhysReg Reg) const {
-  if (LiveRegs.count(Reg))
+                             MCRegister Reg) const {
+  if (LiveRegs.count(Reg.id()))
     return false;
   if (MRI.isReserved(Reg))
     return false;
@@ -154,7 +154,7 @@ bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
 void LivePhysRegs::addBlockLiveIns(const MachineBasicBlock &MBB) {
   for (const auto &LI : MBB.liveins()) {
-    MCPhysReg Reg = LI.PhysReg;
+    MCRegister Reg = LI.PhysReg;
     LaneBitmask Mask = LI.LaneMask;
     MCSubRegIndexIterator S(Reg, TRI);
     assert(Mask.any() && "Invalid livein mask");
@@ -301,7 +301,7 @@ void llvm::recomputeLivenessFlags(MachineBasicBlock &MBB) {
       // the last instruction in the block.
       if (MI.isReturn() && MFI.isCalleeSavedInfoValid()) {
         for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-          if (Info.getReg() == Reg) {
+          if (Info.getReg() == Reg.asMCReg()) {
             IsNotLive = !Info.isRestored();
             break;
           }

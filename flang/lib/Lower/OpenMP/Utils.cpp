@@ -125,7 +125,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members,
                 mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap) {
+                bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
@@ -144,6 +144,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
       loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
       builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+      mapperId,
       builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
       builder.getStringAttr(name), builder.getBoolAttr(partialMap));
   return op;
@@ -310,8 +311,9 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   };
 
   // Generate the access to the original parent base address.
-  lower::AddrAndBoundsInfo parentBaseAddr = lower::getDataOperandBaseAddr(
-      converter, firOpBuilder, *objectList[0].sym(), clauseLocation);
+  fir::factory::AddrAndBoundsInfo parentBaseAddr =
+      lower::getDataOperandBaseAddr(converter, firOpBuilder,
+                                    *objectList[0].sym(), clauseLocation);
   mlir::Value curValue = parentBaseAddr.addr;
 
   // Iterate over all objects in the objectList, this should consist of all
@@ -352,14 +354,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     // type.
     if (fir::RecordType recordType = mlir::dyn_cast<fir::RecordType>(
             fir::unwrapPassByRefType(curValue.getType()))) {
-      mlir::Value idxConst = firOpBuilder.createIntegerConstant(
-          clauseLocation, firOpBuilder.getIndexType(),
-          indices[currentIndicesIdx]);
-      mlir::Type memberTy =
-          recordType.getTypeList().at(indices[currentIndicesIdx]).second;
+      fir::IntOrValue idxConst = mlir::IntegerAttr::get(
+          firOpBuilder.getI32Type(), indices[currentIndicesIdx]);
+      mlir::Type memberTy = recordType.getType(indices[currentIndicesIdx]);
       curValue = firOpBuilder.create<fir::CoordinateOp>(
           clauseLocation, firOpBuilder.getRefType(memberTy), curValue,
-          idxConst);
+          llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
 
       // Skip mapping and the subsequent load if we're the final member or not
       // a type with a descriptor such as a pointer/allocatable. If we're a
@@ -560,7 +560,7 @@ void insertChildMapInfoIntoParent(
       // Create parent to emplace and bind members
       llvm::SmallVector<mlir::Value> bounds;
       std::stringstream asFortran;
-      lower::AddrAndBoundsInfo info =
+      fir::factory::AddrAndBoundsInfo info =
           lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                 mlir::omp::MapBoundsType>(
               converter, firOpBuilder, semaCtx, converter.getFctCtx(),

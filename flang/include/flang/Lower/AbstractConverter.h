@@ -13,12 +13,12 @@
 #ifndef FORTRAN_LOWER_ABSTRACTCONVERTER_H
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
@@ -130,9 +130,18 @@ public:
   virtual void
   createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(
-      const Fortran::semantics::Symbol &sym,
-      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+  /// For a host-associated symbol (a symbol associated with another symbol from
+  /// an enclosing scope), either:
+  ///
+  /// * if \p hostIsSource == true: copy \p sym's value *from* its corresponding
+  /// host symbol,
+  ///
+  /// * if \p hostIsSource == false: copy \p sym's value *to* its corresponding
+  /// host symbol.
+  virtual void
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
+                       bool hostIsSource = true) = 0;
 
   virtual void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
                        fir::FortranVariableFlagsEnum attrs) = 0;
@@ -305,6 +314,8 @@ public:
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Unique a compiler generated name (add a containing scope specific prefix)
   virtual std::string mangleName(std::string &) = 0;
+  /// Unique a compiler generated name (add a provided scope specific prefix)
+  virtual std::string mangleName(std::string &, const semantics::Scope &) = 0;
   /// Return the field name for a derived type component inside a fir.record
   /// type.
   virtual std::string

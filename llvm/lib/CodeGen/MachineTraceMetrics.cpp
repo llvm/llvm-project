@@ -680,14 +680,13 @@ struct DataDep {
     : DefMI(DefMI), DefOp(DefOp), UseOp(UseOp) {}
 
   /// Create a DataDep from an SSA form virtual register.
-  DataDep(const MachineRegisterInfo *MRI, unsigned VirtReg, unsigned UseOp)
-    : UseOp(UseOp) {
-    assert(Register::isVirtualRegister(VirtReg));
-    MachineRegisterInfo::def_iterator DefI = MRI->def_begin(VirtReg);
-    assert(!DefI.atEnd() && "Register has no defs");
-    DefMI = DefI->getParent();
-    DefOp = DefI.getOperandNo();
-    assert((++DefI).atEnd() && "Register has multiple defs");
+  DataDep(const MachineRegisterInfo *MRI, Register VirtReg, unsigned UseOp)
+      : UseOp(UseOp) {
+    assert(VirtReg.isVirtual());
+    MachineOperand *DefMO = MRI->getOneDef(VirtReg);
+    assert(DefMO && "Register does not have unique def");
+    DefMI = DefMO->getParent();
+    DefOp = DefMO->getOperandNo();
   }
 };
 

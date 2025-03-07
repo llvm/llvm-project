@@ -1,3 +1,5 @@
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 ## .dynamic section has invalid sh_entsize, check we report it.
 # RUN: yaml2obj --docnum=1 %s -o %t.so
 # RUN: not ld.lld %t.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR1

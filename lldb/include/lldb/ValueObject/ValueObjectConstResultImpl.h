@@ -66,6 +66,10 @@ public:
 
 private:
   ValueObject *m_impl_backend;
+  /// The memory address in the inferior process that this ValueObject tracks.
+  /// This address is used to request additional memory when the actual data
+  /// size exceeds the initial local buffer size, such as when a dynamic type
+  /// resolution results in a type larger than its statically determined type.
   lldb::addr_t m_live_address;
   AddressType m_live_address_type;
   lldb::ValueObjectSP m_address_of_backend;

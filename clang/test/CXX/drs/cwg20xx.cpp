@@ -22,12 +22,12 @@ int a = b2[0];
 int b = __builtin_addressof(b2)->foo;
 // cxx98-error@-1 {{no member named 'foo' in 'cwg2007::B<cwg2007::A<void> >'}}
 // since-cxx11-error@-2 {{no member named 'foo' in 'cwg2007::B<cwg2007::A<void>>'}}
-}
+} // namespace cwg2007
 
 // cwg2009: na
 
 namespace cwg2026 { // cwg2026: 11
-  template<int> struct X {};
+  template<int> struct X {}; // #cwg2026-X
 
   const int a = a + 1; // #cwg2026-a
   // expected-warning@-1 {{variable 'a' is uninitialized when used within its own initialization}}
@@ -35,9 +35,11 @@ namespace cwg2026 { // cwg2026: 11
   // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
   //   cxx98-note@-2 {{initializer of 'a' is not a constant expression}}
   //   cxx98-note@#cwg2026-a {{declared here}}
+  //   cxx98-note@#cwg2026-X {{template parameter is declared here}}
   // since-cxx11-error@#cwg2026-xa {{non-type template argument is not a constant expression}}
   //   since-cxx11-note@#cwg2026-xa {{initializer of 'a' is not a constant expression}}
   //   since-cxx11-note@#cwg2026-a {{declared here}}
+  //   since-cxx11-note@#cwg2026-X {{template parameter is declared here}}
 
 #if __cplusplus >= 201103L
   constexpr int b = b;
@@ -65,9 +67,11 @@ namespace cwg2026 { // cwg2026: 11
     // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
     //   cxx98-note@-2 {{initializer of 'e' is not a constant expression}}
     //   cxx98-note@#cwg2026-e {{declared here}}
+    //   cxx98-note@#cwg2026-X {{template parameter is declared here}}
     // since-cxx11-error@#cwg2026-xe {{non-type template argument is not a constant expression}}
     //   since-cxx11-note@#cwg2026-xe {{initializer of 'e' is not a constant expression}}
     //   since-cxx11-note@#cwg2026-e {{declared here}}
+    //   since-cxx11-note@#cwg2026-X {{template parameter is declared here}}
 
 #if __cplusplus >= 201103L
     static constexpr int f = f;
@@ -88,7 +92,7 @@ namespace cwg2026 { // cwg2026: 11
     //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
 #endif
   }
-}
+} // namespace cwg2026
 
 namespace cwg2049 { // cwg2049: 18
 #if __cplusplus >= 202302L
@@ -97,9 +101,9 @@ X<> a;
 X<nullptr> b;
 static_assert(__is_same(decltype(a), decltype(b)));
 #endif
-}
+} // namespace cwg2049
 
-namespace cwg2061 { // cwg2061: yes
+namespace cwg2061 { // cwg2061: 2.7
 #if __cplusplus >= 201103L
   namespace A {
     inline namespace b {
@@ -125,7 +129,7 @@ namespace cwg2061 { // cwg2061: yes
     A::C::S<int> s;
   }
 #endif // C++11
-}
+} // namespace cwg2061
 
 namespace cwg2076 { // cwg2076: 13
 #if __cplusplus >= 201103L
@@ -149,7 +153,7 @@ namespace cwg2076 { // cwg2076: 13
     operator string_view() const;
   };
 
-  void foo(const string &); // #cwg2076-foo 
+  void foo(const string &); // #cwg2076-foo
   void bar(string_view); // #cwg2076-bar
 
   void func(const string &arg) {
@@ -172,14 +176,14 @@ namespace cwg2076 { // cwg2076: 13
     //   since-cxx11-note@#cwg2076-bar {{cannot convert initializer list}}
   }
 #endif
-}
+} // namespace cwg2076
 
 namespace cwg2082 { // cwg2082: 11
   void test1(int x, int = sizeof(x)); // ok
 #if __cplusplus >= 201103L
   void test2(int x, int = decltype(x){}); // ok
 #endif
-}
+} // namespace cwg2082
 
 namespace cwg2083 { // cwg2083: partial
 #if __cplusplus >= 201103L
@@ -399,7 +403,7 @@ namespace cwg2083 { // cwg2083: partial
     }
   }
 #endif
-}
+} // namespace cwg2083
 
 namespace cwg2091 { // cwg2091: 10
 template<int &> struct X;
@@ -429,7 +433,7 @@ int f()
   return 0;
 }
 } // namespace GH42233
-} // namespace cwg2091 
+} // namespace cwg2091
 
 namespace cwg2094 { // cwg2094: 5
   struct A { int n; };
@@ -448,6 +452,6 @@ namespace cwg2094 { // cwg2094: 5
 
   static_assert(__is_trivially_assignable(A, const A&), "");
   static_assert(__is_trivially_assignable(B, const B&), "");
-}
+} // namespace cwg2094
 
 // cwg2096: dup 2598

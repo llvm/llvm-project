@@ -886,7 +886,9 @@ def IncludeOp : TransformDialectOp<"include",
 
   let arguments = (ins SymbolRefAttr:$target,
                        FailurePropagationMode:$failure_propagation_mode,
-                       Variadic<Transform_AnyHandleOrParamType>:$operands);
+                       Variadic<Transform_AnyHandleOrParamType>:$operands,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
 
   let assemblyFormat =
@@ -899,7 +901,7 @@ def IncludeOp : TransformDialectOp<"include",
     }
 
     void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      setTargetAttr(callee.get<SymbolRefAttr>());
+      setTargetAttr(cast<SymbolRefAttr>(callee));
     }
 
     ::mlir::Operation::operand_range getArgOperands() {

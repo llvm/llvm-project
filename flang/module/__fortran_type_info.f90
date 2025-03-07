@@ -14,7 +14,7 @@
 module __fortran_type_info
 
   use, intrinsic :: __fortran_builtins, &
-    only: __builtin_c_ptr, __builtin_c_funptr
+    only: __builtin_c_ptr, __builtin_c_devptr, __builtin_c_funptr
   implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant

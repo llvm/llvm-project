@@ -64,6 +64,8 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processExclusive(mlir::Location currentLocation,
+                        mlir::omp::ExclusiveClauseOps &result) const;
   bool processFilter(lower::StatementContext &stmtCtx,
                      mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
@@ -72,6 +74,8 @@ public:
       mlir::omp::HasDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processInclusive(mlir::Location currentLocation,
+                        mlir::omp::InclusiveClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTeams(lower::StatementContext &stmtCtx,
@@ -171,7 +175,8 @@ private:
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
+      llvm::StringRef mapperIdNameRef = "") const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

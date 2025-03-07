@@ -133,6 +133,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_memory_ordered (((((((((((((((((((1621884928|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(((alignto(max(defined_value+4, 1), 8))/8)-1))&(~960))&1073741824)>>30
 // ASM-NEXT: .amdhsa_forward_progress (((((((((((((((((((1621884928|(defined_2_bits<<12))&(~49152))|(defined_2_bits<<14))&(~196608))|(defined_2_bits<<16))&(~786432))|(defined_2_bits<<18))&(~67108864))|(defined_boolean<<26))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~2147483648))|(defined_boolean<<31))&(~63))|(((alignto(max(defined_value+4, 1), 8))/8)-1))&(~960))&2147483648)>>31
 // ASM-NEXT: .amdhsa_shared_vgpr_count 0
+// ASM-NEXT: .amdhsa_inst_pref_size 0
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op (((((((((((((((((((((((((((128|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~1))|defined_boolean)&(~62))&16777216)>>24
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src (((((((((((((((((((((((((((128|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~1))|defined_boolean)&(~62))&33554432)>>25
 // ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero (((((((((((((((((((((((((((128|(defined_2_bits<<11))&(~128))|(defined_boolean<<7))&(~256))|(defined_boolean<<8))&(~512))|(defined_boolean<<9))&(~1024))|(defined_boolean<<10))&(~16777216))|(defined_boolean<<24))&(~33554432))|(defined_boolean<<25))&(~67108864))|(defined_boolean<<26))&(~134217728))|(defined_boolean<<27))&(~268435456))|(defined_boolean<<28))&(~536870912))|(defined_boolean<<29))&(~1073741824))|(defined_boolean<<30))&(~1))|defined_boolean)&(~62))&67108864)>>26
@@ -180,6 +181,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
 // ASM-NEXT: .amdhsa_shared_vgpr_count 0
+// ASM-NEXT: .amdhsa_inst_pref_size 0
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero 1

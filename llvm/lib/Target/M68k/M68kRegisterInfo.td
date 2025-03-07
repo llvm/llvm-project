@@ -99,52 +99,77 @@ class MxRegClass<list<ValueType> regTypes, int alignment, dag regList>
     : RegisterClass<"M68k", regTypes, alignment, regList>;
 
 // Data Registers
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<8,16,16>]> in
 def DR8  : MxRegClass<[i8],  16, (sequence "BD%u", 0, 7)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def DR16 : MxRegClass<[i16], 16, (sequence "WD%u", 0, 7)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def DR32 : MxRegClass<[i32], 32, (sequence "D%u",  0, 7)>;
 
 // Address Registers
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def AR16 : MxRegClass<[i16], 16, (add (sequence "WA%u", 0, 6), WSP)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def AR32 : MxRegClass<[i32], 32, (add (sequence "A%u", 0, 6), SP)>;
 
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def AR32_NOSP : MxRegClass<[i32], 32, (sequence "A%u", 0, 6)>;
 
 // Index Register Classes
 // FIXME try alternative ordering like `D0, D1, A0, A1, ...`
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def XR16 : MxRegClass<[i16], 16, (add DR16, AR16)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def XR32 : MxRegClass<[i32], 32, (add DR32, AR32)>;
 
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def SPC  : MxRegClass<[i32], 32, (add SP)>;
 
 // Floating Point Data Registers
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def FPDR32 : MxRegClass<[f32], 32, (sequence "FP%u", 0, 7)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<64,64,32>]> in
 def FPDR64 : MxRegClass<[f64], 32, (add FPDR32)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<80,128,32>]> in
 def FPDR80 : MxRegClass<[f80], 32, (add FPDR32)>;
 
 let CopyCost = -1 in {
+  let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<8,16,16>]> in
   def CCRC : MxRegClass<[i8],  16, (add CCR)>;
+  let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
   def SRC  : MxRegClass<[i16], 16, (add SR)>;
 
   // Float Point System Control Registers
-  def FPIC   : MxRegClass<[i32], 32, (add FPIAR)>;
-  def FPCSC  : MxRegClass<[i32], 32, (add FPC, FPS)>;
-  def FPSYSC : MxRegClass<[i32], 32, (add FPCSC, FPIC)>;
+  let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in {
+    def FPIC   : MxRegClass<[i32], 32, (add FPIAR)>;
+    def FPCSC  : MxRegClass<[i32], 32, (add FPC, FPS)>;
+    def FPSYSC : MxRegClass<[i32], 32, (add FPCSC, FPIC)>;
+  }
 }
 
 let isAllocatable = 0 in {
+  let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
   def PCC  : MxRegClass<[i32], 32, (add PC)>;
 }
 
 // Register used with tail call
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def DR16_TC : MxRegClass<[i16], 16, (add D0, D1)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def DR32_TC : MxRegClass<[i32], 32, (add D0, D1)>;
 
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def AR16_TC : MxRegClass<[i16], 16, (add A0, A1)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def AR32_TC : MxRegClass<[i32], 32, (add A0, A1)>;
 
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<16,16,16>]> in
 def XR16_TC : MxRegClass<[i16], 16, (add DR16_TC, AR16_TC)>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in
 def XR32_TC : MxRegClass<[i32], 32, (add DR32_TC, AR32_TC)>;
 
 // These classes provide spill/restore order if used with MOVEM instruction
-def SPILL   : MxRegClass<[i32], 32, (add XR32)>;
-def SPILL_R : MxRegClass<[i32], 32, (add SP, (sequence "A%u", 6, 0), (sequence "D%u", 7, 0))>;
+let RegInfos = RegInfoByHwMode<[DefaultMode], [RegInfo<32,32,32>]> in {
+  def SPILL   : MxRegClass<[i32], 32, (add XR32)>;
+  def SPILL_R : MxRegClass<[i32], 32, (add SP, (sequence "A%u", 6, 0), (sequence "D%u", 7, 0))>;
+}

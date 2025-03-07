@@ -102,6 +102,50 @@ enum ForDefinition_t : bool {
   ForDefinition = true
 };
 
+/// The Counter with an optional additional Counter for
+/// branches. `Skipped` counter can be calculated with `Executed` and
+/// a common Counter (like `Parent`) as `(Parent-Executed)`.
+///
+/// In SingleByte mode, Counters are binary. Subtraction is not
+/// applicable (but addition is capable). In this case, both
+/// `Executed` and `Skipped` counters are required.  `Skipped` is
+/// `None` by default. It is allocated in the coverage mapping.
+///
+/// There might be cases that `Parent` could be induced with
+/// `(Executed+Skipped)`. This is not always applicable.
+class CounterPair {
+public:
+  /// Optional value.
+  class ValueOpt {
+  private:
+    static constexpr uint32_t None = (1u << 31); /// None is allocated.
+    static constexpr uint32_t Mask = None - 1;
+
+    uint32_t Val;
+
+  public:
+    ValueOpt() : Val(None) {}
+
+    ValueOpt(unsigned InitVal) {
+      assert(!(InitVal & ~Mask));
+      Val = InitVal;
+    }
+
+    bool hasValue() const { return !(Val & None); }
+
+    operator uint32_t() const { return Val; }
+  };
+
+  ValueOpt Executed;
+  ValueOpt Skipped; /// May be None.
+
+  /// Initialized with Skipped=None.
+  CounterPair(unsigned Val) : Executed(Val) {}
+
+  // FIXME: Should work with {None, None}
+  CounterPair() : Executed(0) {}
+};
+
 struct OrderGlobalInitsOrStermFinalizers {
   unsigned int priority;
   unsigned int lex_order;
@@ -484,6 +528,9 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting dtor.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -603,6 +650,9 @@ private:
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
+  /// void @llvm.fake.use(...)
+  llvm::Function *FakeUseFn = nullptr;
+
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
@@ -629,6 +679,8 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
+  AtomicOptions AtomicOpts;
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -643,6 +695,12 @@ public:
 
   /// Finalize LLVM code generation.
   void Release();
+
+  /// Get the current Atomic options.
+  AtomicOptions getAtomicOpts() { return AtomicOpts; }
+
+  /// Set the current Atomic options.
+  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
@@ -1020,7 +1078,8 @@ public:
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
            !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
+             (getTriple().isNVPTX() || getTriple().isAMDGPU() ||
+              getTriple().isSPIRV()));
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1182,6 +1241,8 @@ public:
 
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
+
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
 
@@ -1280,6 +1341,7 @@ public:
 
   llvm::Function *getLLVMLifetimeStartFn();
   llvm::Function *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMFakeUseFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1485,6 +1547,7 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1509,6 +1572,11 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
+
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D, CodeGenFunction *CGF);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -1745,6 +1813,8 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;

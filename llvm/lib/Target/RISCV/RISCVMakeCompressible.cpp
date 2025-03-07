@@ -17,7 +17,7 @@
 // For case 1, if a compressed register is available, then the uncompressed
 // register is copied to the compressed register and its uses are replaced.
 //
-// For example, storing zero uses the uncompressible zero register:
+// For example, storing zero uses the incompressible zero register:
 //   sw zero, 0(a0)   # if zero
 //   sw zero, 8(a0)   # if zero
 //   sw zero, 4(a0)   # if zero
@@ -275,7 +275,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
       // rather than used.
       //
       // For stores, we can change SrcDest (and Base if SrcDest == Base) but
-      // cannot resolve an uncompressible offset in this case.
+      // cannot resolve an incompressible offset in this case.
       if (isCompressibleStore(MI)) {
         if (!SrcDestCompressed && (BaseCompressed || SrcDest == Base) &&
             !NewBaseAdjust)
@@ -313,7 +313,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     // If RegImm.Reg is modified by this instruction, then we cannot optimize
     // past this instruction. If the register is already compressed, then it may
     // possible to optimize a large offset in the current instruction - this
-    // will have been detected by the preceeding call to
+    // will have been detected by the preceding call to
     // getRegImmPairPreventingCompression.
     if (MI.modifiesRegister(RegImm.Reg, TRI))
       break;
@@ -409,7 +409,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
     for (MachineInstr &MI : MBB) {
       // Determine if this instruction would otherwise be compressed if not for
-      // an uncompressible register or offset.
+      // an incompressible register or offset.
       RegImmPair RegImm = getRegImmPairPreventingCompression(MI);
       if (!RegImm.Reg && RegImm.Imm == 0)
         continue;

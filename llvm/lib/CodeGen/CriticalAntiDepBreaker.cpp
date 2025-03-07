@@ -67,7 +67,7 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   for (const MachineBasicBlock *Succ : BB->successors())
     for (const auto &LI : Succ->liveins()) {
       for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
-        unsigned Reg = *AI;
+        unsigned Reg = (*AI).id();
         Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
         KillIndices[Reg] = BBSize;
         DefIndices[Reg] = ~0u;
@@ -85,7 +85,7 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
     if (!IsReturnBlock && !Pristine.test(Reg))
       continue;
     for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI) {
-      unsigned Reg = *AI;
+      unsigned Reg = (*AI).id();
       Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
       KillIndices[Reg] = BBSize;
       DefIndices[Reg] = ~0u;
@@ -190,29 +190,29 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
 
     // For now, only allow the register to be changed if its register
     // class is consistent across all uses.
-    if (!Classes[Reg] && NewRC)
-      Classes[Reg] = NewRC;
-    else if (!NewRC || Classes[Reg] != NewRC)
-      Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
+    if (!Classes[Reg.id()] && NewRC)
+      Classes[Reg.id()] = NewRC;
+    else if (!NewRC || Classes[Reg.id()] != NewRC)
+      Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
 
     // Now check for aliases.
     for (MCRegAliasIterator AI(Reg, TRI, false); AI.isValid(); ++AI) {
       // If an alias of the reg is used during the live range, give up.
       // Note that this allows us to skip checking if AntiDepReg
       // overlaps with any of the aliases, among other things.
-      unsigned AliasReg = *AI;
+      unsigned AliasReg = (*AI).id();
       if (Classes[AliasReg]) {
         Classes[AliasReg] = reinterpret_cast<TargetRegisterClass *>(-1);
-        Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
+        Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
       }
     }
 
     // If we're still willing to consider this register, note the reference.
-    if (Classes[Reg] != reinterpret_cast<TargetRegisterClass *>(-1))
+    if (Classes[Reg.id()] != reinterpret_cast<TargetRegisterClass *>(-1))
       RegRefs.insert(std::make_pair(Reg, &MO));
 
     if (MO.isUse() && Special) {
-      if (!KeepRegs.test(Reg)) {
+      if (!KeepRegs.test(Reg.id())) {
         for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
           KeepRegs.set(SubReg);
       }
@@ -236,7 +236,7 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
     // earlier instructions could still replace %eax even though the 'xor'
     // itself can't be changed.
     if (MI.isRegTiedToUseOperand(I) &&
-        Classes[Reg] == reinterpret_cast<TargetRegisterClass *>(-1)) {
+        Classes[Reg.id()] == reinterpret_cast<TargetRegisterClass *>(-1)) {
       for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
         KeepRegs.set(SubReg);
       }
@@ -287,7 +287,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 
       // If we've already marked this reg as unchangeable, don't remove
       // it or any of its subregs from KeepRegs.
-      bool Keep = KeepRegs.test(Reg);
+      bool Keep = KeepRegs.test(Reg.id());
 
       // For the reg itself and all subregs: update the def to current;
       // reset the kill state, any restrictions, and references.
@@ -317,17 +317,17 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 
     // For now, only allow the register to be changed if its register
     // class is consistent across all uses.
-    if (!Classes[Reg] && NewRC)
-      Classes[Reg] = NewRC;
-    else if (!NewRC || Classes[Reg] != NewRC)
-      Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
+    if (!Classes[Reg.id()] && NewRC)
+      Classes[Reg.id()] = NewRC;
+    else if (!NewRC || Classes[Reg.id()] != NewRC)
+      Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
 
     RegRefs.insert(std::make_pair(Reg, &MO));
 
     // It wasn't previously live but now it is, this is a kill.
     // Repeat for all aliases.
     for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
-      unsigned AliasReg = *AI;
+      unsigned AliasReg = (*AI).id();
       if (KillIndices[AliasReg] == ~0u) {
         KillIndices[AliasReg] = Count;
         DefIndices[AliasReg] = ~0u;

@@ -65,6 +65,16 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
   case TargetOpcode::G_SEXT_INREG:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FABS:
+  // TODO: support G_FNEG.
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINNUM_IEEE:
     return true;
   }
   return false;
@@ -171,10 +181,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
 
 void GISelCSEInfo::countOpcodeHit(unsigned Opc) {
 #ifndef NDEBUG
-  if (OpcodeHitTable.count(Opc))
-    OpcodeHitTable[Opc] += 1;
-  else
-    OpcodeHitTable[Opc] = 1;
+  ++OpcodeHitTable[Opc];
 #endif
   // Else do nothing.
 }
@@ -378,7 +385,7 @@ GISelInstProfileBuilder::addNodeIDImmediate(int64_t Imm) const {
 
 const GISelInstProfileBuilder &
 GISelInstProfileBuilder::addNodeIDRegNum(Register Reg) const {
-  ID.AddInteger(Reg);
+  ID.AddInteger(Reg.id());
   return *this;
 }
 

@@ -17,12 +17,12 @@
 #include "MCTargetDesc/MipsInstPrinter.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "MCTargetDesc/MipsTargetStreamer.h"
 #include "Mips.h"
 #include "MipsMCInstLower.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -380,7 +380,7 @@ void MipsAsmPrinter::emitFrameDirective() {
   const TargetRegisterInfo &RI = *MF->getSubtarget().getRegisterInfo();
 
   Register stackReg = RI.getFrameRegister(*MF);
-  unsigned returnReg = RI.getRARegister();
+  MCRegister returnReg = RI.getRARegister();
   unsigned stackSize = MF->getFrameInfo().getStackSize();
 
   getTargetStreamer().emitFrame(stackReg, stackSize, returnReg);
@@ -821,6 +821,29 @@ void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
   getTargetStreamer().emitDirectiveSetPop();
 }
 
+void MipsAsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                        const MachineBasicBlock *MBB,
+                                        unsigned uid) const {
+  MCSymbol *MBBSym = MBB->getSymbol();
+  switch (MJTI.getEntryKind()) {
+  case MachineJumpTableInfo::EK_BlockAddress:
+    OutStreamer->emitValue(MCSymbolRefExpr::create(MBBSym, OutContext),
+                           getDataLayout().getPointerSize());
+    break;
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+    // Each entry is a GP-relative value targeting the block symbol.
+    getTargetStreamer().emitGPRel32Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    getTargetStreamer().emitGPRel64Value(
+        MCSymbolRefExpr::create(MBBSym, OutContext));
+    break;
+  default:
+    llvm_unreachable("");
+  }
+}
+
 void MipsAsmPrinter::EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol) {
   MCInst I;
   I.setOpcode(Mips::JAL);
@@ -1176,8 +1199,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
 
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
   // start of function
-  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
-      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
                                    .addReg(Mips::ZERO)
                                    .addReg(Mips::ZERO)
@@ -1226,10 +1248,10 @@ void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
     if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
-        OutStreamer->emitDTPRel32Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
         break;
       case 8:
-        OutStreamer->emitDTPRel64Value(MipsExpr->getSubExpr());
+        getTargetStreamer().emitDTPRel64Value(MipsExpr->getSubExpr());
         break;
       default:
         llvm_unreachable("Unexpected size of expression value.");

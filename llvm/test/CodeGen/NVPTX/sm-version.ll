@@ -16,6 +16,12 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_86 | FileCheck %s --check-prefix=SM86
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_90 | FileCheck %s --check-prefix=SM90
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_90a | FileCheck %s --check-prefix=SM90a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_100 | FileCheck %s --check-prefix=SM100
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_100a | FileCheck %s --check-prefix=SM100a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_101 | FileCheck %s --check-prefix=SM101
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_101a | FileCheck %s --check-prefix=SM101a
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_120 | FileCheck %s --check-prefix=SM120
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_120a | FileCheck %s --check-prefix=SM120a
 
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=SM20
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_21 | FileCheck %s --check-prefix=SM21
@@ -35,6 +41,12 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 | FileCheck %s --check-prefix=SM86
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 | FileCheck %s --check-prefix=SM90
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90a | FileCheck %s --check-prefix=SM90a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100 | FileCheck %s --check-prefix=SM100
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100a | FileCheck %s --check-prefix=SM100a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101 | FileCheck %s --check-prefix=SM101
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101a | FileCheck %s --check-prefix=SM101a
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120 | FileCheck %s --check-prefix=SM120
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120a | FileCheck %s --check-prefix=SM120a
 
 ; SM20: .version 3.2
 ; SM21: .version 3.2
@@ -54,6 +66,12 @@
 ; SM86: .version 7.1
 ; SM90: .version 7.8
 ; SM90a: .version 8.0
+; SM100: .version 8.6
+; SM100a: .version 8.6
+; SM101: .version 8.6
+; SM101a: .version 8.6
+; SM120: .version 8.7
+; SM120a: .version 8.7
 
 ; SM20: .target sm_20
 ; SM21: .target sm_21
@@ -73,3 +91,9 @@
 ; SM86: .target sm_86
 ; SM90: .target sm_90
 ; SM90a: .target sm_90a
+; SM100: .target sm_100
+; SM100a: .target sm_100a
+; SM101: .target sm_101
+; SM101a: .target sm_101a
+; SM120: .target sm_120
+; SM120a: .target sm_120a

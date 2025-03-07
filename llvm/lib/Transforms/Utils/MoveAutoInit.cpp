@@ -179,7 +179,7 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
 
     // CatchSwitchInst blocks can only have one instruction, so they are not
     // good candidates for insertion.
-    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHI())) {
+    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHIIt())) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
         if (DT.isReachableFromEntry(Pred))
           UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);

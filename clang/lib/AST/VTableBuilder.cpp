@@ -1169,12 +1169,13 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       //
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
-      if (!VTableThunks.count(Idx)) {
+      auto [It, Inserted] = VTableThunks.try_emplace(Idx);
+      if (Inserted) {
         const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
-        VTableThunks[Idx].Method = Method;
-        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
+        It->second.Method = Method;
+        It->second.ThisType = Method->getThisType().getTypePtr();
       }
-      VTableThunks[Idx].This = ThisAdjustment;
+      It->second.This = ThisAdjustment;
     };
 
     SetThisAdjustmentThunk(VTableIndex);
@@ -1653,8 +1654,9 @@ void ItaniumVTableBuilder::AddMethods(
     // findOriginalMethod to find the method that created the entry if the
     // method in the entry requires adjustment.
     if (!ReturnAdjustment.isEmpty()) {
-      VTableThunks[Components.size()].Method = MD;
-      VTableThunks[Components.size()].ThisType = MD->getThisType().getTypePtr();
+      auto &VTT = VTableThunks[Components.size()];
+      VTT.Method = MD;
+      VTT.ThisType = MD->getThisType().getTypePtr();
     }
 
     AddMethod(Overrider.Method, ReturnAdjustment);
@@ -1733,8 +1735,8 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
       const CXXMethodDecl *MD = I.first;
       const MethodInfo &MI = I.second;
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)]
-            = MI.VTableIndex - AddressPoint;
+        MethodVTableIndices[GlobalDecl(DD, Dtor_Complete)] =
+            MI.VTableIndex - AddressPoint;
         MethodVTableIndices[GlobalDecl(DD, Dtor_Deleting)]
             = MI.VTableIndex + 1 - AddressPoint;
       } else {
@@ -2113,8 +2115,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     // Dump the next address point.
     uint64_t NextIndex = Index + 1;
-    if (AddressPointsByIndex.count(NextIndex)) {
-      if (AddressPointsByIndex.count(NextIndex) == 1) {
+    if (unsigned Count = AddressPointsByIndex.count(NextIndex)) {
+      if (Count == 1) {
         const BaseSubobject &Base =
           AddressPointsByIndex.find(NextIndex)->second;
 
@@ -2655,7 +2657,11 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
+        // In Microsoft ABI vftable always references vector deleting dtor.
+        CXXDtorType DtorTy = Context.getTargetInfo().getCXXABI().isMicrosoft()
+                                 ? Dtor_VectorDeleting
+                                 : Dtor_Deleting;
+        MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
@@ -3285,7 +3291,10 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXDestructorDecl *DD = Component.getDestructorDecl();
 
       DD->printQualifiedName(Out);
-      Out << "() [scalar deleting]";
+      if (Context.getTargetInfo().getCXXABI().isMicrosoft())
+        Out << "() [vector deleting]";
+      else
+        Out << "() [scalar deleting]";
 
       if (DD->isPureVirtual())
         Out << " [pure]";
@@ -3756,7 +3765,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
-      IndicesMap[I.second] = MethodName + " [scalar deleting]";
+      IndicesMap[I.second] = MethodName + " [vector deleting]";
     } else {
       IndicesMap[I.second] = MethodName;
     }
@@ -3831,8 +3840,8 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
   unsigned VBTableIndex = 1 + VBI->VBTableIndices.size();
   for (const auto &VB : RD->vbases()) {
     const CXXRecordDecl *CurVBase = VB.getType()->getAsCXXRecordDecl();
-    if (!VBI->VBTableIndices.count(CurVBase))
-      VBI->VBTableIndices[CurVBase] = VBTableIndex++;
+    if (VBI->VBTableIndices.try_emplace(CurVBase, VBTableIndex).second)
+      ++VBTableIndex;
   }
 
   return *VBI;
@@ -3873,7 +3882,7 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
-    assert(GD.getDtorType() == Dtor_Deleting);
+    assert(GD.getDtorType() == Dtor_VectorDeleting);
 
   GD = GD.getCanonicalDecl();
 

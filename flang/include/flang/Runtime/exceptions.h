@@ -13,6 +13,7 @@
 
 #include "flang/Runtime/entry-names.h"
 #include <cinttypes>
+#include <cstddef>
 
 namespace Fortran::runtime {
 
@@ -31,6 +32,10 @@ bool RTNAME(SupportHalting)(uint32_t except);
 // Get and set the ieee underflow mode if supported; otherwise nops.
 bool RTNAME(GetUnderflowMode)(void);
 void RTNAME(SetUnderflowMode)(bool flag);
+
+// Get the byte size of ieee_modes_type and ieee_status_type data.
+std::size_t RTNAME(GetModesTypeSize)(void);
+std::size_t RTNAME(GetStatusTypeSize)(void);
 
 } // extern "C"
 } // namespace Fortran::runtime

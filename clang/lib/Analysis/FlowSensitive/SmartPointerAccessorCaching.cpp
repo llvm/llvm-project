@@ -14,6 +14,7 @@ using ast_matchers::callee;
 using ast_matchers::cxxMemberCallExpr;
 using ast_matchers::cxxMethodDecl;
 using ast_matchers::cxxOperatorCallExpr;
+using ast_matchers::hasCanonicalType;
 using ast_matchers::hasName;
 using ast_matchers::hasOverloadedOperatorName;
 using ast_matchers::ofClass;
@@ -41,7 +42,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasStar = true;
         StarReturnType = MD->getReturnType()
                              .getNonReferenceType()
-                             ->getCanonicalTypeUnqualified();
+                             ->getCanonicalTypeUnqualified()
+                             .getUnqualifiedType();
       }
       break;
     case OO_Arrow:
@@ -49,7 +51,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasArrow = true;
         ArrowReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
       }
       break;
     case OO_None: {
@@ -61,14 +64,16 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
           HasGet = true;
           GetReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
         }
       } else if (II->isStr("value")) {
         if (MD->getReturnType()->isReferenceType()) {
           HasValue = true;
           ValueReturnType = MD->getReturnType()
                                 .getNonReferenceType()
-                                ->getCanonicalTypeUnqualified();
+                                ->getCanonicalTypeUnqualified()
+                                .getUnqualifiedType();
         }
       }
     } break;
@@ -122,26 +127,49 @@ namespace clang::dataflow {
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
-      callee(cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(referenceType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("->"),
-      callee(cxxMethodDecl(parameterCountIs(0), returns(pointerType()),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(pointerType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
+
 ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {
-  return cxxMemberCallExpr(callee(
-      cxxMethodDecl(parameterCountIs(0), returns(referenceType()),
-                    hasName("value"), ofClass(smartPointerClassWithValue()))));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), returns(hasCanonicalType(referenceType())),
+      hasName("value"), ofClass(smartPointerClassWithValue()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall() {
-  return cxxMemberCallExpr(callee(
-      cxxMethodDecl(parameterCountIs(0), returns(pointerType()), hasName("get"),
-                    ofClass(smartPointerClassWithGet()))));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), returns(hasCanonicalType(pointerType())),
+      hasName("get"), ofClass(smartPointerClassWithGet()))));
+}
+
+const FunctionDecl *
+getCanonicalSmartPointerLikeOperatorCallee(const CallExpr *CE) {
+  const FunctionDecl *CanonicalCallee = nullptr;
+  const CXXMethodDecl *Callee =
+      cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+  if (Callee == nullptr)
+    return nullptr;
+  const CXXRecordDecl *RD = Callee->getParent();
+  if (RD == nullptr)
+    return nullptr;
+  for (const auto *MD : RD->methods()) {
+    if (MD->getOverloadedOperator() == OO_Star && MD->isConst() &&
+        MD->getNumParams() == 0 && MD->getReturnType()->isReferenceType()) {
+      CanonicalCallee = MD;
+      break;
+    }
+  }
+  return CanonicalCallee;
 }
 
 } // namespace clang::dataflow

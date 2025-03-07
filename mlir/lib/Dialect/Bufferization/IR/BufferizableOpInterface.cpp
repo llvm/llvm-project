@@ -107,7 +107,23 @@ Region *AnalysisState::getEnclosingRepetitiveRegion(
   return region;
 }
 
-void AnalysisState::resetCache() { enclosingRepetitiveRegionCache.clear(); }
+bool AnalysisState::insideMutuallyExclusiveRegions(Operation *op0,
+                                                   Operation *op1) {
+  auto key = std::make_pair(op0, op1);
+  if (auto iter = insideMutuallyExclusiveRegionsCache.find(key);
+      iter != insideMutuallyExclusiveRegionsCache.end())
+    return iter->second;
+  bool result = ::mlir::insideMutuallyExclusiveRegions(op0, op1);
+  // Populate results for both orderings of the ops.
+  insideMutuallyExclusiveRegionsCache[key] = result;
+  insideMutuallyExclusiveRegionsCache[std::make_pair(op1, op0)] = result;
+  return result;
+}
+
+void AnalysisState::resetCache() {
+  enclosingRepetitiveRegionCache.clear();
+  insideMutuallyExclusiveRegionsCache.clear();
+}
 
 Region *bufferization::getNextEnclosingRepetitiveRegion(
     Region *region, const BufferizationOptions &options) {
@@ -480,18 +496,21 @@ bool AnalysisState::isValueRead(Value value) const {
   return false;
 }
 
-// Starting from `value`, follow the use-def chain in reverse, always selecting
-// the aliasing OpOperands. Find and return Values for which `condition`
-// evaluates to true. OpOperands of such matching Values are not traversed any
-// further, the visited aliasing opOperands will be preserved through
-// `visitedOpOperands`.
+// Starting from `opOperand`, follow the use-def chain in reverse, always
+// selecting the aliasing OpOperands. Find and return Values for which
+// `condition` evaluates to true. Uses of such matching Values are not
+// traversed any further, the visited aliasing opOperands will be preserved
+// through `visitedOpOperands`.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
-    Value value, llvm::function_ref<bool(Value)> condition,
+    OpOperand *opOperand, llvm::function_ref<bool(Value)> condition,
     TraversalConfig config,
     llvm::DenseSet<OpOperand *> *visitedOpOperands) const {
   llvm::DenseSet<Value> visited;
   llvm::SetVector<Value> result, workingSet;
-  workingSet.insert(value);
+  workingSet.insert(opOperand->get());
+
+  if (visitedOpOperands)
+    visitedOpOperands->insert(opOperand);
 
   while (!workingSet.empty()) {
     Value value = workingSet.pop_back_val();
@@ -563,12 +582,14 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
   return result;
 }
 
-// Find the values that define the contents of the given value.
-llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
+// Find the values that define the contents of the given operand's value.
+llvm::SetVector<Value>
+AnalysisState::findDefinitions(OpOperand *opOperand) const {
   TraversalConfig config;
   config.alwaysIncludeLeaves = false;
   return findValueInReverseUseDefChain(
-      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); }, config);
+      opOperand, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
+      config);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
@@ -892,7 +913,7 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
   config.alwaysIncludeLeaves = false;
   for (AliasingOpOperand alias : opOperands) {
     if (!state
-             .findValueInReverseUseDefChain(alias.opOperand->get(),
+             .findValueInReverseUseDefChain(alias.opOperand,
                                             isMemoryWriteInsideOp, config)
              .empty())
       return true;

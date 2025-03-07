@@ -116,7 +116,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members,
                 mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false);
+                bool partialMap = false,
+                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,

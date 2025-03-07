@@ -321,14 +321,14 @@ public:
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
 
-  /// ProcessBranch - Called by CoreEngine.  Used to generate successor
-  ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition,
-                     NodeBuilderContext& BuilderCtx,
-                     ExplodedNode *Pred,
-                     ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT,
-                     const CFGBlock *DstF);
+  /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
+  /// processing the 'effects' of a branch condition. If the branch condition
+  /// is a loop condition, IterationsCompletedInLoop is the number of completed
+  /// iterations (otherwise it's std::nullopt).
+  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
+                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                     const CFGBlock *DstT, const CFGBlock *DstF,
+                     std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
@@ -498,6 +498,10 @@ public:
   void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
+  /// VisitAttributedStmt - Transfer function logic for AttributedStmt
+  void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
+                           ExplodedNodeSet &Dst);
+
   /// VisitLogicalExpr - Transfer function logic for '&&', '||'
   void VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
@@ -588,6 +592,8 @@ public:
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
                                     const Expr *Ex);
 
+  bool didEagerlyAssumeBifurcateAt(ProgramStateRef State, const Expr *Ex) const;
+
   static std::pair<const ProgramPointTag *, const ProgramPointTag *>
   getEagerlyAssumeBifurcationTags();
 
@@ -657,13 +663,13 @@ private:
                               SVal Loc, SVal Val,
                               const LocationContext *LCtx);
 
+public:
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of some values.
   ProgramStateRef escapeValues(ProgramStateRef State, ArrayRef<SVal> Vs,
                                PointerEscapeKind K,
                                const CallEvent *Call = nullptr) const;
 
-public:
   // FIXME: 'tag' should be removed, and a LocationContext should be used
   // instead.
   // FIXME: Comment on the meaning of the arguments, when 'St' may not

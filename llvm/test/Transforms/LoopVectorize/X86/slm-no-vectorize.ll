@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @no_vec(i32 %LastIndex, ptr nocapture readonly %InputData, i16 signext %lag, i16 signext %Scale) {
 ; CHECK-LABEL: define i32 @no_vec
-; CHECK-SAME: (i32 [[LASTINDEX:%.*]], ptr nocapture readonly [[INPUTDATA:%.*]], i16 signext [[LAG:%.*]], i16 signext [[SCALE:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i32 [[LASTINDEX:%.*]], ptr readonly captures(none) [[INPUTDATA:%.*]], i16 signext [[LAG:%.*]], i16 signext [[SCALE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[LASTINDEX]], 0
 ; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]

@@ -1806,6 +1806,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
+  config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
@@ -1842,7 +1843,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasArg(OPT_irpgo_profile_sort_eq))
     warn("--irpgo-profile-sort is deprecated. Please use "
          "--bp-startup-sort=function");
-  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_eq))
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile))
     config->irpgoProfilePath = arg->getValue();
 
   if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {

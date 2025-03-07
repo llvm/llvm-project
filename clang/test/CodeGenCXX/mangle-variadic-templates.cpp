@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm -triple=x86_64-apple-darwin9 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=return-type -std=c++11 -emit-llvm -triple=x86_64-apple-darwin9 -o - %s | FileCheck %s
 
 template<unsigned I, typename ...Types>
 struct X { };
@@ -47,7 +47,7 @@ template void f3<int>(const int*);
 template void f3<int, float>(const int*, const float*);
 
 // Mangling of type pack expansions in a template argument
-template<typename ...Types> tuple<Types...> f4() {}
+template<typename ...Types> tuple<Types...> f4() { return {}; }
 // CHECK-LABEL: define weak_odr void @_Z2f4IJifdEE5tupleIJDpT_EEv
 template tuple<int, float, double> f4();
 

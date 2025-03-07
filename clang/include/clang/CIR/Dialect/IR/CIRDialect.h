@@ -26,7 +26,10 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsDialect.h.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Interfaces/CIROpInterfaces.h"
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
 // they are included.  GET_OP_CLASSES tells the file to define the classes for

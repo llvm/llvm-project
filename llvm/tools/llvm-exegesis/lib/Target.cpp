@@ -35,6 +35,19 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
   return nullptr;
 }
 
+const char *
+ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                             unsigned Opcode) const {
+  const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
+  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
+    return "Unsupported opcode: isPseudo/usesCustomInserter";
+  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
+    return "Unsupported opcode: isBranch/isIndirectBranch";
+  if (InstrDesc.isCall() || InstrDesc.isReturn())
+    return "Unsupported opcode: isCall/isReturn";
+  return nullptr;
+}
+
 Expected<std::unique_ptr<pfm::CounterGroup>>
 ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
                               ArrayRef<const char *> ValidationCounters,
@@ -212,7 +225,7 @@ public:
   ExegesisDefaultTarget() : ExegesisTarget({}, opcodeIsNotAvailable) {}
 
 private:
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override {
     llvm_unreachable("Not yet implemented");
   }

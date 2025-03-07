@@ -19,6 +19,7 @@
 #include <__assert>
 #include <__charconv/chars_format.h>
 #include <__charconv/to_chars_floating_point.h>
+#include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
@@ -141,7 +142,7 @@ struct __traits<double> {
 /// on the stack or the heap.
 template <floating_point _Fp>
 class _LIBCPP_TEMPLATE_VIS __float_buffer {
-  using _Traits = __traits<_Fp>;
+  using _Traits _LIBCPP_NODEBUG = __traits<_Fp>;
 
 public:
   // TODO FMT Improve this constructor to do a better estimate.

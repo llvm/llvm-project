@@ -24,7 +24,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
-#include "VPlanDominatorTree.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 
@@ -32,11 +32,13 @@ class Loop;
 class LoopInfo;
 class VPRegionBlock;
 class VPlan;
-class VPlanTestBase;
+class VPlanTestIRBase;
+class VPBlockBase;
+class BasicBlock;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
 class VPlanHCFGBuilder {
-  friend VPlanTestBase;
+  friend VPlanTestIRBase;
 
 private:
   // The outermost loop of the input loop nest considered for vectorization.
@@ -48,10 +50,9 @@ private:
   // The VPlan that will contain the H-CFG we are building.
   VPlan &Plan;
 
-  // Dominator analysis for VPlan plain CFG to be used in the
-  // construction of the H-CFG. This analysis is no longer valid once regions
-  // are introduced.
-  VPDominatorTree VPDomTree;
+  /// Map of create VP blocks to their input IR basic blocks, if they have been
+  /// created for a input IR basic block.
+  DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
 
   /// Build plain CFG for TheLoop and connects it to Plan's entry.
   void buildPlainCFG();
@@ -62,6 +63,14 @@ public:
 
   /// Build H-CFG for TheLoop and update Plan accordingly.
   void buildHierarchicalCFG();
+
+  /// Return the input IR BasicBlock corresponding to \p VPB. Returns nullptr if
+  /// there is no such corresponding block.
+  /// FIXME: This is a temporary workaround to drive the createBlockInMask.
+  /// Remove once mask creation is done on VPlan.
+  BasicBlock *getIRBBForVPB(const VPBlockBase *VPB) const {
+    return VPB2IRBB.lookup(VPB);
+  }
 };
 } // namespace llvm
 

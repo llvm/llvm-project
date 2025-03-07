@@ -22,6 +22,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -167,7 +168,7 @@ template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   // ambiguous if there were an invalidate member in the result type.
   template <typename T, typename U> static DisabledType NonceFunction(T U::*);
   struct CheckerBase { int invalidate; };
-  template <typename T> struct Checker : CheckerBase, T {};
+  template <typename T> struct Checker : CheckerBase, std::remove_cv_t<T> {};
   template <typename T>
   static decltype(NonceFunction(&Checker<T>::invalidate)) check(rank<1>);
 

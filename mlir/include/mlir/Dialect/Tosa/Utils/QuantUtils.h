@@ -28,12 +28,15 @@ namespace tosa {
 
 /// From a scale value, computes multiplier and shift values
 /// for 16 or 32-bit scale widths.
-void computeMultiplierAndShift(double scale, int32_t &multiplier,
+bool computeMultiplierAndShift(double scale, int32_t &multiplier,
                                int32_t &shift, int32_t scaleWidth);
 
 //// Builds ConvOpQuantizationAttr from input and weight.
 ConvOpQuantizationAttr buildConvOpQuantizationAttr(OpBuilder &builder,
                                                    Value input, Value weight);
+
+std::pair<Value, Value> createZPsAsConst(OpBuilder &builder, Value input,
+                                         Value weight);
 
 //// Builds MatMulOpQuantizationAttr for MatMul operations from A and B.
 MatMulOpQuantizationAttr buildMatMulOpQuantizationAttr(OpBuilder &builder,

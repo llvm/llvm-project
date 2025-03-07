@@ -1,0 +1,43 @@
+header: test_small.h
+header_template: test_small.h.def
+merge_yaml_files:
+  - merge1.yaml
+  - merge2.yaml
+macros:
+  - macro_name: MACRO_C
+  - macro_name: MACRO_D
+    macro_header: test_small-macros.h
+  - macro_name: MACRO_E
+    macro_header: test_more-macros.h
+functions:
+  - name: func_c
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: float
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_d
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: float
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: func_e
+    return_type: _Float16
+    arguments:
+      - type: float128
+    standards:
+      - stdc
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: func_f
+    return_type: _Float16
+    arguments:
+      - type: int
+      - type: double
+      - type: float
+    standards:
+      - stdc

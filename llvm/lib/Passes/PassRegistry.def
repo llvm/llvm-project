@@ -62,6 +62,7 @@ MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
 MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass())
+MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -98,6 +99,7 @@ MODULE_PASS("lower-emutls", LowerEmuTLSPass())
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
 MODULE_PASS("lower-ifunc", LowerIFuncPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
+MODULE_PASS("fatlto-cleanup", FatLtoCleanup())
 MODULE_PASS("pgo-force-function-attrs", PGOForceFunctionAttrsPass(PGOOpt ? PGOOpt->ColdOptType : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
@@ -156,7 +158,7 @@ MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
 MODULE_PASS("trigger-crash-module", TriggerCrashModulePass())
 MODULE_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
-MODULE_PASS("tysan-module", ModuleTypeSanitizerPass())
+MODULE_PASS("tysan", TypeSanitizerPass())
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("view-callgraph", CallGraphViewerPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
@@ -391,6 +393,7 @@ FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
 FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass());
 FUNCTION_PASS("kcfi", KCFIPass())
+FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
 FUNCTION_PASS("lint", LintPass())
@@ -402,7 +405,6 @@ FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
 FUNCTION_PASS("loop-versioning", LoopVersioningPass())
-FUNCTION_PASS("lower-allow-check", LowerAllowCheckPass())
 FUNCTION_PASS("lower-atomic", LowerAtomicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
@@ -481,7 +483,6 @@ FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("trigger-crash-function", TriggerCrashFunctionPass())
 FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
-FUNCTION_PASS("tysan", TypeSanitizerPass())
 FUNCTION_PASS("typepromotion", TypePromotionPass(TM))
 FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
@@ -527,7 +528,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
     "no-pre;pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
-    "split-backedge-load-pre;no-memdep;memdep")
+    "split-backedge-load-pre;no-memdep;memdep;no-memoryssa;memoryssa")
 FUNCTION_PASS_WITH_PARAMS(
     "hardware-loops", "HardwareLoopsPass",
     [](HardwareLoopOptions Opts) { return HardwareLoopsPass(Opts); },
@@ -554,6 +555,10 @@ FUNCTION_PASS_WITH_PARAMS(
     parseLoopVectorizeOptions,
     "no-interleave-forced-only;interleave-forced-only;no-vectorize-forced-only;"
     "vectorize-forced-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "lower-allow-check", "LowerAllowCheckPass",
+    [](LowerAllowCheckPass::Options Opts) { return LowerAllowCheckPass(Opts); },
+    parseLowerAllowCheckPassOptions, "")
 FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",
     [](bool Minimal) { return LowerMatrixIntrinsicsPass(Minimal); },
@@ -624,7 +629,7 @@ FUNCTION_PASS_WITH_PARAMS(
     parseWinEHPrepareOptions, "demote-catchswitch-only")
 FUNCTION_PASS_WITH_PARAMS(
     "bounds-checking", "BoundsCheckingPass",
-    [](BoundsCheckingPass::BoundsCheckingOptions Options) {
+    [](BoundsCheckingPass::Options Options) {
       return BoundsCheckingPass(Options);
     },
     parseBoundsCheckingOptions, "trap")

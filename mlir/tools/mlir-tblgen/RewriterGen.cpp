@@ -879,7 +879,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
   if (attr.hasDefaultValue()) {
     os << "if (!tblgen_attr) tblgen_attr = "
        << std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx,
-                            attr.getDefaultValue()))
+                            tgfmt(attr.getDefaultValue(), &fmtCtx)))
        << ";\n";
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we

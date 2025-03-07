@@ -215,7 +215,8 @@ bool arm::isHardTPSupported(const llvm::Triple &Triple) {
 // Select mode for reading thread pointer (-mtp=soft/cp15).
 arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
                                    const llvm::Triple &Triple, bool ForAS) {
-  if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
+  Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ);
+  if (A && A->getValue() != StringRef("auto")) {
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::TPIDRURO)
@@ -239,7 +240,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
     return ReadTPMode::Invalid;
   }
-  return ReadTPMode::Soft;
+  return (isHardTPSupported(Triple) ? ReadTPMode::TPIDRURO : ReadTPMode::Soft);
 }
 
 void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
@@ -443,14 +444,13 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
     case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
       return FloatABI::Hard;
+    case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIT64:
     case llvm::Triple::MuslEABI:
     case llvm::Triple::EABI:
       // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
       return FloatABI::SoftFP;
-    case llvm::Triple::Android:
-      return (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
     default:
       return FloatABI::Invalid;
     }
@@ -575,12 +575,14 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
       A->ignoreTargetSpecific();
   }
 
-  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURW)
+  arm::ReadTPMode TPMode = getReadTPMode(D, Args, Triple, ForAS);
+
+  if (TPMode == ReadTPMode::TPIDRURW)
     Features.push_back("+read-tp-tpidrurw");
-  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURO)
-    Features.push_back("+read-tp-tpidruro");
-  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRPRW)
+  else if (TPMode == ReadTPMode::TPIDRPRW)
     Features.push_back("+read-tp-tpidrprw");
+  else if (TPMode == ReadTPMode::TPIDRURO)
+    Features.push_back("+read-tp-tpidruro");
 
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
   const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);
@@ -647,7 +649,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     (void)getARMFPUFeatures(D, WaFPU->first, Args, WaFPU->second, Features);
   } else if (FPUArg) {
     FPUKind = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) == 7) {
     const char *AndroidFPU = "neon";
     FPUKind = llvm::ARM::parseFPU(AndroidFPU);
     if (!llvm::ARM::getFPUFeatures(FPUKind, Features))
@@ -659,11 +661,19 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
     (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
+    bool Generic = true;
     if (!ForAS) {
       std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+      if (CPU != "generic")
+        Generic = false;
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
+      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
+    }
+    if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
+        getARMSubArchVersionNumber(Triple) >= 7) {
+      FPUKind = llvm::ARM::parseFPU("neon");
       (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     }
   }
@@ -747,6 +757,15 @@ fp16_fml_fallthrough:
     else
       Features.push_back("-crc");
   }
+
+  // Invalid value of the __ARM_FEATURE_MVE macro when an explicit -mfpu= option
+  // disables MVE-FP -mfpu=fpv5-d16 or -mfpu=fpv5-sp-d16 disables the scalar
+  // half-precision floating-point operations feature. Therefore, because the
+  // M-profile Vector Extension (MVE) floating-point feature requires the scalar
+  // half-precision floating-point operations, this option also disables the MVE
+  // floating-point feature: -mve.fp
+  if (FPUKind == llvm::ARM::FK_FPV5_D16 || FPUKind == llvm::ARM::FK_FPV5_SP_D16)
+    Features.push_back("-mve.fp");
 
   // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
   // Rather than replace within the feature vector, determine whether each
