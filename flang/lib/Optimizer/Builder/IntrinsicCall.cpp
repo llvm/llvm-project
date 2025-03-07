@@ -2827,13 +2827,13 @@ mlir::Value IntrinsicLibrary::genAtomicMin(mlir::Type resultType,
 }
 
 // ATOMICXOR
-mlir::Value IntrinsicLibrary::genAtomicXor(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicXor(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  assert(mlir::isa<mlir::IntegerType>(args[1].getType()));
-
-  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::_xor;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  return genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::_xor, arg0, arg1);
 }
 
 // ASSOCIATED
