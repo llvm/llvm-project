@@ -96,7 +96,6 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
             elif job.status == "in_progress":
                 running_count[metric_name] += 1
 
-
     workflow_metrics = []
     for name, value in queued_count.items():
         workflow_metrics.append(
