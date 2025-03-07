@@ -67,7 +67,7 @@ constexpr bool test() {
   test_reference_constructs_from_temporary<const int&, long, true>();
 
   // Additional checks
-  test_reference_constructs_from_temporary<const POD&, Derives, true>();
+  test_reference_constructs_from_temporary<const Base&, Derived, true>();
   test_reference_constructs_from_temporary<int&&, int, true>();
   test_reference_constructs_from_temporary<const int&, int, true>();
   test_reference_constructs_from_temporary<int&&, int&&, false>();

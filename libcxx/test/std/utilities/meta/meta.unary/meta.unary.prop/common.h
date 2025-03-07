@@ -47,18 +47,19 @@ class Abstract {
 
 #if TEST_STD_VER >= 23
 
-struct NonPOD {
-  NonPOD(int);
+class NonPODClass {
+public:
+  NonPODClass(int);
 };
 enum Enum { EV };
-struct POD {
+struct Base {
   Enum e;
   int i;
   float f;
-  NonPOD* p;
+  NonPODClass* p;
 };
 // Not PODs
-struct Derives : POD {};
+struct Derived : Base {};
 
 template <class T, class RefType = T&>
 class ConvertsToRef {
