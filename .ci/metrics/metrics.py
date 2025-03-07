@@ -5,6 +5,7 @@ import time
 import os
 from dataclasses import dataclass
 import sys
+import collections
 import logging
 
 import github
@@ -232,6 +233,44 @@ def buildkite_get_metrics(
     return output, last_recorded_build
 
 
+def github_job_name_to_metric_name(workflow_name, job_name):
+    workflow_key = GITHUB_WORKFLOW_TO_TRACK[workflow_name]
+    job_key = GITHUB_JOB_TO_TRACK[workflow_key][job_name]
+    return f"{workflow_key}_{job_key}"
+
+
+def github_count_queued_running_workflows(workflow_list):
+    """Returns the per-job count of running & queued jobs in the passed
+    workflow list.
+
+    Args:
+      workflow_list: an iterable of workflows.
+
+    Returns:
+      A tuple, (per-job-queue-size, per-job-running-count). The key
+      is the pretty job name, and the value the count of jobs.
+    """
+    queued_count = collections.Counter()
+    running_count = collections.Counter()
+
+    for workflow in workflow_list:
+        if workflow.name not in GITHUB_WORKFLOW_TO_TRACK:
+            continue
+
+        workflow_key = GITHUB_WORKFLOW_TO_TRACK[workflow.name]
+        for job in workflow.jobs():
+            if job.name not in GITHUB_JOB_TO_TRACK[workflow_key]:
+                continue
+            job_key = GITHUB_JOB_TO_TRACK[workflow_key][job.name]
+            metric_name = f"{workflow_key}_{job_key}"
+
+            if job.status == "queued":
+                queued_count[metric_name] += 1
+            elif job.status == "in_progress":
+                running_count[metric_name] += 1
+    return queued_count, running_count
+
+
 def get_sampled_workflow_metrics(github_repo: github.Repository):
     """Gets global statistics about the Github workflow queue
 
@@ -242,60 +281,26 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
       Returns a list of GaugeMetric objects, containing the relevant metrics about
       the workflow
     """
-    queued_job_counts = {}
-    running_job_counts = {}
-
     # Other states are available (pending, waiting, etc), but the meaning
     # is not documented (See #70540).
     # "queued" seems to be the info we want.
-    for queued_workflow in github_repo.get_workflow_runs(status="queued"):
-        if queued_workflow.name not in GITHUB_WORKFLOW_TO_TRACK:
-            continue
-        for queued_workflow_job in queued_workflow.jobs():
-            job_name = queued_workflow_job.name
-            # Workflows marked as queued can potentially only have some jobs
-            # queued, so make sure to also count jobs currently in progress.
-            if queued_workflow_job.status == "queued":
-                if job_name not in queued_job_counts:
-                    queued_job_counts[job_name] = 1
-                else:
-                    queued_job_counts[job_name] += 1
-            elif queued_workflow_job.status == "in_progress":
-                if job_name not in running_job_counts:
-                    running_job_counts[job_name] = 1
-                else:
-                    running_job_counts[job_name] += 1
-
-    for running_workflow in github_repo.get_workflow_runs(status="in_progress"):
-        if running_workflow.name not in GITHUB_WORKFLOW_TO_TRACK:
-            continue
-        for running_workflow_job in running_workflow.jobs():
-            job_name = running_workflow_job.name
-            if running_workflow_job.status != "in_progress":
-                continue
-
-            if job_name not in running_job_counts:
-                running_job_counts[job_name] = 1
-            else:
-                running_job_counts[job_name] += 1
+    queued_1, running_1 = github_count_queued_running_workflows(
+        github_repo.get_workflow_runs(status="queued")
+    )
+    queued_2, running_2 = github_count_queued_running_workflows(
+        github_repo.get_workflow_runs(status="in_progress")
+    )
 
     workflow_metrics = []
-    for queued_job in queued_job_counts:
+    for key, value in (queued_1 + queued_2).items():
         workflow_metrics.append(
-            GaugeMetric(
-                f"workflow_queue_size_{queued_job}",
-                queued_job_counts[queued_job],
-                time.time_ns(),
-            )
+            GaugeMetric(f"workflow_queue_size_{key}", value, time.time_ns())
         )
-    for running_job in running_job_counts:
+    for key, value in (running_1 + running_2).items():
         workflow_metrics.append(
-            GaugeMetric(
-                f"running_workflow_count_{running_job}",
-                running_job_counts[running_job],
-                time.time_ns(),
-            )
+            GaugeMetric(f"running_workflow_count_{key}", value, time.time_ns())
         )
+
     # Always send a hearbeat metric so we can monitor is this container is
     # still able to log to Grafana.
     workflow_metrics.append(
@@ -325,10 +330,12 @@ def get_per_workflow_metrics(github_repo: github.Repository, last_workflow_id: s
       the workflow.
     """
     workflow_metrics = []
-    last_checked_workflow_id = last_workflow_id
-
+    last_recorded_workflow = None
     for workflow_run in iter(github_repo.get_workflow_runs(status="completed")):
-        last_checked_workflow_id = workflow_run.id
+        # Record the first workflow of this list as the most recent one.
+        if last_recorded_workflow is None:
+            last_recorded_workflow = workflow_run.id
+
         # If we saw this workflow already, break. We also break if no
         # workflow has been seen, as this means the script just started.
         if last_workflow_id == workflow_run.id or last_workflow_id is None:
@@ -390,7 +397,7 @@ def get_per_workflow_metrics(github_repo: github.Repository, last_workflow_id: s
                 )
             )
 
-    return workflow_metrics, last_checked_workflow_id
+    return workflow_metrics, last_recorded_workflow
 
 def upload_metrics(workflow_metrics, metrics_userid, api_key):
     """Upload metrics to Grafana.
