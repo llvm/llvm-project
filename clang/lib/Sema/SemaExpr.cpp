@@ -1748,9 +1748,14 @@ ExprResult Sema::CreateGenericSelectionExpr(
         //
         // C11 6.5.1.1p2 "The type name in a generic association shall specify a
         // complete object type other than a variably modified type."
+        // C2y removed the requirement that an expression form must
+        // use a complete type, though it's still as-if the type has undergone
+        // lvalue conversion. We support this as an extension in C23 and
+        // earlier because GCC does so.
         unsigned D = 0;
         if (ControllingExpr && Types[i]->getType()->isIncompleteType())
-          D = diag::err_assoc_type_incomplete;
+          D = LangOpts.C2y ? diag::warn_c2y_compat_assoc_type_incomplete
+                           : diag::ext_assoc_type_incomplete;
         else if (ControllingExpr && !Types[i]->getType()->isObjectType())
           D = diag::err_assoc_type_nonobject;
         else if (Types[i]->getType()->isVariablyModifiedType())
