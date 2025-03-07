@@ -5824,6 +5824,8 @@ Hexagon:
 
 LoongArch:
 
+- ``u``: Print an LASX register.
+- ``w``: Print an LSX register.
 - ``z``: Print $zero register if operand is zero, otherwise print it normally.
 
 MSP430:
@@ -17396,8 +17398,8 @@ Semantics:
 """"""""""
 
 This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
-also behaves in the same way as C standard function ``roundeven``, except that
-it does not raise floating point exceptions.
+also behaves in the same way as C standard function ``roundeven``, including
+that it disregards rounding mode and does not raise floating point exceptions.
 
 
 '``llvm.lround.*``' Intrinsic

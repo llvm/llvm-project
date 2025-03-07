@@ -551,7 +551,7 @@ def err_decomp_decl_constraint : Error<
 def err_decomp_decl_parens : Error<
   "decomposition declaration cannot be declared with parentheses">;
 def err_decomp_decl_template : Error<
-  "decomposition declaration template not supported">;
+  "decomposition declaration cannot be a template">;
 def err_decomp_decl_not_alone : Error<
   "decomposition declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
@@ -3155,6 +3155,10 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
+def warn_attribute_form_ignored : Warning<
+  "%0 attribute ignored because Clang does not yet support this attribute signature">,
+  InGroup<IgnoredAttributes>;
+
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
@@ -3286,6 +3290,10 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def err_attribute_invalid_atomic_argument : Error<
+  "invalid argument '%0' to atomic attribute; valid options are: "
+  "'remote_memory', 'fine_grained_memory', 'ignore_denormal_mode' (optionally "
+  "prefixed with 'no_')">;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
@@ -3335,6 +3343,9 @@ def err_attribute_argument_out_of_range : Error<
 def err_init_priority_object_attr : Error<
   "can only use 'init_priority' attribute on file-scope definitions "
   "of objects of class type">;
+def warn_init_priority_reserved : Warning<
+  "requested 'init_priority' %0 is reserved for internal use">,
+  InGroup<DiagGroup<"init-priority-reserved">>, DefaultError;
 def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
 def err_attribute_only_once_per_parameter : Error<
@@ -4524,6 +4535,12 @@ def err_attribute_cleanup_func_must_take_one_arg : Error<
 def err_attribute_cleanup_func_arg_incompatible_type : Error<
   "'cleanup' function %0 parameter has "
   "%diff{type $ which is incompatible with type $|incompatible type}1,2">;
+def err_attribute_malloc_arg_not_function : Error<
+  "'malloc' argument %select{for deallocator |%1 |%1 }0is not a %select{||single }0function">;
+def err_attribute_malloc_arg_not_function_with_pointer_arg : Error<
+  "'malloc' argument %0 must take a pointer type as its first argument">;
+def err_attribute_malloc_arg_refers_to_non_pointer_type : Error<
+  "'malloc' argument '%0' refers to non-pointer type %1 of %2">; // in GCC, this is a warning, not an error
 def err_attribute_regparm_wrong_platform : Error<
   "'regparm' is not valid on this platform">;
 def err_attribute_regparm_invalid_number : Error<
@@ -5193,16 +5210,11 @@ def err_template_unnamed_class : Error<
 def err_template_param_list_different_arity : Error<
   "%select{too few|too many}0 template parameters in template "
   "%select{|template parameter }1redeclaration">;
-def note_template_param_list_different_arity : Note<
-  "%select{too few|too many}0 template parameters in template template "
-  "argument">;
 def note_template_prev_declaration : Note<
   "previous template %select{declaration|template parameter}0 is here">;
 def err_template_param_different_kind : Error<
   "template parameter has a different kind in template "
   "%select{|template parameter }0redeclaration">;
-def note_template_param_different_kind : Note<
-  "template parameter has a different kind in template argument">;
 
 def err_invalid_decl_specifier_in_nontype_parm : Error<
   "invalid declaration specifier in template non-type parameter">;
@@ -5211,8 +5223,6 @@ def err_template_nontype_parm_different_type : Error<
   "template non-type parameter has a different type %0 in template "
   "%select{|template parameter }1redeclaration">;
 
-def note_template_nontype_parm_different_type : Note<
-  "template non-type parameter has a different type %0 in template argument">;
 def note_template_nontype_parm_prev_declaration : Note<
   "previous non-type template parameter with type %0 is here">;
 def err_template_nontype_parm_bad_type : Error<
@@ -5303,10 +5313,15 @@ def err_template_missing_args : Error<
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
   "arguments">;
-def err_template_arg_list_different_arity : Error<
-  "%select{too few|too many}0 template arguments for "
+def err_template_param_missing_arg : Error<
+  "missing template argument for template parameter">;
+def err_template_template_param_missing_param : Error<
+  "no template parameter in this template template parameter "
+  "corresponds to non-defaulted template parameter of argument template">;
+def err_template_too_many_args : Error<
+  "too many template arguments for "
   "%select{class template|function template|variable template|alias template|"
-  "template template parameter|concept|template}1 %2">;
+  "template template parameter|concept|template}0 %1">;
 def note_template_decl_here : Note<"template is declared here">;
 def note_template_decl_external : Note<
   "template declaration from hidden source: %0">;
@@ -5344,11 +5359,8 @@ def err_template_arg_not_valid_template : Error<
   "template parameter">;
 def note_template_arg_refers_here_func : Note<
   "template argument refers to function template %0, here">;
-def err_template_arg_template_params_mismatch : Error<
-  "template template argument has different template parameters than its "
-  "corresponding template template parameter">;
 def note_template_arg_template_params_mismatch : Note<
-  "template template argument has different template parameters than its "
+  "template template argument is incompatible with its "
   "corresponding template template parameter">;
 def err_non_deduced_mismatch : Error<
   "could not match %diff{$ against $|types}0,1">;
@@ -5910,10 +5922,6 @@ def err_template_parameter_pack_non_pack : Error<
   "%select{template type|non-type template|template template}0 parameter"
   "%select{| pack}1 conflicts with previous %select{template type|"
   "non-type template|template template}0 parameter%select{ pack|}1">;
-def note_template_parameter_pack_non_pack : Note<
-  "%select{template type|non-type template|template template}0 parameter"
-  "%select{| pack}1 does not match %select{template type|non-type template"
-  "|template template}0 parameter%select{ pack|}1 in template argument">;
 def note_template_parameter_pack_here : Note<
   "previous %select{template type|non-type template|template template}0 "
   "parameter%select{| pack}1 declared here">;
@@ -7124,6 +7132,9 @@ def warn_shift_result_sets_sign_bit : Warning<
   "signed shift result (%0) sets the sign bit of the shift expression's "
   "type (%1) and becomes negative">,
   InGroup<DiagGroup<"shift-sign-overflow">>, DefaultIgnore;
+def warn_shift_bool : Warning<
+  "right shifting a 'bool' implicitly converts it to 'int'">,
+  InGroup<DiagGroup<"shift-bool">>, DefaultIgnore;
 
 def warn_precedence_bitwise_rel : Warning<
   "%0 has lower precedence than %1; %1 will be evaluated first">,
@@ -7143,7 +7154,7 @@ def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
 def warn_consecutive_comparison : Warning<
-  "comparisons like 'X<=Y<=Z' don't have their mathematical meaning">,
+  "chained comparison 'X %0 Y %1 Z' does not behave the same as a mathematical expression">,
   InGroup<Parentheses>, DefaultError;
 
 def warn_enum_constant_in_bool_context : Warning<
@@ -10692,6 +10703,11 @@ def err_vector_incorrect_num_elements : Error<
   "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
+def err_vector_incorrect_bit_count : Error<
+  "incorrect number of bits in vector operand (expected %select{|a multiple of}0 %1 bits, have %2)">;
+def err_integer_incorrect_bit_count : Error<
+  "incorrect number of bits in integer (expected %0 bits, have %1)">;
+
 def err_invalid_neon_type_code : Error<
   "incompatible constant for this __builtin_neon function">;
 def err_argument_invalid_range : Error<
@@ -10780,6 +10796,23 @@ def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
 def err_non_variable_decl_in_for : Error<
   "non-variable declaration in 'for' loop">;
+
+def ext_c23_non_local_variable_decl_in_for : Extension<
+  "declaration of non-local variable in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_local_variable_decl_in_for : Warning<
+  "declaration of non-local variable in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
+def ext_c23_non_variable_decl_in_for : Extension<
+  "non-variable declaration in 'for' loop is a C23 extension">,
+  InGroup<C23>;
+
+def warn_c17_non_variable_decl_in_for : Warning<
+  "non-variable declaration in 'for' loop is incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
+
 def err_toomany_element_decls : Error<
   "only one element declaration is allowed">;
 def err_selector_element_not_lvalue : Error<
@@ -12607,8 +12640,9 @@ def err_riscv_builtin_requires_extension : Error<
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 def err_riscv_type_requires_extension : Error<
-  "RISC-V type %0 requires the '%1' extension"
->;
+  "RISC-V type %0 requires the '%1' extension">;
+def err_riscv_attribute_interrupt_requires_extension : Error<
+  "RISC-V interrupt attribute '%0' requires extension '%1'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -12782,8 +12816,9 @@ def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
 
 // OpenACC diagnostics.
-def warn_acc_construct_unimplemented
-    : Warning<"OpenACC construct '%0' not yet implemented, pragma ignored">,
+def warn_acc_routine_unimplemented
+    : Warning<"OpenACC construct 'routine' with implicit function not yet "
+              "implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
 def warn_acc_clause_unimplemented
     : Warning<"OpenACC clause '%0' not yet implemented, clause ignored">,
@@ -12798,6 +12833,7 @@ def err_acc_duplicate_clause_disallowed
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
+def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute/Combined Construct">;
@@ -12830,9 +12866,12 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
-def err_acc_not_a_var_ref_use_device
-    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
-            "name or array name">;
+def err_acc_not_a_var_ref_use_device_declare
+    : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
+            "construct}0 is not a valid variable name or array name">;
+def err_acc_not_a_var_ref_cache
+    : Error<"OpenACC variable in cache directive is not a valid sub-array or "
+            "array element">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -13000,6 +13039,30 @@ def note_acc_atomic_mismatch_compound_operand
            "side of assignment|<not possible>|on left hand side of compound "
            "assignment|on left hand side of assignment}0('%1') from the first "
            "statement">;
+def err_acc_declare_required_clauses
+    : Error<"no valid clauses specified in OpenACC 'declare' directive">;
+def err_acc_declare_clause_at_global
+    : Error<"OpenACC '%0' clause on a 'declare' directive is not allowed at "
+            "global or namespace scope">;
+def err_acc_link_not_extern
+    : Error<"variable referenced by 'link' clause not in global or namespace "
+            "scope must be marked 'extern'">;
+def err_acc_declare_extern
+    : Error<"'extern' variable may not be referenced by '%0' clause on an "
+            "OpenACC 'declare' directive">;
+def err_acc_declare_same_scope
+    : Error<"variable appearing in '%0' clause of OpenACC 'declare' directive "
+            "must be in the same scope as the directive">;
+def err_acc_multiple_references
+    : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
+            "was already referenced">;
+def err_acc_routine_not_func
+    : Error<"OpenACC routine name '%0' does not name a function">;
+def err_acc_routine_overload_set
+    : Error<"OpenACC routine name '%0' names a set of overloads">;
+def err_acc_magic_static_in_routine
+    : Error<"function static variables are not permitted in functions to which "
+            "an OpenACC 'routine' directive applies">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

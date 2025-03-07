@@ -537,7 +537,7 @@ void AArch64TargetELFStreamer::finish() {
     const auto &Sym = cast<MCSymbolELF>(Symbol);
     if (!Sym.isMemtag())
       continue;
-    auto *SRE = MCSymbolRefExpr::create(&Sym, MCSymbolRefExpr::VK_None, Ctx);
+    auto *SRE = MCSymbolRefExpr::create(&Sym, Ctx);
     (void)S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE, SMLoc(),
                                *Ctx.getSubtargetInfo());
   }
@@ -549,12 +549,11 @@ llvm::createAArch64AsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
   return new AArch64TargetAsmStreamer(S, OS);
 }
 
-MCELFStreamer *
-llvm::createAArch64ELFStreamer(MCContext &Context,
-                               std::unique_ptr<MCAsmBackend> TAB,
-                               std::unique_ptr<MCObjectWriter> OW,
-                               std::unique_ptr<MCCodeEmitter> Emitter) {
-  AArch64ELFStreamer *S = new AArch64ELFStreamer(
-      Context, std::move(TAB), std::move(OW), std::move(Emitter));
-  return S;
+MCStreamer *
+llvm::createAArch64ELFStreamer(const Triple &, MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> &&TAB,
+                               std::unique_ptr<MCObjectWriter> &&OW,
+                               std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new AArch64ELFStreamer(Context, std::move(TAB), std::move(OW),
+                                std::move(Emitter));
 }

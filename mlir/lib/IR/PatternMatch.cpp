@@ -87,15 +87,6 @@ Pattern::Pattern(const void *rootValue, RootKind rootKind,
 // RewritePattern
 //===----------------------------------------------------------------------===//
 
-void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
-  llvm_unreachable("need to implement either matchAndRewrite or one of the "
-                   "rewrite functions!");
-}
-
-LogicalResult RewritePattern::match(Operation *op) const {
-  llvm_unreachable("need to implement either match or matchAndRewrite!");
-}
-
 /// Out-of-line vtable anchor.
 void RewritePattern::anchor() {}
 

@@ -117,10 +117,12 @@ protected:
 /// arguments with their constant values.
 struct MaterializeKnownConstantValues : public RewritePattern {
   MaterializeKnownConstantValues(MLIRContext *context, DataFlowSolver &s)
-      : RewritePattern(Pattern::MatchAnyOpTypeTag(), /*benefit=*/1, context),
+      : RewritePattern::RewritePattern(Pattern::MatchAnyOpTypeTag(),
+                                       /*benefit=*/1, context),
         solver(s) {}
 
-  LogicalResult match(Operation *op) const override {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
     if (matchPattern(op, m_Constant()))
       return failure();
 
@@ -129,7 +131,8 @@ struct MaterializeKnownConstantValues : public RewritePattern {
     };
     bool hasConstantResults = llvm::any_of(op->getResults(), needsReplacing);
     if (op->getNumRegions() == 0)
-      return success(hasConstantResults);
+      if (!hasConstantResults)
+        return failure();
     bool hasConstantRegionArgs = false;
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
@@ -137,10 +140,9 @@ struct MaterializeKnownConstantValues : public RewritePattern {
             llvm::any_of(block.getArguments(), needsReplacing);
       }
     }
-    return success(hasConstantResults || hasConstantRegionArgs);
-  }
+    if (!hasConstantResults && !hasConstantRegionArgs)
+      return failure();
 
-  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     bool replacedAll = (op->getNumResults() != 0);
     for (Value v : op->getResults())
       replacedAll &=
@@ -148,7 +150,7 @@ struct MaterializeKnownConstantValues : public RewritePattern {
            v.use_empty());
     if (replacedAll && isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
-      return;
+      return success();
     }
 
     PatternRewriter::InsertionGuard guard(rewriter);
@@ -160,6 +162,8 @@ struct MaterializeKnownConstantValues : public RewritePattern {
         }
       }
     }
+
+    return success();
   }
 
 private:
