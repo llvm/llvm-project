@@ -309,7 +309,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
       Error Err = Client.perform(Request, Handler);
       if (Err)
         return std::move(Err);
-      if (Err = Handler.commit())
+      if ((Err = Handler.commit()))
         return std::move(Err);
 
       unsigned Code = Client.responseCode();
