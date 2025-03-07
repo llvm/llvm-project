@@ -223,10 +223,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
 
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
-    StringRef ModABI = M.getTargetABIFromMD();
-    if (!ModABI.empty()) {
-      TargetOpts.MCOptions.ABIName = ModABI;
-    }
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
