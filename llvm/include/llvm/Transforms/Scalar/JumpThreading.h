@@ -169,7 +169,7 @@ public:
   bool processGuards(BasicBlock *BB);
   bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard, BranchInst *BI);
 
-  bool preserveLoopPreHeader(BasicBlock *BB);
+  bool preserveLoopPredecessor(BasicBlock *BB);
 
 private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,

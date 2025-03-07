@@ -335,7 +335,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
       if (&BB == &F->getEntryBlock() || DTU->isBBPendingDeletion(&BB))
         continue;
 
-      if (pred_empty(&BB) && !preserveLoopPreHeader(&BB)) {
+      if (pred_empty(&BB) && !preserveLoopPredecessor(&BB)) {
         // When processBlock makes BB unreachable it doesn't bother to fix up
         // the instructions in it. We must remove BB to prevent invalid IR.
         LLVM_DEBUG(dbgs() << "  JT: Deleting dead block '" << BB.getName()
@@ -1214,11 +1214,11 @@ static bool isOpDefinedInBlock(Value *Op, BasicBlock *BB) {
   return false;
 }
 
-// Check if BB is a loop pre-header and if it has to be preserved to avoid
+// Check if BB is a loop predecessor and if it has to be preserved to avoid
 // invalid IR.
-bool JumpThreadingPass::preserveLoopPreHeader(BasicBlock *BB) {
+bool JumpThreadingPass::preserveLoopPredecessor(BasicBlock *BB) {
   BasicBlock *Succ = BB->getUniqueSuccessor();
-  // Check if BB is a pre-header
+  // Check if BB is a predecessor
   if (!LoopHeaders.contains(Succ))
     return false;
   // Check for each PHI node in Succ if it uses BB.
@@ -1226,26 +1226,26 @@ bool JumpThreadingPass::preserveLoopPreHeader(BasicBlock *BB) {
   // operands, so if there is a circular use. Only verify this for non-PHI
   // instructions since self-references are OK for PHIs. And only verify this
   // for instructions that are defined in BB.
-  // If we find corresponding instructions, preserve the pre-header because
+  // If we find corresponding instructions, preserve the predecessor because
   // otherwise, the PHI node may become constant and may be removed, which could
   // lead to a circular reference.
   return llvm::any_of(Succ->phis(), [BB](PHINode &PHI) {
     if (PHI.getBasicBlockIndex(BB) == -1)
       return false;
-    bool HasValueDefinedInPreHeader = false;
+    bool HasValueDefinedInPredecessor = false;
     bool HasPotentialSelfReference = false;
     for (Value *Op : PHI.operand_values()) {
       Instruction *Inst = dyn_cast<Instruction>(Op);
       if (!Inst)
         continue;
       if (isOpDefinedInBlock(Op, BB))
-        HasValueDefinedInPreHeader = true;
+        HasValueDefinedInPredecessor = true;
       else if (!isa<PHINode>(Inst) &&
                llvm::any_of(Inst->operand_values(),
                             [&PHI](Value *V) { return V == &PHI; }))
         HasPotentialSelfReference = true;
     }
-    return HasValueDefinedInPreHeader && HasPotentialSelfReference;
+    return HasValueDefinedInPredecessor && HasPotentialSelfReference;
   });
 }
 
