@@ -114,6 +114,10 @@ C2y Feature Support
 - Implemented N3411 which allows a source file to not end with a newline
   character. This is still reported as a conforming extension in earlier
   language modes.
+- Implement `WG14 N3409 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3409.pdf>`_
+  which removes UB around use of ``void`` expressions. In practice, this means
+  that ``_Generic`` selection associations may now have ``void`` type, but it
+  also removes UB with code like ``(void)(void)1;``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
