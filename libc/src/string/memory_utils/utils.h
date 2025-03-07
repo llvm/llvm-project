@@ -17,7 +17,6 @@
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 
-#include <cstddef>
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t / INT32_MAX / INT32_MIN
 
