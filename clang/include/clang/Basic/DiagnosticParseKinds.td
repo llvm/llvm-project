@@ -1820,6 +1820,7 @@ def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%
 
 // HLSL Root Signature Parser Diagnostics
 def err_hlsl_expected_param : Error<"expected parameter in %1(%0)">;
+def err_hlsl_expected_value : Error<"expected value for %1 = %0">;
 def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_non_zero_flag : Error<"specified a non-zero integer as a flag">;
