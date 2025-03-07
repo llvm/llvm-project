@@ -907,7 +907,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("IfMacros: [MYIF]", IfMacros, CustomIfs);
 
   Style.AttributeMacros.clear();
-  CHECK_PARSE("BasedOnStyle: LLVM", AttributeMacros,
+  CHECK_PARSE(
+      "BasedOnStyle: LLVM", AttributeMacros,
       std::vector<std::string>({"__capability", "absl_nonnull", "absl_nullable",
                                 "absl_nullability_unknown"}));
   Style.AttributeMacros.clear();
