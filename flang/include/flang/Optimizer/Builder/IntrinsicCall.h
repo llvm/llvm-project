@@ -187,9 +187,11 @@ struct IntrinsicLibrary {
   mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicCas(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAtomicCas(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicDec(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicExch(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAtomicExch(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicInc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAtomicMax(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAtomicMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
