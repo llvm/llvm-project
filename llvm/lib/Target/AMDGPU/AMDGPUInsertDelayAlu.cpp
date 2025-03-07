@@ -55,8 +55,7 @@ public:
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if ((SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI)) &&
-       AMDGPU::getWMMAIsXDL(MI.getOpcode()))
+    if (SIInstrInfo::isXDLWMMA(MI))
       return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
