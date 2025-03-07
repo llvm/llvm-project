@@ -187,8 +187,8 @@ private:
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned>
-  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI,
+  std::pair<MachineOperand *, unsigned>
+  selectVOP3PModsImpl(MachineOperand *Op, const MachineRegisterInfo &MRI,
                       bool IsDOT = false) const;
 
   InstructionSelector::ComplexRendererFns
