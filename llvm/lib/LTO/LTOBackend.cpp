@@ -222,7 +222,6 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
     CodeModel = M.getCodeModel();
 
   TargetOptions TargetOpts = Conf.Options;
-
   if (TargetOpts.MCOptions.ABIName.empty()) {
     StringRef ModABI = M.getTargetABIFromMD();
     if (!ModABI.empty()) {
