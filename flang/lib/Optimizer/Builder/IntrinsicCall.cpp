@@ -106,7 +106,7 @@ using I = IntrinsicLibrary;
 /// argument is an optional variable in the current scope).
 static constexpr bool handleDynamicOptional = true;
 
-/// TODO: Move all CUDA Fortran intrinsic hanlders into its own file similar to
+/// TODO: Move all CUDA Fortran intrinsic handlers into its own file similar to
 /// PPC.
 static const char __ldca_i4x4[] = "__ldca_i4x4_";
 static const char __ldca_i8x2[] = "__ldca_i8x2_";
