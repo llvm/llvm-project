@@ -1129,7 +1129,6 @@ def OMP_Task : Directive<"task"> {
     VersionedClause<OMPC_Affinity, 50>,
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_Depend>,
-    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_InReduction>,
     VersionedClause<OMPC_Mergeable>,
@@ -1139,6 +1138,7 @@ def OMP_Task : Directive<"task"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Detach, 50>,
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
