@@ -186,8 +186,8 @@ class PGOCtxProfileReader final {
   BitstreamCursor Cursor;
   Expected<BitstreamEntry> advance();
   Error readMetadata();
-  Error wrongValue(const Twine &);
-  Error unsupported(const Twine &);
+  Error wrongValue(const Twine &Msg);
+  Error unsupported(const Twine &Msg);
 
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
   readProfile(PGOCtxProfileBlockIDs Kind);
@@ -195,7 +195,7 @@ class PGOCtxProfileReader final {
   bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
   Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
 
-  Error loadContexts(CtxProfContextualProfiles &);
+  Error loadContexts(CtxProfContextualProfiles &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
@@ -205,6 +205,6 @@ public:
   Expected<PGOCtxProfile> loadProfiles();
 };
 
-void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &);
+void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
 } // namespace llvm
 #endif

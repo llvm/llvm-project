@@ -1575,6 +1575,8 @@ public:
 
   // Emit code for the OpenACC Declare declaration.
   void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D, CodeGenFunction *CGF);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
