@@ -25,7 +25,9 @@ struct RangeView : std::ranges::view_base {
   using Iterator = cpp20_input_iterator<int*>;
   using Sentinel = sentinel_wrapper<Iterator>;
 
-  constexpr explicit RangeView(int* b, int* e) : begin_(b), end_(e) {}
+  template <std::contiguous_iterator It>
+    requires std::same_as<std::iter_value_t<It>, int>
+  constexpr explicit RangeView(It b, It e) : begin_(std::to_address(b)), end_(std::to_address(e)) {}
   constexpr RangeView(RangeView const& other) : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
   constexpr RangeView(RangeView&& other) : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
   RangeView& operator=(RangeView const&) = default;
