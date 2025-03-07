@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -74,12 +75,9 @@ TEST(EquivalenceClassesTest, MembersIterator) {
   EC.unionSets(5, 1);
   EXPECT_EQ(EC.getNumClasses(), 2u);
 
-  std::set<int> ActualMembers;
-  std::set<int> ExpectedMembers{1, 2, 5};
   EquivalenceClasses<int>::iterator I = EC.findValue(EC.getLeaderValue(1));
-  for (auto M : EC.members(I))
-    ActualMembers.insert(M);
-  EXPECT_EQ(ActualMembers, ExpectedMembers);
+  EXPECT_THAT(EC.members(I), testing::ElementsAre(1, 2, 5));
+  EXPECT_THAT(EC.members(EC.end()), testing::IsEmpty());
 }
 
 // Type-parameterized tests: Run the same test cases with different element
