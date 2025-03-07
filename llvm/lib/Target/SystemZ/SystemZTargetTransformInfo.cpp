@@ -74,6 +74,37 @@ static void countNumMemAccesses(const Value *Ptr, unsigned &NumStores,
     }
 }
 
+static bool usedAsGEPIndex(const Value *V) {
+  assert(V->getType()->isIntegerTy() && "Expected an integer value.");
+  for (const User *U : V->users()) {
+    if (const auto *SExtI = dyn_cast<SExtInst>(U))
+      return usedAsGEPIndex(SExtI);
+    else if (const auto *ZExtI = dyn_cast<ZExtInst>(U))
+      return usedAsGEPIndex(ZExtI);
+    else if (isa<GetElementPtrInst>(U))
+      return true;
+  }
+  return false;
+}
+
+// Return true if Arg is used in a Load; Add/Sub; Store sequence.
+static bool looksLikeIVUpdate(const Function *F, const Value *Arg) {
+  assert(Arg->getType()->isPointerTy() && "Expecting ptr arg.");
+  for (const User *ArgU : Arg->users())
+    if (const auto *LoadI = dyn_cast<LoadInst>(ArgU))
+      if (LoadI->getType()->isIntegerTy())
+        for (const User *LdU : LoadI->users()) {
+          const Instruction *AddSubI = cast<Instruction>(LdU);
+          if (AddSubI->getOpcode() == Instruction::Add ||
+              AddSubI->getOpcode() == Instruction::Sub)
+            for (const User *ASU : AddSubI->users())
+              if (const auto *StoreI = dyn_cast<StoreInst>(ASU))
+                if (StoreI->getPointerOperand() == Arg)
+                  return true;
+        }
+  return false;
+}
+
 unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   unsigned Bonus = 0;
   const Function *Caller = CB->getParent()->getParent();
@@ -130,6 +161,27 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   if (NumStores > 10)
     Bonus += NumStores * 50;
   Bonus = std::min(Bonus, unsigned(1000));
+
+  // Give bonus for an integer alloca which is used as a GEP index in caller
+  // and is updated like an IV in memory in callee. This will help LSR.
+  for (unsigned OpIdx = 0; OpIdx != Callee->arg_size(); ++OpIdx) {
+    Value *CallerArg = CB->getArgOperand(OpIdx);
+    Argument *CalleeArg = Callee->getArg(OpIdx);
+    if (const AllocaInst *AI = dyn_cast<AllocaInst>(CallerArg))
+      if (AI->getAllocatedType()->isIntegerTy() && !AI->isArrayAllocation()) {
+        bool UsedAsGEPIndex = false;
+        for (const User *U : AI->users())
+          if (const auto *LI = dyn_cast<LoadInst>(U))
+            if (usedAsGEPIndex(LI)) {
+              UsedAsGEPIndex = true;
+              break;
+            }
+        if (UsedAsGEPIndex && looksLikeIVUpdate(Callee, CalleeArg)) {
+          Bonus = 1000;
+          break;
+        }
+      }
+  }
 
   LLVM_DEBUG(if (Bonus)
                dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
