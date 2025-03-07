@@ -335,14 +335,14 @@ static const load_command *NextCommand(const load_command *lc) {
 }
 
 #  ifdef MH_MAGIC_64
-static const size_t header_size = sizeof(mach_header_64);
+static constexpr size_t header_size = sizeof(mach_header_64);
 #  else
-static const size_t header_size = sizeof(mach_header);
+static constexpr size_t header_size = sizeof(mach_header);
 #  endif
 
 static void FindUUID(const load_command *first_lc, const mach_header *hdr,
                      u8 *uuid_output) {
-  unsigned short curcmd = 0;
+  uint32_t curcmd = 0;
   for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
        curcmd++, lc = NextCommand(lc)) {
     CHECK_LT((const char *)lc,
@@ -360,7 +360,7 @@ static void FindUUID(const load_command *first_lc, const mach_header *hdr,
 
 static bool IsModuleInstrumented(const load_command *first_lc,
                                  const mach_header *hdr) {
-  unsigned short curcmd = 0;
+  uint32_t curcmd = 0;
   for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
        curcmd++, lc = NextCommand(lc)) {
     CHECK_LT((const char *)lc,
