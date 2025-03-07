@@ -358,7 +358,8 @@
                   "number",
                   "string"
                 ],
-                "description": "System process ID to attach to."
+                "description": "Optional process ID to attach to. Defaults to the process picker UI.",
+                "default": "${command:pickProcess}"
               },
               "waitFor": {
                 "type": "boolean",
