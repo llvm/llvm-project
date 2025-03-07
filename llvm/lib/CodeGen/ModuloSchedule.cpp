@@ -464,10 +464,12 @@ void ModuloScheduleExpander::generateExistingPhis(
           InstOp1 = MRI.getVRegDef(PhiOp1);
           int PhiOpStage = Schedule.getStage(InstOp1);
           int StageAdj = (PhiOpStage != -1 ? PhiStage - PhiOpStage : 0);
-          if (PhiOpStage != -1 && PrologStage - StageAdj >= Indirects + np &&
-              VRMap[PrologStage - StageAdj - Indirects - np].count(PhiOp1)) {
-            PhiOp1 = VRMap[PrologStage - StageAdj - Indirects - np][PhiOp1];
-            break;
+          if (PhiOpStage != -1 && PrologStage - StageAdj >= Indirects + np) {
+            auto &M = VRMap[PrologStage - StageAdj - Indirects - np];
+            if (auto It = M.find(PhiOp1); It != M.end()) {
+              PhiOp1 = It->second;
+              break;
+            }
           }
           ++Indirects;
         }
@@ -597,8 +599,11 @@ void ModuloScheduleExpander::generateExistingPhis(
 
     // Check if we need to rename a Phi that has been eliminated due to
     // scheduling.
-    if (NumStages == 0 && IsLast && VRMap[CurStageNum].count(LoopVal))
-      replaceRegUsesAfterLoop(Def, VRMap[CurStageNum][LoopVal], BB, MRI, LIS);
+    if (NumStages == 0 && IsLast) {
+      auto It = VRMap[CurStageNum].find(LoopVal);
+      if (It != VRMap[CurStageNum].end())
+        replaceRegUsesAfterLoop(Def, It->second, BB, MRI, LIS);
+    }
   }
 }
 
