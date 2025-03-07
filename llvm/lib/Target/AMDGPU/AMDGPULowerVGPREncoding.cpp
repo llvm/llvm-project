@@ -549,6 +549,10 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
 
         OpInfo.Encode(NewMode.Ops[I].IdxReg.value(), *MMO, CoreOpId);
         TransferImplicitVGPROperands(*II, *CoreMI, TRI);
+        // TransferImplicitVGPROperands includes a call to addOperand which can
+        // invalidate any existing MachineOperand pointers.
+        // Regenerate CoreOp in case a re-allocation has happened
+        CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
 
         bool HasOtherUsers =
             AMDGPU::STAGING_REGRegClass.contains(DataReg) &&
