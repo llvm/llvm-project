@@ -312,6 +312,91 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
   }
 };
 
+static LogicalResult validateDpasIndexing(PatternRewriter &rewriter,
+                                          vector::ContractionOp contractOp) {
+  MLIRContext *ctx = contractOp.getContext();
+  SmallVector<AffineMap, 4> maps = contractOp.getIndexingMapsArray();
+
+  // Operand rank defines expected data layout:
+  //   - 2D for standard GEMM
+  //   - 3D for VNNI layout
+  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+  auto infer = [&](MapList m) { return AffineMap::inferFromExprList(m, ctx); };
+  AffineExpr m, n, k, vnni;
+  bindDims(ctx, m, n, k, vnni);
+
+  if (contractOp.getRhsType().getRank() == 2) {
+    // Require plain GEMM without any transposition.
+    return success(maps == infer({{m, k}, {k, n}, {m, n}}));
+  }
+
+  // Require VNNI layout.
+  return success(maps == infer({{m, k, vnni}, {k, n, vnni}, {m, n}}));
+}
+
+struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = contractOp.getLoc();
+
+    if (contractOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects add combining kind");
+
+    TypedValue<Type> acc = contractOp.getAcc();
+    VectorType accType = dyn_cast<VectorType>(acc.getType());
+    if (!accType || accType.getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
+    TypedValue<VectorType> lhs = contractOp.getLhs();
+    VectorType lhsType = lhs.getType();
+    int64_t lhsRank = lhsType.getRank();
+    if (!(lhsRank == 2 || lhsRank == 3))
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects lhs 2D or 3D vector");
+    TypedValue<VectorType> rhs = contractOp.getRhs();
+    VectorType rhsType = rhs.getType();
+    int64_t rhsRank = rhsType.getRank();
+    if (!(rhsRank == 2 || rhsRank == 3))
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects rhs 2D or 3D vector");
+    if (lhsRank != rhsRank)
+      return rewriter.notifyMatchFailure(
+          contractOp, "Expects lhs and rhs to be the same rank");
+
+    if (failed(validateDpasIndexing(rewriter, contractOp)))
+      return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
+
+    // 3D shape implies VNNI layout verified by the earlier indexing check.
+    bool isVnni = rhsRank == 3;
+    auto rhsShape = rhsType.getShape();
+    int64_t dimK = isVnni ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+    unsigned elemBitWidth = rhsType.getElementType().getIntOrFloatBitWidth();
+    if (dimK != (8 * 32 / elemBitWidth))
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Invalid K-dimension size");
+    if (isVnni && rhsShape[2] != (32 / elemBitWidth))
+      return rewriter.notifyMatchFailure(contractOp, "Invalid VNNI factor");
+
+    if (isVnni) {
+      // Collapse contract lhs VNNI factor back into K-dim as dpas op expects
+      // flat 2D shape for its lhs operand.
+      auto lhsShape = lhsType.getShape();
+      auto lhsFlatType = VectorType::get(
+          {lhsShape[0], lhsShape[1] * lhsShape[2]}, lhsType.getElementType());
+      lhs = rewriter.create<vector::ShapeCastOp>(loc, lhsFlatType, lhs)
+                .getResult();
+    }
+
+    auto dpasOp = rewriter.create<xegpu::DpasOp>(
+        loc, contractOp.getResultType(), lhs, rhs, acc);
+    rewriter.replaceOp(contractOp, dpasOp);
+
+    return success();
+  }
+};
+
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
@@ -327,5 +412,5 @@ struct ConvertVectorToXeGPUPass
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-               StoreLowering>(patterns.getContext());
+               StoreLowering, ContractionLowering>(patterns.getContext());
 }
