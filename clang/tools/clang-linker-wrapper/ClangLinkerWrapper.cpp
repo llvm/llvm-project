@@ -601,7 +601,7 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
   SmallString<128> Filename;
   (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
-      .toNullTerminatedStringRef(Filename);
+      .toVector(Filename);
   llvm::replace(Filename, ':', '-');
   auto TempFileOrErr = createOutputFile(Filename, "o");
   if (!TempFileOrErr)
