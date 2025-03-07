@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <chrono>
 #include <string>
 
 namespace lldb_dap {
@@ -153,6 +154,39 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 ///     The environment variables stored in the env key
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
+
+class TelemetryDispatcher {
+public:
+  TelemetryDispatcher(SBDebugger *debugger) {
+    m_telemetry_array =
+        ({"start_time",
+          std::chrono::steady_clock::now().time_since_epoch().count()});
+    this->debugger = debugger;
+  }
+
+  void Set(std::string key, std::string value) {
+    m_telemetry_array.push_back(llvm::json::Value{key, value})
+  }
+
+  void Set(std::string key, int64_t value) {
+    m_telemetry_array.push_back(llvm::json::Value{key, value})
+  }
+
+  ~TelemetryDispatcher() {
+    m_telemetry_array.push_back(
+        {"end_time",
+         std::chrono::steady_clock::now().time_since_epoch().count()});
+    lldb::SBStructuredData telemetry_entry;
+    llvm::json::Value val(std::move(telemetry_array));
+    std::string string_rep = lldb_dap::JSONToString(val);
+    telemetry_entry.SetFromJSON(string_rep.c_str());
+    debugger->DispatchClientTelemetry(telemetry_entry);
+  }
+
+private:
+  llvm::json::Array m_telemetry_array;
+  SBDebugger *debugger;
+};
 
 } // namespace lldb_dap
 

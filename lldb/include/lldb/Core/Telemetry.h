@@ -28,6 +28,17 @@
 namespace lldb_private {
 namespace telemetry {
 
+struct LLDBConfig : public ::llvm::telemetry::Config {
+  // If true, we will collect telemetry from LLDB's clients (eg., lldb-dap) via
+  // the SB interface. Must also be enabled by the vendor while creating the
+  // manager.
+  const bool m_enable_client_telemetry;
+
+  explicit LLDBConfig(bool enable_telemetry, bool enable_client_telemetry)
+      : ::llvm::telemetry::Config(enable_telemetry),
+        m_enable_client_telemetry(enable_client_telemetry) {}
+};
+
 // We expect each (direct) subclass of LLDBTelemetryInfo to
 // have an LLDBEntryKind in the form 0b11xxxxxxxx
 // Specifically:
@@ -37,6 +48,7 @@ namespace telemetry {
 // must have their LLDBEntryKind in the similar form (ie., share common prefix)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
+  static const llvm::telemetry::KindType ClientInfo = 0b11100000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
 };
 
@@ -66,6 +78,11 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
+struct ClientInfo : public LLDBBaseTelemetryInfo {
+  std::string request_name;
+  std::optional<std::string> error_msg;
+};
+
 struct DebuggerInfo : public LLDBBaseTelemetryInfo {
   std::string lldb_version;
 
@@ -93,21 +110,23 @@ class TelemetryManager : public llvm::telemetry::Manager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override;
 
-  const llvm::telemetry::Config *GetConfig();
+  const LLDBConfig *GetConfig() { return m_config.get(); }
+
+  virtual void
+  DispatchClientTelemery(const lldb_private::StructuredDataImpl &entry,
+                         Debugger *debugger);
 
   virtual llvm::StringRef GetInstanceName() const = 0;
 
   static TelemetryManager *GetInstance();
 
-  static TelemetryManager *GetInstanceIfEnabled();
-
 protected:
-  TelemetryManager(std::unique_ptr<llvm::telemetry::Config> config);
+  TelemetryManager(std::unique_ptr<LLDBConfig> config);
 
   static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:
-  std::unique_ptr<llvm::telemetry::Config> m_config;
+  std::unique_ptr<LLDBConfig> m_config;
   // Each instance of a TelemetryManager is assigned a unique ID.
   const std::string m_id;
 
