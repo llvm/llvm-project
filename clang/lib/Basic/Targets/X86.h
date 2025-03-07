@@ -835,19 +835,39 @@ class LLVM_LIBRARY_VISIBILITY UEFIX86_64TargetInfo
 public:
   UEFIX86_64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : UEFITargetInfo<X86_64TargetInfo>(Triple, Opts) {
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    IntMaxType = SignedLongLong;
+    Int64Type = SignedLongLong;
+    SizeType = UnsignedLongLong;
+    PtrDiffType = SignedLongLong;
+    IntPtrType = SignedLongLong;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    WCharType = UnsignedShort;
+    WIntType = UnsignedShort;
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    this->MaxTLSAlign = 8192u * this->getCharWidth();
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
 
-  BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::CharPtrBuiltinVaList;
-  }
-
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
+    case CC_X86StdCall:
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+      return CCCR_Ignore;
     case CC_C:
+    case CC_X86VectorCall:
+    case CC_IntelOclBicc:
+    case CC_PreserveMost:
+    case CC_PreserveAll:
+    case CC_PreserveNone:
+    case CC_X86_64SysV:
+    case CC_Swift:
+    case CC_SwiftAsync:
+    case CC_X86RegCall:
+    case CC_OpenCLKernel:
     case CC_Win64:
       return CCCR_OK;
     default:
