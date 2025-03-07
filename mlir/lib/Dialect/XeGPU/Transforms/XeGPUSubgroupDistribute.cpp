@@ -134,6 +134,7 @@ SGMap SGMap::join(const SGMap &lhs, const SGMap &rhs) {
   llvm_unreachable("Join should not be triggered by SGMapPropagation.");
 }
 
+/// Get the transposed layout according to the given permutation.
 SGMap SGMap::getTransposedLayout(ArrayRef<int64_t> permutation) const {
   if (!isAssigned())
     return {};
@@ -180,6 +181,11 @@ static SGMap getDefaultSgMap(Type ty) {
   return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
 }
 
+/// Helper Function to get the default layout representing constants.
+static SGMap getDefaultSgMap() {
+  return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
+}
+
 ///===----------------------------------------------------------------------===///
 /// SGMapPropagation
 ///===----------------------------------------------------------------------===///
@@ -215,6 +221,14 @@ private:
   void visitVectorBitcastOp(vector::BitCastOp bitcast,
                             ArrayRef<SGMapLattice *> operands,
                             ArrayRef<const SGMapLattice *> results);
+
+  void visitCreateNdDescOp(xegpu::CreateNdDescOp createNdDesc,
+                           ArrayRef<SGMapLattice *> operands,
+                           ArrayRef<const SGMapLattice *> results);
+
+  void visitCreateDescOp(xegpu::CreateDescOp createDesc,
+                         ArrayRef<SGMapLattice *> operands,
+                         ArrayRef<const SGMapLattice *> results);
 
 public:
   SGMapPropagation(DataFlowSolver &solver, SymbolTableCollection &symbolTable)
@@ -254,6 +268,10 @@ SGMapPropagation::visitOperation(Operation *op,
     visitVectorBitcastOp(bitcast, operands, results);
   else if (auto loadGather = dyn_cast<xegpu::LoadGatherOp>(op))
     visitLoadGatherOp(loadGather, operands, results);
+  else if (auto createNdDesc = dyn_cast<xegpu::CreateNdDescOp>(op))
+    visitCreateNdDescOp(createNdDesc, operands, results);
+  else if (auto createDesc = dyn_cast<xegpu::CreateDescOp>(op))
+    visitCreateDescOp(createDesc, operands, results);
   else if (auto storeScatter = dyn_cast<xegpu::StoreScatterOp>(op))
     visitStoreScatterOp(storeScatter, operands, results);
   /// All other ops
@@ -318,8 +336,7 @@ void SGMapPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
   /// this effect is not expected and should be abstracted away. Emit a warning.
   /// TODO: Handle this case properly when `order` is introduced in the sg_map.
   if (auto transpose = load.getTranspose()) {
-    emitWarning(load.getLoc())
-        << "Transpose effect is not expected for LoadNdOp";
+    load.emitWarning("Transpose effect is not expected for LoadNdOp");
     tensorDescLayout = valueLayout.getTransposedLayout(transpose.value());
   }
   /// Propagate the new layout to the tensor descriptor operand.
@@ -394,21 +411,53 @@ void SGMapPropagation::visitLoadGatherOp(
     /// a warning.
     /// TODO: Handle this case properly when `order` is introduced in the
     /// sg_map.
-    emitWarning(load.getLoc())
-        << "Transpose effect is not expected for LoadGatherOp";
+    load.emitWarning("Transpose effect is not expected for LoadGatherOp");
     tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
   } else
     tensorDescLayout = valueLayout;
   /// Mask operand should have the same layout as the value but with wi_data =
   /// [1, 1]
-  SGMap maskLayout = getDefaultSgMap(load.getTensorDescType().getElementType());
+  SGMap maskLayout = SGMap(valueLayout.getLayout(), WiData({1, 1}));
   /// Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
   /// Propagate the new layout to the mask operand.
   propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
 }
 
-/// Set the layout for the value, tensor descriptor, and mask operands in
+/// Propagate the layout of the descriptor to the operands in CreateNdDescOp.
+void SGMapPropagation::visitCreateNdDescOp(
+    xegpu::CreateNdDescOp createNdDesc, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  auto descLayout = results[0]->getValue();
+  /// Need the layout of the descriptor to propagate to the operands.
+  if (!descLayout.isAssigned())
+    return;
+  /// Propagate the layout to the source operand.
+  propagateIfChanged(operands[0], operands[0]->meet(descLayout));
+  /// For all other operands propagate the descriptor layout.
+  SGMap layout = getDefaultSgMap();
+  for (size_t i = 1; i < operands.size(); ++i) {
+    propagateIfChanged(operands[i], operands[i]->meet(layout));
+  }
+}
+
+/// Propagate the layout of the descriptor to the source and offset operands in
+/// CreateDescOp.
+void SGMapPropagation::visitCreateDescOp(
+    xegpu::CreateDescOp createDesc, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  auto descLayout = results[0]->getValue();
+  /// Need the layout of the descriptor to propagate to the operands.
+  if (!descLayout.isAssigned())
+    return;
+  /// Propagate the layout to the source operand.
+  propagateIfChanged(operands[0], operands[0]->meet(descLayout));
+  /// For offset operand propagate the default layout.
+  SGMap layout = getDefaultSgMap();
+  propagateIfChanged(operands[1], operands[1]->meet(layout));
+}
+
+/// Set the layout for the value, tensor descriptor, and mask operands in the
 /// StoreScatterOp.
 void SGMapPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<SGMapLattice *> operands,
@@ -422,8 +471,8 @@ void SGMapPropagation::visitStoreScatterOp(
     /// a warning.
     /// TODO: Handle this case properly when `order` is introduced in the
     /// sg_map.
-    emitWarning(storeScatter.getLoc())
-        << "Transpose effect is not expected for StoreScatterOp";
+    storeScatter.emitWarning(
+        "Transpose effect is not expected for StoreScatterOp");
     storeScatterLayout = valueLayout.getTransposedLayout({1, 0});
   } else
     storeScatterLayout = valueLayout;
@@ -431,8 +480,9 @@ void SGMapPropagation::visitStoreScatterOp(
   propagateIfChanged(operands[0], operands[0]->meet(valueLayout));
   /// Propagate the tensor descriptor layout.
   propagateIfChanged(operands[1], operands[1]->meet(storeScatterLayout));
-  /// Propagate the mask layout.
-  propagateIfChanged(operands[2], operands[2]->meet(valueLayout));
+  /// Use default layout for mask operand.
+  auto maskLayout = getDefaultSgMap();
+  propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
 }
 
 namespace {
@@ -517,10 +567,9 @@ struct XeGPUSubgroupDistributePass final
   }
   void runOnOperation() override;
   /// Print sg map propagation analysis result and exit for testing purposes.
-  Option<bool> printOnly{
-      *this, "print-only", llvm::cl::init(false),
-      llvm::cl::desc(
-          "Print the result of the subgroup map propagation analysis")};
+  Option<bool> printOnly{*this, "print-analysis-only", llvm::cl::init(false),
+                         llvm::cl::desc("Print the result of the subgroup map "
+                                        "propagation analysis and exit.")};
 };
 } // namespace
 
