@@ -6616,6 +6616,54 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Str = CGM.GetAddrOfConstantCString(Name, "");
     return RValue::get(Str.getPointer());
   }
+
+  case Builtin::BI__builtin_sadd_nuw:
+  case Builtin::BI__builtin_saddl_nuw:
+  case Builtin::BI__builtin_saddll_nuw:
+  case Builtin::BI__builtin_uadd_nuw:
+  case Builtin::BI__builtin_uaddl_nuw:
+  case Builtin::BI__builtin_uaddll_nuw:
+
+  case Builtin::BI__builtin_sadd_nsw:
+  case Builtin::BI__builtin_saddl_nsw:
+  case Builtin::BI__builtin_saddll_nsw:
+  case Builtin::BI__builtin_uadd_nsw:
+  case Builtin::BI__builtin_uaddl_nsw:
+  case Builtin::BI__builtin_uaddll_nsw:
+
+  case Builtin::BI__builtin_sadd_nuw_nsw:
+  case Builtin::BI__builtin_saddl_nuw_nsw:
+  case Builtin::BI__builtin_saddll_nuw_nsw:
+  case Builtin::BI__builtin_uadd_nuw_nsw:
+  case Builtin::BI__builtin_uaddl_nuw_nsw:
+  case Builtin::BI__builtin_uaddll_nuw_nsw: {
+    bool NUW = false;
+    bool NSW = false;
+    switch (BuiltinIDIfNoAsmLabel) {
+    case Builtin::BI__builtin_sadd_nuw:
+    case Builtin::BI__builtin_saddl_nuw:
+    case Builtin::BI__builtin_saddll_nuw:
+    case Builtin::BI__builtin_uadd_nuw:
+    case Builtin::BI__builtin_uaddl_nuw:
+    case Builtin::BI__builtin_uaddll_nuw:
+      NUW = true;
+      break;
+    case Builtin::BI__builtin_sadd_nsw:
+    case Builtin::BI__builtin_saddl_nsw:
+    case Builtin::BI__builtin_saddll_nsw:
+    case Builtin::BI__builtin_uadd_nsw:
+    case Builtin::BI__builtin_uaddl_nsw:
+    case Builtin::BI__builtin_uaddll_nsw:
+      NSW = true;
+      break;
+    default:
+      NUW = NSW = true;
+      break;
+    }
+    llvm::Value *X = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Y = EmitScalarExpr(E->getArg(1));
+    return RValue::get(Builder.CreateAdd(X, Y, "add", NUW, NSW));
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
