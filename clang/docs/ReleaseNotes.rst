@@ -111,9 +111,9 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
-- Implemented N3411 which allows a source file to not end with a newline
-  character. This is still reported as a conforming extension in earlier
-  language modes.
+- Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
+  which allows a source file to not end with a newline character. This is still
+  reported as a conforming extension in earlier language modes.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -151,6 +151,7 @@ Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns
 related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- The ``ext_vector_type(n)`` attribute can now be used as a generic type attribute.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 - Clang now allows ``__attribute__((model("small")))`` and
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
