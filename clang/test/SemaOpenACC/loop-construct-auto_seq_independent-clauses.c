@@ -60,7 +60,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop auto nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -194,7 +194,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -329,7 +329,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop independent nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -463,7 +463,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -606,7 +606,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop seq nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -746,7 +746,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}

@@ -698,7 +698,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'Decl' context.
-  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
   /// Called when we encounter an associated statement for our construct, this
   /// should check legality of the statement as it appertains to this Construct.
   StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,

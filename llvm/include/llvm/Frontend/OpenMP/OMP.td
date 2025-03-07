@@ -1023,8 +1023,10 @@ def OMP_Single : Directive<"single"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_CopyPrivate>,
     VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Private>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
