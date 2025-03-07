@@ -1574,19 +1574,18 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
   const unsigned LastElt = DemandedElts.getActiveBits() - 1;
   const unsigned MaskLen = LastElt - FirstElt + 1;
 
-  unsigned OldNumElts = VT->getNumElements();
-  if (MaskLen == OldNumElts && MaskLen != 1)
+  // TODO: Handle general subvector extract.
+  if (MaskLen != 1)
     return nullptr;
 
   Type *EltTy = VT->getElementType();
-  Type *NewVT = MaskLen == 1 ? EltTy : FixedVectorType::get(EltTy, MaskLen);
-
-  // Theoretically we should support these intrinsics for any legal type. Avoid
-  // introducing cases that aren't direct register types like v3i16.
-  if (!isTypeLegal(NewVT))
+  if (!isTypeLegal(EltTy))
     return nullptr;
 
   Value *Src = II.getArgOperand(0);
+
+  assert(FirstElt == LastElt);
+  Value *Extract = IC.Builder.CreateExtractElement(Src, FirstElt);
 
   // Make sure convergence tokens are preserved.
   // TODO: CreateIntrinsic should allow directly copying bundles
@@ -1594,39 +1593,16 @@ Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
   II.getOperandBundlesAsDefs(OpBundles);
 
   Module *M = IC.Builder.GetInsertBlock()->getModule();
-  Function *Remangled =
-      Intrinsic::getOrInsertDeclaration(M, II.getIntrinsicID(), {NewVT});
-
-  if (MaskLen == 1) {
-    Value *Extract = IC.Builder.CreateExtractElement(Src, FirstElt);
-
-    // TODO: Preserve callsite attributes?
-    CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
-
-    return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()),
-                                          NewCall, FirstElt);
-  }
-
-  SmallVector<int> ExtractMask(MaskLen, -1);
-  for (unsigned I = 0; I != MaskLen; ++I) {
-    if (DemandedElts[FirstElt + I])
-      ExtractMask[I] = FirstElt + I;
-  }
-
-  Value *Extract = IC.Builder.CreateShuffleVector(Src, ExtractMask);
+  Function *Remangled = Intrinsic::getOrInsertDeclaration(
+      M, II.getIntrinsicID(), {Extract->getType()});
 
   // TODO: Preserve callsite attributes?
   CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
 
-  SmallVector<int> InsertMask(OldNumElts, -1);
-  for (unsigned I = 0; I != MaskLen; ++I) {
-    if (DemandedElts[FirstElt + I])
-      InsertMask[FirstElt + I] = I;
-  }
-
   // FIXME: If the call has a convergence bundle, we end up leaving the dead
   // call behind.
-  return IC.Builder.CreateShuffleVector(NewCall, InsertMask);
+  return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()), NewCall,
+                                        FirstElt);
 }
 
 std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
