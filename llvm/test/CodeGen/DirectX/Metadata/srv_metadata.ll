@@ -34,46 +34,39 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:;                                       SRV     u64         buf      T6     t10,space2     1
 
 define void @test() #0 {
-  ; RWBuffer<half4> Buf : register(u0)
+  ; Buffer<half4> Buf : register(u0)
   %Zero_h = call target("dx.TypedBuffer", <4 x half>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f16_0_0_0t(
-                  i32 0, i32 0, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %Zero_h, ptr @Zero, align 4
  
-  ; RWBuffer<float4> Buf : register(u1)
+  ; Buffer<float4> Buf : register(u1)
   %One_h = call target("dx.TypedBuffer", <2 x float>, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f32_0_0_0t(
-                  i32 0, i32 1, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <2 x float>, 0, 0, 0) %One_h, ptr @One, align 4
  
-  ; RWBuffer<double> Two : register(u2);
+  ; Buffer<double> Two : register(u2);
   %Two_h = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_0_0_0t(
-                  i32 0, i32 2, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", double, 0, 0, 0) %Two_h, ptr @Two, align 4
 
-  ; RWBuffer<int4> Three : register(u3);
+  ; Buffer<int4> Three : register(u3);
   %Three_h = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 1)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0_1t(
-                  i32 0, i32 3, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x i32>, 0, 0, 1) %Three_h, ptr @Three, align 4
 
   ; ByteAddressBuffer Four : register(u4)
   %Four_h = call target("dx.RawBuffer", i8, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
-                  i32 0, i32 5, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", i8, 0, 0) %Four_h, ptr @Four, align 4
 
-; StructuredBuffer<int16_t> Five : register(u6);
+  ; StructuredBuffer<int16_t> Five : register(u6);
   %Five_h = call target("dx.RawBuffer", i16, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i16_0_0t(
-                  i32 0, i32 6, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", i16, 0, 0) %Five_h, ptr @Five, align 4  
   
-  ; RWBuffer<double> Two : register(u2);
+  ; Buffer<double> Two : register(u2);
   %Six_h = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_0_0_0t(
-                  i32 2, i32 10, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", i64, 0, 0, 0) %Six_h, ptr @Six, align 4
 
   ret void
