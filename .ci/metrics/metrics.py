@@ -65,7 +65,10 @@ class GaugeMetric:
 def buildkite_fetch_page_build_list(
     buildkite_token: str, after_cursor: str = None
 ) -> list[dict[str, str]]:
-    """Fetches a page of the build list using the GraphQL BuildKite API. Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last **finished** builds by default, or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE **finished** builds older than the one pointer by |cursor| if provided.
+    """Fetches a page of the build list using the GraphQL BuildKite API.
+    Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last **finished** builds by
+    default, or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE **finished** builds
+    older than the one pointer by |cursor| if provided.
     The |cursor| value is taken from the previous page returned by the API.
 
     The returned data had the following format:
@@ -75,7 +78,7 @@ def buildkite_fetch_page_build_list(
       after_cursor: cursor after which to start the page fetch.
 
     Returns:
-      Returns most recents builds after cursor (if set) with the following format:
+      The most recent builds after cursor (if set) with the following format:
       [
         {
             "cursor": <value>,
@@ -127,7 +130,8 @@ def buildkite_fetch_page_build_list(
 
 def buildkite_get_build_info(build_number: str) -> dict:
     """Returns all the info associated with the provided build number.
-    Note: for unknown reasons, graphql returns no jobs for a given build, while this endpoint does, hence why this uses this API instead of graphql.
+    Note: for unknown reasons, graphql returns no jobs for a given build,
+    while this endpoint does, hence why this uses this API instead of graphql.
 
       Args:
         build_number: which build number to fetch info for.
@@ -292,7 +296,8 @@ def get_sampled_workflow_metrics(github_repo: github.Repository):
                 time.time_ns(),
             )
         )
-    # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
+    # Always send a hearbeat metric so we can monitor is this container is
+    # still able to log to Grafana.
     workflow_metrics.append(
         GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
     )
