@@ -414,10 +414,10 @@ private:
 };
 } // namespace
 
-static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
-                               const SuspendCrossingInfo &Checker,
-                               SmallVectorImpl<AllocaInfo> &Allocas,
-                               const DominatorTree &DT) {
+static void collectFrameAlloca(
+    AllocaInst *AI, const coro::Shape &Shape,
+    const SuspendCrossingInfo &Checker, SmallVectorImpl<AllocaInfo> &Allocas,
+    const DominatorTree &DT, const SmallPtrSetImpl<Value *> &OutsideFrameSet) {
   if (Shape.CoroSuspends.empty())
     return;
 
@@ -426,9 +426,8 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
   if (AI == Shape.SwitchLowering.PromiseAlloca)
     return;
 
-  // The __coro_gro alloca should outlive the promise, make sure we
-  // keep it outside the frame.
-  if (AI->hasMetadata(LLVMContext::MD_coro_outside_frame))
+  // The alloca has been marked as belonging outside the frame.
+  if (OutsideFrameSet.contains(AI))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions
@@ -464,6 +463,10 @@ void collectSpillsAndAllocasFromInsts(
     const SuspendCrossingInfo &Checker, const DominatorTree &DT,
     const coro::Shape &Shape) {
 
+  SmallPtrSet<Value *, 4> OutsideFramePtrs;
+  for (const CoroOutsideFrameInst *I : Shape.OutsideFrames)
+    OutsideFramePtrs.insert(I->getPtr());
+
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
@@ -497,7 +500,7 @@ void collectSpillsAndAllocasFromInsts(
       continue;
 
     if (auto *AI = dyn_cast<AllocaInst>(&I)) {
-      collectFrameAlloca(AI, Shape, Checker, Allocas, DT);
+      collectFrameAlloca(AI, Shape, Checker, Allocas, DT, OutsideFramePtrs);
       continue;
     }
 
