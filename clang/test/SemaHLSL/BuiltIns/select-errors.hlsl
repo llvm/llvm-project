@@ -2,16 +2,16 @@
 
 
 int test_select_first_arg_wrong_type(int1 p0, int t0, int f0) {
-  return select(p0, t0, f0);
+  return select(p0, t0, f0); // No diagnostic expected.
 }
 
 int1 test_select_bool_vals_diff_vecs(bool p0, int1 t0, int1 f0) {
-  return select<int1>(p0, t0, f0);
+  return select<int1>(p0, t0, f0); // No diagnostic expected.
 }
 
 int2 test_select_vector_vals_not_vecs(bool2 p0, int t0,
                                                int f0) {
-  return select(p0, t0, f0);
+  return select(p0, t0, f0); // No diagnostic expected.
 }
 
 int1 test_select_vector_vals_wrong_size(bool2 p0, int1 t0, int1 f0) {
@@ -51,12 +51,12 @@ int test_select_builtin_bool_incompatible_args(bool p0, int t0, double f0) {
 
 // if a vector second arg isnt a vector
 int2 test_select_builtin_second_arg_not_vector(bool2 p0, int t0, int2 f0) {
-  return __builtin_hlsl_select(p0, t0, f0);
+  return __builtin_hlsl_select(p0, t0, f0); // No diagnostic expected.
 }
 
 // if a vector third arg isn't a vector
 int2 test_select_builtin_second_arg_not_vector(bool2 p0, int2 t0, int f0) {
-  return __builtin_hlsl_select(p0, t0, f0);
+  return __builtin_hlsl_select(p0, t0, f0); // No diagnostic expected.
 }
 
 // if vector last 2 aren't same type (so both are vectors but wrong type)
