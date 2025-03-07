@@ -51,6 +51,7 @@ export async function pickProcess(
     {
       placeHolder: "Select a process to attach the debugger to",
       matchOnDetail: true,
+      matchOnDescription: true,
     },
   );
   return selectedProcess?.processId?.toString();
