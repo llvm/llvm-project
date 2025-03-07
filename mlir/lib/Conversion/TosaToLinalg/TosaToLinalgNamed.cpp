@@ -477,21 +477,27 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point must be zero for non-int8 integer types");
 
+    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
 
     // Apply padding as necessary.
-    int64_t intMin = APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
-                         .getSExtValue();
-    int64_t intMax = APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
-                         .getSExtValue();
+    TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
+    if (hasZp) {
+      int64_t intMin =
+          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+      int64_t intMax =
+          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
 
-    if (inputZpVal < intMin || inputZpVal > intMax)
-      return rewriter.notifyMatchFailure(
-          op, "tosa.depthwise_conv op quantization has zp outside of input "
-              "range");
+      if (inputZpVal < intMin || inputZpVal > intMax)
+        return rewriter.notifyMatchFailure(
+            op, "tosa.depthwise_conv op quantization has zp outside of input "
+                "range");
 
-    TypedAttr zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
+    }
 
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
@@ -530,7 +536,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
-    if (inputZpVal == 0 && weightZpVal == 0) {
+    if (!hasZp) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
@@ -550,13 +556,8 @@ public:
                   getNParallelLoopsAttrs(resultRank),
                   [&](OpBuilder &nestedBuilder, Location nestedLoc,
                       ValueRange args) {
-                    Value added;
-                    if (llvm::isa<FloatType>(inputETy))
-                      added = nestedBuilder.create<arith::AddFOp>(loc, args[0],
-                                                                  args[1]);
-                    else
-                      added = nestedBuilder.create<arith::AddIOp>(loc, args[0],
-                                                                  args[1]);
+                    Value added = nestedBuilder.create<arith::AddFOp>(
+                        loc, args[0], args[1]);
                     nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
                   })
               .getResult(0);
