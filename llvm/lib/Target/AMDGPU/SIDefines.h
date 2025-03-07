@@ -1066,6 +1066,7 @@ namespace VirtRegFlag {
 enum Register_Flag : uint8_t {
   // Register operand in a whole-wave mode operation.
   WWM_REG = 1 << 0,
+  SGPR_HAZARD_REG = 1 << 1
 };
 
 } // namespace VirtRegFlag
