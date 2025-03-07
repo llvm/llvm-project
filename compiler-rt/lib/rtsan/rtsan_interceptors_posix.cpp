@@ -312,6 +312,18 @@ INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
 #define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
 #endif
 
+#if _FILE_OFFSET_BITS == 64 && SANITIZER_LINUX
+INTERCEPTOR(ssize_t, copy_file_range, int fdin, off_t *off_int, int fdout,
+            off_t *off_out, size_t len, unsigned int flags) {
+  __rtsan_notify_intercepted_call("copy_file_range");
+  return REAL(copy_file_range)(fdin, off_int, fdout, off_out, len, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_COPY_FILE_RANGE                                  \
+  INTERCEPT_FUNCTION(copy_file_range)
+#else
+#define RTSAN_MAYBE_INTERCEPT_COPY_FILE_RANGE
+#endif
+
 // Streams
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
@@ -1468,6 +1480,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(ftruncate);
   RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
   RTSAN_MAYBE_INTERCEPT_FTRUNCATE64;
+  RTSAN_MAYBE_INTERCEPT_COPY_FILE_RANGE;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
