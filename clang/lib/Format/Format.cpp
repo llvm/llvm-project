@@ -1508,6 +1508,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AttributeMacros.push_back("__capability");
+  // Abseil aliases to clang's `_Nonnull`, `_Nullable` and `_Null_unspecified`.
+  LLVMStyle.AttributeMacros.push_back("absl_nonnull");
+  LLVMStyle.AttributeMacros.push_back("absl_nullable");
+  LLVMStyle.AttributeMacros.push_back("absl_nullability_unknown");
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackLongBracedList = true;
   LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
