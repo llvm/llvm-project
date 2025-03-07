@@ -66,8 +66,10 @@ void CommandInfo::serialize(Serializer &serializer) const {
   serializer.write("target_uuid", target_uuid.GetAsString());
   serializer.write("command_id", command_id);
   serializer.write("command_name", command_name);
-  serializer.write("original_command", original_command);
-  serializer.write("args", args);
+  if (original_command.has_value())
+    serializer.write("original_command", original_command);
+  if (args.has_value())
+    serializer.write("args", args);
   if (ret_status.has_value())
     serializer.write("ret_status", ret_status.value());
   if (error_data.has_value())

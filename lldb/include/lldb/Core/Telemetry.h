@@ -96,8 +96,8 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   /// Vendor may allow them by setting the
   /// LLDBConfig::detailed_command_telemetry.
   /// @{
-  std::string original_command;
-  std::string args;
+  std::optional<std::string> original_command;
+  std::optional<std::string> args;
   /// @}
   /// Return status of a command and any error description in case of error.
   std::optional<lldb::ReturnStatus> ret_status;
