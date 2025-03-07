@@ -311,8 +311,8 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
   let arguments = (ins
     Tosa_Tensor3D:$a,
     Tosa_Tensor3D:$b,
-    OptionalAttr<I32Attr>:$a_zp,
-    OptionalAttr<I32Attr>:$b_zp
+    Tosa_ScalarIntOrFloatTensor:$a_zp,
+    Tosa_ScalarIntOrFloatTensor:$b_zp
   );
 
   let results = (outs
@@ -323,6 +323,13 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getAZeroPoint();
+    FailureOr<int64_t> getBZeroPoint();
+    LogicalResult verifyAZeroPoint(int64_t zp);
+    LogicalResult verifyBZeroPoint(int64_t zp);
+  }];
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];
   let hasVerifier = 1;
