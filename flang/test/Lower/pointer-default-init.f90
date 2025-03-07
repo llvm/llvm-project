@@ -38,10 +38,7 @@ subroutine test_local()
   type(t) :: x
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_local() {
-! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest_localEx"}
-! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtestTt.DerivedInit) : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK: fir.store %[[LOAD]] to %[[x]] : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:  fir.call @_FortranAInitialize(
 
 subroutine test_saved()
   use test, only : t

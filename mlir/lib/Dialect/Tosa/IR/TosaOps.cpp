@@ -352,7 +352,7 @@ static LogicalResult verifyConvOp(T op) {
 
 LogicalResult tosa::ConstOp::verify() {
 
-  auto attrType = llvm::dyn_cast<TensorType>(getValueAttr().getType());
+  auto attrType = llvm::dyn_cast<TensorType>(getValuesAttr().getType());
   auto outputType = llvm::dyn_cast<TensorType>(getOutput().getType());
 
   if (!attrType || !outputType) {
@@ -454,16 +454,33 @@ static LogicalResult verifySameElementTypes(T op, Type inType, Type outType) {
 }
 
 LogicalResult tosa::ArgMaxOp::verify() {
+  const ShapedType resultType = llvm::cast<ShapedType>(getType());
+
   // Ensure output is of 32-bit integer
-  const auto resultETy = llvm::cast<ShapedType>(getType()).getElementType();
-  if (!resultETy.isIntOrIndex())
+  if (const auto resultETy = resultType.getElementType();
+      !resultETy.isIntOrIndex())
     return emitOpError("result tensor is not of integer type");
 
-  // Ensure axis is within the tensor rank
   const auto inputType = llvm::cast<ShapedType>(getInput().getType());
+  if (!inputType.hasRank())
+    return success();
+
+  // Ensure axis is within the tensor rank
   const int64_t axis = getAxisAttr().getInt();
-  if (inputType.hasRank() && ((axis < 0) || axis >= inputType.getRank()))
+  if (((axis < 0) || axis >= inputType.getRank()))
     return emitOpError("specified axis is outside the rank of the tensor");
+
+  if (!resultType.hasRank())
+    return success();
+
+  const ArrayRef<int64_t> inputShape = inputType.getShape();
+  const ArrayRef<int64_t> outputShape = resultType.getShape();
+  llvm::SmallVector<int64_t> expectedOutputShape(inputShape.begin(),
+                                                 inputShape.end());
+  expectedOutputShape.erase(expectedOutputShape.begin() + axis);
+  if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
+    return emitOpError("expected output shape '")
+           << expectedOutputShape << "', got '" << outputShape << "'";
 
   return success();
 }
@@ -871,7 +888,7 @@ LogicalResult tosa::RFFT2dOp::verify() {
   // Output width dimension expected to be input_width / 2 + 1
   const int64_t outputWidth = outputType.getDimSize(2);
   if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
-      (outputWidth - 1) * 2 != width)
+      (outputWidth != (width / 2) + 1))
     return emitOpError(
                "expected output width to be equal to input_width / 2 + 1, got ")
            << outputWidth;
@@ -1162,8 +1179,8 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
 
   SmallVector<int64_t> paddingValues;
   // If the paddings value is not a constant, all dimensions must be dynamic.
-  if (!tosa::getConstShapeValue(adaptor.getPadding().getDefiningOp(),
-                                paddingValues)) {
+  if (!tosa::getConstShapeValues(adaptor.getPadding().getDefiningOp(),
+                                 paddingValues)) {
     outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
@@ -1235,8 +1252,8 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
   SmallVector<int64_t> start;
   SmallVector<int64_t> size;
 
-  if (!tosa::getConstShapeValue(adaptor.getStart().getDefiningOp(), start) ||
-      !tosa::getConstShapeValue(adaptor.getSize().getDefiningOp(), size)) {
+  if (!tosa::getConstShapeValues(adaptor.getStart().getDefiningOp(), start) ||
+      !tosa::getConstShapeValues(adaptor.getSize().getDefiningOp(), size)) {
     auto rank = cast<tosa::shapeType>(adaptor.getSize().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
@@ -1544,8 +1561,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
   llvm::SmallVector<int64_t> newShapeValue;
-  if (!tosa::getConstShapeValue(adaptor.getShape().getDefiningOp(),
-                                newShapeValue)) {
+  if (!tosa::getConstShapeValues(adaptor.getShape().getDefiningOp(),
+                                 newShapeValue)) {
     auto rank = cast<tosa::shapeType>(adaptor.getShape().getType()).getRank();
     SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
@@ -1594,7 +1611,7 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
   RankedTensorType outputType = getType();
 
   SmallVector<int64_t> shapeValues;
-  if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeValues)) {
+  if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeValues)) {
     // skip following checks if shape is not constant
     return mlir::success();
   }
@@ -1899,11 +1916,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     return failure();
 
   SmallVector<int64_t> scaleInt, offsetInt, borderInt;
-  if (!tosa::getConstShapeValue(adaptor.getScale().getDefiningOp(), scaleInt) ||
-      !tosa::getConstShapeValue(adaptor.getOffset().getDefiningOp(),
-                                offsetInt) ||
-      !tosa::getConstShapeValue(adaptor.getBorder().getDefiningOp(),
-                                borderInt)) {
+  if (!tosa::getConstShapeValues(adaptor.getScale().getDefiningOp(),
+                                 scaleInt) ||
+      !tosa::getConstShapeValues(adaptor.getOffset().getDefiningOp(),
+                                 offsetInt) ||
+      !tosa::getConstShapeValues(adaptor.getBorder().getDefiningOp(),
+                                 borderInt)) {
     return failure();
   }
 
@@ -1943,9 +1961,9 @@ LogicalResult tosa::ResizeOp::verify() {
   SmallVector<int64_t> scaleValues;
   SmallVector<int64_t> offsetValues;
   SmallVector<int64_t> borderValues;
-  if (!tosa::getConstShapeValue(getScale().getDefiningOp(), scaleValues) ||
-      !tosa::getConstShapeValue(getOffset().getDefiningOp(), offsetValues) ||
-      !tosa::getConstShapeValue(getBorder().getDefiningOp(), borderValues)) {
+  if (!tosa::getConstShapeValues(getScale().getDefiningOp(), scaleValues) ||
+      !tosa::getConstShapeValues(getOffset().getDefiningOp(), offsetValues) ||
+      !tosa::getConstShapeValues(getBorder().getDefiningOp(), borderValues)) {
     // Skip following checks if shape is not constant
     return success();
   }
@@ -2208,7 +2226,6 @@ NARY_SHAPE_INFER(tosa::MinimumOp)
 NARY_SHAPE_INFER(tosa::NegateOp)
 NARY_SHAPE_INFER(tosa::PowOp)
 NARY_SHAPE_INFER(tosa::ReciprocalOp)
-NARY_SHAPE_INFER(tosa::RescaleOp)
 NARY_SHAPE_INFER(tosa::ReverseOp)
 NARY_SHAPE_INFER(tosa::RsqrtOp)
 NARY_SHAPE_INFER(tosa::SinOp)
@@ -2658,6 +2675,147 @@ LogicalResult TransposeConv2DOp::verify() {
   return success();
 }
 
+LogicalResult RescaleOp::verify() {
+  auto inputType = llvm::dyn_cast<ShapedType>(getInput().getType());
+  if (!inputType) {
+    emitOpError("expect shaped tensor for input, got ") << getInput().getType();
+    return failure();
+  }
+
+  auto inputElementType =
+      getStorageElementTypeOrSelf(inputType.getElementType());
+  if (!mlir::isa<IntegerType>(inputElementType)) {
+    emitOpError("expect input to have integer element type, got ")
+        << inputElementType;
+    return failure();
+  }
+
+  auto outputType = llvm::dyn_cast<ShapedType>(getOutput().getType());
+  if (!outputType) {
+    emitOpError("expect shaped tensor for output, got ")
+        << getOutput().getType();
+    return failure();
+  }
+
+  auto outputElementType =
+      getStorageElementTypeOrSelf(outputType.getElementType());
+  if (!mlir::isa<IntegerType>(outputElementType)) {
+    emitOpError("expect output to have integer element type, got ")
+        << outputElementType;
+    return failure();
+  }
+
+  auto input_zp = getInputZpAttr().getInt();
+  if (input_zp != 0) {
+    // only int8/uint8 and uint16 input can have non-zero input_zp
+    if (!inputElementType.isInteger(8) &&
+        !(inputElementType.isInteger(16) && getInputUnsigned())) {
+      emitOpError("expect input_zp of 0, got ") << input_zp;
+      return failure();
+    }
+    // input_zp must be either 0 or 32768 for uint16 input
+    if (inputElementType.isInteger(16) && getInputUnsigned() &&
+        input_zp != 32768) {
+      emitOpError(
+          "expect input_zp of 0 or 32768 for unsigned int16 input, got ")
+          << input_zp;
+      return failure();
+    }
+  }
+
+  auto output_zp = getOutputZpAttr().getInt();
+  if (output_zp != 0) {
+    // only int8/uint8 and uint16 output can have non-zero output_zp
+    if (!outputElementType.isInteger(8) &&
+        !(outputElementType.isInteger(16) && getOutputUnsigned())) {
+      emitOpError("expect output_zp of 0, got ") << output_zp;
+      return failure();
+    }
+    // output_zp must be either 0 or 32768 for uint16 output
+    if (outputElementType.isInteger(16) && getOutputUnsigned() &&
+        output_zp != 32768) {
+      emitOpError(
+          "expect output_zp of 0 or 32768 for unsigned int16 output, got ")
+          << output_zp;
+      return failure();
+    }
+  }
+
+  auto multiplierType = llvm::dyn_cast<ShapedType>(getMultiplier().getType());
+  if (!multiplierType) {
+    emitOpError("expect shaped tensor for multiplier, got ")
+        << getMultiplier().getType();
+    return failure();
+  }
+
+  auto shiftType = llvm::dyn_cast<ShapedType>(getShift().getType());
+  if (!shiftType) {
+    emitOpError("expect shaped tensor for shift, got ") << getShift().getType();
+    return failure();
+  }
+
+  // multiplier element type must be i32 for scale32 = true
+  if (getScale32() && !multiplierType.getElementType().isInteger(32)) {
+    emitOpError("expect i32 element type for multiplier for scale32=true, got ")
+        << multiplierType.getElementType();
+    return failure();
+  }
+
+  // multiplier element type must be i16 for scale32 = false
+  if (!getScale32() && !multiplierType.getElementType().isInteger(16)) {
+    emitOpError(
+        "expect i16 element type for multiplier for scale32=false, got ")
+        << multiplierType.getElementType();
+    return failure();
+  }
+
+  if (!inputType.hasRank())
+    return success();
+
+  // multiplier/shift must have shape = {numChannels},
+  // where numChannel is 1 if per_channel = false
+  // otherwise numChannel is dimension in input shape's last axis
+  int64_t numChannels = 1;
+  if (getPerChannel()) {
+    numChannels = inputType.getDimSize(inputType.getRank() - 1);
+  }
+
+  if (!multiplierType.hasRank())
+    return success();
+
+  ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
+  // multiplier input has rank 1 by dialect definition
+  if (multiplierShape[0] != ShapedType::kDynamic &&
+      multiplierShape[0] != numChannels) {
+    emitOpError("expect shape of { ")
+        << numChannels << " } for multiplier input, got { "
+        << multiplierShape[0] << " }";
+    return failure();
+  }
+
+  if (!shiftType.hasRank())
+    return success();
+
+  ArrayRef<int64_t> shiftShape = shiftType.getShape();
+  // shift input has rank 1 by dialect definition
+  if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
+    emitOpError("expect shape of { ")
+        << numChannels << " } for shift input, got { " << shiftShape[0] << " }";
+    return failure();
+  }
+
+  return success();
+}
+
+LogicalResult RescaleOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    RescaleOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapeAdaptor inputShape(adaptor.getInput().getType());
+  inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
+  return success();
+}
+
 LogicalResult IfOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     IfOp::Adaptor adaptor,
@@ -3034,14 +3192,14 @@ OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
 
 LogicalResult tosa::ConstShapeOp::verify() {
   // check one dimensional rank
-  auto valuesRank = getValue().getType().getRank();
+  auto valuesRank = getValues().getType().getRank();
   if (valuesRank != 1)
-    return emitOpError("expect elements in attribute value with rank 1");
-  // check that number of elements in value attr equal to rank of result shape
-  auto count = getValue().getNumElements();
+    return emitOpError("expect elements in attribute values with rank 1");
+  // check that number of elements in values attr equal to rank of result shape
+  auto count = getValues().getNumElements();
   auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
   if (!(count == rank || (count == 1 && rank == 0))) {
-    return emitOpError("expect number of elements in attribute value (")
+    return emitOpError("expect number of elements in attribute values (")
            << count << ") to be equal to the rank (" << rank
            << ") for the result shape type";
   }

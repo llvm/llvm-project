@@ -12,6 +12,7 @@
 
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -1474,6 +1475,26 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
         << AL << Str << ArgLoc;
     return;
   }
+
+  switch (Kind) {
+  default:
+    break;
+  case RISCVInterruptAttr::InterruptType::qcinest:
+  case RISCVInterruptAttr::InterruptType::qcinonest: {
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    llvm::StringMap<bool> FunctionFeatureMap;
+    getASTContext().getFunctionFeatureMap(FunctionFeatureMap,
+                                          dyn_cast<FunctionDecl>(D));
+
+    if (!TI.hasFeature("experimental-xqciint") &&
+        !FunctionFeatureMap.lookup("experimental-xqciint")) {
+      Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_requires_extension)
+          << Str << "Xqciint";
+      return;
+    }
+    break;
+  }
+  };
 
   D->addAttr(::new (getASTContext())
                  RISCVInterruptAttr(getASTContext(), AL, Kind));

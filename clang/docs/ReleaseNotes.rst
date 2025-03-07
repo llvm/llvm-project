@@ -62,6 +62,9 @@ AST Dumping Potentially Breaking Changes
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
+- The ``-Wglobal-constructors`` flag now applies to ``[[gnu::constructor]]`` and
+  ``[[gnu::destructor]]`` attributes.
+
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 
@@ -108,6 +111,9 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
+  which allows a source file to not end with a newline character. This is still
+  reported as a conforming extension in earlier language modes.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -145,6 +151,7 @@ Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns
 related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- The ``ext_vector_type(n)`` attribute can now be used as a generic type attribute.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 - Clang now allows ``__attribute__((model("small")))`` and
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
@@ -222,12 +229,15 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 
 - The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-pointer``,
   which enables warning on passing or returning pointers to guarded variables
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+
+- Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
@@ -242,12 +252,17 @@ Bug Fixes in This Version
 
 - Clang now outputs correct values when #embed data contains bytes with negative
   signed char values (#GH102798).
+- Fixed a crash when merging named enumerations in modules (#GH114240).
 - Fixed rejects-valid problem when #embed appears in std::initializer_list or
   when it can affect template argument deduction (#GH122306).
 - Fix crash on code completion of function calls involving partial order of function templates
   (#GH125500).
 - Fixed clang crash when #embed data does not fit into an array
   (#GH128987).
+- Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer incorrectly
+  considered an error in C23 mode and are allowed as an extension in earlier language modes.
+
+- Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -274,10 +289,22 @@ Bug Fixes to C++ Support
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
+- Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
+
+Improvements to C++ diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now more consistently adds a note pointing to the relevant template
+  parameter. Some diagnostics are reworded to better take advantage of this.
+- Template Template Parameter diagnostics now stop referring to template
+  parameters as template arguments, in some circumstances, better hiding
+  from the users template template parameter partial ordering arcana.
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
+- Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

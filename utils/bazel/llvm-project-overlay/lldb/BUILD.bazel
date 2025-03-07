@@ -394,6 +394,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 

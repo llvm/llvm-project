@@ -1191,7 +1191,8 @@ static void handleTestTypestateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleExtVectorTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Remember this typedef decl, we will need it later for diagnostics.
-  S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
+  if (isa<TypedefNameDecl>(D))
+    S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
 }
 
 static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -2138,6 +2139,8 @@ static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_constructor)
+      << D->getSourceRange();
 
   D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
 }
@@ -2147,6 +2150,7 @@ static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() &&
       !S.checkUInt32Argument(AL, AL.getArgAsExpr(0), priority))
     return;
+  S.Diag(D->getLocation(), diag::warn_global_destructor) << D->getSourceRange();
 
   D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
 }
