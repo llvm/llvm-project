@@ -721,19 +721,25 @@ Value *VPInstruction::generate(VPTransformState &State) {
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
+
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+
     if (!getUnderlyingValue()) {
-      // TODO: Compute cost for VPInstructions without underlying values once
-      // the legacy cost model has been retired.
-      return 0;
+      switch (getOpcode()) {
+      case Instruction::FMul:
+        return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
+      default:
+        // TODO: Compute cost for VPInstructions without underlying values once
+        // the legacy cost model has been retired.
+        return 0;
+      }
     }
 
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    Type *ResTy = Ctx.Types.inferScalarType(this);
-    if (!vputils::onlyFirstLaneUsed(this))
-      ResTy = toVectorTy(ResTy, VF);
-
     return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
   }
 
