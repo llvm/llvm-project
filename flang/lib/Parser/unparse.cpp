@@ -2851,15 +2851,14 @@ public:
   void Unparse(const OpenMPCancellationPointConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCELLATION POINT ");
-    Walk(std::get<OmpCancelType>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPCancelConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCEL ");
-    Walk(std::get<OmpCancelType>(x.t));
-    Walk(std::get<std::optional<OpenMPCancelConstruct::If>>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
