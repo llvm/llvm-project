@@ -34,6 +34,23 @@ function convertToInteger(value: any): number | undefined {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
+  resolveDebugConfiguration(
+    _folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    _token?: vscode.CancellationToken,
+  ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    // Default "pid" to ${command:pickProcess} if neither "pid" nor "program" are specified
+    // in an "attach" request.
+    if (
+      debugConfiguration.request === "attach" &&
+      !("pid" in debugConfiguration) &&
+      !("program" in debugConfiguration)
+    ) {
+      debugConfiguration.pid = "${command:pickProcess}";
+    }
+    return debugConfiguration;
+  }
+
   resolveDebugConfigurationWithSubstitutedVariables(
     _folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
