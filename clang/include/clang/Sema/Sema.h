@@ -1563,10 +1563,7 @@ public:
 
   /// \return true iff `-Wunsafe-buffer-usage` is enabled for `Loc` and Bounds
   /// Safety attribute-only mode is on.
-  bool isCXXSafeBuffersBoundsSafetyInteropEnabledAt(SourceLocation Loc) const {
-    return LangOpts.CPlusPlus && LangOpts.isBoundsSafetyAttributeOnlyMode() &&
-           !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc);
-  }
+  bool isCXXSafeBuffersBoundsSafetyInteropEnabledAt(SourceLocation Loc) const;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// pragma clang section kind

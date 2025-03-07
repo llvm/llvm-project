@@ -3019,6 +3019,11 @@ private:
   } LoadedSafeBufferOptOutMap;
 
 public:
+  // FIXME: The result of saving Safe Buffers opt-out regions in PP is that
+  // clang needs to check two places---PP and DiagnosticsEngine, in order to
+  // confirm if C++ Safe Buffers is enabled at a location.   This might not be
+  // ideal as developers can forget to check one of the places.
+  //
   /// \return true iff the given `Loc` is in a "-Wunsafe-buffer-usage" opt-out
   /// region.  This `Loc` must be a source location that has been pre-processed.
   bool isSafeBufferOptOut(const SourceManager&SourceMgr, const SourceLocation &Loc) const;

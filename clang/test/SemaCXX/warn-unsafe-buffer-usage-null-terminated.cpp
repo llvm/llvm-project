@@ -188,6 +188,37 @@ C test_class(char * cstr) {
   return {"hello", {}};
 }
 
+#pragma clang unsafe_buffer_usage begin
+void basics_suppressed(const char * cstr, size_t cstr_len, std::string cxxstr) {
+  const char * __null_terminated p = "hello";   // safe init
+
+  nt_parm(p);
+  nt_parm(get_nt(cstr, cstr_len));
+
+  const char * __null_terminated p2 = cxxstr.c_str(); // safe init
+  const char * __null_terminated p3;
+
+  p3 = cxxstr.c_str();         // safe assignment
+  p3 = "hello";                // safe assignment
+  p3 = p;                      // safe assignment
+  p3 = get_nt(cstr, cstr_len); // safe assignment
+
+  const char * __null_terminated p4 = cstr;  // warn
+
+  nt_parm(cstr);                             // warn
+  p4 = cstr;                                 // warn
+
+  std::string_view view{cxxstr};
+
+  p4 = view.data();                          // warn
+  nt_parm(view.data());                      // warn
+
+  const char * __null_terminated p5 = 0;                 // nullptr is ok
+  const char * __null_terminated p6 = (const char *)1;   // other integer literal is unsafe
+  // (non-0)-terminated pointer is NOT compatible with 'std::string::c_str':
+  const char * __terminated_by(42) p7 = cxxstr.c_str();
+}
+#pragma clang unsafe_buffer_usage end
 
 // Test input/output __null_terminated parameter.
 // expected-note@+1 {{candidate function not viable:}}

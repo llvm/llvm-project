@@ -79,6 +79,20 @@
 using namespace clang;
 using namespace sema;
 
+/* TO_UPSTREAM(BoundsSafety) ON */
+bool Sema::isCXXSafeBuffersBoundsSafetyInteropEnabledAt(
+    SourceLocation Loc) const {
+  // Informations of '#pragma clang unsafe_buffer_usage begin/end' are stored
+  // in the Preprocessor.  So we need also check
+  // `getPreprocessor().isSafeBufferOptOut`.
+  bool NotSupressedByPragmas =
+      Loc.isInvalid() || !getPreprocessor().isSafeBufferOptOut(SourceMgr, Loc);
+  return LangOpts.CPlusPlus && LangOpts.isBoundsSafetyAttributeOnlyMode() &&
+         NotSupressedByPragmas &&
+         !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc);
+}
+/* TO_UPSTREAM(BoundsSafety) OFF */
+
 SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
