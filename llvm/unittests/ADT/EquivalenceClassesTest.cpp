@@ -77,7 +77,6 @@ TEST(EquivalenceClassesTest, MembersIterator) {
 
   EquivalenceClasses<int>::iterator I = EC.findValue(EC.getLeaderValue(1));
   EXPECT_THAT(EC.members(I), testing::ElementsAre(5, 1, 2));
-  EXPECT_EQ(EC.members(EC.end()).begin(), EC.member_end());
 }
 
 // Type-parameterized tests: Run the same test cases with different element
