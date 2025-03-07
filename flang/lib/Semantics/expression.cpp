@@ -265,93 +265,32 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   }
 }
 
-// Some subscript semantic checks must be deferred until all of the
-// subscripts are in hand.
-MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
-  int symbolRank{symbol.Rank()};
-  int subscripts{static_cast<int>(ref.size())};
-  if (subscripts == 0) {
-    return std::nullopt; // error recovery
-  } else if (subscripts != symbolRank) {
-    if (symbolRank != 0) {
-      Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
-          symbolRank, symbol.name(), subscripts);
-    }
-    return std::nullopt;
-  } else if (symbol.has<semantics::ObjectEntityDetails>() ||
-      symbol.has<semantics::AssocEntityDetails>()) {
-    // C928 & C1002
-    if (Triplet *last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
-      if (!last->upper() && IsAssumedSizeArray(symbol)) {
-        Say("Assumed-size array '%s' must have explicit final "
-            "subscript upper bound value"_err_en_US,
-            symbol.name());
-        return std::nullopt;
-      }
-    }
-  } else {
-    // Shouldn't get here from Analyze(ArrayElement) without a valid base,
-    // which, if not an object, must be a construct entity from
-    // SELECT TYPE/RANK or ASSOCIATE.
-    CHECK(symbol.has<semantics::AssocEntityDetails>());
-  }
-  if (!semantics::IsNamedConstant(symbol) && !inDataStmtObject_) {
-    // Subscripts of named constants are checked in folding.
-    // Subscripts of DATA statement objects are checked in data statement
-    // conversion to initializers.
-    CheckSubscripts(ref);
-  }
-  return Designate(DataRef{std::move(ref)});
-}
-
-// Applies subscripts to a data reference.
-MaybeExpr ExpressionAnalyzer::ApplySubscripts(
-    DataRef &&dataRef, std::vector<Subscript> &&subscripts) {
-  if (subscripts.empty()) {
-    return std::nullopt; // error recovery
-  }
-  return common::visit(
-      common::visitors{
-          [&](SymbolRef &&symbol) {
-            return CompleteSubscripts(ArrayRef{symbol, std::move(subscripts)});
-          },
-          [&](Component &&c) {
-            return CompleteSubscripts(
-                ArrayRef{std::move(c), std::move(subscripts)});
-          },
-          [&](auto &&) -> MaybeExpr {
-            DIE("bad base for ArrayRef");
-            return std::nullopt;
-          },
-      },
-      std::move(dataRef.u));
-}
-
-void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
-  // Fold subscript expressions and check for an empty triplet.
-  const Symbol &arraySymbol{ref.base().GetLastSymbol()};
-  Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
-  CHECK(lb.size() >= ref.subscript().size());
-  Shape ub{GetUBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
-  CHECK(ub.size() >= ref.subscript().size());
+// Returns false if any dimension could be empty (e.g. A(1:0)) or has an error
+static bool FoldSubscripts(semantics::SemanticsContext &context,
+    const Symbol &arraySymbol, std::vector<Subscript> &subscripts, Shape &lb,
+    Shape &ub) {
+  FoldingContext &foldingContext{context.foldingContext()};
+  lb = GetLBOUNDs(foldingContext, NamedEntity{arraySymbol});
+  CHECK(lb.size() >= subscripts.size());
+  ub = GetUBOUNDs(foldingContext, NamedEntity{arraySymbol});
+  CHECK(ub.size() >= subscripts.size());
   bool anyPossiblyEmptyDim{false};
   int dim{0};
-  for (Subscript &ss : ref.subscript()) {
+  for (Subscript &ss : subscripts) {
     if (Triplet * triplet{std::get_if<Triplet>(&ss.u)}) {
-      auto expr{Fold(triplet->stride())};
+      auto expr{Fold(foldingContext, triplet->stride())};
       auto stride{ToInt64(expr)};
       triplet->set_stride(std::move(expr));
       std::optional<ConstantSubscript> lower, upper;
       if (auto expr{triplet->lower()}) {
-        *expr = Fold(std::move(*expr));
+        *expr = Fold(foldingContext, std::move(*expr));
         lower = ToInt64(*expr);
         triplet->set_lower(std::move(*expr));
       } else {
         lower = ToInt64(lb[dim]);
       }
       if (auto expr{triplet->upper()}) {
-        *expr = Fold(std::move(*expr));
+        *expr = Fold(foldingContext, std::move(*expr));
         upper = ToInt64(*expr);
         triplet->set_upper(std::move(*expr));
       } else {
@@ -359,8 +298,9 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
       }
       if (stride) {
         if (*stride == 0) {
-          Say("Stride of triplet must not be zero"_err_en_US);
-          return;
+          foldingContext.messages().Say(
+              "Stride of triplet must not be zero"_err_en_US);
+          return false; // error
         }
         if (lower && upper) {
           if (*stride > 0) {
@@ -380,21 +320,53 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
       }
     } else { // not triplet
       auto &expr{std::get<IndirectSubscriptIntegerExpr>(ss.u).value()};
-      expr = Fold(std::move(expr));
+      expr = Fold(foldingContext, std::move(expr));
       anyPossiblyEmptyDim |= expr.Rank() > 0; // vector subscript
     }
     ++dim;
   }
-  if (anyPossiblyEmptyDim) {
-    return;
+  return !anyPossiblyEmptyDim;
+}
+
+static void ValidateSubscriptValue(parser::ContextualMessages &messages,
+    const Symbol &symbol, ConstantSubscript val,
+    std::optional<ConstantSubscript> lb, std::optional<ConstantSubscript> ub,
+    int dim, const char *co = "") {
+  std::optional<parser::MessageFixedText> msg;
+  std::optional<ConstantSubscript> bound;
+  if (lb && val < *lb) {
+    msg =
+        "%ssubscript %jd is less than lower %sbound %jd for %sdimension %d of array"_err_en_US;
+    bound = *lb;
+  } else if (ub && val > *ub) {
+    msg =
+        "%ssubscript %jd is greater than upper %sbound %jd for %sdimension %d of array"_err_en_US;
+    bound = *ub;
+    if (dim + 1 == symbol.Rank() && IsDummy(symbol) && *bound == 1) {
+      // Old-school overindexing of a dummy array isn't fatal when
+      // it's on the last dimension and the extent is 1.
+      msg->set_severity(parser::Severity::Warning);
+    }
   }
-  dim = 0;
-  for (Subscript &ss : ref.subscript()) {
+  if (msg) {
+    AttachDeclaration(
+        messages.Say(std::move(*msg), co, static_cast<std::intmax_t>(val), co,
+            static_cast<std::intmax_t>(bound.value()), co, dim + 1),
+        symbol);
+  }
+}
+
+static void ValidateSubscripts(semantics::SemanticsContext &context,
+    const Symbol &arraySymbol, const std::vector<Subscript> &subscripts,
+    const Shape &lb, const Shape &ub) {
+  int dim{0};
+  for (const Subscript &ss : subscripts) {
     auto dimLB{ToInt64(lb[dim])};
     auto dimUB{ToInt64(ub[dim])};
     if (dimUB && dimLB && *dimUB < *dimLB) {
       AttachDeclaration(
-          Warn(common::UsageWarning::SubscriptedEmptyArray,
+          context.Warn(common::UsageWarning::SubscriptedEmptyArray,
+              context.foldingContext().messages().at(),
               "Empty array dimension %d should not be subscripted as an element or non-empty array section"_err_en_US,
               dim + 1),
           arraySymbol);
@@ -429,33 +401,103 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
     }
     for (int j{0}; j < vals; ++j) {
       if (val[j]) {
-        std::optional<parser::MessageFixedText> msg;
-        std::optional<ConstantSubscript> bound;
-        if (dimLB && *val[j] < *dimLB) {
-          msg =
-              "Subscript %jd is less than lower bound %jd for dimension %d of array"_err_en_US;
-          bound = *dimLB;
-        } else if (dimUB && *val[j] > *dimUB) {
-          msg =
-              "Subscript %jd is greater than upper bound %jd for dimension %d of array"_err_en_US;
-          bound = *dimUB;
-          if (dim + 1 == arraySymbol.Rank() && IsDummy(arraySymbol) &&
-              *bound == 1) {
-            // Old-school overindexing of a dummy array isn't fatal when
-            // it's on the last dimension and the extent is 1.
-            msg->set_severity(parser::Severity::Warning);
-          }
-        }
-        if (msg) {
-          AttachDeclaration(
-              Say(std::move(*msg), static_cast<std::intmax_t>(*val[j]),
-                  static_cast<std::intmax_t>(bound.value()), dim + 1),
-              arraySymbol);
-        }
+        ValidateSubscriptValue(context.foldingContext().messages(), arraySymbol,
+            *val[j], dimLB, dimUB, dim);
       }
     }
     ++dim;
   }
+}
+
+static void CheckSubscripts(
+    semantics::SemanticsContext &context, ArrayRef &ref) {
+  const Symbol &arraySymbol{ref.base().GetLastSymbol()};
+  Shape lb, ub;
+  if (FoldSubscripts(context, arraySymbol, ref.subscript(), lb, ub)) {
+    ValidateSubscripts(context, arraySymbol, ref.subscript(), lb, ub);
+  }
+}
+
+static void CheckSubscripts(
+    semantics::SemanticsContext &context, CoarrayRef &ref) {
+  const Symbol &coarraySymbol{ref.GetBase().GetLastSymbol()};
+  Shape lb, ub;
+  if (FoldSubscripts(context, coarraySymbol, ref.subscript(), lb, ub)) {
+    ValidateSubscripts(context, coarraySymbol, ref.subscript(), lb, ub);
+  }
+  FoldingContext &foldingContext{context.foldingContext()};
+  int dim{0};
+  for (auto &expr : ref.cosubscript()) {
+    expr = Fold(foldingContext, std::move(expr));
+    if (auto val{ToInt64(expr)}) {
+      ValidateSubscriptValue(foldingContext.messages(), coarraySymbol, *val,
+          ToInt64(GetLCOBOUND(coarraySymbol, dim)),
+          ToInt64(GetUCOBOUND(coarraySymbol, dim)), dim, "co");
+    }
+    ++dim;
+  }
+}
+
+// Some subscript semantic checks must be deferred until all of the
+// subscripts are in hand.
+MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
+  const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
+  int symbolRank{symbol.Rank()};
+  int subscripts{static_cast<int>(ref.size())};
+  if (subscripts == 0) {
+    return std::nullopt; // error recovery
+  } else if (subscripts != symbolRank) {
+    if (symbolRank != 0) {
+      Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
+          symbolRank, symbol.name(), subscripts);
+    }
+    return std::nullopt;
+  } else if (symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.has<semantics::AssocEntityDetails>()) {
+    // C928 & C1002
+    if (Triplet * last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
+      if (!last->upper() && IsAssumedSizeArray(symbol)) {
+        Say("Assumed-size array '%s' must have explicit final subscript upper bound value"_err_en_US,
+            symbol.name());
+        return std::nullopt;
+      }
+    }
+  } else {
+    // Shouldn't get here from Analyze(ArrayElement) without a valid base,
+    // which, if not an object, must be a construct entity from
+    // SELECT TYPE/RANK or ASSOCIATE.
+    CHECK(symbol.has<semantics::AssocEntityDetails>());
+  }
+  if (!semantics::IsNamedConstant(symbol) && !inDataStmtObject_) {
+    // Subscripts of named constants are checked in folding.
+    // Subscripts of DATA statement objects are checked in data statement
+    // conversion to initializers.
+    CheckSubscripts(context_, ref);
+  }
+  return Designate(DataRef{std::move(ref)});
+}
+
+// Applies subscripts to a data reference.
+MaybeExpr ExpressionAnalyzer::ApplySubscripts(
+    DataRef &&dataRef, std::vector<Subscript> &&subscripts) {
+  if (subscripts.empty()) {
+    return std::nullopt; // error recovery
+  }
+  return common::visit(common::visitors{
+                           [&](SymbolRef &&symbol) {
+                             return CompleteSubscripts(
+                                 ArrayRef{symbol, std::move(subscripts)});
+                           },
+                           [&](Component &&c) {
+                             return CompleteSubscripts(
+                                 ArrayRef{std::move(c), std::move(subscripts)});
+                           },
+                           [&](auto &&) -> MaybeExpr {
+                             DIE("bad base for ArrayRef");
+                             return std::nullopt;
+                           },
+                       },
+      std::move(dataRef.u));
 }
 
 // C919a - only one part-ref of a data-ref may have rank > 0
@@ -1524,9 +1566,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
     // Reverse the chain of symbols so that the base is first and coarray
     // ultimate component is last.
     if (cosubsOk) {
-      return Designate(
-          DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
-              std::move(subscripts), std::move(cosubscripts)}});
+      CoarrayRef coarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
+          std::move(subscripts), std::move(cosubscripts)};
+      CheckSubscripts(context_, coarrayRef);
+      return Designate(DataRef{std::move(coarrayRef)});
     }
   }
   return std::nullopt;
