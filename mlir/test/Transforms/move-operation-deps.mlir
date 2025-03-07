@@ -125,6 +125,42 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Current implementation omits following basic block argument when
+// computing slices. Verify that this gives expected result.
+func.func @ignore_basic_block_arguments() -> f32 {
+^bb0():
+  %8 = "test"() : () -> (f32)
+  return %8: f32
+^bb1(%bbArg : f32):
+  %0 = "before"() : () -> (f32)
+  %1 = "moved_op"() ({
+    "yield"(%bbArg) : (f32) -> ()
+  }) : () -> (f32)
+  %2 = "foo"() ({
+    "yield"(%1) : (f32) -> ()
+  }) : () -> (f32)
+  return %2 : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["foo"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    transform.test.move_operand_deps %op1 before %op2
+        : !transform.any_op, !transform.any_op
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @ignore_basic_block_arguments()
+//       CHECK:   %[[MOVED_1:.+]] = "moved_op"
+//       CHECK:   "before"
+//       CHECK:   %[[FOO:.+]] = "foo"
+//       CHECK:   return %[[FOO]]
+
+// -----
+
 // Fail when the "before" operation is part of the operation slice.
 func.func @do_not_move_slice() -> f32 {
   %0 = "before"() : () -> (f32)

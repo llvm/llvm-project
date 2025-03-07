@@ -1083,7 +1083,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
   // depends on. Prune the slice to only include operations not already
   // dominated by the `insertionPoint`
   BackwardSliceOptions options;
-  options.inclusive = true;
+  options.inclusive = false;
   options.omitUsesFromAbove = false;
   // Since current support is to only move within a same basic block,
   // the slices dont need to look past block arguments.
@@ -1092,20 +1092,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
     return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
   };
   llvm::SetVector<Operation *> slice;
-
-  // Get the defined slice for operands.
-  for (Value operand : op->getOperands()) {
-    getBackwardSlice(operand, &slice, options);
-  }
-  auto regions = op->getRegions();
-  if (!regions.empty()) {
-    // If op has region, get the defined slice for all captured values.
-    llvm::SetVector<Value> capturedVals;
-    mlir::getUsedValuesDefinedAbove(regions, capturedVals);
-    for (Value value : capturedVals) {
-      getBackwardSlice(value, &slice, options);
-    }
-  }
+  getBackwardSlice(op, &slice, options);
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
   if (slice.contains(insertionPoint)) {
@@ -1114,8 +1101,8 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
         "cannot move dependencies before operation in backward slice of op");
   }
 
-  // Sort the slice topologically, and move in topological order.
-  mlir::topologicalSort(slice);
+  // We should move the slice in topological order, but `getBackwardSlice`
+  // already does that. So no need to sort again.
   for (Operation *op : slice) {
     rewriter.moveOpBefore(op, insertionPoint);
   }
