@@ -1008,8 +1008,8 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.contains(Ty))
-    return ForwardPointerTypes[Ty];
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end())
+    return It->second;
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
 
@@ -1103,14 +1103,15 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   // Null pointer means we have a loop in type definitions, make and
   // return corresponding OpTypeForwardPointer.
   if (SpvElementType == nullptr) {
-    if (!ForwardPointerTypes.contains(Ty))
-      ForwardPointerTypes[Ty] = getOpTypeForwardPointer(SC, MIRBuilder);
-    return ForwardPointerTypes[Ty];
+    auto [It, Inserted] = ForwardPointerTypes.try_emplace(Ty);
+    if (Inserted)
+      It->second = getOpTypeForwardPointer(SC, MIRBuilder);
+    return It->second;
   }
   // If we have forward pointer associated with this type, use its register
   // operand to create OpTypePointer.
-  if (ForwardPointerTypes.contains(Ty)) {
-    Register Reg = getSPIRVTypeID(ForwardPointerTypes[Ty]);
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end()) {
+    Register Reg = getSPIRVTypeID(It->second);
     return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
   }
 
