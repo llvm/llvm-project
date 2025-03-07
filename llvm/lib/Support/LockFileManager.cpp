@@ -157,16 +157,15 @@ public:
 
 } // end anonymous namespace
 
-LockFileManager::LockFileManager(StringRef FileName)
-{
-  this->FileName = FileName;
-  if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
+LockFileManager::LockFileManager(StringRef FileName) {
+  SmallString<128> AbsoluteFileName(FileName);
+  if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName)) {
     std::string S("failed to obtain absolute path for ");
-    S.append(std::string(this->FileName));
+    S.append(std::string(AbsoluteFileName));
     setError(EC, S);
     return;
   }
-  LockFileName = this->FileName;
+  LockFileName = AbsoluteFileName;
   LockFileName += ".lock";
 
   // If the lock file already exists, don't bother to try to create our own
@@ -307,12 +306,8 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
   while (Backoff.waitForNextAttempt()) {
     // FIXME: implement event-based waiting
     if (sys::fs::access(LockFileName.c_str(), sys::fs::AccessMode::Exist) ==
-        errc::no_such_file_or_directory) {
-      // If the original file wasn't created, somone thought the lock was dead.
-      if (!sys::fs::exists(FileName))
-        return Res_OwnerDied;
+        errc::no_such_file_or_directory)
       return Res_Success;
-    }
 
     // If the process owning the lock died without cleaning up, just bail out.
     if (!processStillExecuting((*Owner).first, (*Owner).second))
