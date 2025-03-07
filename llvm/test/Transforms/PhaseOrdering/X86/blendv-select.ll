@@ -117,11 +117,11 @@ define <4 x i64> @x86_pblendvb_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 ; SSE-LABEL: @x86_pblendvb_v8i32_v4i32(
 ; SSE-NEXT:    [[C_BC:%.*]] = bitcast <4 x i64> [[C:%.*]] to <8 x i32>
 ; SSE-NEXT:    [[D_BC:%.*]] = bitcast <4 x i64> [[D:%.*]] to <8 x i32>
-; SSE-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i32> [[C_BC]], [[D_BC]]
+; SSE-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[C_BC]], [[D_BC]]
+; SSE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
 ; SSE-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[B:%.*]] to <8 x i32>
-; SSE-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
-; SSE-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> [[TMP3]]
-; SSE-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[TMP4]] to <4 x i64>
+; SSE-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[TMP2]], <8 x i32> [[TMP1]]
+; SSE-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[TMP3]] to <4 x i64>
 ; SSE-NEXT:    ret <4 x i64> [[RES]]
 ;
 ; AVX2-LABEL: @x86_pblendvb_v8i32_v4i32(
@@ -168,11 +168,11 @@ define <4 x i64> @x86_pblendvb_v16i16_v8i16(<4 x i64> %a, <4 x i64> %b, <4 x i64
 ; SSE-LABEL: @x86_pblendvb_v16i16_v8i16(
 ; SSE-NEXT:    [[C_BC:%.*]] = bitcast <4 x i64> [[C:%.*]] to <16 x i16>
 ; SSE-NEXT:    [[D_BC:%.*]] = bitcast <4 x i64> [[D:%.*]] to <16 x i16>
-; SSE-NEXT:    [[TMP1:%.*]] = icmp slt <16 x i16> [[C_BC]], [[D_BC]]
+; SSE-NEXT:    [[CMP:%.*]] = icmp slt <16 x i16> [[C_BC]], [[D_BC]]
+; SSE-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[A:%.*]] to <16 x i16>
 ; SSE-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[B:%.*]] to <16 x i16>
-; SSE-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[A:%.*]] to <16 x i16>
-; SSE-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP1]], <16 x i16> [[TMP2]], <16 x i16> [[TMP3]]
-; SSE-NEXT:    [[RES:%.*]] = bitcast <16 x i16> [[TMP4]] to <4 x i64>
+; SSE-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[CMP]], <16 x i16> [[TMP2]], <16 x i16> [[TMP1]]
+; SSE-NEXT:    [[RES:%.*]] = bitcast <16 x i16> [[TMP3]] to <4 x i64>
 ; SSE-NEXT:    ret <4 x i64> [[RES]]
 ;
 ; AVX2-LABEL: @x86_pblendvb_v16i16_v8i16(
@@ -270,20 +270,10 @@ define <4 x i64> @x86_pblendvb_v32i8_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 ;
 
 define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double> %d) {
-; SSE-LABEL: @x86_pblendvb_v8f64_v4f64(
-; SSE-NEXT:    [[TMP1:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
-; SSE-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[TMP1]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
-; SSE-NEXT:    ret <8 x double> [[DOTV]]
-;
-; AVX2-LABEL: @x86_pblendvb_v8f64_v4f64(
-; AVX2-NEXT:    [[TMP1:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
-; AVX2-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[TMP1]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
-; AVX2-NEXT:    ret <8 x double> [[DOTV]]
-;
-; AVX512-LABEL: @x86_pblendvb_v8f64_v4f64(
-; AVX512-NEXT:    [[CMP:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
-; AVX512-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
-; AVX512-NEXT:    ret <8 x double> [[DOTV]]
+; CHECK-LABEL: @x86_pblendvb_v8f64_v4f64(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x double> [[DOTV]]
 ;
   %a.bc = bitcast <8 x double> %a to <64 x i8>
   %b.bc = bitcast <8 x double> %b to <64 x i8>
@@ -304,20 +294,10 @@ define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, 
 }
 
 define <16 x float> @x86_pblendvb_v16f32_v8f32(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d) {
-; SSE-LABEL: @x86_pblendvb_v16f32_v8f32(
-; SSE-NEXT:    [[TMP1:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
-; SSE-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[TMP1]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
-; SSE-NEXT:    ret <16 x float> [[DOTV]]
-;
-; AVX2-LABEL: @x86_pblendvb_v16f32_v8f32(
-; AVX2-NEXT:    [[TMP1:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
-; AVX2-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[TMP1]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
-; AVX2-NEXT:    ret <16 x float> [[DOTV]]
-;
-; AVX512-LABEL: @x86_pblendvb_v16f32_v8f32(
-; AVX512-NEXT:    [[CMP:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
-; AVX512-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[CMP]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
-; AVX512-NEXT:    ret <16 x float> [[DOTV]]
+; CHECK-LABEL: @x86_pblendvb_v16f32_v8f32(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[CMP]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <16 x float> [[DOTV]]
 ;
   %a.bc = bitcast <16 x float> %a to <64 x i8>
   %b.bc = bitcast <16 x float> %b to <64 x i8>
@@ -338,20 +318,10 @@ define <16 x float> @x86_pblendvb_v16f32_v8f32(<16 x float> %a, <16 x float> %b,
 }
 
 define <8 x i64> @x86_pblendvb_v8i64_v4i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
-; SSE-LABEL: @x86_pblendvb_v8i64_v4i64(
-; SSE-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i64> [[C:%.*]], [[D:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[B:%.*]], <8 x i64> [[A:%.*]]
-; SSE-NEXT:    ret <8 x i64> [[TMP2]]
-;
-; AVX2-LABEL: @x86_pblendvb_v8i64_v4i64(
-; AVX2-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i64> [[C:%.*]], [[D:%.*]]
-; AVX2-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i64> [[B:%.*]], <8 x i64> [[A:%.*]]
-; AVX2-NEXT:    ret <8 x i64> [[TMP2]]
-;
-; AVX512-LABEL: @x86_pblendvb_v8i64_v4i64(
-; AVX512-NEXT:    [[CMP:%.*]] = icmp slt <8 x i64> [[C:%.*]], [[D:%.*]]
-; AVX512-NEXT:    [[TMP1:%.*]] = select <8 x i1> [[CMP]], <8 x i64> [[B:%.*]], <8 x i64> [[A:%.*]]
-; AVX512-NEXT:    ret <8 x i64> [[TMP1]]
+; CHECK-LABEL: @x86_pblendvb_v8i64_v4i64(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i64> [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <8 x i1> [[CMP]], <8 x i64> [[B:%.*]], <8 x i64> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
   %b.bc = bitcast <8 x i64> %b to <64 x i8>
@@ -372,35 +342,15 @@ define <8 x i64> @x86_pblendvb_v8i64_v4i64(<8 x i64> %a, <8 x i64> %b, <8 x i64>
 }
 
 define <8 x i64> @x86_pblendvb_v16i32_v8i32(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
-; SSE-LABEL: @x86_pblendvb_v16i32_v8i32(
-; SSE-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
-; SSE-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
-; SSE-NEXT:    [[TMP1:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
-; SSE-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
-; SSE-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
-; SSE-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP1]], <16 x i32> [[TMP2]], <16 x i32> [[TMP3]]
-; SSE-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP4]] to <8 x i64>
-; SSE-NEXT:    ret <8 x i64> [[RES]]
-;
-; AVX2-LABEL: @x86_pblendvb_v16i32_v8i32(
-; AVX2-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
-; AVX2-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
-; AVX2-NEXT:    [[TMP1:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
-; AVX2-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
-; AVX2-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
-; AVX2-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP1]], <16 x i32> [[TMP2]], <16 x i32> [[TMP3]]
-; AVX2-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP4]] to <8 x i64>
-; AVX2-NEXT:    ret <8 x i64> [[RES]]
-;
-; AVX512-LABEL: @x86_pblendvb_v16i32_v8i32(
-; AVX512-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
-; AVX512-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
-; AVX512-NEXT:    [[CMP:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
-; AVX512-NEXT:    [[TMP1:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
-; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
-; AVX512-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[TMP2]], <16 x i32> [[TMP1]]
-; AVX512-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP3]] to <8 x i64>
-; AVX512-NEXT:    ret <8 x i64> [[RES]]
+; CHECK-LABEL: @x86_pblendvb_v16i32_v8i32(
+; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[TMP2]], <16 x i32> [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP3]] to <8 x i64>
+; CHECK-NEXT:    ret <8 x i64> [[RES]]
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
   %b.bc = bitcast <8 x i64> %b to <64 x i8>
@@ -436,11 +386,11 @@ define <8 x i64> @x86_pblendvb_v32i16_v16i16(<8 x i64> %a, <8 x i64> %b, <8 x i6
 ; AVX2-LABEL: @x86_pblendvb_v32i16_v16i16(
 ; AVX2-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <32 x i16>
 ; AVX2-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <32 x i16>
-; AVX2-NEXT:    [[TMP1:%.*]] = icmp slt <32 x i16> [[C_BC]], [[D_BC]]
+; AVX2-NEXT:    [[CMP:%.*]] = icmp slt <32 x i16> [[C_BC]], [[D_BC]]
+; AVX2-NEXT:    [[TMP1:%.*]] = bitcast <8 x i64> [[A:%.*]] to <32 x i16>
 ; AVX2-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <32 x i16>
-; AVX2-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64> [[A:%.*]] to <32 x i16>
-; AVX2-NEXT:    [[TMP4:%.*]] = select <32 x i1> [[TMP1]], <32 x i16> [[TMP2]], <32 x i16> [[TMP3]]
-; AVX2-NEXT:    [[RES:%.*]] = bitcast <32 x i16> [[TMP4]] to <8 x i64>
+; AVX2-NEXT:    [[TMP3:%.*]] = select <32 x i1> [[CMP]], <32 x i16> [[TMP2]], <32 x i16> [[TMP1]]
+; AVX2-NEXT:    [[RES:%.*]] = bitcast <32 x i16> [[TMP3]] to <8 x i64>
 ; AVX2-NEXT:    ret <8 x i64> [[RES]]
 ;
 ; AVX512-LABEL: @x86_pblendvb_v32i16_v16i16(

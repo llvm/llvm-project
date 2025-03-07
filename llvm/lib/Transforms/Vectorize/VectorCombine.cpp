@@ -2055,8 +2055,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
-      SelOp, DstVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  OldCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C2VecTy,
+      SelOp, SrcVecTy, C1VecTy, CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  OldCost += TTI.getCmpSelInstrCost(SelOp, SrcVecTy, C2VecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
   OldCost += TTI.getShuffleCost(SK, SrcVecTy, Mask, CostKind, 0, nullptr,
                                 {I.getOperand(0), I.getOperand(1)}, &I);
