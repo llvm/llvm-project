@@ -94,6 +94,10 @@ public:
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() const { return 11; }
 
+  InstructionCost getInstructionCost(const User *U,
+                                     ArrayRef<const Value *> Operands,
+                                     TTI::TargetCostKind CostKind);
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},

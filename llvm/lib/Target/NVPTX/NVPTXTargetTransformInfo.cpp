@@ -8,6 +8,7 @@
 
 #include "NVPTXTargetTransformInfo.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -481,6 +482,34 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return I;
 
   return std::nullopt;
+}
+
+InstructionCost
+NVPTXTTIImpl::getInstructionCost(const User *U,
+                                 ArrayRef<const Value *> Operands,
+                                 TTI::TargetCostKind CostKind) {
+  if (const auto *CI = dyn_cast<CallInst>(U))
+    if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
+      // Without this implementation getCallCost() would return the number
+      // of arguments+1 as the cost. Because the cost-model assumes it is a call
+      // since it is classified as a call in the IR. A better cost model would
+      // be to return the number of asm instructions embedded in the asm
+      // string.
+      auto &AsmStr = IA->getAsmString();
+      SmallVector<StringRef, 4> AsmPieces;
+      SplitString(AsmStr, AsmPieces, ";\n");
+
+      const unsigned InstCount = count_if(AsmPieces, [](StringRef AsmInst) {
+        AsmInst = AsmInst.trim();
+        // This is pretty course but does a reasonably good job of identifying
+        // things that look like instructions, possibly with a predicate ("@").
+        return !AsmInst.empty() && (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
+                                    AsmInst.find(".pragma") != StringRef::npos);
+      });
+      return InstCount * TargetTransformInfo::TCC_Basic;
+    }
+
+  return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
