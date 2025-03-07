@@ -36,6 +36,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <limits>
 #include <vector>
 
 using namespace llvm;
@@ -440,26 +441,83 @@ Error RawCoverageMappingReader::read() {
   // Set the counters for the expansion regions.
   // i.e. Counter of expansion region = counter of the first region
   // from the expanded file.
-  // Perform multiple passes to correctly propagate the counters through
-  // all the nested expansion regions.
-  SmallVector<CounterMappingRegion *, 8> FileIDExpansionRegionMapping;
-  FileIDExpansionRegionMapping.resize(VirtualFileMapping.size(), nullptr);
-  for (unsigned Pass = 1, S = VirtualFileMapping.size(); Pass < S; ++Pass) {
-    for (auto &R : MappingRegions) {
-      if (R.Kind != CounterMappingRegion::ExpansionRegion)
-        continue;
-      assert(!FileIDExpansionRegionMapping[R.ExpandedFileID]);
-      FileIDExpansionRegionMapping[R.ExpandedFileID] = &R;
+  // This assumes:
+  //   - Records are partitioned by FileID.
+  //   - The Count in Expansion is propagated from 1st Record in
+  //     ExpandedFileID.
+  // Therefore another fact below can be assumed.
+  //   - Propagation chain consists of Expansions at each 1st Record.
+
+  /// Node per File.
+  struct FileNode {
+    /// 1st Record in the File.
+    CounterMappingRegion *FirstR = nullptr;
+    /// The Expansion Record out of this File.
+    CounterMappingRegion *ExpanderR = nullptr;
+    /// Count hasn't been propagated yet (for Expansion)
+    bool ExpansionPending = false;
+  };
+  SmallVector<FileNode> FileIDExpansionRegionMapping(VirtualFileMapping.size());
+
+  // Construct the tree.
+  auto PrevFileID = std::numeric_limits<unsigned>::max(); // Invalid value
+  for (auto &R : MappingRegions) {
+    if (R.Kind == CounterMappingRegion::ExpansionRegion) {
+      // The File that contains Expansion may be a node.
+      assert(!FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR);
+      FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR = &R;
+
+      // It will be the node if (isExpansion and ExpansionPending).
+      FileIDExpansionRegionMapping[R.ExpandedFileID].ExpansionPending = true;
     }
-    for (auto &R : MappingRegions) {
-      if (FileIDExpansionRegionMapping[R.FileID]) {
-        FileIDExpansionRegionMapping[R.FileID]->Count = R.Count;
-        FileIDExpansionRegionMapping[R.FileID] = nullptr;
-      }
+
+    if (PrevFileID != R.FileID) {
+      // Record 1st Record for each File.
+      assert(!FileIDExpansionRegionMapping[R.FileID].FirstR);
+      FileIDExpansionRegionMapping[R.FileID].FirstR = &R;
+      PrevFileID = R.FileID;
     }
   }
 
-  return Error::success();
+  auto Propagate = [&](FileNode &X) {
+    // Skip already processed node.
+    if (!X.ExpanderR)
+      return false;
+    // Skip Pending Expansion node.
+    // Process non-Expansion Record and non-Pending Expansion.
+    if (X.ExpansionPending &&
+        X.FirstR->Kind == CounterMappingRegion::ExpansionRegion)
+      return false;
+
+    // Propagate.
+    X.ExpanderR->Count = X.FirstR->Count;
+    // Mark the destination ready.
+    FileIDExpansionRegionMapping[X.ExpanderR->FileID].ExpansionPending = false;
+    // Mark this processed.
+    X.ExpanderR = nullptr;
+    return true;
+  };
+
+  // This won't iterate in most cases but iterates finitely for
+  // unusual cases.
+  for (unsigned I = 0, E = FileIDExpansionRegionMapping.size(); I != E; ++I) {
+    // Propagate Descending.  All Files will be processed if each
+    // ExpandedFileID is greater than FileID.
+    for (auto &X : reverse(FileIDExpansionRegionMapping))
+      Propagate(X);
+
+    // Check whether all Files are processed (or propagate Ascending,
+    // not possible in the usual assumptions).
+    bool Changed = false;
+    for (auto &X : FileIDExpansionRegionMapping)
+      Changed = (Propagate(X) || Changed);
+
+    if (!Changed)
+      return Error::success();
+  }
+
+  return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                      "unexpected Expansions");
 }
 
 Expected<bool> RawCoverageMappingDummyChecker::isDummy() {
