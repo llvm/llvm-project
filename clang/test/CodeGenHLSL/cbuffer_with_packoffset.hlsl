@@ -5,7 +5,7 @@
 // CHECK: %__cblayout_CB = type <{ float, double, <2 x i32> }>
 // CHECK: %__cblayout_CB_1 = type <{ float, <2 x float> }>
 
-// CHECK: @CB.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
+// CHECK: @CB.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 176, 16, 168, 88))
 // CHECK: @a = external addrspace(2) global float, align 4
 // CHECK: @b = external addrspace(2) global double, align 8
 // CHECK: @c = external addrspace(2) global <2 x i32>, align 8

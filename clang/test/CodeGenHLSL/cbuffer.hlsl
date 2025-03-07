@@ -39,7 +39,7 @@ cbuffer CBScalars : register(b1, space5) {
   int64_t a8;
 }
 
-// CHECK: @CBScalars.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 
+// CHECK: @CBScalars.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars,
 // CHECK-SAME: 56, 0, 8, 16, 24, 32, 36, 40, 48))
 // CHECK: @a1 = external addrspace(2) global float, align 4
 // CHECK: @a2 = external addrspace(2) global double, align 8
@@ -61,7 +61,7 @@ cbuffer CBVectors {
   // FIXME: add a bool vectors after llvm-project/llvm#91639 is added
 }
 
-// CHECK: @CBVectors.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors, 
+// CHECK: @CBVectors.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors,
 // CHECK-SAME: 136, 0, 16, 40, 48, 80, 96, 112))
 // CHECK: @b1 = external addrspace(2) global <3 x float>, align 16
 // CHECK: @b2 = external addrspace(2) global <3 x double>, align 32
@@ -82,7 +82,7 @@ cbuffer CBArrays : register(b2) {
   bool c8[4];
 }
 
-// CHECK: @CBArrays.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays, 
+// CHECK: @CBArrays.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays,
 // CHECK-SAME: 708, 0, 48, 112, 176, 224, 608, 624, 656))
 // CHECK: @c1 = external addrspace(2) global [3 x float], align 4
 // CHECK: @c2 = external addrspace(2) global [2 x <3 x double>], align 32
@@ -113,7 +113,7 @@ struct D {
   Empty es;
 };
 
-// CHECK: @CBStructs.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs, 
+// CHECK: @CBStructs.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs,
 // CHECK-SAME: 246, 0, 16, 32, 64, 144, 238, 240))
 // CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 8
 // CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 8
@@ -137,7 +137,7 @@ struct Test {
     float a, b;
 };
 
-// CHECK: @CBMix.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix,
+// CHECK: @CBMix.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix,
 // CHECK-SAME: 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
 // CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 4
 // CHECK: @f1 = external addrspace(2) global float, align 4
