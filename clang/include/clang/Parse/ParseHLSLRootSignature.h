@@ -71,8 +71,8 @@ private:
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   bool HandleUIntLiteral(uint32_t &X);
-  bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
   bool ParseUInt(uint32_t *X);
+  bool ParseRegister(llvm::hlsl::rootsig::Register *Reg, TokenKind Context);
   bool
   ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X);
 

@@ -258,7 +258,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced - invalid token
-  Consumer->SetExpected(diag::err_expected);
+  Consumer->SetExpected(diag::err_hlsl_expected_param);
   ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());
@@ -278,7 +278,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced - end of stream
-  Consumer->SetExpected(diag::err_expected);
+  Consumer->SetExpected(diag::err_hlsl_expected_param);
   ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());

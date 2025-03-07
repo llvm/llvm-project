@@ -61,7 +61,7 @@ bool RootSignatureParser::Parse() {
 }
 
 bool RootSignatureParser::ParseRootElement() {
-  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable))
+  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable, diag::err_hlsl_expected_param, /*Context=*/TokenKind::kw_RootSignature))
     return true;
 
   // Dispatch onto the correct parse method
@@ -117,7 +117,9 @@ bool RootSignatureParser::ParseDescriptorTable() {
 
 bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
-                            TokenKind::kw_UAV, TokenKind::kw_Sampler}))
+                            TokenKind::kw_UAV, TokenKind::kw_Sampler},
+                           diag::err_hlsl_expected_param,
+                           /*Context=*/TokenKind::kw_DescriptorTable))
     return true;
 
   DescriptorTableClause Clause;
@@ -139,11 +141,14 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   }
   Clause.SetDefaultFlags();
 
+  // Store context of clause token type we are parsing
+  TokenKind Context = CurToken.Kind;
+
   if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after, CurToken.Kind))
     return true;
 
   // Consume mandatory Register paramater
-  if (ParseRegister(&Clause.Register))
+  if (ParseRegister(&Clause.Register, Context))
     return true;
 
   // Define optional paramaters
@@ -198,7 +203,7 @@ bool RootSignatureParser::ParseOptionalParams(
   llvm::SmallDenseSet<TokenKind> Seen;
 
   while (TryConsumeExpectedToken(TokenKind::pu_comma)) {
-    if (ConsumeExpectedToken(ParamKeywords))
+    if (ConsumeExpectedToken(ParamKeywords, diag::err_hlsl_expected_param, Context))
       return true;
 
     TokenKind ParamKind = CurToken.Kind;
@@ -239,9 +244,11 @@ bool RootSignatureParser::HandleUIntLiteral(uint32_t &X) {
   return false;
 }
 
-bool RootSignatureParser::ParseRegister(Register *Register) {
+bool RootSignatureParser::ParseRegister(Register *Register, TokenKind Context) {
   if (ConsumeExpectedToken(
-          {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg}))
+          {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg},
+          diag::err_hlsl_expected_param,
+          Context))
     return true;
 
   switch (CurToken.Kind) {
@@ -411,6 +418,7 @@ bool RootSignatureParser::ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
     break;
   case diag::err_expected_either:
   case diag::err_expected_after:
+  case diag::err_hlsl_expected_param:
     DB << FormatTokenKinds(AnyExpected) << FormatTokenKinds({Context});
     break;
   default: break;

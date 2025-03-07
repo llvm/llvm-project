@@ -68,6 +68,9 @@ PUNCTUATOR(equal,   '=')
 PUNCTUATOR(plus,    '+')
 PUNCTUATOR(minus,   '-')
 
+// RootSignature Keyword is only used for diagnostics:
+KEYWORD(RootSignature)
+
 // RootElement Keywords:
 KEYWORD(DescriptorTable)
 
