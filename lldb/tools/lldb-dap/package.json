@@ -164,6 +164,14 @@
               "program"
             ],
             "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
+              },
               "debugAdapterExecutable": {
                 "type": "string",
                 "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
@@ -361,6 +369,14 @@
           },
           "attach": {
             "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
+              },
               "debugAdapterExecutable": {
                 "type": "string",
                 "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
