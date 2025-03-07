@@ -7132,6 +7132,9 @@ def warn_shift_result_sets_sign_bit : Warning<
   "signed shift result (%0) sets the sign bit of the shift expression's "
   "type (%1) and becomes negative">,
   InGroup<DiagGroup<"shift-sign-overflow">>, DefaultIgnore;
+def warn_shift_bool : Warning<
+  "right shifting a 'bool' implicitly converts it to 'int'">,
+  InGroup<DiagGroup<"shift-bool">>, DefaultIgnore;
 
 def warn_precedence_bitwise_rel : Warning<
   "%0 has lower precedence than %1; %1 will be evaluated first">,
@@ -12637,8 +12640,9 @@ def err_riscv_builtin_requires_extension : Error<
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 def err_riscv_type_requires_extension : Error<
-  "RISC-V type %0 requires the '%1' extension"
->;
+  "RISC-V type %0 requires the '%1' extension">;
+def err_riscv_attribute_interrupt_requires_extension : Error<
+  "RISC-V interrupt attribute '%0' requires extension '%1'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;

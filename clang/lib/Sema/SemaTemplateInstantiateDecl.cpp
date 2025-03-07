@@ -1004,14 +1004,17 @@ class OpenACCDeclClauseInstantiator final
     : public OpenACCClauseVisitor<OpenACCDeclClauseInstantiator> {
   Sema &SemaRef;
   const MultiLevelTemplateArgumentList &MLTAL;
+  ArrayRef<OpenACCClause *> ExistingClauses;
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
 public:
   OpenACCDeclClauseInstantiator(Sema &S,
                                 const MultiLevelTemplateArgumentList &MLTAL,
+                                ArrayRef<OpenACCClause *> ExistingClauses,
                                 SemaOpenACC::OpenACCParsedClause &ParsedClause)
-      : SemaRef(S), MLTAL(MLTAL), ParsedClause(ParsedClause) {}
+      : SemaRef(S), MLTAL(MLTAL), ExistingClauses(ExistingClauses),
+        ParsedClause(ParsedClause) {}
 
   OpenACCClause *CreatedClause() { return NewClause; }
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
@@ -1056,7 +1059,6 @@ CLAUSE_NOT_ON_DECLS(DeviceNum)
 CLAUSE_NOT_ON_DECLS(DeviceType)
 CLAUSE_NOT_ON_DECLS(Finalize)
 CLAUSE_NOT_ON_DECLS(FirstPrivate)
-CLAUSE_NOT_ON_DECLS(Gang)
 CLAUSE_NOT_ON_DECLS(Host)
 CLAUSE_NOT_ON_DECLS(If)
 CLAUSE_NOT_ON_DECLS(IfPresent)
@@ -1067,14 +1069,68 @@ CLAUSE_NOT_ON_DECLS(NumWorkers)
 CLAUSE_NOT_ON_DECLS(Private)
 CLAUSE_NOT_ON_DECLS(Reduction)
 CLAUSE_NOT_ON_DECLS(Self)
-CLAUSE_NOT_ON_DECLS(Seq)
 CLAUSE_NOT_ON_DECLS(Tile)
 CLAUSE_NOT_ON_DECLS(UseDevice)
-CLAUSE_NOT_ON_DECLS(Vector)
 CLAUSE_NOT_ON_DECLS(VectorLength)
 CLAUSE_NOT_ON_DECLS(Wait)
-CLAUSE_NOT_ON_DECLS(Worker)
 #undef CLAUSE_NOT_ON_DECLS
+
+void OpenACCDeclClauseInstantiator::VisitGangClause(
+    const OpenACCGangClause &C) {
+  llvm::SmallVector<OpenACCGangKind> TransformedGangKinds;
+  llvm::SmallVector<Expr *> TransformedIntExprs;
+  assert(C.getNumExprs() <= 1 &&
+         "Only 1 expression allowed on gang clause in routine");
+
+  if (C.getNumExprs() > 0) {
+    assert(C.getExpr(0).first == OpenACCGangKind::Dim &&
+           "Only dim allowed on routine");
+    ExprResult ER =
+        SemaRef.SubstExpr(const_cast<Expr *>(C.getExpr(0).second), MLTAL);
+    if (ER.isUsable()) {
+      ER = SemaRef.OpenACC().CheckGangExpr(ExistingClauses,
+                                           ParsedClause.getDirectiveKind(),
+                                           C.getExpr(0).first, ER.get());
+      if (ER.isUsable()) {
+        TransformedGangKinds.push_back(OpenACCGangKind::Dim);
+        TransformedIntExprs.push_back(ER.get());
+      }
+    }
+  }
+
+  NewClause = SemaRef.OpenACC().CheckGangClause(
+      ParsedClause.getDirectiveKind(), ExistingClauses,
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitSeqClause(const OpenACCSeqClause &C) {
+  NewClause = OpenACCSeqClause::Create(SemaRef.getASTContext(),
+                                       ParsedClause.getBeginLoc(),
+                                       ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  NewClause = OpenACCNoHostClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(),
+                                          ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitWorkerClause(
+    const OpenACCWorkerClause &C) {
+  assert(!C.hasIntExpr() && "Int Expr not allowed on routine 'worker' clause");
+  NewClause = OpenACCWorkerClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(), {},
+                                          nullptr, ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitVectorClause(
+    const OpenACCVectorClause &C) {
+  assert(!C.hasIntExpr() && "Int Expr not allowed on routine 'vector' clause");
+  NewClause = OpenACCVectorClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(), {},
+                                          nullptr, ParsedClause.getEndLoc());
+}
 
 void OpenACCDeclClauseInstantiator::VisitCopyClause(
     const OpenACCCopyClause &C) {
@@ -1197,7 +1253,8 @@ llvm::SmallVector<OpenACCClause *> InstantiateOpenACCClauseList(
     if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(Clause))
       ParsedClause.setLParenLoc(WithParms->getLParenLoc());
 
-    OpenACCDeclClauseInstantiator Instantiator{S, MLTAL, ParsedClause};
+    OpenACCDeclClauseInstantiator Instantiator{S, MLTAL, TransformedClauses,
+                                               ParsedClause};
     Instantiator.Visit(Clause);
     if (Instantiator.CreatedClause())
       TransformedClauses.push_back(Instantiator.CreatedClause());
@@ -1213,8 +1270,8 @@ Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
       InstantiateOpenACCClauseList(SemaRef, TemplateArgs, D->getDirectiveKind(),
                                    D->clauses());
 
-  if (SemaRef.OpenACC().ActOnStartDeclDirective(D->getDirectiveKind(),
-                                                D->getBeginLoc()))
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(
+          D->getDirectiveKind(), D->getBeginLoc(), TransformedClauses))
     return nullptr;
 
   DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
@@ -1242,8 +1299,8 @@ Decl *TemplateDeclInstantiator::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
     // the function decl is empty.
   }
 
-  if (SemaRef.OpenACC().ActOnStartDeclDirective(D->getDirectiveKind(),
-                                                D->getBeginLoc()))
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(
+          D->getDirectiveKind(), D->getBeginLoc(), TransformedClauses))
     return nullptr;
 
   DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
