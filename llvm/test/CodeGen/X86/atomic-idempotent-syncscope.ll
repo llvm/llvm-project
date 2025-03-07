@@ -14,106 +14,91 @@
 define i8 @add8(ptr %p) #0 {
 ; X64-LABEL: add8:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
-; X86-SSE2-LABEL: add8:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    mfence
-; X86-SSE2-NEXT:    movzbl (%eax), %eax
-; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: add8:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzbl (%eax), %eax
-; X86-SLM-NEXT:    retl
+; X86-GENERIC-LABEL: add8:
+; X86-GENERIC:       # %bb.0:
+; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    #MEMBARRIER
+; X86-GENERIC-NEXT:    movzbl (%eax), %eax
+; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: add8:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
 ; X86-ATOM-NEXT:    movzbl (%eax), %eax
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw add ptr %p, i8 0 monotonic
+  %1 = atomicrmw add ptr %p, i8 0 syncscope("singlethread") monotonic
   ret i8 %1
 }
 
 define i16 @or16(ptr %p) #0 {
 ; X64-LABEL: or16:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
-; X86-SSE2-LABEL: or16:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    mfence
-; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: or16:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movzwl (%eax), %eax
-; X86-SLM-NEXT:    retl
+; X86-GENERIC-LABEL: or16:
+; X86-GENERIC:       # %bb.0:
+; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    #MEMBARRIER
+; X86-GENERIC-NEXT:    movzwl (%eax), %eax
+; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or16:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
 ; X86-ATOM-NEXT:    movzwl (%eax), %eax
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw or ptr %p, i16 0 acquire
+  %1 = atomicrmw or ptr %p, i16 0 syncscope("singlethread") acquire
   ret i16 %1
 }
 
 define i32 @xor32(ptr %p) #0 {
 ; X64-LABEL: xor32:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
-; X86-SSE2-LABEL: xor32:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    mfence
-; X86-SSE2-NEXT:    movl (%eax), %eax
-; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: xor32:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
+; X86-GENERIC-LABEL: xor32:
+; X86-GENERIC:       # %bb.0:
+; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    #MEMBARRIER
+; X86-GENERIC-NEXT:    movl (%eax), %eax
+; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: xor32:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
 ; X86-ATOM-NEXT:    movl (%eax), %eax
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw xor ptr %p, i32 0 release
+  %1 = atomicrmw xor ptr %p, i32 0 syncscope("singlethread") release
   ret i32 %1
 }
 
 define i64 @sub64(ptr %p) #0 {
 ; X64-LABEL: sub64:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    retq
 ;
@@ -135,7 +120,7 @@ define i64 @sub64(ptr %p) #0 {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
-  %1 = atomicrmw sub ptr %p, i64 0 seq_cst
+  %1 = atomicrmw sub ptr %p, i64 0 syncscope("singlethread") seq_cst
   ret i64 %1
 }
 
@@ -257,7 +242,7 @@ define i128 @or128(ptr %p) #0 {
 ; X86-ATOM-NEXT:    popl %ebx
 ; X86-ATOM-NEXT:    popl %ebp
 ; X86-ATOM-NEXT:    retl $4
-  %1 = atomicrmw or ptr %p, i128 0 monotonic
+  %1 = atomicrmw or ptr %p, i128 0 syncscope("singlethread") monotonic
   ret i128 %1
 }
 
@@ -265,33 +250,28 @@ define i128 @or128(ptr %p) #0 {
 define i32 @and32 (ptr %p) #0 {
 ; X64-LABEL: and32:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
-; X86-SSE2-LABEL: and32:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    mfence
-; X86-SSE2-NEXT:    movl (%eax), %eax
-; X86-SSE2-NEXT:    retl
-;
-; X86-SLM-LABEL: and32:
-; X86-SLM:       # %bb.0:
-; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLM-NEXT:    lock orl $0, (%esp)
-; X86-SLM-NEXT:    movl (%eax), %eax
-; X86-SLM-NEXT:    retl
+; X86-GENERIC-LABEL: and32:
+; X86-GENERIC:       # %bb.0:
+; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-GENERIC-NEXT:    #MEMBARRIER
+; X86-GENERIC-NEXT:    movl (%eax), %eax
+; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: and32:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
 ; X86-ATOM-NEXT:    movl (%eax), %eax
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  %1 = atomicrmw and ptr %p, i32 -1 acq_rel
+  %1 = atomicrmw and ptr %p, i32 -1 syncscope("singlethread") acq_rel
   ret i32 %1
 }
 
@@ -318,7 +298,7 @@ define void @or32_nouse_monotonic(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i32 0 monotonic
+  atomicrmw or ptr %p, i32 0 syncscope("singlethread") monotonic
   ret void
 }
 
@@ -373,7 +353,7 @@ define void @or32_nouse_release(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i32 0 release
+  atomicrmw or ptr %p, i32 0 syncscope("singlethread") release
   ret void
 }
 
@@ -400,24 +380,26 @@ define void @or32_nouse_acq_rel(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i32 0 acq_rel
+  atomicrmw or ptr %p, i32 0 syncscope("singlethread") acq_rel
   ret void
 }
 
 define void @or32_nouse_seq_cst(ptr %p) #0 {
 ; X64-LABEL: or32_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    retq
 ;
 ; X86-GENERIC-LABEL: or32_nouse_seq_cst:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    lock orl $0, (%esp)
+; X86-GENERIC-NEXT:    #MEMBARRIER
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or32_nouse_seq_cst:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
@@ -425,7 +407,7 @@ define void @or32_nouse_seq_cst(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i32 0 seq_cst
+  atomicrmw or ptr %p, i32 0 syncscope("singlethread") seq_cst
   ret void
 }
 
@@ -433,7 +415,7 @@ define void @or32_nouse_seq_cst(ptr %p) #0 {
 define void @or64_nouse_seq_cst(ptr %p) #0 {
 ; X64-LABEL: or64_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: or64_nouse_seq_cst:
@@ -454,7 +436,7 @@ define void @or64_nouse_seq_cst(ptr %p) #0 {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
-  atomicrmw or ptr %p, i64 0 seq_cst
+  atomicrmw or ptr %p, i64 0 syncscope("singlethread") seq_cst
   ret void
 }
 
@@ -567,7 +549,7 @@ define void @or128_nouse_seq_cst(ptr %p) #0 {
 ; X86-ATOM-NEXT:    popl %ebx
 ; X86-ATOM-NEXT:    popl %ebp
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i128 0 seq_cst
+  atomicrmw or ptr %p, i128 0 syncscope("singlethread") seq_cst
   ret void
 }
 
@@ -575,17 +557,19 @@ define void @or128_nouse_seq_cst(ptr %p) #0 {
 define void @or16_nouse_seq_cst(ptr %p) #0 {
 ; X64-LABEL: or16_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    retq
 ;
 ; X86-GENERIC-LABEL: or16_nouse_seq_cst:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    lock orl $0, (%esp)
+; X86-GENERIC-NEXT:    #MEMBARRIER
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or16_nouse_seq_cst:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
@@ -593,24 +577,26 @@ define void @or16_nouse_seq_cst(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i16 0 seq_cst
+  atomicrmw or ptr %p, i16 0 syncscope("singlethread") seq_cst
   ret void
 }
 
 define void @or8_nouse_seq_cst(ptr %p) #0 {
 ; X64-LABEL: or8_nouse_seq_cst:
 ; X64:       # %bb.0:
-; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    #MEMBARRIER
 ; X64-NEXT:    retq
 ;
 ; X86-GENERIC-LABEL: or8_nouse_seq_cst:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    lock orl $0, (%esp)
+; X86-GENERIC-NEXT:    #MEMBARRIER
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: or8_nouse_seq_cst:
 ; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    lock orl $0, (%esp)
+; X86-ATOM-NEXT:    #MEMBARRIER
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
@@ -618,8 +604,12 @@ define void @or8_nouse_seq_cst(ptr %p) #0 {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
-  atomicrmw or ptr %p, i8 0 seq_cst
+  atomicrmw or ptr %p, i8 0 syncscope("singlethread") seq_cst
   ret void
 }
 
 attributes #0 = { nounwind }
+
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X86-SLM: {{.*}}
+; X86-SSE2: {{.*}}
