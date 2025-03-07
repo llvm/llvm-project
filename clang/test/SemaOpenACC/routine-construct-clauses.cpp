@@ -121,3 +121,24 @@ struct DependentT {
 void Inst() {
   DependentT<HasFuncs> T;// expected-note{{in instantiation of}}
 }
+
+#pragma acc routine(Func) gang device_type(Inst)
+#pragma acc routine(Func) gang dtype(Inst)
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) dtype(*) worker
+
+#pragma acc routine(Func) dtype(*) gang
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) device_type(*) vector
+#pragma acc routine(Func) dtype(*) seq
+// expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+#pragma acc routine(Func) seq device_type(*) bind("asdf")
+// expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+#pragma acc routine(Func) seq device_type(*) bind(getSomeInt)
+#pragma acc routine(Func) seq dtype(*) device_type(*)
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'dtype' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq dtype(*) nohost
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq device_type(*) nohost

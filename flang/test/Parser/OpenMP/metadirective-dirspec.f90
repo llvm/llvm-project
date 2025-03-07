@@ -25,7 +25,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = allocate
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = allocate
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
@@ -51,7 +51,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = critical
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = critical
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
@@ -76,7 +76,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare mapper
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | | | OmpArgument -> OmpMapperSpecifier
 !PARSE-TREE: | | | | Name = 'mymapper'
 !PARSE-TREE: | | | | TypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
@@ -120,7 +120,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare reduction
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | | | OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
@@ -158,7 +158,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare simd
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare simd
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f04'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
@@ -183,7 +183,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = declare target
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f05'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
@@ -210,7 +210,7 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = flush
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | | OmpClauseList ->
@@ -237,6 +237,6 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = threadprivate
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = threadprivate
 !PARSE-TREE: | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 't'
 !PARSE-TREE: | | | OmpClauseList ->
