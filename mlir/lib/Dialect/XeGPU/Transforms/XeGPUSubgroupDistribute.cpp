@@ -15,6 +15,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/IR/Builders.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -157,6 +158,8 @@ struct SGMapLattice : public Lattice<SGMap> {
   using Lattice::Lattice;
 };
 
+/// Helper Functions
+
 /// Helper Function to get the expected layouts for DPAS operands.
 static SGMap getSGMapForDPASOperand(Type operandTy, unsigned operandNum) {
   int packingFactorForB = packedBSizeInBits / operandTy.getIntOrFloatBitWidth();
@@ -174,16 +177,33 @@ static SGMap getSGMapForDPASOperand(Type operandTy, unsigned operandNum) {
 /// However, the minimum granularity of data access per work item is 16-bits.
 /// So, if the bitwidth of the type is less than 16, we need to pack the data to
 /// 16-bits.
-static SGMap getDefaultSgMap(Type ty) {
-  int packingFactor = 1;
-  if (ty.getIntOrFloatBitWidth() < packedASizeInBits)
-    packingFactor = packedBSizeInBits / ty.getIntOrFloatBitWidth();
-  return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
+// static SGMap getDefaultSgMap(Type ty, unsigned rank) {
+//   int packingFactor = 1;
+//   if (ty.getIntOrFloatBitWidth() < packedASizeInBits)
+//     packingFactor = packedBSizeInBits / ty.getIntOrFloatBitWidth();
+//   return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
+// }
+
+/// Helper Function to get the default layout for uniform values like constants.
+static SGMap getDefaultSgMap(unsigned rank) {
+  assert((rank == 1 || rank == 2) && "Expected 0D or 1D vector.");
+  if (rank == 1)
+    return SGMap(WiLayout({subgroupSize}), WiData({1}));
+  return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
 }
 
-/// Helper Function to get the default layout representing constants.
-static SGMap getDefaultSgMap() {
-  return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
+static SGMap getDefaultSgMap(VectorType vectorTy) {
+  /// Expecting a 1D or 2D vector.
+  assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
+         "Expected 1D or 2D vector.");
+  /// If the rank is 1, then return default layout for 1D vector.
+  if (vectorTy.getRank() == 1)
+    return getDefaultSgMap(1);
+  int packingFactor = 1;
+  auto bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
+  if (bitwidth < packedASizeInBits)
+    packingFactor = packedBSizeInBits / bitwidth;
+  return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
 }
 
 ///===----------------------------------------------------------------------===///
@@ -230,6 +250,14 @@ private:
                          ArrayRef<SGMapLattice *> operands,
                          ArrayRef<const SGMapLattice *> results);
 
+  void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
+                             ArrayRef<SGMapLattice *> operands,
+                             ArrayRef<const SGMapLattice *> results);
+
+  void visitVectorMultiReductionOp(vector::MultiDimReductionOp reduction,
+                                   ArrayRef<SGMapLattice *> operands,
+                                   ArrayRef<const SGMapLattice *> results);
+
 public:
   SGMapPropagation(DataFlowSolver &solver, SymbolTableCollection &symbolTable)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable) {}
@@ -274,6 +302,10 @@ SGMapPropagation::visitOperation(Operation *op,
     visitCreateDescOp(createDesc, operands, results);
   else if (auto storeScatter = dyn_cast<xegpu::StoreScatterOp>(op))
     visitStoreScatterOp(storeScatter, operands, results);
+  else if (auto updateNdOffset = dyn_cast<xegpu::UpdateNdOffsetOp>(op))
+    visitUpdateNdOffsetOp(updateNdOffset, operands, results);
+  else if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op))
+    visitVectorMultiReductionOp(reduction, operands, results);
   /// All other ops
   else {
     for (const SGMapLattice *r : results) {
@@ -291,6 +323,43 @@ SGMapPropagation::visitOperation(Operation *op,
     addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
   }
   return success();
+}
+
+void SGMapPropagation::visitVectorMultiReductionOp(
+    vector::MultiDimReductionOp reduction, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  /// The layout of the result must be present.
+  auto resultLayout = results[0]->getValue();
+  if (!resultLayout.isAssigned())
+    return;
+  /// We only consider 2D -> 1D reductions at this point.
+  assert(resultLayout.getLayout().size() == 1 &&
+         "Expected 1D layout for reduction result.");
+  /// Given that the result is 1D, the layout of the operand should be 2D with
+  /// default layout.
+  auto operandLayout = getDefaultSgMap(2);
+  operandLayout.print(llvm::outs());
+  propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
+  /// Accumulator should have the same layout as the result.
+  propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
+}
+
+/// Propagate the layout of the result tensor to the source tensor descriptor in
+/// UpdateNdOffsetOp.
+void SGMapPropagation::visitUpdateNdOffsetOp(
+    xegpu::UpdateNdOffsetOp updateNdOffset, ArrayRef<SGMapLattice *> operands,
+    ArrayRef<const SGMapLattice *> results) {
+  /// The layout of the result must be present.
+  auto resultLayout = results[0]->getValue();
+  if (!resultLayout.isAssigned())
+    return;
+  /// Propagate the layout to the source operand.
+  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
+  /// For all other operands use 1D default layout.
+  SGMap layout = getDefaultSgMap(1);
+  for (size_t i = 1; i < operands.size(); ++i) {
+    propagateIfChanged(operands[i], operands[i]->meet(layout));
+  }
 }
 
 /// Set the layouts for DPAS A, B, and C operands.
@@ -314,8 +383,7 @@ void SGMapPropagation::visitDpasOp(xegpu::DpasOp dpas,
 void SGMapPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
                                       ArrayRef<SGMapLattice *> operands,
                                       ArrayRef<const SGMapLattice *> results) {
-  auto storeLayout =
-      getDefaultSgMap(store.getTensorDescType().getElementType());
+  auto storeLayout = getDefaultSgMap(store.getValueType());
   /// Both operands should have the same layout
   for (SGMapLattice *operand : operands) {
     propagateIfChanged(operand, operand->meet(storeLayout));
@@ -334,7 +402,6 @@ void SGMapPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
   SGMap tensorDescLayout = valueLayout;
   /// LoadNdOp has the transpose effect. However, at the stage of this analyis
   /// this effect is not expected and should be abstracted away. Emit a warning.
-  /// TODO: Handle this case properly when `order` is introduced in the sg_map.
   if (auto transpose = load.getTranspose()) {
     load.emitWarning("Transpose effect is not expected for LoadNdOp");
     tensorDescLayout = valueLayout.getTransposedLayout(transpose.value());
@@ -409,15 +476,12 @@ void SGMapPropagation::visitLoadGatherOp(
     /// LoadGatherOp has the transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
     /// a warning.
-    /// TODO: Handle this case properly when `order` is introduced in the
-    /// sg_map.
     load.emitWarning("Transpose effect is not expected for LoadGatherOp");
     tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
   } else
     tensorDescLayout = valueLayout;
-  /// Mask operand should have the same layout as the value but with wi_data =
-  /// [1, 1]
-  SGMap maskLayout = SGMap(valueLayout.getLayout(), WiData({1, 1}));
+  /// Mask operand should have 1D default layout.
+  auto maskLayout = getDefaultSgMap(1);
   /// Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(tensorDescLayout));
   /// Propagate the new layout to the mask operand.
@@ -434,8 +498,8 @@ void SGMapPropagation::visitCreateNdDescOp(
     return;
   /// Propagate the layout to the source operand.
   propagateIfChanged(operands[0], operands[0]->meet(descLayout));
-  /// For all other operands propagate the descriptor layout.
-  SGMap layout = getDefaultSgMap();
+  /// For all other operands use 1D default layout.
+  SGMap layout = getDefaultSgMap(1);
   for (size_t i = 1; i < operands.size(); ++i) {
     propagateIfChanged(operands[i], operands[i]->meet(layout));
   }
@@ -452,8 +516,8 @@ void SGMapPropagation::visitCreateDescOp(
     return;
   /// Propagate the layout to the source operand.
   propagateIfChanged(operands[0], operands[0]->meet(descLayout));
-  /// For offset operand propagate the default layout.
-  SGMap layout = getDefaultSgMap();
+  /// For offset operand propagate 1D default layout.
+  SGMap layout = getDefaultSgMap(1);
   propagateIfChanged(operands[1], operands[1]->meet(layout));
 }
 
@@ -462,15 +526,12 @@ void SGMapPropagation::visitCreateDescOp(
 void SGMapPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<SGMapLattice *> operands,
     ArrayRef<const SGMapLattice *> results) {
-  auto valueLayout =
-      getDefaultSgMap(storeScatter.getTensorDescType().getElementType());
+  auto valueLayout = getDefaultSgMap(storeScatter.getValueType());
   SGMap storeScatterLayout;
   if (storeScatter.getTranspose()) {
     /// StoreScatteOp allows transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
     /// a warning.
-    /// TODO: Handle this case properly when `order` is introduced in the
-    /// sg_map.
     storeScatter.emitWarning(
         "Transpose effect is not expected for StoreScatterOp");
     storeScatterLayout = valueLayout.getTransposedLayout({1, 0});
@@ -480,8 +541,8 @@ void SGMapPropagation::visitStoreScatterOp(
   propagateIfChanged(operands[0], operands[0]->meet(valueLayout));
   /// Propagate the tensor descriptor layout.
   propagateIfChanged(operands[1], operands[1]->meet(storeScatterLayout));
-  /// Use default layout for mask operand.
-  auto maskLayout = getDefaultSgMap();
+  /// Use default 1D layout for mask operand.
+  auto maskLayout = getDefaultSgMap(1);
   propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
 }
 
