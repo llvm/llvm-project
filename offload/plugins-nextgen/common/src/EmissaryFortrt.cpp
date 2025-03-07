@@ -402,6 +402,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     _max_num_threads = 0;
     _max_num_teams = 0;
     delete _deferred_fns_ptr;
+    _deferred_fns_ptr=nullptr;
   } // end run_deferred_functions
 
   return return_value;
