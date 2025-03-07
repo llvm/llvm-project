@@ -12971,7 +12971,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_CRYPTO,
        {Feature_HasV8Bit},
        {ARM::FeatureCrypto, ARM::FeatureNEON, ARM::FeatureFPARMv8}},
-      {(ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP),
+      {(ARM::AEK_DSP | ARM::AEK_MVEFP | ARM::AEK_FP),
        {Feature_HasV8_1MMainlineBit},
        {ARM::HasMVEFloatOps}},
       {ARM::AEK_FP,
