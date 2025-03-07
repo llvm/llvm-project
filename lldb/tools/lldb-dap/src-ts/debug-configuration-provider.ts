@@ -3,31 +3,9 @@ import * as child_process from "child_process";
 import * as util from "util";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
+import { showErrorWithConfigureButton } from "./ui/error-messages";
 
 const exec = util.promisify(child_process.execFile);
-
-/**
- * Shows an error message to the user that optionally allows them to open their
- * launch.json to configure it.
- *
- * @param message The error message to display to the user
- * @returns `undefined` if the debug session should stop or `null` if the launch.json should be opened
- */
-async function showErrorWithConfigureButton(
-  message: string,
-): Promise<null | undefined> {
-  const userSelection = await vscode.window.showErrorMessage(
-    message,
-    { modal: true },
-    "Configure",
-  );
-
-  if (userSelection === "Configure") {
-    return null; // Stops the debug session and opens the launch.json for editing
-  }
-
-  return undefined; // Only stops the debug session
-}
 
 /**
  * Determines whether or not the given lldb-dap executable supports executing

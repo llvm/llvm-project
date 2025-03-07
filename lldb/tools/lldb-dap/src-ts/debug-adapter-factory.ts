@@ -3,6 +3,10 @@ import * as util from "util";
 import * as vscode from "vscode";
 import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
+import {
+  showErrorWithConfigureButton,
+  showLLDBDapNotFoundMessage,
+} from "./ui/error-messages";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -91,12 +95,27 @@ async function getDAPExecutable(
   return undefined;
 }
 
-function getDAPArguments(
+async function getDAPArguments(
   folder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
-): string[] {
+  userInteractive?: boolean,
+): Promise<string[] | null | undefined> {
   // Check the debug configuration for arguments first
   const debugConfigArgs = configuration.debugAdapterArgs;
+  if (debugConfigArgs) {
+    if (
+      !Array.isArray(debugConfigArgs) ||
+      debugConfigArgs.findIndex((entry) => typeof entry !== "string") !== -1
+    ) {
+      if (!userInteractive) {
+        return undefined;
+      }
+      return showErrorWithConfigureButton(
+        "The debugAdapterArgs property must be an array of string values.",
+      );
+    }
+    return debugConfigArgs;
+  }
   if (
     Array.isArray(debugConfigArgs) &&
     debugConfigArgs.findIndex((entry) => typeof entry !== "string") === -1
@@ -107,29 +126,6 @@ function getDAPArguments(
   return vscode.workspace
     .getConfiguration("lldb-dap", folder)
     .get<string[]>("arguments", []);
-}
-
-/**
- * Shows a modal when the debug adapter's path is not found
- */
-async function showLLDBDapNotFoundMessage(path?: string) {
-  const message =
-    path !== undefined
-      ? `Debug adapter path: ${path} is not a valid file`
-      : "Unable to find the path to the LLDB debug adapter executable.";
-  const openSettingsAction = "Open Settings";
-  const callbackValue = await vscode.window.showErrorMessage(
-    message,
-    { modal: true },
-    openSettingsAction,
-  );
-
-  if (openSettingsAction === callbackValue) {
-    vscode.commands.executeCommand(
-      "workbench.action.openSettings",
-      "lldb-dap.executable-path",
-    );
-  }
 }
 
 /**
@@ -176,7 +172,10 @@ export async function createDebugAdapterExecutable(
       ...env,
     },
   };
-  const dbgArgs = getDAPArguments(folder, configuration);
+  const dbgArgs = await getDAPArguments(folder, configuration, userInteractive);
+  if (!dbgArgs) {
+    return undefined;
+  }
 
   return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }
