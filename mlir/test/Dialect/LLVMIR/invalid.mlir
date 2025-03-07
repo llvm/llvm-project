@@ -1693,6 +1693,15 @@ llvm.func @wrong_number_of_bundle_types() {
 
 // -----
 
+llvm.func @wrong_number_of_bundle_types_intrin(%arg0: i32) -> i32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  %1 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["tag"(%0 : i32, i32)] : (i32 {llvm.signext}) -> (i32)
+  llvm.return %1 : i32
+}
+
+// -----
+
 llvm.func @foo()
 llvm.func @wrong_number_of_bundle_tags() {
   %0 = llvm.mlir.constant(0 : i32) : i32

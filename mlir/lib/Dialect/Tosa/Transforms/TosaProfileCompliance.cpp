@@ -178,6 +178,15 @@ void ProfileInfoDepot::populateProfileInfo(tosa::RescaleOp op) {
   addValue(op.getOutput());
 }
 
+template <>
+void ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
+  addValue(op.getA());
+  addValue(op.getB());
+  addValue(op.getAZp());
+  addValue(op.getBZp());
+  addValue(op.getOutput());
+}
+
 LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function only populates the info for the customised operands.
 #define POPULATE_PROFILE_INFO_CUSTOM(tosaOp)                                   \
@@ -218,6 +227,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Resize)
   POPULATE_PROFILE_INFO_CUSTOM(Select)
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
+  POPULATE_PROFILE_INFO_CUSTOM(MatMul)
 
   // Type Invariant Extension, a capability extension that is independent
   // of the data type, meaning any compatible type can be used. No type
@@ -235,7 +245,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_COMMON(Cast)
   POPULATE_PROFILE_INFO_COMMON(Const)
   POPULATE_PROFILE_INFO_COMMON(ArgMax)
-  POPULATE_PROFILE_INFO_COMMON(MatMul)
   POPULATE_PROFILE_INFO_COMMON(Sub)
   POPULATE_PROFILE_INFO_COMMON(Maximum)
   POPULATE_PROFILE_INFO_COMMON(Minimum)
