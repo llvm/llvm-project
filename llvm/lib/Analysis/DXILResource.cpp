@@ -21,7 +21,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
-#include "llvm/IR/DiagnosticInfo.h"
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -860,8 +859,9 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
     }
   }
 
-  // An entry that is not in the map is considered unknown so its wasted overhead
-  // and increased complexity to keep an entry explicitly marked unknown
+  // An entry that is not in the map is considered unknown so its wasted
+  // overhead and increased complexity to keep an entry explicitly marked
+  // unknown
   const auto RemoveEnd = std::remove_if(
       CounterDirections.begin(), CounterDirections.end(), [](const auto &Item) {
         return Item.second == ResourceCounterDirection::Unknown;
@@ -885,7 +885,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
   if (DuplicateEntry == CounterDirections.end())
     return;
 
-  StringRef Message = "RWStructuredBuffers may increment or decrement their counters, but not both.";
+  StringRef Message = "RWStructuredBuffers may increment or decrement their "
+                      "counters, but not both.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 

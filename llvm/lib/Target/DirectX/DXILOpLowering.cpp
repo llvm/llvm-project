@@ -816,7 +816,8 @@ public:
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  DXILResourceCounterDirectionMap &DRCDM = MAM.getResult<DXILResourceCounterDirectionAnalysis>(M);
+  DXILResourceCounterDirectionMap &DRCDM =
+      MAM.getResult<DXILResourceCounterDirectionAnalysis>(M);
 
   bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   if (!MadeChanges)

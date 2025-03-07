@@ -435,7 +435,8 @@ declare void @b.func(target("dx.RawBuffer", float, 1, 0) %handle)
       continue;
     }
 
-    auto Dir = FName == "a.func" ? ResourceCounterDirection::Decrement : ResourceCounterDirection::Increment;
+    auto Dir = FName == "a.func" ? ResourceCounterDirection::Decrement
+                                 : ResourceCounterDirection::Increment;
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
