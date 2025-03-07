@@ -24,6 +24,7 @@
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUOpenCLEnqueuedBlockLowering.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"

@@ -207,5 +207,5 @@ AMDGPUPreloadKernArgPrologPass::run(MachineFunction &MF,
   if (!AMDGPUPreloadKernArgProlog(MF).run())
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
 }
