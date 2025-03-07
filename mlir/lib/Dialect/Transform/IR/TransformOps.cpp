@@ -104,16 +104,8 @@ transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 
 void transform::AlternativesOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  for (Region &alternative : llvm::drop_begin(
-           getAlternatives(),
-           point.isParent() ? 0
-                            : point.getRegionOrNull()->getRegionNumber() + 1)) {
-    regions.emplace_back(&alternative, !getOperands().empty()
-                                           ? alternative.getArguments()
-                                           : Block::BlockArgListType());
-  }
   if (!point.isParent())
-    regions.emplace_back(getOperation()->getResults());
+    regions.emplace_back(getResults());
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -1502,16 +1494,8 @@ void transform::ForeachOp::getEffects(
 
 void transform::ForeachOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  Region *bodyRegion = &getBody();
-  if (point.isParent()) {
-    regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-    return;
-  }
-
-  // Branch back to the region or the parent.
-  assert(point == getBody() && "unexpected region index");
-  regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back();
+  if (point.getRegionOrNull() == &getBody())
+    regions.emplace_back(getResults());
 }
 
 OperandRange
@@ -2742,16 +2726,8 @@ transform::SequenceOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 
 void transform::SequenceOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  if (point.isParent()) {
-    Region *bodyRegion = &getBody();
-    regions.emplace_back(bodyRegion, getNumOperands() != 0
-                                         ? bodyRegion->getArguments()
-                                         : Block::BlockArgListType());
-    return;
-  }
-
-  assert(point == getBody() && "unexpected region index");
-  regions.emplace_back(getOperation()->getResults());
+  if (point.getRegionOrNull() == &getBody())
+    regions.emplace_back(getResults());
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(
