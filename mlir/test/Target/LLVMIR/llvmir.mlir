@@ -2368,6 +2368,18 @@ llvm.func @readwrite_func() attributes {
 // -----
 
 //
+// target-features attribute.
+//
+
+// CHECK-LABEL: @tf
+// CHECK-SAME: #[[TargetFeat:.*]]
+llvm.func @tf(!llvm.ptr) attributes {target_features = #llvm.target_features<["+fix-cortex-a53-835769", "+fp-armv8", "+neon", "+outline-atomics", "+v8a"]>}
+
+// CHECK: attributes #[[TargetFeat]] = { "target-features"="+fix-cortex-a53-835769,+fp-armv8,+neon,+outline-atomics,+v8a" }
+
+// -----
+
+//
 // arm_streaming attribute.
 //
 
