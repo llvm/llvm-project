@@ -1179,7 +1179,9 @@ static bool isVectorElementTypeUpsized(EVT EltVT) {
   // In order to load/store such vectors efficiently, in Type Legalization
   // we split the vector into word-sized chunks (v2x16/v4i8). Now, we will
   // lower to PTX as vectors of b32.
-  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8;
+  // We also consider v2f32 as an upsized type, which may be used in packed
+  // (f32x2) instructions.
+  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8 || EltVT == MVT::v2f32;
 }
 
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
@@ -1235,9 +1237,9 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   EVT EltVT = N->getValueType(0);
 
   if (isVectorElementTypeUpsized(EltVT)) {
-    EltVT = MVT::i32;
+    FromTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(FromTypeWidth);
     FromType = NVPTX::PTXLdStInstCode::Untyped;
-    FromTypeWidth = 32;
   }
 
   SDValue Offset, Base;
@@ -1562,9 +1564,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   }
 
   if (isVectorElementTypeUpsized(EltVT)) {
-    EltVT = MVT::i32;
+    ToTypeWidth = EltVT.getSizeInBits();
+    EltVT = MVT::getIntegerVT(ToTypeWidth);
     ToType = NVPTX::PTXLdStInstCode::Untyped;
-    ToTypeWidth = 32;
   }
 
   SDValue Offset, Base;
