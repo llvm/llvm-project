@@ -10,7 +10,6 @@
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -889,7 +888,6 @@ public:
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
