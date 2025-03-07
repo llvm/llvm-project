@@ -177,9 +177,9 @@ class Section:
     """Class that represents an load address range"""
 
     sect_info_regex = re.compile("(?P<name>[^=]+)=(?P<range>.*)")
-    addr_regex = re.compile("^\s*(?P<start>0x[0-9A-Fa-f]+)\s*$")
+    addr_regex = re.compile(r"^\s*(?P<start>0x[0-9A-Fa-f]+)\s*$")
     range_regex = re.compile(
-        "^\s*(?P<start>0x[0-9A-Fa-f]+)\s*(?P<op>[-+])\s*(?P<end>0x[0-9A-Fa-f]+)\s*$"
+        r"^\s*(?P<start>0x[0-9A-Fa-f]+)\s*(?P<op>[-+])\s*(?P<end>0x[0-9A-Fa-f]+)\s*$"
     )
 
     def __init__(self, start_addr=None, end_addr=None, name=None):
@@ -557,7 +557,7 @@ class Symbolicator:
             if image.identifier == identifier:
                 images.append(image)
         if len(images) == 0:
-            regex_text = "^.*\.%s$" % (re.escape(identifier))
+            regex_text = r"^.*\.%s$" % (re.escape(identifier))
             regex = re.compile(regex_text)
             for image in self.images:
                 if regex.match(image.identifier):

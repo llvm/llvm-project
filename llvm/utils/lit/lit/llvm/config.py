@@ -175,6 +175,8 @@ class LLVMConfig(object):
                 features.add("target-riscv64")
             elif re.match(r"^riscv32-.*-elf.", target_triple):
                 features.add("target-riscv32")
+            elif re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
 
         if not user_is_root():
             features.add("non-root-user")

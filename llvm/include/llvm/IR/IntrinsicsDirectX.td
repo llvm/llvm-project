@@ -34,7 +34,7 @@ def int_dx_resource_load_typedbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
                             [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 def int_dx_resource_store_typedbuffer
-    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty],
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_any_ty],
                             [IntrWriteMem]>;
 def int_dx_resource_load_rawbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
@@ -44,6 +44,21 @@ def int_dx_resource_store_rawbuffer
     : DefaultAttrsIntrinsic<
           [], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_any_ty],
           [IntrWriteMem]>;
+
+// dx.resource.load.cbufferrow encodes the number of elements returned in the
+// function name. The total size of the return should always be 128 bits.
+def int_dx_resource_load_cbufferrow_8
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty,
+           llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_4
+    : DefaultAttrsIntrinsic<
+          [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
+          [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
+def int_dx_resource_load_cbufferrow_2
+    : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_any_ty],
+                            [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 
 def int_dx_resource_updatecounter
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],

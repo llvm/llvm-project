@@ -82,17 +82,16 @@ define float @test_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
 ; CHECK-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; CHECK-NEXT:    v_log_f32_e32 v3, v3
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
+; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v2, v3, v2
-; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v4
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0x42800000
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
@@ -228,8 +227,7 @@ define float @test_powr_fast_f32(float %x, float %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v0, v0, v3
 ; CHECK-NEXT:    v_log_f32_e32 v0, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
@@ -368,8 +366,7 @@ define float @test_pown_fast_f32(float %x, i32 %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; CHECK-NEXT:    v_log_f32_e32 v3, v3
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v1
@@ -511,8 +508,7 @@ define float @test_pown_fast_f32_known_even(float %x, i32 %y.arg) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v0, |v0|, v3
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_log_f32_e32 v0, v0
@@ -651,8 +647,7 @@ define float @test_pown_fast_f32_known_odd(float %x, i32 %y.arg) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
 ; CHECK-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; CHECK-NEXT:    v_or_b32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_log_f32_e32 v3, v3

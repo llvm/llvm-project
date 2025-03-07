@@ -2004,7 +2004,7 @@ void CodeGenRegBank::pruneUnitSets() {
 // Create a RegUnitSet for each RegClass that contains all units in the class
 // including adopted units that are necessary to model register pressure. Then
 // iteratively compute RegUnitSets such that the union of any two overlapping
-// RegUnitSets is repreresented.
+// RegUnitSets is represented.
 //
 // RegisterInfoEmitter will map each RegClass to its RegUnitClass and any
 // RegUnitSet that is a superset of that RegUnitClass.

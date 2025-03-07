@@ -2053,14 +2053,15 @@ define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %sr
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v8.l, v4.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v4.l, v5.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v2, v6, v7, v8 op_sel_hi:[1,1,1] clamp
 ; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
+; SDAG-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v1, v1, v3, v4 op_sel_hi:[1,1,1] clamp
 ; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
 ; SDAG-GFX1100-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

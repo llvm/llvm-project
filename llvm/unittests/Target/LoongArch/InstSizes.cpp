@@ -70,7 +70,7 @@ void runChecks(
   std::unique_ptr<Module> M = MParser->parseIRModule();
   ASSERT_TRUE(M);
 
-  M->setTargetTriple(TM->getTargetTriple().getTriple());
+  M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
 
   MachineModuleInfo MMI(TM);
