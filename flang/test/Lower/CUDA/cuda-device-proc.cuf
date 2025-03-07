@@ -161,6 +161,8 @@ attributes(device) subroutine testAtomic(aa, n)
   istat = atomiccas(a, i, 14)
   do i = 1, n
     istat = atomicxor(aa, i)
+    istat = atomiccas(aa, i, 14)
+    istat = atomicexch(aa, 0)
   end do
 end subroutine
 
@@ -172,6 +174,9 @@ end subroutine
 ! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
 ! CHECK: fir.do_loop
 ! CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<!fir.array<?xi32>> to !llvm.ptr 
+! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
+! CHECK: llvm.atomicrmw xchg %{{.*}}, %c0{{.*}} seq_cst : !llvm.ptr, i32
 
 attributes(device) subroutine testAtomic2()
   integer(8) :: a, i, istat
