@@ -31,9 +31,6 @@ public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
                    std::string OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
-<<<<<<< HEAD
-  virtual Error commit() { return Error::success(); }
-=======
 
   /// Must be called exactly once after the writes to OS have been completed
   /// but before the CachedFileStream object is destroyed.
@@ -47,7 +44,6 @@ public:
   }
 
   bool Committed = false;
->>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;
   virtual ~CachedFileStream() {

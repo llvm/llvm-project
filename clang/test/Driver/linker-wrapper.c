@@ -2,10 +2,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
-<<<<<<< HEAD
-// REQUIRES: system-linux
-=======
->>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
 
 // An externally visible variable so static libraries extract.
 __attribute__((visibility("protected"), used)) int x;

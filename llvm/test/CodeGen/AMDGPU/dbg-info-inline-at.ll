@@ -11,14 +11,14 @@ define amdgpu_kernel void @_Z3fooPiiii(ptr addrspace(1) nocapture noundef writeo
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02 ;
 ; CHECK-NEXT:    .cfi_undefined 16
 ; CHECK-NEXT:    .file 1 "." "a.h"
-; CHECK-NEXT:    .loc 1 5 12 prologue_end ; ./a.h:5:12 @[ a.hip:12:8 ]
+; CHECK-NEXT:    .loc 1 5 12 prologue_end ; ./a.h:5:12
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x8
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_add_i32 s1, s1, s0
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    .loc 1 5 12 is_stmt 0 ; ./a.h:5:12 @[ a.hip:13:9 ]
+; CHECK-NEXT:    .loc 1 5 12 is_stmt 0 ; ./a.h:5:12
 ; CHECK-NEXT:    s_add_i32 s0, s2, s0
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .file 2 "a.hip"

@@ -90,15 +90,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             ModuleName(ModuleName), Task(Task) {}
 
       Error commit() override {
-<<<<<<< HEAD
-        if (Committed)
-          return Error::success();
-        Committed = true;
-=======
         Error E = CachedFileStream::commit();
         if (E)
           return E;
->>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
 
         // Make sure the stream is closed before committing it.
         OS.reset();
@@ -148,21 +142,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
-<<<<<<< HEAD
-      }
-
-      ~CacheStream() {
-        // In Debug builds, try to track down places where commit() was not
-        // called before destruction.
-        assert(Committed);
-        // In Release builds, fall back to the previous behaviour of committing
-        // during destruction and reporting errors with report_fatal_error.
-        if (Committed)
-          return;
-        if (Error Err = commit())
-          report_fatal_error(Twine(toString(std::move(Err))));
-=======
->>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
       }
     };
 

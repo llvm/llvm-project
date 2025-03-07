@@ -188,15 +188,11 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
-<<<<<<< HEAD
-  Error commit();
-=======
 
   /// Must be called exactly once after the writes have been completed
   /// but before the StreamedHTTPResponseHandler object is destroyed.
   Error commit();
 
->>>>>>> ce9e1d3c15ed6290f1cb07b482939976fa8115cd
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
