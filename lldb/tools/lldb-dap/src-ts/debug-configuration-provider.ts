@@ -38,21 +38,19 @@ export class LLDBDapConfigurationProvider
       );
     }
 
-    if (
-      "debugAdapterPort" in debugConfiguration &&
-      ("debugAdapterExecutable" in debugConfiguration ||
-        "debugAdapterArgs" in debugConfiguration)
-    ) {
-      return showErrorWithConfigureButton(
-        "The debugAdapterPort property is incompatible with debugAdapterExecutable and debugAdapterArgs. Please update your launch configuration.",
-      );
-    }
-
-    // Server mode needs to be handled here since DebugAdapterDescriptorFactory
-    // will show an unhelpful error if it returns undefined. We'd rather show a
-    // nicer error message here and allow stopping the debug session gracefully.
-    const config = vscode.workspace.getConfiguration("lldb-dap", folder);
-    if (config.get<boolean>("serverMode", false)) {
+    // Check if we're going to launch a debug session or use an existing process
+    if ("debugAdapterPort" in debugConfiguration) {
+      if (
+        "debugAdapterExecutable" in debugConfiguration ||
+        "debugAdapterArgs" in debugConfiguration
+      ) {
+        return showErrorWithConfigureButton(
+          "The debugAdapterPort property is incompatible with debugAdapterExecutable and debugAdapterArgs. Please update your launch configuration.",
+        );
+      }
+    } else {
+      // Always try to create the debug adapter executable as this will show the user errors
+      // if there are any.
       const executable = await createDebugAdapterExecutable(
         folder,
         debugConfiguration,
@@ -61,7 +59,15 @@ export class LLDBDapConfigurationProvider
       if (!executable) {
         return undefined;
       }
-      if (await isServerModeSupported(executable.command)) {
+
+      // Server mode needs to be handled here since DebugAdapterDescriptorFactory
+      // will show an unhelpful error if it returns undefined. We'd rather show a
+      // nicer error message here and allow stopping the debug session gracefully.
+      const config = vscode.workspace.getConfiguration("lldb-dap", folder);
+      if (
+        config.get<boolean>("serverMode", false) &&
+        (await isServerModeSupported(executable.command))
+      ) {
         const serverInfo = await this.server.start(
           executable.command,
           executable.args,
