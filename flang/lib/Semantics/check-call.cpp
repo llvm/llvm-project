@@ -1840,6 +1840,13 @@ static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
   if (arguments.size() >= 2) {
     evaluate::CheckForCoindexedObject(
         messages, arguments[1], "move_alloc", "to");
+    int fromCR{GetCorank(arguments[0])};
+    int toCR{GetCorank(arguments[1])};
+    if (fromCR != toCR) {
+      messages.Say(*arguments[0]->sourceLocation(),
+          "FROM= argument to MOVE_ALLOC has corank %d, but TO= argument has corank %d"_err_en_US,
+          fromCR, toCR);
+    }
   }
   if (arguments.size() >= 3) {
     evaluate::CheckForCoindexedObject(
