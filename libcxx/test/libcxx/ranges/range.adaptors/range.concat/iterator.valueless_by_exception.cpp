@@ -13,7 +13,23 @@
 #include <utility>
 
 #include "check_assertion.h"
-#include "types.h"
+
+int globalArray[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+
+struct ThrowOnCopyView : std::ranges::view_base {
+  int start_;
+  int* ptr_;
+  constexpr explicit ThrowOnCopyView(int* ptr = globalArray, int start = 0) : start_(start), ptr_(ptr) {}
+  constexpr ThrowOnCopyView(ThrowOnCopyView&&) = default;
+  constexpr ThrowOnCopyView(const ThrowOnCopyView&) { throw 42; };
+  constexpr ThrowOnCopyView& operator=(ThrowOnCopyView&&) = default;
+  constexpr ThrowOnCopyView& operator=(const ThrowOnCopyView&) {
+    throw 42;
+    return *this;
+  };
+  constexpr int* begin() const { return ptr_ + start_; }
+  constexpr int* end() const { return ptr_ + 8; }
+};
 
 int main() {
   {
