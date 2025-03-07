@@ -304,8 +304,8 @@ static void findStmtsInUnspecifiedLvalueContext(
 }
 
 /// Note: Copied and modified from ASTMatchers.
-/// Matches all arguments and their respective types for a \c CallExpr or
-/// \c CXXConstructExpr. It is very similar to \c forEachArgumentWithParam but
+/// Matches all arguments and their respective types for a \c CallExpr.
+/// It is very similar to \c forEachArgumentWithParam but
 /// it works on calls through function pointers as well.
 ///
 /// The difference is, that function pointers do not provide access to a
@@ -338,16 +338,13 @@ static void forEachArgumentWithParamType(
   // we skip over it here.
   unsigned ArgIndex = 0;
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(&Node)) {
-    const auto *FD = CE->getDirectCallee();
-    if (FD) {
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-          MD && !MD->isExplicitObjectMemberFunction()) {
-        // This is an overloaded operator call.
-        // We need to skip the first argument, which is the implicit object
-        // argument of the method which should not be matched against a
-        // parameter.
-        ++ArgIndex;
-      }
+    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+    if (MD && !MD->isExplicitObjectMemberFunction()) {
+      // This is an overloaded operator call.
+      // We need to skip the first argument, which is the implicit object
+      // argument of the method which should not be matched against a
+      // parameter.
+      ++ArgIndex;
     }
   }
 
@@ -381,24 +378,12 @@ static void forEachArgumentWithParamType(
 
   const auto GetParamType =
       [&FProto, &Node](unsigned int ParamIndex) -> std::optional<QualType> {
-    // This test is cheaper compared to the big matcher in the next if.
-    // Therefore, please keep this order.
     if (FProto && FProto->getNumParams() > ParamIndex) {
       return FProto->getParamType(ParamIndex);
     }
-    if (const auto *E = dyn_cast<Expr>(&Node)) {
-      if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-        if (const auto *Ctor = CE->getConstructor();
-            Ctor && Ctor->getNumParams() > ParamIndex) {
-          return CE->getArg(ParamIndex)->getType();
-        }
-      }
-      if (const auto *CE = dyn_cast<CallExpr>(E)) {
-        const auto *FD = CE->getDirectCallee();
-        if (FD && FD->getNumParams() > ParamIndex) {
-          return CE->getArg(ParamIndex)->getType();
-        }
-      }
+    const auto *FD = Node.getDirectCallee();
+    if (FD && FD->getNumParams() > ParamIndex) {
+      return FD->getParamDecl(ParamIndex)->getType();
     }
     return std::nullopt;
   };
@@ -1849,14 +1834,11 @@ public:
       return false;
     auto isSingleStringLiteralArg = false;
     if (CE->getNumArgs() == 1) {
-      const auto *const Arg = CE->getArg(0);
-      if (isa<Expr>(Arg) && !Arg->children().empty()) {
-        isSingleStringLiteralArg =
-            isa<clang::StringLiteral>(*Arg->children().begin());
-      }
+      isSingleStringLiteralArg =
+          isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
     }
-    if (!isSingleStringLiteralArg) { // (unless the call has a sole string
-                                     // literal argument):
+    if (!isSingleStringLiteralArg) {
+      // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
         Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
