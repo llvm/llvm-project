@@ -26,6 +26,7 @@ add_flang_library(FortranSemantics
   check-select-rank.cpp
   check-select-type.cpp
   check-stop.cpp
+  check-warning.cpp
   compute-offsets.cpp
   data-to-inits.cpp
   definable.cpp
@@ -62,4 +63,7 @@ add_flang_library(FortranSemantics
   FrontendOpenMP
   FrontendOpenACC
   TargetParser
+
+  CLANG_LIBS
+  clangBasic
 )

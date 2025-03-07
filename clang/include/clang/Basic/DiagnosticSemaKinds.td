@@ -12966,4 +12966,10 @@ def note_acc_atomic_mismatch_compound_operand
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+// Flang diagnostics
+def warn_unused_dummy_argument : Warning<"unused dummy argument %0">,
+                                 InGroup<UnusedDummyArgument>,
+                                 DefaultIgnore;
+
 } // end of sema component.

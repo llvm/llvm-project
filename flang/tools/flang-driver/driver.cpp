@@ -115,11 +115,19 @@ int main(int argc, const char **argv) {
 
   // Create DiagnosticsEngine for the compiler driver
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      createAndPopulateDiagOpts(args);
+      new clang::DiagnosticOptions();
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
   Fortran::frontend::TextDiagnosticPrinter *diagClient =
       new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), &*diagOpts);
+
+  // Use the DiagnosticsEngine instance of the frontend driver
+  // for parsing the arguments
+  unsigned missingArgIndex, missingArgCount;
+  llvm::opt::InputArgList args2 = clang::driver::getDriverOptTable().ParseArgs(
+      args, missingArgIndex, missingArgCount,
+      llvm::opt::Visibility(clang::driver::options::FlangOption));
+  Fortran::frontend::parseDiagnosticArgs(*diagOpts, args2);
 
   diagClient->setPrefix(
       std::string(llvm::sys::path::stem(getExecutablePath(args[0]))));
