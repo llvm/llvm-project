@@ -618,7 +618,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let hasCanonicalizer = 1;
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
       /// Get the arity enum corresponding to the kind of op, e.g. if arg is
