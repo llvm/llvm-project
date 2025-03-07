@@ -35,7 +35,7 @@ struct MissingFeatures {
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
-
+  static bool opGlobalMlirLinkage() { return false; }
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
   static bool supportComdat() { return false; }

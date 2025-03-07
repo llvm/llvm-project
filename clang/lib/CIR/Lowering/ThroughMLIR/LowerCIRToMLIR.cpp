@@ -42,6 +42,21 @@ struct ConvertCIRToMLIRPass
   StringRef getArgument() const override { return "cir-to-mlir"; }
 };
 
+/// Given a type convertor and a data layout, convert the given type to a type
+/// that is suitable for memory operations. For example, this can be used to
+/// lower cir.bool accesses to i8.
+static mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
+                                       mlir::Type type) {
+  // TODO(cir): Handle other types similarly to clang's codegen
+  // convertTypeForMemory
+  if (isa<cir::BoolType>(type)) {
+    // TODO: Use datalayout to get the size of bool
+    return mlir::IntegerType::get(type.getContext(), 8);
+  }
+
+  return converter.convertType(type);
+}
+
 class CIRGlobalOpLowering : public mlir::OpConversionPattern<cir::GlobalOp> {
 public:
   using OpConversionPattern<cir::GlobalOp>::OpConversionPattern;
@@ -55,8 +70,8 @@ public:
     mlir::OpBuilder b(moduleOp.getContext());
 
     const mlir::Type cirSymType = op.getSymType();
-    assert(!cir::MissingFeatures::convertTypeForMemory());
-    mlir::Type convertedType = getTypeConverter()->convertType(cirSymType);
+    mlir::Type convertedType =
+        convertTypeForMemory(*getTypeConverter(), cirSymType);
     if (!convertedType)
       return mlir::failure();
     auto memrefType = dyn_cast<mlir::MemRefType>(convertedType);
@@ -87,7 +102,7 @@ public:
     }
 
     // Add symbol visibility
-    assert(!cir::MissingFeatures::opGlobalLinkage());
+    assert(!cir::MissingFeatures::opGlobalMlirLinkage());
     std::string symVisibility = "public";
 
     assert(!cir::MissingFeatures::opGlobalConstant());
@@ -112,8 +127,7 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
 static mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    assert(!cir::MissingFeatures::convertTypeForMemory());
-    mlir::Type ty = converter.convertType(type.getPointee());
+    mlir::Type ty = convertTypeForMemory(converter, type.getPointee());
     // FIXME: The pointee type might not be converted (e.g. struct)
     if (!ty)
       return nullptr;
