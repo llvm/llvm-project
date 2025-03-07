@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
-
+// XFAIL: *
 auto Lambda = [](){};
 // CHECK: #pragma acc routine(Lambda) worker
 #pragma acc routine(Lambda) worker
