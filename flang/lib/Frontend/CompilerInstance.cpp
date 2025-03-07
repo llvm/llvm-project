@@ -13,7 +13,6 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
-#include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran-features.h"

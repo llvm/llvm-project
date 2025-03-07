@@ -12,10 +12,6 @@
 
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Frontend/CompilerInstance.h"
-#include "flang/Lower/Bridge.h"
-#include "flang/Lower/PFTBuilder.h"
-#include "flang/Parser/dump-parse-tree.h"
-#include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "flang/Parser/unparse.h"
