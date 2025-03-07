@@ -190,6 +190,21 @@ public:
     return Mask;
   }
 
+  bool mergeSubsequentWaitAlus(MachineBasicBlock::instr_iterator &MI,
+                               unsigned Mask) {
+    auto MBB = MI->getParent();
+    if (MI != MBB->instr_begin()) {
+      MachineBasicBlock::instr_iterator It = std::prev(MI);
+      while (It != MBB->instr_begin() && It->isDebugInstr())
+        --It;
+      if (It->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
+        It->getOperand(0).setImm(mergeMasks(Mask, It->getOperand(0).getImm()));
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
     enum { WA_VALU = 0x1, WA_SALU = 0x2, WA_VCC = 0x4 };
 
@@ -388,21 +403,12 @@ public:
           Mask = AMDGPU::DepCtr::encodeFieldVaSdst(Mask, 0);
         }
         if (Emit) {
-          if (MI != MBB.instr_begin()) {
-            MachineBasicBlock::instr_iterator It = std::prev(MI);
-            while (It != MBB.instr_begin() && It->isDebugInstr())
-              --It;
-            if (It->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR) {
-              Mask = mergeMasks(Mask, It->getOperand(0).getImm());
-              It->getOperand(0).setImm(Mask);
-              continue;
-            }
+          if (!mergeSubsequentWaitAlus(MI, Mask)) {
+            auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
+                                 TII->get(AMDGPU::S_WAITCNT_DEPCTR))
+                             .addImm(Mask);
+            updateGetPCBundle(NewMI);
           }
-
-          auto NewMI = BuildMI(MBB, MI, MI->getDebugLoc(),
-                               TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-                           .addImm(Mask);
-          updateGetPCBundle(NewMI);
           Emitted = true;
         }
       }
