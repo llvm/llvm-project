@@ -709,7 +709,7 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1174,7 +1174,9 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~multiset() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multiset() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }

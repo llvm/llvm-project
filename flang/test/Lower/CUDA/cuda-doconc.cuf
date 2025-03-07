@@ -1,0 +1,39 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check if do concurrent works inside cuf kernel directive
+
+subroutine doconc1
+  integer :: i, n
+  integer, managed :: a(3)
+  a(:) = -1
+  n = 3
+  n = n - 1
+  !$cuf kernel do
+  do concurrent(i=1:n)
+    a(i) = 1
+  end do
+end
+
+! CHECK: func.func @_QPdoconc1() {
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc1Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: cuf.kernel<<<*, *>>>
+! CHECK: %{{.*}} = fir.load %[[DECL]]#0 : !fir.ref<index>
+
+subroutine doconc2
+  integer :: i, j, m, n
+  integer, managed :: a(2, 4)
+  m = 2
+  n = 4
+  a(:,:) = -1
+  !$cuf kernel do
+  do concurrent(i=1:m,j=1:n)
+    a(i,j) = i+j
+  end do
+end
+
+! CHECK: func.func @_QPdoconc2() {
+! CHECK: %[[DECLI:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc2Ei"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: %[[DECLJ:.*]]:2 = hlfir.declare %{{.*}}#0 {uniq_name = "_QFdoconc2Ej"} : (!fir.ref<index>) -> (!fir.ref<index>, !fir.ref<index>)
+! CHECK: cuf.kernel<<<*, *>>> (%arg0 : index, %arg1 : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index) {
+! CHECK: %{{.*}} = fir.load %[[DECLI]]#0 : !fir.ref<index>
+! CHECK: %{{.*}} = fir.load %[[DECLJ]]#0 : !fir.ref<index>

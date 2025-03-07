@@ -498,6 +498,10 @@ public:
   void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
                          ExplodedNodeSet &Dst);
 
+  /// VisitAttributedStmt - Transfer function logic for AttributedStmt
+  void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
+                           ExplodedNodeSet &Dst);
+
   /// VisitLogicalExpr - Transfer function logic for '&&', '||'
   void VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
@@ -659,13 +663,13 @@ private:
                               SVal Loc, SVal Val,
                               const LocationContext *LCtx);
 
+public:
   /// A simple wrapper when you only need to notify checkers of pointer-escape
   /// of some values.
   ProgramStateRef escapeValues(ProgramStateRef State, ArrayRef<SVal> Vs,
                                PointerEscapeKind K,
                                const CallEvent *Call = nullptr) const;
 
-public:
   // FIXME: 'tag' should be removed, and a LocationContext should be used
   // instead.
   // FIXME: Comment on the meaning of the arguments, when 'St' may not

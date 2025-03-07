@@ -672,7 +672,7 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
-  IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
+  IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
   MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>

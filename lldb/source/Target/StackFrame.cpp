@@ -1480,7 +1480,9 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 namespace {
 ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
                                 int64_t offset) {
-  if (offset < 0 || uint64_t(offset) >= parent->GetByteSize()) {
+  if (offset < 0 ||
+      uint64_t(offset) >=
+          llvm::expectedToOptional(parent->GetByteSize()).value_or(0)) {
     return ValueObjectSP();
   }
 
@@ -1497,7 +1499,8 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     }
 
     int64_t child_offset = child_sp->GetByteOffset();
-    int64_t child_size = child_sp->GetByteSize().value_or(0);
+    int64_t child_size =
+        llvm::expectedToOptional(child_sp->GetByteSize()).value_or(0);
 
     if (offset >= child_offset && offset < (child_offset + child_size)) {
       return GetValueForOffset(frame, child_sp, offset - child_offset);
@@ -1529,9 +1532,13 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
     return ValueObjectSP();
   }
 
-  if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
-    int64_t index = offset / pointee->GetByteSize().value_or(1);
-    offset = offset % pointee->GetByteSize().value_or(1);
+  if (offset >= 0 &&
+      uint64_t(offset) >=
+          llvm::expectedToOptional(pointee->GetByteSize()).value_or(0)) {
+    uint64_t size =
+        llvm::expectedToOptional(pointee->GetByteSize()).value_or(1);
+    int64_t index = offset / size;
+    offset = offset % size;
     const bool can_create = true;
     pointee = base->GetSyntheticArrayMember(index, can_create);
   }
@@ -1670,13 +1677,14 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         break;
       case Instruction::Operand::Type::Immediate: {
         SymbolContext sc;
-        Address load_address;
-        if (!frame.CalculateTarget()->ResolveLoadAddress(
-                operands[0].m_immediate, load_address)) {
+        if (!pc.GetModule())
           break;
-        }
+        Address address(operands[0].m_immediate,
+                        pc.GetModule()->GetSectionList());
+        if (!address.IsValid())
+          break;
         frame.CalculateTarget()->GetImages().ResolveSymbolContextForAddress(
-            load_address, eSymbolContextFunction, sc);
+            address, eSymbolContextFunction, sc);
         if (!sc.function) {
           break;
         }

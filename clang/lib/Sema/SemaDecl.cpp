@@ -50,6 +50,7 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -136,6 +137,26 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
 };
 
 } // end anonymous namespace
+
+QualType Sema::getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                               TypeDecl *TD, SourceLocation NameLoc) {
+  auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
+  auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
+  if (DCK != DiagCtorKind::None && LookupRD && FoundRD &&
+      FoundRD->isInjectedClassName() &&
+      declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent()))) {
+    Diag(NameLoc,
+         DCK == DiagCtorKind::Typename
+             ? diag::ext_out_of_line_qualified_id_type_names_constructor
+             : diag::err_out_of_line_qualified_id_type_names_constructor)
+        << TD->getIdentifier() << /*Type=*/1
+        << 0 /*if any keyword was present, it was 'typename'*/;
+  }
+
+  DiagnoseUseOfDecl(TD, NameLoc);
+  MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+  return Context.getTypeDeclType(TD);
+}
 
 namespace {
 enum class UnqualifiedTypeNameLookupResult {
@@ -293,10 +314,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              bool IsClassTemplateDeductionContext,
                              ImplicitTypenameContext AllowImplicitTypename,
                              IdentifierInfo **CorrectedII) {
+  bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
-                              getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
-                              !isClassName && !HasTrailingDot;
+                              getLangOpts().CPlusPlus17 && IsImplicitTypename &&
+                              !HasTrailingDot;
 
   // Determine where we will perform name lookup.
   DeclContext *LookupCtx = nullptr;
@@ -320,11 +342,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         // refer to a member of an unknown specialization.
         // In C++2a, in several contexts a 'typename' is not required. Also
         // allow this as an extension.
-        if (AllowImplicitTypename == ImplicitTypenameContext::No &&
-            !isClassName && !IsCtorOrDtorName)
-          return nullptr;
-        bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
         if (IsImplicitTypename) {
+          if (AllowImplicitTypename == ImplicitTypenameContext::No)
+            return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
           if (getLangOpts().CPlusPlus20)
             Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
@@ -513,18 +533,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // C++ [class.qual]p2: A lookup that would find the injected-class-name
     // instead names the constructors of the class, except when naming a class.
     // This is ill-formed when we're not actually forming a ctor or dtor name.
-    auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
-    auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
-    if (!isClassName && !IsCtorOrDtorName && LookupRD && FoundRD &&
-        FoundRD->isInjectedClassName() &&
-        declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
-      Diag(NameLoc, diag::err_out_of_line_qualified_id_type_names_constructor)
-          << &II << /*Type*/1;
-
-    DiagnoseUseOfDecl(IIDecl, NameLoc);
-
-    T = Context.getTypeDeclType(TD);
-    MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    T = getTypeDeclType(LookupCtx,
+                        IsImplicitTypename ? DiagCtorKind::Implicit
+                                           : DiagCtorKind::None,
+                        TD, NameLoc);
   } else if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
@@ -2818,6 +2830,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *FA = dyn_cast<FormatAttr>(Attr))
     NewAttr = S.mergeFormatAttr(D, *FA, FA->getType(), FA->getFormatIdx(),
                                 FA->getFirstArg());
+  else if (const auto *FMA = dyn_cast<FormatMatchesAttr>(Attr))
+    NewAttr = S.mergeFormatMatchesAttr(
+        D, *FMA, FMA->getType(), FMA->getFormatIdx(), FMA->getFormatString());
   else if (const auto *SA = dyn_cast<SectionAttr>(Attr))
     NewAttr = S.mergeSectionAttr(D, *SA, SA->getName());
   else if (const auto *CSA = dyn_cast<CodeSegAttr>(Attr))
@@ -4803,7 +4818,8 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() || New->getNumTemplateParameterLists() ||
-       New->getDeclContext()->isDependentContext())) {
+       New->getDeclContext()->isDependentContext() ||
+       New->hasAttr<SelectAnyAttr>())) {
     // The previous definition is hidden, and multiple definitions are
     // permitted (in separate TUs). Demote this to a declaration.
     New->demoteThisDefinitionToDeclaration();
@@ -7962,6 +7978,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
+  if (getLangOpts().OpenACC)
+    OpenACC().ActOnVariableDeclarator(NewVD);
 
   // FIXME: This is probably the wrong location to be doing this and we should
   // probably be doing this for more attributes (especially for function
@@ -13423,9 +13441,13 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
         FunDcl->getTemplateSpecializationKind() != TSK_Undeclared;
   }
 
-  // Non-inline functions/variables can only legally appear in one TU,
-  // unless they were part of a template.
-  if (!TargetIsInline && !TargetWasTemplated)
+  // Non-inline functions/variables can only legally appear in one TU
+  // unless they were part of a template. Unfortunately, making complex
+  // template instantiations visible is infeasible in practice, since
+  // everything the template depends on also has to be visible. To avoid
+  // giving impractical-to-fix warnings, don't warn if we're inside
+  // something that was templated, even on inline stuff.
+  if (!TargetIsInline || TargetWasTemplated)
     return false;
 
   // If the object isn't hidden, the dynamic linker will prevent duplication.
@@ -13440,6 +13462,23 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
   return true;
 }
 
+// Determine whether the object seems mutable for the purpose of diagnosing
+// possible unique object duplication, i.e. non-const-qualified, and
+// not an always-constant type like a function.
+// Not perfect: doesn't account for mutable members, for example, or
+// elements of container types.
+// For nested pointers, any individual level being non-const is sufficient.
+static bool looksMutable(QualType T, const ASTContext &Ctx) {
+  T = T.getNonReferenceType();
+  if (T->isFunctionType())
+    return false;
+  if (!T.isConstant(Ctx))
+    return true;
+  if (T->isPointerType())
+    return looksMutable(T->getPointeeType(), Ctx);
+  return false;
+}
+
 void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // If this object has external linkage and hidden visibility, it might be
   // duplicated when built into a shared library, which causes problems if it's
@@ -13448,30 +13487,16 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   // FIXME: Windows uses dllexport/dllimport instead of visibility, and we don't
   // handle that yet. Disable the warning on Windows for now.
 
-  // Don't diagnose if we're inside a template;
-  // we'll diagnose during instantiation instead.
+  // Don't diagnose if we're inside a template, because it's not practical to
+  // fix the warning in most cases.
   if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
       !VD->isTemplated() &&
       GloballyUniqueObjectMightBeAccidentallyDuplicated(VD)) {
 
-    // Check mutability. For pointers, ensure that both the pointer and the
-    // pointee are (recursively) const.
-    QualType Type = VD->getType().getNonReferenceType();
-    if (!Type.isConstant(VD->getASTContext())) {
+    QualType Type = VD->getType();
+    if (looksMutable(Type, VD->getASTContext())) {
       Diag(VD->getLocation(), diag::warn_possible_object_duplication_mutable)
           << VD;
-    } else {
-      while (Type->isPointerType()) {
-        Type = Type->getPointeeType();
-        if (Type->isFunctionType())
-          break;
-        if (!Type.isConstant(VD->getASTContext())) {
-          Diag(VD->getLocation(),
-               diag::warn_possible_object_duplication_mutable)
-              << VD;
-          break;
-        }
-      }
     }
 
     // To keep false positives low, only warn if we're certain that the
@@ -14295,6 +14320,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (getLangOpts().OpenCL &&
         Var->getType().getAddressSpace() == LangAS::opencl_local)
       return;
+
+    // In HLSL, objects in the hlsl_constant address space are initialized
+    // externally, so don't synthesize an implicit initializer.
+    if (getLangOpts().HLSL &&
+        Var->getType().getAddressSpace() == LangAS::hlsl_constant)
+      return;
+
     // C++03 [dcl.init]p9:
     //   If no initializer is specified for an object, and the
     //   object is of (possibly cv-qualified) non-POD class type (or
@@ -20455,6 +20487,21 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
+
+    // If FD is a virtual destructor of an explicit instantiation
+    // of a template class, return Emitted.
+    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
+      if (Destructor->isVirtual()) {
+        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
+                Destructor->getParent())) {
+          TemplateSpecializationKind TSK =
+              Spec->getTemplateSpecializationKind();
+          if (TSK == TSK_ExplicitInstantiationDeclaration ||
+              TSK == TSK_ExplicitInstantiationDefinition)
+            return FunctionEmissionStatus::Emitted;
+        }
+      }
+    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of

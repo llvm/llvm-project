@@ -562,7 +562,8 @@ private:
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
-  SDValue SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N, RTLIB::Libcall LC);
+  SDValue SoftenFloatRes_UnaryWithTwoFPResults(
+      SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
   SDValue SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_ARITH_FENCE(SDNode *N);
@@ -608,6 +609,7 @@ private:
   SDValue SoftenFloatRes_ExpOp(SDNode *N);
   SDValue SoftenFloatRes_FFREXP(SDNode *N);
   SDValue SoftenFloatRes_FSINCOS(SDNode *N);
+  SDValue SoftenFloatRes_FMODF(SDNode *N);
   SDValue SoftenFloatRes_FREEZE(SDNode *N);
   SDValue SoftenFloatRes_FREM(SDNode *N);
   SDValue SoftenFloatRes_FRINT(SDNode *N);
@@ -668,6 +670,9 @@ private:
                             SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_Binary(SDNode *N, RTLIB::Libcall LC,
                              SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_UnaryWithTwoFPResults(
+      SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
+
   // clang-format off
   void ExpandFloatRes_FABS      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FACOS     (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -714,6 +719,9 @@ private:
   void ExpandFloatRes_FTRUNC    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_LOAD      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandFloatRes_FMODF(SDNode *N);
+  void ExpandFloatRes_FSINCOS(SDNode* N);
+  void ExpandFloatRes_FSINCOSPI(SDNode* N);
   // clang-format on
 
   // Float Operand Expansion.

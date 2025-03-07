@@ -353,6 +353,11 @@ bool APFloatBase::semanticsHasNaN(const fltSemantics &semantics) {
   return semantics.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
 }
 
+bool APFloatBase::isIEEELikeFP(const fltSemantics &semantics) {
+  // Keep in sync with Type::isIEEELikeFPTy
+  return SemanticsToEnum(semantics) <= S_IEEEquad;
+}
+
 bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
                                             const fltSemantics &Dst) {
   // Exponent range must be larger.
@@ -4871,8 +4876,9 @@ DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
 }
 
 DoubleAPFloat::DoubleAPFloat(DoubleAPFloat &&RHS)
-    : Semantics(RHS.Semantics), Floats(std::move(RHS.Floats)) {
+    : Semantics(RHS.Semantics), Floats(RHS.Floats) {
   RHS.Semantics = &semBogus;
+  RHS.Floats = nullptr;
   assert(Semantics == &semPPCDoubleDouble);
 }
 

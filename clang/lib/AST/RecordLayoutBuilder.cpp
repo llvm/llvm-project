@@ -1469,15 +1469,18 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   //   sizeof(T')*8 <= n.
 
   QualType IntegralPODTypes[] = {
-    Context.UnsignedCharTy, Context.UnsignedShortTy, Context.UnsignedIntTy,
-    Context.UnsignedLongTy, Context.UnsignedLongLongTy
+      Context.UnsignedCharTy,     Context.UnsignedShortTy,
+      Context.UnsignedIntTy,      Context.UnsignedLongTy,
+      Context.UnsignedLongLongTy, Context.UnsignedInt128Ty,
   };
 
   QualType Type;
+  uint64_t MaxSize =
+      Context.getTargetInfo().getLargestOverSizedBitfieldContainer();
   for (const QualType &QT : IntegralPODTypes) {
     uint64_t Size = Context.getTypeSize(QT);
 
-    if (Size > FieldSize)
+    if (Size > FieldSize || Size > MaxSize)
       break;
 
     Type = QT;
@@ -1520,6 +1523,7 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   setSize(std::max(getSizeInBits(), getDataSizeInBits()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, TypeAlign);
   UpdateAlignment(TypeAlign);
 }
 

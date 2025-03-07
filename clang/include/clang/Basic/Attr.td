@@ -1834,6 +1834,16 @@ def Format : InheritableAttr {
   let Documentation = [FormatDocs];
 }
 
+def FormatMatches : InheritableAttr {
+  let Spellings = [GCC<"format_matches">];
+  let Args = [IdentifierArgument<"Type">, IntArgument<"FormatIdx">, ExprArgument<"ExpectedFormat">];
+  let AdditionalMembers = [{
+    StringLiteral *getFormatString() const;
+  }];
+  let Subjects = SubjectList<[ObjCMethod, Block, HasFunctionProto]>;
+  let Documentation = [FormatMatchesDocs];
+}
+
 def FormatArg : InheritableAttr {
   let Spellings = [GCC<"format_arg">];
   let Args = [ParamIdxArgument<"FormatIdx">];
@@ -1894,6 +1904,8 @@ def IFunc : Attr, TargetSpecificAttr<TargetIFuncSupport> {
 
 def Restrict : InheritableAttr {
   let Spellings = [Declspec<"restrict">, GCC<"malloc">];
+  let Args = [ExprArgument<"Deallocator", /*opt=*/ 1>,
+              ParamIdxArgument<"DeallocatorPtrArgIndex", /*opt=*/ 1>];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [RestrictDocs];
 }
@@ -2220,8 +2232,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
   let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine"],
-                           ["supervisor", "machine"],
+                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
+                           ["supervisor", "machine", "qcinest", "qcinonest"],
                            1>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
@@ -3302,6 +3314,14 @@ def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
                   C23<"riscv", "vector_cc">,
                   Clang<"riscv_vector_cc">];
  let Documentation = [RISCVVectorCCDocs];
+}
+
+def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vls_cc">,
+                  C23<"riscv", "vls_cc">,
+                  Clang<"riscv_vls_cc">];
+ let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
+ let Documentation = [RISCVVLSCCDocs];
 }
 
 def Target : InheritableAttr {
@@ -4990,4 +5010,27 @@ def NoTrivialAutoVarInit: InheritableAttr {
   let Subjects = SubjectList<[Function, Tag]>;
   let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
+}
+
+def Atomic : StmtAttr {
+  let Spellings = [Clang<"atomic">];
+  let Args = [VariadicEnumArgument<"AtomicOptions", "ConsumedOption",
+                                   /*is_string=*/false,
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"],
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"]>];
+  let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
+  let Documentation = [AtomicDocs];
+  let StrictEnumParameters = 1;
+}
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targetted by a `routine`
+  // directive, so it dones't have a spelling and is always implicit.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
 }

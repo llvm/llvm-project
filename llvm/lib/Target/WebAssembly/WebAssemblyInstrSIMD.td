@@ -558,7 +558,7 @@ defm SHUFFLE :
 // Shuffles after custom lowering
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 // The @llvm.wasm.shuffle intrinsic has immediate arguments that become TargetConstants.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 timm:$m0), (i32 timm:$m1),

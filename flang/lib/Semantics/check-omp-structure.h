@@ -81,6 +81,10 @@ public:
   void Enter(const parser::OmpEndLoopDirective &);
   void Leave(const parser::OmpEndLoopDirective &);
 
+  void Enter(const parser::OpenMPAssumeConstruct &);
+  void Leave(const parser::OpenMPAssumeConstruct &);
+  void Enter(const parser::OpenMPDeclarativeAssumes &);
+  void Leave(const parser::OpenMPDeclarativeAssumes &);
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OmpBeginBlockDirective &);
@@ -98,6 +102,8 @@ public:
   void Leave(const parser::OpenMPDeclarativeAllocate &);
   void Enter(const parser::OpenMPDeclareMapperConstruct &);
   void Leave(const parser::OpenMPDeclareMapperConstruct &);
+  void Enter(const parser::OpenMPDeclareReductionConstruct &);
+  void Leave(const parser::OpenMPDeclareReductionConstruct &);
   void Enter(const parser::OpenMPDeclareTargetConstruct &);
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPDepobjConstruct &);

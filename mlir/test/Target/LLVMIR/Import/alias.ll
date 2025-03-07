@@ -68,14 +68,6 @@ entry:
 @a1 = private alias i32, ptr @g1
 @a2 = private alias ptr, ptr @a1
 
-; CHECK: llvm.mlir.alias private @a1 {dso_local} : i32 {
-; CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @g1 : !llvm.ptr
-; CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
-; CHECK: }
-; CHECK: llvm.mlir.alias private @a2 {dso_local} : !llvm.ptr {
-; CHECK-NEXT:   %[[ADDR:.*]] = llvm.mlir.addressof @a1 : !llvm.ptr
-; CHECK-NEXT:   llvm.return %[[ADDR]] : !llvm.ptr
-; CHECK-NEXT: }
 
 ; CHECK: llvm.mlir.global internal constant @g2() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
 ; CHECK-NEXT:   %[[ADDR:.*]] = llvm.mlir.addressof @a1 : !llvm.ptr
@@ -84,5 +76,15 @@ entry:
 
 ; CHECK: llvm.mlir.global internal constant @g3() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
 ; CHECK-NEXT:   %[[ADDR:.*]] = llvm.mlir.addressof @a2 : !llvm.ptr
+; CHECK-NEXT:   llvm.return %[[ADDR]] : !llvm.ptr
+; CHECK-NEXT: }
+
+; CHECK: llvm.mlir.alias private @a1 {dso_local} : i32 {
+; CHECK-NEXT:   %[[ADDR:.*]] = llvm.mlir.addressof @g1 : !llvm.ptr
+; CHECK-NEXT:   llvm.return %[[ADDR]] : !llvm.ptr
+; CHECK-NEXT: }
+
+; CHECK: llvm.mlir.alias private @a2 {dso_local} : !llvm.ptr {
+; CHECK-NEXT:   %[[ADDR:.*]] = llvm.mlir.addressof @a1 : !llvm.ptr
 ; CHECK-NEXT:   llvm.return %[[ADDR]] : !llvm.ptr
 ; CHECK-NEXT: }

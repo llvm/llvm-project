@@ -446,6 +446,9 @@ public:
   bool Pre(const parser::OpenMPDeclareMapperConstruct &);
   void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
 
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
+  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
 
@@ -1976,6 +1979,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   return true;
 }
 
+bool OmpAttributeVisitor::Pre(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
@@ -2309,7 +2318,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     }
 
     if (Symbol * found{currScope().FindSymbol(name.source)}) {
-      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+      if (found->GetUltimate().test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
 

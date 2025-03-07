@@ -272,6 +272,11 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
+
 private:
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
@@ -350,7 +355,8 @@ private:
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
   /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`.
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
   void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
                                   OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
@@ -407,6 +413,10 @@ private:
   /// always requires a symbol name.
   FlatSymbolRefAttr
   getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -416,8 +426,6 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
-  /// Operation to insert the next alias after.
-  Operation *aliasInsertionOp = nullptr;
   /// Operation to insert comdat selector operations into.
   ComdatOp globalComdatOp = nullptr;
   /// The current context.
