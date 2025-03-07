@@ -557,7 +557,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
 /// @brief Create a queue for the given device.
 ///
 /// @details
-///    - The created queue has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -574,7 +573,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(
     ol_queue_handle_t *Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the queue's reference count.
+/// @brief Destroy the queue and free all underlying resources.
 ///
 /// @details
 ///
@@ -585,24 +584,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateQueue(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Queue`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(
-    // [in] handle of the queue
-    ol_queue_handle_t Queue);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the queues's reference count, and free it if the reference
-/// count reaches 0.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Queue`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyQueue(
     // [in] handle of the queue
     ol_queue_handle_t Queue);
 
@@ -623,7 +605,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitQueue(
     ol_queue_handle_t Queue);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the event's reference count.
+/// @brief Destroy the event and free all underlying resources.
 ///
 /// @details
 ///
@@ -634,24 +616,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitQueue(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Event`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(
-    // [in] handle of the event
-    ol_event_handle_t Event);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the event's reference count, and free it if the reference
-/// count reaches 0.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Event`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseEvent(
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyEvent(
     // [in] handle of the event
     ol_event_handle_t Event);
 
@@ -753,7 +718,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
 /// `ProgData`.
 ///
 /// @details
-///    - The created program has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -775,7 +739,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
     ol_program_handle_t *Program);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the program's reference count.
+/// @brief Destroy the program and free all underlying resources.
 ///
 /// @details
 ///
@@ -786,24 +750,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateProgram(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Program`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olRetainProgram(
-    // [in] handle of the program
-    ol_program_handle_t Program);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the program's reference count, and free it if the reference
-/// count reaches 0.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Program`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgram(
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyProgram(
     // [in] handle of the program
     ol_program_handle_t Program);
 
@@ -812,7 +759,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgram(
 /// given program.
 ///
 /// @details
-///    - The created kernel has an initial reference count of 1.
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -832,7 +778,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
     ol_kernel_handle_t *Kernel);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Increment the kernel's reference count.
+/// @brief Destroy the kernel and free all underlying resources.
 ///
 /// @details
 ///
@@ -843,24 +789,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernel(
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Kernel`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(
-    // [in] handle of the kernel
-    ol_kernel_handle_t Kernel);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Decrement the kernel's reference count, and free it if the reference
-/// count reaches 0.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Kernel`
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernel(
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel);
 
@@ -969,18 +898,11 @@ typedef struct ol_create_queue_params_t {
 } ol_create_queue_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olRetainQueue
+/// @brief Function parameters for olDestroyQueue
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_retain_queue_params_t {
+typedef struct ol_destroy_queue_params_t {
   ol_queue_handle_t *pQueue;
-} ol_retain_queue_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olReleaseQueue
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_release_queue_params_t {
-  ol_queue_handle_t *pQueue;
-} ol_release_queue_params_t;
+} ol_destroy_queue_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olWaitQueue
@@ -990,18 +912,11 @@ typedef struct ol_wait_queue_params_t {
 } ol_wait_queue_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olRetainEvent
+/// @brief Function parameters for olDestroyEvent
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_retain_event_params_t {
+typedef struct ol_destroy_event_params_t {
   ol_event_handle_t *pEvent;
-} ol_retain_event_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olReleaseEvent
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_release_event_params_t {
-  ol_event_handle_t *pEvent;
-} ol_release_event_params_t;
+} ol_destroy_event_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olWaitEvent
@@ -1046,18 +961,11 @@ typedef struct ol_create_program_params_t {
 } ol_create_program_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olRetainProgram
+/// @brief Function parameters for olDestroyProgram
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_retain_program_params_t {
+typedef struct ol_destroy_program_params_t {
   ol_program_handle_t *pProgram;
-} ol_retain_program_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olReleaseProgram
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_release_program_params_t {
-  ol_program_handle_t *pProgram;
-} ol_release_program_params_t;
+} ol_destroy_program_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olCreateKernel
@@ -1069,18 +977,11 @@ typedef struct ol_create_kernel_params_t {
 } ol_create_kernel_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olRetainKernel
+/// @brief Function parameters for olDestroyKernel
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_retain_kernel_params_t {
+typedef struct ol_destroy_kernel_params_t {
   ol_kernel_handle_t *pKernel;
-} ol_retain_kernel_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olReleaseKernel
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_release_kernel_params_t {
-  ol_kernel_handle_t *pKernel;
-} ol_release_kernel_params_t;
+} ol_destroy_kernel_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
@@ -1187,17 +1088,10 @@ olCreateQueueWithCodeLoc(ol_device_handle_t Device, ol_queue_handle_t *Queue,
                          ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olRetainQueue that also sets source code location
+/// @brief Variant of olDestroyQueue that also sets source code location
 /// information
-/// @details See also ::olRetainQueue
-OL_APIEXPORT ol_result_t OL_APICALL olRetainQueueWithCodeLoc(
-    ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olReleaseQueue that also sets source code location
-/// information
-/// @details See also ::olReleaseQueue
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueueWithCodeLoc(
+/// @details See also ::olDestroyQueue
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyQueueWithCodeLoc(
     ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1208,17 +1102,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitQueueWithCodeLoc(
     ol_queue_handle_t Queue, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olRetainEvent that also sets source code location
+/// @brief Variant of olDestroyEvent that also sets source code location
 /// information
-/// @details See also ::olRetainEvent
-OL_APIEXPORT ol_result_t OL_APICALL olRetainEventWithCodeLoc(
-    ol_event_handle_t Event, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olReleaseEvent that also sets source code location
-/// information
-/// @details See also ::olReleaseEvent
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseEventWithCodeLoc(
+/// @details See also ::olDestroyEvent
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyEventWithCodeLoc(
     ol_event_handle_t Event, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1256,17 +1143,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateProgramWithCodeLoc(
     ol_program_handle_t *Program, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olRetainProgram that also sets source code location
+/// @brief Variant of olDestroyProgram that also sets source code location
 /// information
-/// @details See also ::olRetainProgram
-OL_APIEXPORT ol_result_t OL_APICALL olRetainProgramWithCodeLoc(
-    ol_program_handle_t Program, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olReleaseProgram that also sets source code location
-/// information
-/// @details See also ::olReleaseProgram
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseProgramWithCodeLoc(
+/// @details See also ::olDestroyProgram
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyProgramWithCodeLoc(
     ol_program_handle_t Program, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1278,17 +1158,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olCreateKernelWithCodeLoc(
     ol_kernel_handle_t *Kernel, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olRetainKernel that also sets source code location
+/// @brief Variant of olDestroyKernel that also sets source code location
 /// information
-/// @details See also ::olRetainKernel
-OL_APIEXPORT ol_result_t OL_APICALL olRetainKernelWithCodeLoc(
-    ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olReleaseKernel that also sets source code location
-/// information
-/// @details See also ::olReleaseKernel
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernelWithCodeLoc(
+/// @details See also ::olDestroyKernel
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernelWithCodeLoc(
     ol_kernel_handle_t Kernel, ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)

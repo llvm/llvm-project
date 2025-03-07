@@ -618,24 +618,24 @@ ol_result_t olCreateQueueWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olRetainQueue_val(ol_queue_handle_t Queue) {
+ol_impl_result_t olDestroyQueue_val(ol_queue_handle_t Queue) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Queue) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
   }
 
-  return llvm::offload::olRetainQueue_impl(Queue);
+  return llvm::offload::olDestroyQueue_impl(Queue);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(ol_queue_handle_t Queue) {
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyQueue(ol_queue_handle_t Queue) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olRetainQueue";
+    llvm::errs() << "---> olDestroyQueue";
   }
 
-  ol_result_t Result = olRetainQueue_val(Queue);
+  ol_result_t Result = olDestroyQueue_val(Queue);
 
   if (offloadConfig().TracingEnabled) {
-    ol_retain_queue_params_t Params = {&Queue};
+    ol_destroy_queue_params_t Params = {&Queue};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -644,46 +644,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainQueue(ol_queue_handle_t Queue) {
   }
   return Result;
 }
-ol_result_t olRetainQueueWithCodeLoc(ol_queue_handle_t Queue,
-                                     ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olRetainQueue(Queue);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olReleaseQueue_val(ol_queue_handle_t Queue) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Queue) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-  }
-
-  return llvm::offload::olReleaseQueue_impl(Queue);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseQueue(ol_queue_handle_t Queue) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olReleaseQueue";
-  }
-
-  ol_result_t Result = olReleaseQueue_val(Queue);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_release_queue_params_t Params = {&Queue};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olReleaseQueueWithCodeLoc(ol_queue_handle_t Queue,
+ol_result_t olDestroyQueueWithCodeLoc(ol_queue_handle_t Queue,
                                       ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olReleaseQueue(Queue);
+  ol_result_t Result = ::olDestroyQueue(Queue);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -726,24 +690,24 @@ ol_result_t olWaitQueueWithCodeLoc(ol_queue_handle_t Queue,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olRetainEvent_val(ol_event_handle_t Event) {
+ol_impl_result_t olDestroyEvent_val(ol_event_handle_t Event) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Event) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
   }
 
-  return llvm::offload::olRetainEvent_impl(Event);
+  return llvm::offload::olDestroyEvent_impl(Event);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(ol_event_handle_t Event) {
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyEvent(ol_event_handle_t Event) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olRetainEvent";
+    llvm::errs() << "---> olDestroyEvent";
   }
 
-  ol_result_t Result = olRetainEvent_val(Event);
+  ol_result_t Result = olDestroyEvent_val(Event);
 
   if (offloadConfig().TracingEnabled) {
-    ol_retain_event_params_t Params = {&Event};
+    ol_destroy_event_params_t Params = {&Event};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -752,46 +716,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainEvent(ol_event_handle_t Event) {
   }
   return Result;
 }
-ol_result_t olRetainEventWithCodeLoc(ol_event_handle_t Event,
-                                     ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olRetainEvent(Event);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olReleaseEvent_val(ol_event_handle_t Event) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Event) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-  }
-
-  return llvm::offload::olReleaseEvent_impl(Event);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseEvent(ol_event_handle_t Event) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olReleaseEvent";
-  }
-
-  ol_result_t Result = olReleaseEvent_val(Event);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_release_event_params_t Params = {&Event};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olReleaseEventWithCodeLoc(ol_event_handle_t Event,
+ol_result_t olDestroyEventWithCodeLoc(ol_event_handle_t Event,
                                       ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olReleaseEvent(Event);
+  ol_result_t Result = ::olDestroyEvent(Event);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -1023,25 +951,25 @@ ol_result_t olCreateProgramWithCodeLoc(ol_device_handle_t Device,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olRetainProgram_val(ol_program_handle_t Program) {
+ol_impl_result_t olDestroyProgram_val(ol_program_handle_t Program) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Program) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
   }
 
-  return llvm::offload::olRetainProgram_impl(Program);
+  return llvm::offload::olDestroyProgram_impl(Program);
 }
 OL_APIEXPORT ol_result_t OL_APICALL
-olRetainProgram(ol_program_handle_t Program) {
+olDestroyProgram(ol_program_handle_t Program) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olRetainProgram";
+    llvm::errs() << "---> olDestroyProgram";
   }
 
-  ol_result_t Result = olRetainProgram_val(Program);
+  ol_result_t Result = olDestroyProgram_val(Program);
 
   if (offloadConfig().TracingEnabled) {
-    ol_retain_program_params_t Params = {&Program};
+    ol_destroy_program_params_t Params = {&Program};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -1050,47 +978,10 @@ olRetainProgram(ol_program_handle_t Program) {
   }
   return Result;
 }
-ol_result_t olRetainProgramWithCodeLoc(ol_program_handle_t Program,
-                                       ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olRetainProgram(Program);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olReleaseProgram_val(ol_program_handle_t Program) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Program) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-  }
-
-  return llvm::offload::olReleaseProgram_impl(Program);
-}
-OL_APIEXPORT ol_result_t OL_APICALL
-olReleaseProgram(ol_program_handle_t Program) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olReleaseProgram";
-  }
-
-  ol_result_t Result = olReleaseProgram_val(Program);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_release_program_params_t Params = {&Program};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olReleaseProgramWithCodeLoc(ol_program_handle_t Program,
+ol_result_t olDestroyProgramWithCodeLoc(ol_program_handle_t Program,
                                         ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olReleaseProgram(Program);
+  ol_result_t Result = ::olDestroyProgram(Program);
 
   currentCodeLocation() = nullptr;
   return Result;
@@ -1147,24 +1038,24 @@ ol_result_t olCreateKernelWithCodeLoc(ol_program_handle_t Program,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olRetainKernel_val(ol_kernel_handle_t Kernel) {
+ol_impl_result_t olDestroyKernel_val(ol_kernel_handle_t Kernel) {
   if (offloadConfig().ValidationEnabled) {
     if (NULL == Kernel) {
       return OL_ERRC_INVALID_NULL_HANDLE;
     }
   }
 
-  return llvm::offload::olRetainKernel_impl(Kernel);
+  return llvm::offload::olDestroyKernel_impl(Kernel);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(ol_kernel_handle_t Kernel) {
+OL_APIEXPORT ol_result_t OL_APICALL olDestroyKernel(ol_kernel_handle_t Kernel) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olRetainKernel";
+    llvm::errs() << "---> olDestroyKernel";
   }
 
-  ol_result_t Result = olRetainKernel_val(Kernel);
+  ol_result_t Result = olDestroyKernel_val(Kernel);
 
   if (offloadConfig().TracingEnabled) {
-    ol_retain_kernel_params_t Params = {&Kernel};
+    ol_destroy_kernel_params_t Params = {&Kernel};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -1173,46 +1064,10 @@ OL_APIEXPORT ol_result_t OL_APICALL olRetainKernel(ol_kernel_handle_t Kernel) {
   }
   return Result;
 }
-ol_result_t olRetainKernelWithCodeLoc(ol_kernel_handle_t Kernel,
-                                      ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olRetainKernel(Kernel);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olReleaseKernel_val(ol_kernel_handle_t Kernel) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == Kernel) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-  }
-
-  return llvm::offload::olReleaseKernel_impl(Kernel);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olReleaseKernel(ol_kernel_handle_t Kernel) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olReleaseKernel";
-  }
-
-  ol_result_t Result = olReleaseKernel_val(Kernel);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_release_kernel_params_t Params = {&Kernel};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olReleaseKernelWithCodeLoc(ol_kernel_handle_t Kernel,
+ol_result_t olDestroyKernelWithCodeLoc(ol_kernel_handle_t Kernel,
                                        ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olReleaseKernel(Kernel);
+  ol_result_t Result = ::olDestroyKernel(Kernel);
 
   currentCodeLocation() = nullptr;
   return Result;

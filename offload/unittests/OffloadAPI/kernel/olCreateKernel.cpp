@@ -16,7 +16,7 @@ TEST_F(olCreateKernelTest, Success) {
   ol_kernel_handle_t Kernel = nullptr;
   ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
   ASSERT_NE(Kernel, nullptr);
-  ASSERT_SUCCESS(olReleaseKernel(Kernel));
+  ASSERT_SUCCESS(olDestroyKernel(Kernel));
 }
 
 TEST_F(olCreateKernelTest, InvalidNullProgram) {

@@ -13,9 +13,7 @@
 def : Function {
     let name = "olCreateQueue";
     let desc = "Create a queue for the given device.";
-    let details = [
-        "The created queue has an initial reference count of 1."
-    ];
+    let details = [];
     let params = [
         Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
         Param<"ol_queue_handle_t*", "Queue", "output pointer for the created queue", PARAM_OUT>
@@ -24,18 +22,8 @@ def : Function {
 }
 
 def : Function {
-    let name = "olRetainQueue";
-    let desc = "Increment the queue's reference count.";
-    let details = [];
-    let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
-    ];
-    let returns = [];
-}
-
-def : Function {
-    let name = "olReleaseQueue";
-    let desc = "Decrement the queues's reference count, and free it if the reference count reaches 0.";
+    let name = "olDestroyQueue";
+    let desc = "Destroy the queue and free all underlying resources.";
     let details = [];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>

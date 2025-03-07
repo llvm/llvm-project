@@ -16,18 +16,15 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDeviceInfoSize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olCreateQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olWaitQueue.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olReleaseQueue.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olRetainQueue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/queue/olDestroyQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemAlloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemFree.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueMemcpy.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueKernelLaunch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olCreateProgram.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/program/olRetainProgram.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/program/olReleaseProgram.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/program/olDestroyProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olCreateKernel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olReleaseKernel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olRetainKernel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olDestroyKernel.cpp
     )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON} LibomptUnitTestsDeviceBins)
 target_compile_definitions("offload.unittests" PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")

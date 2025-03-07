@@ -40,39 +40,50 @@ using namespace llvm::omp::target::plugin;
 // Handle type definitions. Ideally these would be 1:1 with the plugins, but
 // we add some additional data here for now to avoid churn in the plugin
 // interface.
-
-struct RefCounted {
-  std::atomic_uint32_t RefCount;
-};
-
 struct ol_device_impl_t {
+  ol_device_impl_t(int DeviceNum, GenericDeviceTy *Device,
+                   ol_platform_handle_t Platform)
+      : DeviceNum(DeviceNum), Device(Device), Platform(Platform) {}
   int DeviceNum;
   GenericDeviceTy *Device;
   ol_platform_handle_t Platform;
 };
 
 struct ol_platform_impl_t {
+  ol_platform_impl_t(std::unique_ptr<GenericPluginTy> Plugin,
+                     std::vector<ol_device_impl_t> Devices)
+      : Plugin(std::move(Plugin)), Devices(Devices) {}
   std::unique_ptr<GenericPluginTy> Plugin;
   std::vector<ol_device_impl_t> Devices;
 };
 
-struct ol_queue_impl_t : RefCounted {
+struct ol_queue_impl_t {
+  ol_queue_impl_t(__tgt_async_info *AsyncInfo, ol_device_handle_t Device)
+      : AsyncInfo(AsyncInfo), Device(Device) {}
   __tgt_async_info *AsyncInfo;
   ol_device_handle_t Device;
 };
 
-struct ol_event_impl_t : RefCounted {
+struct ol_event_impl_t {
+  ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
+      : EventInfo(EventInfo), Queue(Queue) {}
+  ~ol_event_impl_t() { (void)Queue->Device->Device->destroyEvent(EventInfo); }
   void *EventInfo;
   ol_queue_handle_t Queue;
 };
 
-struct ol_program_impl_t : RefCounted {
+struct ol_program_impl_t {
+  ol_program_impl_t(plugin::DeviceImageTy *Image,
+                    std::unique_ptr<llvm::MemoryBuffer> ImageData,
+                    const __tgt_device_image &DeviceImage)
+      : Image(Image), ImageData(std::move(ImageData)),
+        DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
   __tgt_device_image DeviceImage;
 };
 
-struct ol_kernel_impl_t : RefCounted {
+struct ol_kernel_impl_t {
   GenericKernelTy *KernelImpl;
 };
 
@@ -90,15 +101,8 @@ ol_device_handle_t HostDevice() {
   return &HostDeviceImpl;
 }
 
-template <typename HandleT> ol_impl_result_t olRetain(HandleT Handle) {
-  Handle->RefCount++;
-  return OL_SUCCESS;
-}
-
-template <typename HandleT> ol_impl_result_t olRelease(HandleT Handle) {
-  if (--Handle->RefCount == 0) {
-    delete Handle;
-  }
+template <typename HandleT> ol_impl_result_t olDestroy(HandleT Handle) {
+  delete Handle;
   return OL_SUCCESS;
 }
 
@@ -336,23 +340,17 @@ ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
 
 ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
                                     ol_queue_handle_t *Queue) {
-  auto CreatedQueue = std::make_unique<ol_queue_impl_t>();
+  auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
   auto Err = Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo));
   if (Err)
     return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
 
-  CreatedQueue->Device = Device;
-  CreatedQueue->RefCount = 1;
   *Queue = CreatedQueue.release();
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olRetainQueue_impl(ol_queue_handle_t Queue) {
-  return olRetain(Queue);
-}
-
-ol_impl_result_t olReleaseQueue_impl(ol_queue_handle_t Queue) {
-  return olRelease(Queue);
+ol_impl_result_t olDestroyQueue_impl(ol_queue_handle_t Queue) {
+  return olDestroy(Queue);
 }
 
 ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
@@ -382,17 +380,12 @@ ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olRetainEvent_impl(ol_event_handle_t Event) {
-  return olRetain(Event);
-}
-
-ol_impl_result_t olReleaseEvent_impl(ol_event_handle_t Event) {
-  return olRelease(Event);
+ol_impl_result_t olDestroyEvent_impl(ol_event_handle_t Event) {
+  return olDestroy(Event);
 }
 
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
-  auto EventImpl = std::make_unique<ol_event_impl_t>();
-  EventImpl->Queue = Queue;
+  auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
   auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo);
   if (Res)
     return nullptr;
@@ -447,12 +440,13 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
   auto ImageData = MemoryBuffer::getMemBufferCopy(
       StringRef(reinterpret_cast<const char *>(ProgData), ProgDataSize));
 
-  ol_program_handle_t Prog = new ol_program_impl_t();
-
-  Prog->DeviceImage = __tgt_device_image{
+  auto DeviceImage = __tgt_device_image{
       const_cast<char *>(ImageData->getBuffer().data()),
       const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize, nullptr,
       nullptr};
+
+  ol_program_handle_t Prog =
+      new ol_program_impl_t(nullptr, std::move(ImageData), DeviceImage);
 
   auto Res =
       Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
@@ -462,19 +456,14 @@ ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
   }
 
   Prog->Image = *Res;
-  Prog->RefCount = 1;
-  Prog->ImageData = std::move(ImageData);
+  // Prog->ImageData = std::move(ImageData);
   *Program = Prog;
 
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olRetainProgram_impl(ol_program_handle_t Program) {
-  return olRetain(Program);
-}
-
-ol_impl_result_t olReleaseProgram_impl(ol_program_handle_t Program) {
-  return olRelease(Program);
+ol_impl_result_t olDestroyProgram_impl(ol_program_handle_t Program) {
+  return olDestroy(Program);
 }
 
 ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
@@ -491,19 +480,14 @@ ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
     return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
 
   ol_kernel_handle_t CreatedKernel = new ol_kernel_impl_t();
-  CreatedKernel->RefCount = 1;
   CreatedKernel->KernelImpl = &*KernelImpl;
   *Kernel = CreatedKernel;
 
   return OL_SUCCESS;
 }
 
-ol_impl_result_t olRetainKernel_impl(ol_kernel_handle_t Kernel) {
-  return olRetain(Kernel);
-}
-
-ol_impl_result_t olReleaseKernel_impl(ol_kernel_handle_t Kernel) {
-  return olRelease(Kernel);
+ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel) {
+  return olDestroy(Kernel);
 }
 
 ol_impl_result_t
