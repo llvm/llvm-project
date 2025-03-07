@@ -113,6 +113,7 @@ MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 MACHINE_FUNCTION_PASS("si-lower-control-flow", SILowerControlFlowPass())
 MACHINE_FUNCTION_PASS("si-lower-sgpr-spills", SILowerSGPRSpillsPass())
 MACHINE_FUNCTION_PASS("si-lower-wwm-copies", SILowerWWMCopiesPass())
+MACHINE_FUNCTION_PASS("si-memory-legalizer", SIMemoryLegalizerPass())
 MACHINE_FUNCTION_PASS("si-mode-register", SIModeRegisterPass())
 MACHINE_FUNCTION_PASS("si-opt-vgpr-liverange", SIOptimizeVGPRLiveRangePass())
 MACHINE_FUNCTION_PASS("si-optimize-exec-masking", SIOptimizeExecMaskingPass())
@@ -132,7 +133,6 @@ DUMMY_MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPas
 DUMMY_MACHINE_FUNCTION_PASS("si-insert-hard-clauses", SIInsertHardClausesPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-insert-waitcnts", SIInsertWaitcntsPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())
-DUMMY_MACHINE_FUNCTION_PASS("si-memory-legalizer", SIMemoryLegalizerPass())
 DUMMY_MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 // TODO: Move amdgpu-preload-kern-arg-prolog to MACHINE_FUNCTION_PASS since it
 // already exists.
