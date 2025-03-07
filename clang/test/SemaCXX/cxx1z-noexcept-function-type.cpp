@@ -74,6 +74,7 @@ namespace DependentDefaultCtorExceptionSpec {
   };
   struct InstantiateFromAnotherClass {
     template <class B, class T = decltype(static_cast<bool (B::*)(int)>(&B::foo))> // expected-note {{in instantiation of function template specialization}}
+    // expected-note@-1 {{template parameter is declared here}}
     InstantiateFromAnotherClass(B *) {} // expected-note {{in instantiation of default argument}}
   };
   NoexceptWithThis<int> f{};

@@ -27,15 +27,40 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser P for a wrapper class, invoke P, and if it succeeds return
+// the wrapped object.
+template <typename Parser> struct UnwrapParser {
+  static_assert(
+      Parser::resultType::WrapperTrait::value && "Wrapper class required");
+  using resultType = decltype(Parser::resultType::v);
+  constexpr UnwrapParser(Parser p) : parser_(p) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto result{parser_.Parse(state)}) {
+      return result->v;
+    }
+    return std::nullopt;
+  }
+
+private:
+  const Parser parser_;
+};
+
+template <typename Parser> constexpr auto unwrap(const Parser &p) {
+  return UnwrapParser<Parser>(p);
+}
+
 /// Parse OpenMP directive name (this includes compound directives).
 struct OmpDirectiveNameParser {
-  using resultType = llvm::omp::Directive;
+  using resultType = OmpDirectiveName;
   using Token = TokenStringMatch<false, false>;
 
   std::optional<resultType> Parse(ParseState &state) const {
     for (const NameWithId &nid : directives()) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
-        return nid.second;
+        OmpDirectiveName n;
+        n.v = nid.second;
+        return n;
       }
     }
     return std::nullopt;
@@ -218,7 +243,7 @@ TYPE_PARSER(construct<OmpTraitSelectorName::Value>(
 TYPE_PARSER(sourced(construct<OmpTraitSelectorName>(
     // Parse predefined names first (because of SIMD).
     construct<OmpTraitSelectorName>(Parser<OmpTraitSelectorName::Value>{}) ||
-    construct<OmpTraitSelectorName>(OmpDirectiveNameParser{}) ||
+    construct<OmpTraitSelectorName>(unwrap(OmpDirectiveNameParser{})) ||
     // identifier-or-string for extensions
     construct<OmpTraitSelectorName>(
         applyFunction(nameToString, Parser<Name>{})) ||
@@ -775,9 +800,9 @@ TYPE_PARSER(construct<OmpMessageClause>(expr))
 
 TYPE_PARSER(construct<OmpHoldsClause>(indirect(expr)))
 TYPE_PARSER(construct<OmpAbsentClause>(many(maybe(","_tok) >>
-    construct<llvm::omp::Directive>(OmpDirectiveNameParser{}))))
+    construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 TYPE_PARSER(construct<OmpContainsClause>(many(maybe(","_tok) >>
-    construct<llvm::omp::Directive>(OmpDirectiveNameParser{}))))
+    construct<llvm::omp::Directive>(unwrap(OmpDirectiveNameParser{})))))
 
 TYPE_PARSER("ABSENT" >> construct<OmpClause>(construct<OmpClause::Absent>(
                             parenthesized(Parser<OmpAbsentClause>{}))) ||
@@ -972,7 +997,7 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 // --- Parsers for directives and constructs --------------------------
 
 TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>( //
-    OmpDirectiveNameParser{},
+    sourced(OmpDirectiveNameParser{}),
     maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
     maybe(Parser<OmpClauseList>{}))))
 

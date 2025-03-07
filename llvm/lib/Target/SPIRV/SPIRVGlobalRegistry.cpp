@@ -1008,8 +1008,8 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.contains(Ty))
-    return ForwardPointerTypes[Ty];
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end())
+    return It->second;
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
 
@@ -1103,14 +1103,15 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   // Null pointer means we have a loop in type definitions, make and
   // return corresponding OpTypeForwardPointer.
   if (SpvElementType == nullptr) {
-    if (!ForwardPointerTypes.contains(Ty))
-      ForwardPointerTypes[Ty] = getOpTypeForwardPointer(SC, MIRBuilder);
-    return ForwardPointerTypes[Ty];
+    auto [It, Inserted] = ForwardPointerTypes.try_emplace(Ty);
+    if (Inserted)
+      It->second = getOpTypeForwardPointer(SC, MIRBuilder);
+    return It->second;
   }
   // If we have forward pointer associated with this type, use its register
   // operand to create OpTypePointer.
-  if (ForwardPointerTypes.contains(Ty)) {
-    Register Reg = getSPIRVTypeID(ForwardPointerTypes[Ty]);
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end()) {
+    Register Reg = getSPIRVTypeID(It->second);
     return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
   }
 
@@ -1759,6 +1760,75 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   return LLT::scalar(64);
 }
 
+// Aliasing list MD contains several scope MD nodes whithin it. Each scope MD
+// has a selfreference and an extra MD node for aliasing domain and also it
+// can contain an optional string operand. Domain MD contains a self-reference
+// with an optional string operand. Here we unfold the list, creating SPIR-V
+// aliasing instructions.
+// TODO: add support for an optional string operand.
+MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
+    MachineIRBuilder &MIRBuilder, const MDNode *AliasingListMD) {
+  if (AliasingListMD->getNumOperands() == 0)
+    return nullptr;
+  if (auto L = AliasInstMDMap.find(AliasingListMD); L != AliasInstMDMap.end())
+    return L->second;
+
+  SmallVector<MachineInstr *> ScopeList;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  for (const MDOperand &MDListOp : AliasingListMD->operands()) {
+    if (MDNode *ScopeMD = dyn_cast<MDNode>(MDListOp)) {
+      if (ScopeMD->getNumOperands() < 2)
+        return nullptr;
+      MDNode *DomainMD = dyn_cast<MDNode>(ScopeMD->getOperand(1));
+      if (!DomainMD)
+        return nullptr;
+      auto *Domain = [&] {
+        auto D = AliasInstMDMap.find(DomainMD);
+        if (D != AliasInstMDMap.end())
+          return D->second;
+        const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+        auto MIB =
+            MIRBuilder.buildInstr(SPIRV::OpAliasDomainDeclINTEL).addDef(Ret);
+        return MIB.getInstr();
+      }();
+      AliasInstMDMap.insert(std::make_pair(DomainMD, Domain));
+      auto *Scope = [&] {
+        auto S = AliasInstMDMap.find(ScopeMD);
+        if (S != AliasInstMDMap.end())
+          return S->second;
+        const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpAliasScopeDeclINTEL)
+                       .addDef(Ret)
+                       .addUse(Domain->getOperand(0).getReg());
+        return MIB.getInstr();
+      }();
+      AliasInstMDMap.insert(std::make_pair(ScopeMD, Scope));
+      ScopeList.push_back(Scope);
+    }
+  }
+
+  const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  auto MIB =
+      MIRBuilder.buildInstr(SPIRV::OpAliasScopeListDeclINTEL).addDef(Ret);
+  for (auto *Scope : ScopeList)
+    MIB.addUse(Scope->getOperand(0).getReg());
+  auto List = MIB.getInstr();
+  AliasInstMDMap.insert(std::make_pair(AliasingListMD, List));
+  return List;
+}
+
+void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
+    Register Reg, MachineIRBuilder &MIRBuilder, uint32_t Dec,
+    const MDNode *AliasingListMD) {
+  MachineInstr *AliasList =
+      getOrAddMemAliasingINTELInst(MIRBuilder, AliasingListMD);
+  if (!AliasList)
+    return;
+  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+      .addUse(Reg)
+      .addImm(Dec)
+      .addUse(AliasList->getOperand(0).getReg());
+}
 void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
                                              bool DeleteOld) {
   Old->replaceAllUsesWith(New);

@@ -342,7 +342,8 @@ private:
   bool levelCheckResize(Operation *op) {
     if (auto resize = dyn_cast<tosa::ResizeOp>(op)) {
       SmallVector<int64_t> scale;
-      if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+      if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(),
+                                     scale)) {
         return false;
       }
       const int64_t scaleYN = scale[0];
@@ -736,7 +737,7 @@ bool checkErrorIfResize(Operation *op) {
   }
 
   SmallVector<int64_t> scale;
-  if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+  if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(), scale)) {
     return false;
   }
 
@@ -761,8 +762,8 @@ bool checkErrorIfResize(Operation *op) {
 
   SmallVector<int64_t> offset;
   SmallVector<int64_t> border;
-  if (!tosa::getConstShapeValue(resize.getOffset().getDefiningOp(), offset) ||
-      !tosa::getConstShapeValue(resize.getBorder().getDefiningOp(), border)) {
+  if (!tosa::getConstShapeValues(resize.getOffset().getDefiningOp(), offset) ||
+      !tosa::getConstShapeValues(resize.getBorder().getDefiningOp(), border)) {
     return false;
   }
 
