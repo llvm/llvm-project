@@ -151,6 +151,7 @@ Adding [[clang::unsafe_buffer_usage]] attribute to a method definition now turns
 related warnings within the method body.
 
 - The ``no_sanitize`` attribute now accepts both ``gnu`` and ``clang`` names.
+- The ``ext_vector_type(n)`` attribute can now be used as a generic type attribute.
 - Clang now diagnoses use of declaration attributes on void parameters. (#GH108819)
 - Clang now allows ``__attribute__((model("small")))`` and
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
