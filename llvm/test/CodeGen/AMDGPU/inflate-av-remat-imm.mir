@@ -12,8 +12,6 @@ machineFunctionInfo:
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
-  vgprForAGPRCopy: '$vgpr255'
-  sgprForEXECCopy: '$sgpr74_sgpr75'
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr4_sgpr5
@@ -65,8 +63,6 @@ machineFunctionInfo:
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       7
-  vgprForAGPRCopy: '$vgpr255'
-  sgprForEXECCopy: '$sgpr74_sgpr75'
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr4_sgpr5
