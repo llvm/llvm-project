@@ -342,6 +342,44 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 }
 
+def fir_CopyOp : fir_Op<"copy", []> {
+  let summary = "copy constant size memory";
+
+  let description = [{
+    Copy the memory from a source with compile time constant size to
+    a destination of the same type.
+
+    This is meant to be used for aggregate types where load and store
+    are not appropriate to make a copy because LLVM is not meant to
+    handle load and store of "big" aggregates.
+
+    Its "no_overlap" attribute allows indicating that the source and destination
+    are known to not overlap at compile time.
+
+    ```
+      !t =!fir.type<t{x:!fir.array<1000xi32>}>
+      fir.copy %x to %y : !fir.ref<!t>, !fir.ref<!t>
+    ```
+    TODO: add FirAliasTagOpInterface to carry TBAA.
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$source,
+                       Arg<AnyReferenceLike, "", [MemWrite]>:$destination,
+                       OptionalAttr<UnitAttr>:$no_overlap);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$source,
+                                 "mlir::Value":$destination,
+                                  CArg<"bool", "false">:$no_overlap)>];
+
+  let assemblyFormat = [{
+    $source `to` $destination (`no_overlap` $no_overlap^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
+}
+
+
 def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let summary = [{
     save an array, box, or record function result SSA-value to a memory location

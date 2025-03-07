@@ -933,3 +933,12 @@ func.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: (i16)-> i16) -> i16 {
   %0 = fir.call %arg1(%arg0) : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   return %0 : i16
 }
+
+// CHECK-LABEL: @test_copy(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<sometype{i:i32}>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ptr<!fir.type<sometype{i:i32}>>
+func.func @test_copy(%arg0: !fir.ref<!fir.type<sometype{i:i32}>>, %arg1: !fir.ptr<!fir.type<sometype{i:i32}>>) {
+  // CHECK: fir.copy %[[VAL_0]] to %[[VAL_1]] no_overlap : !fir.ref<!fir.type<sometype{i:i32}>>, !fir.ptr<!fir.type<sometype{i:i32}>>
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!fir.type<sometype{i:i32}>>, !fir.ptr<!fir.type<sometype{i:i32}>>
+  return
+}
