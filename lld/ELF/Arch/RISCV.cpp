@@ -902,6 +902,9 @@ bool RISCV::relaxOnce(int pass) const {
   if (ctx.arg.relocatable)
     return false;
 
+  if (pass == 29)
+    return false;
+
   if (pass == 0)
     initSymbolAnchors(ctx);
 
