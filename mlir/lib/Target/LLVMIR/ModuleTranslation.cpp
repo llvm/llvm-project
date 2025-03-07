@@ -1606,6 +1606,9 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
   if (func.getWillReturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
+  if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
+    llvmFunc->addFnAttr("frame-pointer", stringifyFramePointerKind(
+                                             fpAttr.getFramePointerKind()));
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
