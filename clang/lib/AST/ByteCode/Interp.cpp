@@ -714,6 +714,9 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
+  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+    return false;
+
   if (F->isConstexpr() && F->hasBody() &&
       (F->getDecl()->isConstexpr() || F->getDecl()->hasAttr<MSConstexprAttr>()))
     return true;
