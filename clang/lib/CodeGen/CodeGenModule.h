@@ -1574,9 +1574,11 @@ public:
                             CodeGenFunction *CGF = nullptr);
 
   // Emit code for the OpenACC Declare declaration.
-  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                          CodeGenFunction *CGF = nullptr);
   // Emit code for the OpenACC Routine declaration.
-  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D, CodeGenFunction *CGF);
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
+                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
