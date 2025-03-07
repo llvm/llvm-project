@@ -473,6 +473,14 @@ std::optional<unsigned> Attribute::getVScaleRangeMax() const {
   return unpackVScaleRangeArgs(pImpl->getValueAsInt()).second;
 }
 
+unsigned Attribute::getVScaleValue() const {
+  std::optional<unsigned> VScale = getVScaleRangeMax();
+  if (VScale && *VScale == getVScaleRangeMin())
+    return *VScale;
+
+  return 0;
+}
+
 UWTableKind Attribute::getUWTableKind() const {
   assert(hasAttribute(Attribute::UWTable) &&
          "Trying to get unwind table kind from non-uwtable attribute");
