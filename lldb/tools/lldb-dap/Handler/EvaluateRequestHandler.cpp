@@ -145,8 +145,9 @@ void EvaluateRequestHandler::operator()(
   llvm::json::Object body;
   const auto *arguments = request.getObject("arguments");
   lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  std::string expression = GetString(arguments, "expression").str();
-  llvm::StringRef context = GetString(arguments, "context");
+  std::string expression =
+      GetString(arguments, "expression").value_or("").str();
+  const llvm::StringRef context = GetString(arguments, "context").value_or("");
   bool repeat_last_command =
       expression.empty() && dap.last_nonempty_var_expression.empty();
 

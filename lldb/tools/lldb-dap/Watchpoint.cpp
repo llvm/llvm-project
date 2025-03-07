@@ -20,8 +20,8 @@
 namespace lldb_dap {
 Watchpoint::Watchpoint(DAP &d, const llvm::json::Object &obj)
     : BreakpointBase(d, obj) {
-  llvm::StringRef dataId = GetString(obj, "dataId");
-  std::string accessType = GetString(obj, "accessType").str();
+  llvm::StringRef dataId = GetString(obj, "dataId").value_or("");
+  std::string accessType = GetString(obj, "accessType").value_or("").str();
   auto [addr_str, size_str] = dataId.split('/');
   llvm::to_integer(addr_str, addr, 16);
   llvm::to_integer(size_str, size);
