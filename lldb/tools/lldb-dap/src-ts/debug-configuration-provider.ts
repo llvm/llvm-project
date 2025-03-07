@@ -22,43 +22,48 @@ export class LLDBDapConfigurationProvider
       );
     }
 
-    if (
-      "debugAdapterPort" in debugConfiguration &&
-      ("debugAdapterExecutable" in debugConfiguration ||
-        "debugAdapterArgs" in debugConfiguration)
-    ) {
-      return showErrorWithConfigureButton(
-        "The debugAdapterPort property is incompatible with debugAdapterExecutable and debugAdapterArgs. Please update your launch configuration.",
-      );
-    }
-
-    // Server mode needs to be handled here since DebugAdapterDescriptorFactory
-    // will show an unhelpful error if it returns undefined. We'd rather show a
-    // nicer error message here and allow stopping the debug session gracefully.
-    const config = vscode.workspace.getConfiguration("lldb-dap", folder);
-    if (config.get<boolean>("serverMode", false)) {
+    // Check if we're going to launch a debug session or use an existing process
+    if ("debugAdapterPort" in debugConfiguration) {
+      if (
+        "debugAdapterExecutable" in debugConfiguration ||
+        "debugAdapterArgs" in debugConfiguration
+      ) {
+        return showErrorWithConfigureButton(
+          "The debugAdapterPort property is incompatible with debugAdapterExecutable and debugAdapterArgs. Please update your launch configuration.",
+        );
+      }
+    } else {
+      // Always try to create the debug adapter executable as this will show the user errors
+      // if there are any.
       const executable = await createDebugAdapterExecutable(
         folder,
         debugConfiguration,
         /* userInteractive */ true,
       );
-      if (!executable) {
-        return undefined;
+
+      // Server mode needs to be handled here since DebugAdapterDescriptorFactory
+      // will show an unhelpful error if it returns undefined. We'd rather show a
+      // nicer error message here and allow stopping the debug session gracefully.
+      const config = vscode.workspace.getConfiguration("lldb-dap", folder);
+      if (config.get<boolean>("serverMode", false)) {
+        if (!executable) {
+          return undefined;
+        }
+        const serverInfo = await this.server.start(
+          executable.command,
+          executable.args,
+          executable.options,
+        );
+        if (!serverInfo) {
+          return undefined;
+        }
+        // Use a debug adapter host and port combination rather than an executable
+        // and list of arguments.
+        delete debugConfiguration.debugAdapterExecutable;
+        delete debugConfiguration.debugAdapterArgs;
+        debugConfiguration.debugAdapterHost = serverInfo.host;
+        debugConfiguration.debugAdapterPort = serverInfo.port;
       }
-      const serverInfo = await this.server.start(
-        executable.command,
-        executable.args,
-        executable.options,
-      );
-      if (!serverInfo) {
-        return undefined;
-      }
-      // Use a debug adapter host and port combination rather than an executable
-      // and list of arguments.
-      delete debugConfiguration.debugAdapterExecutable;
-      delete debugConfiguration.debugAdapterArgs;
-      debugConfiguration.debugAdapterHost = serverInfo.host;
-      debugConfiguration.debugAdapterPort = serverInfo.port;
     }
 
     return debugConfiguration;
