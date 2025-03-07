@@ -277,15 +277,14 @@ void toYaml(yaml::Output &Out, const PGOCtxProfContext &Ctx) {
 
 } // namespace
 
-void llvm::convertCtxProfToYaml(raw_ostream &OS,
-                                const PGOCtxProfile &Profiles) {
+void llvm::convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile) {
   yaml::Output Out(OS);
   void *SaveInfo = nullptr;
   bool UseDefault = false;
   Out.beginMapping();
-  if (!Profiles.Contexts.empty()) {
+  if (!Profile.Contexts.empty()) {
     Out.preflightKey("Contexts", false, false, UseDefault, SaveInfo);
-    toYaml(Out, Profiles.Contexts);
+    toYaml(Out, Profile.Contexts);
     Out.postflightKey(nullptr);
   }
   Out.endMapping();
