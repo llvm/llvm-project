@@ -325,7 +325,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
     else if (!NewRC || Classes[Reg.id()] != NewRC)
       Classes[Reg.id()] = reinterpret_cast<TargetRegisterClass *>(-1);
 
-    RegRefs.insert(std::make_pair(Reg, &MO));
+    RegRefs.emplace(Reg, &MO);
 
     // It wasn't previously live but now it is, this is a kill.
     // Repeat for all aliases.
