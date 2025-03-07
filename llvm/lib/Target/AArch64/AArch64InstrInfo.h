@@ -448,8 +448,21 @@ public:
   /// be checked.
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
-  /// When getMachineCombinerPatterns() finds patterns, this function generates
-  /// the instructions that could replace the original code sequence
+
+  /// Returns true if \P Opcode is an instruction which performs accumulation
+  /// into a destination register.
+  bool isAccumulationOpcode(unsigned Opcode) const override;
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  std::optional<unsigned>
+  getAccumulationStartOpcode(unsigned Opcode) const override;
+
+  std::optional<unsigned>
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const override;
+
+  /// When getMachineCombinerPatterns() finds patterns, this function
+  /// generates the instructions that could replace the original code
+  /// sequence
   void genAlternativeCodeSequence(
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,

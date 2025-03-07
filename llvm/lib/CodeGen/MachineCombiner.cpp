@@ -47,6 +47,11 @@ static cl::opt<bool> dump_intrs("machine-combiner-dump-subst-intrs", cl::Hidden,
                                 cl::desc("Dump all substituted intrs"),
                                 cl::init(false));
 
+static cl::opt<bool> CombineRecurse(
+    "machine-combiner-recurse", cl::Hidden,
+    cl::desc("Apply machine combiner recursively until block is stable."),
+    cl::init(false));
+
 #ifdef EXPENSIVE_CHECKS
 static cl::opt<bool> VerifyPatternOrder(
     "machine-combiner-verify-pattern-order", cl::Hidden,
@@ -743,8 +748,20 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   // Try to combine instructions.
-  for (auto &MBB : MF)
-    Changed |= combineInstructions(&MBB);
+  for (auto &MBB : MF) {
+    if (CombineRecurse) {
+      bool MBBChanged = false;
+      // Combine instructions recursively on the MBB, to allow applying patterns
+      // iteratively, for example recombining chains of MLA instructions to
+      // allow for more parallelism.
+      do {
+        MBBChanged = combineInstructions(&MBB);
+      } while (MBBChanged);
+      Changed |= MBBChanged;
+    } else {
+      Changed |= combineInstructions(&MBB);
+    }
+  }
 
   return Changed;
 }
