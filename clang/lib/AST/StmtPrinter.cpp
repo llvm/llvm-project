@@ -264,7 +264,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   Indent();
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
-  if (!Node->isSingleDecl() || !isa<OpenACCDeclareDecl>(Node->getSingleDecl()))
+  if (!Node->isSingleDecl() ||
+      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }

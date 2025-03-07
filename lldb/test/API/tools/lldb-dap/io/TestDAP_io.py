@@ -18,18 +18,19 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
             # If the process is still alive, terminate it.
             if process.poll() is None:
                 process.terminate()
-                stdout_data = process.stdout.read()
-                stderr_data = process.stderr.read()
-                print("========= STDOUT =========")
-                print(stdout_data)
-                print("========= END =========")
-                print("========= STDERR =========")
-                print(stderr_data)
-                print("========= END =========")
-                print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
-                with open(log_file_path, "r") as file:
-                    print(file.read())
-                print("========= END =========")
+                process.wait()
+            stdout_data = process.stdout.read()
+            stderr_data = process.stderr.read()
+            print("========= STDOUT =========")
+            print(stdout_data)
+            print("========= END =========")
+            print("========= STDERR =========")
+            print(stderr_data)
+            print("========= END =========")
+            print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+            with open(log_file_path, "r") as file:
+                print(file.read())
+            print("========= END =========")
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)

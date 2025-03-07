@@ -223,7 +223,6 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
