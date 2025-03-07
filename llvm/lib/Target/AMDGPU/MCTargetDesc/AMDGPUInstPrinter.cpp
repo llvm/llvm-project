@@ -79,11 +79,12 @@ void AMDGPUInstPrinter::printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   // KIMM64
+  // This part needs to align with AMDGPUInstPrinter::printImmediate64.
   uint64_t Imm = MI->getOperand(OpNo).getImm();
-  if (Hi_32(Imm))
-    O << formatHex(Lo_32(Imm) ? Imm : Imm >> 32);
+  if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+    O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
   else
-    O << "lit64(" << formatHex(Imm) << ')';
+    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
 }
 
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
@@ -685,20 +686,20 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
-  else if (IsFP && AMDGPU::isValid32BitLiteral(Imm, true))
-    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
   else {
-    assert(isUInt<32>(Imm) || isInt<32>(Imm) ||
-           STI.hasFeature(AMDGPU::Feature64BitLiterals));
-
-    if (IsFP && !Hi_32(Imm) && STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
-      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+    // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
+    if (IsFP) {
+      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Imm))
+        O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+      else
+        O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
       return;
     }
 
-    // In rare situations, we will have a 32-bit literal in a 64-bit
-    // operand. This is technically allowed for the encoding of s_mov_b64.
-    O << formatHex(static_cast<uint64_t>(Imm));
+    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Hi_32(Imm))
+      O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
+    else
+      O << formatHex(static_cast<uint64_t>(Imm));
   }
 }
 

@@ -123,7 +123,7 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s[[LO:[0-9]+]], 0
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s[[HI:[0-9]+]], 1.0
-; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x3f80000000000000
+; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], lit64(0x3f80000000000000)
 ; PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[LO]]:[[HI]]]{{$}}
 define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -139,7 +139,7 @@ define amdgpu_kernel void @fadd_v2_v_lit_lo0(ptr addrspace(1) %a) {
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 1.0
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 2.0
-; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x400000003f800000
+; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], lit64(0x400000003f800000)
 ; PACKED:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fadd_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -333,7 +333,7 @@ define amdgpu_kernel void @fmul_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; GFX900-DAG: v_mul_f32_e32 v{{[0-9]+}}, 0x40400000, v{{[0-9]+}}
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
 ; NOTGFX1250-PACKED-DAG: s_mov_b32 s{{[0-9]+}}, 0x40400000
-; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], 0x4040000040800000
+; GFX1250:               s_mov_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], lit64(0x4040000040800000)
 ; PACKED:     v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fmul_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -462,7 +462,7 @@ define amdgpu_kernel void @fma_v2_v_lit_splat(ptr addrspace(1) %a) {
 ; NOTGFX1250-PACKED-SDAG-DAG: s_mov_b32 s{{[0-9]+}}, 4.0
 ; NOTGFX1250-PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 1.0
 ; NOTGFX1250-PACKED-SDAG-DAG: {{v_mov_b32_e32|s_mov_b32}} {{[vs]}}{{[0-9]+}}, 2.0
-; GFX1250:         s_mov_b64 s[{{[0-9:]+}}], 0x4040000040800000
+; GFX1250:         s_mov_b64 s[{{[0-9:]+}}], lit64(0x4040000040800000)
 ; PACKED:          v_pk_fma_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[{{[0-9:]+}}], {{[vs]}}[{{[0-9:]+}}]{{$}}
 define amdgpu_kernel void @fma_v2_v_unfoldable_lit(ptr addrspace(1) %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

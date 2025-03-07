@@ -1597,6 +1597,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
   }
 
+  bool has64BitLiterals() const {
+    return getFeatureBits()[AMDGPU::Feature64BitLiterals];
+  }
+
   bool hasFlatOffsets() const {
     return getFeatureBits()[AMDGPU::FeatureFlatInstOffsets];
   }
@@ -2214,7 +2218,7 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
   }
 
   bool Allow64Bit = (type == MVT::i64 || type == MVT::f64) &&
-                    AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals];
+                    AsmParser->has64BitLiterals();
 
   if (!Imm.IsFPImm) {
     // We got int literal token.
@@ -2387,8 +2391,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       if (AMDGPU::isSISrcFPOperand(InstDesc, OpNum)) { // Expected 64-bit fp operand
         // For fp operands we check if low 32 bits are zeros
         if (Literal.getLoBits(32) != 0 &&
-            (InstDesc.getSize() != 4 ||
-             !AsmParser->getFeatureBits()[AMDGPU::Feature64BitLiterals]) &&
+            (InstDesc.getSize() != 4 || !AsmParser->has64BitLiterals()) &&
             OpTy != AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED) {
           const_cast<AMDGPUAsmParser *>(AsmParser)->Warning(Inst.getLoc(),
           "Can't encode literal as exact 64-bit floating-point operand. "
@@ -2511,8 +2514,25 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
-  case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
+      Inst.addOperand(MCOperand::createImm(Val));
+      setImmKindConst();
+      return;
+    }
+
+    // When the 32 MSBs are not zero (effectively means it can't be safely
+    // truncated to uint32_t), if the target doesn't support 64-bit literals, or
+    // the lit modifier is explicitly used, we need to truncate it to the 32
+    // LSBs.
+    if (Hi_32(Val) && (!AsmParser->has64BitLiterals() || getModifiers().Lit))
+      Val = Lo_32(Val);
+
+    Inst.addOperand(MCOperand::createImm(Val));
+    setImmKindLiteral();
+    return;
+
+  case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP64_DEFERRED:
@@ -2522,9 +2542,23 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-    if ((isInt<32>(Val) || isUInt<32>(Val)) && !getModifiers().Lit64)
-      Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? (uint64_t)Val << 32
-                                                      : Lo_32(Val);
+    // If the target doesn't support 64-bit literals, we need to use the
+    // constant as the high 32 MSBs of a double-precision floating point value.
+    if (!AsmParser->has64BitLiterals()) {
+      Val = static_cast<uint64_t>(Val) << 32;
+    } else {
+      // Now the target does support 64-bit literals, there are two cases
+      // where we still want to use src_literal encoding:
+      // 1) explicitly forced by using lit modifier;
+      // 2) the value is a valid 32-bit representation (signed or unsigned),
+      // meanwhile not forced by lit64 modifier.
+      if (getModifiers().Lit) {
+        Val = static_cast<uint64_t>(Val) << 32;
+      } else if (!getModifiers().Lit64 && (isInt<32>(Val) || isUInt<32>(Val))) {
+        Val = isInt<32>(Val) ? static_cast<int32_t>(Val) : Lo_32(Val);
+        Val = static_cast<uint64_t>(Val) << 32;
+      }
+    }
 
     Inst.addOperand(MCOperand::createImm(Val));
     setImmKindLiteral();
@@ -3517,7 +3551,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   if (Lit64) {
     if (!skipToken(AsmToken::LParen, "expected left paren after lit64"))
       return ParseStatus::Failure;
-    if (!getFeatureBits()[Feature64BitLiterals])
+    if (!has64BitLiterals())
       return Error(Loc, "lit64 is not supported on this GPU");
   }
 
@@ -5091,8 +5125,7 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
       bool IsValid32Op = AMDGPU::isValid32BitLiteral(Value, IsFP64);
 
       if (!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
-          !IsForcedFP64 &&
-          (!getFeatureBits()[Feature64BitLiterals] || Desc.getSize() != 4)) {
+          !IsForcedFP64 && (!has64BitLiterals() || Desc.getSize() != 4)) {
         Error(getLitLoc(Operands), "invalid operand for instruction");
         return false;
       }
