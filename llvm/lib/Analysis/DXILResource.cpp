@@ -9,6 +9,7 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -20,6 +21,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include "llvm/IR/DiagnosticInfo.h"
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -858,8 +860,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
     }
   }
 
-  // An entry that is not in the map is considered unknown so its wasted
-  // overhead and increased complexity to keep it so it should be removed.
+  // An entry that is not in the map is considered unknown so its wasted overhead
+  // and increased complexity to keep an entry explicitly marked unknown
   const auto RemoveEnd = std::remove_if(
       CounterDirections.begin(), CounterDirections.end(), [](const auto &Item) {
         return Item.second == ResourceCounterDirection::Unknown;
@@ -883,8 +885,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
   if (DuplicateEntry == CounterDirections.end())
     return;
 
-  // TODO: Emit an error message
-  assert(CounterDirections.size() == 1 && "dups found");
+  StringRef Message = "RWStructuredBuffers may increment or decrement their counters, but not both.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
 bool DXILResourceCounterDirectionMap::invalidate(
