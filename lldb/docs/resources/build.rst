@@ -340,7 +340,8 @@ On macOS the LLDB test suite requires libc++. Either add
   code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
 * ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
   functional without setting up code-signing.
-
+* ``LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS:BOOL``: This helps with determining missing
+  packages or modules at configuration time.
 
 .. _CMakeCaches:
 
@@ -371,6 +372,7 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;lldb" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
           llvm-project/llvm
 
   $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
@@ -387,6 +389,7 @@ Build LLDB standalone for development with Xcode:
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
           -DLLVM_ENABLE_PROJECTS="clang" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
           llvm-project/llvm
   $ ninja -C /path/to/llvm-build
 
