@@ -756,4 +756,8 @@ Symbols:
   // But it should be created on demand.
   module_symtab = module_sp->GetSymtab(/*can_create=*/true);
   ASSERT_NE(module_symtab, nullptr);
+
+  // And we should be able to get it again once it has been created.
+  Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, cached_module_symtab);
 }
