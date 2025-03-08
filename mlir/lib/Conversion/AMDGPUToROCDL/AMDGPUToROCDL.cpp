@@ -178,6 +178,7 @@ struct FatRawBufferCastLowering
   LogicalResult
   matchAndRewrite(FatRawBufferCastOp op, FatRawBufferCastOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+                    /*
     Location loc = op.getLoc();
     Value memRef = adaptor.getSource();
     Value unconvertedMemref = op.getSource();
@@ -222,7 +223,7 @@ struct FatRawBufferCastLowering
 
     Value fatPtr = makeBufferRsrc(
         rewriter, loc, basePointer, numRecords, adaptor.getBoundsCheck(),
-        chipset, adaptor.getCacheSwizzleStride(), /*addressSpace=*/7);
+        chipset, adaptor.getCacheSwizzleStride(), /*addressSpace=7);
 
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
@@ -241,6 +242,8 @@ struct FatRawBufferCastLowering
     }
     rewriter.replaceOp(op, result);
     return success();
+    */
+   return failure();
   }
 };
 

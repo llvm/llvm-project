@@ -59,7 +59,7 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
-    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
+    Location loc, MemRefType type, ValueRange memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
 
   auto [strides, offset] = type.getStridesAndOffset();
@@ -217,34 +217,20 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     Location loc, MemRefType memRefType, Value allocatedPtr, Value alignedPtr,
     ArrayRef<Value> sizes, ArrayRef<Value> strides,
     ConversionPatternRewriter &rewriter) const {
-  auto structType = typeConverter->convertType(memRefType);
-  auto memRefDescriptor = MemRefDescriptor::poison(rewriter, loc, structType);
-
-  // Field 1: Allocated pointer, used for malloc/free.
-  memRefDescriptor.setAllocatedPtr(rewriter, loc, allocatedPtr);
-
-  // Field 2: Actual aligned pointer to payload.
-  memRefDescriptor.setAlignedPtr(rewriter, loc, alignedPtr);
-
-  // Field 3: Offset in aligned pointer.
+  SmallVector<Value> elements;
+  elements.push_back(allocatedPtr);
+  elements.push_back(alignedPtr);
   Type indexType = getIndexType();
-  memRefDescriptor.setOffset(
-      rewriter, loc, createIndexAttrConstant(rewriter, loc, indexType, 0));
-
-  // Fields 4: Sizes.
-  for (const auto &en : llvm::enumerate(sizes))
-    memRefDescriptor.setSize(rewriter, loc, en.index(), en.value());
-
-  // Field 5: Strides.
-  for (const auto &en : llvm::enumerate(strides))
-    memRefDescriptor.setStride(rewriter, loc, en.index(), en.value());
-
-  return memRefDescriptor;
+  elements.push_back(createIndexAttrConstant(rewriter, loc, indexType, 0));
+  llvm::append_range(elements, sizes);
+  llvm::append_range(elements, strides);
+  return MemRefDescriptor(elements);
 }
 
 LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     OpBuilder &builder, Location loc, TypeRange origTypes,
     SmallVectorImpl<Value> &operands, bool toDynamic) const {
+  // TODO: Pass unpacked structs to this function.
   assert(origTypes.size() == operands.size() &&
          "expected as may original types as operands");
 
@@ -253,7 +239,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   SmallVector<unsigned> unrankedAddressSpaces;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
     if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
-      unrankedMemrefs.emplace_back(operands[i]);
+      unrankedMemrefs.push_back(UnrankedMemRefDescriptor::fromPackedStruct(builder, loc, operands[i]));
       FailureOr<unsigned> addressSpace =
           getTypeConverter()->getMemRefAddressSpace(memRefType);
       if (failed(addressSpace))
@@ -294,7 +280,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     if (!isa<UnrankedMemRefType>(type))
       continue;
     Value allocationSize = sizes[unrankedMemrefPos++];
-    UnrankedMemRefDescriptor desc(operands[i]);
+    UnrankedMemRefDescriptor desc = UnrankedMemRefDescriptor::fromPackedStruct(builder, loc, operands[i]);
 
     // Allocate memory, copy, and free the source if necessary.
     Value memory =
@@ -315,16 +301,15 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     // times, attempting to modify its pointer can lead to memory leaks
     // (allocated twice and overwritten) or double frees (the caller does not
     // know if the descriptor points to the same memory).
-    Type descriptorType = getTypeConverter()->convertType(type);
-    if (!descriptorType)
+    SmallVector<Type> descriptorTypes;
+    if (failed(getTypeConverter()->convertType(type, descriptorTypes)))
       return failure();
     auto updatedDesc =
-        UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
+        UnrankedMemRefDescriptor::poison(builder, loc, descriptorTypes);
     Value rank = desc.rank(builder, loc);
     updatedDesc.setRank(builder, loc, rank);
     updatedDesc.setMemRefDescPtr(builder, loc, memory);
-
-    operands[i] = updatedDesc;
+    operands[i] = updatedDesc.packStruct(builder, loc);
   }
 
   return success();

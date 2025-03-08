@@ -1179,8 +1179,10 @@ struct NVGPUTmaCreateDescriptorOpLowering
 
     Value tensorElementType =
         elementTypeAsLLVMConstant(b, op.getTensor().getType().getElementType());
-    auto promotedOperands = getTypeConverter()->promoteOperands(
-        b.getLoc(), op->getOperands(), adaptor.getOperands(), b);
+    llvm_unreachable("TODO");
+    SmallVector<Value> promotedOperands;
+    //auto promotedOperands = getTypeConverter()->promoteOperands(
+    //    b.getLoc(), op->getOperands(), adaptor.getOperands(), b);
 
     Value boxArrayPtr = b.create<LLVM::AllocaOp>(llvmPointerType, llvmInt64Type,
                                                  makeI64Const(b, 5));

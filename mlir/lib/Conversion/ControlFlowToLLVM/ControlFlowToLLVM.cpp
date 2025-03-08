@@ -125,24 +125,35 @@ static FailureOr<Block *> getConvertedBlock(ConversionPatternRewriter &rewriter,
   return rewriter.applySignatureConversion(block, *conversion, converter);
 }
 
+static SmallVector<Value> flattenValueRanges(ArrayRef<ValueRange> ranges) {
+  SmallVector<Value> result;
+  for (ValueRange range : ranges)
+    llvm::append_range(result, range);
+  return result;
+}
+
 /// Convert the destination block signature (if necessary) and lower the branch
 /// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
   using ConvertOpToLLVMPattern<cf::BranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<cf::BranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::BranchOp op, typename cf::BranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::BranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedOperands =
+        flattenValueRanges(adaptor.getOperands());
     FailureOr<Block *> convertedBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getSuccessor(),
-                          TypeRange(adaptor.getOperands()));
+                          TypeRange(ValueRange(flattenedOperands)));
     if (failed(convertedBlock))
       return failure();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, adaptor.getOperands(), *convertedBlock);
+        op, flattenedOperands, *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     return success();
   }
 };
@@ -151,28 +162,33 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
 /// branch op to llvm.cond_br.
 struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   using ConvertOpToLLVMPattern<cf::CondBranchOp>::ConvertOpToLLVMPattern;
+  using Adaptor =
+      typename ConvertOpToLLVMPattern<cf::CondBranchOp>::OneToNOpAdaptor;
 
   LogicalResult
-  matchAndRewrite(cf::CondBranchOp op,
-                  typename cf::CondBranchOp::Adaptor adaptor,
+  matchAndRewrite(cf::CondBranchOp op, Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    SmallVector<Value> flattenedTrueDestOperands =
+        flattenValueRanges(adaptor.getTrueDestOperands());
     FailureOr<Block *> convertedTrueBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getTrueDest(),
-                          TypeRange(adaptor.getTrueDestOperands()));
+                          TypeRange(ValueRange(flattenedTrueDestOperands)));
     if (failed(convertedTrueBlock))
       return failure();
+    SmallVector<Value> flattenedFalseDestOperands =
+        flattenValueRanges(adaptor.getFalseDestOperands());
     FailureOr<Block *> convertedFalseBlock =
         getConvertedBlock(rewriter, getTypeConverter(), op, op.getFalseDest(),
-                          TypeRange(adaptor.getFalseDestOperands()));
+                          TypeRange(ValueRange(flattenedFalseDestOperands)));
     if (failed(convertedFalseBlock))
       return failure();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getCondition(), *convertedTrueBlock,
-        adaptor.getTrueDestOperands(), *convertedFalseBlock,
-        adaptor.getFalseDestOperands());
+        op, llvm::getSingleElement(adaptor.getCondition()), *convertedTrueBlock,
+        flattenedTrueDestOperands, *convertedFalseBlock,
+        flattenedFalseDestOperands);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     return success();
   }
 };

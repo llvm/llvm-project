@@ -140,15 +140,23 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   for (auto [index, argType] : llvm::enumerate(type.getInputs())) {
     Value arg = wrapperFuncOp.getArgument(index + argOffset);
     if (auto memrefType = dyn_cast<MemRefType>(argType)) {
+      SmallVector<Type> convertedType;
+      LogicalResult status = typeConverter.convertMemRefType(memrefType, convertedType, /*packed=*/true);
+      (void)status;
+      assert(succeeded(status) && "failed to convert memref type");
       Value loaded = rewriter.create<LLVM::LoadOp>(
-          loc, typeConverter.convertType(memrefType), arg);
-      MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
+          loc, llvm::getSingleElement(convertedType), arg);
+      llvm::append_range(args, MemRefDescriptor::fromPackedStruct(rewriter, loc, loaded).getElements());
       continue;
     }
-    if (isa<UnrankedMemRefType>(argType)) {
+    if (auto unrankedMemrefType = dyn_cast<UnrankedMemRefType>(argType)) {
+      SmallVector<Type> convertedType;
+      LogicalResult status = typeConverter.convertUnrankedMemRefType(unrankedMemrefType, convertedType, /*packed=*/true);
+      (void)status;
+      assert(succeeded(status) && "failed to convert memref type");
       Value loaded = rewriter.create<LLVM::LoadOp>(
-          loc, typeConverter.convertType(argType), arg);
-      UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
+          loc, llvm::getSingleElement(convertedType), arg);
+      llvm::append_range(args, UnrankedMemRefDescriptor::fromPackedStruct(rewriter, loc, loaded).getElements());
       continue;
     }
 
@@ -231,14 +239,12 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
       numToDrop = memRefType
                       ? MemRefDescriptor::getNumUnpackedValues(memRefType)
                       : UnrankedMemRefDescriptor::getNumUnpackedValues();
-      Value packed =
-          memRefType
-              ? MemRefDescriptor::pack(builder, loc, typeConverter, memRefType,
-                                       wrapperArgsRange.take_front(numToDrop))
-              : UnrankedMemRefDescriptor::pack(
-                    builder, loc, typeConverter, unrankedMemRefType,
-                    wrapperArgsRange.take_front(numToDrop));
-
+      Value packed;
+      if (memRefType) {
+        packed = MemRefDescriptor(wrapperArgsRange.take_front(numToDrop)).packStruct(builder, loc);
+      } else {
+        packed = UnrankedMemRefDescriptor(wrapperArgsRange.take_front(numToDrop)).packStruct(builder, loc);
+      }
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
@@ -515,9 +521,10 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
   using ConvertOpToLLVMPattern<CallOpType>::ConvertOpToLLVMPattern;
   using Super = CallOpInterfaceLowering<CallOpType>;
   using Base = ConvertOpToLLVMPattern<CallOpType>;
+  using Adaptor = typename ConvertOpToLLVMPattern<CallOpType>::OneToNOpAdaptor;
 
   LogicalResult matchAndRewriteImpl(CallOpType callOp,
-                                    typename CallOpType::Adaptor adaptor,
+                                    Adaptor adaptor,
                                     ConversionPatternRewriter &rewriter,
                                     bool useBarePtrCallConv = false) const {
     // Pack the result types into a struct.
@@ -579,7 +586,18 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
       return failure();
     }
 
-    rewriter.replaceOp(callOp, results);
+    SmallVector<SmallVector<Value>> unpackedResults;
+    for (auto it : llvm::zip_equal(resultTypes, results)) {
+      SmallVector<Value> &result = unpackedResults.emplace_back();
+      if (isa<MemRefType>(std::get<0>(it))) {
+        llvm::append_range(result, MemRefDescriptor::fromPackedStruct(rewriter, callOp.getLoc(), std::get<1>(it)).getElements());
+      } else if (isa<UnrankedMemRefType>(std::get<0>(it))) {
+        llvm::append_range(result, UnrankedMemRefDescriptor::fromPackedStruct(rewriter, callOp.getLoc(), std::get<1>(it)).getElements());
+      } else {
+        result.push_back(std::get<1>(it));
+      }
+    }
+    rewriter.replaceOpWithMultiple(callOp, unpackedResults);
     return success();
   }
 };
@@ -593,7 +611,7 @@ public:
         symbolTable(symbolTable) {}
 
   LogicalResult
-  matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
+  matchAndRewrite(func::CallOp callOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     bool useBarePtrCallConv = false;
     if (getTypeConverter()->getOptions().useBarePtrCallConv) {
@@ -623,7 +641,7 @@ struct CallIndirectOpLowering
   using Super::Super;
 
   LogicalResult
-  matchAndRewrite(func::CallIndirectOp callIndirectOp, OpAdaptor adaptor,
+  matchAndRewrite(func::CallIndirectOp callIndirectOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return matchAndRewriteImpl(callIndirectOp, adaptor, rewriter);
   }
@@ -666,7 +684,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
   using ConvertOpToLLVMPattern<func::ReturnOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(func::ReturnOp op, OpAdaptor adaptor,
+  matchAndRewrite(func::ReturnOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     unsigned numArguments = op.getNumOperands();
@@ -680,20 +698,36 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
       // be returned from the memref descriptor.
       for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
         Type oldTy = std::get<0>(it).getType();
-        Value newOperand = std::get<1>(it);
+        ValueRange adaptorVal = std::get<1>(it);
         if (isa<MemRefType>(oldTy) && getTypeConverter()->canConvertToBarePtr(
                                           cast<BaseMemRefType>(oldTy))) {
-          MemRefDescriptor memrefDesc(newOperand);
-          newOperand = memrefDesc.allocatedPtr(rewriter, loc);
+          MemRefDescriptor memrefDesc(adaptorVal);
+          updatedOperands.push_back( memrefDesc.allocatedPtr(rewriter, loc));
         } else if (isa<UnrankedMemRefType>(oldTy)) {
           // Unranked memref is not supported in the bare pointer calling
           // convention.
           return failure();
+        } else {
+          assert(adaptorVal.size() == 1 && "1:N conversion not supported for non-memref types");
+          updatedOperands.push_back(adaptorVal.front());
         }
-        updatedOperands.push_back(newOperand);
       }
     } else {
-      updatedOperands = llvm::to_vector<4>(adaptor.getOperands());
+      // Pack operands.
+      for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
+        Value operand = std::get<0>(it);
+        ValueRange adaptorVal = std::get<1>(it);
+        if (isa<MemRefType>(operand.getType())) {
+          MemRefDescriptor memrefDesc(adaptorVal);
+          updatedOperands.push_back(memrefDesc.packStruct(rewriter, loc));
+        } else if (isa<UnrankedMemRefType>(operand.getType())) {
+          UnrankedMemRefDescriptor unrankedMemrefDesc(adaptorVal);
+          updatedOperands.push_back(unrankedMemrefDesc.packStruct(rewriter, loc));
+        } else {
+          assert(adaptorVal.size() == 1 && "1:N conversion not supported for non-memref types");
+          updatedOperands.push_back(adaptorVal.front());
+        }
+      }
       (void)copyUnrankedDescriptors(rewriter, loc, op.getOperands().getTypes(),
                                     updatedOperands,
                                     /*toDynamic=*/true);

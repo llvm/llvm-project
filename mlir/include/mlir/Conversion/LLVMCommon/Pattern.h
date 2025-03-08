@@ -76,7 +76,7 @@ protected:
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
+  Value getStridedElementPtr(Location loc, MemRefType type, ValueRange memRefDesc,
                              ValueRange indices,
                              ConversionPatternRewriter &rewriter) const;
 
