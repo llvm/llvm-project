@@ -199,12 +199,12 @@ class LldbGdbServerTestCase(
         if not self.isRISCV():
             self.assertIn("flags", generic_regs)
 
-        if self.isRISCV():
-            # Special RISC-V register for a return address
+        if self.isRISCV() or self.isAArch64() or self.isARM():
+            # Specific register for a return address
             self.assertIn("ra", generic_regs)
 
-            # RISC-V's function arguments registers
-            for i in range(1, 9):
+            # Function arguments registers
+            for i in range(1, 5 if self.isARM() else 9):
                 self.assertIn(f"arg{i}", generic_regs)
 
     def test_qRegisterInfo_contains_at_least_one_register_set(self):
