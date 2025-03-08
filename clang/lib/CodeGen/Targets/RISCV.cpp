@@ -389,7 +389,7 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
 bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
                                              llvm::Type *&VLSType) const {
   // No riscv_vls_cc attribute.
-  if (ABIVLen == 1)
+  if (ABIVLen == 0)
     return false;
 
   // Legal struct for VLS calling convention should fulfill following rules:

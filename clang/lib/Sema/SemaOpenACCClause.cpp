@@ -509,11 +509,6 @@ bool checkAlreadyHasClauseOfKind(
 bool checkValidAfterDeviceType(
     SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
     const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is implemented for everything but 'routine', so treat as 'fine' for
-  // that.
-  if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
-    return false;
-
   // OpenACC3.3: Section 2.4: Clauses that precede any device_type clause are
   // default clauses.  Clauses that follow a device_type clause up to the end of
   // the directive or up to the next device_type clause are device-specific
@@ -597,6 +592,19 @@ bool checkValidAfterDeviceType(
     switch (NewClause.getClauseKind()) {
     case OpenACCClauseKind::Async:
     case OpenACCClauseKind::Wait:
+      return false;
+    default:
+      break;
+    }
+  } else if (NewClause.getDirectiveKind() == OpenACCDirectiveKind::Routine) {
+    // OpenACC 3.3 section 2.15: Only the 'gang', 'worker', 'vector', 'seq', and
+    // 'bind' clauses may follow a device_type clause.
+    switch (NewClause.getClauseKind()) {
+    case OpenACCClauseKind::Gang:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::Vector:
+    case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Bind:
       return false;
     default:
       break;
@@ -1256,10 +1264,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions implemented properly on everything except 'routine'.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Routine)
-    return isNotImplemented();
-
   // OpenACC 3.3 2.14.3: Two instances of the same clause may not appear on the
   // same directive.
   if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
@@ -2056,11 +2060,8 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return nullptr;
   }
 
-  if (const auto *DevTypeClause =
-          llvm::find_if(ExistingClauses,
-                        [&](const OpenACCClause *C) {
-                          return isa<OpenACCDeviceTypeClause>(C);
-                        });
+  if (const auto *DevTypeClause = llvm::find_if(
+          ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
       DevTypeClause != ExistingClauses.end()) {
     if (checkValidAfterDeviceType(
             *this, *cast<OpenACCDeviceTypeClause>(*DevTypeClause), Clause))
