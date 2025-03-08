@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/locale-macros.h"
 #include "src/locale/freelocale.h"
 #include "src/locale/newlocale.h"
 #include "src/strings/strcasecmp_l.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCaseCmpLTest, Case) {
-  locale_t locale = newlocale(LC_ALL, "C", nullptr);
-  ASSERT_EQ(strcasecmp_l("hello", "HELLO", locale), 0);
-  ASSERT_LT(strcasecmp_l("hello1", "hello2", locale), 0);
-  ASSERT_GT(strcasecmp_l("hello2", "hello1", locale), 0);
-  freelocale(locale);
+  locale_t locale = LIBC_NAMESPACE::newlocale(LC_ALL, "C", nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::strcasecmp_l("hello", "HELLO", locale), 0);
+  ASSERT_LT(LIBC_NAMESPACE::strcasecmp_l("hello1", "hello2", locale), 0);
+  ASSERT_GT(LIBC_NAMESPACE::strcasecmp_l("hello2", "hello1", locale), 0);
+  LIBC_NAMESPACE::freelocale(locale);
 }

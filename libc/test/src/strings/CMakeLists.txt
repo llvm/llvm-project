@@ -81,6 +81,7 @@ add_libc_test(
   SRCS
     strcasecmp_l_test.cpp
   DEPENDS
+    libc.include.locale
     libc.src.locale.freelocale
     libc.src.locale.newlocale
     libc.src.strings.strcasecmp_l
@@ -103,6 +104,7 @@ add_libc_test(
   SRCS
     strncasecmp_l_test.cpp
   DEPENDS
+    libc.include.locale
     libc.src.locale.freelocale
     libc.src.locale.newlocale
     libc.src.strings.strncasecmp_l
