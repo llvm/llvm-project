@@ -15,7 +15,6 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,7 +29,6 @@
 
 #include <functional>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 
 namespace lldb_private {
