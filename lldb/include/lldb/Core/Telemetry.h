@@ -156,60 +156,6 @@ private:
   static std::unique_ptr<TelemetryManager> g_instance;
 };
 
-/// Helper RAII class for collecting telemetry.
-template <typename Info> struct ScopedDispatcher {
-  // The debugger pointer is optional because we may not have a debugger yet.
-  // In that case, caller must set the debugger later.
-  ScopedDispatcher(Debugger *debugger = nullptr) {
-    // Start the timer.
-    m_start_time = std::chrono::steady_clock::now();
-    debugger = debugger;
-  }
-  ScopedDispatcher(llvm::unique_function<void(Info *info)> final_callback,
-                   Debugger *debugger = nullptr)
-      : m_final_callback(std::move(final_callback)) {
-    // Start the timer.
-    m_start_time = std::chrono::steady_clock::now();
-    this->debugger = debugger;
-  }
-
-  void SetDebugger(Debugger *debugger) { this->debugger = debugger; }
-
-  void DispatchOnExit(llvm::unique_function<void(Info *info)> final_callback) {
-    // We probably should not be overriding previously set cb.
-    assert(!m_final_callback);
-    m_final_callback = std::move(final_callback);
-  }
-
-  void DispatchNow(llvm::unique_function<void(Info *info)> populate_fields_cb) {
-    TelemetryManager *manager = TelemetryManager::GetInstance();
-    if (!manager->GetConfig()->EnableTelemetry)
-      return;
-    Info info;
-    // Populate the common fields we know aboutl
-    info.start_time = m_start_time;
-    info.end_time = std::chrono::steady_clock::now();
-    info.debugger = debugger;
-    // The callback will set the rest.
-    populate_fields_cb(&info);
-    // And then we dispatch.
-    if (llvm::Error er = manager->dispatch(&info)) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),
-                     "Failed to dispatch entry of type: {0}", info.getKind());
-    }
-  }
-
-  ~ScopedDispatcher() {
-    if (m_final_callback)
-      DispatchNow(std::move(m_final_callback));
-  }
-
-private:
-  SteadyTimePoint m_start_time;
-  llvm::unique_function<void(Info *info)> m_final_callback;
-  Debugger *debugger;
-};
-
 } // namespace telemetry
 } // namespace lldb_private
 #endif // LLDB_CORE_TELEMETRY_H
