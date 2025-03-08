@@ -10,9 +10,10 @@
 .section ._start,"ax",@progbits
 _start:
 jmp test_simple
-jmp .Llocal
-jmp .Llocal_within_symbol
+.quad .Lanonymous
+.quad .Lanonymous_within_symbol
 jmp test_shared
+.quad test_local
 .size _start, .-_start
 
 .globl test_simple
@@ -25,6 +26,7 @@ jmp test_from_unsized
 
 # SIMPLE:      live symbol: test_simple
 # SIMPLE-NEXT: >>> kept live by _start
+# SIMPLE-NOT:  >>>
 
 ## Live only by being a member of .test_simple
 .globl test_incidental
@@ -37,6 +39,7 @@ jmp test_incidental
 # INCIDENTAL-NEXT: >>> kept live by {{.*}}.o:(.test_simple)
 # INCIDENTAL-NEXT: >>> kept live by test_simple
 # INCIDENTAL-NEXT: >>> kept live by _start
+# INCIDENTAL-NOT:  >>>
 
 ## Reached from a reference in section .test_simple directly, since test_simple is an unsized symbol.
 .globl test_from_unsized
@@ -50,6 +53,7 @@ jmp test_from_unsized
 # FROM-UNSIZED-NEXT: >>> kept live by {{.*}}.o:(.test_simple)
 # FROM-UNSIZED-NEXT: >>> kept live by test_simple
 # FROM-UNSIZED-NEXT: >>> kept live by _start
+# FROM-UNSIZED-NOT:  >>>
 
 ## Symbols in dead sections are dead and not reported.
 .globl test_dead
@@ -85,36 +89,52 @@ jmp test_retained
 
 # RETAINED:      live symbol: test_retained
 # RETAINED-NEXT: >>> kept live by {{.*}}:(.test_retained)
+# RETAINED-NOT:  >>>
 
-## Relocs that reference offsets from sections (e.g., from local symbols) are considered to point to the section if no enclosing symbol exists.
+## Relocs that reference offsets from sections (e.g., from anonymous symbols) are considered to point to the section if no enclosing symbol exists.
 
 .globl test_section_offset
 .section .test_section_offset,"ax",@progbits
 test_section_offset:
 jmp test_section_offset
-.Llocal:
+.Lanonymous:
 jmp test_section_offset
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_section_offset | FileCheck %s --check-prefix=SECTION-OFFSET
 
-# SECTION-OFFSET:        live symbol: test_section_offset
-# SECTION-OFFSET-NEXT:   >>> kept live by {{.*}}:(.test_section_offset)
-# SECTION-OFFSET-NEXT:   >>> kept live by _start
+# SECTION-OFFSET:      live symbol: test_section_offset
+# SECTION-OFFSET-NEXT: >>> kept live by {{.*}}:(.test_section_offset)
+# SECTION-OFFSET-NEXT: >>> kept live by _start
+# SECTION-OFFSET-NOT:  >>>
 
-## Relocs that reference offsets from sections (e.g., from local symbols) are considered to point to the enclosing symbol if one exists.
+## Relocs that reference offsets from sections (e.g., from anonymous symbols) are considered to point to the enclosing symbol if one exists.
 
 .globl test_section_offset_within_symbol
 .section .test_section_offset_within_symbol,"ax",@progbits
 test_section_offset_within_symbol:
 jmp test_section_offset_within_symbol
-.Llocal_within_symbol:
+.Lanonymous_within_symbol:
 jmp test_section_offset_within_symbol
 .size test_section_offset_within_symbol, .-test_section_offset_within_symbol
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_section_offset_within_symbol | FileCheck %s --check-prefix=SECTION-OFFSET-WITHIN-SYMBOL
 
-# SECTION-OFFSET-WITHIN-SYMBOL:        live symbol: test_section_offset_within_symbol
-# SECTION-OFFSET-WITHIN-SYMBOL-NEXT:   >>> kept live by _start
+# SECTION-OFFSET-WITHIN-SYMBOL:      live symbol: test_section_offset_within_symbol
+# SECTION-OFFSET-WITHIN-SYMBOL-NEXT: >>> kept live by _start
+# SECTION-OFFSET-WITHIN-SYMBOL-NOT:  >>>
+
+## Local symbols can be queried just like global symbols.
+
+.section .test_local,"ax",@progbits
+test_local:
+jmp test_local
+.size test_local, .-test_local
+
+# RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_local | FileCheck %s --check-prefix=LOCAL
+
+# LOCAL:      live symbol: {{.*}}:(test_local)
+# LOCAL-NEXT: >>> kept live by _start
+# LOCAL-NOT:  >>>
 
 ## Shared symbols
 
@@ -122,6 +142,7 @@ jmp test_section_offset_within_symbol
 
 # SHARED:      live symbol: test_shared
 # SHARED-NEXT: >>> kept live by _start
+# SHARED-NOT:  >>>
 
 ## Globs match multiple cases. Multiple --why-live flags union.
 
