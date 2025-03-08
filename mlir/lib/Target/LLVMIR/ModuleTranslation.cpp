@@ -1494,9 +1494,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
 
-  if (auto targetFeatures = func.getTargetFeatures())
-    llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
-
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
