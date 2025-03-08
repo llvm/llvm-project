@@ -60,7 +60,7 @@ struct SelectPass final : public impl::SelectPassBase<SelectPass> {
       return failure();
 
     if (selectCondName.empty())
-      return errorHandler("invalid select-cond-name");
+      return errorHandler("select-cond-name is empty");
 
     if (selectValues.size() != selectPipelines.size())
       return errorHandler("values and pipelines size mismatch");
