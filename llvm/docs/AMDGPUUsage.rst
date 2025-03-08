@@ -2320,6 +2320,9 @@ if needed.
   as position independent code. See :ref:`amdgpu-code-conventions` for
   information on conventions used in the isa generation.
 
+``.amdgpu.kernel.runtime.handle``
+  Symbols used for device enqueue.
+
 .. _amdgpu-note-records:
 
 Note Records
