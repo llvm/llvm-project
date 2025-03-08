@@ -86,12 +86,12 @@ void CaptureThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");
   diag(Lambda->getBeginLoc(),
-       "using lambda expressions to capture this and storing it in class "
+       "using lambda expressions to capture 'this' and storing it in class "
        "member will cause potential variable lifetime issue when the class "
        "instance is moved or copied")
       << Capture->getLocation();
   diag(Field->getLocation(),
-       "'std::function' that stores captured this and becomes invalid during "
+       "'std::function' that stores captured 'this' and becomes invalid during "
        "copying or moving",
        DiagnosticIDs::Note);
 }

@@ -18,14 +18,14 @@ struct Basic {
   Basic() : Captured([this]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: using lambda expressions to capture this and storing it in class member
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct AssignCapture {
   AssignCapture() : Captured([Self = this]() { static_cast<void>(Self); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: using lambda expressions to capture this and storing it in class member
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct DeleteMoveAndCopy {
@@ -52,7 +52,7 @@ struct DeleteCopyDefaultMove {
   DeleteCopyDefaultMove& operator=(DeleteCopyDefaultMove const&) = delete;
   DeleteCopyDefaultMove& operator=(DeleteCopyDefaultMove &&) = default;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct DeleteMoveDefaultCopy {
@@ -63,7 +63,7 @@ struct DeleteMoveDefaultCopy {
   DeleteMoveDefaultCopy& operator=(DeleteMoveDefaultCopy const&) = default;
   DeleteMoveDefaultCopy& operator=(DeleteMoveDefaultCopy &&) = delete;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct DeleteCopyMoveBase {
@@ -96,7 +96,7 @@ struct UserDefinedCopyMoveWithDefault1 {
   UserDefinedCopyMoveWithDefault1& operator=(UserDefinedCopyMoveWithDefault1 const&);
   UserDefinedCopyMoveWithDefault1& operator=(UserDefinedCopyMoveWithDefault1 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct UserDefinedCopyMoveWithDefault2 {
@@ -107,7 +107,7 @@ struct UserDefinedCopyMoveWithDefault2 {
   UserDefinedCopyMoveWithDefault2& operator=(UserDefinedCopyMoveWithDefault2 const&);
   UserDefinedCopyMoveWithDefault2& operator=(UserDefinedCopyMoveWithDefault2 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct UserDefinedCopyMoveWithDefault3 {
@@ -118,7 +118,7 @@ struct UserDefinedCopyMoveWithDefault3 {
   UserDefinedCopyMoveWithDefault3& operator=(UserDefinedCopyMoveWithDefault3 const&) = default;
   UserDefinedCopyMoveWithDefault3& operator=(UserDefinedCopyMoveWithDefault3 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
 
 struct UserDefinedCopyMoveWithDefault4 {
@@ -129,5 +129,5 @@ struct UserDefinedCopyMoveWithDefault4 {
   UserDefinedCopyMoveWithDefault4& operator=(UserDefinedCopyMoveWithDefault4 const&);
   UserDefinedCopyMoveWithDefault4& operator=(UserDefinedCopyMoveWithDefault4 &&) = default;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured this
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function' that stores captured 'this;
 };
