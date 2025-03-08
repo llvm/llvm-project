@@ -12,6 +12,8 @@
 
 #include "LowerToLLVM.h"
 
+#include <deque>
+
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -25,6 +27,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -603,6 +606,64 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
 }
 
+// The unreachable code is not lowered by applyPartialConversion function
+// since it traverses blocks in the dominance order. At the same time we
+// do need to lower such code - otherwise verification errors occur.
+// For instance, the next CIR code:
+//
+//    cir.func @foo(%arg0: !s32i) -> !s32i {
+//      %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+//      cir.if %4 {
+//        %5 = cir.const #cir.int<1> : !s32i
+//        cir.return %5 : !s32i
+//      } else {
+//        %5 = cir.const #cir.int<0> : !s32i
+//       cir.return %5 : !s32i
+//      }
+//     cir.return %arg0 : !s32i
+//    }
+//
+// contains an unreachable return operation (the last one). After the flattening
+// pass it will be placed into the unreachable block. And the possible error
+// after the lowering pass is: error: 'cir.return' op expects parent op to be
+// one of 'cir.func, cir.scope, cir.if ... The reason that this operation was
+// not lowered and the new parent is llvm.func.
+//
+// In the future we may want to get rid of this function and use DCE pass or
+// something similar. But now we need to guarantee the absence of the dialect
+// verification errors.
+static void collectUnreachable(mlir::Operation *parent,
+                               llvm::SmallVector<mlir::Operation *> &ops) {
+
+  llvm::SmallVector<mlir::Block *> unreachableBlocks;
+  parent->walk([&](mlir::Block *blk) { // check
+    if (blk->hasNoPredecessors() && !blk->isEntryBlock())
+      unreachableBlocks.push_back(blk);
+  });
+
+  std::set<mlir::Block *> visited;
+  for (mlir::Block *root : unreachableBlocks) {
+    // We create a work list for each unreachable block.
+    // Thus we traverse operations in some order.
+    std::deque<mlir::Block *> workList;
+    workList.push_back(root);
+
+    while (!workList.empty()) {
+      mlir::Block *blk = workList.back();
+      workList.pop_back();
+      if (visited.count(blk))
+        continue;
+      visited.emplace(blk);
+
+      for (mlir::Operation &op : *blk)
+        ops.push_back(&op);
+
+      for (mlir::Block *succ : blk->getSuccessors())
+        workList.push_back(succ);
+    }
+  }
+}
+
 void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   // Lower the module attributes to LLVM equivalents.
   if (mlir::Attribute tripleAttr =
@@ -630,7 +691,13 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMConstantOpLowering>(converter, patterns.getContext(),
                                             dl);
-  patterns.add<CIRToLLVMFuncOpLowering>(converter, patterns.getContext());
+  patterns.add<
+      // clang-format off
+               CIRToLLVMBrOpLowering,
+               CIRToLLVMFuncOpLowering,
+               CIRToLLVMTrapOpLowering
+      // clang-format on
+      >(converter, patterns.getContext());
 
   processCIRAttrs(module);
 
@@ -640,9 +707,36 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
 
-  if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+  llvm::SmallVector<mlir::Operation *> ops;
+  ops.push_back(module);
+  collectUnreachable(module, ops);
+
+  if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
-  }
+}
+
+mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
+    cir::BrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(op, adaptor.getOperands(),
+                                                op.getDest());
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
+    cir::TrapOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Location loc = op->getLoc();
+  rewriter.eraseOp(op);
+
+  rewriter.create<mlir::LLVM::Trap>(loc);
+
+  // Note that the call to llvm.trap is not a terminator in LLVM dialect.
+  // So we must emit an additional llvm.unreachable to terminate the current
+  // block.
+  rewriter.create<mlir::LLVM::UnreachableOp>(loc);
+
+  return mlir::success();
 }
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
@@ -650,6 +744,7 @@ std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
 }
 
 void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
+  mlir::populateCIRPreLoweringPasses(pm);
   pm.addPass(createConvertCIRToLLVMPass());
 }
 
@@ -670,6 +765,7 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
+  mlir::registerCIRDialectTranslation(*mlirCtx);
 
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
 
