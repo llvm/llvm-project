@@ -470,7 +470,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view with the default sentinel.");
+        !__it.__it_.valueless_by_exception(),
+        "Trying to compare a valueless iterator of concat_view with the default sentinel.");
     constexpr auto __last_idx = sizeof...(_Views) - 1;
     return __it.__it_.index() == __last_idx &&
            std::__unchecked_get<__last_idx>(__it.__it_) == ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
@@ -606,7 +607,8 @@ public:
             (__apply_drop_first<_Const, _Views...>::value)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
+        !__x.__it_.valueless_by_exception(),
+        "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
     size_t __ix = __x.__it_.index();
     __variant_detail::__visitation::__variant::__visit_value(
         [&](auto& __it_x) {
