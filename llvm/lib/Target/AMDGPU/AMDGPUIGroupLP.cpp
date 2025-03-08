@@ -1891,7 +1891,6 @@ private:
         }
       }
 
-      assert(Cache->size());
       auto *DAG = SyncPipe[0].DAG;
       for (auto &Elt : *Cache) {
         if (DAG->IsReachable(Elt, const_cast<SUnit *>(SU)))
