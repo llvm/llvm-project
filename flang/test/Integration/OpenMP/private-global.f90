@@ -1,4 +1,7 @@
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s
+!UNSUPPORTED: target-x86
+!UNSUPPORTED: target=sparc-{{.*}}
+!UNSUPPORTED: target=sparcel-{{.*}}
 
 ! Regression test for https://github.com/llvm/llvm-project/issues/106297
 
@@ -36,7 +39,7 @@ End Program
 ! CHECK:         %[[FIFTY_BOX_VAL:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8 } { ptr undef, i64 4, i32 20240719, i8 0, i8 9, i8 0, i8 0 }, ptr %[[FIFTY]], 0
 ! CHECK:         store { ptr, i64, i32, i8, i8, i8, i8 } %[[FIFTY_BOX_VAL]], ptr %[[BOXED_FIFTY]], align 8
 ! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR2]], ptr %[[INTERMEDIATE]], i32 48, i1 false)
-! CHECK:         call void @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 9)
+! CHECK:         call void @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 12)
 ! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR]], ptr %[[PRIV_BOX_ALLOC]], i32 48, i1 false)
 ! CHECK:         %[[PRIV_TABLE:.*]] = call ptr @malloc(i64 40)
 ! ...

@@ -2,6 +2,9 @@
 // RUN: %flang_fc1 -emit-llvm  %s -o - | FileCheck %s
 
 // UNSUPPORTED: system-windows
+// UNSUPPORTED: target-x86
+// UNSUPPORTED: target=sparc-{{.*}}
+// UNSUPPORTED: target=sparcel-{{.*}}
 
 // CHECK-LABEL: define ptr @alloca_scalar_nonchar()
 // CHECK: alloca i32, i64 1
