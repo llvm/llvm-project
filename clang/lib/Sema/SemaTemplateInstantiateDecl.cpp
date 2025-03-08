@@ -1218,8 +1218,38 @@ Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
     return nullptr;
 
   DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
+      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(), {},
+      nullptr, {}, D->getEndLoc(), TransformedClauses);
+
+  if (Res.isNull())
+    return nullptr;
+
+  return Res.getSingleDecl();
+}
+
+Decl *TemplateDeclInstantiator::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  SemaRef.OpenACC().ActOnConstruct(D->getDirectiveKind(), D->getBeginLoc());
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      InstantiateOpenACCClauseList(SemaRef, TemplateArgs, D->getDirectiveKind(),
+                                   D->clauses());
+
+  ExprResult FuncRef;
+  if (D->getFunctionReference()) {
+    FuncRef = SemaRef.SubstCXXIdExpr(D->getFunctionReference(), TemplateArgs);
+    if (FuncRef.isUsable())
+      FuncRef = SemaRef.OpenACC().ActOnRoutineName(FuncRef.get());
+    // We don't return early here, we leave the construct in the AST, even if
+    // the function decl is empty.
+  }
+
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(D->getDirectiveKind(),
+                                                D->getBeginLoc()))
+    return nullptr;
+
+  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
       D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(),
-      D->getEndLoc(), TransformedClauses);
+      D->getLParenLoc(), FuncRef.get(), D->getRParenLoc(), D->getEndLoc(),
+      TransformedClauses);
 
   if (Res.isNull())
     return nullptr;

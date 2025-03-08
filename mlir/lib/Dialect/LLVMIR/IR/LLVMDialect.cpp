@@ -3942,6 +3942,7 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   if (name == LLVMDialect::getStructRetAttrName() ||
       name == LLVMDialect::getByValAttrName() ||
       name == LLVMDialect::getByRefAttrName() ||
+      name == LLVMDialect::getElementTypeAttrName() ||
       name == LLVMDialect::getInAllocaAttrName() ||
       name == LLVMDialect::getPreallocatedAttrName()) {
     if (failed(checkTypeAttrType()))

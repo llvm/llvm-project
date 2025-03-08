@@ -13585,6 +13585,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
       if (TEInsertPt == InsertPt) {
+        // If the users are the PHI nodes with the same incoming blocks - skip.
+        if (TEUseEI.UserTE->State == TreeEntry::Vectorize &&
+            TEUseEI.UserTE->getOpcode() == Instruction::PHI &&
+            UseEI.UserTE->State == TreeEntry::Vectorize &&
+            UseEI.UserTE->getOpcode() == Instruction::PHI &&
+            TEUseEI.UserTE != UseEI.UserTE &&
+            TEUseEI.UserTE->getMainOp()->getParent() ==
+                UseEI.UserTE->getMainOp()->getParent())
+          continue;
         // If 2 gathers are operands of the same entry (regardless of whether
         // user is PHI or else), compare operands indices, use the earlier one
         // as the base.

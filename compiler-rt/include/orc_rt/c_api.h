@@ -62,7 +62,7 @@ typedef union {
  * the 'small' state and the content is held in the first Size bytes of
  * Data.Value.
  *
- * If Size > sizeof(OrtRTCWrapperFunctionResultData) then the value is in the
+ * If Size > sizeof(orc_rt_CWrapperFunctionResultData) then the value is in the
  * 'large' state and the content is held in the first Size bytes of the
  * memory pointed to by Data.ValuePtr. This memory must have been allocated by
  * malloc, and will be freed with free when this value is destroyed.

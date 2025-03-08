@@ -119,7 +119,7 @@ public:
     assert(Parser.Line->Tokens.empty());
     Parser.Line = std::move(PreBlockLine);
     if (Parser.CurrentLines == &Parser.PreprocessorDirectives)
-      Parser.MustBreakBeforeNextToken = true;
+      Parser.AtEndOfPPLine = true;
     Parser.CurrentLines = OriginalLines;
   }
 
@@ -158,8 +158,8 @@ UnwrappedLineParser::UnwrappedLineParser(
     ArrayRef<FormatToken *> Tokens, UnwrappedLineConsumer &Callback,
     llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
     IdentifierTable &IdentTable)
-    : Line(new UnwrappedLine), MustBreakBeforeNextToken(false),
-      CurrentLines(&Lines), Style(Style), IsCpp(Style.isCpp()),
+    : Line(new UnwrappedLine), AtEndOfPPLine(false), CurrentLines(&Lines),
+      Style(Style), IsCpp(Style.isCpp()),
       LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords),
       CommentPragmasRegex(Style.CommentPragmas), Tokens(nullptr),
       Callback(Callback), AllTokens(Tokens), PPBranchLevel(-1),
@@ -180,7 +180,7 @@ void UnwrappedLineParser::reset() {
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
-  MustBreakBeforeNextToken = false;
+  AtEndOfPPLine = false;
   IsDecltypeAutoFunction = false;
   PreprocessorDirectives.clear();
   CurrentLines = &Lines;
@@ -5090,12 +5090,12 @@ UnwrappedLineParser::parseMacroCall() {
 
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
-  if (MustBreakBeforeNextToken) {
+  if (AtEndOfPPLine) {
     auto &Tok = *Line->Tokens.back().Tok;
     Tok.MustBreakBefore = true;
     Tok.MustBreakBeforeFinalized = true;
-    Tok.FirstAfterPPDirectiveLine = true;
-    MustBreakBeforeNextToken = false;
+    Tok.FirstAfterPPLine = true;
+    AtEndOfPPLine = false;
   }
 }
 

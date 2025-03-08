@@ -475,6 +475,7 @@ private:
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
                             !box.isPointer();
+    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
     if (inlineAllocation &&
         ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
@@ -488,7 +489,7 @@ private:
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
-    genAllocateObjectInit(box);
+    genAllocateObjectInit(box, allocatorIdx);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray: allocation of a coarray object");
     if (alloc.type.IsPolymorphic())
@@ -549,14 +550,16 @@ private:
       TODO(loc, "derived type length parameters in allocate");
   }
 
-  void genAllocateObjectInit(const fir::MutableBoxValue &box) {
+  void genAllocateObjectInit(const fir::MutableBoxValue &box,
+                             unsigned allocatorIdx) {
     if (box.isPointer()) {
       // For pointers, the descriptor may still be uninitialized (see Fortran
       // 2018 19.5.2.2). The allocation runtime needs to be given a descriptor
       // with initialized rank, types and attributes. Initialize the descriptor
       // here to ensure these constraints are fulfilled.
       mlir::Value nullPointer = fir::factory::createUnallocatedBox(
-          builder, loc, box.getBoxTy(), box.nonDeferredLenParams());
+          builder, loc, box.getBoxTy(), box.nonDeferredLenParams(),
+          /*typeSourceBox=*/{}, allocatorIdx);
       builder.create<fir::StoreOp>(loc, nullPointer, box.getAddr());
     } else {
       assert(box.isAllocatable() && "must be an allocatable");
@@ -612,11 +615,12 @@ private:
 
   void genSourceMoldAllocation(const Allocation &alloc,
                                const fir::MutableBoxValue &box, bool isSource) {
+    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
-    ;
+
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
-    genAllocateObjectInit(box);
+    genAllocateObjectInit(box, allocatorIdx);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length

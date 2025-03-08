@@ -131,9 +131,10 @@ void BreakpointLocationsRequestHandler::operator()(
   auto *arguments = request.getObject("arguments");
   auto *source = arguments->getObject("source");
   std::string path = GetString(source, "path").str();
-  const auto start_line = GetInteger<uint64_t>(arguments, "line").value_or(0);
-  const auto start_column =
-      GetInteger<uint64_t>(arguments, "column").value_or(0);
+  const auto start_line = GetInteger<uint64_t>(arguments, "line")
+                              .value_or(LLDB_INVALID_LINE_NUMBER);
+  const auto start_column = GetInteger<uint64_t>(arguments, "column")
+                                .value_or(LLDB_INVALID_COLUMN_NUMBER);
   const auto end_line =
       GetInteger<uint64_t>(arguments, "endLine").value_or(start_line);
   const auto end_column = GetInteger<uint64_t>(arguments, "endColumn")

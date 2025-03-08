@@ -40,9 +40,10 @@ struct EmulateUnsupportedFloatsPass
   void runOnOperation() override;
 };
 
-struct EmulateFloatPattern final : ConversionPattern {
+struct EmulateFloatPattern final : ConversionPattern::SplitMatchAndRewrite {
   EmulateFloatPattern(const TypeConverter &converter, MLIRContext *ctx)
-      : ConversionPattern(converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
+      : ConversionPattern::SplitMatchAndRewrite(
+            converter, Pattern::MatchAnyOpTypeTag(), 1, ctx) {}
 
   LogicalResult match(Operation *op) const override;
   void rewrite(Operation *op, ArrayRef<Value> operands,

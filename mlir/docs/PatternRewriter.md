@@ -38,22 +38,23 @@ possible cost and use the predicate to guard the match.
 ### Root Operation Name (Optional)
 
 The name of the root operation that this pattern matches against. If specified,
-only operations with the given root name will be provided to the `match` and
-`rewrite` implementation. If not specified, any operation type may be provided.
-The root operation name should be provided whenever possible, because it
-simplifies the analysis of patterns when applying a cost model. To match any
+only operations with the given root name will be provided to the
+`matchAndRewrite` implementation. If not specified, any operation type may be
+provided. The root operation name should be provided whenever possible, because
+it simplifies the analysis of patterns when applying a cost model. To match any
 operation type, a special tag must be provided to make the intent explicit:
 `MatchAnyOpTypeTag`.
 
-### `match` and `rewrite` implementation
+### `matchAndRewrite` implementation
 
 This is the chunk of code that matches a given root `Operation` and performs a
 rewrite of the IR. A `RewritePattern` can specify this implementation either via
-separate `match` and `rewrite` methods, or via a combined `matchAndRewrite`
-method. When using the combined `matchAndRewrite` method, no IR mutation should
-take place before the match is deemed successful. The combined `matchAndRewrite`
-is useful when non-trivially recomputable information is required by the
-matching and rewriting phase. See below for examples:
+the `matchAndRewrite` method or via separate `match` and `rewrite` methods when
+deriving from `RewritePattern::SplitMatchAndRewrite`. When using the combined
+`matchAndRewrite` method, no IR mutation should take place before the match is
+deemed successful. The combined `matchAndRewrite` is useful when non-trivially
+recomputable information is required by the matching and rewriting phase. See
+below for examples:
 
 ```c++
 class MyPattern : public RewritePattern {
@@ -105,6 +106,10 @@ Within the `rewrite` section of a pattern, the following constraints apply:
     `eraseOp`) should be used instead.
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
+*   `matchAndRewrite` must return "success" if and only if the IR was modified.
+    `match` must return "success" if and only if the IR is going to be modified
+    during `rewrite`.
+
 
 ### Application Recursion
 

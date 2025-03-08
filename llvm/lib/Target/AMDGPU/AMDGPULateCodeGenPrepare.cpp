@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -75,6 +76,7 @@ private:
   Module &Mod;
   const DataLayout &DL;
   const GCNSubtarget &ST;
+
   /// The scalar type to convert to
   Type *const ConvertToScalar;
   /// The set of visited Instructions
@@ -123,6 +125,131 @@ public:
     TargetLoweringBase::LegalizeKind LK =
         TLI->getTypeConversion(EltTy->getContext(), EVT::getEVT(EltTy, false));
     return LK.first != TargetLoweringBase::TypeLegal;
+  }
+
+  /// Check if intrinsic natively operates on 8-bit or 16-bit
+  bool isNativeIntrinsic(Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::amdgcn_dot4_f32_fp8_bf8:
+    case Intrinsic::amdgcn_dot4_f32_bf8_fp8:
+    case Intrinsic::amdgcn_dot4_f32_fp8_fp8:
+    case Intrinsic::amdgcn_dot4_f32_bf8_bf8:
+    case Intrinsic::amdgcn_mfma_i32_4x4x4i8:
+    case Intrinsic::amdgcn_mfma_i32_16x16x4i8:
+    case Intrinsic::amdgcn_mfma_i32_32x32x4i8:
+    case Intrinsic::amdgcn_mfma_i32_16x16x16i8:
+    case Intrinsic::amdgcn_mfma_i32_32x32x8i8:
+    case Intrinsic::amdgcn_mfma_i32_16x16x64_i8:
+    case Intrinsic::amdgcn_mfma_i32_32x32x32_i8:
+    case Intrinsic::amdgcn_mfma_i32_32x32x16_i8:
+    case Intrinsic::amdgcn_mfma_i32_16x16x32_i8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_bf8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_16x16x32_fp8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_bf8_fp8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_bf8:
+    case Intrinsic::amdgcn_mfma_f32_32x32x16_fp8_fp8:
+    case Intrinsic::amdgcn_smfmac_i32_16x16x64_i8:
+    case Intrinsic::amdgcn_smfmac_i32_32x32x32_i8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x64_bf8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x64_bf8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x64_fp8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x64_fp8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x32_bf8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x32_fp8_fp8:
+    case Intrinsic::amdgcn_smfmac_i32_16x16x128_i8:
+    case Intrinsic::amdgcn_smfmac_i32_32x32x64_i8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x64_bf8_fp8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_bf8:
+    case Intrinsic::amdgcn_smfmac_f32_32x32x64_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x16_bf8_bf8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
+    case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_i32_16x16x16_iu8:
+    case Intrinsic::amdgcn_wmma_i32_16x16x16_iu4:
+    case Intrinsic::amdgcn_wmma_i32_16x16x32_iu4:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
+    case Intrinsic::amdgcn_swmmac_i32_16x16x64_iu4:
+    case Intrinsic::amdgcn_raw_buffer_store_format:
+    case Intrinsic::amdgcn_raw_buffer_store:
+    case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
+    case Intrinsic::amdgcn_raw_ptr_buffer_store:
+    case Intrinsic::amdgcn_struct_buffer_store_format:
+    case Intrinsic::amdgcn_struct_buffer_store:
+    case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
+    case Intrinsic::amdgcn_struct_ptr_buffer_store:
+    case Intrinsic::amdgcn_raw_tbuffer_store:
+    case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
+    case Intrinsic::amdgcn_struct_ptr_tbuffer_store:
+    case Intrinsic::amdgcn_struct_tbuffer_store:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool isOpLegal(Instruction *I) {
+    if (const auto *Intr = dyn_cast<IntrinsicInst>(I)) {
+      Intrinsic::ID ID = Intr->getIntrinsicID();
+      if (isNativeIntrinsic(ID))
+        return true;
+    }
+    // Stores
+    if (isa<StoreInst>(I))
+      return true;
+    return false;
+  }
+
+  bool isCoercionProfitable(Instruction *II) {
+    SmallPtrSet<Instruction *, 4> CVisited;
+    SmallVector<Instruction *, 4> UserList;
+
+    // Check users for profitable conditions (across block user which can
+    // natively handle the illegal vector).
+    for (User *V : II->users())
+      if (auto *UseInst = dyn_cast<Instruction>(V))
+        UserList.push_back(UseInst);
+
+    auto IsLookThru = [](Instruction *II) {
+      if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
+        return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
+      return isa<PHINode>(II) || isa<ShuffleVectorInst>(II) ||
+             isa<InsertElementInst>(II) || isa<ExtractElementInst>(II) ||
+             isa<CastInst>(II);
+    };
+
+    while (!UserList.empty()) {
+      auto CII = UserList.pop_back_val();
+      if (!CVisited.insert(CII).second)
+        continue;
+
+      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+        continue;
+
+      if (isOpLegal(CII))
+        return true;
+
+      if (IsLookThru(CII))
+        for (User *V : CII->users())
+          if (auto *UseInst = dyn_cast<Instruction>(V))
+            UserList.push_back(UseInst);
+    }
+    return false;
   }
 
   LiveRegOptimizer(Module &Mod, const GCNSubtarget &ST)
@@ -257,6 +384,9 @@ bool LiveRegOptimizer::optimizeLiveType(
       continue;
 
     if (!shouldReplace(II->getType()))
+      continue;
+
+    if (!isCoercionProfitable(II))
       continue;
 
     if (PHINode *Phi = dyn_cast<PHINode>(II)) {
@@ -478,7 +608,6 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
 PreservedAnalyses
 AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
 

@@ -113,6 +113,7 @@ namespace {
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
@@ -497,7 +498,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
         isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D) ||
         isa<OMPAllocateDecl>(*D))
       Terminator = nullptr;
-    else if (isa<OpenACCDeclareDecl>(*D))
+    else if (isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(*D))
       Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
@@ -1918,6 +1919,28 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
 void DeclPrinter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
   if (!D->isInvalidDecl()) {
     Out << "#pragma acc declare ";
+    OpenACCClausePrinter Printer(Out, Policy);
+    Printer.VisitClauseList(D->clauses());
+  }
+}
+void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  if (!D->isInvalidDecl()) {
+    Out << "#pragma acc routine";
+
+    if (D->hasNameSpecified()) {
+      Out << "(";
+
+      // The referenced function was named here, but this makes us tolerant of
+      // errors.
+      if (D->getFunctionReference())
+        D->getFunctionReference()->printPretty(Out, nullptr, Policy,
+                                               Indentation, "\n", &Context);
+      else
+        Out << "<error>";
+
+      Out << ")";
+    }
+
     OpenACCClausePrinter Printer(Out, Policy);
     Printer.VisitClauseList(D->clauses());
   }
