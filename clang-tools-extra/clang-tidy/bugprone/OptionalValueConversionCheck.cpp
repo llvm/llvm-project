@@ -12,6 +12,7 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include <array>
 
 using namespace clang::ast_matchers;
@@ -31,6 +32,7 @@ constexpr std::array<StringRef, 2> MakeSmartPtrList{
     "::std::make_unique",
     "::std::make_shared",
 };
+constexpr StringRef MakeOptional = "::std::make_optional";
 
 } // namespace
 
@@ -86,6 +88,18 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
                    callee(functionDecl(
                        matchers::matchesAnyListedName(MakeSmartPtrList),
                        hasTemplateArgument(0, refersToType(BindOptionalType)))),
+                   hasArgument(0, OptionalDerefMatcher)),
+               callExpr(
+                   // match first std::make_optional by limit argument count (1)
+                   // and template count (1).
+                   // 1. template< class T > constexpr
+                   //    std::optional<decay_t<T>> make_optional(T&& value);
+                   // 2. template< class T, class... Args > constexpr
+                   //    std::optional<T> make_optional(Args&&... args);
+                   argumentCountIs(1),
+                   callee(functionDecl(templateArgumentCountIs(1),
+                                       hasName(MakeOptional),
+                                       returns(BindOptionalType))),
                    hasArgument(0, OptionalDerefMatcher))),
            unless(anyOf(hasAncestor(typeLoc()),
                         hasAncestor(expr(matchers::hasUnevaluatedContext())))))

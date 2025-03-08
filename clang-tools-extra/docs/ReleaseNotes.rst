@@ -115,6 +115,10 @@ Changes in existing checks
   no longer be needed and will be removed. Also fixing false positive from 
   const reference accessors to objects containing optional member.
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
+  conversion in argument of ``std::make_optional``.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
