@@ -15,8 +15,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds lambda captures that capture the ``this`` pointer and store it as class
-/// members without handle the copy and move constructors and the assignments.
+/// Finds lambda captures that capture the ``this`` pointer and store it as
+/// class members without handle the copy and move constructors and the
+/// assignments.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/capture-this-by-field.html
