@@ -238,7 +238,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
-  Consumer->SetExpected(diag::err_expected);
+  Consumer->SetExpected(diag::err_expected_either);
   ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());

@@ -53,7 +53,7 @@ bool RootSignatureParser::Parse() {
   while (!ParseRootElement()) {
     if (Lexer.EndOfBuffer())
       return false;
-    if (ConsumeExpectedToken(TokenKind::pu_comma))
+    if (ConsumeExpectedToken(TokenKind::pu_comma, diag::err_expected_either, TokenKind::end_of_stream))
       return true;
   }
 
