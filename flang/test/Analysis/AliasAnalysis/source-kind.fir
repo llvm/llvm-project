@@ -1,3 +1,4 @@
+// REQUIRES: asserts
 // RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -debug-only=fir-alias-analysis 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : "_QFPtest"
