@@ -2309,29 +2309,36 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return visitChildExpr(FalseExpr);
   }
 
+  bool IsBcpCall = false;
+  if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
+    IsBcpCall = true;
+  }
+
   LabelTy LabelEnd = this->getLabel();   // Label after the operator.
   LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
 
+  if (IsBcpCall) {
+    if (!this->emitStartSpeculation(E))
+      return false;
+  }
+
   if (!this->visitBool(Condition))
     return false;
-
   if (!this->jumpFalse(LabelFalse))
     return false;
-
   if (!visitChildExpr(TrueExpr))
     return false;
-
   if (!this->jump(LabelEnd))
     return false;
-
   this->emitLabel(LabelFalse);
-
   if (!visitChildExpr(FalseExpr))
     return false;
-
   this->fallthrough(LabelEnd);
   this->emitLabel(LabelEnd);
 
+  if (IsBcpCall)
+    return this->emitEndSpeculation(E);
   return true;
 }
 

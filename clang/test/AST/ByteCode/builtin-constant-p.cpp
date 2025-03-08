@@ -59,13 +59,10 @@ template<typename T> constexpr bool bcp(T t) {
 }
 
 constexpr intptr_t ptr_to_int(const void *p) {
-  return __builtin_constant_p(1) ? (intptr_t)p : (intptr_t)p; // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+  return __builtin_constant_p(1) ? (intptr_t)p : (intptr_t)p;
 }
 
-/// This is from test/SemaCXX/builtin-constant-p.cpp, but it makes no sense.
-/// ptr_to_int is called before bcp(), so it fails. GCC does not accept this either.
-static_assert(bcp(ptr_to_int("foo"))); // expected-error {{not an integral constant expression}} \
-                                       // expected-note {{in call to}}
+static_assert(bcp(ptr_to_int("foo")));
 
 constexpr bool AndFold(const int &a, const int &b) {
   return __builtin_constant_p(a && b);
