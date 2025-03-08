@@ -114,6 +114,9 @@ bool ObjC_Selector_SummaryProvider(ValueObject &valobj, Stream &stream,
 bool TypePreservingNSNumber_SummaryProvider(ValueObject &valobj, Stream &stream,
                                             const TypeSummaryOptions &options);
 
+bool TaskPriority_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
+
 SyntheticChildrenFrontEnd *EnumSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                         lldb::ValueObjectSP);
 

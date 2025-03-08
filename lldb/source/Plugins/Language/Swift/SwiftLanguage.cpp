@@ -482,6 +482,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(swift_category_sp, staticstring_summary_provider,
                 "Swift.StaticString summary provider",
                 ConstString("Swift.StaticString"), summary_flags);
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::TaskPriority_SummaryProvider,
+                "Swift TaskPriority summary provider", "Swift.TaskPriority",
+                summary_flags);
   summary_flags.SetSkipPointers(false);
   // this is an ObjC dynamic type - as such it comes in pointer form
   // NSContiguousString* - do not skip pointers here

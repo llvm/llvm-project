@@ -1605,6 +1605,38 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
   return false;
 }
 
+bool lldb_private::formatters::swift::TaskPriority_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  uint64_t raw_value = UINT8_MAX;
+  if (auto child_sp = valobj.GetChildMemberWithName("rawValue"))
+    if (auto synthetic_sp = child_sp->GetSyntheticValue())
+      raw_value = synthetic_sp->GetValueAsUnsigned(UINT8_MAX);
+  if (raw_value >= UINT8_MAX)
+    return false;
+
+  switch (raw_value) {
+  case 0x19:
+    // Also .userInitiated
+    stream.PutCString(".high");
+    break;
+  case 0x15:
+    // Also .default (deprecated)
+    stream.PutCString(".medium");
+    break;
+  case 0x11:
+    // Also .utilitiy
+    stream.PutCString(".low");
+    break;
+  case 0x09:
+    stream.PutCString(".background");
+    break;
+  default:
+    stream.Format("{0}", raw_value);
+    break;
+  }
+  return true;
+}
+
 namespace {
 
 /// Enumerate the kinds of SIMD elements.
