@@ -35,6 +35,26 @@ Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
   return inBounds;
 }
 
+/// Generate a runtime check to see if the given indices are in-bounds with
+/// respect to the given ranked memref.
+Value generateIndicesInBoundsCheck(OpBuilder &builder, Location loc,
+                                   Value memref, ValueRange indices) {
+  auto memrefType = cast<MemRefType>(memref.getType());
+  assert(memrefType.getRank() == static_cast<int64_t>(indices.size()) &&
+         "rank mismatch");
+  Value cond = builder.create<arith::ConstantOp>(
+      loc, builder.getIntegerAttr(builder.getI1Type(), 1));
+
+  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  for (auto [dim, idx] : llvm::enumerate(indices)) {
+    Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, dim);
+    Value inBounds = generateInBoundsCheck(builder, loc, idx, zero, dimOp);
+    cond = builder.createOrFold<arith::AndIOp>(loc, cond, inBounds);
+  }
+
+  return cond;
+}
+
 struct AssumeAlignmentOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           AssumeAlignmentOpInterface, AssumeAlignmentOp> {
@@ -186,26 +206,10 @@ struct LoadStoreOpInterface
   void generateRuntimeVerification(Operation *op, OpBuilder &builder,
                                    Location loc) const {
     auto loadStoreOp = cast<LoadStoreOp>(op);
-
-    auto memref = loadStoreOp.getMemref();
-    auto rank = memref.getType().getRank();
-    if (rank == 0) {
-      return;
-    }
-    auto indices = loadStoreOp.getIndices();
-
-    auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    Value assertCond;
-    for (auto i : llvm::seq<int64_t>(0, rank)) {
-      Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
-      Value inBounds =
-          generateInBoundsCheck(builder, loc, indices[i], zero, dimOp);
-      assertCond =
-          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
-                : inBounds;
-    }
+    Value cond = generateIndicesInBoundsCheck(
+        builder, loc, loadStoreOp.getMemref(), loadStoreOp.getIndices());
     builder.create<cf::AssertOp>(
-        loc, assertCond,
+        loc, cond,
         RuntimeVerifiableOpInterface::generateErrorMessage(
             op, "out-of-bounds access"));
   }
@@ -377,9 +381,12 @@ void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
+    AtomicRMWOp::attachInterface<LoadStoreOpInterface<AtomicRMWOp>>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
     DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+    GenericAtomicRMWOp::attachInterface<
+        LoadStoreOpInterface<GenericAtomicRMWOp>>(*ctx);
     LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
     ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);
     StoreOp::attachInterface<LoadStoreOpInterface<StoreOp>>(*ctx);
