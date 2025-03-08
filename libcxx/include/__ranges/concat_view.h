@@ -472,7 +472,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__it.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view with the default sentinel.");
     constexpr auto __last_idx = sizeof...(_Views) - 1;
     return __it.__it_.index() == __last_idx &&
            std::__unchecked_get<__last_idx>(__it.__it_) == ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
