@@ -191,6 +191,11 @@ public:
 /// of the symbol as external.
 class MCSymbolRefExpr : public MCExpr {
 public:
+  // VariantKind isn't ideal for encoding relocation operators because:
+  // (a) other expressions, like MCConstantExpr (e.g., 4@l) and MCBinaryExpr
+  // (e.g., (a+1)@l), also need it; (b) semantics become unclear (e.g., folding
+  // expressions with @). MCTargetExpr, as used by AArch64 and RISC-V, offers a
+  // cleaner approach.
   enum VariantKind : uint16_t {
     VK_None,
     VK_Invalid,
@@ -384,14 +389,13 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx) {
-    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx);
+  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx,
+                                       SMLoc Loc = SMLoc()) {
+    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
   }
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
-  static const MCSymbolRefExpr *create(StringRef Name, VariantKind Kind,
-                                       MCContext &Ctx);
 
   /// @}
   /// \name Accessors
@@ -630,8 +634,10 @@ public:
   }
 };
 
-/// This is an extension point for target-specific MCExpr subclasses to
-/// implement.
+/// Extension point for target-specific MCExpr subclasses to implement.
+/// This can encode a relocation operator, serving as a replacement for
+/// MCSymbolRefExpr::VariantKind. Ideally, limit this to
+/// top-level use, avoiding its inclusion as a subexpression.
 ///
 /// NOTE: All subclasses are required to have trivial destructors because
 /// MCExprs are bump pointer allocated and not destructed.

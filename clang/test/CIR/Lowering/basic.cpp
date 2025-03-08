@@ -1,9 +1,4 @@
-// RUN: not %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
-
-// This error is caused by the "const int i = 2" line in f2(). When
-// initaliziers are implemented, the checks there should be updated
-// and the "not" should be removed from the run line.
-// CHECK: error: ClangIR code gen Not Yet Implemented: emitAutoVarInit
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
 
 int f1() {
   int i;
@@ -22,6 +17,7 @@ int f2() {
 
 // CHECK: define{{.*}} i32 @f2() {
 // CHECK:    %[[I_PTR:.*]] = alloca i32, i64 1, align 4
+// CHECK:    store i32 2, ptr %[[I_PTR]], align 4
 // CHECK:    %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
 // CHECK:    ret i32 %[[I]]
 

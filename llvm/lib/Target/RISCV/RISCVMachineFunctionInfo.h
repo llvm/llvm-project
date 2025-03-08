@@ -75,6 +75,9 @@ private:
   unsigned RVPushStackSize = 0;
   unsigned RVPushRegs = 0;
 
+  /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
+  unsigned QCIInterruptStackSize = 0;
+
   int64_t StackProbeSize = 0;
 
   /// Does it probe the stack for a dynamic allocation?
@@ -109,7 +112,7 @@ public:
   }
 
   unsigned getReservedSpillsSize() const {
-    return LibCallStackSize + RVPushStackSize;
+    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -149,6 +152,19 @@ public:
 
   unsigned getRVPushStackSize() const { return RVPushStackSize; }
   void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
+
+  enum class InterruptStackKind { None = 0, QCINest, QCINoNest };
+
+  InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
+
+  bool useQCIInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::QCINest ||
+           Kind == InterruptStackKind::QCINoNest;
+  }
+
+  unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
+  void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
 
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
 

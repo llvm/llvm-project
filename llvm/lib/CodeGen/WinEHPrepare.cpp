@@ -406,7 +406,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     //  stored in pre-order (outer first, inner next), not post-order
     //  Add to map here.  Fix the CatchHigh after children are processed
     const Module *Mod = BB->getParent()->getParent();
-    bool IsPreOrder = Triple(Mod->getTargetTriple()).isArch64Bit();
+    bool IsPreOrder = Mod->getTargetTriple().isArch64Bit();
     if (IsPreOrder)
       addTryBlockMapEntry(FuncInfo, TryLow, TryHigh, CatchLow, Handlers);
     unsigned TBMEIdx = FuncInfo.TryBlockMap.size() - 1;

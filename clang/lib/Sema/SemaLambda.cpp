@@ -1506,14 +1506,13 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   TemplateParameterList *TemplateParams =
       getGenericLambdaTemplateParameterList(LSI, *this);
   if (TemplateParams) {
-    for (const auto *TP : TemplateParams->asArray()) {
+    for (auto *TP : TemplateParams->asArray()) {
       if (!TP->getIdentifier())
         continue;
+      CheckTemplateParameterRAII CTP(*this, TP);
       for (const auto &Capture : Intro.Captures) {
-        if (Capture.Id == TP->getIdentifier()) {
+        if (Capture.Id == TP->getIdentifier())
           Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
-          NoteTemplateParameterLocation(*TP);
-        }
       }
     }
   }

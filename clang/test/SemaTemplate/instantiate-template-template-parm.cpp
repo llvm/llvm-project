@@ -20,17 +20,17 @@ apply<add_reference, int>::type ir = i;
 apply<add_reference, float>::type fr = i; // expected-error{{non-const lvalue reference to type 'float' cannot bind to a value of unrelated type 'int'}}
 
 // Template template parameters
-template<int> struct B;
+template<int> struct B; // expected-note {{template parameter is declared here}}
 
 template<typename T,
          template<T Value> class X> // expected-error{{cannot have type 'float'}}
                                     // expected-error@-1 {{cannot be narrowed from type 'long long' to 'int'}}
-                                    // expected-note@-2 {{previous template template parameter is here}}
+                                    // expected-note@-2 2{{template parameter is declared here}}
 struct X0 { };
 
 X0<int, B> x0b1;
 X0<float, B> x0b2; // expected-note{{while substituting}}
-X0<long long, B> x0b3; // expected-note {{has different template parameters}}
+X0<long long, B> x0b3; // expected-note {{template template argument is incompatible}}
 
 template<template<int V> class TT>
 struct X1 { };
