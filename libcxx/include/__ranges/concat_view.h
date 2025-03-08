@@ -509,7 +509,7 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__y.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
     return __x.__it_ <=> __y.__it_;
   }
 
