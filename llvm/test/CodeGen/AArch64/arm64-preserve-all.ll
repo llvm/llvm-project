@@ -7,8 +7,8 @@ target triple = "aarch64-unknown-linux-gnu"
 declare void @normal_cc()
 
 ; Caller: preserve_allcc; callee: normalcc. Normally callee saved registers
-; x9~x15 need to be spilled. Since most of them will be spilled in pairs in
-; reverse order, we only check the odd number ones due to FileCheck not
+; x10~x14 need to be spilled. Since most of them will be spilled in pairs in
+; reverse order, we only check the even number ones due to FileCheck not
 ; matching the same line of assembly twice.
 ; CHECK-LABEL: preserve_all
 ; CHECK-DAG: {{st[rp]}} {{(q[0-9]+, )?q8(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
@@ -22,21 +22,23 @@ declare void @normal_cc()
 ; CHECK-DAG: {{st[rp]}} {{(q[0-9]+, )?q26(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
 ; CHECK-DAG: {{st[rp]}} {{(q[0-9]+, )?q28(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
 ; CHECK-DAG: {{st[rp]}} {{(q[0-9]+, )?q30(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
-; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x9(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
-; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x11(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
-; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x13(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
-; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x15(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
+; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x10(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
+; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x12(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
+; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x14(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
 define preserve_allcc void @preserve_all() {
   call void @normal_cc()
   ret void
 }
 
 ; Caller: normalcc; callee: preserve_allcc. x9/q9 does not need to be spilled.
-; The same holds for other x and q registers, but we only check x9 and q9.
+; The same holds for other x and q registers, but we only check x9, x11, and q9.
 ; CHECK-LABEL: normal_cc_caller
 ; CHECK-NOT: stp {{x[0-9]+}}, x9, [sp, #{{[-0-9]+}}]
 ; CHECK-NOT: stp x9, {{x[0-9]+}}, [sp, #{{[-0-9]+}}]
 ; CHECK-NOT: str x9, [sp, {{#[-0-9]+}}]
+; CHECK-NOT: stp {{x[0-9]+}}, x11, [sp, #{{[-0-9]+}}]
+; CHECK-NOT: stp x10, {{x[0-9]+}}, [sp, #{{[-0-9]+}}]
+; CHECK-NOT: str x10, [sp, {{#[-0-9]+}}]
 ; CHECK-NOT: stp {{q[0-9]+}}, q9, [sp, #{{[-0-9]+}}]
 ; CHECK-NOT: stp q9, {{q[0-9]+}}, [sp, #{{[-0-9]+}}]
 ; CHECK-NOT: str q9, [sp, {{#[-0-9]+}}]
