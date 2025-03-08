@@ -4959,7 +4959,6 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::Decl *decl) {
       break;
 
     case swift::DeclKind::Accessor:
-    case swift::DeclKind::PoundDiagnostic:
       break;
     }
   }
