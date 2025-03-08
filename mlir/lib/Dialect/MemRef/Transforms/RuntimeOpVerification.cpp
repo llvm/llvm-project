@@ -23,7 +23,7 @@ using namespace mlir;
 namespace mlir {
 namespace memref {
 namespace {
-/// Generate a runtime check for lb <= value < ub. 
+/// Generate a runtime check for lb <= value < ub.
 Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
                             Value lb, Value ub) {
   Value inBounds1 = builder.createOrFold<arith::CmpIOp>(
@@ -34,6 +34,28 @@ Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
       builder.createOrFold<arith::AndIOp>(loc, inBounds1, inBounds2);
   return inBounds;
 }
+
+struct AssumeAlignmentOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<
+          AssumeAlignmentOpInterface, AssumeAlignmentOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto assumeOp = cast<AssumeAlignmentOp>(op);
+    Value ptr = builder.create<ExtractAlignedPointerAsIndexOp>(
+        loc, assumeOp.getMemref());
+    Value rest = builder.create<arith::RemUIOp>(
+        loc, ptr,
+        builder.create<arith::ConstantIndexOp>(loc, assumeOp.getAlignment()));
+    Value isAligned = builder.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::eq, rest,
+        builder.create<arith::ConstantIndexOp>(loc, 0));
+    builder.create<cf::AssertOp>(
+        loc, isAligned,
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "memref is not aligned to " +
+                    std::to_string(assumeOp.getAlignment())));
+  }
+};
 
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
@@ -354,6 +376,7 @@ struct ExpandShapeOpInterface
 void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    AssumeAlignmentOp::attachInterface<AssumeAlignmentOpInterface>(*ctx);
     CastOp::attachInterface<CastOpInterface>(*ctx);
     DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
