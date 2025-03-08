@@ -155,6 +155,28 @@ template <> struct MappingTraits<memprof::AllocationInfo> {
 // In YAML, we use GUIDMemProfRecordPair instead of MemProfRecord so that we can
 // treat the GUID and the fields within MemProfRecord at the same level as if
 // the GUID were part of MemProfRecord.
+template <> struct MappingTraits<memprof::CallSiteInfo> {
+  static void mapping(IO &Io, memprof::CallSiteInfo &CS) {
+    Io.mapRequired("Frames", CS.Frames);
+    Io.mapOptional("CalleeGuids", CS.CalleeGuids);
+  }
+};
+
+// Add sequence traits for SmallVector<CallSiteInfo>
+template <unsigned N>
+struct SequenceTraits<SmallVector<memprof::CallSiteInfo, N>> {
+  static size_t size(IO &IO, SmallVector<memprof::CallSiteInfo, N> &Seq) {
+    return Seq.size();
+  }
+
+  static memprof::CallSiteInfo &
+  element(IO &IO, SmallVector<memprof::CallSiteInfo, N> &Seq, size_t Index) {
+    if (Index >= Seq.size())
+      Seq.resize(Index + 1);
+    return Seq[Index];
+  }
+};
+
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
@@ -174,6 +196,7 @@ template <> struct MappingTraits<memprof::AllMemProfData> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::Frame)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<memprof::Frame>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_
