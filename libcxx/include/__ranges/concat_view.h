@@ -542,7 +542,7 @@ public:
              (... && indirectly_swappable<iterator_t<__maybe_const<_Const, _Views>>>)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to swap iterators of concat_view where at least one iterator is valueless.");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__y.__it_.valueless_by_exception(), "Trying to swap iterators of concat_view where at least one iterator is valueless.");
     __variant_detail::__visitation::__variant::__visit_value(
