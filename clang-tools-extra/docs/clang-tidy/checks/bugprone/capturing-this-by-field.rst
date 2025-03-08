@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-capture-this-by-field
+.. title:: clang-tidy - bugprone-capturing-this-by-field
 
-bugprone-capture-this-by-field
-==============================
+bugprone-capturing-this-by-field
+================================
 
 Finds lambda captures that capture the ``this`` pointer and store it as class
 members without handle the copy and move constructors and the assignments.

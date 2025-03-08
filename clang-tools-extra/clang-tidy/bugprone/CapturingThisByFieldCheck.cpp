@@ -1,4 +1,4 @@
-//===--- CaptureThisByFieldCheck.cpp - clang-tidy -------------------------===//
+//===--- CapturingThisByFieldCheck.cpp - clang-tidy -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CaptureThisByFieldCheck.h"
+#include "CapturingThisByFieldCheck.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -58,7 +58,7 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 
 } // namespace
 
-void CaptureThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
+void CapturingThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
   auto IsStdFunctionField =
       fieldDecl(hasType(cxxRecordDecl(hasName("::std::function"))))
           .bind("field");
@@ -81,7 +81,7 @@ void CaptureThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void CaptureThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
+void CapturingThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Capture = Result.Nodes.getNodeAs<LambdaCapture>("capture");
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");

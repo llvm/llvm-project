@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capture-this-by-field %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capturing-this-by-field %t
 
 namespace std {
 
