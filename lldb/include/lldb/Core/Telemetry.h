@@ -55,10 +55,12 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
 // must have their LLDBEntryKind in the similar form (ie., share common prefix
 // and differ by the last two bits)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
-  static const llvm::telemetry::KindType BaseInfo = 0b11000000;
-  static const llvm::telemetry::KindType CommandInfo = 0b11010000;
-  static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
-  static const llvm::telemetry::KindType TargetInfo = 0b11001000;
+  // clang-format off
+  static const llvm::telemetry::KindType BaseInfo     = 0b11000000;
+  static const llvm::telemetry::KindType CommandInfo  = 0b11010000;
+  static const llvm::telemetry::KindType DebuggerInfo = 0b11001000;
+  static const llvm::telemetry::KindType TargetInfo   = 0b11000100;
+  // clang-format on
 };
 
 /// Defines a convenient type for timestamp of various events.
