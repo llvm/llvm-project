@@ -58,8 +58,8 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
-- Added `BuiltinHeaders` which controls if system includes are extracted from
-  Clangd or solely from the QueryDriver.
+- Added `BuiltinHeaders` config key which controls if system includes are
+  extracted from clangd or solely from the query driver.
 
 Hover
 ^^^^^

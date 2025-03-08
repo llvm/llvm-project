@@ -424,7 +424,7 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
     break;
   }
   case Config::BuiltinHeaderPolicy::QueryDriver:
-    vlog("System includes extractor: builtin headers from query driver");
+    vlog("System includes extractor: Using builtin headers from query driver.");
     break;
   }
 
