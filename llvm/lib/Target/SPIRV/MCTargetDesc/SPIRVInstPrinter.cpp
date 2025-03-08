@@ -13,9 +13,7 @@
 #include "SPIRVInstPrinter.h"
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
-#include "SPIRVInstrInfo.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -51,7 +49,7 @@ void SPIRVInstPrinter::printRemainingVariableOps(const MCInst *MI,
 void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              unsigned StartIndex,
                                              raw_ostream &O) {
-  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::ASM_PRINTER_WIDTH16;
+  unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
   assert((NumVarOps == 1 || NumVarOps == 2) &&
@@ -98,7 +96,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
-  Register Reg = MI->getOperand(0).getReg();
+  MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
   auto Set = getExtInstSetFromString(Name);
   ExtInstSetIDs.insert({Reg, Set});
@@ -211,6 +209,34 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           // are part of the variable value.
           printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
+        case SPIRV::OpCooperativeMatrixMulAddKHR: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps == NumOps)
+            break;
+
+          OS << ' ';
+          const unsigned MulAddOp = MI->getOperand(FirstVariableIndex).getImm();
+          if (MulAddOp == 0) {
+            printSymbolicOperand<
+                OperandCategory::CooperativeMatrixOperandsOperand>(
+                MI, FirstVariableIndex, OS);
+          } else {
+            std::string Buffer;
+            for (unsigned Mask = 0x1;
+                 Mask != SPIRV::CooperativeMatrixOperands::
+                             MatrixResultBFloat16ComponentsINTEL;
+                 Mask <<= 1) {
+              if (MulAddOp & Mask) {
+                if (!Buffer.empty())
+                  Buffer += '|';
+                Buffer += getSymbolicOperandMnemonic(
+                    OperandCategory::CooperativeMatrixOperandsOperand, Mask);
+              }
+            }
+            OS << Buffer;
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -308,7 +334,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
-      O << '%' << (Register::virtReg2Index(Op.getReg()) + 1);
+      O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
     else if (Op.isImm())
       O << formatImm((int64_t)Op.getImm());
     else if (Op.isDFPImm())

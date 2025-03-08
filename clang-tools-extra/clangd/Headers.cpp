@@ -9,6 +9,7 @@
 #include "Headers.h"
 #include "Preamble.h"
 #include "SourceCode.h"
+#include "support/Logger.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -30,8 +31,7 @@ namespace clangd {
 class IncludeStructure::RecordHeaders : public PPCallbacks {
 public:
   RecordHeaders(const CompilerInstance &CI, IncludeStructure *Out)
-      : SM(CI.getSourceManager()),
-        Out(Out) {}
+      : SM(CI.getSourceManager()), Out(Out) {}
 
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
@@ -287,11 +287,11 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
-  bool IsAngled = false;
+  bool IsAngledByDefault = false;
   std::string Suggested;
   if (HeaderSearchInfo) {
     Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-        InsertedHeader.File, BuildDir, IncludingFile, &IsAngled);
+        InsertedHeader.File, BuildDir, IncludingFile, &IsAngledByDefault);
   } else {
     // Calculate include relative to including file only.
     StringRef IncludingDir = llvm::sys::path::parent_path(IncludingFile);
@@ -304,9 +304,33 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
     return std::nullopt;
+  bool IsAngled = false;
+  for (auto Filter : AngledHeaders) {
+    if (Filter(Suggested)) {
+      IsAngled = true;
+      break;
+    }
+  }
+  bool IsQuoted = false;
+  for (auto Filter : QuotedHeaders) {
+    if (Filter(Suggested)) {
+      IsQuoted = true;
+      break;
+    }
+  }
+  // No filters apply, or both filters apply (a bug), use system default.
+  if (IsAngled == IsQuoted) {
+    // Probably a bug in the config regex.
+    if (IsAngled && IsQuoted) {
+      elog("Header '{0}' matches both quoted and angled regexes, default will "
+           "be used.",
+           Suggested);
+    }
+    IsAngled = IsAngledByDefault;
+  }
   if (IsAngled)
     Suggested = "<" + Suggested + ">";
-  else
+  else // if (IsQuoted)
     Suggested = "\"" + Suggested + "\"";
   return Suggested;
 }

@@ -918,6 +918,11 @@ ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   return g_section_name_eh_frame;
 }
 
+ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
+  static ConstString g_section_name_lldb_no_nlist("__lldb_no_nlist");
+  return g_section_name_lldb_no_nlist;
+}
+
 bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
@@ -1209,6 +1214,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleObjC:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
+        case eSectionTypeLLDBTypeSummaries:
+        case eSectionTypeLLDBFormatters:
         case eSectionTypeSwiftModules:
           return AddressClass::eDebug;
 
@@ -1484,6 +1491,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_data("__data");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
+  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
+  static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_abbrev)
@@ -1564,6 +1573,10 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
     return eSectionTypeCTF;
+  if (section_name == g_sect_name_lldb_summaries)
+    return lldb::eSectionTypeLLDBTypeSummaries;
+  if (section_name == g_sect_name_lldb_formatters)
+    return lldb::eSectionTypeLLDBFormatters;
   if (section_name == g_sect_name_swift_ast)
     return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_objc_data ||
@@ -2235,11 +2248,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
   Progress progress("Parsing symbol table", file_name);
 
-  llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
   llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
   llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
+  SymtabCommandLargeOffsets symtab_load_command;
   // The data element of type bool indicates that this entry is thumb
   // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
@@ -2276,12 +2289,20 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // Watch for the symbol table load command
     switch (lc.cmd) {
     case LC_SYMTAB:
+      // struct symtab_command {
+      //   uint32_t        cmd;            /* LC_SYMTAB */
+      //   uint32_t        cmdsize;        /* sizeof(struct symtab_command) */
+      //   uint32_t        symoff;         /* symbol table offset */
+      //   uint32_t        nsyms;          /* number of symbol table entries */
+      //   uint32_t        stroff;         /* string table offset */
+      //   uint32_t        strsize;        /* string table size in bytes */
+      // };
       symtab_load_command.cmd = lc.cmd;
       symtab_load_command.cmdsize = lc.cmdsize;
-      // Read in the rest of the symtab load command
-      if (m_data.GetU32(&offset, &symtab_load_command.symoff, 4) ==
-          nullptr) // fill in symoff, nsyms, stroff, strsize fields
-        return;
+      symtab_load_command.symoff = m_data.GetU32(&offset);
+      symtab_load_command.nsyms = m_data.GetU32(&offset);
+      symtab_load_command.stroff = m_data.GetU32(&offset);
+      symtab_load_command.strsize = m_data.GetU32(&offset);
       break;
 
     case LC_DYLD_INFO:
@@ -2378,14 +2399,53 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   uint32_t memory_module_load_level = eMemoryModuleLoadLevelComplete;
   bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
+
+  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
+  ConstString g_segment_name_DATA = GetSegmentNameDATA();
+  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
+  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
+  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
+  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
+  ConstString g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
+  SectionSP text_section_sp(
+      section_list->FindSectionByName(g_segment_name_TEXT));
+  SectionSP data_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA));
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
+  SectionSP data_dirty_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
+  SectionSP data_const_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_CONST));
+  SectionSP objc_section_sp(
+      section_list->FindSectionByName(g_segment_name_OBJC));
+  SectionSP eh_frame_section_sp;
+  SectionSP lldb_no_nlist_section_sp;
+  if (text_section_sp.get()) {
+    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_eh_frame);
+    lldb_no_nlist_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_lldb_no_nlist);
+  } else {
+    eh_frame_section_sp =
+        section_list->FindSectionByName(g_section_name_eh_frame);
+    lldb_no_nlist_section_sp =
+        section_list->FindSectionByName(g_section_name_lldb_no_nlist);
+  }
 
   if (process && m_header.filetype != llvm::MachO::MH_OBJECT &&
       !is_local_shared_cache_image) {
     Target &target = process->GetTarget();
 
     memory_module_load_level = target.GetMemoryModuleLoadLevel();
+
+    // If __TEXT,__lldb_no_nlist section is present in this binary,
+    // and we're reading it out of memory, do not read any of the
+    // nlist entries.  They are not needed in lldb and it may be
+    // expensive to load these.  This is to handle a dylib consisting
+    // of only metadata, no code, but it has many nlist entries.
+    if (lldb_no_nlist_section_sp)
+      memory_module_load_level = eMemoryModuleLoadLevelMinimal;
 
     // Reading mach file from memory in a process or core file...
 
@@ -2509,30 +2569,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   }
 
   const bool have_strtab_data = strtab_data.GetByteSize() > 0;
-
-  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
-  ConstString g_segment_name_DATA = GetSegmentNameDATA();
-  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
-  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
-  SectionSP text_section_sp(
-      section_list->FindSectionByName(g_segment_name_TEXT));
-  SectionSP data_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA));
-  SectionSP data_dirty_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
-  SectionSP data_const_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_CONST));
-  SectionSP objc_section_sp(
-      section_list->FindSectionByName(g_segment_name_OBJC));
-  SectionSP eh_frame_section_sp;
-  if (text_section_sp.get())
-    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
-        g_section_name_eh_frame);
-  else
-    eh_frame_section_sp =
-        section_list->FindSectionByName(g_section_name_eh_frame);
 
   const bool is_arm = (m_header.cputype == llvm::MachO::CPU_TYPE_ARM);
   const bool always_thumb = GetArchitecture().IsAlwaysThumbInstructions();
@@ -2734,7 +2770,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         return;
 
         if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID::fromData(&cache_uuid, 16))
+          process_shared_cache_uuid != UUID(&cache_uuid, 16))
         return;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
@@ -2743,7 +2779,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           return;
 
         dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID::fromData(dsc_image_uuid, 16))
+        if (image_uuid != UUID(dsc_image_uuid, 16))
           return;
 
         found_image = true;
@@ -2832,7 +2868,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                           "DSC unmapped local symbol[{0}] has invalid "
                           "string table offset {1:x} in {2}, ignoring symbol",
                           nlist_index, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath());
+                          module_sp->GetFileSpec().GetPath()));
                       continue;
                     }
                     if (symbol_name[0] == '\0')
@@ -3767,6 +3803,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       SymbolType type = eSymbolTypeInvalid;
       SectionSP symbol_section;
+      lldb::addr_t symbol_byte_size = 0;
       bool add_nlist = true;
       bool is_gsym = false;
       bool demangled_is_synthesized = false;
@@ -4352,6 +4389,47 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
       if (symbol_section) {
         const addr_t section_file_addr = symbol_section->GetFileAddress();
+        if (symbol_byte_size == 0 && function_starts_count > 0) {
+          addr_t symbol_lookup_file_addr = nlist.n_value;
+          // Do an exact address match for non-ARM addresses, else get the
+          // closest since the symbol might be a thumb symbol which has an
+          // address with bit zero set.
+          FunctionStarts::Entry *func_start_entry =
+              function_starts.FindEntry(symbol_lookup_file_addr, !is_arm);
+          if (is_arm && func_start_entry) {
+            // Verify that the function start address is the symbol address
+            // (ARM) or the symbol address + 1 (thumb).
+            if (func_start_entry->addr != symbol_lookup_file_addr &&
+                func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
+              // Not the right entry, NULL it out...
+              func_start_entry = nullptr;
+            }
+          }
+          if (func_start_entry) {
+            func_start_entry->data = true;
+
+            addr_t symbol_file_addr = func_start_entry->addr;
+            if (is_arm)
+              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
+
+            const FunctionStarts::Entry *next_func_start_entry =
+                function_starts.FindNextEntry(func_start_entry);
+            const addr_t section_end_file_addr =
+                section_file_addr + symbol_section->GetByteSize();
+            if (next_func_start_entry) {
+              addr_t next_symbol_file_addr = next_func_start_entry->addr;
+              // Be sure the clear the Thumb address bit when we calculate the
+              // size from the current and next address
+              if (is_arm)
+                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
+              symbol_byte_size = std::min<lldb::addr_t>(
+                  next_symbol_file_addr - symbol_file_addr,
+                  section_end_file_addr - symbol_file_addr);
+            } else {
+              symbol_byte_size = section_end_file_addr - symbol_file_addr;
+            }
+          }
+        }
         symbol_value -= section_file_addr;
       }
 
@@ -4457,6 +4535,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
       if (nlist.n_desc & N_WEAK_REF)
         sym[sym_idx].SetIsWeak(true);
+
+      if (symbol_byte_size > 0)
+        sym[sym_idx].SetByteSize(symbol_byte_size);
 
       if (demangled_is_synthesized)
         sym[sym_idx].SetDemangledNameIsSynthesized(true);
@@ -4576,7 +4657,23 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           Address symbol_addr;
           if (module_sp->ResolveFileAddress(symbol_file_addr, symbol_addr)) {
             SectionSP symbol_section(symbol_addr.GetSection());
+            uint32_t symbol_byte_size = 0;
             if (symbol_section) {
+              const addr_t section_file_addr = symbol_section->GetFileAddress();
+              const FunctionStarts::Entry *next_func_start_entry =
+                  function_starts.FindNextEntry(func_start_entry);
+              const addr_t section_end_file_addr =
+                  section_file_addr + symbol_section->GetByteSize();
+              if (next_func_start_entry) {
+                addr_t next_symbol_file_addr = next_func_start_entry->addr;
+                if (is_arm)
+                  next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
+                symbol_byte_size = std::min<lldb::addr_t>(
+                    next_symbol_file_addr - symbol_file_addr,
+                    section_end_file_addr - symbol_file_addr);
+              } else {
+                symbol_byte_size = section_end_file_addr - symbol_file_addr;
+              }
               sym[sym_idx].SetID(synthetic_sym_id++);
               // Don't set the name for any synthetic symbols, the Symbol
               // object will generate one if needed when the name is accessed
@@ -4588,6 +4685,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               add_symbol_addr(symbol_addr.GetFileAddress());
               if (symbol_flags)
                 sym[sym_idx].SetFlags(symbol_flags);
+              if (symbol_byte_size)
+                sym[sym_idx].SetByteSize(symbol_byte_size);
               ++sym_idx;
             }
           }
@@ -5520,9 +5619,13 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       // struct main_bin_spec
       // {
       //     uint32_t version;       // currently 2
-      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //     uint32_t type;          // 0 == unspecified,
+      //                             // 1 == kernel
       //                             // 2 == user process,
+      //                                     dyld mach-o binary addr
       //                             // 3 == standalone binary
+      //                             // 4 == user process,
+      //                             //      dyld_all_image_infos addr
       //     uint64_t address;       // UINT64_MAX if address not specified
       //     uint64_t slide;         // slide, UINT64_MAX if unspecified
       //                             // 0 if no slide needs to be applied to
@@ -5573,6 +5676,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
           const char *typestr = "unrecognized type";
+          type = eBinaryTypeInvalid;
           switch (binspec_type) {
           case 0:
             type = eBinaryTypeUnknown;
@@ -5589,6 +5693,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           case 3:
             type = eBinaryTypeStandalone;
             typestr = "standalone";
+            break;
+          case 4:
+            type = eBinaryTypeUserAllImageInfos;
+            typestr = "userland dyld_all_image_infos";
             break;
           }
           LLDB_LOGF(log,
@@ -6174,9 +6282,9 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                   "0x%" PRIx64,
                   section_sp->GetName().AsCString(),
                   section_sp->GetFileAddress() + value);
-        if (target.GetSectionLoadList().SetSectionLoadAddress(
-                section_sp, section_sp->GetFileAddress() + value,
-                warn_multiple))
+        if (target.SetSectionLoadAddress(section_sp,
+                                         section_sp->GetFileAddress() + value,
+                                         warn_multiple))
           ++num_loaded_sections;
       }
     }
@@ -6197,8 +6305,8 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
                     "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
                     "0x%" PRIx64,
                     section_sp->GetName().AsCString(), section_load_addr);
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
-                  section_sp, section_load_addr, warn_multiple))
+          if (target.SetSectionLoadAddress(section_sp, section_load_addr,
+                                           warn_multiple))
             ++num_loaded_sections;
         }
       }
@@ -6478,9 +6586,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
        target_triple.getOS() == llvm::Triple::IOS ||
        target_triple.getOS() == llvm::Triple::WatchOS ||
        target_triple.getOS() == llvm::Triple::TvOS ||
+       target_triple.getOS() == llvm::Triple::BridgeOS ||
        target_triple.getOS() == llvm::Triple::XROS)) {
-    // NEED_BRIDGEOS_TRIPLE target_triple.getOS() == llvm::Triple::BridgeOS))
-    // {
     bool make_core = false;
     switch (target_arch.GetMachine()) {
     case llvm::Triple::aarch64:

@@ -1,0 +1,37 @@
+functions:
+  duplocale:
+    in-latest-posix: ''
+  freelocale:
+    in-latest-posix: ''
+  getlocalename_l:
+    in-latest-posix: ''
+  localeconv:
+    c-definition: 7.11.2.1
+    in-latest-posix: ''
+  newlocale:
+    in-latest-posix: ''
+  setlocale:
+    c-definition: 7.11.1.1
+    in-latest-posix: ''
+  uselocale:
+    in-latest-posix: ''
+macros:
+  LC_ALL:
+    c-definition: '7.11'
+    in-latest-posix: ''
+  LC_COLLATE:
+    c-definition: '7.11'
+    in-latest-posix: ''
+  LC_CTYPE:
+    c-definition: '7.11'
+    in-latest-posix: ''
+  LC_MONETARY:
+    c-definition: '7.11'
+    in-latest-posix: ''
+  LC_NUMERIC:
+    c-definition: '7.11'
+    in-latest-posix: ''
+  LC_TIME:
+    c-definition: '7.11'
+    in-latest-posix: ''
+

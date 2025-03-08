@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___HASH_TABLE
-#define _LIBCPP___HASH_TABLE
+#ifndef _LIBCPP___CXX03___HASH_TABLE
+#define _LIBCPP___CXX03___HASH_TABLE
 
 #include <__cxx03/__algorithm/max.h>
 #include <__cxx03/__algorithm/min.h>
@@ -2041,4 +2041,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___HASH_TABLE
+#endif // _LIBCPP___CXX03___HASH_TABLE

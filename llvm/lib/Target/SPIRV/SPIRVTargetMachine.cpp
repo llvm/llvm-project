@@ -15,6 +15,7 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
@@ -45,6 +47,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeGlobalISel(PR);
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
+  initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -92,6 +96,11 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
+
 namespace {
 // SPIR-V Code Generator Pass Configuration Options.
 class SPIRVPassConfig : public TargetPassConfig {
@@ -130,13 +139,8 @@ FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr;
 }
 
-// Disable passes that may break CFG.
+// A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
-  // Some standard passes that optimize machine instructions in SSA form uses
-  // MI.isPHI() that doesn't account for OpPhi in SPIR-V and so are able to
-  // break the CFG (e.g., MachineSink).
-  disablePass(&MachineSinkingID);
-
   TargetPassConfig::addMachineSSAOptimization();
 }
 
@@ -205,6 +209,8 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  if (TM.getSubtargetImpl()->isVulkanEnv())
+    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -214,6 +220,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerCombiner());
   addPass(createSPIRVPreLegalizerPass());
 }
 

@@ -34,10 +34,10 @@ def arm_cmpfpe  : SDNode<"ARMISD::CMPFPE",   SDT_CMPFP>;
 def arm_cmpfpe0 : SDNode<"ARMISD::CMPFPEw0", SDT_CMPFP0>;
 
 def arm_fmstat : SDNode<"ARMISD::FMSTAT",
-  SDTypeProfile<0, 1, [
-    SDTCisVT<0, FlagsVT> // in flags
-  ]>,
-  [SDNPOutGlue] // TODO: Change Glue to a normal result.
+  SDTypeProfile<1, 1, [
+    SDTCisVT<0, FlagsVT>, // out flags
+    SDTCisVT<1, FlagsVT>  // in flags
+  ]>
 >;
 
 def arm_fmdrr  : SDNode<"ARMISD::VMOVDRR", SDT_VMOVDRR>;
@@ -562,19 +562,21 @@ multiclass vsel_inst<string op, bits<2> opc, int CC> {
     def H : AHbInp<0b11100, opc, 0,
                    (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f16\t$Sd, $Sn, $Sm"),
-                   [(set (f16 HPR:$Sd), (ARMcmov (f16 HPR:$Sm), (f16 HPR:$Sn), CC))]>,
+                   [(set (f16 HPR:$Sd),
+                         (ARMcmov (f16 HPR:$Sm), (f16 HPR:$Sn), CC, CPSR))]>,
                    Requires<[HasFullFP16]>;
 
     def S : ASbInp<0b11100, opc, 0,
                    (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f32\t$Sd, $Sn, $Sm"),
-                   [(set SPR:$Sd, (ARMcmov SPR:$Sm, SPR:$Sn, CC))]>,
+                   [(set SPR:$Sd, (ARMcmov SPR:$Sm, SPR:$Sn, CC, CPSR))]>,
                    Requires<[HasFPARMv8]>;
 
     def D : ADbInp<0b11100, opc, 0,
                    (outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm),
                    NoItinerary, !strconcat("vsel", op, ".f64\t$Dd, $Dn, $Dm"),
-                   [(set DPR:$Dd, (ARMcmov (f64 DPR:$Dm), (f64 DPR:$Dn), CC))]>,
+                   [(set DPR:$Dd,
+                         (ARMcmov (f64 DPR:$Dm), (f64 DPR:$Dn), CC, CPSR))]>,
                    Requires<[HasFPARMv8, HasDPVFP]>;
   }
 }
@@ -2461,24 +2463,34 @@ def : Pat<(fneg (f16 (fma (fneg (f16 HPR:$Sn)), (f16 HPR:$Sm), (f16 HPR:$Sdin)))
 //
 
 let hasSideEffects = 0 in {
-def VMOVDcc  : PseudoInst<(outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm, cmovpred:$p),
-                    IIC_fpUNA64,
-                    [(set (f64 DPR:$Dd),
-                          (ARMcmov DPR:$Dn, DPR:$Dm, cmovpred:$p))]>,
+def VMOVDcc  : PseudoInst<(outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm, pred:$p),
+                          IIC_fpUNA64, []>,
                RegConstraint<"$Dn = $Dd">, Requires<[HasFPRegs64]>;
 
-def VMOVScc  : PseudoInst<(outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm, cmovpred:$p),
-                    IIC_fpUNA32,
-                    [(set (f32 SPR:$Sd),
-                          (ARMcmov SPR:$Sn, SPR:$Sm, cmovpred:$p))]>,
+def VMOVScc  : PseudoInst<(outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm, pred:$p),
+                          IIC_fpUNA32, []>,
                RegConstraint<"$Sn = $Sd">, Requires<[HasFPRegs]>;
 
-def VMOVHcc  : PseudoInst<(outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm, cmovpred:$p),
-                    IIC_fpUNA16,
-                    [(set (f16 HPR:$Sd),
-                          (ARMcmov (f16 HPR:$Sn), (f16 HPR:$Sm), cmovpred:$p))]>,
+def VMOVHcc  : PseudoInst<(outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm, pred:$p),
+                          IIC_fpUNA16, []>,
                RegConstraint<"$Sd = $Sn">, Requires<[HasFPRegs]>;
 } // hasSideEffects
+
+// The following patterns have to be defined out-of-line because the number
+// of instruction operands does not match the number of SDNode operands
+// (`pred` counts as one operand).
+
+def : Pat<(ARMcmov f64:$Dn, f64:$Dm, imm:$cc, CPSR),
+          (VMOVDcc $Dn, $Dm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs64]>;
+
+def : Pat<(ARMcmov f32:$Sn, f32:$Sm, imm:$cc, CPSR),
+          (VMOVScc $Sn, $Sm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs]>;
+
+def : Pat<(ARMcmov f16:$Sn, f16:$Sm, imm:$cc, CPSR),
+          (VMOVHcc $Sn, $Sm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs]>; // FIXME: Shouldn't this be HasFPRegs16?
 
 //===----------------------------------------------------------------------===//
 // Move from VFP System Register to ARM core register.
@@ -2510,7 +2522,7 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
      Rt = 0b1111 /* apsr_nzcv */ in
  def FMSTAT : MovFromVFP<0b0001 /* fpscr */, (outs), (ins),
                          "vmrs", "\tAPSR_nzcv, fpscr",
-                         [(arm_fmstat FPSCR_NZCV)]>;
+                         [(set CPSR, (arm_fmstat FPSCR_NZCV))]>;
 
  // Application level FPSCR -> GPR
  let hasSideEffects = 1, Uses = [FPSCR], Predicates = [HasFPRegs] in

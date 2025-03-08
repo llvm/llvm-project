@@ -9,8 +9,19 @@
 #ifndef MLIR_IR_BUILTINTYPEINTERFACES_H
 #define MLIR_IR_BUILTINTYPEINTERFACES_H
 
+#include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/Types.h"
 
+namespace llvm {
+struct fltSemantics;
+} // namespace llvm
+
+namespace mlir {
+class FloatType;
+class MLIRContext;
+} // namespace mlir
+
 #include "mlir/IR/BuiltinTypeInterfaces.h.inc"
+#include "mlir/IR/OpAsmTypeInterface.h.inc"
 
 #endif // MLIR_IR_BUILTINTYPEINTERFACES_H

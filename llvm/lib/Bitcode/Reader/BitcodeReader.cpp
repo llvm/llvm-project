@@ -1663,15 +1663,42 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           C = BlockAddress::get(Fn, BB);
           break;
         }
-        case BitcodeConstant::ConstantStructOpcode:
-          C = ConstantStruct::get(cast<StructType>(BC->getType()), ConstOps);
+        case BitcodeConstant::ConstantStructOpcode: {
+          auto *ST = cast<StructType>(BC->getType());
+          if (ST->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in struct initializer");
+
+          for (const auto [Ty, Op] : zip(ST->elements(), ConstOps))
+            if (Op->getType() != Ty)
+              return error("Incorrect type in struct initializer");
+
+          C = ConstantStruct::get(ST, ConstOps);
           break;
-        case BitcodeConstant::ConstantArrayOpcode:
-          C = ConstantArray::get(cast<ArrayType>(BC->getType()), ConstOps);
+        }
+        case BitcodeConstant::ConstantArrayOpcode: {
+          auto *AT = cast<ArrayType>(BC->getType());
+          if (AT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in array initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != AT->getElementType())
+              return error("Incorrect type in array initializer");
+
+          C = ConstantArray::get(AT, ConstOps);
           break;
-        case BitcodeConstant::ConstantVectorOpcode:
+        }
+        case BitcodeConstant::ConstantVectorOpcode: {
+          auto *VT = cast<FixedVectorType>(BC->getType());
+          if (VT->getNumElements() != ConstOps.size())
+            return error("Invalid number of elements in vector initializer");
+
+          for (Constant *Op : ConstOps)
+            if (Op->getType() != VT->getElementType())
+              return error("Incorrect type in vector initializer");
+
           C = ConstantVector::get(ConstOps);
           break;
+        }
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
@@ -1838,7 +1865,7 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::StackProtect:    return 1 << 14;
   case Attribute::StackProtectReq: return 1 << 15;
   case Attribute::Alignment:       return 31 << 16;
-  case Attribute::NoCapture:       return 1 << 21;
+  // 1ULL << 21 is NoCapture, which is upgraded separately.
   case Attribute::NoRedZone:       return 1 << 22;
   case Attribute::NoImplicitFloat: return 1 << 23;
   case Attribute::Naked:           return 1 << 24;
@@ -1910,8 +1937,7 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 }
 
 /// This fills an AttrBuilder object with the LLVM attributes that have
-/// been decoded from the given integer. This function must stay in sync with
-/// 'encodeLLVMAttributesForBitcode'.
+/// been decoded from the given integer.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs,
                                            uint64_t AttrIdx) {
@@ -1957,6 +1983,12 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
     }
     if (ME != MemoryEffects::unknown())
       B.addMemoryAttr(ME);
+  }
+
+  // Upgrade nocapture to captures(none).
+  if (Attrs & (1ULL << 21)) {
+    Attrs &= ~(1ULL << 21);
+    B.addCapturesAttr(CaptureInfo::none());
   }
 
   addRawAttributeValue(B, Attrs);
@@ -2071,8 +2103,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoBuiltin;
   case bitc::ATTR_KIND_NO_CALLBACK:
     return Attribute::NoCallback;
-  case bitc::ATTR_KIND_NO_CAPTURE:
-    return Attribute::NoCapture;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
   case bitc::ATTR_KIND_NO_DUPLICATE:
@@ -2165,6 +2195,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeHWAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
     return Attribute::SanitizeThread;
+  case bitc::ATTR_KIND_SANITIZE_TYPE:
+    return Attribute::SanitizeType;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
   case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
@@ -2221,6 +2253,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroElideSafe;
   case bitc::ATTR_KIND_NO_EXT:
     return Attribute::NoExt;
+  case bitc::ATTR_KIND_CAPTURES:
+    return Attribute::Captures;
   }
 }
 
@@ -2318,6 +2352,11 @@ Error BitcodeReader::parseAttributeGroupBlock() {
               upgradeOldMemoryAttribute(ME, EncodedKind))
             continue;
 
+          if (EncodedKind == bitc::ATTR_KIND_NO_CAPTURE) {
+            B.addCapturesAttr(CaptureInfo::none());
+            continue;
+          }
+
           if (Error Err = parseAttrKind(EncodedKind, &Kind))
             return Err;
 
@@ -2358,8 +2397,29 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory)
-            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
+          else if (Kind == Attribute::Memory) {
+            uint64_t EncodedME = Record[++i];
+            const uint8_t Version = (EncodedME >> 56);
+            if (Version == 0) {
+              // Errno memory location was previously encompassed into default
+              // memory. Ensure this is taken into account while reconstructing
+              // the memory attribute prior to its introduction.
+              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
+              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
+              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
+              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
+                        MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::errnoMemOnly(OtherMem) |
+                        MemoryEffects::otherMemOnly(OtherMem);
+              B.addMemoryAttr(ME);
+            } else {
+              // Construct the memory attribute directly from the encoded base
+              // on newer versions.
+              B.addMemoryAttr(MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+            }
+          } else if (Kind == Attribute::Captures)
+            B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
@@ -2565,7 +2625,7 @@ Error BitcodeReader::parseTypeTableBody() {
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
       ContainedIDs.push_back(Record[0]);
-      ResultTy = PointerType::get(ResultTy, AddressSpace);
+      ResultTy = PointerType::get(ResultTy->getContext(), AddressSpace);
       break;
     }
     case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
@@ -4470,12 +4530,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple());
+        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4659,7 +4719,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(S);
+      TheModule->setTargetTriple(Triple(S));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -5169,6 +5229,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        }
+        if (isa<FPMathOperator>(I)) {
+          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          if (FMF.any())
+            I->setFastMathFlags(FMF);
         }
       }
 
@@ -7110,6 +7175,8 @@ Error BitcodeReader::materializeModule() {
 
   UpgradeModuleFlags(*TheModule);
 
+  UpgradeNVVMAnnotations(*TheModule);
+
   UpgradeARCRuntime(*TheModule);
 
   return Error::success();
@@ -8008,20 +8075,18 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
+                                static_cast<size_t>(Record[I + 1]));
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
+                                 static_cast<size_t>(Record[I + 1]));
       break;
     }
 

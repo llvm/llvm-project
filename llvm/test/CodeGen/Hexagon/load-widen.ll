@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
-; RUN: llc -march=hexagon -disable-load-widen < %s | FileCheck %s --check-prefix=CHECK-DISABLE
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-load-widen < %s | FileCheck %s --check-prefix=CHECK-DISABLE
 
 %struct.node32 = type { ptr, ptr }
 

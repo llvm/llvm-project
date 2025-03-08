@@ -43,8 +43,8 @@ struct ARM64 : ARM64Common {
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
 
   void initICFSafeThunkBody(InputSection *thunk,
-                            InputSection *branchTarget) const override;
-  InputSection *getThunkBranchTarget(InputSection *thunk) const override;
+                            Symbol *targetSym) const override;
+  Symbol *getThunkBranchTarget(InputSection *thunk) const override;
   uint32_t getICFSafeThunkSize() const override;
 };
 
@@ -185,8 +185,7 @@ static constexpr uint32_t icfSafeThunkCode[] = {
     0x14000000, // 08: b    target
 };
 
-void ARM64::initICFSafeThunkBody(InputSection *thunk,
-                                 InputSection *branchTarget) const {
+void ARM64::initICFSafeThunkBody(InputSection *thunk, Symbol *targetSym) const {
   // The base data here will not be itself modified, we'll just be adding a
   // reloc below. So we can directly use the constexpr above as the data.
   thunk->data = {reinterpret_cast<const uint8_t *>(icfSafeThunkCode),
@@ -195,17 +194,17 @@ void ARM64::initICFSafeThunkBody(InputSection *thunk,
   thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
                              /*pcrel=*/true, /*length=*/2,
                              /*offset=*/0, /*addend=*/0,
-                             /*referent=*/branchTarget);
+                             /*referent=*/targetSym);
 }
 
-InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
+Symbol *ARM64::getThunkBranchTarget(InputSection *thunk) const {
   assert(thunk->relocs.size() == 1 &&
          "expected a single reloc on ARM64 ICF thunk");
   auto &reloc = thunk->relocs[0];
-  assert(reloc.referent.is<InputSection *>() &&
-         "ARM64 thunk reloc is expected to point to an InputSection");
+  assert(isa<Symbol *>(reloc.referent) &&
+         "ARM64 thunk reloc is expected to point to a Symbol");
 
-  return reloc.referent.dyn_cast<InputSection *>();
+  return cast<Symbol *>(reloc.referent);
 }
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }

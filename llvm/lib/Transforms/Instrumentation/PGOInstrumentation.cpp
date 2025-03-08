@@ -158,11 +158,11 @@ STATISTIC(NumCoveredBlocks, "Number of basic blocks that were executed");
 
 // Command line option to specify the file to read profile from. This is
 // mainly used for testing.
-static cl::opt<std::string>
-    PGOTestProfileFile("pgo-test-profile-file", cl::init(""), cl::Hidden,
-                       cl::value_desc("filename"),
-                       cl::desc("Specify the path of profile data file. This is"
-                                "mainly for test purpose."));
+static cl::opt<std::string> PGOTestProfileFile(
+    "pgo-test-profile-file", cl::init(""), cl::Hidden,
+    cl::value_desc("filename"),
+    cl::desc("Specify the path of profile data file. This is "
+             "mainly for test purpose."));
 static cl::opt<std::string> PGOTestProfileRemappingFile(
     "pgo-test-profile-remapping-file", cl::init(""), cl::Hidden,
     cl::value_desc("filename"),
@@ -186,7 +186,7 @@ static cl::opt<unsigned> MaxNumAnnotations(
 // to write to the metadata for a single memop intrinsic.
 static cl::opt<unsigned> MaxNumMemOPAnnotations(
     "memop-max-annotations", cl::init(4), cl::Hidden,
-    cl::desc("Max number of preicise value annotations for a single memop"
+    cl::desc("Max number of precise value annotations for a single memop"
              "intrinsic"));
 
 // Command line option to control appending FunctionHash to the name of a COMDAT
@@ -259,6 +259,11 @@ static cl::opt<bool> PGOInstrumentEntry(
     "pgo-instrument-entry", cl::init(false), cl::Hidden,
     cl::desc("Force to instrument function entry basicblock."));
 
+static cl::opt<bool>
+    PGOInstrumentLoopEntries("pgo-instrument-loop-entries", cl::init(false),
+                             cl::Hidden,
+                             cl::desc("Force to instrument loop entries."));
+
 static cl::opt<bool> PGOFunctionEntryCoverage(
     "pgo-function-entry-coverage", cl::Hidden,
     cl::desc(
@@ -286,13 +291,13 @@ static cl::opt<bool> PGOVerifyHotBFI(
     cl::desc("Print out the non-match BFI count if a hot raw profile count "
              "becomes non-hot, or a cold raw profile count becomes hot. "
              "The print is enabled under -Rpass-analysis=pgo, or "
-             "internal option -pass-remakrs-analysis=pgo."));
+             "internal option -pass-remarks-analysis=pgo."));
 
 static cl::opt<bool> PGOVerifyBFI(
     "pgo-verify-bfi", cl::init(false), cl::Hidden,
     cl::desc("Print out mismatched BFI counts after setting profile metadata "
              "The print is enabled under -Rpass-analysis=pgo, or "
-             "internal option -pass-remakrs-analysis=pgo."));
+             "internal option -pass-remarks-analysis=pgo."));
 
 static cl::opt<unsigned> PGOVerifyBFIRatio(
     "pgo-verify-bfi-ratio", cl::init(2), cl::Hidden,
@@ -359,6 +364,7 @@ class FunctionInstrumenter final {
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
   BranchProbabilityInfo *const BPI;
   BlockFrequencyInfo *const BFI;
+  LoopInfo *const LI;
 
   const PGOInstrumentationType InstrumentationType;
 
@@ -376,14 +382,17 @@ class FunctionInstrumenter final {
            InstrumentationType == PGOInstrumentationType::CTXPROF;
   }
 
+  bool shouldInstrumentLoopEntries() const { return PGOInstrumentLoopEntries; }
+
 public:
   FunctionInstrumenter(
       Module &M, Function &F, TargetLibraryInfo &TLI,
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       BranchProbabilityInfo *BPI = nullptr, BlockFrequencyInfo *BFI = nullptr,
+      LoopInfo *LI = nullptr,
       PGOInstrumentationType InstrumentationType = PGOInstrumentationType::FDO)
       : M(M), F(F), TLI(TLI), ComdatMembers(ComdatMembers), BPI(BPI), BFI(BFI),
-        InstrumentationType(InstrumentationType) {}
+        LI(LI), InstrumentationType(InstrumentationType) {}
 
   void instrument();
 };
@@ -439,6 +448,8 @@ createIRLevelProfileFlagVar(Module &M,
   if (PGOInstrumentEntry ||
       InstrumentationType == PGOInstrumentationType::CTXPROF)
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
+  if (PGOInstrumentLoopEntries)
+    ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
   if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
@@ -625,12 +636,13 @@ public:
       Function &Func, TargetLibraryInfo &TLI,
       std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
       bool CreateGlobalVar = false, BranchProbabilityInfo *BPI = nullptr,
-      BlockFrequencyInfo *BFI = nullptr, bool IsCS = false,
-      bool InstrumentFuncEntry = true, bool HasSingleByteCoverage = false)
+      BlockFrequencyInfo *BFI = nullptr, LoopInfo *LI = nullptr,
+      bool IsCS = false, bool InstrumentFuncEntry = true,
+      bool InstrumentLoopEntries = false, bool HasSingleByteCoverage = false)
       : F(Func), IsCS(IsCS), ComdatMembers(ComdatMembers), VPC(Func, TLI),
         TLI(TLI), ValueSites(IPVK_Last + 1),
         SIVisitor(Func, HasSingleByteCoverage),
-        MST(F, InstrumentFuncEntry, BPI, BFI),
+        MST(F, InstrumentFuncEntry, InstrumentLoopEntries, BPI, BFI, LI),
         BCI(constructBCI(Func, HasSingleByteCoverage, InstrumentFuncEntry)) {
     if (BCI && PGOViewBlockCoverageGraph)
       BCI->viewBlockCoverageGraph();
@@ -898,9 +910,9 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
     if (!BlockColors.empty()) {
       const ColorVector &CV = BlockColors.find(OrigCall->getParent())->second;
       assert(CV.size() == 1 && "non-unique color for block!");
-      Instruction *EHPad = CV.front()->getFirstNonPHI();
-      if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+      BasicBlock::iterator EHPadIt = CV.front()->getFirstNonPHIIt();
+      if (EHPadIt->isEHPad())
+        OpBundles.emplace_back("funclet", &*EHPadIt);
     }
   }
 }
@@ -916,9 +928,10 @@ void FunctionInstrumenter::instrument() {
 
   const bool IsCtxProf = InstrumentationType == PGOInstrumentationType::CTXPROF;
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
-      F, TLI, ComdatMembers, /*CreateGlobalVar=*/!IsCtxProf, BPI, BFI,
+      F, TLI, ComdatMembers, /*CreateGlobalVar=*/!IsCtxProf, BPI, BFI, LI,
       InstrumentationType == PGOInstrumentationType::CSFDO,
-      shouldInstrumentEntryBB(), PGOBlockCoverage);
+      shouldInstrumentEntryBB(), shouldInstrumentLoopEntries(),
+      PGOBlockCoverage);
 
   auto *const Name = IsCtxProf ? cast<GlobalValue>(&F) : FuncInfo.FuncNameVar;
   auto *const CFGHash =
@@ -1136,11 +1149,13 @@ public:
   PGOUseFunc(Function &Func, Module *Modu, TargetLibraryInfo &TLI,
              std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers,
              BranchProbabilityInfo *BPI, BlockFrequencyInfo *BFIin,
-             ProfileSummaryInfo *PSI, bool IsCS, bool InstrumentFuncEntry,
+             LoopInfo *LI, ProfileSummaryInfo *PSI, bool IsCS,
+             bool InstrumentFuncEntry, bool InstrumentLoopEntries,
              bool HasSingleByteCoverage)
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
-        FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS,
-                 InstrumentFuncEntry, HasSingleByteCoverage),
+        FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, LI, IsCS,
+                 InstrumentFuncEntry, InstrumentLoopEntries,
+                 HasSingleByteCoverage),
         FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
@@ -1502,9 +1517,10 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     CoveredBlocksToProcess.pop();
     for (auto *BB : InverseDependencies[CoveredBlock]) {
       // If CoveredBlock is covered then BB is covered.
-      if (Coverage[BB])
+      bool &Cov = Coverage[BB];
+      if (Cov)
         continue;
-      Coverage[BB] = true;
+      Cov = true;
       CoveredBlocksToProcess.push(BB);
     }
   }
@@ -1548,14 +1564,15 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     // successors, e.g., when a block calls a function that may call exit(). In
     // those cases, BFI could find its successor to be covered while BCI could
     // find its successor to be dead.
-    if (Coverage[&BB] == IsBlockDead(BB).value_or(false)) {
+    const bool &Cov = Coverage[&BB];
+    if (Cov == IsBlockDead(BB).value_or(false)) {
       LLVM_DEBUG(
           dbgs() << "Found inconsistent block covearge for " << BB.getName()
-                 << ": BCI=" << (Coverage[&BB] ? "Covered" : "Dead") << " BFI="
+                 << ": BCI=" << (Cov ? "Covered" : "Dead") << " BFI="
                  << (IsBlockDead(BB).value() ? "Dead" : "Covered") << "\n");
       ++NumCorruptCoverage;
     }
-    if (Coverage[&BB])
+    if (Cov)
       ++NumCoveredBlocks;
   }
   if (PGOVerifyBFI && NumCorruptCoverage) {
@@ -1923,6 +1940,7 @@ static bool InstrumentAllFunctions(
     Module &M, function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
+    function_ref<LoopInfo *(Function &)> LookupLI,
     PGOInstrumentationType InstrumentationType) {
   // For the context-sensitve instrumentation, we should have a separated pass
   // (before LTO/ThinLTO linking) to create these variables.
@@ -1943,10 +1961,11 @@ static bool InstrumentAllFunctions(
   for (auto &F : M) {
     if (skipPGOGen(F))
       continue;
-    auto &TLI = LookupTLI(F);
-    auto *BPI = LookupBPI(F);
-    auto *BFI = LookupBFI(F);
-    FunctionInstrumenter FI(M, F, TLI, ComdatMembers, BPI, BFI,
+    TargetLibraryInfo &TLI = LookupTLI(F);
+    BranchProbabilityInfo *BPI = LookupBPI(F);
+    BlockFrequencyInfo *BFI = LookupBFI(F);
+    LoopInfo *LI = LookupLI(F);
+    FunctionInstrumenter FI(M, F, TLI, ComdatMembers, BPI, BFI, LI,
                             InstrumentationType);
     FI.instrument();
   }
@@ -1980,8 +1999,11 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
   auto LookupBFI = [&FAM](Function &F) {
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
+  auto LookupLI = [&FAM](Function &F) {
+    return &FAM.getResult<LoopAnalysis>(F);
+  };
 
-  if (!InstrumentAllFunctions(M, LookupTLI, LookupBPI, LookupBFI,
+  if (!InstrumentAllFunctions(M, LookupTLI, LookupBPI, LookupBFI, LookupLI,
                               InstrumentationType))
     return PreservedAnalyses::all();
 
@@ -2116,7 +2138,8 @@ static bool annotateAllFunctions(
     function_ref<TargetLibraryInfo &(Function &)> LookupTLI,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI,
-    ProfileSummaryInfo *PSI, bool IsCS) {
+    function_ref<LoopInfo *(Function &)> LookupLI, ProfileSummaryInfo *PSI,
+    bool IsCS) {
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -2181,22 +2204,27 @@ static bool annotateAllFunctions(
   bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
   if (PGOInstrumentEntry.getNumOccurrences() > 0)
     InstrumentFuncEntry = PGOInstrumentEntry;
+  bool InstrumentLoopEntries = PGOReader->instrLoopEntriesEnabled();
+  if (PGOInstrumentLoopEntries.getNumOccurrences() > 0)
+    InstrumentLoopEntries = PGOInstrumentLoopEntries;
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
     if (skipPGOUse(F))
       continue;
-    auto &TLI = LookupTLI(F);
-    auto *BPI = LookupBPI(F);
-    auto *BFI = LookupBFI(F);
+    TargetLibraryInfo &TLI = LookupTLI(F);
+    BranchProbabilityInfo *BPI = LookupBPI(F);
+    BlockFrequencyInfo *BFI = LookupBFI(F);
+    LoopInfo *LI = LookupLI(F);
     if (!HasSingleByteCoverage) {
       // Split indirectbr critical edges here before computing the MST rather
       // than later in getInstrBB() to avoid invalidating it.
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
                                    BFI);
     }
-    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
-                    InstrumentFuncEntry, HasSingleByteCoverage);
+    PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, LI, PSI, IsCS,
+                    InstrumentFuncEntry, InstrumentLoopEntries,
+                    HasSingleByteCoverage);
     if (HasSingleByteCoverage) {
       Func.populateCoverage(PGOReader.get());
       continue;
@@ -2335,10 +2363,14 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   auto LookupBFI = [&FAM](Function &F) {
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
+  auto LookupLI = [&FAM](Function &F) {
+    return &FAM.getResult<LoopAnalysis>(F);
+  };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
-                            LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
+                            LookupTLI, LookupBPI, LookupBFI, LookupLI, PSI,
+                            IsCS))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

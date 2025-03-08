@@ -27,6 +27,7 @@ add_host_subdirectory(common
   common/LockFileBase.cpp
   common/LZMA.cpp
   common/MainLoopBase.cpp
+  common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -113,7 +114,6 @@ else()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
-        android/LibcGlue.cpp
         )
     endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -132,6 +132,11 @@ else()
     add_host_subdirectory(openbsd
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
+      )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_host_subdirectory(aix
+      aix/HostInfoAIX.cpp
       )
   endif()
 endif()

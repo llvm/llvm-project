@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -550,6 +551,22 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  virtual bool isAuthenticationOfReg(const MCInst &Inst,
+                                     MCPhysReg AuthenticatedReg) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
@@ -618,10 +635,6 @@ public:
   virtual bool isADR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-
-  virtual void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const {
-    llvm_unreachable("not implemented");
   }
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
@@ -1204,6 +1217,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
@@ -1421,11 +1439,12 @@ public:
   }
 
   /// Creates an indirect call to the function within the \p DirectCall PLT
-  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// stub. The function's address location is pointed by the \p TargetLocation
   /// symbol.
+  /// Move instruction annotations from \p DirectCall to the indirect call.
   virtual InstructionListType
-  createIndirectPltCall(const MCInst &DirectCall,
-                        const MCSymbol *TargetLocation, MCContext *Ctx) {
+  createIndirectPLTCall(MCInst &&DirectCall, const MCSymbol *TargetLocation,
+                        MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -1512,6 +1531,13 @@ public:
 
   virtual void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
                               MCContext *Ctx, bool IsTailCall = false) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Undo the linker's ADRP+ADD to ADR relaxation. Take \p ADRInst and return
+  /// ADRP+ADD instruction sequence.
+  virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

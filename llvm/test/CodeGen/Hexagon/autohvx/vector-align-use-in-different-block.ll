@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This used to crash because of calling isSafeToMoveBeforeInBB with source
 ; and target in different blocks.

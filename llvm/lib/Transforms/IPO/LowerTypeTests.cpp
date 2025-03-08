@@ -1699,9 +1699,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
       if (IsExported) {
         if (IsJumpTableCanonical)
-          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDefs().emplace(F->getName());
         else
-          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDecls().emplace(F->getName());
       }
 
       if (!IsJumpTableCanonical) {
@@ -1847,6 +1847,9 @@ LowerTypeTestsModule::LowerTypeTestsModule(
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
+      // Skip declarations since we should not query the TTI for them.
+      if (F.isDeclaration())
+        continue;
       auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
       if (TTI.hasArmWideBranch(false))
         CanUseArmJumpTable = true;
@@ -2090,20 +2093,19 @@ bool LowerTypeTestsModule::lower() {
   };
   MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
-    // A set of all functions that are address taken by a live global object.
-    DenseSet<GlobalValue::GUID> AddressTaken;
-    for (auto &I : *ExportSummary)
-      for (auto &GVS : I.second.SummaryList)
-        if (GVS->isLive())
-          for (const auto &Ref : GVS->refs()) {
-            AddressTaken.insert(Ref.getGUID());
-            for (auto &RefGVS : Ref.getSummaryList())
-              if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
-                AddressTaken.insert(Alias->getAliaseeGUID());
-          }
-
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
+      // A set of all functions that are address taken by a live global object.
+      DenseSet<GlobalValue::GUID> AddressTaken;
+      for (auto &I : *ExportSummary)
+        for (auto &GVS : I.second.SummaryList)
+          if (GVS->isLive())
+            for (const auto &Ref : GVS->refs()) {
+              AddressTaken.insert(Ref.getGUID());
+              for (auto &RefGVS : Ref.getSummaryList())
+                if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
+                  AddressTaken.insert(Alias->getAliaseeGUID());
+            }
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =

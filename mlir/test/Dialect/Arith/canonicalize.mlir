@@ -160,6 +160,78 @@ func.func @selNotCond(%arg0: i1, %arg1 : i32, %arg2 : i32, %arg3 : i32, %arg4 : 
   return %res1, %res2 : i32, i32
 }
 
+// CHECK-LABEL: @cmpiI1eq
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eq(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %arg0, %one : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1eqVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %arg0, %one : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1ne
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1ne(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %arg0, %zero : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1neVec
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVec(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %arg0, %zero : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1eqLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqLhs(%arg0: i1) -> i1 {
+  %one = arith.constant 1 : i1
+  %res = arith.cmpi eq, %one, %arg0  : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1eqVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1eqVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %one = arith.constant dense<1> : vector<4xi1>
+  %res = arith.cmpi eq, %one, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpiI1neLhs
+//  CHECK-SAME: (%[[ARG:.*]]: i1)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neLhs(%arg0: i1) -> i1 {
+  %zero = arith.constant 0 : i1
+  %res = arith.cmpi ne, %zero, %arg0 : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpiI1neVecLhs
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4xi1>)
+//       CHECK: return %[[ARG]]
+func.func @cmpiI1neVecLhs(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %zero = arith.constant dense<0> : vector<4xi1>
+  %res = arith.cmpi ne, %zero, %arg0 : vector<4xi1>
+  return %res : vector<4xi1>
+}
+
 // Test case: Folding of comparisons with equal operands.
 // CHECK-LABEL: @cmpi_equal_operands
 //   CHECK-DAG:   %[[T:.*]] = arith.constant true
@@ -642,6 +714,45 @@ func.func @extFPVectorConstant() -> vector<2xf128> {
   return %0 : vector<2xf128>
 }
 
+// CHECK-LABEL: @truncExtf
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf(%arg0: f32) -> f32 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %trunc = arith.truncf %extf : f64 to f32
+  return %trunc : f32
+}
+
+// CHECK-LABEL: @truncExtf1
+//       CHECK-NOT:  truncf
+//       CHECK:   return  %arg0
+func.func @truncExtf1(%arg0: bf16) -> bf16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to bf16
+  return %trunc : bf16
+}
+
+// CHECK-LABEL: @truncExtf2
+//       CHECK:  %[[ARG0:.+]]: bf16
+//       CHECK:  %[[EXTF:.*]] = arith.extf %[[ARG0:.+]] : bf16 to f32
+//       CHECK:  %[[TRUNCF:.*]] = arith.truncf %[[EXTF:.*]] : f32 to f16
+//       CHECK:   return  %[[TRUNCF:.*]]
+func.func @truncExtf2(%arg0: bf16) -> f16 {
+  %extf = arith.extf %arg0 : bf16 to f32
+  %trunc = arith.truncf %extf : f32 to f16
+  return %trunc : f16
+}
+
+// CHECK-LABEL: @truncExtf3
+//       CHECK:  %[[ARG0:.+]]: f32
+//       CHECK:  %[[CST:.*]] = arith.truncf %[[ARG0:.+]] : f32 to f16
+//       CHECK:   return  %[[CST:.*]]
+func.func @truncExtf3(%arg0: f32) -> f16 {
+  %extf = arith.extf %arg0 : f32 to f64
+  %truncf = arith.truncf %extf : f64 to f16
+  return %truncf : f16
+}
+
 // TODO: We should also add a test for not folding arith.extf on information loss.
 // This may happen when extending f8E5M2FNUZ to f16.
 
@@ -867,6 +978,27 @@ func.func @tripleAddAddOvf2(%arg0: index) -> index {
   %add1 = arith.addi %c17, %arg0 overflow<nsw> : index
   %add2 = arith.addi %c42, %add1 overflow<nuw> : index
   return %add2 : index
+}
+
+
+// CHECK-LABEL: @foldSubXX_tensor
+//       CHECK:   %[[c0:.+]] = arith.constant dense<0> : tensor<10xi32> 
+//       CHECK:   %[[sub:.+]] = arith.subi
+//       CHECK:   return %[[c0]], %[[sub]]
+func.func @foldSubXX_tensor(%static : tensor<10xi32>, %dyn : tensor<?x?xi32>) -> (tensor<10xi32>, tensor<?x?xi32>) {
+  %static_sub = arith.subi %static, %static : tensor<10xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : tensor<?x?xi32>
+  return %static_sub, %dyn_sub : tensor<10xi32>, tensor<?x?xi32>
+}
+
+// CHECK-LABEL: @foldSubXX_vector
+//       CHECK-DAG:  %[[c0:.+]] = arith.constant dense<0> : vector<8xi32>
+//       CHECK-DAG:  %[[c0_scalable:.+]] = arith.constant dense<0> : vector<[4]xi32>
+//       CHECK:   return %[[c0]], %[[c0_scalable]]
+func.func @foldSubXX_vector(%static : vector<8xi32>, %dyn : vector<[4]xi32>) -> (vector<8xi32>, vector<[4]xi32>) {
+  %static_sub = arith.subi %static, %static : vector<8xi32>
+  %dyn_sub = arith.subi %dyn, %dyn : vector<[4]xi32>
+  return %static_sub, %dyn_sub : vector<8xi32>, vector<[4]xi32>
 }
 
 // CHECK-LABEL: @tripleAddSub0
@@ -1750,6 +1882,28 @@ func.func @bitcastOfBitcast(%arg : i16) -> i16 {
 
 // -----
 
+// CHECK-LABEL: @bitcastPoisonItoFP(
+func.func @bitcastPoisonItoFP() -> f32 {
+  // CHECK: %[[P:.+]] = ub.poison : f32
+  // CHECK: return %[[P]] : f32
+  %p = ub.poison : i32
+  %res = arith.bitcast %p : i32 to f32
+  return %res : f32
+}
+
+// -----
+
+// CHECK-LABEL: @bitcastPoisonFPtoI(
+func.func @bitcastPoisonFPtoI() -> i32 {
+  // CHECK: %[[P:.+]] = ub.poison : i32
+  // CHECK: return %[[P]] : i32
+  %p = ub.poison : f32
+  %res = arith.bitcast %p : f32 to i32
+  return %res : i32
+}
+
+// -----
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127
@@ -1917,31 +2071,39 @@ func.func @test_maximumf(%arg0 : f32) -> (f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_minnumf(
-func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32) {
+func.func @test_minnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[INF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.minnumf %arg0, %[[C0]]
-  // CHECK-NEXT:  return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.minnumf %arg0, %[[INF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %inf = arith.constant 0x7F800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.minnumf %c0, %arg0 : f32
   %1 = arith.minnumf %arg0, %arg0 : f32
   %2 = arith.minnumf %inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.minnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_maxnumf(
-func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32) {
-  // CHECK-DAG:   %[[C0:.+]] = arith.constant
+func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
+  // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
+  // CHECK-DAG:   %[[NINF:.+]] = arith.constant
   // CHECK-NEXT:  %[[X:.+]] = arith.maxnumf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0
+  // CHECK-NEXT:  %[[Y:.+]] = arith.maxnumf %arg0, %[[NINF]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %[[Y]], %arg0
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
+  %nan = arith.constant 0x7FC00000 : f32
   %0 = arith.maxnumf %c0, %arg0 : f32
   %1 = arith.maxnumf %arg0, %arg0 : f32
   %2 = arith.maxnumf %-inf, %arg0 : f32
-  return %0, %1, %2 : f32, f32, f32
+  %3 = arith.maxnumf %nan, %arg0 : f32
+  return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
 // -----
@@ -2028,6 +2190,70 @@ func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
   %2 = arith.divf %0, %1 : f32
   return %2 : f32
 }
+
+// -----
+
+func.func @fold_divui_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divui_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nuw> : index
+  %1 = arith.divui %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divui_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+func.func @fold_divsi_of_muli_0(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_0(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG1]]
+
+func.func @fold_divsi_of_muli_1(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 overflow<nsw> : index
+  %1 = arith.divsi %0, %arg1 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @fold_divsi_of_muli_1(
+//  CHECK-SAME:     %[[ARG0:.+]]: index,
+//  CHECK-SAME:     %[[ARG1:.+]]: index)
+//       CHECK:   return %[[ARG0]]
+
+// Do not fold divui(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divui_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divui %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divui_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divui %[[T0]],
+//       CHECK:   return %[[T1]]
+
+// Do not fold divsi(mul(a, v), v) -> a with nuw attribute.
+func.func @no_fold_divsi_of_muli(%arg0 : index, %arg1 : index) -> index {
+  %0 = arith.muli %arg0, %arg1 : index
+  %1 = arith.divsi %0, %arg0 : index
+  return %1 : index
+}
+// CHECK-LABEL: func @no_fold_divsi_of_muli
+//       CHECK:   %[[T0:.+]] = arith.muli
+//       CHECK:   %[[T1:.+]] = arith.divsi %[[T0]],
+//       CHECK:   return %[[T1]]
 
 // -----
 
@@ -3201,26 +3427,3 @@ func.func @bf16_fma(%arg0: vector<32x32x32xbf16>, %arg1: vector<32x32x32xbf16>, 
     }
   }
 #-}
-
-// -----
-
-// CHECK-LABEL: @test_fold_denorm
-// CHECK-SAME: %[[ARG0:.+]]: f32
-func.func @test_fold_denorm(%arg0: f32) -> f32 {
-  // CHECK-NOT: arith.subf
-  // CHECK: return %[[ARG0]] : f32
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<positive_zero> : f32
-  return %sub : f32
-}
-
-// -----
-
-// CHECK-LABEL: @test_expect_not_to_fold_denorm
-func.func @test_expect_not_to_fold_denorm(%arg0: f32, %arg1 : f32) -> (f32, f32) {
-  // CHECK-COUNT-2: arith.subf
-  %c_denorm = arith.constant 1.4e-45 : f32
-  %sub = arith.subf %arg0, %c_denorm denormal<ieee> : f32
-  %sub_1 = arith.subf %arg1, %c_denorm denormal<preserve_sign> : f32
-  return %sub, %sub_1 : f32, f32
-}

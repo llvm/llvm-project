@@ -20,43 +20,43 @@ define <16 x float> @test_tcvtrowd2psi() {
 }
 declare <16 x float> @llvm.x86.tcvtrowd2ps(i8 %A, i32 %B)
 
-define <32 x bfloat> @test_tcvtrowps2pbf16h(i32 %A) {
-; CHECK-LABEL: test_tcvtrowps2pbf16h:
+define <32 x bfloat> @test_tcvtrowps2bf16h(i32 %A) {
+; CHECK-LABEL: test_tcvtrowps2bf16h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tcvtrowps2pbf16h %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x47,0x48,0x6d,0xc1]
+; CHECK-NEXT:    tcvtrowps2bf16h %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x47,0x48,0x6d,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h(i8 1, i32 %A)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 1, i32 %A)
   ret <32 x bfloat> %ret
 }
 
-define <32 x bfloat> @test_tcvtrowps2pbf16hi() {
-; CHECK-LABEL: test_tcvtrowps2pbf16hi:
+define <32 x bfloat> @test_tcvtrowps2bf16hi() {
+; CHECK-LABEL: test_tcvtrowps2bf16hi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tcvtrowps2pbf16h $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x07,0xc1,0x7f]
+; CHECK-NEXT:    tcvtrowps2bf16h $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x07,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h(i8 1, i32 127)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 1, i32 127)
   ret <32 x bfloat> %ret
 }
-declare <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h(i8 %A, i32 %B)
+declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16h(i8 %A, i32 %B)
 
-define <32 x bfloat> @test_tcvtrowps2pbf16l(i32 %A) {
-; CHECK-LABEL: test_tcvtrowps2pbf16l:
+define <32 x bfloat> @test_tcvtrowps2bf16l(i32 %A) {
+; CHECK-LABEL: test_tcvtrowps2bf16l:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tcvtrowps2pbf16l %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x46,0x48,0x6d,0xc1]
+; CHECK-NEXT:    tcvtrowps2bf16l %edi, %tmm1, %zmm0 # encoding: [0x62,0xf2,0x46,0x48,0x6d,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l(i8 1, i32 %A)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 1, i32 %A)
   ret <32 x bfloat> %ret
 }
 
-define <32 x bfloat> @test_tcvtrowps2pbf16li() {
-; CHECK-LABEL: test_tcvtrowps2pbf16li:
+define <32 x bfloat> @test_tcvtrowps2bf16li() {
+; CHECK-LABEL: test_tcvtrowps2bf16li:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tcvtrowps2pbf16l $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x77,0xc1,0x7f]
+; CHECK-NEXT:    tcvtrowps2bf16l $127, %tmm1, %zmm0 # encoding: [0x62,0xf3,0x7e,0x48,0x77,0xc1,0x7f]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l(i8 1, i32 127)
+  %ret = call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 1, i32 127)
   ret <32 x bfloat> %ret
 }
-declare <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l(i8 %A, i32 %B)
+declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16l(i8 %A, i32 %B)
 
 define <32 x half> @test_tcvtrowps2phh(i32 %A) {
 ; CHECK-LABEL: test_tcvtrowps2phh:

@@ -36,7 +36,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -345,4 +345,22 @@ if(SUB_COMPONENTS)
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
       ${CMAKE_CURRENT_BINARY_DIR}/runtimes/Components.cmake)
   endif()
+endif()
+
+# If the user requested 'compile_commands.json' we merge the generated JSON from
+# the created directories.
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT ("${LLVM_BINARY_DIR}" STREQUAL "${CMAKE_BINARY_DIR}"))
+  # Make a dependency so that we don't error if the file gets deleted somehow.
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/compile_commands.json
+                     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/compile_commands.json)
+
+  file(TO_NATIVE_PATH "${LLVM_MAIN_SRC_DIR}/utils/merge-json.py" MERGE_JSON_PATH)
+  add_custom_command(OUTPUT ${LLVM_BINARY_DIR}/compile_commands.json
+                     COMMAND ${CMAKE_COMMAND} -E touch ${LLVM_BINARY_DIR}/compile_commands.json
+                     COMMAND ${Python3_EXECUTABLE} ${MERGE_JSON_PATH}
+                             ${LLVM_BINARY_DIR}/compile_commands.json
+                             ${CMAKE_BINARY_DIR}/compile_commands.json
+                             -o ${LLVM_BINARY_DIR}/compile_commands.json
+                     DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json)
+  add_custom_target(merge_runtime_commands ALL DEPENDS ${LLVM_BINARY_DIR}/compile_commands.json)
 endif()

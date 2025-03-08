@@ -29,6 +29,7 @@
 #include <__memory/auto_ptr.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/shared_count.h>
 #include <__memory/uninitialized_algorithms.h>
@@ -43,6 +44,7 @@
 #include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_function.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_unbounded_array.h>
@@ -56,7 +58,6 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <new>
 #include <typeinfo>
 #if _LIBCPP_HAS_ATOMIC_HEADER
 #  include <__atomic/memory_order.h>
@@ -141,7 +142,7 @@ struct __for_overwrite_tag {};
 
 template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace : __shared_weak_count {
-  using __value_type = __remove_cv_t<_Tp>;
+  using __value_type _LIBCPP_NODEBUG = __remove_cv_t<_Tp>;
 
   template <class... _Args,
             class _Allocator                                                                         = _Alloc,
@@ -293,7 +294,8 @@ struct __shared_ptr_deleter_ctor_reqs {
 };
 
 template <class _Dp>
-using __shared_ptr_nullptr_deleter_ctor_reqs = _And<is_move_constructible<_Dp>, __well_formed_deleter<_Dp, nullptr_t> >;
+using __shared_ptr_nullptr_deleter_ctor_reqs _LIBCPP_NODEBUG =
+    _And<is_move_constructible<_Dp>, __well_formed_deleter<_Dp, nullptr_t> >;
 
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
@@ -315,7 +317,7 @@ public:
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
-  using __trivially_relocatable = shared_ptr;
+  using __trivially_relocatable _LIBCPP_NODEBUG = shared_ptr;
 
 private:
   element_type* __ptr_;
@@ -495,7 +497,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(const weak_ptr<_Yp>& __r)
       : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_ ? __r.__cntrl_->lock() : __r.__cntrl_) {
     if (__cntrl_ == nullptr)
-      __throw_bad_weak_ptr();
+      std::__throw_bad_weak_ptr();
   }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
@@ -1210,7 +1212,7 @@ public:
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
   // any bookkeeping, so it's always trivially relocatable.
-  using __trivially_relocatable = weak_ptr;
+  using __trivially_relocatable _LIBCPP_NODEBUG = weak_ptr;
 
 private:
   element_type* __ptr_;

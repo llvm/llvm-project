@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
-#define _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_BASE_OF_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_BASE_OF_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -28,4 +28,4 @@ inline constexpr bool is_base_of_v = __is_base_of(_Bp, _Dp);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_BASE_OF_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_BASE_OF_H

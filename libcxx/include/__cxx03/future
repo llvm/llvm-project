@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FUTURE
-#define _LIBCPP_FUTURE
+#ifndef _LIBCPP___CXX03_FUTURE
+#define _LIBCPP___CXX03_FUTURE
 
 /*
     future synopsis
@@ -1472,7 +1472,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void swap(__packaged_task_function&) _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
+  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
 };
 
 template <class _Rp, class... _ArgTypes>
@@ -2059,4 +2059,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/system_error>
 #endif
 
-#endif // _LIBCPP_FUTURE
+#endif // _LIBCPP___CXX03_FUTURE

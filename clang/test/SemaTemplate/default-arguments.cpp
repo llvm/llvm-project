@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-template<typename T, int N = 2> struct X; // expected-note{{template is declared here}}
+template<typename T, int N = 2> struct X; // expected-note {{template parameter is declared here}}
 
 X<int, 1> *x1;
 X<int> *x2;
 
-X<> *x3; // expected-error{{too few template arguments for class template 'X'}}
+X<> *x3; // expected-error{{missing template argument for template parameter}}
 
 template<typename U = float, int M> struct X;
 
@@ -20,6 +20,7 @@ template<class T> struct a { };
 template<> struct a<int> { static const bool v = true; };
 
 template<class T, bool = a<T>::v> struct p { }; // expected-error {{no member named 'v'}}
+                                                // expected-note@-1 {{template parameter is declared here}}
 
 template struct p<bool>; // expected-note {{in instantiation of default argument for 'p<bool>' required here}}
 template struct p<int>;
@@ -50,22 +51,24 @@ template<typename T> struct X1 { };
 template<typename T>
 struct X2 {
   template<typename U = typename X1<T>::type> // expected-error{{no type named 'type' in 'X1<int>'}} \
-                                              // expected-error{{no type named 'type' in 'X1<char>'}}
-  struct Inner1 { }; // expected-note{{template is declared here}}
-  
+                                              // expected-error{{no type named 'type' in 'X1<char>'}} \
+                                              // expected-note {{template parameter is declared here}}
+  struct Inner1 { };
+
   template<T Value = X1<T>::value> // expected-error{{no member named 'value' in 'X1<int>'}} \
-                                   // expected-error{{no member named 'value' in 'X1<char>'}}
-  struct NonType1 { }; // expected-note{{template is declared here}}
-  
+                                   // expected-error{{no member named 'value' in 'X1<char>'}} \
+                                   // expected-note {{template parameter is declared here}}
+  struct NonType1 { };
+
   template<T Value>
   struct Inner2 { };
-  
+
   template<typename U>
   struct Inner3 {
     template<typename X = T, typename V = U>
     struct VeryInner { };
-    
-    template<T Value1 = sizeof(T), T Value2 = sizeof(U), 
+
+    template<T Value1 = sizeof(T), T Value2 = sizeof(U),
              T Value3 = Value1 + Value2>
     struct NonType2 { };
   };
@@ -74,10 +77,10 @@ struct X2 {
 X2<int> x2i; // expected-note{{in instantiation of template class 'X2<int>' requested here}}
 X2<int>::Inner1<float> x2iif;
 
-X2<int>::Inner1<> x2bad; // expected-error{{too few template arguments for class template 'Inner1'}}
+X2<int>::Inner1<> x2bad; // expected-error{{missing template argument for template parameter}}
 
 X2<int>::NonType1<'a'> x2_nontype1;
-X2<int>::NonType1<> x2_nontype1_bad; // expected-error{{too few template arguments for class template 'NonType1'}}
+X2<int>::NonType1<> x2_nontype1_bad; // expected-error{{missing template argument for template parameter}}
 
 // Check multi-level substitution into template type arguments
 X2<int>::Inner3<float>::VeryInner<> vi;
@@ -89,11 +92,11 @@ struct is_same { static const bool value = false; };
 template<typename T>
 struct is_same<T, T> { static const bool value = true; };
 
-int array1[is_same<__typeof__(vi), 
+int array1[is_same<__typeof__(vi),
                X2<int>::Inner3<float>::VeryInner<int, float> >::value? 1 : -1];
 
 int array2[is_same<__typeof(x2_deep_nontype),
-                   X2<char>::Inner3<int>::NonType2<sizeof(char), sizeof(int), 
+                   X2<char>::Inner3<int>::NonType2<sizeof(char), sizeof(int),
                                     sizeof(char)+sizeof(int)> >::value? 1 : -1];
 
 // Template template parameter defaults
@@ -109,18 +112,20 @@ struct add_pointer {
 
 template<typename T, template<typename> class X = T::template apply>
   struct X4;
-int array4[is_same<X4<add_pointer>, 
+int array4[is_same<X4<add_pointer>,
                    X4<add_pointer, add_pointer::apply> >::value? 1 : -1];
 
-template<int> struct X5 {};
-template<long> struct X5b {};
-template<typename T, 
-         template<T> class B = X5>
+template<int> struct X5 {}; // expected-note {{template parameter is declared here}}
+template<long long> struct X5b {};
+template<typename T,
+         template<T> class B = X5> // expected-error {{cannot be narrowed from type 'long long' to 'int'}}
+                                   // expected-note@-1 {{template template argument is incompatible}}
+                                   // expected-note@-2 {{template parameter is declared here}}
   struct X6 {};
 
 X6<int> x6a;
-X6<long> x6b;
-X6<long, X5b> x6c;
+X6<long long> x6b; // expected-note {{while checking a default template argument used here}}
+X6<long long, X5b> x6c;
 
 
 template<template<class> class X = B<int> > struct X7; // expected-error{{must be a class template}}

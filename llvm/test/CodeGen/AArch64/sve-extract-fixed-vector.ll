@@ -238,11 +238,8 @@ define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
 ; CHECK-LABEL: extract_v2i1_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov v0.s[1], v0.s[2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %inmask, i64 0)
   ret <2 x i1> %mask

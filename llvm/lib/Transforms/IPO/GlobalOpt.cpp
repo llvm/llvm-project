@@ -96,6 +96,12 @@ STATISTIC(NumGlobalArraysPadded,
           "Number of global arrays padded to alignment boundary");
 
 static cl::opt<bool>
+    OptimizeNonFMVCallers("optimize-non-fmv-callers",
+                          cl::desc("Statically resolve calls to versioned "
+                                   "functions from non-versioned callers."),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
                            cl::desc("Enable stress test of coldcc by adding "
                                     "calling conv to all internal functions."),
@@ -105,7 +111,7 @@ static cl::opt<int> ColdCCRelFreq(
     "coldcc-rel-freq", cl::Hidden, cl::init(2),
     cl::desc(
         "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling"
+        "entry frequency, for a call site to be considered cold for enabling "
         "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,
@@ -946,11 +952,10 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
 
   // If there is a comparison against null, we will insert a global bool to
   // keep track of whether the global was initialized yet or not.
-  GlobalVariable *InitBool =
-    new GlobalVariable(Type::getInt1Ty(GV->getContext()), false,
-                       GlobalValue::InternalLinkage,
-                       ConstantInt::getFalse(GV->getContext()),
-                       GV->getName()+".init", GV->getThreadLocalMode());
+  GlobalVariable *InitBool = new GlobalVariable(
+      Type::getInt1Ty(GV->getContext()), false, GlobalValue::InternalLinkage,
+      ConstantInt::getFalse(GV->getContext()), GV->getName() + ".init",
+      GV->getThreadLocalMode(), GV->getAddressSpace());
   bool InitBoolUsed = false;
 
   // Loop over all instruction uses of GV, processing them in turn.
@@ -2059,7 +2064,7 @@ static bool destArrayCanBeWidened(CallInst *CI) {
   return true;
 }
 
-static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
                                            unsigned NumBytesToPad,
                                            unsigned NumBytesToCopy) {
   if (!OldVar->hasInitializer())
@@ -2078,10 +2083,10 @@ static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
     StrData.push_back('\0');
   auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
   // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  Constant *SourceReplace = ConstantDataArray::get(OldVar->getContext(), Arr);
   GlobalVariable *NewGV = new GlobalVariable(
-      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
-      SourceReplace, SourceReplace->getName());
+      *(OldVar->getParent()), SourceReplace->getType(), true,
+      OldVar->getLinkage(), SourceReplace, SourceReplace->getName());
   // Copy any other attributes from original global variable
   // e.g. unamed_addr
   NewGV->copyAttributesFrom(OldVar);
@@ -2109,13 +2114,13 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
   }
 }
 
-static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+static bool tryWidenGlobalArrayAndDests(GlobalVariable *SourceVar,
                                         const unsigned NumBytesToPad,
                                         const unsigned NumBytesToCopy,
                                         ConstantInt *BytesToCopyOp,
                                         ConstantDataArray *SourceDataArray) {
   auto *NewSourceGV =
-      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+      widenGlobalVariable(SourceVar, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
     return false;
 
@@ -2153,8 +2158,6 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
-    Function *F = CI->getCalledFunction();
-
     auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
     if (!BytesToCopyOp)
       continue;
@@ -2181,10 +2184,12 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (NumElementsToCopy != DZSize || DZSize != SZSize)
       continue;
 
-    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
-        NumBytesToCopy, SourceDataArray->getType());
+    unsigned NumBytesToPad =
+        GetTTI(*CI->getFunction())
+            .getNumBytesToPadGlobalArray(NumBytesToCopy,
+                                         SourceDataArray->getType());
     if (NumBytesToPad) {
-      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+      return tryWidenGlobalArrayAndDests(GV, NumBytesToPad, NumBytesToCopy,
                                          BytesToCopyOp, SourceDataArray);
     }
   }
@@ -2642,6 +2647,171 @@ DeleteDeadIFuncs(Module &M,
   return Changed;
 }
 
+// Follows the use-def chain of \p V backwards until it finds a Function,
+// in which case it collects in \p Versions. Return true on successful
+// use-def chain traversal, false otherwise.
+static bool collectVersions(TargetTransformInfo &TTI, Value *V,
+                            SmallVectorImpl<Function *> &Versions) {
+  if (auto *F = dyn_cast<Function>(V)) {
+    if (!TTI.isMultiversionedFunction(*F))
+      return false;
+    Versions.push_back(F);
+  } else if (auto *Sel = dyn_cast<SelectInst>(V)) {
+    if (!collectVersions(TTI, Sel->getTrueValue(), Versions))
+      return false;
+    if (!collectVersions(TTI, Sel->getFalseValue(), Versions))
+      return false;
+  } else if (auto *Phi = dyn_cast<PHINode>(V)) {
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+      if (!collectVersions(TTI, Phi->getIncomingValue(I), Versions))
+        return false;
+  } else {
+    // Unknown instruction type. Bail.
+    return false;
+  }
+  return true;
+}
+
+// Bypass the IFunc Resolver of MultiVersioned functions when possible. To
+// deduce whether the optimization is legal we need to compare the target
+// features between caller and callee versions. The criteria for bypassing
+// the resolver are the following:
+//
+// * If the callee's feature set is a subset of the caller's feature set,
+//   then the callee is a candidate for direct call.
+//
+// * Among such candidates the one of highest priority is the best match
+//   and it shall be picked, unless there is a version of the callee with
+//   higher priority than the best match which cannot be picked from a
+//   higher priority caller (directly or through the resolver).
+//
+// * For every higher priority callee version than the best match, there
+//   is a higher priority caller version whose feature set availability
+//   is implied by the callee's feature set.
+//
+static bool OptimizeNonTrivialIFuncs(
+    Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  bool Changed = false;
+
+  // Cache containing the mask constructed from a function's target features.
+  DenseMap<Function *, uint64_t> FeatureMask;
+
+  for (GlobalIFunc &IF : M.ifuncs()) {
+    if (IF.isInterposable())
+      continue;
+
+    Function *Resolver = IF.getResolverFunction();
+    if (!Resolver)
+      continue;
+
+    if (Resolver->isInterposable())
+      continue;
+
+    TargetTransformInfo &TTI = GetTTI(*Resolver);
+
+    // Discover the callee versions.
+    SmallVector<Function *> Callees;
+    if (any_of(*Resolver, [&TTI, &Callees](BasicBlock &BB) {
+          if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
+            if (!collectVersions(TTI, Ret->getReturnValue(), Callees))
+              return true;
+          return false;
+        }))
+      continue;
+
+    assert(!Callees.empty() && "Expecting successful collection of versions");
+
+    LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
+                      << Resolver->getName() << "\n");
+
+    // Cache the feature mask for each callee.
+    for (Function *Callee : Callees) {
+      auto [It, Inserted] = FeatureMask.try_emplace(Callee);
+      if (Inserted)
+        It->second = TTI.getFeatureMask(*Callee);
+    }
+
+    // Sort the callee versions in decreasing priority order.
+    sort(Callees, [&](auto *LHS, auto *RHS) {
+      return FeatureMask[LHS] > FeatureMask[RHS];
+    });
+
+    // Find the callsites and cache the feature mask for each caller.
+    SmallVector<Function *> Callers;
+    DenseMap<Function *, SmallVector<CallBase *>> CallSites;
+    for (User *U : IF.users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        if (CB->getCalledOperand() == &IF) {
+          Function *Caller = CB->getFunction();
+          auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(Caller);
+          if (FeatInserted)
+            FeatIt->second = TTI.getFeatureMask(*Caller);
+          auto [CallIt, CallInserted] = CallSites.try_emplace(Caller);
+          if (CallInserted)
+            Callers.push_back(Caller);
+          CallIt->second.push_back(CB);
+        }
+      }
+    }
+
+    // Sort the caller versions in decreasing priority order.
+    sort(Callers, [&](auto *LHS, auto *RHS) {
+      return FeatureMask[LHS] > FeatureMask[RHS];
+    });
+
+    auto implies = [](uint64_t A, uint64_t B) { return (A & B) == B; };
+
+    // Index to the highest priority candidate.
+    unsigned I = 0;
+    // Now try to redirect calls starting from higher priority callers.
+    for (Function *Caller : Callers) {
+      assert(I < Callees.size() && "Found callers of equal priority");
+
+      Function *Callee = Callees[I];
+      uint64_t CallerBits = FeatureMask[Caller];
+      uint64_t CalleeBits = FeatureMask[Callee];
+
+      // In the case of FMV callers, we know that all higher priority callers
+      // than the current one did not get selected at runtime, which helps
+      // reason about the callees (if they have versions that mandate presence
+      // of the features which we already know are unavailable on this target).
+      if (TTI.isMultiversionedFunction(*Caller)) {
+        // If the feature set of the caller implies the feature set of the
+        // highest priority candidate then it shall be picked. In case of
+        // identical sets advance the candidate index one position.
+        if (CallerBits == CalleeBits)
+          ++I;
+        else if (!implies(CallerBits, CalleeBits)) {
+          // Keep advancing the candidate index as long as the caller's
+          // features are a subset of the current candidate's.
+          while (implies(CalleeBits, CallerBits)) {
+            if (++I == Callees.size())
+              break;
+            CalleeBits = FeatureMask[Callees[I]];
+          }
+          continue;
+        }
+      } else {
+        // We can't reason much about non-FMV callers. Just pick the highest
+        // priority callee if it matches, otherwise bail.
+        if (!OptimizeNonFMVCallers || I > 0 || !implies(CallerBits, CalleeBits))
+          continue;
+      }
+      auto &Calls = CallSites[Caller];
+      for (CallBase *CS : Calls) {
+        LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName() << " -> "
+                          << Callee->getName() << "\n");
+        CS->setCalledOperand(Callee);
+      }
+      Changed = true;
+    }
+    if (IF.use_empty() ||
+        all_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))
+      NumIFuncsResolved++;
+  }
+  return Changed;
+}
+
 static bool
 optimizeGlobalsInModule(Module &M, const DataLayout &DL,
                         function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2707,6 +2877,9 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);
+
+    // Optimize IFuncs based on the target features of the caller.
+    LocalChange |= OptimizeNonTrivialIFuncs(M, GetTTI);
 
     // Remove any IFuncs that are now dead.
     LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);

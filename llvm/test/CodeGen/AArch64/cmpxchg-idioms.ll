@@ -53,7 +53,6 @@ define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-LABEL: test_return_bool:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    ; kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:  LBB1_1: ; %cmpxchg.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxrb w9, [x0]

@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/StmtVisitor.h"
 #include <optional>
 
 namespace clang {
@@ -23,6 +24,8 @@ bool isSafePtr(clang::CXXRecordDecl *Decl) {
 
 bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -33,12 +36,16 @@ bool tryToFindPtrOrigin(
       E = tempExpr->getSubExpr();
       continue;
     }
-    if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
+    if (auto *tempExpr = dyn_cast<CXXConstructExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
         if (auto *Class = C->getParent(); Class && isSafePtr(Class))
           return callback(E, true);
         break;
       }
+    }
+    if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+      if (isSafePtrType(TempExpr->getTypeAsWritten()))
+        return callback(TempExpr, true);
     }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
@@ -52,9 +59,9 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                callback) &&
+                                isSafePtr, isSafePtrType, callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                callback);
+                                isSafePtr, isSafePtrType, callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -91,7 +98,7 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *callee = call->getDirectCallee()) {
-        if (isCtorOfRefCounted(callee) || isCtorOfCheckedPtr(callee)) {
+        if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
@@ -137,8 +144,13 @@ bool tryToFindPtrOrigin(
 bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+    auto *FoundDecl = Ref->getFoundDecl();
+    if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+        return true;
+    } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
+      VarDecl *VD = BD->getHoldingVar();
+      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
         return true;
     }
   }
@@ -153,20 +165,62 @@ bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(E)) {
     if (auto *Callee = MCE->getDirectCallee()) {
       auto Name = safeGetName(Callee);
-      if (Name == "get" || Name == "ptr") {
-        auto *ThisArg = MCE->getImplicitObjectArgument();
-        E = ThisArg;
-      }
+      if (Name == "get" || Name == "ptr")
+        E = MCE->getImplicitObjectArgument();
+      if (isa<CXXConversionDecl>(Callee))
+        E = MCE->getImplicitObjectArgument();
     }
+  } else if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+    if (OCE->getOperator() == OO_Star && OCE->getNumArgs() == 1)
+      E = OCE->getArg(0);
   }
-  auto *ME = dyn_cast<MemberExpr>(E);
-  if (!ME)
-    return false;
-  auto *D = ME->getMemberDecl();
+  const ValueDecl *D = nullptr;
+  if (auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  else if (auto *IVR = dyn_cast<ObjCIvarRefExpr>(E))
+    D = IVR->getDecl();
   if (!D)
     return false;
   auto T = D->getType();
   return isOwnerPtrType(T) && T.isConstQualified();
+}
+
+class EnsureFunctionVisitor
+    : public ConstStmtVisitor<EnsureFunctionVisitor, bool> {
+public:
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children()) {
+      if (Child && !Visit(Child))
+        return false;
+    }
+    return true;
+  }
+
+  bool VisitReturnStmt(const ReturnStmt *RS) {
+    if (auto *RV = RS->getRetValue()) {
+      RV = RV->IgnoreParenCasts();
+      if (isa<CXXNullPtrLiteralExpr>(RV))
+        return true;
+      return isConstOwnerPtrMemberExpr(RV);
+    }
+    return false;
+  }
+};
+
+bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
+  auto *MCE = dyn_cast<CXXMemberCallExpr>(E);
+  if (!MCE)
+    return false;
+  auto *Callee = MCE->getDirectCallee();
+  if (!Callee)
+    return false;
+  auto *Body = Callee->getBody();
+  if (!Body)
+    return false;
+  auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
+  if (IsNew)
+    CacheIt->second = EnsureFunctionVisitor().Visit(Body);
+  return CacheIt->second;
 }
 
 } // namespace clang

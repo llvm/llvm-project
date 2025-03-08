@@ -549,7 +549,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TheTarget =
           TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
       if (!TheTarget) {
-        WithColor::error(errs(), argv[0]) << Error;
+        WithColor::error(errs(), argv[0]) << Error << "\n";
         exit(1);
       }
 
@@ -575,7 +575,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
     if (!TargetTriple.empty())
-      M->setTargetTriple(Triple::normalize(TargetTriple));
+      M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
@@ -592,7 +592,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     TheTarget =
         TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
     if (!TheTarget) {
-      WithColor::error(errs(), argv[0]) << Error;
+      WithColor::error(errs(), argv[0]) << Error << "\n";
       return 1;
     }
 
@@ -633,7 +633,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)

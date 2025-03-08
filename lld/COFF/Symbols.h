@@ -33,7 +33,12 @@ class ArchiveFile;
 class COFFLinkerContext;
 class InputFile;
 class ObjFile;
+class Symbol;
 class SymbolTable;
+
+const COFFSyncStream &operator<<(const COFFSyncStream &,
+                                 const llvm::object::Archive::Symbol *);
+const COFFSyncStream &operator<<(const COFFSyncStream &, Symbol *);
 
 // The base class for real symbol classes.
 class Symbol {
@@ -527,6 +532,10 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
 std::string toString(const coff::COFFLinkerContext &ctx, coff::Symbol &b);
 std::string toCOFFString(const coff::COFFLinkerContext &ctx,
                          const llvm::object::Archive::Symbol &b);
+
+// Returns a symbol name for an error message.
+std::string maybeDemangleSymbol(const coff::COFFLinkerContext &ctx,
+                                StringRef symName);
 
 } // namespace lld
 

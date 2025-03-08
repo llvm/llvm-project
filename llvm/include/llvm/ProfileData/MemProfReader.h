@@ -209,6 +209,26 @@ private:
   // A mapping of the hash to symbol name, only used if KeepSymbolName is true.
   llvm::DenseMap<uint64_t, std::string> GuidToSymbolName;
 };
+
+class YAMLMemProfReader final : public MemProfReader {
+public:
+  YAMLMemProfReader() = default;
+
+  // Return true if the \p DataBuffer starts with "---" indicating it is a YAML
+  // file.
+  static bool hasFormat(const MemoryBuffer &DataBuffer);
+  // Wrapper around hasFormat above, reading the file instead of the memory
+  // buffer.
+  static bool hasFormat(const StringRef Path);
+
+  // Create a YAMLMemProfReader after sanity checking the contents of the file
+  // at \p Path or the \p Buffer.
+  static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
+  static Expected<std::unique_ptr<YAMLMemProfReader>>
+  create(std::unique_ptr<MemoryBuffer> Buffer);
+
+  void parse(StringRef YAMLData);
+};
 } // namespace memprof
 } // namespace llvm
 

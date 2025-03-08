@@ -755,10 +755,41 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
       sizeof(PointerJumpStubContent), true, false);
 }
 
+/// AArch64 reentry trampoline.
+///
+/// Contains the instruction sequence for a trampoline that stores its return
+/// address (and stack pointer) on the stack and calls the given reentry symbol:
+///   STP  x29, x30, [sp, #-16]!
+///   BL   <reentry-symbol>
+extern const char ReentryTrampolineContent[8];
+
+/// Create a block of N reentry trampolines.
+inline Block &createReentryTrampolineBlock(LinkGraph &G,
+                                           Section &TrampolineSection,
+                                           Symbol &ReentrySymbol) {
+  auto &B = G.createContentBlock(TrampolineSection, ReentryTrampolineContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 4, 0);
+  B.addEdge(Branch26PCRel, 4, ReentrySymbol, 0);
+  return B;
+}
+
+inline Symbol &createAnonymousReentryTrampoline(LinkGraph &G,
+                                                Section &TrampolineSection,
+                                                Symbol &ReentrySymbol) {
+  return G.addAnonymousSymbol(
+      createReentryTrampolineBlock(G, TrampolineSection, ReentrySymbol), 0,
+      sizeof(ReentryTrampolineContent), true, false);
+}
+
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
 public:
   static StringRef getSectionName() { return "$__GOT"; }
+
+  GOTTableManager(LinkGraph &G) {
+    if ((GOTSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     Edge::Kind KindToSet = Edge::Invalid;
@@ -822,15 +853,20 @@ private:
     return *GOTSection;
   }
 
+  void registerExistingEntries();
+
   Section *GOTSection = nullptr;
 };
 
 /// Procedure Linkage Table Builder.
 class PLTTableManager : public TableManager<PLTTableManager> {
 public:
-  PLTTableManager(GOTTableManager &GOT) : GOT(GOT) {}
-
   static StringRef getSectionName() { return "$__STUBS"; }
+
+  PLTTableManager(LinkGraph &G, GOTTableManager &GOT) : GOT(GOT) {
+    if ((StubsSection = G.findSectionByName(getSectionName())))
+      registerExistingEntries();
+  }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
@@ -857,6 +893,8 @@ public:
                                       orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
   }
+
+  void registerExistingEntries();
 
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;

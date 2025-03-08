@@ -253,6 +253,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
+OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
+  std::string_view nameView{name.source.begin(), name.source.size()};
+  std::string nameLower{ToLowerCaseLetters(nameView)};
+  // The function getOpenMPDirectiveKind will return OMPD_unknown in two cases:
+  // (1) if the given string doesn't match any actual directive, or
+  // (2) if the given string was "unknown".
+  // The Verbatim(<token>) parser will succeed as long as the given token
+  // matches the source.
+  // Since using "construct<OmpDirectiveName>(verbatim(...))" will succeed
+  // if the verbatim parser succeeds, in order to get OMPD_unknown the
+  // token given to Verbatim must be invalid. Because it's an internal issue
+  // asserting is ok.
+  v = llvm::omp::getOpenMPDirectiveKind(nameLower);
+  assert(v != llvm::omp::Directive::OMPD_unknown && "Invalid directive name");
+  source = name.source;
+}
+
 OmpDependenceType::Value OmpDoacross::GetDepType() const {
   return common::visit( //
       common::visitors{
@@ -267,7 +284,38 @@ OmpDependenceType::Value OmpDoacross::GetDepType() const {
 }
 
 OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
-  return std::get<parser::OmpTaskDependenceType>(t).v;
+  using Modifier = OmpDependClause::TaskDep::Modifier;
+  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
+  if (modifiers) {
+    for (auto &m : *modifiers) {
+      if (auto *dep{std::get_if<OmpTaskDependenceType>(&m.u)}) {
+        return dep->v;
+      }
+    }
+    llvm_unreachable("expecting OmpTaskDependenceType in TaskDep");
+  } else {
+    llvm_unreachable("expecting modifiers on OmpDependClause::TaskDep");
+  }
+}
+
+std::string OmpTraitSelectorName::ToString() const {
+  return common::visit( //
+      common::visitors{
+          [&](Value v) { //
+            return std::string(EnumToString(v));
+          },
+          [&](llvm::omp::Directive d) {
+            return llvm::omp::getOpenMPDirectiveName(d).str();
+          },
+          [&](const std::string &s) { //
+            return s;
+          },
+      },
+      u);
+}
+
+std::string OmpTraitSetSelectorName::ToString() const {
+  return std::string(EnumToString(v));
 }
 
 } // namespace Fortran::parser
@@ -287,5 +335,13 @@ template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
 namespace Fortran::parser {
 llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
+}
+
+const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
+  static OmpClauseList empty{decltype(OmpClauseList::v){}};
+  if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
+    return *clauses;
+  }
+  return empty;
 }
 } // namespace Fortran::parser

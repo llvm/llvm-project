@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_REDUCE_H
-#define _LIBCPP___NUMERIC_REDUCE_H
+#ifndef _LIBCPP___CXX03___NUMERIC_REDUCE_H
+#define _LIBCPP___CXX03___NUMERIC_REDUCE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/operations.h>
@@ -50,4 +50,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_REDUCE_H
+#endif // _LIBCPP___CXX03___NUMERIC_REDUCE_H

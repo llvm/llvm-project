@@ -253,7 +253,7 @@ public:
   InstrLowerer(Module &M, const InstrProfOptions &Options,
                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                bool IsCS)
-      : M(M), Options(Options), TT(Triple(M.getTargetTriple())), IsCS(IsCS),
+      : M(M), Options(Options), TT(M.getTargetTriple()), IsCS(IsCS),
         GetTLI(GetTLI), DataReferencedByCode(profDataReferencedByCode(M)) {}
 
   bool lower();
@@ -775,7 +775,7 @@ void InstrLowerer::doSampling(Instruction *I) {
     NewSamplingVarVal =
         IncBuilder.CreateAdd(LoadSamplingVar, GetConstant(IncBuilder, 1));
     SamplingVarIncr = IncBuilder.CreateStore(NewSamplingVarVal, SamplingVar);
-    I->moveBefore(ThenTerm);
+    I->moveBefore(ThenTerm->getIterator());
   }
 
   if (config.IsFastSampling)
@@ -792,11 +792,11 @@ void InstrLowerer::doSampling(Instruction *I) {
 
   // For the simple sampling, the counter update happens in sampling var reset.
   if (config.IsSimpleSampling)
-    I->moveBefore(ThenTerm);
+    I->moveBefore(ThenTerm->getIterator());
 
   IRBuilder<> ResetBuilder(ThenTerm);
   ResetBuilder.CreateStore(GetConstant(ResetBuilder, 0), SamplingVar);
-  SamplingVarIncr->moveBefore(ElseTerm);
+  SamplingVarIncr->moveBefore(ElseTerm->getIterator());
 }
 
 bool InstrLowerer::lowerIntrinsics(Function *F) {
