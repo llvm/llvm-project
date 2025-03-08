@@ -25,7 +25,6 @@
 #include <__memory/unique_temporary_buffer.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/invoke.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
@@ -204,7 +203,7 @@ struct __stable_sort_switch {
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
-  static_assert(is_arithmetic<_Tp>::value);
+  static_assert(is_integral_v<_Tp > || numeric_limits<_Tp>::is_iec559);
   if constexpr (sizeof(_Tp) == 1) {
     return 1 << 8;
   }
@@ -214,14 +213,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_max_bound() {
-  static_assert(is_arithmetic<_Tp>::value);
+  static_assert(is_integral_v<_Tp > || numeric_limits<_Tp>::is_iec559);
   if constexpr (sizeof(_Tp) >= 8) {
     return 1 << 15;
   }
 
   return 1 << 16;
 }
-
 #endif // _LIBCPP_STD_VER >= 17
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
