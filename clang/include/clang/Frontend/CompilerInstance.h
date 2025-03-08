@@ -53,6 +53,7 @@ class FileManager;
 class FrontendAction;
 class InMemoryModuleCache;
 class Module;
+class ModuleCacheLock;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -96,8 +97,11 @@ class CompilerInstance : public ModuleLoader {
   /// The source manager.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
-  /// The cache of PCM files.
+  /// The local in-memory cache of PCM files.
   IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+
+  /// The lock managing the global cache of PCM files.
+  std::shared_ptr<ModuleCacheLock> ModuleCacheLck;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -209,7 +213,8 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      InMemoryModuleCache *SharedModuleCache = nullptr);
+      InMemoryModuleCache *SharedModuleCache = nullptr,
+      std::shared_ptr<ModuleCacheLock> ModuleCacheLck = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -897,6 +902,10 @@ public:
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
   InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+
+  std::shared_ptr<ModuleCacheLock> getModuleCacheLockPtr() const {
+    return ModuleCacheLck;
+  }
 };
 
 } // end namespace clang
