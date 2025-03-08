@@ -18,6 +18,8 @@
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
   extern size_t wcslen(const wchar_t *p);
+  extern void *memchr(const void *s, int c, size_t n);
+  extern char *strchr(const char *s, int c);
 }
 
 namespace strcmp {
@@ -1350,4 +1352,120 @@ namespace Memcmp {
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 6) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 5) == 0);
+}
+
+namespace Memchr {
+  constexpr const char *kStr = "abca\xff\0d";
+  constexpr char kFoo[] = {'f', 'o', 'o'};
+
+  static_assert(__builtin_memchr(kStr, 'a', 0) == nullptr);
+  static_assert(__builtin_memchr(kStr, 'a', 1) == kStr);
+  static_assert(__builtin_memchr(kStr, '\0', 5) == nullptr);
+  static_assert(__builtin_memchr(kStr, '\0', 6) == kStr + 5);
+  static_assert(__builtin_memchr(kStr, '\xff', 8) == kStr + 4);
+  static_assert(__builtin_memchr(kStr, '\xff' + 256, 8) == kStr + 4);
+  static_assert(__builtin_memchr(kStr, '\xff' - 256, 8) == kStr + 4);
+  static_assert(__builtin_memchr(kFoo, 'x', 3) == nullptr);
+  static_assert(__builtin_memchr(kFoo, 'x', 4) == nullptr); // both-error {{not an integral constant}} \
+                                                            // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memchr(nullptr, 'x', 3) == nullptr); // both-error {{not an integral constant}} \
+                                                               // both-note {{dereferenced null}}
+  static_assert(__builtin_memchr(nullptr, 'x', 0) == nullptr);
+
+
+#if defined(CHAR8_T)
+  constexpr const char8_t *kU8Str = u8"abca\xff\0d";
+  constexpr char8_t kU8Foo[] = {u8'f', u8'o', u8'o'};
+  static_assert(__builtin_memchr(kU8Str, u8'a', 0) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'a', 1) == kU8Str);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 5) == nullptr);
+  static_assert(__builtin_memchr(kU8Str, u8'\0', 6) == kU8Str + 5);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff', 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' + 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Str, u8'\xff' - 256, 8) == kU8Str + 4);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 3) == nullptr);
+  static_assert(__builtin_memchr(kU8Foo, u8'x', 4) == nullptr); // both-error {{not an integral constant}} \
+                                                                // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 3) == nullptr); // both-error {{not an integral constant}} \
+                                                                 // both-note {{dereferenced null}}
+  static_assert(__builtin_memchr(nullptr, u8'x', 0) == nullptr);
+#endif
+
+  extern struct Incomplete incomplete;
+  static_assert(__builtin_memchr(&incomplete, 0, 0u) == nullptr);
+  static_assert(__builtin_memchr(&incomplete, 0, 1u) == nullptr); // both-error {{not an integral constant}} \
+                                                                  // ref-note {{read of incomplete type 'struct Incomplete'}}
+
+  const unsigned char &u1 = 0xf0;
+  auto &&i1 = (const signed char []){-128};
+  static_assert(__builtin_memchr(&u1, -(0x0f + 1), 1) == &u1);
+  static_assert(__builtin_memchr(i1, 0x80, 1) == i1);
+
+  enum class E : unsigned char {};
+  struct EPair { E e, f; };
+  constexpr EPair ee{E{240}};
+  static_assert(__builtin_memchr(&ee.e, 240, 1) == &ee.e); // both-error {{constant}} \
+                                                           // both-note {{not supported}}
+
+  constexpr bool kBool[] = {false, true, false};
+  constexpr const bool *const kBoolPastTheEndPtr = kBool + 3;
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, 1, 99) == kBool + 1); // both-error {{constant}} \
+                                                                                                     // both-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBool + 1, 0, 99) == kBoolPastTheEndPtr - 1); // both-error {{constant}} \
+                                                                                                     // both-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr - 3, -1, 3) == nullptr); // both-error {{constant}} \
+                                                                                                   // both-note {{not supported}}
+  static_assert(sizeof(bool) != 1u || __builtin_memchr(kBoolPastTheEndPtr, 0, 1) == nullptr); // both-error {{constant}} \
+                                                                                              // both-note {{not supported}}
+
+  static_assert(__builtin_char_memchr(kStr, 'a', 0) == nullptr);
+  static_assert(__builtin_char_memchr(kStr, 'a', 1) == kStr);
+  static_assert(__builtin_char_memchr(kStr, '\0', 5) == nullptr);
+  static_assert(__builtin_char_memchr(kStr, '\0', 6) == kStr + 5);
+  static_assert(__builtin_char_memchr(kStr, '\xff', 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kStr, '\xff' + 256, 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kStr, '\xff' - 256, 8) == kStr + 4);
+  static_assert(__builtin_char_memchr(kFoo, 'x', 3) == nullptr);
+  static_assert(__builtin_char_memchr(kFoo, 'x', 4) == nullptr); // both-error {{not an integral constant}} \
+                                                                 // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_char_memchr(nullptr, 'x', 3) == nullptr); // both-error {{not an integral constant}} \
+                                                                    // both-note {{dereferenced null}}
+  static_assert(__builtin_char_memchr(nullptr, 'x', 0) == nullptr);
+
+  static_assert(*__builtin_char_memchr(kStr, '\xff', 8) == '\xff');
+  constexpr bool char_memchr_mutable() {
+    char buffer[] = "mutable";
+    *__builtin_char_memchr(buffer, 't', 8) = 'r';
+    *__builtin_char_memchr(buffer, 'm', 8) = 'd';
+    return __builtin_strcmp(buffer, "durable") == 0;
+  }
+  static_assert(char_memchr_mutable());
+
+  constexpr bool b = !memchr("hello", 'h', 3); // both-error {{constant expression}} \
+                                               // both-note {{non-constexpr function 'memchr' cannot be used in a constant expression}}
+
+}
+
+namespace Strchr {
+  constexpr const char *kStr = "abca\xff\0d";
+  constexpr char kFoo[] = {'f', 'o', 'o'};
+  static_assert(__builtin_strchr(kStr, 'a') == kStr);
+  static_assert(__builtin_strchr(kStr, 'b') == kStr + 1);
+  static_assert(__builtin_strchr(kStr, 'c') == kStr + 2);
+  static_assert(__builtin_strchr(kStr, 'd') == nullptr);
+  static_assert(__builtin_strchr(kStr, 'e') == nullptr);
+  static_assert(__builtin_strchr(kStr, '\0') == kStr + 5);
+  static_assert(__builtin_strchr(kStr, 'a' + 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, 'a' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, '\xff') == kStr + 4);
+  static_assert(__builtin_strchr(kStr, '\xff' + 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, '\xff' - 256) == nullptr);
+  static_assert(__builtin_strchr(kFoo, 'o') == kFoo + 1);
+  static_assert(__builtin_strchr(kFoo, 'x') == nullptr); // both-error {{not an integral constant}} \
+                                                         // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_strchr(nullptr, 'x') == nullptr); // both-error {{not an integral constant}} \
+                                                            // both-note {{dereferenced null}}
+
+  constexpr bool a = !strchr("hello", 'h'); // both-error {{constant expression}} \
+                                            // both-note {{non-constexpr function 'strchr' cannot be used in a constant expression}}
 }
