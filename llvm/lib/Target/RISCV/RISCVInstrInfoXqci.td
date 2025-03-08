@@ -568,7 +568,7 @@ let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
 
   let mayLoad = 0, mayStore = 1,
     Uses = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31],
-    Defs = [X2] in {
+    Defs = [X2, X8] in {
   def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
   def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
   } // mayLoad = 1, mayStore = 1, Uses = [...], Defs = [...]
