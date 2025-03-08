@@ -485,10 +485,10 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
         AArch64BuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(
         AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "", false);
+        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "");
     TS->emitAttribute(
         AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "", false);
+        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "");
   }
 
   unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
@@ -502,13 +502,13 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
                                 AArch64BuildAttrs::SubsectionType::ULEB128);
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "");
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "");
     TS->emitAttribute(AArch64BuildAttrs::getVendorName(
                           AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "", false);
+                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 
@@ -1362,8 +1362,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
       OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
       OutStreamer->emitAssignment(
-          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Src, MCSymbolRefExpr::create(Dst, MMI->getContext()));
     };
 
     auto getSymbolFromMetadata = [&](StringRef Name) {
@@ -1436,8 +1435,7 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
       OutStreamer->endCOFFSymbolDef();
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
       OutStreamer->emitAssignment(
-          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Sym, MCSymbolRefExpr::create(ExpSym, MMI->getContext()));
       return;
     }
   }

@@ -164,6 +164,9 @@ struct FormatResourceDimension
     case dxil::ResourceKind::TypedBuffer:
       OS << "buf";
       break;
+    case dxil::ResourceKind::CBuffer:
+      OS << "NA";
+      break;
     case dxil::ResourceKind::RTAccelerationStructure:
       // TODO: dxc would print "ras" here. Can/should this happen?
       llvm_unreachable("RTAccelerationStructure printing is not implemented");

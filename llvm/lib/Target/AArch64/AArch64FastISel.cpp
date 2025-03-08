@@ -277,9 +277,9 @@ private:
 
 public:
   // Backend specific FastISel code.
-  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
-  unsigned fastMaterializeConstant(const Constant *C) override;
-  unsigned fastMaterializeFloatZero(const ConstantFP* CF) override;
+  Register fastMaterializeAlloca(const AllocaInst *AI) override;
+  Register fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeFloatZero(const ConstantFP *CF) override;
 
   explicit AArch64FastISel(FunctionLoweringInfo &FuncInfo,
                            const TargetLibraryInfo *LibInfo)
@@ -346,13 +346,13 @@ CCAssignFn *AArch64FastISel::CCAssignFnForCall(CallingConv::ID CC) const {
   return CC_AArch64_AAPCS;
 }
 
-unsigned AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i64 &&
          "Alloca should always return a pointer.");
 
   // Don't handle dynamic allocas.
   if (!FuncInfo.StaticAllocaMap.count(AI))
-    return 0;
+    return Register();
 
   DenseMap<const AllocaInst *, int>::iterator SI =
       FuncInfo.StaticAllocaMap.find(AI);
@@ -367,7 +367,7 @@ unsigned AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 unsigned AArch64FastISel::materializeInt(const ConstantInt *CI, MVT VT) {
@@ -537,12 +537,12 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
   return ResultReg;
 }
 
-unsigned AArch64FastISel::fastMaterializeConstant(const Constant *C) {
+Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
   if (!CEVT.isSimple())
-    return 0;
+    return Register();
   MVT VT = CEVT.getSimpleVT();
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
@@ -558,18 +558,18 @@ unsigned AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   else if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
     return materializeGV(GV);
 
-  return 0;
+  return Register();
 }
 
-unsigned AArch64FastISel::fastMaterializeFloatZero(const ConstantFP* CFP) {
+Register AArch64FastISel::fastMaterializeFloatZero(const ConstantFP *CFP) {
   assert(CFP->isNullValue() &&
          "Floating-point constant is not a positive zero.");
   MVT VT;
   if (!isTypeLegal(CFP->getType(), VT))
-    return 0;
+    return Register();
 
   if (VT != MVT::f32 && VT != MVT::f64)
-    return 0;
+    return Register();
 
   bool Is64Bit = (VT == MVT::f64);
   unsigned ZReg = Is64Bit ? AArch64::XZR : AArch64::WZR;

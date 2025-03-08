@@ -314,18 +314,20 @@ RegBankLegalizeRules::getRulesForOpc(MachineInstr &MI) const {
       Opc == AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS ||
       Opc == AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS) {
     unsigned IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
-    if (!IRulesAlias.contains(IntrID)) {
+    auto IRAIt = IRulesAlias.find(IntrID);
+    if (IRAIt == IRulesAlias.end()) {
       LLVM_DEBUG(dbgs() << "MI: "; MI.dump(););
       llvm_unreachable("No rules defined for intrinsic opcode");
     }
-    return IRules.at(IRulesAlias.at(IntrID));
+    return IRules.at(IRAIt->second);
   }
 
-  if (!GRulesAlias.contains(Opc)) {
+  auto GRAIt = GRulesAlias.find(Opc);
+  if (GRAIt == GRulesAlias.end()) {
     LLVM_DEBUG(dbgs() << "MI: "; MI.dump(););
     llvm_unreachable("No rules defined for generic opcode");
   }
-  return GRules.at(GRulesAlias.at(Opc));
+  return GRules.at(GRAIt->second);
 }
 
 // Syntactic sugar wrapper for predicate lambda that enables '&&', '||' and '!'.

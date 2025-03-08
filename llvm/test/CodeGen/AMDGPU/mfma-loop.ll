@@ -78,9 +78,8 @@ exit:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_loop_non_splat:
-
-; GCN-COUNT-31:    v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GCN:             v_accvgpr_write_b32 a{{[0-9]+}}, 1.0{{$}}
+; GCN-COUNT-31:    v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -386,7 +385,8 @@ exit:
 ; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v0
 ; GFX908-DAG:   v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
 ; GFX942_A-DAG: s_load_dword [[TMP:s[0-9]+]],
-; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
+
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
@@ -420,6 +420,7 @@ exit:
 
 ; GFX90A-DAG:      v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
 ; GFX90A-COUNT-28: v_accvgpr_write_b32 a{{[0-9]+}}, 0
+; GFX90A-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr

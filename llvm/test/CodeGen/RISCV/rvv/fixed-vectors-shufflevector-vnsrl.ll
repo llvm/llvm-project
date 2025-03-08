@@ -391,10 +391,10 @@ define void @vnsrl_0_i8_undef3(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    li a0, -32
 ; CHECK-NEXT:    vadd.vv v9, v9, v9
+; CHECK-NEXT:    vadd.vi v9, v9, -8
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 3, v0.t
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vadd.vi v9, v9, -8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf4, ta, mu
