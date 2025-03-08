@@ -547,6 +547,13 @@ public:
     return false;
   }
 
+  bool isBRA(const MCInst &Inst) const {
+    return (Inst.getOpcode() == AArch64::BRAA ||
+            Inst.getOpcode() == AArch64::BRAB ||
+            Inst.getOpcode() == AArch64::BRAAZ ||
+            Inst.getOpcode() == AArch64::BRABZ);
+  }
+
   bool mayLoad(const MCInst &Inst) const override {
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
@@ -941,6 +948,11 @@ public:
       DenseMap<const MCInst *, SmallVector<MCInst *, 4>> &UDChain,
       const MCExpr *&JumpTable, int64_t &Offset, int64_t &ScaleValue,
       MCInst *&PCRelBase) const {
+    // The only kind of indirect branches we match is jump table, thus ignore
+    // authenticating branch instructions early.
+    if (isBRA(Inst))
+      return false;
+
     // Expect AArch64 BR
     assert(Inst.getOpcode() == AArch64::BR && "Unexpected opcode");
 
