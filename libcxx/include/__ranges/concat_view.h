@@ -612,7 +612,7 @@ public:
             (__apply_drop_first<_Const, _Views...>::value)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
     size_t __ix = __x.__it_.index();
     __variant_detail::__visitation::__variant::__visit_value(
         [&](auto& __it_x) {
