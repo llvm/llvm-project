@@ -109,6 +109,7 @@ struct SelectPass final : public impl::SelectPassBase<SelectPass> {
       return;
     }
 
+    // TODO: add a default pipeline option.
     op->emitError("unhandled condition value: ") << condAttrValue;
     return signalPassFailure();
   }
