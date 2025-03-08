@@ -1604,16 +1604,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   // (MIXED) ------ . ----> (MIXED)
   // (FILTERED)---- . ----> (FILTERED)
 
-  std::vector<bitAttr_t> bitAttrs;
+  std::vector<bitAttr_t> bitAttrs(BitWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
   for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
     if (FilterBitValues[BitIndex] == BIT_TRUE ||
         FilterBitValues[BitIndex] == BIT_FALSE)
-      bitAttrs.push_back(ATTR_FILTERED);
-    else
-      bitAttrs.push_back(ATTR_NONE);
+      bitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (const auto &OpcPair : Opcodes) {
     insn_t insn;
