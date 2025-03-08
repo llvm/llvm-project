@@ -26,3 +26,12 @@ pointer points to the new object, which will lead to bugs.
     assert(v2.Captured() == v1.Captured()); // v2.Captured capture v1's this pointer
     assert(v2.Captured() == &v2); // assertion failed.
   }
+
+Possible fixes include refactoring the function object into a class member
+method or passing the this pointer as a parameter.
+
+.. option:: FunctionWrapperTypes
+
+  A semicolon-separated list of names of types. Used to specify function
+  wrapper that can hold lambda expressions.
+  Default is ``::std::function;::boost::function``.

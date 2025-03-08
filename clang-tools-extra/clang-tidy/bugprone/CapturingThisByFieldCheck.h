@@ -23,8 +23,8 @@ namespace clang::tidy::bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/capturing-this-by-field.html
 class CapturingThisByFieldCheck : public ClangTidyCheck {
 public:
-  CapturingThisByFieldCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  CapturingThisByFieldCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -33,6 +33,10 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TraversalKind::TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  ///< store the function wrapper types
+  const std::vector<StringRef> FunctionWrapperTypes;
 };
 
 } // namespace clang::tidy::bugprone

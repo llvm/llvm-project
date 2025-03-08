@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CapturingThisByFieldCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -58,9 +60,21 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 
 } // namespace
 
+CapturingThisByFieldCheck::CapturingThisByFieldCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      FunctionWrapperTypes(utils::options::parseStringList(Options.get(
+          "FunctionWrapperTypes", "::std::function;::boost::function"))) {}
+void CapturingThisByFieldCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "FunctionWrapperTypes",
+                utils::options::serializeStringList(FunctionWrapperTypes));
+}
+
 void CapturingThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
   auto IsStdFunctionField =
-      fieldDecl(hasType(cxxRecordDecl(hasName("::std::function"))))
+      fieldDecl(hasType(cxxRecordDecl(
+                    matchers::matchesAnyListedName(FunctionWrapperTypes))))
           .bind("field");
   auto CaptureThis = lambdaCapture(anyOf(
       // [this]
@@ -91,9 +105,10 @@ void CapturingThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
        "instance is moved or copied")
       << Capture->getLocation();
   diag(Field->getLocation(),
-       "'std::function' that stores captured 'this' and becomes invalid during "
+       "'%0' that stores captured 'this' and becomes invalid during "
        "copying or moving",
-       DiagnosticIDs::Note);
+       DiagnosticIDs::Note)
+      << Field->getType().getAsString();
 }
 
 } // namespace clang::tidy::bugprone
