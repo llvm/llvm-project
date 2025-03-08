@@ -1007,9 +1007,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
       MCBinaryExpr::createSub(
           MCSymbolRefExpr::create(KernelCodeSymbol,
                                   MCSymbolRefExpr::VK_AMDGPU_REL64, Context),
-          MCSymbolRefExpr::create(KernelDescriptorSymbol,
-                                  MCSymbolRefExpr::VK_None, Context),
-          Context),
+          MCSymbolRefExpr::create(KernelDescriptorSymbol, Context), Context),
       sizeof(amdhsa::kernel_descriptor_t::kernel_code_entry_byte_offset));
   for (uint32_t i = 0; i < sizeof(amdhsa::kernel_descriptor_t::reserved1); ++i)
     Streamer.emitInt8(0u);

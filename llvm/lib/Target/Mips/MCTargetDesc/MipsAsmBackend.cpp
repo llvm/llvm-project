@@ -65,11 +65,11 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx.reportError(Fixup.getLoc(),
                       "fixup value out of range [-32768, 65535]");
     break;
-  case FK_DTPRel_4:
-  case FK_DTPRel_8:
-  case FK_TPRel_4:
-  case FK_TPRel_8:
-  case FK_GPRel_4:
+  case Mips::fixup_Mips_GPREL32:
+  case Mips::fixup_Mips_DTPREL32:
+  case Mips::fixup_Mips_DTPREL64:
+  case Mips::fixup_Mips_TPREL32:
+  case Mips::fixup_Mips_TPREL64:
   case FK_Data_4:
   case FK_Data_8:
   case Mips::fixup_Mips_SUB:
@@ -364,6 +364,11 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_16",           0,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
     { "fixup_Mips_26",           0,     26,   0 },
     { "fixup_Mips_HI16",         0,     16,   0 },
     { "fixup_Mips_LO16",         0,     16,   0 },
@@ -373,7 +378,6 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_GOT",          0,     16,   0 },
     { "fixup_Mips_PC16",         0,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",       0,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
     { "fixup_Mips_SHIFT5",       6,      5,   0 },
     { "fixup_Mips_SHIFT6",       6,      5,   0 },
     { "fixup_Mips_64",           0,     64,   0 },
@@ -446,6 +450,11 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_16",          16,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
     { "fixup_Mips_26",           6,     26,   0 },
     { "fixup_Mips_HI16",        16,     16,   0 },
     { "fixup_Mips_LO16",        16,     16,   0 },
@@ -455,7 +464,6 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_GOT",         16,     16,   0 },
     { "fixup_Mips_PC16",        16,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",      16,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
     { "fixup_Mips_SHIFT5",      21,      5,   0 },
     { "fixup_Mips_SHIFT6",      21,      5,   0 },
     { "fixup_Mips_64",           0,     64,   0 },

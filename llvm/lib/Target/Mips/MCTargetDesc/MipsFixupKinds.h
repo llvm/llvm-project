@@ -31,6 +31,12 @@ enum Fixups {
   // Full 32 bit data relative data fixup resulting in - R_MIPS_REL32.
   fixup_Mips_REL32,
 
+  fixup_Mips_GPREL32,  // R_MIPS_GPREL32
+  fixup_Mips_DTPREL32, // R_MIPS_TLS_DTPREL32
+  fixup_Mips_DTPREL64, // R_MIPS_TLS_DTPREL64
+  fixup_Mips_TPREL32,  // R_MIPS_TLS_TPREL32
+  fixup_Mips_TPREL64,  // R_MIPS_TLS_TPREL64
+
   // Jump 26 bit fixup resulting in - R_MIPS_26.
   fixup_Mips_26,
 
@@ -57,9 +63,6 @@ enum Fixups {
 
   // resulting in - R_MIPS_CALL16.
   fixup_Mips_CALL16,
-
-  // resulting in - R_MIPS_GPREL32.
-  fixup_Mips_GPREL32,
 
   // resulting in - R_MIPS_SHIFT5.
   fixup_Mips_SHIFT5,

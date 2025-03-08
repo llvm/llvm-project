@@ -320,6 +320,12 @@ static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
   g->global->setPointerValue(memoryPtr);
 }
 
+static void checkPageAligned(StringRef name, uint64_t value) {
+  if (value != alignTo(value, ctx.arg.pageSize))
+    error(name + " must be aligned to the page size (" +
+          Twine(ctx.arg.pageSize) + " bytes)");
+}
+
 // Fix the memory layout of the output binary.  This assigns memory offsets
 // to each of the input data sections as well as the explicit stack region.
 // The default memory layout is as follows, from low to high.
@@ -445,8 +451,7 @@ void Writer::layoutMemory() {
   }
 
   if (ctx.arg.initialHeap != 0) {
-    if (ctx.arg.initialHeap != alignTo(ctx.arg.initialHeap, WasmPageSize))
-      error("initial heap must be " + Twine(WasmPageSize) + "-byte aligned");
+    checkPageAligned("initial heap", ctx.arg.initialHeap);
     uint64_t maxInitialHeap = maxMemorySetting - memoryPtr;
     if (ctx.arg.initialHeap > maxInitialHeap)
       error("initial heap too large, cannot be greater than " +
@@ -455,8 +460,7 @@ void Writer::layoutMemory() {
   }
 
   if (ctx.arg.initialMemory != 0) {
-    if (ctx.arg.initialMemory != alignTo(ctx.arg.initialMemory, WasmPageSize))
-      error("initial memory must be " + Twine(WasmPageSize) + "-byte aligned");
+    checkPageAligned("initial memory", ctx.arg.initialMemory);
     if (memoryPtr > ctx.arg.initialMemory)
       error("initial memory too small, " + Twine(memoryPtr) + " bytes needed");
     if (ctx.arg.initialMemory > maxMemorySetting)
@@ -465,9 +469,9 @@ void Writer::layoutMemory() {
     memoryPtr = ctx.arg.initialMemory;
   }
 
-  memoryPtr = alignTo(memoryPtr, WasmPageSize);
+  memoryPtr = alignTo(memoryPtr, ctx.arg.pageSize);
 
-  out.memorySec->numMemoryPages = memoryPtr / WasmPageSize;
+  out.memorySec->numMemoryPages = memoryPtr / ctx.arg.pageSize;
   log("mem: total pages = " + Twine(out.memorySec->numMemoryPages));
 
   if (WasmSym::heapEnd) {
@@ -480,8 +484,7 @@ void Writer::layoutMemory() {
 
   uint64_t maxMemory = 0;
   if (ctx.arg.maxMemory != 0) {
-    if (ctx.arg.maxMemory != alignTo(ctx.arg.maxMemory, WasmPageSize))
-      error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
+    checkPageAligned("maximum memory", ctx.arg.maxMemory);
     if (memoryPtr > ctx.arg.maxMemory)
       error("maximum memory too small, " + Twine(memoryPtr) + " bytes needed");
     if (ctx.arg.maxMemory > maxMemorySetting)
@@ -503,7 +506,7 @@ void Writer::layoutMemory() {
   }
 
   if (maxMemory != 0) {
-    out.memorySec->maxMemoryPages = maxMemory / WasmPageSize;
+    out.memorySec->maxMemoryPages = maxMemory / ctx.arg.pageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }
@@ -932,7 +935,7 @@ static void finalizeIndirectFunctionTable() {
   }
 
   uint32_t tableSize = ctx.arg.tableBase + out.elemSec->numEntries();
-  WasmLimits limits = {0, tableSize, 0};
+  WasmLimits limits = {0, tableSize, 0, 0};
   if (WasmSym::indirectFunctionTable->isDefined() && !ctx.arg.growableTable) {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
     limits.Maximum = limits.Minimum;

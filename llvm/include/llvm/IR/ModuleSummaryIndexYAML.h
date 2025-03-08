@@ -9,8 +9,10 @@
 #ifndef LLVM_IR_MODULESUMMARYINDEXYAML_H
 #define LLVM_IR_MODULESUMMARYINDEXYAML_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 
 namespace llvm {
 namespace yaml {
@@ -345,11 +347,13 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
                    index.WithGlobalValueDeadStripping);
 
     if (io.outputting()) {
-      std::vector<std::string> CfiFunctionDefs(index.CfiFunctionDefs.begin(),
-                                               index.CfiFunctionDefs.end());
+      std::vector<StringRef> CfiFunctionDefs(index.CfiFunctionDefs.begin(),
+                                             index.CfiFunctionDefs.end());
+      std::sort(CfiFunctionDefs.begin(), CfiFunctionDefs.end());
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      std::vector<std::string> CfiFunctionDecls(index.CfiFunctionDecls.begin(),
-                                                index.CfiFunctionDecls.end());
+      std::vector<StringRef> CfiFunctionDecls(index.CfiFunctionDecls.begin(),
+                                              index.CfiFunctionDecls.end());
+      std::sort(CfiFunctionDecls.begin(), CfiFunctionDecls.end());
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
     } else {
       std::vector<std::string> CfiFunctionDefs;
