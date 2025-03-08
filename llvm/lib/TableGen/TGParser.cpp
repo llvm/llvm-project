@@ -1455,6 +1455,44 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
   }
 
+  case tgtok::XSelect: {
+    // Value ::= !select '<' Type '>' '(' Regex ')'
+    Lex.Lex(); // eat the operation.
+
+    const RecTy *Type = ParseOperatorType();
+    if (!Type)
+      return nullptr;
+
+    if (!consume(tgtok::l_paren)) {
+      TokError("expected '(' after type of !select");
+      return nullptr;
+    }
+
+    SMLoc RegexLoc = Lex.getLoc();
+    const Init *Regex = ParseValue(CurRec);
+    if (!Regex)
+      return nullptr;
+
+    const auto *RegexType = dyn_cast<TypedInit>(Regex);
+    if (!RegexType) {
+      Error(RegexLoc, "expected string type argument in !select operator");
+      return nullptr;
+    }
+
+    const auto *SType = dyn_cast<StringRecTy>(RegexType->getType());
+    if (!SType) {
+      Error(RegexLoc, "expected string type argument in !select operator");
+      return nullptr;
+    }
+
+    if (!consume(tgtok::r_paren)) {
+      TokError("expected ')' in !select");
+      return nullptr;
+    }
+
+    return (SelectOpInit::get(Type, Regex))->Fold();
+  }
+
   case tgtok::XConcat:
   case tgtok::XADD:
   case tgtok::XSUB:
