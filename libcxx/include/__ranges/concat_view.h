@@ -561,7 +561,7 @@ public:
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__x.__it_.valueless_by_exception(), "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__y.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
     size_t __ix = __x.__it_.index();
