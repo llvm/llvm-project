@@ -2164,12 +2164,14 @@ protected:
 /// Construct a `ThreadTask` instance for a Task variable contained in the first
 /// argument.
 static llvm::Expected<ThreadSP>
-ThreadForTaskVariable(Args &command, ExecutionContext &exe_ctx) {
+ThreadForTaskArgument(Args &command, ExecutionContext &exe_ctx) {
   if (!exe_ctx.GetFramePtr())
     return llvm::createStringError("no active frame selected");
 
   if (command.empty() || command[0].ref().empty())
     return llvm::createStringError("missing task variable argument");
+
+  StringRef arg = command[0].ref();
 
   StackFrame &frame = exe_ctx.GetFrameRef();
   uint32_t path_options =
@@ -2177,45 +2179,57 @@ ThreadForTaskVariable(Args &command, ExecutionContext &exe_ctx) {
   VariableSP var_sp;
   Status status;
   ValueObjectSP valobj_sp = frame.GetValueForVariableExpressionPath(
-      command[0].c_str(), eDynamicDontRunTarget, path_options, var_sp, status);
-  if (!valobj_sp)
-    return status.takeError();
+      arg, eDynamicDontRunTarget, path_options, var_sp, status);
 
   addr_t task_ptr = LLDB_INVALID_ADDRESS;
-  ThreadSafeReflectionContext reflection_ctx;
-  if (ValueObjectSP task_obj_sp = valobj_sp->GetChildMemberWithName("_task")) {
-    task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    if (task_ptr != LLDB_INVALID_ADDRESS)
-      if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessSP()))
-        reflection_ctx = runtime->GetReflectionContext();
+  if (status.Success() && valobj_sp) {
+    if (auto task_obj_sp = valobj_sp->GetChildMemberWithName("_task"))
+      task_ptr = task_obj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    if (task_ptr == LLDB_INVALID_ADDRESS)
+      return llvm::createStringError("failed to access Task pointer");
+  } else {
+    // The argument is not a valid variable expression, try parsing it as a
+    // (task) address.
+    if (arg.getAsInteger(0, task_ptr))
+      return status.takeError();
   }
-  if (task_ptr == LLDB_INVALID_ADDRESS || !reflection_ctx)
-    return llvm::createStringError("failed to access Task data from runtime");
 
-  llvm::Expected<ReflectionContextInterface::AsyncTaskInfo> task_info =
-      reflection_ctx->asyncTaskInfo(task_ptr);
-  if (auto error = task_info.takeError())
-    return error;
+  if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessSP()))
+    if (auto reflection_ctx = runtime->GetReflectionContext()) {
+      if (auto task_info = reflection_ctx->asyncTaskInfo(task_ptr))
+        return ThreadTask::Create(task_info->id, task_info->resumeAsyncContext,
+                                  exe_ctx);
+      else
+        return task_info.takeError();
+    }
 
-  return ThreadTask::Create(task_info->id, task_info->resumeAsyncContext,
-                            exe_ctx);
+  return llvm::createStringError("failed to access Task data from runtime");
 }
 
 class CommandObjectLanguageSwiftTaskBacktrace final
     : public CommandObjectParsed {
 public:
   CommandObjectLanguageSwiftTaskBacktrace(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "backtrace",
-                            "Show the backtrace of Swift tasks. See `thread "
-                            "backtrace` for customizing backtrace output.",
-                            "language swift task backtrace <variable-name>") {
-    AddSimpleArgumentList(eArgTypeVarName);
+      : CommandObjectParsed(
+            interpreter, "backtrace",
+            "Show the backtrace of Swift tasks. See `thread "
+            "backtrace` for customizing backtrace output.",
+            "language swift task backtrace <variable-name | address>") {
+    CommandArgumentEntry arg_entry;
+    arg_entry.emplace_back(eArgTypeVarName, eArgRepeatPlain, LLDB_OPT_SET_1);
+    arg_entry.emplace_back(eArgTypeAddress, eArgRepeatPlain, LLDB_OPT_SET_2);
+    m_arguments.push_back(arg_entry);
   }
 
 private:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendError("missing <variable-name> or <address> argument");
+      return;
+    }
+
     llvm::Expected<ThreadSP> thread_task =
-        ThreadForTaskVariable(command, m_exe_ctx);
+        ThreadForTaskArgument(command, m_exe_ctx);
     if (auto error = thread_task.takeError()) {
       result.AppendError(toString(std::move(error)));
       return;
@@ -2235,14 +2249,22 @@ public:
             interpreter, "select",
             "Change the currently selected thread to thread representation of "
             "the given Swift Task. See `thread select`.",
-            "language swift task select <variable-name>") {
-    AddSimpleArgumentList(eArgTypeVarName);
+            "language swift task select <variable-name | address>") {
+    CommandArgumentEntry arg_entry;
+    arg_entry.emplace_back(eArgTypeVarName, eArgRepeatPlain, LLDB_OPT_SET_1);
+    arg_entry.emplace_back(eArgTypeAddress, eArgRepeatPlain, LLDB_OPT_SET_2);
+    m_arguments.push_back(arg_entry);
   }
 
 private:
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendError("missing <variable-name> or <address> argument");
+      return;
+    }
+
     llvm::Expected<ThreadSP> thread_task =
-        ThreadForTaskVariable(command, m_exe_ctx);
+        ThreadForTaskArgument(command, m_exe_ctx);
     if (auto error = thread_task.takeError()) {
       result.AppendError(toString(std::move(error)));
       return;

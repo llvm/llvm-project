@@ -6,12 +6,25 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(TestBase):
 
-    def test_backtrace_selected_task(self):
+    def test_backtrace_selected_task_variable(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift")
         )
-        self.runCmd("language swift task select task")
+        self.do_backtrace_selected_task("task")
+
+    def test_backtrace_selected_task_address(self):
+        self.build()
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+        frame = thread.frames[0]
+        task = frame.FindVariable("task")
+        task_addr = task.GetChildMemberWithName("address").unsigned
+        self.do_backtrace_selected_task(task_addr)
+
+    def do_backtrace_selected_task(self, arg):
+        self.runCmd(f"language swift task select {arg}")
         self.expect(
             "thread backtrace",
             substrs=[
@@ -22,16 +35,27 @@ class TestCase(TestBase):
             ],
         )
 
-    def test_navigate_selected_task_stack(self):
+    def test_navigate_stack_of_selected_task_variable(self):
         self.build()
-        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+        _, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift")
         )
-        self.runCmd("language swift task select task")
+        self.do_test_navigate_selected_task_stack(process, "task")
 
-        thread = process.selected_thread
-        self.assertEqual(thread.id, 2)
-        self.assertEqual(thread.idx, 0xFFFFFFFF)
+    def test_navigate_stack_of_selected_task_address(self):
+        self.build()
+        _, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+        frame = thread.frames[0]
+        task = frame.FindVariable("task")
+        task_addr = task.GetChildMemberWithName("address").unsigned
+        self.do_test_navigate_selected_task_stack(process, task_addr)
+
+    def do_test_navigate_selected_task_stack(self, process, arg):
+        self.runCmd(f"language swift task select {arg}")
+        thread = process.GetSelectedThread()
+
         self.assertIn(
             "libswift_Concurrency.", thread.GetSelectedFrame().module.file.basename
         )
