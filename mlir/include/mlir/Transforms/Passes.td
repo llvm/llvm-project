@@ -586,4 +586,23 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
   ];
 }
 
+def SelectPass : Pass<"select-pass"> {
+  let summary = "Select pass";
+  let description = [{
+    Select pass allows to run multiple different set of passes based on
+    attribute value on some top-level op.
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"SelectPass\"",
+           "Select pass display name">,
+    Option<"selectCondName", "select-cond-name", "std::string", "\"select\"",
+           "Attribute name used for condition">,
+    ListOption<"selectValues", "select-values", "std::string",
+               "Values used to check select condition">,
+    ListOption<"selectPipelines", "select-pipelines", "std::string",
+               "Pipelines, assotiated with corresponding select values">,
+  ];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES
