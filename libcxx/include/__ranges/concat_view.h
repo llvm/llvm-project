@@ -523,7 +523,7 @@ public:
 
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it.__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__it.__it_.valueless_by_exception(), "Trying to apply iter_move to a valueless iterator of concat_view.");
     return __variant_detail::__visitation::__variant::__visit_value(
         [](const auto& __i) -> __concat_rvalue_reference_t<__maybe_const<_Const, _Views>...> {
           return ranges::iter_move(__i);
