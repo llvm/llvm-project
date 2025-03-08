@@ -1294,19 +1294,17 @@ class CfiFunctionIndex {
   std::set<std::string, std::less<>> Index;
 
 public:
-  CfiFunctionIndex() = default;
-  class CfiGUIDIterator
+  class GUIDIterator
       : public iterator_adaptor_base<
-            CfiGUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+            GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
             std::forward_iterator_tag, GlobalValue::GUID> {
     using base = iterator_adaptor_base<
-        CfiGUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+        GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
         std::forward_iterator_tag, GlobalValue::GUID>;
 
   public:
-    CfiGUIDIterator() = default;
-    explicit CfiGUIDIterator(
-        std::set<std::string, std::less<>>::const_iterator I)
+    GUIDIterator() = default;
+    explicit GUIDIterator(std::set<std::string, std::less<>>::const_iterator I)
         : base(std::move(I)) {}
 
     GlobalValue::GUID operator*() const {
@@ -1315,6 +1313,7 @@ public:
     }
   };
 
+  CfiFunctionIndex() = default;
   template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
 
   std::set<std::string, std::less<>>::const_iterator begin() const {
@@ -1325,9 +1324,9 @@ public:
     return Index.end();
   }
 
-  CfiGUIDIterator guid_begin() const { return CfiGUIDIterator(Index.begin()); }
-  CfiGUIDIterator guid_end() const { return CfiGUIDIterator(Index.end()); }
-  iterator_range<CfiGUIDIterator> guids() const {
+  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
+  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
+  iterator_range<GUIDIterator> guids() const {
     return make_range(guid_begin(), guid_end());
   }
 
