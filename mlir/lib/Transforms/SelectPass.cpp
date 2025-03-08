@@ -60,16 +60,16 @@ struct SelectPass final : public impl::SelectPassBase<SelectPass> {
       return failure();
 
     if (selectCondName.empty())
-      return errorHandler("Invalid select-cond-name");
+      return errorHandler("invalid select-cond-name");
 
     if (selectValues.size() != selectPipelines.size())
-      return errorHandler("Values and pipelines size mismatch");
+      return errorHandler("values and pipelines size mismatch");
 
     selectPassManagers.resize(selectPipelines.size());
 
     for (auto &&[i, pipeline] : llvm::enumerate(selectPipelines)) {
       if (failed(parsePassPipeline(pipeline, selectPassManagers[i])))
-        return errorHandler("Failed to parse pipeline");
+        return errorHandler("failed to parse pipeline");
     }
 
     return success();
@@ -94,7 +94,7 @@ struct SelectPass final : public impl::SelectPassBase<SelectPass> {
     Operation *op = getOperation();
     Attribute condAttrValue = op->getAttr(condAttrName);
     if (!condAttrValue) {
-      op->emitError("Condition attribute not present: ") << condAttrName;
+      op->emitError("condition attribute not present: ") << condAttrName;
       return signalPassFailure();
     }
 
@@ -109,7 +109,7 @@ struct SelectPass final : public impl::SelectPassBase<SelectPass> {
       return;
     }
 
-    op->emitError("Unhandled condition value: ") << condAttrValue;
+    op->emitError("unhandled condition value: ") << condAttrValue;
     return signalPassFailure();
   }
 
