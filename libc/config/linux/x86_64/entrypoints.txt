@@ -99,9 +99,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
-    libc.src.strings.strcasecmp_l
     libc.src.strings.strncasecmp
-    libc.src.strings.strncasecmp_l
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -939,6 +937,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # string.h entrypoints
     libc.src.string.strcoll_l
     libc.src.string.strxfrm_l
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # assert.h entrypoints
     libc.src.assert.__assert_fail
