@@ -2591,7 +2591,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (dstTy->isStructTy() && srcTy->isStructTy() &&
         cast<StructType>(dstTy)->getNumElements() ==
             cast<StructType>(srcTy)->getNumElements()) {
-      Value *DStruct = llvm::UndefValue::get(dstTy);
+      Value *DStruct = PoisonValue::get(dstTy);
 
       for (unsigned i = 0, n = cast<StructType>(dstTy)->getNumElements(); i < n;
            i++) {
