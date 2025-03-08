@@ -589,8 +589,8 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
 def SelectPass : Pass<"select-pass"> {
   let summary = "Select pass";
   let description = [{
-    Select pass allows to run multiple different set of passes based on
-    attribute value on some top-level op.
+    Select pass dynamically selects pass pipeline to run based on root op
+    attribute.
   }];
 
   let options = [

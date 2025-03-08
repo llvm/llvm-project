@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SelectPass allows to run multiple different set of passes based on attribute
-// value on some top-level op.
+// SelectPass dynamically selects pass pipeline to run based on root op
+// attribute.
 //
 //===----------------------------------------------------------------------===//
 

@@ -140,8 +140,8 @@ std::unique_ptr<Pass> createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
     int maxIterations = 10);
 
-/// Creates select pass which allows to run multiple different set of passes
-/// based on attribute value on some top-level op.
+/// Creates select pass, which dynamically selects pass pipeline to run based on
+/// root op attribute.
 std::unique_ptr<Pass> createSelectPass(
     std::string name, std::string selectCondName,
     ArrayRef<std::pair<StringRef, std::function<void(OpPassManager &)>>>
