@@ -401,10 +401,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires(equality_comparable<iterator_t<__maybe_const<_Const, _Views>>> && ...)
   {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__y.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
+                                        "Trying to compare a valueless iterator of concat_view.");
     return __x.__it_ == __y.__it_;
   }
 
@@ -506,10 +504,8 @@ public:
     requires((random_access_range<__maybe_const<_Const, _Views>> && ...) &&
              (three_way_comparable<__maybe_const<_Const, _Views>> && ...))
   {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__y.__it_.valueless_by_exception(), "Trying to compare a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
+                                        "Trying to compare a valueless iterator of concat_view.");
     return __x.__it_ <=> __y.__it_;
   }
 
@@ -542,9 +538,8 @@ public:
              (... && indirectly_swappable<iterator_t<__maybe_const<_Const, _Views>>>)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to swap iterators of concat_view where at least one iterator is valueless.");
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__y.__it_.valueless_by_exception(), "Trying to swap iterators of concat_view where at least one iterator is valueless.");
+        !__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
+        "Trying to swap iterators of concat_view where at least one iterator is valueless.");
     __variant_detail::__visitation::__variant::__visit_value(
         [&](const auto& __it1, const auto& __it2) {
           if constexpr (is_same_v<decltype(__it1), decltype(__it2)>) {
@@ -561,9 +556,8 @@ public:
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__x.__it_.valueless_by_exception(), "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__y.__it_.valueless_by_exception(), "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
+        !__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
+        "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
     size_t __ix = __x.__it_.index();
     size_t __iy = __y.__it_.index();
 
