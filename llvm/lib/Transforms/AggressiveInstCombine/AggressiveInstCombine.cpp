@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -423,11 +425,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            Arg, 0,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Value *NewSqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
-                                             /*FMFSource=*/nullptr, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
@@ -676,14 +675,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers and load sizes are same.
+  // Verify if both loads have same base pointers
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  // Make sure that there are no padding bits.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.
@@ -803,8 +803,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),

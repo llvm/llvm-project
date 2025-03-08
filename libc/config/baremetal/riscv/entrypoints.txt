@@ -20,17 +20,51 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # ctype.h entrypoints
+    libc.src.ctype.isalnum_l
+    libc.src.ctype.isalpha_l
+    libc.src.ctype.isblank_l
+    libc.src.ctype.iscntrl_l
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isgraph_l
+    libc.src.ctype.islower_l
+    libc.src.ctype.isprint_l
+    libc.src.ctype.ispunct_l
+    libc.src.ctype.isspace_l
+    libc.src.ctype.isupper_l
+    libc.src.ctype.isxdigit_l
+    libc.src.ctype.tolower_l
+    libc.src.ctype.toupper_l
+
+    # stdlib.h entrypoints
+    libc.src.stdlib.strtod_l
+    libc.src.stdlib.strtof_l
+    libc.src.stdlib.strtol_l
+    libc.src.stdlib.strtold_l
+    libc.src.stdlib.strtoll_l
+    libc.src.stdlib.strtoul_l
+    libc.src.stdlib.strtoull_l
+
+    # string.h entrypoints
+    libc.src.string.strcoll_l
+    libc.src.string.strxfrm_l
+
     # compiler entrypoints (no corresponding header)
     libc.src.compiler.__stack_chk_fail
 
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # locale.h entrypoints
+    libc.src.locale.localeconv
+    libc.src.locale.duplocale
+    libc.src.locale.freelocale
+    libc.src.locale.localeconv
+    libc.src.locale.newlocale
+    libc.src.locale.setlocale
+    libc.src.locale.uselocale
+
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
-    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -41,10 +75,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memrchr
     libc.src.string.memset
     libc.src.string.memset_explicit
-    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -58,7 +90,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -71,6 +102,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -178,7 +218,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.div
     libc.src.stdlib.exit
     libc.src.stdlib.free
-    libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
@@ -205,6 +244,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
+    libc.src.time.strftime
+    libc.src.time.strftime_l
+    libc.src.time.timespec_get
 
     # internal entrypoints
     libc.startup.baremetal.init
@@ -461,7 +503,31 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.kbits
     libc.src.stdfix.ukbits
     libc.src.stdfix.lkbits
-    libc.src.stdfix.ulkbits   
+    libc.src.stdfix.ulkbits
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsr
+    libc.src.stdfix.bitslr
+    libc.src.stdfix.bitshk
+    libc.src.stdfix.bitsk
+    libc.src.stdfix.bitslk
+    libc.src.stdfix.bitshr
+    libc.src.stdfix.bitsur
+    libc.src.stdfix.bitsulr
+    libc.src.stdfix.bitsuhk
+    libc.src.stdfix.bitsuk
+    libc.src.stdfix.bitsulk
+    libc.src.stdfix.countlshr
+    libc.src.stdfix.countlsr
+    libc.src.stdfix.countlslr
+    libc.src.stdfix.countlshk
+    libc.src.stdfix.countlsk
+    libc.src.stdfix.countlslk
+    libc.src.stdfix.countlsuhr
+    libc.src.stdfix.countlsur
+    libc.src.stdfix.countlsulr
+    libc.src.stdfix.countlsuhk
+    libc.src.stdfix.countlsuk
+    libc.src.stdfix.countlsulk
   )
 endif()
 

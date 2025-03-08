@@ -262,7 +262,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // index the symbols. `uuid` is the cheapest fool-proof method.
     // (The non-determinism and alternative methods are noted in the downstream
     // PlayStation docs).
-    CmdArgs.push_back("--build-id=uuid");
+    // Static executables are only used for a handful of specialized components,
+    // where the extra section is not wanted.
+    if (!Static)
+      CmdArgs.push_back("--build-id=uuid");
 
     // All references are expected to be resolved at static link time for both
     // executables and dynamic libraries. This has been the default linking
@@ -361,9 +364,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
 
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -489,7 +493,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
                               options::OPT_emit_ast);
-  if (!CustomSysroot && Linking) {
+  if (Linking) {
     SmallString<128> Dir(SDKLibraryRootDir);
     llvm::sys::path::append(Dir, "target/lib");
     if (CheckSDKPartExists(Dir, "system libraries"))

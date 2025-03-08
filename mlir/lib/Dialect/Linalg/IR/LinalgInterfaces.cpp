@@ -13,8 +13,6 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
@@ -54,7 +52,8 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     // if the op has no loops.
     return linalgOp.getNumLoops() == 0;
   }
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return inversePermutation(concatAffineMaps(
+             indexingMaps, linalgOp.getContext())) != AffineMap();
 }
 
 //===----------------------------------------------------------------------===//
@@ -146,7 +145,7 @@ linalg::isaBroadcastOpInterface(GenericOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// TranposeOpInterface implementation
+// TransposeOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
 linalg::isaTransposeOpInterface(GenericOp op) {
@@ -1089,19 +1088,6 @@ SmallVector<Range, 4> LinalgOp::createLoopRanges(OpBuilder &b, Location loc) {
       res[d.getPosition()] =
           Range{b.getIndexAttr(0), viewSizes[idx], b.getIndexAttr(1)};
     }
-  }
-  return res;
-}
-
-SmallVector<int64_t, 4> LinalgOp::computeStaticLoopSizes() {
-  AffineMap map = getLoopsToShapesMap();
-  unsigned numDims = map.getNumDims(), numRes = map.getNumResults();
-  SmallVector<int64_t, 4> allShapeSizes = createFlatListOfOperandStaticDims();
-  SmallVector<int64_t, 4> res(numDims, 0);
-  for (unsigned idx = 0; idx < numRes; ++idx) {
-    auto result = map.getResult(idx);
-    if (auto d = dyn_cast<AffineDimExpr>(result))
-      res[d.getPosition()] = allShapeSizes[idx];
   }
   return res;
 }

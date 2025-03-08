@@ -803,6 +803,7 @@ define <vscale x 8 x i64> @vmerge_truelhs_nxv8i64_0(<vscale x 8 x i64> %va, <vsc
 define <vscale x 8 x i64> @vmerge_falselhs_nxv8i64_0(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb) {
 ; CHECK-LABEL: vmerge_falselhs_nxv8i64_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %vc = select <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i64> %va, <vscale x 8 x i64> %vb

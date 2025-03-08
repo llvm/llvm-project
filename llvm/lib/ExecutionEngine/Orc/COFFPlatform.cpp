@@ -54,21 +54,9 @@ public:
   StringRef getName() const override { return "COFFHeaderMU"; }
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    unsigned PointerSize;
-    llvm::endianness Endianness;
-    const auto &TT = CP.getExecutionSession().getTargetTriple();
-
-    switch (TT.getArch()) {
-    case Triple::x86_64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
-      break;
-    default:
-      llvm_unreachable("Unrecognized architecture");
-    }
-
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<COFFHeaderMU>", TT, PointerSize, Endianness,
+        "<COFFHeaderMU>", CP.getExecutionSession().getSymbolStringPool(),
+        CP.getExecutionSession().getTargetTriple(), SubtargetFeatures(),
         jitlink::getGenericEdgeKindName);
     auto &HeaderSection = G->createSection("__header", MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
@@ -399,7 +387,7 @@ COFFPlatform::COFFPlatform(
       OrcRuntimeArchive(std::move(OrcRuntimeArchive)),
       StaticVCRuntime(StaticVCRuntime),
       COFFHeaderStartSymbol(ES.intern("__ImageBase")) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
 
   Bootstrapping.store(true);
   ObjLinkingLayer.addPlugin(std::make_unique<COFFPlatformPlugin>(*this));
@@ -496,10 +484,8 @@ COFFPlatform::buildJDDepMap(JITDylib &JD) {
           }
           DM.push_back(KV.first);
           // Push unvisited entry.
-          if (!JDDepMap.count(KV.first)) {
+          if (JDDepMap.try_emplace(KV.first).second)
             Worklist.push_back(KV.first);
-            JDDepMap[KV.first] = {};
-          }
         }
       });
     }
@@ -792,7 +778,7 @@ Error COFFPlatform::COFFPlatformPlugin::associateJITDylibHeaderSymbol(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR,
     bool IsBootstraping) {
   auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
-    return Sym->getName() == *CP.COFFHeaderStartSymbol;
+    return *Sym->getName() == *CP.COFFHeaderStartSymbol;
   });
   assert(I != G.defined_symbols().end() && "Missing COFF header start symbol");
 
@@ -862,9 +848,9 @@ Error COFFPlatform::COFFPlatformPlugin::preserveInitializerSections(
       // to the first block.
       if (!InitSym) {
         auto &B = **InitSection.blocks().begin();
-        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
-                                      jitlink::Linkage::Strong,
-                                      jitlink::Scope::Default, false, true);
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
       }
 
       // Add keep-alive edges to anonymous symbols in all other init blocks.

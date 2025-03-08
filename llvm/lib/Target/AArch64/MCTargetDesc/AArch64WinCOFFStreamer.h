@@ -18,9 +18,11 @@
 
 namespace llvm {
 
-MCWinCOFFStreamer *createAArch64WinCOFFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter);
+MCStreamer *
+createAArch64WinCOFFStreamer(MCContext &Context,
+                             std::unique_ptr<MCAsmBackend> &&TAB,
+                             std::unique_ptr<MCObjectWriter> &&OW,
+                             std::unique_ptr<MCCodeEmitter> &&Emitter);
 } // end llvm namespace
 
 #endif

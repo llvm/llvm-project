@@ -140,7 +140,7 @@ static cl::opt<unsigned> FPAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
-cl::opt<unsigned> IntAssociationUpperLimit(
+static cl::opt<unsigned> IntAssociationUpperLimit(
     "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
     cl::desc(
         "Set upper limit for the number of transformations performed "
@@ -766,8 +766,8 @@ public:
     if (!ControlFlowHoisting)
       return CurLoop->getLoopPreheader();
     // If BB has already been hoisted, return that
-    if (HoistDestinationMap.count(BB))
-      return HoistDestinationMap[BB];
+    if (auto It = HoistDestinationMap.find(BB); It != HoistDestinationMap.end())
+      return It->second;
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
@@ -800,11 +800,12 @@ public:
 
     // Create hoisted versions of blocks that currently don't have them
     auto CreateHoistedBlock = [&](BasicBlock *Orig) {
-      if (HoistDestinationMap.count(Orig))
-        return HoistDestinationMap[Orig];
+      auto [It, Inserted] = HoistDestinationMap.try_emplace(Orig);
+      if (!Inserted)
+        return It->second;
       BasicBlock *New =
           BasicBlock::Create(C, Orig->getName() + ".licm", Orig->getParent());
-      HoistDestinationMap[Orig] = New;
+      It->second = New;
       DT->addNewBlock(New, HoistTarget);
       if (CurLoop->getParentLoop())
         CurLoop->getParentLoop()->addBasicBlockToLoop(New, *LI);
@@ -933,14 +934,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(ReciprocalDivisor, I.getParent());
-        ReciprocalDivisor->insertBefore(&I);
+        ReciprocalDivisor->insertBefore(I.getIterator());
         ReciprocalDivisor->setDebugLoc(I.getDebugLoc());
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(Product, I.getParent());
-        Product->insertAfter(&I);
+        Product->insertAfter(I.getIterator());
         Product->setDebugLoc(I.getDebugLoc());
         I.replaceAllUsesWith(Product);
         eraseInstruction(I, *SafetyInfo, MSSAU);
@@ -1448,9 +1449,9 @@ static Instruction *cloneInstructionInExitBlock(
       const ColorVector &CV = BlockColors.find(&ExitBlock)->second;
       assert(CV.size() == 1 && "non-unique color for exit block!");
       BasicBlock *BBColor = CV.front();
-      Instruction *EHPad = BBColor->getFirstNonPHI();
+      BasicBlock::iterator EHPad = BBColor->getFirstNonPHIIt();
       if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+        OpBundles.emplace_back("funclet", &*EHPad);
     }
 
     New = CallInst::Create(CI, OpBundles);
@@ -1531,14 +1532,11 @@ static Instruction *sinkThroughTriviallyReplaceablePHI(
   assert(isTriviallyReplaceablePHI(*TPN, *I) &&
          "Expect only trivially replaceable PHI");
   BasicBlock *ExitBlock = TPN->getParent();
-  Instruction *New;
-  auto It = SunkCopies.find(ExitBlock);
-  if (It != SunkCopies.end())
-    New = It->second;
-  else
-    New = SunkCopies[ExitBlock] = cloneInstructionInExitBlock(
-        *I, *ExitBlock, *TPN, LI, SafetyInfo, MSSAU);
-  return New;
+  auto [It, Inserted] = SunkCopies.try_emplace(ExitBlock);
+  if (Inserted)
+    It->second = cloneInstructionInExitBlock(*I, *ExitBlock, *TPN, LI,
+                                             SafetyInfo, MSSAU);
+  return It->second;
 }
 
 static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
@@ -1549,7 +1547,8 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   // it require updating BlockColors for all offspring blocks accordingly. By
   // skipping such corner case, we can make updating BlockColors after splitting
   // predecessor fairly simple.
-  if (!SafetyInfo->getBlockColors().empty() && BB->getFirstNonPHI()->isEHPad())
+  if (!SafetyInfo->getBlockColors().empty() &&
+      BB->getFirstNonPHIIt()->isEHPad())
     return false;
   for (BasicBlock *BBPred : predecessors(BB)) {
     if (isa<IndirectBrInst>(BBPred->getTerminator()))
@@ -1934,7 +1933,6 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
   return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     /* StoreCaptures */ true,
                                      L->getHeader()->getTerminator(), DT);
 }
 
@@ -2030,7 +2028,9 @@ bool llvm::promoteLoopAccessesToScalars(
 
   bool DereferenceableInPH = false;
   bool StoreIsGuanteedToExecute = false;
+  bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
+
   // Goes from Unknown to either Safe or Unsafe, but can't switch between them.
   enum {
     StoreSafe,
@@ -2088,6 +2088,10 @@ bool llvm::promoteLoopAccessesToScalars(
         FoundLoadToPromote = true;
 
         Align InstAlignment = Load->getAlign();
+
+        if (!LoadIsGuaranteedToExecute)
+          LoadIsGuaranteedToExecute =
+              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2233,8 +2237,9 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags, *SafetyInfo,
-                        StoreSafety == StoreSafe);
+                        SawUnorderedAtomic,
+                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -2247,7 +2252,7 @@ bool llvm::promoteLoopAccessesToScalars(
       PreheaderLoad->setOrdering(AtomicOrdering::Unordered);
     PreheaderLoad->setAlignment(Alignment);
     PreheaderLoad->setDebugLoc(DebugLoc());
-    if (AATags)
+    if (AATags && LoadIsGuaranteedToExecute)
       PreheaderLoad->setAAMetadata(AATags);
 
     MemoryAccess *PreheaderLoadMemoryAccess = MSSAU.createMemoryAccessInBB(
@@ -2423,8 +2428,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   } else
     return false;
 
-  auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
-                                       Value *&LHS, Value *&RHS) {
+  auto MatchICmpAgainstInvariant = [&](Value *C, CmpPredicate &P, Value *&LHS,
+                                       Value *&RHS) {
     if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
       return false;
     if (!LHS->getType()->isIntegerTy())
@@ -2441,20 +2446,22 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
       P = ICmpInst::getInversePredicate(P);
     return true;
   };
-  ICmpInst::Predicate P1, P2;
+  CmpPredicate P1, P2;
   Value *LHS1, *LHS2, *RHS1, *RHS2;
   if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
       !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
     return false;
-  if (P1 != P2 || LHS1 != LHS2)
+  auto MatchingPred = CmpPredicate::getMatching(P1, P2);
+  if (!MatchingPred || LHS1 != LHS2)
     return false;
 
   // Everything is fine, we can do the transform.
-  bool UseMin = ICmpInst::isLT(P1) || ICmpInst::isLE(P1);
+  bool UseMin = ICmpInst::isLT(*MatchingPred) || ICmpInst::isLE(*MatchingPred);
   assert(
-      (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
+      (UseMin || ICmpInst::isGT(*MatchingPred) ||
+       ICmpInst::isGE(*MatchingPred)) &&
       "Relational predicate is either less (or equal) or greater (or equal)!");
-  Intrinsic::ID id = ICmpInst::isSigned(P1)
+  Intrinsic::ID id = ICmpInst::isSigned(*MatchingPred)
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
                          : (UseMin ? Intrinsic::umin : Intrinsic::umax);
   auto *Preheader = L.getLoopPreheader();
@@ -2467,11 +2474,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (isa<SelectInst>(I))
     RHS2 = Builder.CreateFreeze(RHS2, RHS2->getName() + ".fr");
   Value *NewRHS = Builder.CreateBinaryIntrinsic(
-      id, RHS1, RHS2, nullptr, StringRef("invariant.") +
-                                   (ICmpInst::isSigned(P1) ? "s" : "u") +
-                                   (UseMin ? "min" : "max"));
+      id, RHS1, RHS2, nullptr,
+      StringRef("invariant.") +
+          (ICmpInst::isSigned(*MatchingPred) ? "s" : "u") +
+          (UseMin ? "min" : "max"));
   Builder.SetInsertPoint(&I);
-  ICmpInst::Predicate P = P1;
+  ICmpInst::Predicate P = *MatchingPred;
   if (Inverse)
     P = ICmpInst::getInversePredicate(P);
   Value *NewCond = Builder.CreateICmp(P, LHS1, NewRHS);
@@ -2671,7 +2679,7 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                         DominatorTree *DT) {
   using namespace PatternMatch;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *LHS, *RHS;
   if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
     return false;

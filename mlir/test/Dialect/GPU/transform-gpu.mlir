@@ -43,7 +43,7 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 floordiv 128)>
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 floordiv 128)>
 
 // CHECK-LABEL: func.func @warpgroup_3d(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -61,7 +61,7 @@ func.func @warpgroup_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream
 //      CHECK:   gpu.launch
 //      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
 //      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
-//  CHECK-DAG:   %[[WG:.*]] = affine.apply #[[$MAP]](%[[TIDX]])
+//  CHECK-DAG:   %[[WG:.*]] = affine.apply #[[$MAP]]()[%[[TIDX]]]
 //  CHECK-DAG:   %[[CMPX:.*]] = arith.cmpi ult, %[[TIDX]], %[[C384]] : index
 //  CHECK-DAG:   %[[CMPY:.*]] = arith.cmpi ult, %[[TIDY]], %[[C1]] : index
 //      CHECK:   %[[COND:.*]] = arith.andi %[[CMPX]], %[[CMPY]] : i1
@@ -95,7 +95,7 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
+// CHECK-DAG: #map = affine_map<()[s0] -> (s0 floordiv 16)>
 
 // CHECK-LABEL: func.func @warp_3d(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -114,7 +114,7 @@ func.func @warp_3d(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !g
 //      CHECK:   gpu.launch
 //      CHECK:   %[[TIDX:.*]] = gpu.thread_id  x
 //      CHECK:   %[[TIDY:.*]] = gpu.thread_id  y
-//  CHECK-DAG:   %[[W:.*]] = affine.apply #[[$MAP]](%[[TIDX]])
+//  CHECK-DAG:   %[[W:.*]] = affine.apply #[[$MAP]]()[%[[TIDX]]]
 //  CHECK-DAG:   %[[CMPX:.*]] = arith.cmpi ult, %[[TIDX]], %[[C32]] : index
 //  CHECK-DAG:   %[[CMPY:.*]] = arith.cmpi ult, %[[TIDY]], %[[C3]] : index
 //      CHECK:   %[[COND:.*]] = arith.andi %[[CMPX]], %[[CMPY]] : i1
@@ -354,9 +354,9 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPWGLIN:.*]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 32 + d2 * 256)>
-// CHECK-DAG: #[[$MAPWGX:.*]] = affine_map<(d0, d1) -> (((d0 + d1 * 32) floordiv 128) mod 2)>
-// CHECK-DAG: #[[$MAPWGY:.*]] = affine_map<(d0, d1, d2) -> (d2 + ((d0 + d1 * 32) floordiv 128) floordiv 2)>
+// CHECK-DAG: #[[$MAPWGLIN:.*]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * 32 + s2 * 256)>
+// CHECK-DAG: #[[$MAPWGX:.*]] = affine_map<()[s0, s1] -> (((s0 + s1 * 32) floordiv 128) mod 2)>
+// CHECK-DAG: #[[$MAPWGY:.*]] = affine_map<()[s0, s1, s2] -> (s2 + ((s0 + s1 * 32) floordiv 128) floordiv 2)>
 
 // CHECK-LABEL: func.func @warpgroup_linear(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -376,9 +376,9 @@ func.func @warpgroup_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %st
 // CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id  x
 // CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id  y
 // CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id  z
-// CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWGLIN]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
-// CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWGX]](%[[TIDX]], %[[TIDY]])
-// CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWGY]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
+// CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWGLIN]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
+// CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWGX]]()[%[[TIDX]], %[[TIDY]]]
+// CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWGY]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 // CHECK-DAG: %[[CMPLIN:.*]] = arith.cmpi ult, %[[WIDLIN]], %[[C768]] : index
 //     CHECK: scf.if %[[CMPLIN]]
 //      CHECK:   memref.load %[[ARGX]][%[[WIDX]], %[[WIDY]]]
@@ -410,9 +410,9 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPWLIN:.*]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 32 + d2 * 256)>
-// CHECK-DAG: #[[$MAPWX:.*]] = affine_map<(d0, d1, d2) -> ((d1 + d2 * 8 + d0 floordiv 32) mod 2)>
-// CHECK-DAG: #[[$MAPWY:.*]] = affine_map<(d0, d1, d2) -> ((d1 + d2 * 8 + d0 floordiv 32) floordiv 2)>
+// CHECK-DAG: #[[$MAPWLIN:.*]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * 32 + s2 * 256)>
+// CHECK-DAG: #[[$MAPWX:.*]] = affine_map<()[s0, s1, s2] -> ((s1 + s2 * 8 + s0 floordiv 32) mod 2)>
+// CHECK-DAG: #[[$MAPWY:.*]] = affine_map<()[s0, s1, s2] -> ((s1 + s2 * 8 + s0 floordiv 32) floordiv 2)>
 
 // CHECK-LABEL: func.func @warp_linear(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -432,9 +432,9 @@ func.func @warp_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream 
 // CHECK-DAG: %[[TIDX:.*]] = gpu.thread_id  x
 // CHECK-DAG: %[[TIDY:.*]] = gpu.thread_id  y
 // CHECK-DAG: %[[TIDZ:.*]] = gpu.thread_id  z
-// CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWLIN]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
-// CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
-// CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWY]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
+// CHECK-DAG: %[[WIDLIN:.*]] = affine.apply #[[$MAPWLIN]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
+// CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
+// CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWY]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 // CHECK-DAG: %[[CMPLIN:.*]] = arith.cmpi ult, %[[WIDLIN]], %[[C192]] : index
 //     CHECK: scf.if %[[CMPLIN]]
 //      CHECK:   memref.load %[[ARGX]][%[[WIDX]], %[[WIDY]]]
@@ -466,12 +466,12 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPWX:.*]] = affine_map<(d0, d1) -> (((d0 + d1 * 18) floordiv 32) mod 3)>
-// CHECK-DAG: #[[$MAPWY:.*]] = affine_map<(d0, d1) -> ((((d0 + d1 * 18) floordiv 32) mod 6) floordiv 3)>
+// CHECK-DAG: #[[$MAPWX:.*]] = affine_map<()[s0, s1] -> (((s0 + s1 * 18) floordiv 32) mod 3)>
+// CHECK-DAG: #[[$MAPWY:.*]] = affine_map<()[s0, s1] -> ((((s0 + s1 * 18) floordiv 32) mod 6) floordiv 3)>
 
-// CHECK-DAG: #[[$MAPLIN:.*]] = affine_map<(d0, d1) -> (d0 + d1 * 18)>
-// CHECK-DAG: #[[$MAPLX:.*]] = affine_map<(d0, d1) -> ((d0 + d1 * 18) mod 10)>
-// CHECK-DAG: #[[$MAPLY:.*]] = affine_map<(d0, d1) -> ((d0 + d1 * 18) floordiv 10)>
+// CHECK-DAG: #[[$MAPLIN:.*]] = affine_map<()[s0, s1] -> (s0 + s1 * 18)>
+// CHECK-DAG: #[[$MAPLX:.*]] = affine_map<()[s0, s1] -> ((s0 + s1 * 18) mod 10)>
+// CHECK-DAG: #[[$MAPLY:.*]] = affine_map<()[s0, s1] -> ((s0 + s1 * 18) floordiv 10)>
 
 // CHECK-LABEL: func.func @map_multi_level_linear(
 func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f32, %stream : !gpu.async.token) -> !type {
@@ -504,9 +504,9 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
       memref.store %6, %y[%i, %j] : !type
     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>]}
 
-    // CHECK-DAG: %[[LIN:.*]] = affine.apply #[[$MAPLIN]](%[[TIDX]], %[[TIDY]])
-    // CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]](%[[TIDX]], %[[TIDY]])
-    // CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWY]](%[[TIDX]], %[[TIDY]])
+    // CHECK-DAG: %[[LIN:.*]] = affine.apply #[[$MAPLIN]]()[%[[TIDX]], %[[TIDY]]]
+    // CHECK-DAG: %[[WIDX:.*]] = affine.apply #[[$MAPWX]]()[%[[TIDX]], %[[TIDY]]]
+    // CHECK-DAG: %[[WIDY:.*]] = affine.apply #[[$MAPWY]]()[%[[TIDX]], %[[TIDY]]]
     // CHECK-DAG: %[[CMPLIN:.*]] = arith.cmpi ult, %[[LIN]], %[[C192]] : index
     //     CHECK: scf.if %[[CMPLIN]]
     scf.forall (%i, %j, %k) in (%c3, %c2, %c1) {
@@ -515,8 +515,8 @@ func.func @map_multi_level_linear(%x: !type, %y: !type, %t: !type1d, %alpha : f3
         memref.store %8, %y[%i, %j] : !type
      }  {mapping = [#gpu.warp<linear_dim_0>, #gpu.warp<linear_dim_1>, #gpu.warp<linear_dim_2>] }
 
-    // CHECK-DAG: %[[LIDX:.*]] = affine.apply #[[$MAPLX]](%[[TIDX]], %[[TIDY]])
-    // CHECK-DAG: %[[LIDY:.*]] = affine.apply #[[$MAPLY]](%[[TIDX]], %[[TIDY]])
+    // CHECK-DAG: %[[LIDX:.*]] = affine.apply #[[$MAPLX]]()[%[[TIDX]], %[[TIDY]]]
+    // CHECK-DAG: %[[LIDY:.*]] = affine.apply #[[$MAPLY]]()[%[[TIDX]], %[[TIDY]]]
     // CHECK-DAG: %[[COND:.*]] = arith.cmpi ult, %[[LIN]], %[[C20]] : index
     //     CHECK: scf.if %[[COND]]
     //     CHECK:   memref.load %{{.*}}[%[[LIDX]]] : memref<32xf32>
@@ -545,9 +545,9 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPBLIN:.*]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 12 + d2 * 108)>
-// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<(d0, d1, d2) -> ((d0 + d1 * 12 + d2 * 108) mod 7)>
-// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<(d0, d1, d2) -> ((d0 + d1 * 12 + d2 * 108) floordiv 7)>
+// CHECK-DAG: #[[$MAPBLIN:.*]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * 12 + s2 * 108)> 
+// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<()[s0, s1, s2] -> ((s0 + s1 * 12 + s2 * 108) mod 7)>
+// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<()[s0, s1, s2] -> ((s0 + s1 * 12 + s2 * 108) floordiv 7)>
 
 // CHECK-LABEL: func.func @block_linear_existing_launch(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -566,9 +566,9 @@ func.func @block_linear_existing_launch(
 //  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
 //  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
 //  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
-//  CHECK-DAG: %[[BIDLIN:.*]] = affine.apply #[[$MAPBLIN]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
-//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
-//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
+//  CHECK-DAG: %[[BIDLIN:.*]] = affine.apply #[[$MAPBLIN]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
+//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
+//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //  CHECK-DAG: %[[CMPLIN:.*]] = arith.cmpi ult, %[[BIDLIN]], %[[C63]] : index
 //     CHECK: scf.if %[[CMPLIN]]
 //      CHECK:   memref.load %[[ARGX]][%[[BLX]], %[[BLY]]]
@@ -600,8 +600,8 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<(d0) -> (d0 mod 7)>
-// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<(d0, d1, d2) -> (d1 + d2 * 9 + d0 floordiv 7)>
+// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<()[s0] -> (s0 mod 7)>
+// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * 9 + s0 floordiv 7)>
 
 // CHECK-LABEL: func.func @block_linear_generate_launch(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -620,8 +620,8 @@ func.func @block_linear_generate_launch(
 //  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
 //  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
 //  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
-//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]](%[[BIDX]])
-//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
+//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]]]
+//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //      CHECK:   memref.load %[[ARGX]][%[[BLX]], %[[BLY]]]
 //      CHECK:   memref.load %[[ARGY]][%[[BLX]], %[[BLY]]]
   scf.forall (%i, %j) in (%c7, %c9) {
@@ -647,8 +647,8 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0 *  128)>
 #map1 = affine_map<(d0) -> (d0 * 32)>
 
-// CHECK-DAG: #[[$MAPB:.*]] = affine_map<(d0) -> (d0 * 128)>
-// CHECK-DAG: #[[$MAPW:.*]] = affine_map<(d0, d1, d2) -> (d2 * 32 + ((d0 + d1 * 4) floordiv 32) * 32)>
+// CHECK-DAG: #[[$MAPB:.*]] = affine_map<()[s0] -> (s0 * 128)>
+// CHECK-DAG: #[[$MAPW:.*]] = affine_map<()[s0, s1, s2] -> (s2 * 32 + ((s0 + s1 * 4) floordiv 32) * 32)>
 
 // CHECK-LABEL: func.func @simple_fill(
 func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
@@ -660,14 +660,14 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
 //       CHECK:     %[[BIDX:.*]] = gpu.block_id  x
-//       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]](%[[BIDX]])
+//       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
     scf.forall (%arg2) in (4) {
 //       CHECK:     %[[TIDX:.*]] = gpu.thread_id  x
 //       CHECK:     %[[TIDY:.*]] = gpu.thread_id  y
 //       CHECK:     %[[TIDZ:.*]] = gpu.thread_id  z
-//       CHECK:     %[[THX:.*]] = affine.apply #[[$MAPW]](%[[TIDX]], %[[TIDY]], %[[TIDZ]])
+//       CHECK:     %[[THX:.*]] = affine.apply #[[$MAPW]]()[%[[TIDX]], %[[TIDY]], %[[TIDZ]]]
 //   CHECK-NOT:     scf.if
 //       CHECK:       memref.subview %{{.*}}[%[[THX]]]
       %1 = affine.apply #map1(%arg2)

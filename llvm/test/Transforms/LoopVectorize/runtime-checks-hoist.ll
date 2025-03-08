@@ -30,7 +30,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @diff_checks
-; CHECK-SAME: (ptr nocapture noundef writeonly [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nuw i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
@@ -162,7 +162,7 @@ outer.exit:
 
 define void @full_checks(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @full_checks
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
@@ -286,7 +286,7 @@ outer.exit:
 
 define void @full_checks_diff_strides(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @full_checks_diff_strides
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[WIDE_N:%.*]] = zext i32 [[N]] to i64
@@ -411,7 +411,7 @@ outer.exit:
 
 define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @diff_checks_src_start_invariant
-; CHECK-SAME: (ptr nocapture noundef writeonly [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef writeonly captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
@@ -522,7 +522,7 @@ outer.loop.exit:
 
 define void @full_checks_src_start_invariant(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @full_checks_src_start_invariant
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
@@ -645,7 +645,7 @@ outer.loop.exit:
 
 define void @triple_nested_loop_mixed_access(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %m, i32 noundef %n, i32 noundef %o) {
 ; CHECK-LABEL: define void @triple_nested_loop_mixed_access
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]], i32 noundef [[O:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]], i32 noundef [[O:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[O]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[O]] to i64
@@ -810,7 +810,7 @@ exit:
 
 define void @uncomputable_outer_tc(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, ptr nocapture noundef readonly %str, i32 noundef %n) {
 ; CHECK-LABEL: define void @uncomputable_outer_tc
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], ptr nocapture noundef readonly [[STR:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], ptr noundef readonly captures(none) [[STR:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[STR]], align 1
 ; CHECK-NEXT:    [[CMP_NOT23:%.*]] = icmp ne i8 [[TMP0]], 0
@@ -965,7 +965,7 @@ while.end:
 
 define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %stride1, i32 noundef %stride2, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @decreasing_inner_iv
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP20:%.*]] = icmp sgt i32 [[M]], 0
 ; CHECK-NEXT:    [[CMP218:%.*]] = icmp sgt i32 [[N]], -1
@@ -1010,45 +1010,45 @@ define void @decreasing_inner_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP15]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP15]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[TMP0]], [[INDEX]]
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = add nsw i64 [[TMP20]], [[TMP16]]
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i32 -3
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP24]], align 4, !alias.scope [[META46:![0-9]+]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP22:%.*]] = add nsw i64 [[TMP21]], [[TMP16]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP25]], align 4, !alias.scope [[META46:![0-9]+]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i64 [[TMP20]], [[TMP17]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP26]], i32 0
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP27]], i32 -3
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP28]], align 4, !alias.scope [[META49:![0-9]+]], !noalias [[META46]]
+; CHECK-NEXT:    [[TMP26:%.*]] = add nsw i64 [[TMP21]], [[TMP17]]
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP27]], i32 0
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP28]], i32 -3
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP29]], align 4, !alias.scope [[META49:![0-9]+]], !noalias [[META46]]
 ; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD3]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP29:%.*]] = add nsw <4 x i32> [[REVERSE4]], [[REVERSE]]
-; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i32> [[TMP29]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    store <4 x i32> [[REVERSE5]], ptr [[TMP28]], align 4, !alias.scope [[META49]], !noalias [[META46]]
+; CHECK-NEXT:    [[TMP30:%.*]] = add nsw <4 x i32> [[REVERSE4]], [[REVERSE]]
+; CHECK-NEXT:    [[REVERSE5:%.*]] = shufflevector <4 x i32> [[TMP30]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[REVERSE5]], ptr [[TMP29]], align 4, !alias.scope [[META49]], !noalias [[META46]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP51:![0-9]+]]
+; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP51:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP15]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[INNER_LOOP_EXIT]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[OUTER_LOOP]] ], [ [[TMP0]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP20]], [[MIDDLE_BLOCK]] ], [ [[TMP0]], [[OUTER_LOOP]] ], [ [[TMP0]], [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INNER_IV_NEXT:%.*]], [[INNER_LOOP]] ]
-; CHECK-NEXT:    [[TMP31:%.*]] = add nsw i64 [[INNER_IV]], [[TMP16]]
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP31]]
-; CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
-; CHECK-NEXT:    [[TMP33:%.*]] = add nsw i64 [[INNER_IV]], [[TMP17]]
-; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP33]]
-; CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX8_US]], align 4
-; CHECK-NEXT:    [[ADD9_US:%.*]] = add nsw i32 [[TMP34]], [[TMP32]]
+; CHECK-NEXT:    [[TMP32:%.*]] = add nsw i64 [[INNER_IV]], [[TMP16]]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
+; CHECK-NEXT:    [[TMP34:%.*]] = add nsw i64 [[INNER_IV]], [[TMP17]]
+; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP34]]
+; CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[ARRAYIDX8_US]], align 4
+; CHECK-NEXT:    [[ADD9_US:%.*]] = add nsw i32 [[TMP35]], [[TMP33]]
 ; CHECK-NEXT:    store i32 [[ADD9_US]], ptr [[ARRAYIDX8_US]], align 4
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nsw i64 [[INNER_IV]], -1
 ; CHECK-NEXT:    [[CMP2_US:%.*]] = icmp sgt i64 [[INNER_IV]], 0
@@ -1132,7 +1132,7 @@ exit:
 
 define void @decreasing_outer_iv(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %stride1, i32 noundef %stride2, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @decreasing_outer_iv
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp slt i32 [[M]], 1
 ; CHECK-NEXT:    [[CMP2_NOT18:%.*]] = icmp slt i32 [[N]], 0
@@ -1291,7 +1291,7 @@ exit:
 
 define void @unknown_inner_stride(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i32 noundef %stride1, i32 noundef %stride2, i32 noundef %m, i32 noundef %n) {
 ; CHECK-LABEL: define void @unknown_inner_stride
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i32 noundef [[STRIDE1:%.*]], i32 noundef [[STRIDE2:%.*]], i32 noundef [[M:%.*]], i32 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[M]], 0
 ; CHECK-NEXT:    [[CMP224:%.*]] = icmp sgt i32 [[N]], 0
@@ -1434,7 +1434,7 @@ exit:
 ; values (%dst, %src) of the outer AddRecs.
 define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec
-; CHECK-SAME: (ptr nocapture noundef [[DST:%.*]], ptr nocapture noundef readonly [[SRC:%.*]], i64 noundef [[M:%.*]], i64 noundef [[N:%.*]]) {
+; CHECK-SAME: (ptr noundef captures(none) [[DST:%.*]], ptr noundef readonly captures(none) [[SRC:%.*]], i64 noundef [[M:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
@@ -1528,19 +1528,17 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    [[PRE_C:%.*]] = icmp ugt i32 [[ACOLS]], 0
 ; CHECK-NEXT:    br i1 [[PRE_C]], label [[EXIT:%.*]], label [[OUTER_HEADER_PREHEADER:%.*]]
 ; CHECK:       outer.header.preheader:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[C]], i64 34359738368
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[C]], i64 8000
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 0, [[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[MUL_US:%.*]] = mul i32 [[OUTER_IV]], [[ACOLS]]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr double, ptr [[A]], i32 [[MUL_US]]
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[C]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -1549,18 +1547,18 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[C]], i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]], !noalias [[META72:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8, !alias.scope [[META69:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8, !alias.scope [[META72]]
+; CHECK-NEXT:    store <4 x double> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8, !alias.scope [[META72:![0-9]+]], !noalias [[META69]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP74:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[OUTER_HEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[OUTER_HEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INNER_IV_NEXT:%.*]], [[INNER]] ]
@@ -1568,7 +1566,7 @@ define void @stride_check_known_via_loop_guard(ptr %C, ptr %A, i32 %Acols) {
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[ARRAYIDX_US]], align 8
 ; CHECK-NEXT:    store double [[L]], ptr [[GEP_C]], align 8
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add i32 [[INNER_IV]], 1
-; CHECK-NEXT:    [[INNER_C:%.*]] = icmp eq i32 [[INNER_IV_NEXT]], 0
+; CHECK-NEXT:    [[INNER_C:%.*]] = icmp eq i32 [[INNER_IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[INNER_C]], label [[OUTER_LATCH]], label [[INNER]], !llvm.loop [[LOOP75:![0-9]+]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
@@ -1595,7 +1593,7 @@ inner:
   %l = load double, ptr %arrayidx.us, align 8
   store double %l, ptr %gep.C, align 8
   %inner.iv.next = add i32 %inner.iv, 1
-  %inner.c = icmp eq i32 %inner.iv.next, 0
+  %inner.c = icmp eq i32 %inner.iv.next, 1000
   br i1 %inner.c, label %outer.latch, label %inner
 
 outer.latch:

@@ -61,19 +61,11 @@ class StdUnorderedMapSynthProvider:
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.count = None
-        self.kind = self.get_object_kind(valobj)
-
-    def get_object_kind(self, valobj):
-        type_name = valobj.GetTypeName()
-        return "set" if "set" in type_name else "map"
 
     def extract_type(self):
         type = self.valobj.GetType()
-        # type of std::pair<key, value> is the first template
-        # argument type of the 4th template argument to std::map and
-        # 3rd template argument for std::set. That's why
-        # we need to know kind of the object
-        template_arg_num = 4 if self.kind == "map" else 3
+        # The last template argument is the allocator type.
+        template_arg_num = type.GetNumberOfTemplateArguments() - 1
         allocator_type = type.GetTemplateArgumentType(template_arg_num)
         data_type = allocator_type.GetTemplateArgumentType(0)
         return data_type

@@ -145,8 +145,12 @@ def gi_extract_high_v4i32 :
 
 def extract_high_v8f16 :
     ComplexPattern<v4f16, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
+def extract_high_v8bf16 :
+    ComplexPattern<v4bf16, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 def extract_high_v4f32 :
     ComplexPattern<v2f32, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
+def extract_high_v2f64 :
+    ComplexPattern<v1f64, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 
 def gi_extract_high_v8f16 :
   GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
@@ -396,6 +400,16 @@ def uimm6_32b : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 64; }]> {
    let ParserMatchClass = UImm6Operand;
 }
 
+def CmpBranchUImm6Operand_32b
+    : ComplexPattern<i32, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
+def CmpBranchUImm6Operand_64b
+    : ComplexPattern<i64, 1, "SelectCmpBranchUImm6Operand", [imm]> {
+  let WantsParent = true;
+}
+
 def UImm6Plus1Operand : AsmOperandClass {
   let Name = "UImm6P1";
   let DiagnosticType = "InvalidImm1_64";
@@ -527,6 +541,18 @@ def UImmS4XForm : SDNodeXForm<imm, [{
 }]>;
 def UImmS8XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() / 8, SDLoc(N), MVT::i64);
+}]>;
+
+def UImmM2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i32);
+}]>;
+
+def UImmM4XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i32);
+}]>;
+
+def UImmM8XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 8, SDLoc(N), MVT::i32);
 }]>;
 
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
@@ -1098,6 +1124,13 @@ def timm32_0_1 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm0_1Operand;
 }
 
+// extq_timm32_0_1m8 - True if the 32-bit immediate is in the range [0,1], scale this immediate
+// by a factor of 8 after a match is made.
+def extq_timm32_0_1m8 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 2;}], UImmM8XForm> {
+  let ParserMatchClass = Imm0_15Operand;
+}
+
 // timm32_1_1 - True if the 32-bit immediate is in the range [1,1]
 def timm32_1_1 : Operand<i32>, TImmLeaf<i32, [{
     return ((uint32_t)Imm) == 1;
@@ -1140,11 +1173,25 @@ def timm32_0_3 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm0_3Operand;
 }
 
+// extq_timm32_0_3m4 - True if the 32-bit immediate is in the range [0,3], scale this immediate
+// by a factor of 4 after a match is made.
+def extq_timm32_0_3m4 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 4;}], UImmM4XForm> {
+  let ParserMatchClass = Imm0_15Operand;
+}
+
 // timm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
 def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
+}
+
+// extq_timm32_0_7m2 - True if the 32-bit immediate is in the range [0,7], scale this immediate
+// by a factor of 2 after a match is made.
+def extq_timm32_0_7m2 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 8;}], UImmM2XForm> {
+  let ParserMatchClass = Imm0_15Operand;
 }
 
 // timm32_1_7 predicate - True if the 32-bit immediate is in the range [1,7]
@@ -1767,7 +1814,9 @@ class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
 }
 
 class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
+  bits<5> Xt;
   let Inst{20-5} = 0b0111001110000000;
+  let Inst{4-0} = Xt;
   let DecoderNamespace = "APAS";
 }
 
@@ -2731,6 +2780,8 @@ class MulHi<bits<3> opc, string asm, SDNode OpNode>
   let Inst{23-21} = opc;
   let Inst{20-16} = Rm;
   let Inst{15}    = 0;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 
@@ -4883,6 +4934,8 @@ class LoadExclusivePair<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   bits<5> Rt;
   bits<5> Rt2;
   bits<5> Rn;
+  let Inst{20-16} = 0b11111;
+  let Unpredictable{20-16} = 0b11111;
   let Inst{14-10} = Rt2;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
@@ -4898,6 +4951,7 @@ class BaseLoadStoreExclusiveLSUI<bits<2> sz, bit L, bit o0,
   let Inst{31-30} = sz;
   let Inst{29-23} = 0b0010010;
   let Inst{22}    = L;
+  let Inst{21}    = 0b0;
   let Inst{15}    = o0;
 }
 
@@ -4984,6 +5038,7 @@ class BaseStoreUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
    let Inst{9-5} = Rn;
    let Inst{4-0} = Rt;
    let PostEncoderMethod = "fixLoadStoreExclusive<1,0>";
+   let mayStore = 1;
 }
 
 multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
@@ -5466,6 +5521,15 @@ multiclass IntegerToFPSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, SDPa
     let Inst{31} = 1; // 64-bit FPR flag
     let Inst{23-22} = 0b00; // 32-bit FPR flag
   }
+
+  def : Pat<(f16 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f64 (node (i32 (extractelt (v4i32 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # DSr) (EXTRACT_SUBREG $Rn, ssub))>;
+  def : Pat<(f16 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # HDr) (EXTRACT_SUBREG $Rn, dsub))>;
+  def : Pat<(f32 (node (i64 (extractelt (v2i64 V128:$Rn), (i64 0))))),
+          (!cast<Instruction>(NAME # SDr) (EXTRACT_SUBREG $Rn, dsub))>;
 }
 
 //---
@@ -6474,14 +6538,15 @@ multiclass SIMDThreeSameVectorFML<bit U, bit b13, bits<3> size, string asm,
                                          v4f32, v8f16, OpNode>;
 }
 
-multiclass SIMDThreeSameVectorMLA<bit Q, string asm>{
+multiclass SIMDThreeSameVectorMLA<bit Q, string asm, SDPatternOperator op> {
+
   def v8f16 : BaseSIMDThreeSameVectorDot<Q, 0b0, 0b11, 0b1111, asm, ".8h", ".16b",
-                                         V128, v8f16, v16i8, null_frag>;
+                                         V128, v8f16, v16i8, op>;
 }
 
-multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm>{
+multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm, SDPatternOperator op> {
   def v4f32 : BaseSIMDThreeSameVectorDot<Q, 0b0, sz, 0b1000, asm, ".4s", ".16b",
-                                         V128, v4f32, v16i8, null_frag>;
+                                         V128, v4f32, v16i8, op>;
 }
 
 // FP8 assembly/disassembly classes
@@ -6514,32 +6579,48 @@ class BaseSIMDThreeVectors<bit Q, bit U, bits<2> size, bits<4> op,
 
 
 // FCVTN (FP16 to FP8)
-multiclass SIMDThreeSameSizeVectorCvt<string asm> {
-   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b01, 0b1110, V64, V64, asm, ".8b",".4h">;
-   def v16f8 : BaseSIMDThreeVectors<0b1, 0b0, 0b01, 0b1110,  V128, V128, asm, ".16b", ".8h">;
+multiclass SIMD_FP8_CVTN_F16<string asm, SDPatternOperator Op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b01, 0b1110, V64, V64, asm, ".8b",".4h">;
+    def v16f8 : BaseSIMDThreeVectors<0b1, 0b0, 0b01, 0b1110,  V128, V128, asm, ".16b", ".8h">;
+  }
+  def : Pat<(v8i8 (Op (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+            (!cast<Instruction>(NAME # v8f8) V64:$Rn, V64:$Rm)>;
+  def : Pat<(v16i8 (Op (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+            (!cast<Instruction>(NAME # v16f8) V128:$Rn, V128:$Rm)>;
 }
 
-// TODO : Create v16f8 value type
 // FCVTN, FCVTN2 (FP32 to FP8)
-multiclass SIMDThreeVectorCvt<string asm> {
-   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
-   def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
-                                           V128, v16i8, v4f32, null_frag>;
+multiclass SIMD_FP8_CVTN_F32<string asm, SDPatternOperator Op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
+    def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
+                                            V128, v16i8, v4f32, null_frag>;
+  }
+
+  def : Pat<(v8i8 (Op (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (!cast<Instruction>(NAME # v8f8) V128:$Rn, V128:$Rm)>;
+
+  def : Pat<(v16i8 (!cast<SDPatternOperator>(Op # 2) (v16i8 V128:$_Rd), (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (!cast<Instruction>(NAME # 2v16f8) V128:$_Rd, V128:$Rn, V128:$Rm)>;
 }
 
-// TODO: Create a new Value Type v8f8 and v16f8
-multiclass SIMDThreeSameVectorDOT2<string asm> {
-   def v4f16 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b01, 0b1111, asm, ".4h", ".8b",
-                                          V64, v4f16, v8i8, null_frag>;
-   def v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1111, asm, ".8h", ".16b",
-                                          V128, v8f16, v16i8, null_frag>;
+multiclass SIMD_FP8_Dot2<string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v4f16 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b01, 0b1111, asm, ".4h", ".8b",
+                                           V64, v4f16, v8i8, op>;
+    def v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1111, asm, ".8h", ".16b",
+                                           V128, v8f16, v16i8, op>;
+  }
 }
 
-multiclass SIMDThreeSameVectorDOT4<string asm> {
-   def v2f32 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b00, 0b1111, asm, ".2s", ".8b",
-                                          V64, v2f32, v8i8, null_frag>;
-   def v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1111, asm, ".4s", ".16b",
-                                          V128, v4f32, v16i8, null_frag>;
+multiclass SIMD_FP8_Dot4<string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v2f32 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b00, 0b1111, asm, ".2s", ".8b",
+                                           V64, v2f32, v8i8, op>;
+    def v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1111, asm, ".4s", ".16b",
+                                           V128, v4f32, v16i8, op>;
+  }
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
@@ -6988,11 +7069,18 @@ multiclass SIMDMixedTwoVector<bit U, bits<5> opc, string asm,
 //----------------------------------------------------------------------------
 // FP8 Advanced SIMD two-register miscellaneous
 //----------------------------------------------------------------------------
-multiclass SIMDMixedTwoVectorFP8<bits<2>sz, string asm> {
-  def v8f16 : BaseSIMDMixedTwoVector<0b0, 0b1, sz, 0b10111, V64, V128,
-                                     asm, ".8h", ".8b", []>;
-  def 2v8f16 : BaseSIMDMixedTwoVector<0b1, 0b1, sz, 0b10111, V128, V128,
-                                     asm#2, ".8h", ".16b", []>;
+multiclass SIMD_FP8_CVTL<bits<2>sz, string asm, ValueType dty, SDPatternOperator Op> {
+  let Uses=[FPMR, FPCR], mayLoad = 1 in {
+    def NAME : BaseSIMDMixedTwoVector<0b0, 0b1, sz, 0b10111, V64, V128,
+                                      asm, ".8h", ".8b", []>;
+    def NAME#2 : BaseSIMDMixedTwoVector<0b1, 0b1, sz, 0b10111, V128, V128,
+                                        asm#2, ".8h", ".16b", []>;
+  }
+  def : Pat<(dty (Op (v8i8 V64:$Rn))),
+            (!cast<Instruction>(NAME) V64:$Rn)>;
+
+  def : Pat<(dty (Op (v16i8 V128:$Rn))),
+            (!cast<Instruction>(NAME#2) V128:$Rn)>;
 }
 
 class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,
@@ -8491,28 +8579,28 @@ multiclass SIMDTableLookup<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 multiclass SIMDTableLookupTied<bit op, string asm> {
@@ -8535,28 +8623,28 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 //----------------------------------------------------------------------------
@@ -9008,22 +9096,19 @@ class SIMDThreeSameVectorBF16MatrixMul<string asm>
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMD_BFCVTN
-  : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V128,
+  : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V64,
                            "bfcvtn", ".4h", ".4s",
-    [(set (v8bf16 V128:$Rd),
-          (int_aarch64_neon_bfcvtn (v4f32 V128:$Rn)))]>;
+    [(set (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn)))]>;
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class SIMD_BFCVTN2
   : BaseSIMDMixedTwoVectorTied<1, 0, 0b10, 0b10110, V128, V128,
-                           "bfcvtn2", ".8h", ".4s",
-    [(set (v8bf16 V128:$dst),
-          (int_aarch64_neon_bfcvtn2 (v8bf16 V128:$Rd), (v4f32 V128:$Rn)))]>;
+                               "bfcvtn2", ".8h", ".4s", []>;
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class BF16ToSinglePrecision<string asm>
   : I<(outs FPR16:$Rd), (ins FPR32:$Rn), asm, "\t$Rd, $Rn", "",
-    [(set (bf16 FPR16:$Rd), (int_aarch64_neon_bfcvt (f32 FPR32:$Rn)))]>,
+    [(set (bf16 FPR16:$Rd), (any_fpround (f32 FPR32:$Rn)))]>,
     Sched<[WriteFCvt]> {
   bits<5> Rd;
   bits<5> Rn;
@@ -9039,7 +9124,7 @@ class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
                                     RegisterOperand RegType,
                                     RegisterOperand RegType_lo>
   : BaseSIMDIndexedTied<Q, U, 0b0, sz, opc,
-                        RegType, RegType, RegType_lo, VectorIndexB,
+                        RegType, RegType, RegType_lo, VectorIndexB32b_timm,
                         asm, "", dst_kind, ".16b", ".b", []> {
 
   // idx = H:L:M
@@ -9048,14 +9133,24 @@ class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
   let Inst{21-19} = idx{2-0};
 }
 
-multiclass SIMDThreeSameVectorMLAIndex<bit Q, string asm> {
-  def v8f16 : BaseSIMDThreeSameVectorIndexB<Q, 0b0, 0b11, 0b0000, asm, ".8h",
-                                            V128, V128_0to7>;
+multiclass SIMDThreeSameVectorMLAIndex<bit Q, string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f16 : BaseSIMDThreeSameVectorIndexB<Q, 0b0, 0b11, 0b0000, asm, ".8h",
+                                              V128, V128_0to7>;
+  }
+
+  def : Pat<(v8f16 (op (v8f16 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128_0to7:$Rm), VectorIndexB32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v8f16) $Rd, $Rn, $Rm, $Idx)>;
 }
 
-multiclass SIMDThreeSameVectorMLALIndex<bit Q, bits<2> sz, string asm> {
-  def v4f32 : BaseSIMDThreeSameVectorIndexB<Q, 0b1, sz, 0b1000, asm, ".4s",
-                                            V128, V128_0to7>;
+multiclass SIMDThreeSameVectorMLALIndex<bit Q, bits<2> sz, string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v4f32 : BaseSIMDThreeSameVectorIndexB<Q, 0b1, sz, 0b1000, asm, ".4s",
+                                              V128, V128_0to7>;
+  }
+
+  def : Pat<(v4f32 (op (v4f32 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128_0to7:$Rm), VectorIndexB32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v4f32) $Rd, $Rn, $Rm, $Idx)>;
 }
 
 //----------------------------------------------------------------------------
@@ -9076,15 +9171,16 @@ class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, str
                                     string dst_kind, string lhs_kind, string rhs_kind,
                                     RegisterOperand RegType,
                                     ValueType AccumType, ValueType InputType,
+                                    AsmVectorIndexOpnd VIdx,
                                     SDPatternOperator OpNode> :
         BaseSIMDIndexedTied<Q, U, 0b0, size, opc, RegType, RegType, V128,
-                            VectorIndexS, asm, "", dst_kind, lhs_kind, rhs_kind,
+                            VIdx, asm, "", dst_kind, lhs_kind, rhs_kind,
         [(set (AccumType RegType:$dst),
               (AccumType (OpNode (AccumType RegType:$Rd),
                                  (InputType RegType:$Rn),
                                  (InputType (bitconvert (AccumType
                                     (AArch64duplane32 (v4i32 V128:$Rm),
-                                        VectorIndexS:$idx)))))))]> {
+                                        VIdx:$idx)))))))]> {
   bits<2> idx;
   let Inst{21}    = idx{0};  // L
   let Inst{11}    = idx{1};  // H
@@ -9093,17 +9189,24 @@ class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, str
 multiclass SIMDThreeSameVectorDotIndex<bit U, bit Mixed, bits<2> size, string asm,
                                        SDPatternOperator OpNode> {
   def v8i8  : BaseSIMDThreeSameVectorIndexS<0, U, size, {0b111, Mixed}, asm, ".2s", ".8b", ".4b",
-                                              V64, v2i32, v8i8, OpNode>;
+                                              V64, v2i32, v8i8, VectorIndexS, OpNode>;
   def v16i8 : BaseSIMDThreeSameVectorIndexS<1, U, size, {0b111, Mixed}, asm, ".4s", ".16b", ".4b",
-                                              V128, v4i32, v16i8, OpNode>;
+                                              V128, v4i32, v16i8, VectorIndexS, OpNode>;
 }
 
-// TODO: The vectors v8i8 and v16i8 should be v8f8 and v16f8
-multiclass SIMDThreeSameVectorFP8DOT4Index<string asm> {
-  def v8f8 : BaseSIMDThreeSameVectorIndexS<0b0, 0b0, 0b00, 0b0000, asm, ".2s", ".8b", ".4b",
-                                           V64, v2f32, v8i8, null_frag>;
-  def v16f8 : BaseSIMDThreeSameVectorIndexS<0b1, 0b0, 0b00, 0b0000, asm, ".4s", ".16b",".4b",
-                                            V128, v4f32, v16i8, null_frag>;
+multiclass SIMD_FP8_Dot4_Index<string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v2f32 : BaseSIMDThreeSameVectorIndexS<0b0, 0b0, 0b00, 0b0000, asm, ".2s", ".8b", ".4b",
+                                              V64, v2f32, v8i8, VectorIndexS32b_timm, null_frag>;
+    def v4f32 : BaseSIMDThreeSameVectorIndexS<0b1, 0b0, 0b00, 0b0000, asm, ".4s", ".16b",".4b",
+                                              V128, v4f32, v16i8, VectorIndexS32b_timm, null_frag>;
+  }
+
+  def : Pat<(v2f32 (op (v2f32 V64:$Rd), (v8i8 V64:$Rn), (v16i8 V128:$Rm), VectorIndexS32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v2f32) $Rd, $Rn, $Rm, $Idx)>;
+
+  def : Pat<(v4f32 (op (v4f32 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128:$Rm), VectorIndexS32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v4f32) $Rd, $Rn, $Rm, $Idx)>;
 }
 
 // ARMv8.2-A Fused Multiply Add-Long Instructions (Indexed)
@@ -9112,14 +9215,15 @@ class BaseSIMDThreeSameVectorIndexH<bit Q, bit U, bits<2> sz, bits<4> opc, strin
                                       string dst_kind, string lhs_kind,
                                       string rhs_kind, RegisterOperand RegType,
                                       RegisterOperand RegType_lo, ValueType AccumType,
-                                      ValueType InputType, SDPatternOperator OpNode> :
+                                      ValueType InputType, AsmVectorIndexOpnd VIdx,
+                                      SDPatternOperator OpNode> :
         BaseSIMDIndexedTied<Q, U, 0, sz, opc, RegType, RegType, RegType_lo,
-                            VectorIndexH, asm, "", dst_kind, lhs_kind, rhs_kind,
+                            VIdx, asm, "", dst_kind, lhs_kind, rhs_kind,
           [(set (AccumType RegType:$dst),
                 (AccumType (OpNode (AccumType RegType:$Rd),
                                    (InputType RegType:$Rn),
                                    (InputType (AArch64duplane16 (v8f16 V128_lo:$Rm),
-                                                VectorIndexH:$idx)))))]> {
+                                                VIdx:$idx)))))]> {
   // idx = H:L:M
   bits<3> idx;
   let Inst{11} = idx{2}; // H
@@ -9130,19 +9234,25 @@ class BaseSIMDThreeSameVectorIndexH<bit Q, bit U, bits<2> sz, bits<4> opc, strin
 multiclass SIMDThreeSameVectorFMLIndex<bit U, bits<4> opc, string asm,
                                        SDPatternOperator OpNode> {
   def v4f16 : BaseSIMDThreeSameVectorIndexH<0, U, 0b10, opc, asm, ".2s", ".2h", ".h",
-                                              V64, V128_lo, v2f32, v4f16, OpNode>;
+                                              V64, V128_lo, v2f32, v4f16, VectorIndexH, OpNode>;
   def v8f16 : BaseSIMDThreeSameVectorIndexH<1, U, 0b10, opc, asm, ".4s", ".4h", ".h",
-                                              V128, V128_lo, v4f32, v8f16, OpNode>;
+                                              V128, V128_lo, v4f32, v8f16, VectorIndexH, OpNode>;
 }
 
 //----------------------------------------------------------------------------
 // FP8 Advanced SIMD vector x indexed element
-// TODO: Replace value types v8i8 and v16i8 by v8f8 and v16f8
-multiclass SIMDThreeSameVectorFP8DOT2Index<string asm> {
-  def v4f16 : BaseSIMDThreeSameVectorIndexH<0b0, 0b0, 0b01, 0b0000, asm, ".4h", ".8b", ".2b",
-                                            V64, V128_lo, v4f16, v8i8, null_frag>;
-  def v8f16 : BaseSIMDThreeSameVectorIndexH<0b1, 0b0, 0b01, 0b0000, asm, ".8h", ".16b", ".2b",
-                                            V128, V128_lo, v8f16, v8i16, null_frag>;
+multiclass SIMD_FP8_Dot2_Index<string asm, SDPatternOperator op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in { 
+    def v4f16 : BaseSIMDThreeSameVectorIndexH<0b0, 0b0, 0b01, 0b0000, asm, ".4h", ".8b", ".2b",
+                                              V64, V128_lo, v4f16, v8i8, VectorIndexH32b_timm, null_frag>;
+    def v8f16 : BaseSIMDThreeSameVectorIndexH<0b1, 0b0, 0b01, 0b0000, asm, ".8h", ".16b", ".2b",
+                                              V128, V128_lo, v8f16, v16i8, VectorIndexH32b_timm, null_frag>;
+  }
+  def : Pat<(v4f16 (op (v4f16 V64:$Rd), (v8i8 V64:$Rn), (v16i8 V128_lo:$Rm), VectorIndexH32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v4f16) $Rd, $Rn, $Rm, $Idx)>;
+
+  def : Pat<(v8f16 (op (v8f16 V128:$Rd), (v16i8 V128:$Rn), (v16i8 V128_lo:$Rm), VectorIndexH32b_timm:$Idx)),
+            (!cast<Instruction>(NAME # v8f16) $Rd, $Rn, $Rm, $Idx)>;
 }
 
 multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
@@ -12383,6 +12493,36 @@ multiclass LDOPregister_patterns_mod<string inst, string op, string mod> {
                         (i32 (!cast<Instruction>(mod#Wrr) WZR, GPR32:$Rm))>;
 }
 
+let Predicates = [HasLSFE] in
+multiclass LDFPOPregister_patterns_ord_dag<string inst, string suffix, string op,
+                                         ValueType vt, dag data> {
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "A" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "L" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+  def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, data),
+            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+}
+
+multiclass LDFPOPregister_patterns_ord<string inst, string suffix, string op,
+                                     ValueType vt, dag RHS> {
+  defm : LDFPOPregister_patterns_ord_dag<inst, suffix, op, vt, RHS>;
+}
+
+multiclass LDFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "H", op, f16, (f16 FPR16:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "S", op, f32, (f32 FPR32:$Rm)>;
+  defm : LDFPOPregister_patterns_ord<inst, "D", op, f64, (f64 FPR64:$Rm)>;
+}
+
+multiclass LDBFPOPregister_patterns<string inst, string op> {
+  defm : LDFPOPregister_patterns_ord<inst, "", op, bf16, (bf16 FPR16:$Rm)>;
+}
+
 let Predicates = [HasLSE] in
 multiclass CASregister_patterns_ord_dag<string inst, string suffix, string op,
                                         ValueType vt, dag OLD, dag NEW> {
@@ -12438,26 +12578,19 @@ multiclass STOPregister<string asm, string instr> {
                     !cast<Instruction>(instr # "X")>;
 }
 
+let Predicates = [HasLSUI] in
 class BaseSTOPregisterLSUI<string asm, RegisterClass OP, Register Reg,
                         Instruction inst> :
-      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
+      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn), 0>;
 
 multiclass STOPregisterLSUI<string asm, string instr> {
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR32, WZR,
+  def : BaseSTOPregisterLSUI<asm # "l", GPR32, WZR,
+                    !cast<Instruction>(instr # "LW")>;
+  def : BaseSTOPregisterLSUI<asm # "l", GPR64, XZR,
+                    !cast<Instruction>(instr # "LX")>;
+  def : BaseSTOPregisterLSUI<asm, GPR32, WZR,
                     !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "a",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "l",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm # "al",        GPR64, XZR,
-                    !cast<Instruction>(instr # "X")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR32, WZR,
-                    !cast<Instruction>(instr # "W")>;
-  def : BaseSTOPregisterLSUI<asm,        GPR64, XZR,
+  def : BaseSTOPregisterLSUI<asm, GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
 }
 
@@ -12488,6 +12621,7 @@ class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
   bits<5> Rs;
   let Inst{20-16} = Rs;
+  let mayStore = 1;
 }
 
 class MOPSMemoryCopyMoveBase<bit isMove, bits<2> opcode, bits<2> op1,
@@ -13131,6 +13265,21 @@ multiclass CmpBranchRegisterAlias<string mnemonic, string insn> {
   def : InstAlias<mnemonic # "\t$Rt, $Rm, $target",
                  (!cast<Instruction>(insn # "Xrr") GPR64:$Rm, GPR64:$Rt, am_brcmpcond:$target), 0>;
 }
+
+class CmpBranchRegisterPseudo<RegisterClass regtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, regtype:$Rm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
+class CmpBranchImmediatePseudo<RegisterClass regtype, ImmLeaf imtype>
+  : Pseudo<(outs), (ins ccode:$Cond, regtype:$Rt, imtype:$Imm, am_brcmpcond:$Target), []>,
+    Sched<[WriteBr]> {
+  let isBranch = 1;
+  let isTerminator = 1;
+}
+
 //----------------------------------------------------------------------------
 // Allow the size specifier tokens to be upper case, not just lower.
 def : TokenAlias<".4B", ".4b">;  // Add dot product
@@ -13227,4 +13376,3 @@ multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{
       let Predicates = [HasNEON, HasF8F32MM];
     }
 }
-

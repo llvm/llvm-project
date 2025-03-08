@@ -131,7 +131,7 @@ class SPIRV_IntelSplitBarrierOp<string mnemonic>
   let results = (outs);
 
   let assemblyFormat = [{
-    $execution_scope `,` $memory_scope `,` $memory_semantics attr-dict
+    $execution_scope $memory_scope $memory_semantics attr-dict
   }];
 
   let hasVerifier = 0;
@@ -160,7 +160,7 @@ def SPIRV_INTELControlBarrierArriveOp
     #### Example:
 
     ```mlir
-    spirv.ControlBarrierArrive <Workgroup>, <Device>, <Acquire|UniformMemory>
+    spirv.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>
     ```
   }];
 }
@@ -194,7 +194,7 @@ def SPIRV_INTELControlBarrierWaitOp
     #### Example:
 
     ```mlir
-    spirv.ControlBarrierWait <Workgroup>, <Device>, <Acquire|UniformMemory>
+    spirv.ControlBarrierWait <Workgroup> <Device> <Acquire|UniformMemory>
     ```
   }];
 }

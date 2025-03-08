@@ -1,23 +1,23 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefix=CI -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=kaveri | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=fiji -mattr=-xnack | FileCheck -check-prefix=VI-NOXNACK -check-prefix=GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=carrizo -mattr=+xnack | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=stoney -mattr=+xnack | FileCheck -check-prefix=VI-XNACK  -check-prefix=GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,-xnack | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX9-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=+architected-flat-scratch,+xnack | FileCheck -check-prefixes=HSA-VI-XNACK,GFX9-ARCH-FLAT,GCN %s
 
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch -verify-machineinstrs | FileCheck -check-prefixes=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack -verify-machineinstrs | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch | FileCheck -check-prefixes=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,-xnack | FileCheck -check-prefixes=HSA-VI-NOXNACK,GFX10-ARCH-FLAT,GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=+architected-flat-scratch,+xnack | FileCheck -check-prefixes=HSA-VI-XNACK,GFX10-ARCH-FLAT,GCN %s
 
 ; GCN-LABEL: {{^}}no_vcc_no_flat:
 
@@ -96,9 +96,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr() #0 {
@@ -113,9 +113,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_lo() #0 {
@@ -130,9 +130,9 @@ entry:
 ; HSA-VI-NOXNACK: .amdhsa_reserve_xnack_mask 0
 ; HSA-VI-XNACK: .amdhsa_reserve_xnack_mask 1
 
-; CI: TotalNumSgprs: 4
-; VI-NOXNACK: TotalNumSgprs: 6
-; VI-XNACK: TotalNumSgprs: 6
+; CI: NumSgprs: 4
+; VI-NOXNACK: NumSgprs: 6
+; VI-XNACK: NumSgprs: 6
 ; GFX9-ARCH-FLAT: ; TotalNumSgprs: 6
 ; GFX10-ARCH-FLAT: ; TotalNumSgprs: 0
 define amdgpu_kernel void @use_flat_scr_hi() #0 {

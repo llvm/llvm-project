@@ -86,7 +86,6 @@ static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
   StringRef Name = "_GLOBAL_OFFSET_TABLE_";
   return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 MCSymbolRefExpr::VK_None,
                                  Context);
 }
 
@@ -688,22 +687,28 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     int64_t SrcDisp = MI->getOperand(5).getImm();
 
     SystemZTargetStreamer *TS = getTargetStreamer();
-    MCSymbol *DotSym = nullptr;
-    MCInst ET = MCInstBuilder(TargetInsOpc).addReg(DestReg)
-      .addImm(DestDisp).addImm(1).addReg(SrcReg).addImm(SrcDisp);
+    MCInst ET = MCInstBuilder(TargetInsOpc)
+                    .addReg(DestReg)
+                    .addImm(DestDisp)
+                    .addImm(1)
+                    .addReg(SrcReg)
+                    .addImm(SrcDisp);
     SystemZTargetStreamer::MCInstSTIPair ET_STI(ET, &MF->getSubtarget());
-    SystemZTargetStreamer::EXRLT2SymMap::iterator I =
-        TS->EXRLTargets2Sym.find(ET_STI);
-    if (I != TS->EXRLTargets2Sym.end())
-      DotSym = I->second;
-    else
-      TS->EXRLTargets2Sym[ET_STI] = DotSym = OutContext.createTempSymbol();
+    auto [It, Inserted] = TS->EXRLTargets2Sym.try_emplace(ET_STI);
+    if (Inserted)
+      It->second = OutContext.createTempSymbol();
+    MCSymbol *DotSym = It->second;
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
     return;
   }
+
+  // EH_SjLj_Setup is a dummy terminator instruction of size 0.
+  // It is used to handle the clobber register for builtin setjmp.
+  case SystemZ::EH_SjLj_Setup:
+    return;
 
   default:
     Lower.lower(MI, LoweredMI);

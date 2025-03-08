@@ -1251,11 +1251,12 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   if (EHPersonality::get(*this).isWasmPersonality()) {
     auto *CatchSwitch =
-        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHI());
+        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
                               ? CatchSwitch->getSuccessor(1)
                               : CatchSwitch->getSuccessor(0);
-    auto *CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHI());
+    auto *CPI =
+        cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
     CurrentFuncletPad = CPI;
   }
 
@@ -1858,7 +1859,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
     RecoverCall->setArgOperand(1, ParentFP);
-    RecoverCall->insertBefore(AllocaInsertPt);
+    RecoverCall->insertBefore(AllocaInsertPt->getIterator());
   }
 
   // Bitcast the variable, rename it, and insert it in the local decl map.
@@ -2252,7 +2253,7 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // __except blocks don't get outlined into funclets, so immediately do a
   // catchret.
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   llvm::BasicBlock *ExceptBB = createBasicBlock("__except");
   Builder.CreateCatchRet(CPI, ExceptBB);
   EmitBlock(ExceptBB);

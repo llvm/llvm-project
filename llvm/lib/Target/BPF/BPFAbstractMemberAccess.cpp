@@ -109,7 +109,7 @@ Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
                                          BPFCoreSharedInfo::SeqNum++);
 
   auto *NewInst = CallInst::Create(Fn, {SeqNumVal, Input});
-  NewInst->insertBefore(Before);
+  NewInst->insertBefore(Before->getIterator());
   return NewInst;
 }
 } // namespace llvm
@@ -1115,16 +1115,16 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // Generate a BitCast
   auto *BCInst =
       new BitCastInst(Base, PointerType::getUnqual(BB->getContext()));
-  BCInst->insertBefore(Call);
+  BCInst->insertBefore(Call->getIterator());
 
   // Generate a GetElementPtr
   auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(BB->getContext()),
                                         BCInst, LDInst);
-  GEP->insertBefore(Call);
+  GEP->insertBefore(Call->getIterator());
 
   // Generate a BitCast
   auto *BCInst2 = new BitCastInst(GEP, Call->getType());
-  BCInst2->insertBefore(Call);
+  BCInst2->insertBefore(Call->getIterator());
 
   // For the following code,
   //    Block0:

@@ -17,7 +17,9 @@
 #include <__fwd/functional.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
@@ -51,30 +53,30 @@ template <class _Tp>
 struct __can_convert_char<const _Tp> : public __can_convert_char<_Tp> {};
 template <>
 struct __can_convert_char<char> {
-  static const bool value = true;
-  using __char_type       = char;
+  static const bool value           = true;
+  using __char_type _LIBCPP_NODEBUG = char;
 };
 template <>
 struct __can_convert_char<wchar_t> {
-  static const bool value = true;
-  using __char_type       = wchar_t;
+  static const bool value           = true;
+  using __char_type _LIBCPP_NODEBUG = wchar_t;
 };
 #  if _LIBCPP_HAS_CHAR8_T
 template <>
 struct __can_convert_char<char8_t> {
-  static const bool value = true;
-  using __char_type       = char8_t;
+  static const bool value           = true;
+  using __char_type _LIBCPP_NODEBUG = char8_t;
 };
 #  endif
 template <>
 struct __can_convert_char<char16_t> {
-  static const bool value = true;
-  using __char_type       = char16_t;
+  static const bool value           = true;
+  using __char_type _LIBCPP_NODEBUG = char16_t;
 };
 template <>
 struct __can_convert_char<char32_t> {
-  static const bool value = true;
-  using __char_type       = char32_t;
+  static const bool value           = true;
+  using __char_type _LIBCPP_NODEBUG = char32_t;
 };
 
 template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
@@ -95,7 +97,7 @@ typedef string __u8_string;
 struct _NullSentinel {};
 
 template <class _Tp>
-using _Void = void;
+using _Void _LIBCPP_NODEBUG = void;
 
 template <class _Tp, class = void>
 struct __is_pathable_string : public false_type {};
@@ -104,7 +106,7 @@ template <class _ECharT, class _Traits, class _Alloc>
 struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
                              _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
-  using _Str = basic_string<_ECharT, _Traits, _Alloc>;
+  using _Str _LIBCPP_NODEBUG = basic_string<_ECharT, _Traits, _Alloc>;
 
   _LIBCPP_HIDE_FROM_ABI static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
 
@@ -117,7 +119,7 @@ template <class _ECharT, class _Traits>
 struct __is_pathable_string< basic_string_view<_ECharT, _Traits>,
                              _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
-  using _Str = basic_string_view<_ECharT, _Traits>;
+  using _Str _LIBCPP_NODEBUG = basic_string_view<_ECharT, _Traits>;
 
   _LIBCPP_HIDE_FROM_ABI static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
 
@@ -157,7 +159,7 @@ struct __is_pathable_iter<
     true,
     _Void<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
-  using _ECharT = typename iterator_traits<_Iter>::value_type;
+  using _ECharT _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
 
   _LIBCPP_HIDE_FROM_ABI static _Iter __range_begin(_Iter __b) { return __b; }
 
@@ -380,13 +382,13 @@ struct _PathExport<char8_t> {
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
-  using _EnableIfPathable = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
+  using _EnableIfPathable _LIBCPP_NODEBUG = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 
   template <class _Tp>
-  using _SourceChar = typename __is_pathable<_Tp>::__char_type;
+  using _SourceChar _LIBCPP_NODEBUG = typename __is_pathable<_Tp>::__char_type;
 
   template <class _Tp>
-  using _SourceCVT = _PathCVT<_SourceChar<_Tp> >;
+  using _SourceCVT _LIBCPP_NODEBUG = _PathCVT<_SourceChar<_Tp> >;
 
 public:
 #  if defined(_LIBCPP_WIN32API)
@@ -583,7 +585,7 @@ public:
 
   template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI path& operator+=(_ECharT __x) {
-    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(&__x, 1));
+    _PathCVT<_ECharT>::__append_source(__pn_, basic_string_view<_ECharT>(std::addressof(__x), 1));
     return *this;
   }
 

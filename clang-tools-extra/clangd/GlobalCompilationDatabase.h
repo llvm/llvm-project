@@ -209,6 +209,9 @@ public:
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
 
+  std::unique_ptr<ProjectModules>
+  getProjectModules(PathRef File) const override;
+
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */

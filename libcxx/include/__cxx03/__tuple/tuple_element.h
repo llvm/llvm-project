@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_TUPLE_ELEMENT_H
-#define _LIBCPP___TUPLE_TUPLE_ELEMENT_H
+#ifndef _LIBCPP___CXX03___TUPLE_TUPLE_ELEMENT_H
+#define _LIBCPP___CXX03___TUPLE_TUPLE_ELEMENT_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__tuple/tuple_indices.h>
@@ -55,4 +55,4 @@ using tuple_element_t _LIBCPP_NODEBUG = typename tuple_element<_Ip, _Tp...>::typ
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TUPLE_TUPLE_ELEMENT_H
+#endif // _LIBCPP___CXX03___TUPLE_TUPLE_ELEMENT_H

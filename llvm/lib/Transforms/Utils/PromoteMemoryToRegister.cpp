@@ -119,7 +119,8 @@ static void createDebugValue(DIBuilder &DIB, Value *NewValue,
                              DILocalVariable *Variable,
                              DIExpression *Expression, const DILocation *DI,
                              Instruction *InsertBefore) {
-  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI, InsertBefore);
+  DIB.insertDbgValueIntrinsic(NewValue, Variable, Expression, DI,
+                              InsertBefore->getIterator());
 }
 
 /// Helper for updating assignment tracking debug info when promoting allocas.
@@ -447,9 +448,9 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
       Intrinsic::getOrInsertDeclaration(LI->getModule(), Intrinsic::assume);
   ICmpInst *LoadNotNull = new ICmpInst(ICmpInst::ICMP_NE, LI,
                                        Constant::getNullValue(LI->getType()));
-  LoadNotNull->insertAfter(LI);
+  LoadNotNull->insertAfter(LI->getIterator());
   CallInst *CI = CallInst::Create(AssumeIntrinsic, {LoadNotNull});
-  CI->insertAfter(LoadNotNull);
+  CI->insertAfter(LoadNotNull->getIterator());
   AC->registerAssumption(cast<AssumeInst>(CI));
 }
 

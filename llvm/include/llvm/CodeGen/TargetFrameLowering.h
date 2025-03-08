@@ -229,10 +229,17 @@ public:
 
   /// Returns true if we may need to fix the unwind information for the
   /// function.
-  virtual bool enableCFIFixup(MachineFunction &MF) const;
+  virtual bool enableCFIFixup(const MachineFunction &MF) const;
+
+  /// enableFullCFIFixup - Returns true if we may need to fix the unwind
+  /// information such that it is accurate for *every* instruction in the
+  /// function (e.g. if the function has an async unwind table).
+  virtual bool enableFullCFIFixup(const MachineFunction &MF) const {
+    return enableCFIFixup(MF);
+  };
 
   /// Emit CFI instructions that recreate the state of the unwind information
-  /// upon fucntion entry.
+  /// upon function entry.
   virtual void resetCFIToInitialState(MachineBasicBlock &MBB) const {}
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline

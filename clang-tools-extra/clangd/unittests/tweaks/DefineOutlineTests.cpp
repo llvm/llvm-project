@@ -118,12 +118,6 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     template <> void fo^o<int>() {}
   )cpp");
 
-  // Not available on member function templates with unnamed template
-  // parameters.
-  EXPECT_UNAVAILABLE(R"cpp(
-    struct Foo { template <typename> void ba^r() {} };
-  )cpp");
-
   // Not available on methods of unnamed classes.
   EXPECT_UNAVAILABLE(R"cpp(
     struct Foo {
@@ -410,14 +404,14 @@ inline typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>
       {
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
+              template <typename T, typename, bool B = true>
               T ^bar() { return {}; }
             };)cpp",
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
+              template <typename T, typename, bool B = true>
               T bar() ;
-            };template <typename T, bool B>
+            };template <typename T, typename, bool B>
 inline T Foo::bar() { return {}; }
 )cpp",
           ""},
@@ -426,13 +420,13 @@ inline T Foo::bar() { return {}; }
       {
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> T ^bar(const T& t, const U& u) { return {}; }
+              template <typename U, bool> T ^bar(const T& t, const U& u) { return {}; }
             };)cpp",
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> T bar(const T& t, const U& u) ;
+              template <typename U, bool> T bar(const T& t, const U& u) ;
             };template <typename T>
-template <typename U>
+template <typename U, bool>
 inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 )cpp",
           ""},

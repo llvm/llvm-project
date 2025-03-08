@@ -40,6 +40,18 @@ declare void @fn_inaccessiblemem_write() memory(inaccessiblemem: write)
 ; CHECK: @fn_inaccessiblemem_readwrite()
 declare void @fn_inaccessiblemem_readwrite() memory(inaccessiblemem: readwrite)
 
+; CHECK: Function Attrs: memory(errnomem: read)
+; CHECK: @fn_errnomem_read()
+declare void @fn_errnomem_read() memory(errnomem: read)
+
+; CHECK: Function Attrs: memory(errnomem: write)
+; CHECK: @fn_errnomem_write()
+declare void @fn_errnomem_write() memory(errnomem: write)
+
+; CHECK: Function Attrs: memory(errnomem: readwrite)
+; CHECK: @fn_errnomem_readwrite()
+declare void @fn_errnomem_readwrite() memory(errnomem: readwrite)
+
 ; CHECK: Function Attrs: memory(read, argmem: readwrite)
 ; CHECK: @fn_read_argmem_readwrite()
 declare void @fn_read_argmem_readwrite() memory(read, argmem: readwrite)

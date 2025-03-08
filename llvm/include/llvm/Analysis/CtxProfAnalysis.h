@@ -21,12 +21,6 @@ namespace llvm {
 
 class CtxProfAnalysis;
 
-// Setting initial capacity to 1 because all contexts must have at least 1
-// counter, and then, because all contexts belonging to a function have the same
-// size, there'll be at most one other heap allocation.
-using CtxProfFlatProfile =
-    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
-
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
   friend class CtxProfAnalysis;
@@ -38,7 +32,7 @@ class PGOContextualProfile {
     PGOCtxProfContext Index;
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
-  std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
+  PGOCtxProfile Profiles;
   // For the GUIDs in this module, associate metadata about each function which
   // we'll need when we maintain the profiles during IPO transformations.
   std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
@@ -56,11 +50,11 @@ public:
   PGOContextualProfile(const PGOContextualProfile &) = delete;
   PGOContextualProfile(PGOContextualProfile &&) = default;
 
-  operator bool() const { return Profiles.has_value(); }
-
-  const PGOCtxProfContext::CallTargetMapTy &profiles() const {
-    return *Profiles;
+  const CtxProfContextualProfiles &contexts() const {
+    return Profiles.Contexts;
   }
+
+  const PGOCtxProfile &profiles() const { return Profiles; }
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
@@ -140,7 +134,7 @@ public:
 class CtxProfAnalysisPrinterPass
     : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
-  enum class PrintMode { Everything, JSON };
+  enum class PrintMode { Everything, YAML };
   explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

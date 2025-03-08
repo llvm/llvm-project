@@ -167,6 +167,7 @@ public:
   SyncStream(SyncStream &&o) : e(o.e), level(o.level), buf(std::move(o.buf)) {}
   ~SyncStream();
   StringRef str() { return os.str(); }
+  uint64_t tell() { return os.tell(); }
 };
 
 [[noreturn]] void exitLld(int val);

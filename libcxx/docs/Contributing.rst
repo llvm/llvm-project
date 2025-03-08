@@ -36,56 +36,10 @@ Every change in libc++ must come with appropriate tests. Libc++ has an extensive
 should be run locally by developers before submitting patches and is also run as part of our CI
 infrastructure. The documentation about writing tests and running them is :ref:`here <testing>`.
 
-Coding standards
-================
+Coding Guidelines
+=================
 
-In general, libc++ follows the `LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
-There are some deviations from these standards.
-
-Libc++ uses ``__ugly_names``. These names are reserved for implementations, so
-users may not use them in their own applications. When using a name like ``T``,
-a user may have defined a macro that changes the meaning of ``T``. By using
-``__ugly_names`` we avoid that problem. Other standard libraries and compilers
-use these names too. To avoid common clashes with other uglified names used in
-other implementations (e.g. system headers), the test in
-``libcxx/test/libcxx/system_reserved_names.gen.py`` contains the list of
-reserved names that can't be used.
-
-Unqualified function calls are susceptible to
-`argument-dependent lookup (ADL) <https://en.cppreference.com/w/cpp/language/adl>`_.
-This means calling ``move(UserType)`` might not call ``std::move``. Therefore,
-function calls must use qualified names to avoid ADL. Some functions in the
-standard library `require ADL usage <http://eel.is/c++draft/contents#3>`_.
-Names of classes, variables, concepts, and type aliases are not subject to ADL.
-They don't need to be qualified.
-
-Function overloading also applies to operators. Using ``&user_object`` may call
-a user-defined ``operator&``. Use ``std::addressof`` instead. Similarly, to
-avoid invoking a user-defined ``operator,``, make sure to cast the result to
-``void`` when using the ``,``. For example:
-
-.. code-block:: cpp
-
-    for (; __first1 != __last1; ++__first1, (void)++__first2) {
-      ...
-    }
-
-In general, try to follow the style of existing code. There are a few
-exceptions:
-
-- Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
-  by libc++ accept alias declarations in all standard modes.
-
-Other tips are:
-
-- Keep the number of formatting changes in patches minimal.
-- Provide separate patches for style fixes and for bug fixes or features. Keep in
-  mind that large formatting patches may cause merge conflicts with other patches
-  under review. In general, we prefer to avoid large reformatting patches.
-- Keep patches self-contained. Large and/or complicated patches are harder to
-  review and take a significant amount of time. It's fine to have multiple
-  patches to implement one feature if the feature can be split into
-  self-contained sub-tasks.
+libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
 
 Resources
@@ -185,6 +139,17 @@ of the group to have approved the patch, excluding the patch author. This is not
 rule -- for very simple patches, use your judgement. The `"libc++" review group <https://reviews.llvm.org/project/members/64/>`__
 consists of frequent libc++ contributors with a good understanding of the project's
 guidelines -- if you would like to be added to it, please reach out on Discord.
+
+Some tips:
+
+- Keep the number of formatting changes in patches minimal.
+- Provide separate patches for style fixes and for bug fixes or features. Keep in
+  mind that large formatting patches may cause merge conflicts with other patches
+  under review. In general, we prefer to avoid large reformatting patches.
+- Keep patches self-contained. Large and/or complicated patches are harder to
+  review and take a significant amount of time. It's fine to have multiple
+  patches to implement one feature if the feature can be split into
+  self-contained sub-tasks.
 
 Exporting new symbols from the library
 ======================================

@@ -70,12 +70,13 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
-  Option<bool> testGeneralizePadTensor{
-      *this, "test-generalize-pad-tensor",
+  Option<bool> testDecomposePadTensor{
+      *this, "test-decompose-pad-tensor",
       llvm::cl::desc("Test transform pad tensor by copying with generic ops"),
       llvm::cl::init(false)};
+  // TODO: This is not used - delete.
   Option<bool> testDecomposeTensorPackOp{
-      *this, "test-decompose-tensor-pack",
+      *this, "test-decompose-linalg-pack",
       llvm::cl::desc("Test transform that generalizes pack ops into a sequence "
                      "of tensor and Linalg ops"),
       llvm::cl::init(false)};
@@ -130,6 +131,14 @@ struct TestLinalgTransforms
   Option<bool> testDecomposeWinogradOps{
       *this, "test-decompose-winograd-ops",
       llvm::cl::desc("Test decompose Winograd ops"), llvm::cl::init(false)};
+  Option<bool> testFoldIntoPackAndUnpack{
+      *this, "test-fold-into-pack-and-unpack",
+      llvm::cl::desc("Test folding ops into linalg.pack and linalg.unpack"),
+      llvm::cl::init(false)};
+  Option<bool> testSimplifyPackUnpackPatterns{
+      *this, "test-simplify-pack-unpack-patterns",
+      llvm::cl::desc("Test patterns to simplify linalg.pack and linalg.unpack"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -147,14 +156,14 @@ static void applyPatterns(func::FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
   RewritePatternSet forwardPattern(funcOp.getContext());
   forwardPattern.add<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
   forwardPattern.add<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(forwardPattern));
+  (void)applyPatternsGreedily(funcOp, std::move(forwardPattern));
 }
 
 static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
@@ -163,68 +172,80 @@ static void applyLinalgToVectorPatterns(func::FuncOp funcOp) {
   patterns.add<CopyVectorizationPattern>(ctx);
   populatePadOpVectorizationPatterns(patterns);
   populateConvolutionVectorizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
-static void applyGeneralizePadTensorPatterns(func::FuncOp funcOp) {
+static void applyDecomposePadPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizePadOpPattern>(funcOp.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  patterns.add<DecomposePadOpPattern>(funcOp.getContext());
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyDecomposeTensorPackPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<DecomposeOuterUnitDimsPackOpPattern>(funcOp.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyDecomposeTensorUnPackPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<DecomposeOuterUnitDimsUnPackOpPattern>(funcOp.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyBubbleUpExtractSliceOpPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateBubbleUpExtractSliceOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applySwapExtractSliceWithFillPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateSwapExtractSliceWithFillPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyEraseUnusedOperandsAndResultsPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateEraseUnusedOperandsAndResultsPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyEraseUnnecessaryInputs(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateEraseUnnecessaryInputsPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyWinogradConv2D(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateWinogradConv2DPatterns(patterns, /*m=*/4, /*r=*/3);
   populateWinogradConv2DPatterns(patterns, /*m=*/2, /*r=*/5);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
 static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateDecomposeWinogradOpsPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsGreedily(funcOp, std::move(patterns));
+}
+
+static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  linalg::populateFoldIntoPackAndUnpackPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
+static void applySimplifyPackUnpackPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  linalg::populateSimplifyPackAndUnpackPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 /// Apply transformations specified as patterns.
@@ -235,8 +256,8 @@ void TestLinalgTransforms::runOnOperation() {
     return applyVectorTransferForwardingPatterns(getOperation());
   if (testGenericToVectorPattern)
     return applyLinalgToVectorPatterns(getOperation());
-  if (testGeneralizePadTensor)
-    return applyGeneralizePadTensorPatterns(getOperation());
+  if (testDecomposePadTensor)
+    return applyDecomposePadPatterns(getOperation());
   if (testDecomposeTensorPackOp)
     return applyDecomposeTensorPackPatterns(getOperation());
   if (testDecomposeTensorUnPackOp)
@@ -255,6 +276,11 @@ void TestLinalgTransforms::runOnOperation() {
     return applyWinogradConv2D(getOperation());
   if (testDecomposeWinogradOps)
     return applyDecomposeWinogradOps(getOperation());
+  Operation *rootOp = getOperation();
+  if (testFoldIntoPackAndUnpack)
+    applyFoldIntoPackAndUnpackPatterns(rootOp);
+  if (testSimplifyPackUnpackPatterns)
+    applySimplifyPackUnpackPatterns(rootOp);
 }
 
 namespace mlir {

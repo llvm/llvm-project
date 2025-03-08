@@ -10,9 +10,10 @@
 ;
 ; GCN: s_endpgm
 
-define amdgpu_ps void @main(i32 %in1) local_unnamed_addr {
+define amdgpu_ps void @main(i32 %in1, i32 inreg %arg) local_unnamed_addr {
 .entry:
-  br i1 undef, label %bb12, label %bb
+  %cond = icmp eq i32 %arg, 0
+  br i1 %cond, label %bb12, label %bb
 
 bb:
   %__llpc_global_proxy_r5.12.vec.insert = insertelement <4 x i32> undef, i32 %in1, i32 3
@@ -24,7 +25,7 @@ bb:
   br label %bb12
 
 bb12:
-  %__llpc_global_proxy_r2.0 = phi <4 x i32> [ %__llpc_global_proxy_r2.0.vec.insert196, %bb ], [ undef, %.entry ]
+  %__llpc_global_proxy_r2.0 = phi <4 x i32> [ %__llpc_global_proxy_r2.0.vec.insert196, %bb ], [ poison, %.entry ]
   %tmp6 = shufflevector <4 x i32> %__llpc_global_proxy_r2.0, <4 x i32> undef, <3 x i32> <i32 1, i32 2, i32 3>
   %tmp7 = bitcast <3 x i32> %tmp6 to <3 x float>
   %a0.i = extractelement <3 x float> %tmp7, i32 0

@@ -66,7 +66,7 @@ static llvm::Value *FindEntryInstruction(llvm::Function *function) {
   if (function->empty())
     return nullptr;
 
-  return function->getEntryBlock().getFirstNonPHIOrDbg();
+  return &*function->getEntryBlock().getFirstNonPHIOrDbg();
 }
 
 IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
@@ -298,16 +298,17 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  std::optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
-  if (!bit_size) {
+  auto bit_size_or_err = m_result_type.GetBitSize(target_sp.get());
+  if (!bit_size_or_err) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
     LLDB_LOG(log, "Result type has unknown size");
 
     m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' "
-                          "couldn't be determined\n",
-                          type_desc_stream.GetData());
+                          "couldn't be determined\n%s",
+                          type_desc_stream.GetData(),
+                          llvm::toString(bit_size_or_err.takeError()).c_str());
     return false;
   }
 
@@ -322,7 +323,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).value_or(0));
+           llvm::expectedToOptional(m_result_type.GetByteSize(target_sp.get()))
+               .value_or(0));
 
   // Construct a new result global and set up its metadata
 
@@ -361,7 +363,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // there's nothing to put into its equivalent persistent variable.
 
     BasicBlock &entry_block(llvm_function.getEntryBlock());
-    Instruction *first_entry_instruction(entry_block.getFirstNonPHIOrDbg());
+    Instruction *first_entry_instruction(&*entry_block.getFirstNonPHIOrDbg());
 
     if (!first_entry_instruction)
       return false;
@@ -1035,7 +1037,8 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     }
 
     auto *target = m_execution_unit.GetTarget().get();
-    std::optional<uint64_t> value_size = compiler_type.GetByteSize(target);
+    std::optional<uint64_t> value_size =
+        llvm::expectedToOptional(compiler_type.GetByteSize(target));
     if (!value_size)
       return false;
     std::optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(target);
@@ -1505,7 +1508,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
-  Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
+  Instruction *FirstEntryInstruction(&*entry_block.getFirstNonPHIOrDbg());
 
   if (!FirstEntryInstruction) {
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the "

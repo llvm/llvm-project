@@ -38,7 +38,6 @@ subroutine sub1()
   adev = 10
 
   cdev = 0
-
 end
 
 ! CHECK-LABEL: func.func @_QPsub1()
@@ -381,3 +380,26 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub18
 ! CHECK-NOT: cuf.data_transfer
+
+subroutine sub19()
+  integer, device :: adev(10)
+  integer :: ahost(10)
+  ! Implicit data transfer of adev and then addition on the host
+  ahost = adev + 2
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub19()
+! CHECK: %[[ADEV_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub19Eadev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[ALLOC_TMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[ALLOC_TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
+! CHECK: cuf.data_transfer %[[ADEV_DECL]]#1 to %[[TMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
+! CHECK: hlfir.assign 
+
+subroutine sub20()
+  integer, managed :: a(10)
+  a = a + 2 ! ok. No data transfer. Assignment on the host.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub20()
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign

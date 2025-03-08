@@ -37,12 +37,12 @@ spirv.func @split_barrier() "None" {
   // CHECK:         [[MEMORY:%.*]] = llvm.mlir.constant(2 : i32) : i32
   // CHECK:         [[SEMANTICS:%.*]] = llvm.mlir.constant(768 : i32) : i32
   // CHECK:         llvm.call spir_funccc @_Z33__spirv_ControlBarrierArriveINTELiii([[EXECUTION]], [[MEMORY]], [[SEMANTICS]]) {convergent, no_unwind, will_return} : (i32, i32, i32) -> ()
-  spirv.INTEL.ControlBarrierArrive <Workgroup>, <Workgroup>, <CrossWorkgroupMemory|WorkgroupMemory>
+  spirv.INTEL.ControlBarrierArrive <Workgroup> <Workgroup> <CrossWorkgroupMemory|WorkgroupMemory>
 
   // CHECK:         [[EXECUTION:%.*]] = llvm.mlir.constant(2 : i32) : i32
   // CHECK:         [[MEMORY:%.*]] = llvm.mlir.constant(2 : i32) : i32
   // CHECK:         [[SEMANTICS:%.*]] = llvm.mlir.constant(256 : i32) : i32
   // CHECK:         llvm.call spir_funccc @_Z31__spirv_ControlBarrierWaitINTELiii([[EXECUTION]], [[MEMORY]], [[SEMANTICS]]) {convergent, no_unwind, will_return} : (i32, i32, i32) -> ()
-  spirv.INTEL.ControlBarrierWait <Workgroup>, <Workgroup>, <WorkgroupMemory>
+  spirv.INTEL.ControlBarrierWait <Workgroup> <Workgroup> <WorkgroupMemory>
   spirv.Return
 }

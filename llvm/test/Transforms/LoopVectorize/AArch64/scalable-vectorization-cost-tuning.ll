@@ -1,42 +1,39 @@
 ; REQUIRES: asserts
 ; RUN: opt -mtriple=aarch64 -mattr=+sve \
-; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE16
+; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
 
 ; RUN: opt -mtriple=aarch64 -mattr=+sve -mcpu=generic \
-; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=GENERIC,VF-VSCALE16
+; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-v1 \
-; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-V1,VF-VSCALE16
+; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING2
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-n2 \
-; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-N2,VF-VSCALE16
+; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1
 
 ; RUN: opt -mtriple=aarch64 -mcpu=neoverse-v2 \
-; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize < %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=NEOVERSE-V2,VF-16
+; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=NEOVERSEV2
 
-; GENERIC: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
-; GENERIC: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
-; GENERIC: LV: Selecting VF: vscale x 16
+; VSCALEFORTUNING1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
+; VSCALEFORTUNING1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
+; VSCALEFORTUNING1: LV: Selecting VF: vscale x 16
 
-; NEOVERSE-V1: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
-; NEOVERSE-V1: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
-; NEOVERSE-V1: LV: Selecting VF: vscale x 16
+; VSCALEFORTUNING2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 2.
+; VSCALEFORTUNING2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 1.
+; VSCALEFORTUNING2: LV: Selecting VF: vscale x 16
 
-; NEOVERSE-N2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
-; NEOVERSE-N2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
-; NEOVERSE-N2: LV: Selecting VF: vscale x 16
+; NEOVERSEV2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
+; NEOVERSEV2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
+; NEOVERSEV2: LV: Selecting VF: 16
 
-; NEOVERSE-V2: Cost for VF vscale x 2: 11 (Estimated cost per lane: 5.
-; NEOVERSE-V2: Cost for VF vscale x 4: 11 (Estimated cost per lane: 2.
-; NEOVERSE-V2: LV: Selecting VF: 16
-
-; VF-16: <16 x i8>
-; VF-VSCALE16: <vscale x 16 x i8>
+; VSCALEFORTUNING1: <vscale x 16 x i8>
+; VSCALEFORTUNING2: <vscale x 16 x i8>
+; NEOVERSEV2: <16 x i8>
 define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 entry:
   br label %loop

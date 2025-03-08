@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -281,28 +282,33 @@ bool InstCombinerImpl::shouldChangeType(Type *From, Type *To) const {
 // Return true, if No Signed Wrap should be maintained for I.
 // The No Signed Wrap flag can be kept if the operation "B (I.getOpcode) C",
 // where both B and C should be ConstantInts, results in a constant that does
-// not overflow. This function only handles the Add and Sub opcodes. For
+// not overflow. This function only handles the Add/Sub/Mul opcodes. For
 // all other opcodes, the function conservatively returns false.
 static bool maintainNoSignedWrap(BinaryOperator &I, Value *B, Value *C) {
   auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I);
   if (!OBO || !OBO->hasNoSignedWrap())
     return false;
 
-  // We reason about Add and Sub Only.
-  Instruction::BinaryOps Opcode = I.getOpcode();
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
-    return false;
-
   const APInt *BVal, *CVal;
   if (!match(B, m_APInt(BVal)) || !match(C, m_APInt(CVal)))
     return false;
 
+  // We reason about Add/Sub/Mul Only.
   bool Overflow = false;
-  if (Opcode == Instruction::Add)
+  switch (I.getOpcode()) {
+  case Instruction::Add:
     (void)BVal->sadd_ov(*CVal, Overflow);
-  else
+    break;
+  case Instruction::Sub:
     (void)BVal->ssub_ov(*CVal, Overflow);
-
+    break;
+  case Instruction::Mul:
+    (void)BVal->smul_ov(*CVal, Overflow);
+    break;
+  default:
+    // Conservatively return false for other opcodes.
+    return false;
+  }
   return !Overflow;
 }
 
@@ -727,7 +733,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   RetVal->takeName(&I);
 
   // Try to add no-overflow flags to the final value.
-  if (isa<OverflowingBinaryOperator>(RetVal)) {
+  if (isa<BinaryOperator>(RetVal)) {
     bool HasNSW = false;
     bool HasNUW = false;
     if (isa<OverflowingBinaryOperator>(&I)) {
@@ -939,12 +945,11 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
                m_OneUse(m_Shift(m_Value(Y), m_Value(Shift)))))
       return nullptr;
     if (!match(I.getOperand(1 - ShOpnum),
-               m_BinOp(m_Value(ShiftedX), m_Value(Mask))))
+               m_c_BinOp(m_CombineAnd(
+                             m_OneUse(m_Shift(m_Value(X), m_Specific(Shift))),
+                             m_Value(ShiftedX)),
+                         m_Value(Mask))))
       return nullptr;
-
-    if (!match(ShiftedX, m_OneUse(m_Shift(m_Value(X), m_Specific(Shift)))))
-      return nullptr;
-
     // Make sure we are matching instruction shifts and not ConstantExpr
     auto *IY = dyn_cast<Instruction>(I.getOperand(ShOpnum));
     auto *IX = dyn_cast<Instruction>(ShiftedX);
@@ -1753,9 +1758,9 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   if (TerminatorBI && TerminatorBI->isConditional() &&
       TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
     bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
-    std::optional<bool> ImpliedCond =
-        isImpliedCondition(TerminatorBI->getCondition(), ICmp->getPredicate(),
-                           Ops[0], Ops[1], DL, LHSIsTrue);
+    std::optional<bool> ImpliedCond = isImpliedCondition(
+        TerminatorBI->getCondition(), ICmp->getCmpPredicate(), Ops[0], Ops[1],
+        DL, LHSIsTrue);
     if (ImpliedCond)
       return ConstantInt::getBool(I.getType(), ImpliedCond.value());
   }
@@ -1763,7 +1768,8 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
+Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
+                                             bool AllowMultipleUses) {
   unsigned NumPHIValues = PN->getNumIncomingValues();
   if (NumPHIValues == 0)
     return nullptr;
@@ -1771,7 +1777,9 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   // We normally only transform phis with a single use.  However, if a PHI has
   // multiple uses and they are all the same operation, we can fold *all* of the
   // uses into the PHI.
-  if (!PN->hasOneUse()) {
+  bool OneUse = PN->hasOneUse();
+  bool IdenticalUsers = false;
+  if (!AllowMultipleUses && !OneUse) {
     // Walk the use list for the instruction, comparing them to I.
     for (User *U : PN->users()) {
       Instruction *UI = cast<Instruction>(U);
@@ -1779,6 +1787,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         return nullptr;
     }
     // Otherwise, we can replace *all* users with the new PHI we form.
+    IdenticalUsers = true;
   }
 
   // Check that all operands are phi-translatable.
@@ -1818,16 +1827,36 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       continue;
     }
 
-    // If the only use of phi is comparing it with a constant then we can
-    // put this comparison in the incoming BB directly after a ucmp/scmp call
-    // because we know that it will simplify to a single icmp.
-    const APInt *Ignored;
-    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUser() &&
-        match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
+    // Handle some cases that can't be fully simplified, but where we know that
+    // the two instructions will fold into one.
+    auto WillFold = [&]() {
+      if (!InVal->hasOneUser())
+        return false;
+
+      // icmp of ucmp/scmp with constant will fold to icmp.
+      const APInt *Ignored;
+      if (isa<CmpIntrinsic>(InVal) &&
+          match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored))))
+        return true;
+
+      // icmp eq zext(bool), 0 will fold to !bool.
+      if (isa<ZExtInst>(InVal) &&
+          cast<ZExtInst>(InVal)->getSrcTy()->isIntOrIntVectorTy(1) &&
+          match(&I,
+                m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(PN), m_Zero())))
+        return true;
+
+      return false;
+    };
+
+    if (WillFold()) {
       OpsToMoveUseToIncomingBB.push_back(i);
       NewPhiValues.push_back(nullptr);
       continue;
     }
+
+    if (!OneUse && !IdenticalUsers)
+      return nullptr;
 
     if (SeenNonSimplifiedInVal)
       return nullptr; // More than one non-simplified value.
@@ -1890,17 +1919,22 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   for (unsigned i = 0; i != NumPHIValues; ++i)
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
-  for (User *U : make_early_inc_range(PN->users())) {
-    Instruction *User = cast<Instruction>(U);
-    if (User == &I)
-      continue;
-    replaceInstUsesWith(*User, NewPN);
-    eraseInstFromFunction(*User);
+  if (IdenticalUsers) {
+    for (User *U : make_early_inc_range(PN->users())) {
+      Instruction *User = cast<Instruction>(U);
+      if (User == &I)
+        continue;
+      replaceInstUsesWith(*User, NewPN);
+      eraseInstFromFunction(*User);
+    }
+    OneUse = true;
   }
 
-  replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
-                        const_cast<PHINode &>(*NewPN),
-                        const_cast<PHINode &>(*PN), DT);
+  if (OneUse) {
+    replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
+                          const_cast<PHINode &>(*NewPN),
+                          const_cast<PHINode &>(*PN), DT);
+  }
   return replaceInstUsesWith(I, NewPN);
 }
 
@@ -2756,6 +2790,116 @@ static bool shouldCanonicalizeGEPToPtrAdd(GetElementPtrInst &GEP) {
          });
 }
 
+static Instruction *foldGEPOfPhi(GetElementPtrInst &GEP, PHINode *PN,
+                                 IRBuilderBase &Builder) {
+  auto *Op1 = dyn_cast<GetElementPtrInst>(PN->getOperand(0));
+  if (!Op1)
+    return nullptr;
+
+  // Don't fold a GEP into itself through a PHI node. This can only happen
+  // through the back-edge of a loop. Folding a GEP into itself means that
+  // the value of the previous iteration needs to be stored in the meantime,
+  // thus requiring an additional register variable to be live, but not
+  // actually achieving anything (the GEP still needs to be executed once per
+  // loop iteration).
+  if (Op1 == &GEP)
+    return nullptr;
+  GEPNoWrapFlags NW = Op1->getNoWrapFlags();
+
+  int DI = -1;
+
+  for (auto I = PN->op_begin()+1, E = PN->op_end(); I !=E; ++I) {
+    auto *Op2 = dyn_cast<GetElementPtrInst>(*I);
+    if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands() ||
+        Op1->getSourceElementType() != Op2->getSourceElementType())
+      return nullptr;
+
+    // As for Op1 above, don't try to fold a GEP into itself.
+    if (Op2 == &GEP)
+      return nullptr;
+
+    // Keep track of the type as we walk the GEP.
+    Type *CurTy = nullptr;
+
+    for (unsigned J = 0, F = Op1->getNumOperands(); J != F; ++J) {
+      if (Op1->getOperand(J)->getType() != Op2->getOperand(J)->getType())
+        return nullptr;
+
+      if (Op1->getOperand(J) != Op2->getOperand(J)) {
+        if (DI == -1) {
+          // We have not seen any differences yet in the GEPs feeding the
+          // PHI yet, so we record this one if it is allowed to be a
+          // variable.
+
+          // The first two arguments can vary for any GEP, the rest have to be
+          // static for struct slots
+          if (J > 1) {
+            assert(CurTy && "No current type?");
+            if (CurTy->isStructTy())
+              return nullptr;
+          }
+
+          DI = J;
+        } else {
+          // The GEP is different by more than one input. While this could be
+          // extended to support GEPs that vary by more than one variable it
+          // doesn't make sense since it greatly increases the complexity and
+          // would result in an R+R+R addressing mode which no backend
+          // directly supports and would need to be broken into several
+          // simpler instructions anyway.
+          return nullptr;
+        }
+      }
+
+      // Sink down a layer of the type for the next iteration.
+      if (J > 0) {
+        if (J == 1) {
+          CurTy = Op1->getSourceElementType();
+        } else {
+          CurTy =
+              GetElementPtrInst::getTypeAtIndex(CurTy, Op1->getOperand(J));
+        }
+      }
+    }
+
+    NW &= Op2->getNoWrapFlags();
+  }
+
+  // If not all GEPs are identical we'll have to create a new PHI node.
+  // Check that the old PHI node has only one use so that it will get
+  // removed.
+  if (DI != -1 && !PN->hasOneUse())
+    return nullptr;
+
+  auto *NewGEP = cast<GetElementPtrInst>(Op1->clone());
+  NewGEP->setNoWrapFlags(NW);
+
+  if (DI == -1) {
+    // All the GEPs feeding the PHI are identical. Clone one down into our
+    // BB so that it can be merged with the current GEP.
+  } else {
+    // All the GEPs feeding the PHI differ at a single offset. Clone a GEP
+    // into the current block so it can be merged, and create a new PHI to
+    // set that index.
+    PHINode *NewPN;
+    {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(PN);
+      NewPN = Builder.CreatePHI(Op1->getOperand(DI)->getType(),
+                                PN->getNumOperands());
+    }
+
+    for (auto &I : PN->operands())
+      NewPN->addIncoming(cast<GEPOperator>(I)->getOperand(DI),
+                         PN->getIncomingBlock(I));
+
+    NewGEP->setOperand(DI, NewPN);
+  }
+
+  NewGEP->insertBefore(*GEP.getParent(), GEP.getParent()->getFirstInsertionPt());
+  return NewGEP;
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2846,107 +2990,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
-    auto *Op1 = dyn_cast<GetElementPtrInst>(PN->getOperand(0));
-    if (!Op1)
-      return nullptr;
-
-    // Don't fold a GEP into itself through a PHI node. This can only happen
-    // through the back-edge of a loop. Folding a GEP into itself means that
-    // the value of the previous iteration needs to be stored in the meantime,
-    // thus requiring an additional register variable to be live, but not
-    // actually achieving anything (the GEP still needs to be executed once per
-    // loop iteration).
-    if (Op1 == &GEP)
-      return nullptr;
-
-    int DI = -1;
-
-    for (auto I = PN->op_begin()+1, E = PN->op_end(); I !=E; ++I) {
-      auto *Op2 = dyn_cast<GetElementPtrInst>(*I);
-      if (!Op2 || Op1->getNumOperands() != Op2->getNumOperands() ||
-          Op1->getSourceElementType() != Op2->getSourceElementType())
-        return nullptr;
-
-      // As for Op1 above, don't try to fold a GEP into itself.
-      if (Op2 == &GEP)
-        return nullptr;
-
-      // Keep track of the type as we walk the GEP.
-      Type *CurTy = nullptr;
-
-      for (unsigned J = 0, F = Op1->getNumOperands(); J != F; ++J) {
-        if (Op1->getOperand(J)->getType() != Op2->getOperand(J)->getType())
-          return nullptr;
-
-        if (Op1->getOperand(J) != Op2->getOperand(J)) {
-          if (DI == -1) {
-            // We have not seen any differences yet in the GEPs feeding the
-            // PHI yet, so we record this one if it is allowed to be a
-            // variable.
-
-            // The first two arguments can vary for any GEP, the rest have to be
-            // static for struct slots
-            if (J > 1) {
-              assert(CurTy && "No current type?");
-              if (CurTy->isStructTy())
-                return nullptr;
-            }
-
-            DI = J;
-          } else {
-            // The GEP is different by more than one input. While this could be
-            // extended to support GEPs that vary by more than one variable it
-            // doesn't make sense since it greatly increases the complexity and
-            // would result in an R+R+R addressing mode which no backend
-            // directly supports and would need to be broken into several
-            // simpler instructions anyway.
-            return nullptr;
-          }
-        }
-
-        // Sink down a layer of the type for the next iteration.
-        if (J > 0) {
-          if (J == 1) {
-            CurTy = Op1->getSourceElementType();
-          } else {
-            CurTy =
-                GetElementPtrInst::getTypeAtIndex(CurTy, Op1->getOperand(J));
-          }
-        }
-      }
-    }
-
-    // If not all GEPs are identical we'll have to create a new PHI node.
-    // Check that the old PHI node has only one use so that it will get
-    // removed.
-    if (DI != -1 && !PN->hasOneUse())
-      return nullptr;
-
-    auto *NewGEP = cast<GetElementPtrInst>(Op1->clone());
-    if (DI == -1) {
-      // All the GEPs feeding the PHI are identical. Clone one down into our
-      // BB so that it can be merged with the current GEP.
-    } else {
-      // All the GEPs feeding the PHI differ at a single offset. Clone a GEP
-      // into the current block so it can be merged, and create a new PHI to
-      // set that index.
-      PHINode *NewPN;
-      {
-        IRBuilderBase::InsertPointGuard Guard(Builder);
-        Builder.SetInsertPoint(PN);
-        NewPN = Builder.CreatePHI(Op1->getOperand(DI)->getType(),
-                                  PN->getNumOperands());
-      }
-
-      for (auto &I : PN->operands())
-        NewPN->addIncoming(cast<GEPOperator>(I)->getOperand(DI),
-                           PN->getIncomingBlock(I));
-
-      NewGEP->setOperand(DI, NewPN);
-    }
-
-    NewGEP->insertBefore(*GEP.getParent(), GEP.getParent()->getFirstInsertionPt());
-    return replaceOperand(GEP, 0, NewGEP);
+    if (Value *NewPtrOp = foldGEPOfPhi(GEP, PN, Builder))
+      return replaceOperand(GEP, 0, NewPtrOp);
   }
 
   if (auto *Src = dyn_cast<GEPOperator>(PtrOp))
@@ -3111,6 +3156,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         }
       }
     }
+  }
+
+  // nusw + nneg -> nuw
+  if (GEP.hasNoUnsignedSignedWrap() && !GEP.hasNoUnsignedWrap() &&
+      all_of(GEP.indices(), [&](Value *Idx) {
+        return isKnownNonNegative(Idx, SQ.getWithInstruction(&GEP));
+      })) {
+    GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
+    return &GEP;
   }
 
   if (Instruction *R = foldSelectGEP(GEP, Builder))
@@ -3443,7 +3497,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // Validate the rest of constraint #1 by matching on the pred branch.
   Instruction *TI = PredBB->getTerminator();
   BasicBlock *TrueBB, *FalseBB;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (!match(TI, m_Br(m_ICmp(Pred,
                              m_CombineOr(m_Specific(Op),
                                          m_Specific(Op->stripPointerCasts())),
@@ -3464,7 +3518,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
-    Instr.moveBeforePreserving(TI);
+    Instr.moveBeforePreserving(TI->getIterator());
   }
   assert(FreeInstrBB->size() == 1 &&
          "Only the branch instruction should remain");
@@ -3533,10 +3587,25 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Value *RetVal = RI.getReturnValue();
-  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+  if (!RetVal)
     return nullptr;
 
   Function *F = RI.getFunction();
+  Type *RetTy = RetVal->getType();
+  if (RetTy->isPointerTy()) {
+    bool HasDereferenceable =
+        F->getAttributes().getRetDereferenceableBytes() > 0;
+    if (F->hasRetAttribute(Attribute::NonNull) ||
+        (HasDereferenceable &&
+         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
+      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+        return replaceOperand(RI, 0, V);
+    }
+  }
+
+  if (!AttributeFuncs::isNoFPClassCompatibleType(RetTy))
+    return nullptr;
+
   FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
   if (ReturnClass == fcNone)
     return nullptr;
@@ -3587,20 +3656,15 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   assert(BI.isUnconditional() && "Only for unconditional branches.");
 
   // If this store is the second-to-last instruction in the basic block
-  // (excluding debug info and bitcasts of pointers) and if the block ends with
+  // (excluding debug info) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
 
   auto GetLastSinkableStore = [](BasicBlock::iterator BBI) {
-    auto IsNoopInstrForStoreMerging = [](BasicBlock::iterator BBI) {
-      return BBI->isDebugOrPseudoInst() ||
-             (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy());
-    };
-
     BasicBlock::iterator FirstInstr = BBI->getParent()->begin();
     do {
       if (BBI != FirstInstr)
         --BBI;
-    } while (BBI != FirstInstr && IsNoopInstrForStoreMerging(BBI));
+    } while (BBI != FirstInstr && BBI->isDebugOrPseudoInst());
 
     return dyn_cast<StoreInst>(BBI);
   };
@@ -3724,7 +3788,7 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return replaceOperand(BI, 0, ConstantInt::getFalse(Cond->getType()));
 
   // Canonicalize, for example, fcmp_one -> fcmp_oeq.
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(Cond, m_OneUse(m_FCmp(Pred, m_Value(), m_Value()))) &&
       !isCanonicalPredicate(Pred)) {
     // Swap destinations and condition.
@@ -3785,7 +3849,7 @@ static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
   if (CstBB != SI.getDefaultDest())
     return nullptr;
   Value *X = Select->getOperand(3 - CstOpIdx);
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *RHSC;
   if (!match(Select->getCondition(),
              m_ICmp(Pred, m_Specific(X), m_APInt(RHSC))))
@@ -4016,6 +4080,49 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   return nullptr;
 }
 
+static Value *foldFrexpOfSelect(ExtractValueInst &EV, IntrinsicInst *FrexpCall,
+                                SelectInst *SelectInst,
+                                InstCombiner::BuilderTy &Builder) {
+  // Helper to fold frexp of select to select of frexp.
+
+  if (!SelectInst->hasOneUse() || !FrexpCall->hasOneUse())
+    return nullptr;
+  Value *Cond = SelectInst->getCondition();
+  Value *TrueVal = SelectInst->getTrueValue();
+  Value *FalseVal = SelectInst->getFalseValue();
+
+  const APFloat *ConstVal = nullptr;
+  Value *VarOp = nullptr;
+  bool ConstIsTrue = false;
+
+  if (match(TrueVal, m_APFloat(ConstVal))) {
+    VarOp = FalseVal;
+    ConstIsTrue = true;
+  } else if (match(FalseVal, m_APFloat(ConstVal))) {
+    VarOp = TrueVal;
+    ConstIsTrue = false;
+  } else {
+    return nullptr;
+  }
+
+  Builder.SetInsertPoint(&EV);
+
+  CallInst *NewFrexp =
+      Builder.CreateCall(FrexpCall->getCalledFunction(), {VarOp}, "frexp");
+  NewFrexp->copyIRFlags(FrexpCall);
+
+  Value *NewEV = Builder.CreateExtractValue(NewFrexp, 0, "mantissa");
+
+  int Exp;
+  APFloat Mantissa = frexp(*ConstVal, Exp, APFloat::rmNearestTiesToEven);
+
+  Constant *ConstantMantissa = ConstantFP::get(TrueVal->getType(), Mantissa);
+
+  Value *NewSel = Builder.CreateSelectFMF(
+      Cond, ConstIsTrue ? ConstantMantissa : NewEV,
+      ConstIsTrue ? NewEV : ConstantMantissa, SelectInst, "select.frexp");
+  return NewSel;
+}
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -4026,6 +4133,15 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
                                           SQ.getWithInstruction(&EV)))
     return replaceInstUsesWith(EV, V);
 
+  Value *Cond, *TrueVal, *FalseVal;
+  if (match(&EV, m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Select(
+                     m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal)))))) {
+    auto *SelInst =
+        cast<SelectInst>(cast<IntrinsicInst>(Agg)->getArgOperand(0));
+    if (Value *Result =
+            foldFrexpOfSelect(EV, cast<IntrinsicInst>(Agg), SelInst, Builder))
+      return replaceInstUsesWith(EV, Result);
+  }
   if (InsertValueInst *IV = dyn_cast<InsertValueInst>(Agg)) {
     // We're extracting from an insertvalue instruction, compare the indices
     const unsigned *exti, *exte, *insi, *inse;
@@ -4927,7 +5043,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
-      DIIClone->insertBefore(&*InsertPos);
+      DIIClone->insertBefore(InsertPos);
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }

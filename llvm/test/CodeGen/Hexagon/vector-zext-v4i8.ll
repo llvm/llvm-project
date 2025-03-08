@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that when we extract a byte from the result of a mask from predicate
 ; that the results of the mask all fit in the same word.

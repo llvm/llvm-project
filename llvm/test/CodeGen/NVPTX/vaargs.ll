@@ -16,7 +16,7 @@ entry:
 
 ; Test va_start
 ; CHECK:         .param .align 8 .b8 foo_vararg[]
-; CHECK:         mov.u[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
+; CHECK:         mov.b[[BITS]] [[VA_PTR:%(r|rd)[0-9]+]], foo_vararg;
 ; CHECK-NEXT:    st.u[[BITS]] [%SP], [[VA_PTR]];
 
   call void @llvm.va_start(ptr %al)
@@ -89,12 +89,12 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK-NEXT:    ld.param.u32 [[ARG_I32:%r[0-9]+]], [test_foo_param_0];
 
 ; Store arguments to an array
-; CHECK32:  .param .align 8 .b8 param1[24];
-; CHECK64:  .param .align 8 .b8 param1[28];
+; CHECK32:  .param .align 8 .b8 param1[28];
+; CHECK64:  .param .align 8 .b8 param1[32];
 ; CHECK-NEXT:    st.param.b32 [param1], [[ARG_I32]];
-; CHECK-NEXT:    st.param.b64 [param1+4], [[ARG_I64]];
-; CHECK-NEXT:    st.param.f64 [param1+12], [[ARG_DOUBLE]];
-; CHECK-NEXT:    st.param.b[[BITS]] [param1+20], [[ARG_VOID_PTR]];
+; CHECK-NEXT:    st.param.b64 [param1+8], [[ARG_I64]];
+; CHECK-NEXT:    st.param.f64 [param1+16], [[ARG_DOUBLE]];
+; CHECK-NEXT:    st.param.b[[BITS]] [param1+24], [[ARG_VOID_PTR]];
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .align 8 .b8 _[]
 

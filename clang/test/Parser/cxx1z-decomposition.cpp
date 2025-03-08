@@ -110,7 +110,7 @@ namespace BadSpecifiers {
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
-    auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto BadSpecifiers::S::*'}} expected-error {{incompatible initializer}}
+    auto S::*[g] = s; // expected-error {{cannot be declared with type 'auto S::*'}} expected-error {{incompatible initializer}}
 
     // ref-qualifiers are OK.
     auto &&[ok_1] = S();
@@ -136,8 +136,8 @@ namespace MultiDeclarator {
 
 namespace Template {
   int n[3];
-  // FIXME: There's no actual rule against this...
-  template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration template not supported}}
+  // Structured binding template is not allowed.
+  template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration cannot be a template}}
 }
 
 namespace Init {

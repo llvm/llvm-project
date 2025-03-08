@@ -180,8 +180,8 @@ def NoBuiltin : EnumAttr<"nobuiltin", IntersectPreserve, [FnAttr]>;
 /// Function cannot enter into caller's translation unit.
 def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 
-/// Function creates no aliases of pointer.
-def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
+/// Specify how the pointer may be captured.
+def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
@@ -317,6 +317,9 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 /// ThreadSanitizer is on.
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
+/// TypeSanitizer is on.
+def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
+
 /// MemorySanitizer is on.
 def SanitizeMemory : EnumAttr<"sanitize_memory", IntersectPreserve, [FnAttr]>;
 
@@ -425,6 +428,7 @@ class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
 
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
+def : CompatRule<"isEqual<SanitizeTypeAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
 def : CompatRule<"isEqual<SanitizeHWAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeMemTagAttr>">;

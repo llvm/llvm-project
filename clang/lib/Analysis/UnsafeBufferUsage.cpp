@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
@@ -170,6 +172,12 @@ public:
     if (ignoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
+  }
+
+  bool TraverseCXXDefaultInitExpr(CXXDefaultInitExpr *Node) override {
+    if (!TraverseStmt(Node->getExpr()))
+      return false;
+    return DynamicRecursiveASTVisitor::TraverseCXXDefaultInitExpr(Node);
   }
 
   bool TraverseStmt(Stmt *Node) override {
@@ -347,23 +355,90 @@ isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
   return stmt(anyOf(CompStmt, IfStmtThen, IfStmtElse));
 }
 
+// Returns true iff integer E1 is equivalent to integer E2.
+//
+// For now we only support such expressions:
+//    expr := DRE | const-value | expr BO expr
+//    BO   := '*' | '+'
+//
+// FIXME: We can reuse the expression comparator of the interop analysis after
+// it has been upstreamed.
+static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx);
+static bool areEqualIntegralBinaryOperators(const BinaryOperator *E1,
+                                            const Expr *E2_LHS,
+                                            BinaryOperatorKind BOP,
+                                            const Expr *E2_RHS,
+                                            ASTContext &Ctx) {
+  if (E1->getOpcode() == BOP) {
+    switch (BOP) {
+      // Commutative operators:
+    case BO_Mul:
+    case BO_Add:
+      return (areEqualIntegers(E1->getLHS(), E2_LHS, Ctx) &&
+              areEqualIntegers(E1->getRHS(), E2_RHS, Ctx)) ||
+             (areEqualIntegers(E1->getLHS(), E2_RHS, Ctx) &&
+              areEqualIntegers(E1->getRHS(), E2_LHS, Ctx));
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
+  E1 = E1->IgnoreParenImpCasts();
+  E2 = E2->IgnoreParenImpCasts();
+  if (!E1->getType()->isIntegerType() || E1->getType() != E2->getType())
+    return false;
+
+  Expr::EvalResult ER1, ER2;
+
+  // If both are constants:
+  if (E1->EvaluateAsInt(ER1, Ctx) &&
+      E2->EvaluateAsInt(ER2, Ctx))
+    return ER1.Val.getInt() == ER2.Val.getInt();
+
+  // Otherwise, they should have identical stmt kind:
+  if (E1->getStmtClass() != E2->getStmtClass())
+    return false;
+  switch (E1->getStmtClass()) {
+  case Stmt::DeclRefExprClass:
+    return cast<DeclRefExpr>(E1)->getDecl() == cast<DeclRefExpr>(E2)->getDecl();
+  case Stmt::BinaryOperatorClass: {
+    auto BO2 = cast<BinaryOperator>(E2);
+    return areEqualIntegralBinaryOperators(cast<BinaryOperator>(E1),
+                                           BO2->getLHS(), BO2->getOpcode(),
+                                           BO2->getRHS(), Ctx);
+  }
+  default:
+    return false;
+  }
+}
+
 // Given a two-param std::span construct call, matches iff the call has the
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
 //   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}`
+//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{std::addressof(...), 1}`
+//   6. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+//       `f` is a function with attribute `alloc_size(N, M)`;
+//       `args` represents the list of arguments;
+//       `N, M` are parameter indexes to the allocating element number and size.
+//        Sometimes, there is only one parameter index representing the total
+//        size.
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
-  const Expr *Arg0 = Node.getArg(0)->IgnoreImplicit();
-  const Expr *Arg1 = Node.getArg(1)->IgnoreImplicit();
-  auto HaveEqualConstantValues = [&Finder](const Expr *E0, const Expr *E1) {
-    if (auto E0CV = E0->getIntegerConstantExpr(Finder->getASTContext()))
-      if (auto E1CV = E1->getIntegerConstantExpr(Finder->getASTContext())) {
+  const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
+  const Expr *Arg1 = Node.getArg(1)->IgnoreParenImpCasts();
+  ASTContext &Ctx = Finder->getASTContext();
+
+  auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
+    if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
+      if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
         return APSInt::compareValues(*E0CV, *E1CV) == 0;
       }
     return false;
@@ -375,13 +450,14 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
       }
     return false;
   };
-  std::optional<APSInt> Arg1CV =
-      Arg1->getIntegerConstantExpr(Finder->getASTContext());
+  std::optional<APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
 
   if (Arg1CV && Arg1CV->isZero())
     // Check form 5:
     return true;
-  switch (Arg0->IgnoreImplicit()->getStmtClass()) {
+
+  // Check forms 1-3:
+  switch (Arg0->getStmtClass()) {
   case Stmt::CXXNewExprClass:
     if (auto Size = cast<CXXNewExpr>(Arg0)->getArraySize()) {
       // Check form 1:
@@ -401,6 +477,7 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
       return Arg1CV && Arg1CV->isOne();
     break;
   case Stmt::CallExprClass:
+    // Check form 3:
     if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
       const auto FnDecl = CE->getDirectCallee();
       if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
@@ -415,12 +492,40 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
 
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
-  if (auto *ConstArrTy =
-          Finder->getASTContext().getAsConstantArrayType(Arg0Ty)) {
+  if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
     const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
 
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
+  }
+  // Check form 6:
+  if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
+    if (!CCast->getType()->isPointerType())
+      return false;
+
+    QualType PteTy = CCast->getType()->getPointeeType();
+
+    if (!(PteTy->isConstantSizeType() && Ctx.getTypeSizeInChars(PteTy).isOne()))
+      return false;
+
+    if (const auto *Call = dyn_cast<CallExpr>(CCast->getSubExpr())) {
+      if (const FunctionDecl *FD = Call->getDirectCallee())
+        if (auto *AllocAttr = FD->getAttr<AllocSizeAttr>()) {
+          const Expr *EleSizeExpr =
+              Call->getArg(AllocAttr->getElemSizeParam().getASTIndex());
+          // NumElemIdx is invalid if AllocSizeAttr has 1 argument:
+          ParamIdx NumElemIdx = AllocAttr->getNumElemsParam();
+
+          if (!NumElemIdx.isValid())
+            return areEqualIntegers(Arg1, EleSizeExpr, Ctx);
+
+          const Expr *NumElesExpr = Call->getArg(NumElemIdx.getASTIndex());
+
+          if (auto BO = dyn_cast<BinaryOperator>(Arg1))
+            return areEqualIntegralBinaryOperators(BO, NumElesExpr, BO_Mul,
+                                                   EleSizeExpr, Ctx);
+        }
+    }
   }
   return false;
 }
@@ -433,36 +538,49 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  const auto *SLiteral =
-      dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts());
-  uint64_t size;
-
-  if (!BaseDRE && !SLiteral)
+  uint64_t limit;
+  if (const auto *CATy =
+          dyn_cast<ConstantArrayType>(Node.getBase()
+                                          ->IgnoreParenImpCasts()
+                                          ->getType()
+                                          ->getUnqualifiedDesugaredType())) {
+    limit = CATy->getLimitedSize();
+  } else if (const auto *SLiteral = dyn_cast<StringLiteral>(
+                 Node.getBase()->IgnoreParenImpCasts())) {
+    limit = SLiteral->getLength() + 1;
+  } else {
     return false;
-
-  if (BaseDRE) {
-    if (!BaseDRE->getDecl())
-      return false;
-    const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-        BaseDRE->getDecl()->getType());
-    if (!CATy) {
-      return false;
-    }
-    size = CATy->getLimitedSize();
-  } else if (SLiteral) {
-    size = SLiteral->getLength() + 1;
   }
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
+  Expr::EvalResult EVResult;
+  const Expr *IndexExpr = Node.getIdx();
+  if (!IndexExpr->isValueDependent() &&
+      IndexExpr->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+    llvm::APSInt ArrIdx = EVResult.Val.getInt();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
-    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < size)
+    if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
-  }
+  } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
+    // For an integer expression `e` and an integer constant `n`, `e & n` and
+    // `n & e` are bounded by `n`:
+    if (BE->getOpcode() != BO_And)
+      return false;
 
+    const Expr *LHS = BE->getLHS();
+    const Expr *RHS = BE->getRHS();
+
+    if ((!LHS->isValueDependent() &&
+         LHS->EvaluateAsInt(EVResult,
+                            Finder->getASTContext())) || // case: `n & e`
+        (!RHS->isValueDependent() &&
+         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
+      llvm::APSInt result = EVResult.Val.getInt();
+      if (result.isNonNegative() && result.getLimitedValue() < limit)
+        return true;
+    }
+    return false;
+  }
   return false;
 }
 
@@ -930,7 +1048,7 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
       // The array element type must be compatible with `char` otherwise an
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
-      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+      if (Size->EvaluateAsInt(ER, Ctx)) {
         APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
         return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
@@ -1987,14 +2105,18 @@ public:
 };
 
 /// Scan the function and return a list of gadgets found with provided kits.
-static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
-            bool EmitSuggestions) {
+static void findGadgets(const Stmt *S, ASTContext &Ctx,
+                        const UnsafeBufferUsageHandler &Handler,
+                        bool EmitSuggestions, FixableGadgetList &FixableGadgets,
+                        WarningGadgetList &WarningGadgets,
+                        DeclUseTracker &Tracker) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    FixableGadgetList FixableGadgets;
-    WarningGadgetList WarningGadgets;
-    DeclUseTracker Tracker;
+    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
+                         WarningGadgetList &WarningGadgets,
+                         DeclUseTracker &Tracker)
+        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
+          Tracker(Tracker) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
       // In debug mode, assert that we've found exactly one gadget.
@@ -2035,10 +2157,14 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
       assert(numFound >= 1 && "Gadgets not found in match result!");
       assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
     }
+
+    FixableGadgetList &FixableGadgets;
+    WarningGadgetList &WarningGadgets;
+    DeclUseTracker &Tracker;
   };
 
   MatchFinder M;
-  GadgetFinderCallback CB;
+  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
 
   // clang-format off
   M.addMatcher(
@@ -2083,9 +2209,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
     // clang-format on
   }
 
-  M.match(*D->getBody(), D->getASTContext());
-  return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
-          std::move(CB.Tracker)};
+  M.match(*S, Ctx);
 }
 
 // Compares AST nodes by source locations.
@@ -2326,7 +2450,8 @@ static StringRef getEndOfLine() {
 }
 
 // Returns the text indicating that the user needs to provide input there:
-std::string getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
+static std::string
+getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") {
   std::string s = std::string("<# ");
   s += HintTextToUser;
   s += " #>";
@@ -2338,12 +2463,13 @@ template <typename NodeTy>
 static std::optional<SourceLocation>
 getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
               const LangOptions &LangOpts) {
-  unsigned TkLen = Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts);
-  SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
+  if (unsigned TkLen =
+          Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts)) {
+    SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
 
-  if (Loc.isValid())
-    return Loc;
-
+    if (Loc.isValid())
+      return Loc;
+  }
   return std::nullopt;
 }
 
@@ -3629,39 +3755,9 @@ public:
   }
 };
 
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method
-  // independently. Instead, it should be visited along with the outer method.
-  // FIXME: do we want to do the same thing for `BlockDecl`s?
-  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
-    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
-      return;
-  }
-
-  // Do not emit fixit suggestions for functions declared in an
-  // extern "C" block.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        EmitSuggestions = false;
-        break;
-      }
-    }
-  }
-
-  WarningGadgetSets UnsafeOps;
-  FixableGadgetSets FixablesForAllVars;
-
-  auto [FixableGadgets, WarningGadgets, Tracker] =
-      findGadgets(D, Handler, EmitSuggestions);
-
+void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
+                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3705,8 +3801,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   if (WarningGadgets.empty())
     return;
 
-  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
+  WarningGadgetSets UnsafeOps =
+      groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixableGadgetSets FixablesForAllVars =
+      groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3926,4 +4024,57 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                D->getASTContext());
     }
   }
+}
+
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D);
+
+  SmallVector<Stmt *> Stmts;
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // We do not want to visit a Lambda expression defined inside a method
+    // independently. Instead, it should be visited along with the outer method.
+    // FIXME: do we want to do the same thing for `BlockDecl`s?
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (MD->getParent()->isLambda() && MD->getParent()->isLocalClass())
+        return;
+    }
+
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        // Do not emit fixit suggestions for functions declared in an
+        // extern "C" block.
+        EmitSuggestions = false;
+        break;
+      }
+    }
+
+    Stmts.push_back(FD->getBody());
+
+    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *CI : ID->inits()) {
+        Stmts.push_back(CI->getInit());
+      }
+    }
+  } else if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    Stmts.push_back(D->getBody());
+  }
+
+  assert(!Stmts.empty());
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  for (Stmt *S : Stmts) {
+    findGadgets(S, D->getASTContext(), Handler, EmitSuggestions, FixableGadgets,
+                WarningGadgets, Tracker);
+  }
+  applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
+               std::move(Tracker), Handler, EmitSuggestions);
 }

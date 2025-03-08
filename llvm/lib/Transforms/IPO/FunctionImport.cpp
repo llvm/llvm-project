@@ -430,10 +430,18 @@ class GlobalsImporter final {
         // than as part of the logic deciding which functions to import (i.e.
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
-        if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
+        bool CanImportDecl = false;
+        if (!GVS ||
             shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
-                                           Summary.modulePath()))
+                                           Summary.modulePath()) ||
+            !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true,
+                                      CanImportDecl)) {
+          if (ImportDeclaration && CanImportDecl)
+            ImportList.maybeAddDeclaration(RefSummary->modulePath(),
+                                           VI.getGUID());
+
           continue;
+        }
 
         // If there isn't an entry for GUID, insert <GUID, Definition> pair.
         // Otherwise, definition should take precedence over declaration.
@@ -716,12 +724,12 @@ class WorkloadImportsManager : public ModuleImportsManager {
     auto Buffer = std::move(BufferOrErr.get());
 
     PGOCtxProfileReader Reader(Buffer->getBuffer());
-    auto Ctx = Reader.loadContexts();
+    auto Ctx = Reader.loadProfiles();
     if (!Ctx) {
       report_fatal_error("Failed to parse contextual profiles");
       return;
     }
-    const auto &CtxMap = *Ctx;
+    const auto &CtxMap = Ctx->Contexts;
     SetVector<GlobalValue::GUID> ContainedGUIDs;
     for (const auto &[RootGuid, Root] : CtxMap) {
       // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
@@ -1540,8 +1548,7 @@ void llvm::gatherImportedSummariesForModule(
     auto &SummariesForIndex =
         LookupOrCreate(ModuleToSummariesForIndex, FromModule);
 
-    const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(FromModule);
+    const auto &DefinedGVSummaries = ModuleToDefinedGVSummaries.at(FromModule);
     const auto &DS = DefinedGVSummaries.find(GUID);
     assert(DS != DefinedGVSummaries.end() &&
            "Expected a defined summary for imported global value");
@@ -1943,9 +1950,8 @@ Expected<bool> FunctionImporter::importFunctions(
     SrcModule->setPartialSampleProfileRatio(Index);
 
     // Link in the specified functions.
-    if (renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
-                               &GlobalsToImport))
-      return true;
+    renameModuleForThinLTO(*SrcModule, Index, ClearDSOLocalOnDeclarations,
+                           &GlobalsToImport);
 
     if (PrintImports) {
       for (const auto *GV : GlobalsToImport)
@@ -2019,11 +2025,8 @@ static bool doImportingForModuleForTest(
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
-  if (renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
-                             /*GlobalsToImport=*/nullptr)) {
-    errs() << "Error renaming module\n";
-    return true;
-  }
+  renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
+                         /*GlobalsToImport=*/nullptr);
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {

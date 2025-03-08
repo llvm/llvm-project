@@ -199,6 +199,6 @@
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-MISMATCHED-B %s
 //
-// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt: module file out of date
+// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt: module file has a different size or mtime than expected
 // CHECK-MISMATCHED-B-NEXT: note: imported by module 'c'
 // CHECK-MISMATCHED-B-NOT:  note:

@@ -85,6 +85,8 @@ const char *getScopeName(Scope S) {
     return "default";
   case Scope::Hidden:
     return "hidden";
+  case Scope::SideEffectsOnly:
+    return "side-effects-only";
   case Scope::Local:
     return "local";
   }
@@ -123,7 +125,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
      << (Sym.isLive() ? "live" : "dead") << "  -   "
-     << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>");
+     << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>");
   return OS;
 }
 
@@ -163,6 +165,16 @@ Section::~Section() {
     Sym->~Symbol();
   for (auto *B : Blocks)
     B->~Block();
+}
+
+LinkGraph::~LinkGraph() {
+  for (auto *Sym : AbsoluteSymbols) {
+    Sym->~Symbol();
+  }
+  for (auto *Sym : external_symbols()) {
+    Sym->~Symbol();
+  }
+  ExternalSymbols.clear();
 }
 
 std::vector<Block *> LinkGraph::splitBlockImpl(std::vector<Block *> Blocks,
@@ -412,7 +424,7 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     if (E.getTarget().hasName()) {
       ErrStream << "\"" << E.getTarget().getName() << "\"";
     } else
-      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
+      ErrStream << E.getTarget().getSection().getName() << " + "
                 << formatv("{0:x}", E.getOffset());
     ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
               << " is out of range of " << G.getEdgeKindName(E.getKind())
@@ -479,45 +491,29 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
 }
 
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
+createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
+                          std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
   case file_magic::macho_object:
-    return createLinkGraphFromMachOObject(ObjectBuffer);
+    return createLinkGraphFromMachOObject(ObjectBuffer, std::move(SSP));
   case file_magic::elf_relocatable:
-    return createLinkGraphFromELFObject(ObjectBuffer);
+    return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
-    return createLinkGraphFromCOFFObject(ObjectBuffer);
+    return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
 }
 
-std::unique_ptr<LinkGraph> absoluteSymbolsLinkGraph(const Triple &TT,
-                                                    orc::SymbolMap Symbols) {
-  unsigned PointerSize;
-  endianness Endianness =
-      TT.isLittleEndian() ? endianness::little : endianness::big;
-  switch (TT.getArch()) {
-  case Triple::aarch64:
-  case llvm::Triple::riscv64:
-  case Triple::x86_64:
-    PointerSize = 8;
-    break;
-  case llvm::Triple::arm:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::x86:
-    PointerSize = 4;
-    break;
-  default:
-    llvm::report_fatal_error("unhandled target architecture");
-  }
-
+std::unique_ptr<LinkGraph>
+absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
+                         orc::SymbolMap Symbols) {
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", TT, PointerSize,
-      Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP),
+      std::move(TT), SubtargetFeatures(), getGenericEdgeKindName);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

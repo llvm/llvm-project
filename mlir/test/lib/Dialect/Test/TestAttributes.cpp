@@ -67,7 +67,7 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 
 Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
-  if (parser.parseLess()){
+  if (parser.parseLess()) {
     return Attribute();
   }
   SmallVector<int64_t> shape;
@@ -314,6 +314,17 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 
   value.emplace(parsedValue);
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpAsmAttrInterfaceAttr
+//===----------------------------------------------------------------------===//
+
+::mlir::OpAsmDialectInterface::AliasResult
+TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
+  os << "op_asm_attr_interface_";
+  os << getValue().getValue();
+  return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
 }
 
 //===----------------------------------------------------------------------===//

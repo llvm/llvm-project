@@ -133,7 +133,7 @@ lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
                                       Function &caller, Target &target) {
   Log *log = GetLog(LLDBLog::Step);
 
-  const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
+  const Address &caller_start_addr = caller.GetAddress();
 
   ModuleSP caller_module_sp = caller_start_addr.GetModule();
   if (!caller_module_sp) {
@@ -276,13 +276,18 @@ AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   AddressRanges ranges)
+                   Address address, AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
-      m_type(type), m_mangled(mangled), m_block(func_uid),
-      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
-      m_frame_base(), m_flags(), m_prologue_byte_size(0) {
-  m_block.SetParentScope(this);
+      m_type(type), m_mangled(mangled), m_block(*this, func_uid),
+      m_range(CollapseRanges(ranges)), m_address(std::move(address)),
+      m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
+  lldb::addr_t base_file_addr = m_address.GetFileAddress();
+  for (const AddressRange &range : ranges)
+    m_block.AddRange(
+        Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
+                     range.GetByteSize()));
+  m_block.FinalizeRanges();
 }
 
 Function::~Function() = default;
@@ -308,33 +313,38 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
       return;
 
     LineEntry line_entry;
-    if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                           line_entry, nullptr)) {
+    if (line_table->FindLineEntryByAddress(GetAddress(), line_entry, nullptr)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
   }
 }
 
-void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
-  line_no = 0;
-  source_file.Clear();
-
-  // The -1 is kind of cheesy, but I want to get the last line entry for the
-  // given function, not the first entry of the next.
-  Address scratch_addr(GetAddressRange().GetBaseAddress());
-  scratch_addr.SetOffset(scratch_addr.GetOffset() +
-                         GetAddressRange().GetByteSize() - 1);
-
+llvm::Expected<std::pair<SupportFileSP, Function::SourceRange>>
+Function::GetSourceInfo() {
+  SupportFileSP source_file_sp;
+  uint32_t start_line;
+  GetStartLineSourceInfo(source_file_sp, start_line);
   LineTable *line_table = m_comp_unit->GetLineTable();
-  if (line_table == nullptr)
-    return;
-
-  LineEntry line_entry;
-  if (line_table->FindLineEntryByAddress(scratch_addr, line_entry, nullptr)) {
-    line_no = line_entry.line;
-    source_file = line_entry.GetFile();
+  if (start_line == 0 || !line_table) {
+    return llvm::createStringError(llvm::formatv(
+        "Could not find line information for function \"{0}\".", GetName()));
   }
+
+  uint32_t end_line = start_line;
+  for (const AddressRange &range : GetAddressRanges()) {
+    for (auto [idx, end] = line_table->GetLineEntryIndexRange(range); idx < end;
+         ++idx) {
+      LineEntry entry;
+      // Ignore entries belonging to inlined functions or #included files.
+      if (line_table->GetLineEntryAtIndex(idx, entry) &&
+          source_file_sp->Equal(*entry.file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet))
+        end_line = std::max(end_line, entry.line);
+    }
+  }
+  return std::make_pair(std::move(source_file_sp),
+                        SourceRange(start_line, end_line - start_line));
 }
 
 llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
@@ -427,13 +437,16 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
     *s << "}";
   }
-  *s << ", range" << (m_ranges.size() > 1 ? "s" : "") << " = ";
+  *s << ", range" << (m_block.GetNumRanges() > 1 ? "s" : "") << " = ";
   Address::DumpStyle fallback_style =
       level == eDescriptionLevelVerbose
           ? Address::DumpStyleModuleWithFileAddress
           : Address::DumpStyleFileAddress;
-  for (const AddressRange &range : m_ranges)
+  for (unsigned idx = 0; idx < m_block.GetNumRanges(); ++idx) {
+    AddressRange range;
+    m_block.GetRangeAtIndex(idx, range);
     range.Dump(s, target, Address::DumpStyleLoadAddress, fallback_style);
+  }
 }
 
 void Function::Dump(Stream *s, bool show_context) const {
@@ -477,11 +490,11 @@ Function *Function::CalculateSymbolContextFunction() { return this; }
 lldb::DisassemblerSP Function::GetInstructions(const ExecutionContext &exe_ctx,
                                                const char *flavor,
                                                bool prefer_file_cache) {
-  ModuleSP module_sp(GetAddressRange().GetBaseAddress().GetModule());
+  ModuleSP module_sp = GetAddress().GetModule();
   if (module_sp && exe_ctx.HasTargetScope()) {
     return Disassembler::DisassembleRange(
         module_sp->GetArchitecture(), nullptr, nullptr, nullptr, flavor,
-        exe_ctx.GetTargetRef(), GetAddressRange(), !prefer_file_cache);
+        exe_ctx.GetTargetRef(), GetAddressRanges(), !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }
@@ -594,8 +607,7 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                             first_line_entry,
+      if (line_table->FindLineEntryByAddress(GetAddress(), first_line_entry,
                                              &first_line_entry_idx)) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;

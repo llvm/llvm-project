@@ -43,7 +43,7 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
-struct Configuration {
+struct Config {
   bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;
@@ -94,6 +94,7 @@ struct Configuration {
   // runtime).
   uint64_t tableBase;
   uint64_t zStackSize;
+  uint64_t pageSize;
   unsigned ltoPartitions;
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
@@ -120,17 +121,17 @@ struct Configuration {
   llvm::StringSet<> exportedSymbols;
   std::vector<llvm::StringRef> requiredExports;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
+  llvm::SmallVector<llvm::StringRef, 0> rpath;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
-// The only instance of Configuration struct.
-extern Configuration *config;
-
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
+  Config arg;
+
   llvm::SmallVector<ObjFile *, 0> objectFiles;
   llvm::SmallVector<StubFile *, 0> stubFiles;
   llvm::SmallVector<SharedFile *, 0> sharedFiles;
@@ -156,6 +157,7 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
+  Ctx();
   void reset();
 };
 

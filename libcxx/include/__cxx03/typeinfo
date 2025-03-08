@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TYPEINFO
-#define _LIBCPP_TYPEINFO
+#ifndef _LIBCPP___CXX03_TYPEINFO
+#define _LIBCPP___CXX03_TYPEINFO
 
 /*
 
@@ -386,4 +386,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_TYPEINFO
+#endif // _LIBCPP___CXX03_TYPEINFO

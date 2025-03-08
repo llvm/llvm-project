@@ -496,11 +496,9 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
               sourceShard.getLoc(),
               RankedTensorType::get(outShape,
                                     sourceShard.getType().getElementType()),
-              sourceShard, initOprnd, mesh.getSymName(),
+              initOprnd, mesh.getSymName(),
               MeshAxesArrayAttr::get(builder.getContext(),
                                      sourceSharding.getSplitAxes()),
-              sourceSharding.getDynamicHaloSizes(),
-              sourceSharding.getStaticHaloSizes(),
               targetSharding.getDynamicHaloSizes(),
               targetSharding.getStaticHaloSizes())
           .getResult();
@@ -563,7 +561,8 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                TypedValue<ShapedType> sourceUnshardedValue,
                                TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
-  if (sourceSharding == targetSharding) {
+  if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
+                                           isFullReplication(targetSharding))) {
     return sourceShard;
   }
 
@@ -638,14 +637,6 @@ shardedBlockArgumentTypes(Block &block,
   return res;
 }
 
-void spmdizeTriviallyShardableOperation(Operation &op,
-                                        ArrayRef<Value> spmdizedOperands,
-                                        ArrayRef<MeshSharding> operandShardings,
-                                        ArrayRef<MeshSharding> resultShardings,
-                                        IRMapping &spmdizationMap,
-                                        SymbolTableCollection &symbolTable,
-                                        OpBuilder &builder);
-
 static LogicalResult spmdizeOperation(
     Operation &op, ArrayRef<Value> spmdizedOperands,
     ArrayRef<MeshSharding> operandShardings,
@@ -705,8 +696,9 @@ static std::vector<MeshSharding> getResultShardings(Operation &op) {
                     if (!rankedTensor) {
                       return MeshSharding();
                     }
-
-                    assert(result.hasOneUse());
+                    if (!result.hasOneUse()) {
+                      return MeshSharding();
+                    }
                     Operation *userOp = *result.getUsers().begin();
                     ShardOp shardOp = llvm::cast<ShardOp>(userOp);
                     return MeshSharding(shardOp.getSharding());
@@ -746,6 +738,15 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
   if (isa<ShardingOp>(op)) {
     return success();
   }
+  if (auto getShardingOp = dyn_cast<GetShardingOp>(op)) {
+    auto shardOp = getShardingOp.getSource().getDefiningOp<ShardOp>();
+    if (!shardOp) {
+      return op.emitError("expected a shard op as source of get_sharding");
+    }
+    auto newSharding = builder.clone(*shardOp.getSharding().getDefiningOp());
+    spmdizationMap.map(op.getResult(0), newSharding->getResult(0));
+    return success();
+  }
 
   ShardOp shardOp = llvm::dyn_cast<ShardOp>(op);
   if (shardOp) {
@@ -767,6 +768,7 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
 static LogicalResult spmdizeBlock(Block &block, IRMapping &spmdizationMap,
                                   SymbolTableCollection &symbolTableCollection,
                                   OpBuilder &builder) {
+
   SmallVector<Location> argLocations;
   llvm::transform(block.getArguments(), std::back_inserter(argLocations),
                   [](BlockArgument arg) { return arg.getLoc(); });
@@ -798,8 +800,12 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
   // Snapshot the original blocks to not mess up the iteration when adding new
   // blocks.
   SmallVector<Block *> originalBlocks;
-  llvm::transform(op.getBlocks(), std::back_inserter(originalBlocks),
-                  [](Block &b) { return &b; });
+  for (Block &b : op.getBlocks()) {
+    if (llvm::any_of(b.getOperations(),
+                     [](Operation &op) { return isa<ShardOp>(op); })) {
+      originalBlocks.push_back(&b);
+    }
+  }
 
   for (Block *block : originalBlocks) {
     if (failed(spmdizeBlock(*block, spmdizationMap, symbolTableCollection,
@@ -825,10 +831,11 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
       break;
     }
   }
-  assert(returnOp);
-  op.setType(FunctionType::get(op->getContext(),
-                               op.getFunctionBody().front().getArgumentTypes(),
-                               returnOp->getOperandTypes()));
+  if (returnOp) {
+    op.setType(FunctionType::get(
+        op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
+        returnOp->getOperandTypes()));
+  }
 
   return success();
 }

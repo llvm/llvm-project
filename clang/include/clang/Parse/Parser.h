@@ -3706,10 +3706,15 @@ private:
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
     SourceLocation DirLoc;
+    SourceLocation LParenLoc;
+    SourceLocation RParenLoc;
     SourceLocation EndLoc;
+    SourceLocation MiscLoc;
+    OpenACCAtomicKind AtomicKind;
+    SmallVector<Expr *> Exprs;
     SmallVector<OpenACCClause *> Clauses;
-    // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
-    // Wait constructs, we likely want to put that information in here as well.
+    // TODO OpenACC: As we implement support for the Atomic, Routine, and Cache
+    // constructs, we likely want to put that information in here as well.
   };
 
   struct OpenACCWaitParseInfo {
@@ -3717,6 +3722,18 @@ private:
     Expr *DevNumExpr = nullptr;
     SourceLocation QueuesLoc;
     SmallVector<Expr *> QueueIdExprs;
+
+    SmallVector<Expr *> getAllExprs() {
+      SmallVector<Expr *> Out;
+      Out.push_back(DevNumExpr);
+      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      return Out;
+    }
+  };
+  struct OpenACCCacheParseInfo {
+    bool Failed = false;
+    SourceLocation ReadOnlyLoc;
+    SmallVector<Expr *> Vars;
   };
 
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
@@ -3740,13 +3757,15 @@ private:
   /// Helper that parses an ID Expression based on the language options.
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
-  void ParseOpenACCCacheVarList();
+  OpenACCCacheParseInfo ParseOpenACCCacheVarList();
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCDirectiveKind DK,
+                                        OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCDirectiveKind DK,
+                                                OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult

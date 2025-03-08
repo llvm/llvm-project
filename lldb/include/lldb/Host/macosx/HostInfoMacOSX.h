@@ -32,6 +32,9 @@ public:
   static FileSpec GetXcodeDeveloperDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
+  ///
+  /// Note, this is an expensive operation if the SDK we're querying
+  /// does not exist in an Xcode installation path on the host.
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
   static llvm::Expected<llvm::StringRef> FindSDKTool(XcodeSDK sdk,
                                                      llvm::StringRef tool);
