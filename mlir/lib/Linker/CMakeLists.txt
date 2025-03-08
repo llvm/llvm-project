@@ -8,5 +8,4 @@ add_mlir_library(
   PUBLIC
   MLIRAsmParser
   MLIRBytecodeReader
-  MLIRLinkageInterfaces
   MLIRIR)

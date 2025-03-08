@@ -11,456 +11,163 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LINKER_LINKAGEDIALECTINTERFACE_H
-#define MLIR_LINKER_LINKAGEDIALECTINTERFACE_H
+#ifndef MLIR_LINKER_LINKERINTERFACE_H
+#define MLIR_LINKER_LINKERINTERFACE_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectInterface.h"
-#include "mlir/Interfaces/LinkageInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
 
-namespace mlir {
-namespace link {
+#include "mlir/Linker/IRMover.h"
+
+namespace mlir::link {
+
+//===----------------------------------------------------------------------===//
+// LinkerStateBase
+//===----------------------------------------------------------------------===//
+
+struct LinkerState {
+  virtual ~LinkerState() = default;
+
+  TypeID getID() const { return id; }
+
+  template <typename ConcreteType, typename BaseType>
+  struct LinkerStateBase : BaseType {
+    using Base = LinkerStateBase<ConcreteType, BaseType>;
+
+    static TypeID getTypeID() { return TypeID::get<ConcreteType>(); }
+
+    static bool classof(const LinkerState *state) {
+      return state->getID() == TypeID::get<ConcreteType>();
+    }
+
+  protected:
+    LinkerStateBase() : BaseType(getTypeID()) {}
+  };
+
+  template <typename ConcreteType>
+  using Base = LinkerStateBase<ConcreteType, LinkerState>;
+
+  /// Lookup the operation in the linker state of the destination module.
+  virtual Operation *lookup(Operation *op) const { return nullptr; }
+
+protected:
+  explicit LinkerState(TypeID id) : id(id) {}
+
+private:
+  TypeID id;
+};
 
 //===----------------------------------------------------------------------===//
 // LinkerInterface
 //===----------------------------------------------------------------------===//
 
-struct DenseMapOperationKey {
-  Operation *op;
+enum LinkerFlags {
+  None = 0,
+  OverrideFromSrc = (1 << 0),
+  LinkOnlyNeeded = (1 << 1),
 };
 
-class LinkerSummaryState {
-public:
-  LinkerSummaryState() : type(TypeID::get<LinkerSummaryState>()) {}
+struct LinkerInterface : DialectInterface::Base<LinkerInterface> {
+  using DialectInterface::Base<LinkerInterface>::Base;
 
-  virtual ~LinkerSummaryState() = default;
+  template <typename ConcreteType, typename BaseType, typename StateType>
+  struct LinkerInterfaceBase : BaseType {
+    using BaseType::BaseType;
 
-  LinkerSummaryState(const LinkerSummaryState &) = delete;
-  LinkerSummaryState &operator=(const LinkerSummaryState &) = delete;
+    const StateType &getLinkerState() const { return cast<StateType>(*state); }
+    StateType &getLinkerState() { return cast<StateType>(*state); }
 
-  static bool classof(const LinkerSummaryState *base) { return true; }
+    static bool classof(const LinkerInterface *iface) {
+      return iface->getInterfaceID() == TypeID::get<ConcreteType>();
+    }
 
-  TypeID getType() const { return type; }
+    LogicalResult initialize(ModuleOp src) override {
+      if (!state)
+        state = init(src);
+      return success();
+    }
+
+    Operation *lookup(Operation *op) const override {
+      return getLinkerState().lookup(op);
+    }
+
+  private:
+    std::unique_ptr<LinkerState> state = nullptr;
+  };
+
+  template <typename ConcreteType, typename StateType>
+  using Base = LinkerInterfaceBase<ConcreteType, LinkerInterface, StateType>;
+
+  virtual LogicalResult initialize(ModuleOp src) = 0;
+
+  virtual LogicalResult link(ModuleOp dst) const = 0;
+
+  virtual Operation *lookup(Operation *op) const = 0;
 
 protected:
-  explicit LinkerSummaryState(TypeID type) : type(type) {}
-
-private:
-  TypeID type;
+  virtual std::unique_ptr<LinkerState> init(ModuleOp src) const = 0;
 };
 
-class LinkerInterface : public DialectInterface::Base<LinkerInterface> {
-public:
-  LinkerInterface(Dialect *dialect) : Base(dialect) {}
+//===----------------------------------------------------------------------===//
+// ModuleLinkerInterface
+//===----------------------------------------------------------------------===//
 
-  // TODO: Should be moved to SymbolLinkerInterface
-  virtual bool isDeclaration(GlobalValueLinkageOpInterface op) const {
-    return false;
-  }
+struct ModuleLinkerInterface : LinkerInterface {
+  template <typename ConcreteType, typename StateType>
+  using Base =
+      LinkerInterfaceBase<ConcreteType, ModuleLinkerInterface, StateType>;
 
-  // TODO: Should not exist (too llvm specific)
-  bool isDeclarationForLinker(GlobalValueLinkageOpInterface op) const {
-    if (op.hasAvailableExternallyLinkage())
-      return true;
-    return isDeclaration(op);
-  }
+  using LinkerInterface::LinkerInterface;
 
-  virtual std::unique_ptr<LinkerSummaryState>
-  summarize(std::vector<ModuleOp> &modules) const {
-    return nullptr;
-  }
+  virtual LogicalResult process(ModuleOp src, unsigned flags) = 0;
 
-  virtual LogicalResult link(ModuleOp dst, ModuleOp src,
-                             const LinkerSummaryState *state) const {
-    return failure();
-  }
-
-  virtual OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) const {
-    return ModuleOp::create(
-        FileLineColLoc::get(src.getContext(), "composite", 0, 0));
-  }
+  virtual OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) = 0;
 };
 
-struct LinkableOp {
-  LinkableOp() = default;
+//===----------------------------------------------------------------------===//
+// SymbolLinkerInterface
+//===----------------------------------------------------------------------===//
 
-  explicit LinkableOp(Operation *op)
-      : op(op), linker(op ? dyn_cast_or_null<LinkerInterface>(op->getDialect())
-                          : nullptr) {}
+struct SymbolLinkerInterface : LinkerInterface {
+  template <typename ConcreteType, typename StateType>
+  using Base =
+      LinkerInterfaceBase<ConcreteType, SymbolLinkerInterface, StateType>;
 
-  explicit LinkableOp(DenseMapOperationKey op) : op(op.op), linker() {}
+  using LinkerInterface::LinkerInterface;
 
-  operator bool() const { return op; }
+  /// Determines if the given operation is eligible for linking.
+  virtual bool canBeLinked(Operation *op) const = 0;
 
-  Operation *getOperation() const { return op; }
+  /// Checks if an operation conflicts with existing linked operations.
+  virtual ConflictPair findConflict(Operation *src) const = 0;
+
+  /// Determines if an operation should be linked into the destination module.
+  virtual bool isLinkNeeded(ConflictPair pair) const = 0;
+
+  /// Resolves a conflict between an existing operation and a new one.
+  virtual LogicalResult resolveConflict(ConflictPair pair) = 0;
+
+  /// Records a non-conflicting operation for linking.
+  virtual void registerOperation(Operation *op) = 0;
+
+  /// Link the operations in the source module into the destination module.
+  virtual Operation *materialize(ConflictPair pair, ModuleOp dst) const = 0;
+
+  void setFlags(unsigned flags) { this->flags = flags; }
+
+  bool shouldLinkOnlyNeeded() const {
+    return flags & LinkerFlags::LinkOnlyNeeded;
+  }
+
+  bool shouldOverrideFromSrc() const {
+    return flags & LinkerFlags::OverrideFromSrc;
+  }
 
 protected:
-  Operation *op = nullptr;
-  LinkerInterface *linker = nullptr;
+  unsigned flags = LinkerFlags::None;
 };
 
-template <typename Op>
-struct LinkableOpDenseMapInfo {
-  static Op getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<::mlir::Operation *>::getEmptyKey();
-    return {::mlir::link::DenseMapOperationKey{pointer}};
-  }
+} // namespace mlir::link
 
-  static Op getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<::mlir::Operation *>::getEmptyKey();
-    return {::mlir::link::DenseMapOperationKey{pointer}};
-  }
-
-  static unsigned getHashValue(const Op &val) {
-    return DenseMapInfo<::mlir::Operation *>::getHashValue(val.getOperation());
-  }
-
-  static bool isEqual(const Op &lhs, const Op &rhs) {
-    return lhs.getOperation() == rhs.getOperation();
-  }
-};
-
-template <typename Interface>
-struct OpInterface : LinkableOp {
-  OpInterface() = default;
-  OpInterface(Interface op) : LinkableOp(op) {}
-  OpInterface(DenseMapOperationKey op) : LinkableOp(op) {}
-
-  Interface interface() const { return cast<Interface>(op); }
-  Interface operator*() const { return interface(); }
-
-  operator Interface() { return cast<Interface>(op); }
-  operator Interface() const { return cast<Interface>(op); }
-};
-
-template <typename Interface>
-struct GlobalValueBase : OpInterface<Interface> {
-  using Base = OpInterface<Interface>;
-  using Base::Base;
-  using Base::interface;
-
-  bool isDeclaration() const {
-    return this->linker->isDeclaration(interface());
-  }
-
-  bool isDeclarationForLinker() const {
-    return this->linker->isDeclarationForLinker(interface());
-  }
-
-  bool hasExternalLinkage() const { return interface().hasExternalLinkage(); }
-
-  bool hasAvailableExternallyLinkage() const {
-    return interface().hasAvailableExternallyLinkage();
-  }
-
-  bool hasLinkOnceLinkage() const { return interface().hasLinkOnceLinkage(); }
-
-  bool hasLinkOnceAnyLinkage() const {
-    return interface().hasLinkOnceAnyLinkage();
-  }
-
-  bool hasLinkOnceODRLinkage() const {
-    return interface().hasLinkOnceODRLinkage();
-  }
-
-  bool hasWeakLinkage() const { return interface().hasWeakLinkage(); }
-
-  bool hasWeakAnyLinkage() const { return interface().hasWeakAnyLinkage(); }
-
-  bool hasWeakODRLinkage() const { return interface().hasWeakODRLinkage(); }
-
-  bool hasAppendingLinkage() const { return interface().hasAppendingLinkage(); }
-
-  bool hasInternalLinkage() const { return interface().hasInternalLinkage(); }
-
-  bool hasPrivateLinkage() const { return interface().hasPrivateLinkage(); }
-
-  bool hasLocalLinkage() const { return interface().hasLocalLinkage(); }
-
-  bool hasExternalWeakLinkage() const {
-    return interface().hasExternalWeakLinkage();
-  }
-
-  bool hasCommonLinkage() const { return interface().hasCommonLinkage(); }
-
-  Linkage getLinkage() const { return interface().getLinkage(); }
-
-  void setLinkage(Linkage linkage) { interface().setLinkage(linkage); }
-
-  StringRef getLinkedName() const { return interface().getLinkedName(); }
-
-  void setLinkedName(StringRef name) { llvm_unreachable("Not implemented"); }
-};
-
-template <typename Interface>
-struct GlobalObjectBase : GlobalValueBase<Interface> {
-  using Base = GlobalValueBase<Interface>;
-  using Base::Base;
-  using Base::interface;
-};
-
-template <typename Interface>
-struct GlobalAliasBase : GlobalValueBase<Interface> {
-  using Base = GlobalValueBase<Interface>;
-  using Base::Base;
-  using Base::interface;
-
-  Operation *getAliasee() const { llvm_unreachable("Not implemented"); }
-};
-
-template <typename Interface>
-struct GlobalVariableBase : GlobalObjectBase<Interface> {
-  using Base = GlobalObjectBase<Interface>;
-  using Base::Base;
-  using Base::interface;
-
-  bool isConstant() const { return interface().isConstant(); }
-
-  void setConstant(bool isConstant) { llvm_unreachable("Not implemented"); }
-
-  // TODO fix this not to be optional
-  std::optional<uint64_t> getAlignment() const {
-    return interface().getAlignment();
-  }
-
-  // TODO fix this not to be optional
-  void setAlignment(std::optional<uint64_t> alignment) {
-    interface().setAlignment(alignment);
-  }
-};
-
-template <typename Interface>
-struct FunctionBase : GlobalObjectBase<Interface> {
-  using Base = GlobalObjectBase<Interface>;
-  using Base::Base;
-  using Base::interface;
-};
-
-template <typename Interface>
-struct GlobalIFuncBase : GlobalObjectBase<Interface> {
-  using Base = GlobalObjectBase<Interface>;
-  using Base::Base;
-  using Base::interface;
-
-  Operation *getResolver() const { llvm_unreachable("Not implemented"); }
-};
-
-struct GlobalValue : GlobalValueBase<GlobalValueLinkageOpInterface> {
-  using GlobalValueBase::GlobalValueBase;
-};
-
-struct GlobalAlias : GlobalAliasBase<GlobalAliasLinkageOpInterface> {
-  using GlobalAliasBase::GlobalAliasBase;
-
-  operator GlobalValue() { return GlobalValue(interface()); }
-  operator GlobalValue() const { return GlobalValue(interface()); }
-};
-
-struct GlobalVariable : GlobalVariableBase<GlobalVariableLinkageOpInterface> {
-  using GlobalVariableBase::GlobalVariableBase;
-
-  operator GlobalValue() { return GlobalValue(interface()); }
-  operator GlobalValue() const { return GlobalValue(interface()); }
-};
-
-struct Function : FunctionBase<FunctionLinkageOpInterface> {
-  using FunctionBase::FunctionBase;
-
-  operator GlobalValue() { return GlobalValue(interface()); }
-  operator GlobalValue() const { return GlobalValue(interface()); }
-};
-
-struct GlobalIFunc : GlobalIFuncBase<GlobalIFuncLinkageOpInterface> {
-  using GlobalIFuncBase::GlobalIFuncBase;
-
-  operator GlobalValue() { return GlobalValue(interface()); }
-  operator GlobalValue() const { return GlobalValue(interface()); }
-};
-
-} // namespace link
-} // namespace mlir
-
-namespace llvm {
-
-///
-/// LinkableOp
-///
-template <typename T>
-struct CastInfo<T, ::mlir::link::LinkableOp>
-    : public NullableValueCastFailed<T>,
-      public DefaultDoCastIfPossible<T, ::mlir::link::LinkableOp &,
-                                     CastInfo<T, ::mlir::link::LinkableOp>> {
-
-  static bool isPossible(::mlir::link::LinkableOp &op) {
-    return T::classof(op.getOperation());
-  }
-
-  static T doCast(::mlir::link::LinkableOp &op) { return T(op.getOperation()); }
-};
-
-template <>
-struct CastInfo<::mlir::link::GlobalAlias, ::mlir::link::LinkableOp>
-    : public NullableValueCastFailed<::mlir::link::GlobalAlias>,
-      public DefaultDoCastIfPossible<
-          ::mlir::link::GlobalAlias, ::mlir::link::LinkableOp &,
-          CastInfo<::mlir::link::GlobalAlias, ::mlir::link::LinkableOp>> {
-
-  static bool isPossible(::mlir::link::LinkableOp &op) {
-    return ::mlir::GlobalAliasLinkageOpInterface::classof(op.getOperation());
-  }
-
-  static ::mlir::link::GlobalAlias doCast(::mlir::link::LinkableOp &op) {
-    return ::mlir::link::GlobalAlias(
-        cast<::mlir::GlobalAliasLinkageOpInterface>(op.getOperation()));
-  }
-};
-
-template <>
-struct CastInfo<::mlir::link::GlobalVariable, ::mlir::link::LinkableOp>
-    : public NullableValueCastFailed<::mlir::link::GlobalVariable>,
-      public DefaultDoCastIfPossible<
-          ::mlir::link::GlobalVariable, ::mlir::link::LinkableOp &,
-          CastInfo<::mlir::link::GlobalVariable, ::mlir::link::LinkableOp>> {
-
-  static bool isPossible(::mlir::link::LinkableOp &op) {
-    return ::mlir::GlobalVariableLinkageOpInterface::classof(op.getOperation());
-  }
-
-  static ::mlir::link::GlobalVariable doCast(::mlir::link::LinkableOp &op) {
-    return ::mlir::link::GlobalVariable(
-        cast<::mlir::GlobalVariableLinkageOpInterface>(op.getOperation()));
-  }
-};
-
-template <>
-struct CastInfo<::mlir::link::Function, ::mlir::link::LinkableOp>
-    : public NullableValueCastFailed<::mlir::link::Function>,
-      public DefaultDoCastIfPossible<
-          ::mlir::link::Function, ::mlir::link::LinkableOp &,
-          CastInfo<::mlir::link::Function, ::mlir::link::LinkableOp>> {
-
-  static bool isPossible(::mlir::link::LinkableOp &op) {
-    return ::mlir::FunctionLinkageOpInterface::classof(op.getOperation());
-  }
-
-  static ::mlir::link::Function doCast(::mlir::link::LinkableOp &op) {
-    return ::mlir::link::Function(
-        cast<::mlir::FunctionLinkageOpInterface>(op.getOperation()));
-  }
-};
-
-template <>
-struct CastInfo<::mlir::link::GlobalIFunc, ::mlir::link::LinkableOp>
-    : public NullableValueCastFailed<::mlir::link::GlobalIFunc>,
-      public DefaultDoCastIfPossible<
-          ::mlir::link::GlobalIFunc, ::mlir::link::LinkableOp &,
-          CastInfo<::mlir::link::GlobalIFunc, ::mlir::link::LinkableOp>> {
-
-  static bool isPossible(::mlir::link::LinkableOp &op) {
-    return ::mlir::GlobalIFuncLinkageOpInterface::classof(op.getOperation());
-  }
-
-  static ::mlir::link::GlobalIFunc doCast(::mlir::link::LinkableOp &op) {
-    return ::mlir::link::GlobalIFunc(
-        cast<::mlir::GlobalIFuncLinkageOpInterface>(op.getOperation()));
-  }
-};
-
-template <typename T>
-struct CastInfo<T, const ::mlir::link::LinkableOp>
-    : public ConstStrippingForwardingCast<
-          T, const ::mlir::link::LinkableOp,
-          CastInfo<T, ::mlir::link::LinkableOp>> {};
-
-template <>
-struct DenseMapInfo<::mlir::link::LinkableOp>
-    : public ::mlir::link::LinkableOpDenseMapInfo<::mlir::link::LinkableOp> {};
-
-///
-/// GlobalAlias
-///
-
-template <>
-struct CastInfo<::mlir::link::GlobalAlias, ::mlir::Operation *>
-    : public CastInfo<::mlir::GlobalAliasLinkageOpInterface,
-                      ::mlir::Operation *> {};
-
-template <typename T>
-struct CastInfo<T, ::mlir::link::GlobalAlias>
-    : public CastInfo<T, ::mlir::link::LinkableOp> {};
-
-template <typename T>
-struct CastInfo<T, const ::mlir::link::GlobalAlias>
-    : public CastInfo<T, const ::mlir::link::LinkableOp> {};
-
-template <>
-struct DenseMapInfo<::mlir::link::GlobalAlias>
-    : public ::mlir::link::LinkableOpDenseMapInfo<::mlir::link::GlobalAlias> {};
-
-///
-/// GlobalValue
-///
-
-template <>
-struct CastInfo<::mlir::link::GlobalValue, ::mlir::Operation *>
-    : public CastInfo<::mlir::GlobalValueLinkageOpInterface,
-                      ::mlir::Operation *> {};
-
-template <typename T>
-struct CastInfo<T, ::mlir::link::GlobalValue>
-    : public CastInfo<T, ::mlir::link::LinkableOp> {};
-
-template <typename T>
-struct CastInfo<T, const ::mlir::link::GlobalValue>
-    : public CastInfo<T, const ::mlir::link::LinkableOp> {};
-
-template <>
-struct DenseMapInfo<::mlir::link::GlobalValue>
-    : public ::mlir::link::LinkableOpDenseMapInfo<::mlir::link::GlobalValue> {};
-
-///
-/// GlobalVariable
-///
-
-template <>
-struct CastInfo<::mlir::link::GlobalVariable, ::mlir::Operation *>
-    : public CastInfo<::mlir::GlobalVariableLinkageOpInterface,
-                      ::mlir::Operation *> {};
-
-template <typename T>
-struct CastInfo<T, ::mlir::link::GlobalVariable>
-    : public CastInfo<T, ::mlir::link::LinkableOp> {};
-
-template <typename T>
-struct CastInfo<T, const ::mlir::link::GlobalVariable>
-    : public CastInfo<T, const ::mlir::link::LinkableOp> {};
-
-template <>
-struct DenseMapInfo<::mlir::link::GlobalVariable>
-    : public ::mlir::link::LinkableOpDenseMapInfo<
-          ::mlir::link::GlobalVariable> {};
-
-///
-/// Function
-///
-
-template <>
-struct CastInfo<::mlir::link::Function, ::mlir::Operation *>
-    : public CastInfo<::mlir::FunctionLinkageOpInterface, ::mlir::Operation *> {
-};
-
-template <typename T>
-struct CastInfo<T, ::mlir::link::Function>
-    : public CastInfo<T, ::mlir::link::LinkableOp> {};
-
-template <typename T>
-struct CastInfo<T, const ::mlir::link::Function>
-    : public CastInfo<T, const ::mlir::link::LinkableOp> {};
-
-template <>
-struct DenseMapInfo<::mlir::link::Function>
-    : public ::mlir::link::LinkableOpDenseMapInfo<::mlir::link::Function> {};
-
-} // namespace llvm
-
-#endif // MLIR_LINKER_LINKAGEDIALECTINTERFACE_H
+#endif // MLIR_LINKER_LINKERINTERFACE_H

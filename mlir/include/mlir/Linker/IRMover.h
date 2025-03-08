@@ -1,4 +1,4 @@
-//===- IRMover.h ------------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,26 +10,60 @@
 #define MLIR_LINKER_IRMOVER_H
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 
-#include "mlir/Linker/LinkerInterface.h"
-
-using llvm::Error;
+#include "llvm/ADT/Hashing.h"
 
 namespace mlir::link {
 
-class IRMover {
-public:
-  IRMover(mlir::ModuleOp composite) : composite(composite) {}
+struct ConflictPair {
+  Operation *dst;
+  Operation *src;
 
-  ModuleOp getComposite() { return composite; }
-  MLIRContext *getContext() { return composite->getContext(); }
+  bool hasConflict() const { return dst; }
+};
 
-  Error move(OwningOpRef<Operation *> src, ArrayRef<GlobalValue> valuesToLink);
+struct IRMover {
+
+  ModuleOp composite;
+
+  std::vector<ConflictPair> worklist;
+
+  /// Mapping of values to their cloned counterpart.
+  IRMapping mapping;
+
+  explicit IRMover(ModuleOp composite) : composite(composite) {}
+
+  LogicalResult move(ArrayRef<ConflictPair> valuesToLink);
 
 private:
-  mlir::ModuleOp composite;
+  Operation * remap(ConflictPair pair);
+
+  Operation * materialize(ConflictPair pair) const;
 };
 
 } // namespace mlir::link
 
-#endif
+namespace llvm {
+
+template <>
+struct DenseMapInfo<mlir::link::ConflictPair> {
+  static mlir::link::ConflictPair getEmptyKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return {{}, static_cast<mlir::Operation*>(pointer)};
+  }
+  static mlir::link::ConflictPair getTombstoneKey() {
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return {{}, static_cast<mlir::Operation *>(pointer)};
+  }
+  static unsigned getHashValue(mlir::link::ConflictPair val) {
+    return DenseMapInfo<const mlir::Operation *>::getHashValue(val.src);
+  }
+  static bool isEqual(mlir::link::ConflictPair lhs, mlir::link::ConflictPair rhs) {
+    return lhs.src == rhs.src;
+  }
+};
+
+} // namespace llvm
+
+#endif // MLIR_LINKER_IRMOVER_H

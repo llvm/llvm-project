@@ -33,7 +33,7 @@ using namespace llvm;
 
 /// This class is intended to manage the handling of command line options for
 /// creating a linker config. This is a singleton.
-struct LinkerCLOptions : public LinkerConfig {
+struct LinkerCLOptions : public LinkerOptions {
   /// Returns the command line option category for the linker options
   static cl::OptionCategory &getCategory() {
     static cl::OptionCategory linkerCategory("MLIR Linker Options");
@@ -69,9 +69,9 @@ struct LinkerCLOptions : public LinkerConfig {
   }
   StringRef outputSplitMarker() const { return outputSplitMarkerFlag; }
 
-  /// Creates and initializes a LinkerConfig from command line options.
+  /// Creates and initializes a LinkerOptions from command line options.
   /// These options are static but use ExternalStorage to initialize the
-  /// members of the LinkerConfig class.
+  /// members of the LinkerOptions class.
   LinkerCLOptions() {
     // Allow operation with no registered dialects.
     // This option is for convenience during testing only and discouraged in
@@ -145,7 +145,7 @@ struct LinkerCLOptions : public LinkerConfig {
 };
 
 ManagedStatic<LinkerCLOptions> clOptionsConfig;
-const LinkerCLOptions &createLinkerConfigFromCLOptions() {
+const LinkerCLOptions &createLinkerOptionsFromCLOptions() {
   return *clOptionsConfig;
 }
 
@@ -216,8 +216,7 @@ private:
 
     // TBD: internalization
     OwningOpRef<ModuleOp> mod = cast<ModuleOp>(op.release());
-    // Link the parsed operation
-    return linker.linkInModule(std::move(mod));
+    return linker.addModule(std::move(mod));
   }
 
   Linker &linker;
@@ -238,35 +237,35 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   // Initialize LLVM infrastructure
   InitLLVM initLLVM(argc, argv);
 
-  const LinkerCLOptions &config = createLinkerConfigFromCLOptions();
+  const LinkerCLOptions &options = createLinkerOptionsFromCLOptions();
   LinkerCLOptions::setupAndParse(argc, argv);
 
-  if (config.shouldShowDialects())
+  if (options.shouldShowDialects())
     return printRegisteredDialects(registry);
 
   MLIRContext context(registry);
-  context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
+  context.allowUnregisteredDialects(options.shouldAllowUnregisteredDialects());
 
-  Linker linker(config, &context);
+  Linker linker(&context, options);
 
   // Prepare output file
   std::string errorMessage;
-  auto out = openOutputFile(config.outputFile, &errorMessage);
+  auto out = openOutputFile(options.outputFile, &errorMessage);
 
   if (!out) {
     return linker.emitError("Failed to open output file: " + errorMessage);
   }
 
-  StringRef inMarker = config.inputSplitMarker();
-  StringRef outMarker = config.outputSplitMarker();
+  StringRef inMarker = options.inputSplitMarker();
+  StringRef outMarker = options.outputSplitMarker();
 
   FileProcessor proc(linker, out->os(), inMarker, outMarker);
 
   // First add all the regular input files
-  if (failed(proc.linkFiles(config.inputFiles)))
+  if (failed(proc.linkFiles(options.inputFiles)))
     return failure();
 
-  OwningOpRef<ModuleOp> composite = linker.takeModule();
+  OwningOpRef<ModuleOp> composite = linker.link();
   if (failed(verify(composite.get(), true))) {
     return composite->emitError("verification after linking failed");
   }

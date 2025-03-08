@@ -22,7 +22,6 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Interfaces/LinkageInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -1227,10 +1226,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol,
-    GlobalVariableLinkageOpInterface,
-    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>,
-    DeclareOpInterfaceMethods<GlobalVariableLinkageOpInterface>]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -1382,9 +1378,6 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     }
   }];
 
-  let extraClassDefinition = [{
-    bool $cppClass::isDeclarationForLinkage() { return getInitializerRegion().empty() && !getValue(); }
-  }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -1500,9 +1493,7 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
-    FunctionLinkageOpInterface,
-    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>]> {
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface]> {
   let summary = "LLVM dialect function.";
 
   let description = [{
@@ -1629,11 +1620,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
     /// Returns true if the `optimize_none` attribute is set, false otherwise.
     bool isOptimizeNone() { return bool(getOptimizeNoneAttr()); }
-
-  }];
-
-  let extraClassDefinition = [{
-    bool $cppClass::isDeclarationForLinkage() { return getBody().empty(); }
   }];
 
   let hasCustomAssemblyFormat = 1;

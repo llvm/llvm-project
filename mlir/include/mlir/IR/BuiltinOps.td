@@ -20,7 +20,6 @@ include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
-include "mlir/Interfaces/LinkageInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for Builtin dialect ops.
