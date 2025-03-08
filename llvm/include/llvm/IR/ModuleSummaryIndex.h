@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -1293,8 +1294,26 @@ class CfiFunctionIndex {
   std::set<std::string, std::less<>> Index;
 
 public:
-  CfiFunctionIndex() = default;
+  class GUIDIterator
+      : public iterator_adaptor_base<
+            GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+            std::forward_iterator_tag, GlobalValue::GUID> {
+    using base = iterator_adaptor_base<
+        GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+        std::forward_iterator_tag, GlobalValue::GUID>;
 
+  public:
+    GUIDIterator() = default;
+    explicit GUIDIterator(std::set<std::string, std::less<>>::const_iterator I)
+        : base(std::move(I)) {}
+
+    GlobalValue::GUID operator*() const {
+      return GlobalValue::getGUID(
+          GlobalValue::dropLLVMManglingEscape(*this->wrapped()));
+    }
+  };
+
+  CfiFunctionIndex() = default;
   template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
 
   std::set<std::string, std::less<>>::const_iterator begin() const {
@@ -1303,6 +1322,12 @@ public:
 
   std::set<std::string, std::less<>>::const_iterator end() const {
     return Index.end();
+  }
+
+  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
+  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
+  iterator_range<GUIDIterator> guids() const {
+    return make_range(guid_begin(), guid_end());
   }
 
   template <typename... Args> void emplace(Args &&...A) {

@@ -306,8 +306,7 @@ class FilterChooser;
 /// version and return the Opcode since the two have the same Asm format string.
 class Filter {
 protected:
-  const FilterChooser
-      *Owner;        // points to the FilterChooser who owns this filter
+  const FilterChooser &Owner; // FilterChooser who owns this filter
   unsigned StartBit; // the starting bit position
   unsigned NumBits;  // number of bits to filter
   bool Mixed;        // a mixed region contains both set and unset bits
@@ -329,7 +328,8 @@ protected:
 
 public:
   Filter(Filter &&f);
-  Filter(FilterChooser &owner, unsigned startBit, unsigned numBits, bool mixed);
+  Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits,
+         bool mixed);
 
   ~Filter() = default;
 
@@ -589,22 +589,22 @@ Filter::Filter(Filter &&f)
       FilterChooserMap(std::move(f.FilterChooserMap)),
       NumFiltered(f.NumFiltered), LastOpcFiltered(f.LastOpcFiltered) {}
 
-Filter::Filter(FilterChooser &owner, unsigned startBit, unsigned numBits,
+Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits,
                bool mixed)
-    : Owner(&owner), StartBit(startBit), NumBits(numBits), Mixed(mixed) {
-  assert(StartBit + NumBits - 1 < Owner->BitWidth);
+    : Owner(owner), StartBit(startBit), NumBits(numBits), Mixed(mixed) {
+  assert(StartBit + NumBits - 1 < Owner.BitWidth);
 
   NumFiltered = 0;
   LastOpcFiltered = {0, 0};
 
-  for (const auto &OpcPair : Owner->Opcodes) {
+  for (const auto &OpcPair : Owner.Opcodes) {
     insn_t Insn;
 
     // Populates the insn given the uid.
-    Owner->insnWithID(Insn, OpcPair.EncodingID);
+    Owner.insnWithID(Insn, OpcPair.EncodingID);
 
     // Scans the segment for possibly well-specified encoding bits.
-    auto [Ok, Field] = Owner->fieldFromInsn(Insn, StartBit, NumBits);
+    auto [Ok, Field] = Owner.fieldFromInsn(Insn, StartBit, NumBits);
 
     if (Ok) {
       // The encoding bits are well-known.  Lets add the uid of the
@@ -631,7 +631,7 @@ Filter::Filter(FilterChooser &owner, unsigned startBit, unsigned numBits,
 // match the remaining undecoded encoding bits against the singleton.
 void Filter::recurse() {
   // Starts by inheriting our parent filter chooser's filter bit values.
-  std::vector<bit_value_t> BitValueArray(Owner->FilterBitValues);
+  std::vector<bit_value_t> BitValueArray(Owner.FilterBitValues);
 
   if (!VariableInstructions.empty()) {
     // Conservatively marks each segment position as BIT_UNSET.
@@ -642,9 +642,9 @@ void Filter::recurse() {
     // group of instructions whose segment values are variable.
     FilterChooserMap.try_emplace(
         NO_FIXED_SEGMENTS_SENTINEL,
-        std::make_unique<FilterChooser>(Owner->AllInstructions,
-                                        VariableInstructions, Owner->Operands,
-                                        BitValueArray, *Owner));
+        std::make_unique<FilterChooser>(Owner.AllInstructions,
+                                        VariableInstructions, Owner.Operands,
+                                        BitValueArray, Owner));
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -667,10 +667,10 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(Inst.first,
-                                 std::make_unique<FilterChooser>(
-                                     Owner->AllInstructions, Inst.second,
-                                     Owner->Operands, BitValueArray, *Owner));
+    FilterChooserMap.try_emplace(
+        Inst.first,
+        std::make_unique<FilterChooser>(Owner.AllInstructions, Inst.second,
+                                        Owner.Operands, BitValueArray, Owner));
   }
 }
 
