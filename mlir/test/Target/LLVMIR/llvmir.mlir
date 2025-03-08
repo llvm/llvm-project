@@ -2455,6 +2455,18 @@ llvm.func @preserves_za_func() attributes {arm_preserves_za} {
 // -----
 
 //
+// frame pointer attribute.
+//
+
+// CHECK-LABEL: @t
+// CHECK-SAME: #[[FP:.*]]
+llvm.func @t(!llvm.ptr) attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
+
+// CHECK: attributes #[[FP]] = { "frame-pointer"="non-leaf" }
+
+// -----
+
+//
 // Zero-initialize operation.
 //
 
