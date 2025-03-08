@@ -15960,11 +15960,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  std::pair<StringRef, ASTContext::AvailabilityDomainInfo> ADInfo =
-      getASTContext().getFeatureAvailInfo(VD);
-
-  if (!ADInfo.first.empty())
-    getASTContext().addAvailabilityDomainMap(ADInfo.first, ADInfo.second);
+  if (auto *Attr = VD->getAttr<AvailabilityDomainAttr>())
+    getASTContext().addAvailabilityDomainMap(Attr->getName()->getName(), VD);
 
   const DeclContext *DC = VD->getDeclContext();
   // If there's a #pragma GCC visibility in scope, and this isn't a class

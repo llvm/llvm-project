@@ -986,6 +986,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
+  RECORD(AVAILABILITY_DOMAIN_TABLE);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -3445,6 +3446,76 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   Stream.EmitRecordWithBlob(DeclContextLexicalAbbrev, Record,
                             bytes(KindDeclPairs));
   return Offset;
+}
+
+namespace {
+class AvailabilityDomainsTableTrait {
+public:
+  using key_type = StringRef;
+  using key_type_ref = key_type;
+  using data_type = clang::serialization::DeclID;
+  using data_type_ref = const data_type &;
+  using hash_value_type = uint32_t;
+  using offset_type = unsigned;
+
+  hash_value_type ComputeHash(key_type_ref Key) { return llvm::djbHash(Key); }
+
+  std::pair<unsigned, unsigned>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref Key, data_type_ref) {
+    uint32_t KeyLength = Key.size();
+    uint32_t DataLength = sizeof(data_type);
+
+    llvm::support::endian::Writer Writer(Out, llvm::endianness::little);
+    Writer.write<uint16_t>(KeyLength);
+    Writer.write<uint16_t>(DataLength);
+    return {KeyLength, DataLength};
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref Key, unsigned) { Out << Key; }
+
+  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref Data, unsigned) {
+    llvm::support::endian::Writer writer(Out, llvm::endianness::little);
+    writer.write<data_type>(Data);
+  }
+};
+} // namespace
+
+void ASTWriter::writeAvailabilityDomainDecls(ASTContext &Context) {
+  using namespace llvm;
+  if (Context.AvailabilityDomainMap.empty())
+    return;
+
+  AvailabilityDomainsTableTrait GeneratorTrait;
+  llvm::OnDiskChainedHashTableGenerator<AvailabilityDomainsTableTrait>
+      Generator;
+
+  for (auto &P : Context.AvailabilityDomainMap)
+    Generator.insert(P.first, GetDeclRef(P.second).getRawValue(),
+                     GeneratorTrait);
+
+  // Create the on-disk hash table in a buffer.
+  SmallString<4096> AvailDomainTable;
+  uint32_t BucketOffset;
+  {
+    using namespace llvm::support;
+    llvm::raw_svector_ostream Out(AvailDomainTable);
+    // Make sure that no bucket is at offset 0
+    endian::write<uint32_t>(Out, 0, llvm::endianness::little);
+    BucketOffset = Generator.Emit(Out, GeneratorTrait);
+  }
+
+  // Create a blob abbreviation.
+  auto Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(AVAILABILITY_DOMAIN_TABLE));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  unsigned MethodPoolAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  // Write the table.
+  {
+    RecordData::value_type Record[] = {AVAILABILITY_DOMAIN_TABLE, BucketOffset};
+    Stream.EmitRecordWithBlob(MethodPoolAbbrev, Record, AvailDomainTable);
+  }
 }
 
 void ASTWriter::WriteTypeDeclOffsets() {
@@ -6341,6 +6412,8 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   // Write the visible updates to DeclContexts.
   for (auto *DC : UpdatedDeclContexts)
     WriteDeclContextVisibleUpdate(Context, DC);
+
+  writeAvailabilityDomainDecls(Context);
 }
 
 void ASTWriter::WriteSpecializationsUpdates(bool IsPartial) {

@@ -410,6 +410,38 @@ private:
 using HeaderFileInfoLookupTable =
     llvm::OnDiskChainedHashTable<HeaderFileInfoTrait>;
 
+/// This trait class is used for searching the on-disk hash table that stores
+/// feature availability information. The hash table maps feature names to Decl
+/// IDs that corresponds to the variables declared in header files.
+class AvailabilityDomainsTableReaderTrait {
+public:
+  using internal_key_type = llvm::StringRef;
+  using external_key_type = internal_key_type;
+  using data_type = clang::serialization::DeclID;
+  using hash_value_type = uint32_t;
+  using offset_type = unsigned;
+
+  internal_key_type GetInternalKey(external_key_type Key) { return Key; }
+  external_key_type GetExternalKey(internal_key_type Key) { return Key; }
+
+  hash_value_type ComputeHash(internal_key_type Key);
+
+  static bool EqualKey(internal_key_type LHS, internal_key_type RHS) {
+    return LHS == RHS;
+  }
+
+  static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data);
+
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length);
+
+  static data_type ReadData(internal_key_type Key, const uint8_t *Data,
+                            unsigned Length);
+};
+
+/// The on-disk hash table used for availability domain lookup.
+using AvailabilityDomainLookupTable =
+    llvm::OnDiskChainedHashTable<AvailabilityDomainsTableReaderTrait>;
+
 } // namespace reader
 
 } // namespace serialization

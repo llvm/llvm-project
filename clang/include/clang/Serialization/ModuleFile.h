@@ -405,6 +405,10 @@ public:
   /// the header files.
   void *HeaderFileInfoTable = nullptr;
 
+  /// The on-disk hash table that contains information about availability
+  /// domains.
+  void *AvailabilityDomainTable = nullptr;
+
   // === Submodule information ===
 
   /// The number of submodules in this module.

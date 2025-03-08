@@ -605,6 +605,7 @@ private:
                                     uint64_t &VisibleBlockOffset,
                                     uint64_t &ModuleLocalBlockOffset,
                                     uint64_t &TULocalBlockOffset);
+  void writeAvailabilityDomainDecls(ASTContext &Context);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);

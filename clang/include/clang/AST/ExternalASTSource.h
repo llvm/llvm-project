@@ -142,6 +142,11 @@ public:
   /// Update an out-of-date identifier.
   virtual void updateOutOfDateIdentifier(const IdentifierInfo &II) {}
 
+  // Retrieve the variable declaration that has the information for the domain.
+  virtual Decl *getAvailabilityDomainDecl(StringRef DomainName) {
+    return nullptr;
+  }
+
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
   /// or SetNoExternalVisibleDeclsForName.

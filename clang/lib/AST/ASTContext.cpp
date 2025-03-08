@@ -969,9 +969,15 @@ ASTContext::getFeatureAvailInfo(StringRef FeatureName) const {
   if (Kind != FeatureAvailKind::None)
     return {Kind};
 
+  Decl *D = nullptr;
   auto I = AvailabilityDomainMap.find(FeatureName);
   if (I != AvailabilityDomainMap.end())
-    return I->second;
+    D = I->second;
+  else if (auto *Source = getExternalSource())
+    D = Source->getAvailabilityDomainDecl(FeatureName);
+
+  if (D)
+    return getFeatureAvailInfo(D).second;
 
   return {};
 }

@@ -753,6 +753,9 @@ enum ASTRecordTypes {
   UPDATE_MODULE_LOCAL_VISIBLE = 76,
 
   UPDATE_TU_LOCAL_VISIBLE = 77,
+
+  /// Record code for availability domain table.
+  AVAILABILITY_DOMAIN_TABLE = 78,
 };
 
 /// Record types used within a source manager block.

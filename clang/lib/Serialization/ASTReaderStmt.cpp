@@ -1678,11 +1678,18 @@ void ASTStmtReader::VisitObjCBoolLiteralExpr(ObjCBoolLiteralExpr *E) {
 
 void ASTStmtReader::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
   VisitExpr(E);
+  unsigned DomainNameLength = Record.readInt();
+  E->setHasDomainName(Record.readInt());
   SourceRange R = Record.readSourceRange();
   E->AtLoc = R.getBegin();
   E->RParen = R.getEnd();
   E->VersionToCheck.Version = Record.readVersionTuple();
   E->VersionToCheck.SourceVersion = Record.readVersionTuple();
+  if (E->hasDomainName()) {
+    std::string DomainName = Record.readString();
+    assert(DomainNameLength == DomainName.size());
+    strcpy(E->getTrailingObjects<char>(), DomainName.data());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3617,7 +3624,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_OBJC_AVAILABILITY_CHECK:
-      S = new (Context) ObjCAvailabilityCheckExpr(Empty);
+      S = ObjCAvailabilityCheckExpr::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumExprFields]);
       break;
 
     case STMT_SEH_LEAVE:

@@ -1571,6 +1571,7 @@ private:
       bool AllowCompatibleConfigurationMismatch, ASTReaderListener *Listener,
       bool ValidateDiagnosticOptions);
 
+  Decl *getAvailabilityDomainDecl(StringRef DomainName) override;
   llvm::Error ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   llvm::Error ReadExtensionBlock(ModuleFile &F);
   void ReadModuleOffsetMap(ModuleFile &F) const;

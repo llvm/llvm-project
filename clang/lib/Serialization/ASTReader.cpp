@@ -3495,6 +3495,74 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   }
 }
 
+AvailabilityDomainsTableReaderTrait::hash_value_type
+AvailabilityDomainsTableReaderTrait::ComputeHash(internal_key_type Key) {
+  return llvm::djbHash(Key);
+}
+
+std::pair<unsigned, unsigned>
+AvailabilityDomainsTableReaderTrait::ReadKeyDataLength(const uint8_t *&Data) {
+  unsigned KeyLength =
+      llvm::support::endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  unsigned DataLength =
+      llvm::support::endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  return {KeyLength, DataLength};
+}
+
+AvailabilityDomainsTableReaderTrait::internal_key_type
+AvailabilityDomainsTableReaderTrait::ReadKey(const uint8_t *Data,
+                                             unsigned Length) {
+  return llvm::StringRef(reinterpret_cast<const char *>(Data), Length);
+}
+
+AvailabilityDomainsTableReaderTrait::data_type
+AvailabilityDomainsTableReaderTrait::ReadData(internal_key_type Key,
+                                              const uint8_t *Data,
+                                              unsigned Length) {
+  return llvm::support::endian::readNext<data_type, llvm::endianness::little>(
+      Data);
+}
+
+class AvailabilityDomainVisitor {
+  std::optional<Decl *> D;
+  StringRef DomainName;
+  ASTReader &Reader;
+
+public:
+  explicit AvailabilityDomainVisitor(StringRef DomainName, ASTReader &Reader)
+      : DomainName(DomainName), Reader(Reader) {}
+
+  bool operator()(ModuleFile &M) {
+    AvailabilityDomainLookupTable *Table =
+        static_cast<AvailabilityDomainLookupTable *>(M.AvailabilityDomainTable);
+
+    if (!Table)
+      return false;
+
+    // Look in the on-disk hash table for an entry for this domain name.
+    AvailabilityDomainLookupTable::iterator Pos = Table->find(DomainName);
+    if (Pos == Table->end())
+      return false;
+
+    LocalDeclID LocalID = LocalDeclID::get(Reader, M, *Pos);
+    GlobalDeclID ID = Reader.getGlobalDeclID(M, LocalID);
+    D = Reader.GetDecl(ID);
+    return true;
+  }
+
+  std::optional<Decl *> getDecl() const { return D; }
+};
+
+Decl *ASTReader::getAvailabilityDomainDecl(StringRef DomainName) {
+  AvailabilityDomainVisitor Visitor(DomainName, *this);
+  ModuleMgr.visit(Visitor);
+
+  if (std::optional<Decl *> D = Visitor.getDecl())
+    return *D;
+
+  return nullptr;
+}
+
 llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                     unsigned ClientLoadCapabilities) {
   BitstreamCursor &Stream = F.Stream;
@@ -3836,6 +3904,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         UnusedFileScopedDecls.push_back(ReadDeclID(F, Record, I));
       break;
+
+    case AVAILABILITY_DOMAIN_TABLE: {
+      auto Data = Blob.data();
+      F.AvailabilityDomainTable = AvailabilityDomainLookupTable::Create(
+          (const unsigned char *)Data + Record[0], (const unsigned char *)Data,
+          AvailabilityDomainsTableReaderTrait());
+      break;
+    }
 
     case DELEGATING_CTORS:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)

@@ -1644,9 +1644,13 @@ void ASTStmtWriter::VisitObjCBoolLiteralExpr(ObjCBoolLiteralExpr *E) {
 
 void ASTStmtWriter::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->hasDomainName() ? E->getDomainName().size() : 0);
+  Record.push_back(E->hasDomainName());
   Record.AddSourceRange(E->getSourceRange());
   Record.AddVersionTuple(E->getVersion());
   Record.AddVersionTuple(E->getVersionAsWritten());
+  if (E->hasDomainName())
+    Record.AddString(E->getDomainName());
   Code = serialization::EXPR_OBJC_AVAILABILITY_CHECK;
 }
 
