@@ -252,7 +252,6 @@ set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
 
-
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   if (NOT DEFINED FLANG_RT_GCC_RESOURCE_DIR)
     set(FLANG_RT_GCC_RESOURCE_DIR "FLANG_RT_GCC_RESOURCE_DIR-NOTFOUND")
@@ -276,7 +275,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   endif ()
 endif ()
 
-
 check_include_file("quadmath.h" FOUND_QUADMATH_H)
 if (FOUND_QUADMATH_H)
   message(STATUS "quadmath.h found without additional include paths")
@@ -291,7 +289,6 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
     set(FLANG_RT_INCLUDE_QUADMATH_H "\"${FLANG_RT_GCC_RESOURCE_DIR}/include/quadmath.h\"")
   endif ()
 endif ()
-
 
 
 
