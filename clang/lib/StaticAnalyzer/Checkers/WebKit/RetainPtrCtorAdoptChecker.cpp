@@ -128,7 +128,8 @@ public:
     auto Name = safeGetName(F);
     if (Result == IsOwnedResult::Unknown)
       Result = IsOwnedResult::NotOwned;
-    if (Result == IsOwnedResult::NotOwned && !isAllocInit(Arg) && !isCreateOrCopy(Arg)) {
+    if (Result == IsOwnedResult::NotOwned && !isAllocInit(Arg) &&
+        !isCreateOrCopy(Arg)) {
       if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
         if (CreateOrCopyOutArguments.contains(DRE->getDecl()))
           return;
@@ -139,8 +140,9 @@ public:
         reportUseAfterFree(Name, CE, DeclWithIssue);
     }
   }
-  
-  void rememberOutArguments(const CallExpr *CE, const FunctionDecl *Callee) const {
+
+  void rememberOutArguments(const CallExpr *CE,
+                            const FunctionDecl *Callee) const {
     auto CalleeName = Callee->getName();
     if (!CalleeName.contains("Create") && !CalleeName.contains("Copy"))
       return;
