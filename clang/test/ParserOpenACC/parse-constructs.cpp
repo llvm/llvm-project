@@ -14,40 +14,40 @@ namespace NS {
 }
 
 // expected-error@+1{{use of undeclared identifier 'foo'; did you mean 'NS::foo'?}}
-#pragma acc routine(foo)
-#pragma acc routine(NS::foo)
+#pragma acc routine(foo) seq
+#pragma acc routine(NS::foo) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
 // expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
-#pragma acc routine(templ)
+#pragma acc routine(templ) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
-#pragma acc routine(NS::templ)
+#pragma acc routine(NS::templ) seq
 
 // expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
 // expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
-#pragma acc routine(templ<int>)
+#pragma acc routine(templ<int>) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ<int>' names a set of overloads}}
-#pragma acc routine(NS::templ<int>)
+#pragma acc routine(NS::templ<int>) seq
 
 // expected-error@+1{{use of undeclared identifier 'T'}}
-#pragma acc routine(templ<T>)
+#pragma acc routine(templ<T>) seq
 // expected-error@+1{{use of undeclared identifier 'T'}}
-#pragma acc routine(NS::templ<T>)
+#pragma acc routine(NS::templ<T>) seq
 
 // expected-error@+2{{expected ')'}}
 // expected-note@+1{{to match this '('}}
-#pragma acc routine (NS::foo())
+#pragma acc routine (NS::foo()) seq
 
 // expected-error@+1 {{expected unqualified-id}}
-#pragma acc routine()
+#pragma acc routine() seq
 
 // expected-error@+1 {{expected unqualified-id}}
-#pragma acc routine(int)
+#pragma acc routine(int) seq
 
 // expected-error@+2{{'C' does not refer to a value}}
 // expected-note@#CDef{{declared here}}
-#pragma acc routine (NS::C)
+#pragma acc routine (NS::C) seq
 // expected-error@+2{{'private_mem_func' is a private member of 'NS::C'}}
 // expected-note@#PrivateMemFunc{{implicitly declared private here}}
-#pragma acc routine (NS::C::private_mem_func)
-#pragma acc routine (NS::C::public_mem_func)
+#pragma acc routine (NS::C::private_mem_func) seq
+#pragma acc routine (NS::C::public_mem_func) seq

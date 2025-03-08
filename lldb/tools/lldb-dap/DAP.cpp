@@ -195,33 +195,15 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
-  if (auto Error = out.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stdout, output);
       }))
     return Error;
 
-  if (overrideOut) {
-    auto fd = out.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideOut)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
-
-  if (auto Error = err.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stderr, output);
       }))
     return Error;
-
-  if (overrideErr) {
-    auto fd = err.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideErr)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
 
   return llvm::Error::success();
 }
@@ -729,15 +711,11 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 
   llvm::StringRef json_sref(json);
   llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
+  if (auto error = json_value.takeError()) {
+    std::string error_str = llvm::toString(std::move(error));
+    if (log)
       *log << "error: failed to parse JSON: " << error_str << std::endl
            << json << std::endl;
-    }
     return PacketStatus::JSONMalformed;
   }
 
@@ -848,10 +826,6 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
-  // Stop forwarding the debugger output and error handles.
-  out.Stop();
-  err.Stop();
-
   disconnecting = true;
 
   return error;
@@ -859,8 +833,8 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
 llvm::Error DAP::Loop() {
   auto cleanup = llvm::make_scope_exit([this]() {
-    if (output.descriptor)
-      output.descriptor->Close();
+    out.Stop();
+    err.Stop();
     StopEventHandlers();
   });
   while (!disconnecting) {

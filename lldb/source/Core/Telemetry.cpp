@@ -61,6 +61,26 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
 
+void CommandInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("target_uuid", target_uuid.GetAsString());
+  serializer.write("command_id", command_id);
+  serializer.write("command_name", command_name);
+  if (original_command.has_value())
+    serializer.write("original_command", original_command.value());
+  if (args.has_value())
+    serializer.write("args", args.value());
+  if (ret_status.has_value())
+    serializer.write("ret_status", ret_status.value());
+  if (error_data.has_value())
+    serializer.write("error_data", error_data.value());
+}
+
+  
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
+uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
@@ -80,7 +100,7 @@ void TargetInfo::serialize(Serializer &serializer) const {
   }
 }
 
-TelemetryManager::TelemetryManager(std::unique_ptr<Config> config)
+TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
 
 llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
@@ -92,8 +112,6 @@ llvm::Error TelemetryManager::preDispatch(TelemetryInfo *entry) {
   return llvm::Error::success();
 }
 
-const Config *TelemetryManager::GetConfig() { return m_config.get(); }
-
 class NoOpTelemetryManager : public TelemetryManager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
@@ -102,8 +120,8 @@ public:
   }
 
   explicit NoOpTelemetryManager()
-      : TelemetryManager(std::make_unique<::llvm::telemetry::Config>(
-            /*EnableTelemetry*/ false)) {}
+      : TelemetryManager(std::make_unique<LLDBConfig>(
+            /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
@@ -118,6 +136,7 @@ public:
     static std::unique_ptr<NoOpTelemetryManager> g_ins =
         std::make_unique<NoOpTelemetryManager>();
     return g_ins.get();
+
   }
 };
 

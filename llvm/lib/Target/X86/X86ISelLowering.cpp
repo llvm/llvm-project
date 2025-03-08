@@ -31883,7 +31883,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 
   IRBuilder<> Builder(AI);
   Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
@@ -31905,21 +31904,10 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // otherwise, we might be able to be more aggressive on relaxed idempotent
   // rmw. In practice, they do not look useful, so we don't try to be
   // especially clever.
-  if (SSID == SyncScope::SingleThread)
-    // FIXME: we could just insert an ISD::MEMBARRIER here, except we are at
-    // the IR level, so we must wrap it in an intrinsic.
-    return nullptr;
 
-  if (!Subtarget.hasMFence())
-    // FIXME: it might make sense to use a locked operation here but on a
-    // different cache-line to prevent cache-line bouncing. In practice it
-    // is probably a small win, and x86 processors without mfence are rare
-    // enough that we do not bother.
-    return nullptr;
-
-  Function *MFence =
-      llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_sse2_mfence);
-  Builder.CreateCall(MFence, {});
+  // Use `fence seq_cst` over `llvm.x64.sse2.mfence` here to get the correct
+  // lowering for SSID == SyncScope::SingleThread and !hasMFence
+  Builder.CreateFence(AtomicOrdering::SequentiallyConsistent, SSID);
 
   // Finally we can emit the atomic load.
   LoadInst *Loaded = Builder.CreateAlignedLoad(
@@ -57948,9 +57936,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     switch (Op0.getOpcode()) {
     case ISD::VECTOR_SHUFFLE: {
-      if (NumOps == 2 && VT.is256BitVector() &&
+      // TODO: Relax VBMI requirement for repeated shuffle ops - currently
+      // limited to targets that should always have good cross lane shuffles.
+      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
           (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
+          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1) ||
+           (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
+            Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
+            Subtarget.hasVBMI()))) {
         int NumSubElts = Op0.getValueType().getVectorNumElements();
         SmallVector<int> NewMask;
         for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
