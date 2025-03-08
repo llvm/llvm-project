@@ -58758,6 +58758,14 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to recursively combine to a shuffle.
+  if (isTargetShuffle(peekThroughBitcasts(Vec).getOpcode()) &&
+      isTargetShuffle(peekThroughBitcasts(SubVec).getOpcode())) {
+    SDValue Op(N, 0);
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+      return Res;
+  }
+
   return SDValue();
 }
 
