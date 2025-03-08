@@ -19,6 +19,8 @@
 namespace llvm {
 namespace bolt {
 
+class RewriteInstance;
+
 /// Base class for handling file sections with metadata. In this context,
 /// metadata encompasses a wide range of data that references code and other
 /// data. Such metadata may or may not have an impact on program execution.
@@ -34,10 +36,14 @@ class MetadataRewriter {
   StringRef Name;
 
 protected:
+  RewriteInstance &RI;
+
   /// Provides access to the binary context.
   BinaryContext &BC;
 
-  MetadataRewriter(StringRef Name, BinaryContext &BC) : Name(Name), BC(BC) {}
+  MetadataRewriter(StringRef Name, RewriteInstance &RI);
+
+  std::optional<uint64_t> lookupSymbol(const StringRef Name);
 
 public:
   virtual ~MetadataRewriter() = default;

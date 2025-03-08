@@ -39,8 +39,8 @@ class BuildIDRewriter final : public MetadataRewriter {
   std::optional<uint64_t> BuildIDSize;
 
 public:
-  BuildIDRewriter(StringRef Name, BinaryContext &BC)
-      : MetadataRewriter(Name, BC) {}
+  BuildIDRewriter(StringRef Name, RewriteInstance &RI)
+      : MetadataRewriter(Name, RI) {}
 
   Error sectionInitializer() override;
 
@@ -108,6 +108,6 @@ Error BuildIDRewriter::postEmitFinalizer() {
 } // namespace
 
 std::unique_ptr<MetadataRewriter>
-llvm::bolt::createBuildIDRewriter(BinaryContext &BC) {
-  return std::make_unique<BuildIDRewriter>("build-id-rewriter", BC);
+llvm::bolt::createBuildIDRewriter(RewriteInstance &RI) {
+  return std::make_unique<BuildIDRewriter>("build-id-rewriter", RI);
 }

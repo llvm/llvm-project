@@ -80,8 +80,8 @@ class PseudoProbeRewriter final : public MetadataRewriter {
   std::shared_ptr<MCPseudoProbeDecoder> ProbeDecoderPtr;
 
 public:
-  PseudoProbeRewriter(BinaryContext &BC)
-      : MetadataRewriter("pseudo-probe-rewriter", BC),
+  PseudoProbeRewriter(RewriteInstance &RI)
+      : MetadataRewriter("pseudo-probe-rewriter", RI),
         ProbeDecoderPtr(std::make_shared<MCPseudoProbeDecoder>()) {
     BC.setPseudoProbeDecoder(ProbeDecoderPtr);
   }
@@ -447,6 +447,6 @@ void PseudoProbeRewriter::encodePseudoProbes() {
 } // namespace
 
 std::unique_ptr<MetadataRewriter>
-llvm::bolt::createPseudoProbeRewriter(BinaryContext &BC) {
-  return std::make_unique<PseudoProbeRewriter>(BC);
+llvm::bolt::createPseudoProbeRewriter(RewriteInstance &RI) {
+  return std::make_unique<PseudoProbeRewriter>(RI);
 }
