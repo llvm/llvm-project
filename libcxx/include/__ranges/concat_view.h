@@ -350,7 +350,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__it_.valueless_by_exception(), "Trying to dereference a valueless iterator of concat_view.");
     return __variant_detail::__visitation::__variant::__visit_value(
         [](auto&& __it) -> __concat_reference_t<__maybe_const<_Const, _Views>...> { return *__it; }, __it_);
   }
