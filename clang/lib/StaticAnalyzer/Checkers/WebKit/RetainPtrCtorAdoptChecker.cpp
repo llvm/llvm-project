@@ -328,22 +328,6 @@ public:
     return IsOwnedResult::Unknown;
   }
 
-  template <typename ExprType>
-  void reportUnknown(std::string &Name, const ExprType *CE,
-                     const Decl *DeclWithIssue) const {
-    SmallString<100> Buf;
-    llvm::raw_svector_ostream Os(Buf);
-
-    Os << Name << " is called on an object in unknown state.";
-
-    PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
-                                 BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(CE->getSourceRange());
-    Report->setDeclWithIssue(DeclWithIssue);
-    BR->emitReport(std::move(Report));
-  }
-
   void reportUseAfterFree(std::string &Name, const CallExpr *CE,
                           const Decl *DeclWithIssue,
                           const char *condition = nullptr) const {
