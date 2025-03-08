@@ -2,9 +2,6 @@
 ! RUN: %flang -emit-llvm -flang-deprecated-no-hlfir -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 ! Test from Fortran source through to LLVM IR.
 ! UNSUPPORTED: system-windows
-! UNSUPPORTED: target-x86
-! UNSUPPORTED: target=sparc-{{.*}}
-! UNSUPPORTED: target=sparcel-{{.*}}
 
 ! Assumed size array of assumed length character.
 program test
