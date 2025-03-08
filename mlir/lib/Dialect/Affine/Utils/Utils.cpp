@@ -263,16 +263,17 @@ static void promoteIfBlock(AffineIfOp ifOp, bool elseBlock) {
 static Operation *getOutermostInvariantForOp(AffineIfOp ifOp) {
   // Walk up the parents past all for op that this conditional is invariant on.
   auto ifOperands = ifOp.getOperands();
-  auto *res = ifOp.getOperation();
-  while (!isa<func::FuncOp>(res->getParentOp())) {
+  Operation *res = ifOp;
+  while (!res->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     auto *parentOp = res->getParentOp();
     if (auto forOp = dyn_cast<AffineForOp>(parentOp)) {
       if (llvm::is_contained(ifOperands, forOp.getInductionVar()))
         break;
     } else if (auto parallelOp = dyn_cast<AffineParallelOp>(parentOp)) {
-      for (auto iv : parallelOp.getIVs())
-        if (llvm::is_contained(ifOperands, iv))
-          break;
+      if (llvm::any_of(parallelOp.getIVs(), [&](Value iv) {
+            return llvm::is_contained(ifOperands, iv);
+          }))
+        break;
     } else if (!isa<AffineIfOp>(parentOp)) {
       // Won't walk up past anything other than affine.for/if ops.
       break;
@@ -438,11 +439,10 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   if (folded)
     *folded = false;
 
-  // The folding above should have ensured this, but the affine.if's
-  // canonicalization is missing composition of affine.applys into it.
+  // The folding above should have ensured this.
   assert(llvm::all_of(ifOp.getOperands(),
                       [](Value v) {
-                        return isTopLevelValue(v) || isAffineForInductionVar(v);
+                        return isTopLevelValue(v) || isAffineInductionVar(v);
                       }) &&
          "operands not composed");
 
