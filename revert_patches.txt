@@ -13,10 +13,6 @@ breaks build of hipRuntime
 51ad2901ca54 [Clang] Improve diagnostic on `[[nodiscard]]` attribute (#112521)
 Ron, Maneesh
 ---
-Revert: breaks build of rocFFT
-854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
-Brendon and Vigneshwar
----
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
@@ -24,10 +20,7 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-a3165398db07 AMDGPU: Fix overly conservative immediate operand check
-Matt
----
-needs spriv fix etc ...
-979c275097a6 [IR] Store Triple in Module (NFC) (#129868)
-Alex and Ron
+needs flang help
+f1178815d243 [Flang][OpenMP][MLIR] Implement close, present and ompx_ho
+AndrewG
 ---
