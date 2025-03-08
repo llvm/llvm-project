@@ -3,7 +3,7 @@
 // RUN:     select-cond-name=test.attr \
 // RUN:     select-values=rocdl,nvvm \
 // RUN:     select-pipelines=convert-gpu-to-rocdl,convert-gpu-to-nvvm \
-// RUN:     }))' -split-input-file | FileCheck %s
+// RUN:     }))' | FileCheck %s
 
 gpu.module @rocdl_module attributes {test.attr = "rocdl"} {
 // CHECK-LABEL: func @foo()
