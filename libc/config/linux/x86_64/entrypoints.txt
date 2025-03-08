@@ -99,7 +99,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
+    libc.src.strings.strcasecmp_l
     libc.src.strings.strncasecmp
+    libc.src.strings.strncasecmp_l
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
