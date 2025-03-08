@@ -2843,6 +2843,8 @@ bool Compiler<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
 
   assert(Initializing);
   const Record *R = P.getOrCreateRecord(E->getLambdaClass());
+  if (!R)
+    return false;
 
   auto *CaptureInitIt = E->capture_init_begin();
   // Initialize all fields (which represent lambda captures) of the
@@ -4087,9 +4089,8 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
     } else if (D->isRecord()) {
       if (!this->visitZeroRecordInitializer(D->ElemRecord, E))
         return false;
-    } else {
-      assert(false);
-    }
+    } else
+      return false;
 
     if (!this->emitFinishInitPop(E))
       return false;
@@ -5166,6 +5167,12 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
+  auto visitChildStmt = [&](const Stmt *S) -> bool {
+    LocalScope<Emitter> SScope(this);
+    if (!visitStmt(S))
+      return false;
+    return SScope.destroyLocals();
+  };
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -5174,7 +5181,22 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  // Compile condition.
+  // Save ourselves compiling some code and the jumps, etc. if the condition is
+  // stataically known to be either true or false. We could look at more cases
+  // here, but I think all the ones that actually happen are using a
+  // ConstantExpr.
+  if (const auto *CE = dyn_cast_if_present<ConstantExpr>(IS->getCond());
+      CE && CE->hasAPValueResult() &&
+      CE->getResultAPValueKind() == APValue::ValueKind::Int) {
+    APSInt Value = CE->getResultAsAPSInt();
+    if (Value.getBoolValue())
+      return visitChildStmt(IS->getThen());
+    else if (const Stmt *Else = IS->getElse())
+      return visitChildStmt(Else);
+    return true;
+  }
+
+  // Otherwise, compile the condition.
   if (IS->isNonNegatedConsteval()) {
     if (!this->emitIsConstantContext(IS))
       return false;
@@ -5193,35 +5215,20 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelElse))
       return false;
-    {
-      LocalScope<Emitter> ThenScope(this);
-      if (!visitStmt(IS->getThen()))
-        return false;
-      if (!ThenScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(IS->getThen()))
+      return false;
     if (!this->jump(LabelEnd))
       return false;
     this->emitLabel(LabelElse);
-    {
-      LocalScope<Emitter> ElseScope(this);
-      if (!visitStmt(Else))
-        return false;
-      if (!ElseScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(Else))
+      return false;
     this->emitLabel(LabelEnd);
   } else {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelEnd))
       return false;
-    {
-      LocalScope<Emitter> ThenScope(this);
-      if (!visitStmt(IS->getThen()))
-        return false;
-      if (!ThenScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(IS->getThen()))
+      return false;
     this->emitLabel(LabelEnd);
   }
 
@@ -6039,14 +6046,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
   case UO_Deref: // *x
-    if (DiscardResult) {
-      // assert(false);
+    if (DiscardResult)
       return this->discard(SubExpr);
-    }
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr)
+    if (classifyPrim(SubExpr) == PT_Ptr && !E->getType()->isArrayType())
       return this->emitNarrowPtr(E);
     return true;
 
@@ -6326,7 +6331,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
     if (IsReference)
-      return this->emitGetLocal(PT_Ptr, Offset, E);
+      return this->emitGetLocal(classifyPrim(E), Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
     if (IsReference) {

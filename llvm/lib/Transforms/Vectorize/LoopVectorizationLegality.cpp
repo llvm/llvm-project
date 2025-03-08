@@ -43,12 +43,10 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                        cl::desc("Enable recognition of non-constant strided "
                                 "pointer induction variables."));
 
-namespace llvm {
-cl::opt<bool>
+static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
                          cl::desc("Allow enabling loop hints to reorder "
                                   "FP operations during vectorization."));
-} // namespace llvm
 
 // TODO: Move size-based thresholds out of legality checking, make cost based
 // decisions instead of hard thresholds.

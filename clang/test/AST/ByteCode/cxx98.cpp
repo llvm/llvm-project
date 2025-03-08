@@ -6,7 +6,7 @@
 namespace IntOrEnum {
   const int k = 0;
   const int &p = k; // both-note {{declared here}}
-  template<int n> struct S {};
+  template<int n> struct S {}; // both-note {{template parameter is declared here}}
   S<p> s; // both-error {{not an integral constant expression}} \
           // both-note {{read of variable 'p' of non-integral, non-enumeration type 'const int &'}}
 }

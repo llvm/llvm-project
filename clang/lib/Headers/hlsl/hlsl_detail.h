@@ -9,6 +9,8 @@
 #ifndef _HLSL_HLSL_DETAILS_H_
 #define _HLSL_HLSL_DETAILS_H_
 
+#include "hlsl_alias_intrinsics.h"
+
 namespace hlsl {
 
 namespace __detail {
@@ -55,7 +57,7 @@ constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
 template <typename T>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_impl(T X) {
-  return __builtin_elementwise_abs(X);
+  return abs(X);
 }
 
 template <typename T, int N>
@@ -64,7 +66,7 @@ length_vec_impl(vector<T, N> X) {
 #if (__has_builtin(__builtin_spirv_length))
   return __builtin_spirv_length(X);
 #else
-  return __builtin_elementwise_sqrt(__builtin_hlsl_dot(X, X));
+  return sqrt(dot(X, X));
 #endif
 }
 
@@ -91,7 +93,7 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #if (__has_builtin(__builtin_spirv_reflect))
   return __builtin_spirv_reflect(I, N);
 #else
-  return I - 2 * N * __builtin_hlsl_dot(I, N);
+  return I - 2 * N * dot(I, N);
 #endif
 }
 

@@ -73,6 +73,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -88,6 +89,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -161,6 +163,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
+  case Intrinsic::experimental_vp_splice:
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4 || ScalarOpdIdx == 5;
   default:
     return false;
   }
@@ -186,7 +190,9 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::modf:
   case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
@@ -413,6 +419,36 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   }
 
   return true;
+}
+
+bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                             std::array<std::pair<int, int>, 2> &SrcInfo) {
+  const int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
+  for (auto [i, M] : enumerate(Mask)) {
+    if (M < 0)
+      continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool Match = false;
+    for (int j = 0; j < 2; j++) {
+      auto &[SrcE, DiffE] = SrcInfo[j];
+      if (SrcE == -1) {
+        assert(DiffE == SignalValue);
+        SrcE = Src;
+        DiffE = Diff;
+      }
+      if (SrcE == Src && DiffE == Diff) {
+        Match = true;
+        break;
+      }
+    }
+    if (!Match)
+      return false;
+  }
+  // Avoid all undef masks
+  return SrcInfo[0].first != -1;
 }
 
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
@@ -809,7 +845,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(I))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -821,7 +857,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(I))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -829,7 +865,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+    for (Value *M : ECs.members(I)) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;
