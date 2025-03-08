@@ -190,9 +190,9 @@ public:
 //
 // BIT_UNFILTERED is used as the init value for a filter position.  It is used
 // only for filter processings.
-typedef enum {
-  BIT_TRUE,      // '1'
+typedef enum : uint8_t {
   BIT_FALSE,     // '0'
+  BIT_TRUE,      // '1'
   BIT_UNSET,     // '?'
   BIT_UNFILTERED // unfiltered
 } bit_value_t;
