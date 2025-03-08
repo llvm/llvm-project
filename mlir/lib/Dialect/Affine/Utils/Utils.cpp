@@ -636,7 +636,8 @@ static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
                                  const MemRefAccess &destAccess) {
   // Affine dependence analysis is possible only if both ops in the same
   // AffineScope.
-  if (getAffineScope(srcAccess.opInst) != getAffineScope(destAccess.opInst))
+  if (getAffineAnalysisScope(srcAccess.opInst) !=
+      getAffineAnalysisScope(destAccess.opInst))
     return false;
 
   unsigned nsLoops =
@@ -659,9 +660,9 @@ static bool mayHaveEffect(Operation *srcMemOp, Operation *destMemOp,
   // AffineScope. Also, we can only check if our affine scope is isolated from
   // above; otherwise, values can from outside of the affine scope that the
   // check below cannot analyze.
-  Region *srcScope = getAffineScope(srcMemOp);
+  Region *srcScope = getAffineAnalysisScope(srcMemOp);
   if (srcAccess.memref == destAccess.memref &&
-      srcScope == getAffineScope(destMemOp)) {
+      srcScope == getAffineAnalysisScope(destMemOp)) {
     unsigned nsLoops = getNumCommonSurroundingLoops(*srcMemOp, *destMemOp);
     FlatAffineValueConstraints dependenceConstraints;
     for (unsigned d = nsLoops + 1; d > minSurroundingLoops; d--) {
