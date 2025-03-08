@@ -47,7 +47,7 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, UnorderedSymbolSet &);
+    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
     const parser::Expr *);
@@ -363,7 +363,7 @@ void ModFileWriter::PutSymbols(
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
-  UnorderedSymbolSet modules;
+  SourceOrderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
@@ -839,7 +839,7 @@ void ModFileWriter::PutUseExtraAttr(
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, UnorderedSymbolSet &modules) {
+    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};

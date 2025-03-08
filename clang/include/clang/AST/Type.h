@@ -2661,6 +2661,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
 

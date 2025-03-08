@@ -342,7 +342,8 @@ private:
   bool levelCheckResize(Operation *op) {
     if (auto resize = dyn_cast<tosa::ResizeOp>(op)) {
       SmallVector<int64_t> scale;
-      if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+      if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(),
+                                     scale)) {
         return false;
       }
       const int64_t scaleYN = scale[0];
@@ -371,14 +372,14 @@ private:
       }
     }
     if (auto condIf = dyn_cast<tosa::IfOp>(op)) {
-      if (!levelCheckListSize(op, condIf.getInputs().size(), "inputs") ||
-          !levelCheckListSize(op, condIf.getOutput().size(), "outputs")) {
+      if (!levelCheckListSize(op, condIf.getInputList().size(), "inputs") ||
+          !levelCheckListSize(op, condIf.getOutputList().size(), "outputs")) {
         return false;
       }
     }
     if (auto w = dyn_cast<tosa::WhileOp>(op)) {
-      if (!levelCheckListSize(op, w.getInputs().size(), "inputs") ||
-          !levelCheckListSize(op, w.getOutput().size(), "outputs")) {
+      if (!levelCheckListSize(op, w.getInputList().size(), "inputs") ||
+          !levelCheckListSize(op, w.getOutputList().size(), "outputs")) {
         return false;
       }
     }
@@ -450,7 +451,7 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   auto op = tosaOp.getOperation();
 
   // Only the condition input has rank limitation.
-  if (!levelCheckRank(op, tosaOp.getCond(), "operand", tosaLevel.MAX_RANK))
+  if (!levelCheckRank(op, tosaOp.getCondition(), "operand", tosaLevel.MAX_RANK))
     return false;
 
   return true;
@@ -736,7 +737,7 @@ bool checkErrorIfResize(Operation *op) {
   }
 
   SmallVector<int64_t> scale;
-  if (!tosa::getConstShapeValue(resize.getScale().getDefiningOp(), scale)) {
+  if (!tosa::getConstShapeValues(resize.getScale().getDefiningOp(), scale)) {
     return false;
   }
 
@@ -761,8 +762,8 @@ bool checkErrorIfResize(Operation *op) {
 
   SmallVector<int64_t> offset;
   SmallVector<int64_t> border;
-  if (!tosa::getConstShapeValue(resize.getOffset().getDefiningOp(), offset) ||
-      !tosa::getConstShapeValue(resize.getBorder().getDefiningOp(), border)) {
+  if (!tosa::getConstShapeValues(resize.getOffset().getDefiningOp(), offset) ||
+      !tosa::getConstShapeValues(resize.getBorder().getDefiningOp(), border)) {
     return false;
   }
 

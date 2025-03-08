@@ -1518,8 +1518,7 @@ public:
     if (foldTailWithEVL())
       return true;
     return PreferPredicatedReductionSelect ||
-           TTI.preferPredicatedReductionSelect(
-               Opcode, PhiTy, TargetTransformInfo::ReductionFlags());
+           TTI.preferPredicatedReductionSelect(Opcode, PhiTy);
   }
 
   /// Estimate cost of an intrinsic call instruction CI if it were vectorized
@@ -2095,18 +2094,11 @@ public:
   /// depending on the generated condition.
   BasicBlock *emitSCEVChecks(BasicBlock *Bypass,
                              BasicBlock *LoopVectorPreHeader) {
-    if (!SCEVCheckCond)
+    using namespace llvm::PatternMatch;
+    if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
       return nullptr;
 
-    Value *Cond = SCEVCheckCond;
-    // Mark the check as used, to prevent it from being removed during cleanup.
-    SCEVCheckCond = nullptr;
-    if (auto *C = dyn_cast<ConstantInt>(Cond))
-      if (C->isZero())
-        return nullptr;
-
     auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
-
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
     // Create new preheader for vector loop.
     if (OuterLoop)
@@ -2120,10 +2112,14 @@ public:
     DT->addNewBlock(SCEVCheckBlock, Pred);
     DT->changeImmediateDominator(LoopVectorPreHeader, SCEVCheckBlock);
 
-    BranchInst &BI = *BranchInst::Create(Bypass, LoopVectorPreHeader, Cond);
+    BranchInst &BI =
+        *BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheckCond);
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
+
+    // Mark the check as used, to prevent it from being removed during cleanup.
+    SCEVCheckCond = nullptr;
     return SCEVCheckBlock;
   }
 
@@ -2257,6 +2253,7 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
                      Value *Step,
                      InductionDescriptor::InductionKind InductionKind,
                      const BinaryOperator *InductionBinOp) {
+  using namespace llvm::PatternMatch;
   Type *StepTy = Step->getType();
   Value *CastedIndex = StepTy->isIntegerTy()
                            ? B.CreateSExtOrTrunc(Index, StepTy)
@@ -2274,12 +2271,10 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
   // cases only.
   auto CreateAdd = [&B](Value *X, Value *Y) {
     assert(X->getType() == Y->getType() && "Types don't match!");
-    if (auto *CX = dyn_cast<ConstantInt>(X))
-      if (CX->isZero())
-        return Y;
-    if (auto *CY = dyn_cast<ConstantInt>(Y))
-      if (CY->isZero())
-        return X;
+    if (match(X, m_ZeroInt()))
+      return Y;
+    if (match(Y, m_ZeroInt()))
+      return X;
     return B.CreateAdd(X, Y);
   };
 
@@ -2288,12 +2283,10 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
   auto CreateMul = [&B](Value *X, Value *Y) {
     assert(X->getType()->getScalarType() == Y->getType() &&
            "Types don't match!");
-    if (auto *CX = dyn_cast<ConstantInt>(X))
-      if (CX->isOne())
-        return Y;
-    if (auto *CY = dyn_cast<ConstantInt>(Y))
-      if (CY->isOne())
-        return X;
+    if (match(X, m_One()))
+      return Y;
+    if (match(Y, m_One()))
+      return X;
     VectorType *XVTy = dyn_cast<VectorType>(X->getType());
     if (XVTy && !isa<VectorType>(Y->getType()))
       Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
@@ -4875,8 +4868,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
             Legal->getReductionVars().find(PN)->second;
         if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getOpcode(),
-                                      RdxDesc.getRecurrenceType(),
-                                      TargetTransformInfo::ReductionFlags()))
+                                      RdxDesc.getRecurrenceType()))
           continue;
         T = RdxDesc.getRecurrenceType();
       }
@@ -7043,8 +7035,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     // want to record it as such.
     unsigned Opcode = RdxDesc.getOpcode();
     if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
-        !TTI.preferInLoopReduction(Opcode, Phi->getType(),
-                                   TargetTransformInfo::ReductionFlags()))
+        !TTI.preferInLoopReduction(Opcode, Phi->getType()))
       continue;
 
     // Check that we can correctly put the reductions into the loop, by

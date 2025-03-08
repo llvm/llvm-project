@@ -147,8 +147,8 @@ class ARMFastISel final : public FastISel {
     // Backend specific FastISel code.
 
     bool fastSelectInstruction(const Instruction *I) override;
-    unsigned fastMaterializeConstant(const Constant *C) override;
-    unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
+    Register fastMaterializeConstant(const Constant *C) override;
+    Register fastMaterializeAlloca(const AllocaInst *AI) override;
     bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                              const LoadInst *LI) override;
     bool fastLowerArguments() override;
@@ -619,11 +619,12 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
   return DestReg;
 }
 
-unsigned ARMFastISel::fastMaterializeConstant(const Constant *C) {
+Register ARMFastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
-  if (!CEVT.isSimple()) return 0;
+  if (!CEVT.isSimple())
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
@@ -633,17 +634,19 @@ unsigned ARMFastISel::fastMaterializeConstant(const Constant *C) {
   else if (isa<ConstantInt>(C))
     return ARMMaterializeInt(C, VT);
 
-  return 0;
+  return Register();
 }
 
 // TODO: unsigned ARMFastISel::TargetMaterializeFloatZero(const ConstantFP *CF);
 
-unsigned ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   // Don't handle dynamic allocas.
-  if (!FuncInfo.StaticAllocaMap.count(AI)) return 0;
+  if (!FuncInfo.StaticAllocaMap.count(AI))
+    return Register();
 
   MVT VT;
-  if (!isLoadTypeLegal(AI->getType(), VT)) return 0;
+  if (!isLoadTypeLegal(AI->getType(), VT))
+    return Register();
 
   DenseMap<const AllocaInst*, int>::iterator SI =
     FuncInfo.StaticAllocaMap.find(AI);
@@ -663,7 +666,7 @@ unsigned ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 bool ARMFastISel::isTypeLegal(Type *Ty, MVT &VT) {
