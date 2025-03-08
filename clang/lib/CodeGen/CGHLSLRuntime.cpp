@@ -85,16 +85,11 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-// Returns true if the type is an HLSL resource class
-static bool isResourceRecordType(const clang::Type *Ty) {
-  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
-}
-
 // Returns true if the type is an HLSL resource class or an array of them
 static bool isResourceRecordTypeOrArrayOf(const clang::Type *Ty) {
   while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual();
-  return isResourceRecordType(Ty);
+  return Ty->isHLSLResourceRecord();
 }
 
 // Emits constant global variables for buffer constants declarations
@@ -658,7 +653,7 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
     // on?
     return;
 
-  if (!isResourceRecordType(VD->getType().getTypePtr()))
+  if (!VD->getType().getTypePtr()->isHLSLResourceRecord())
     // FIXME: Only simple declarations of resources are supported for now.
     // Arrays of resources or resources in user defined classes are
     // not implemented yet.

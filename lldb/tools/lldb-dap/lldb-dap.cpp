@@ -10,11 +10,13 @@
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -175,22 +177,22 @@ EXAMPLES:
 // If --launch-target is provided, this instance of lldb-dap becomes a
 // runInTerminal launcher. It will ultimately launch the program specified in
 // the --launch-target argument, which is the original program the user wanted
-// to debug. This is done in such a way that the actual debug adaptor can
+// to debug. This is done in such a way that the actual debug adapter can
 // place breakpoints at the beginning of the program.
 //
-// The launcher will communicate with the debug adaptor using a fifo file in the
+// The launcher will communicate with the debug adapter using a fifo file in the
 // directory specified in the --comm-file argument.
 //
-// Regarding the actual flow, this launcher will first notify the debug adaptor
+// Regarding the actual flow, this launcher will first notify the debug adapter
 // of its pid. Then, the launcher will be in a pending state waiting to be
-// attached by the adaptor.
+// attached by the adapter.
 //
 // Once attached and resumed, the launcher will exec and become the program
 // specified by --launch-target, which is the original target the
 // user wanted to run.
 //
 // In case of errors launching the target, a suitable error message will be
-// emitted to the debug adaptor.
+// emitted to the debug adapter.
 static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                              llvm::StringRef comm_file,
                                              lldb::pid_t debugger_pid,
@@ -219,7 +221,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
   int timeout_in_ms =
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
-  if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
     return err;
   }
@@ -504,9 +506,24 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create a memory monitor. This can return nullptr if the host platform is
+  // not supported.
+  std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
+      lldb_private::MemoryMonitor::Create([&]() {
+        if (log)
+          *log << "memory pressure detected\n";
+        lldb::SBDebugger::MemoryPressureDetected();
+      });
+
+  if (memory_monitor)
+    memory_monitor->Start();
+
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+  auto terminate_debugger = llvm::make_scope_exit([&] {
+    if (memory_monitor)
+      memory_monitor->Stop();
+    lldb::SBDebugger::Terminate();
+  });
 
   std::vector<std::string> pre_init_commands;
   for (const std::string &arg :

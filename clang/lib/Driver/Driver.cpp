@@ -226,10 +226,7 @@ std::string CUIDOptions::getCUID(StringRef InputFile,
     else if (UseCUID == Kind::Hash) {
       llvm::MD5 Hasher;
       llvm::MD5::MD5Result Hash;
-      SmallString<256> RealPath;
-      llvm::sys::fs::real_path(InputFile, RealPath,
-                               /*expand_tilde=*/true);
-      Hasher.update(RealPath);
+      Hasher.update(InputFile);
       for (auto *A : Args) {
         if (A->getOption().matches(options::OPT_INPUT))
           continue;
@@ -4671,6 +4668,16 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       Action *LastAction = Actions.back();
       Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
           LastAction, types::TY_DX_CONTAINER));
+    }
+    if (Args.getLastArg(options::OPT_metal)) {
+      Action *LastAction = Actions.back();
+      // Metal shader converter runs on DXIL containers, which can either be
+      // validated (in which case they are TY_DX_CONTAINER), or unvalidated
+      // (TY_OBJECT).
+      if (LastAction->getType() == types::TY_DX_CONTAINER ||
+          LastAction->getType() == types::TY_Object)
+        Actions.push_back(C.MakeAction<BinaryTranslatorJobAction>(
+            LastAction, types::TY_DX_CONTAINER));
     }
   }
 

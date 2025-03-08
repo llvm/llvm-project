@@ -319,8 +319,9 @@ static FunctionSummary *calculatePrevailingSummary(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
 
-  if (CachedPrevailingSummary.count(VI))
-    return CachedPrevailingSummary[VI];
+  if (auto It = CachedPrevailingSummary.find(VI);
+      It != CachedPrevailingSummary.end())
+    return It->second;
 
   /// At this point, prevailing symbols have been resolved. The following leads
   /// to returning a conservative result:
@@ -1249,7 +1250,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
 
     // Functions that are readonly (or readnone) and nounwind and don't return
     // a value can't capture arguments. Don't analyze them.
-    if (F->onlyReadsMemory() && F->doesNotThrow() &&
+    if (F->onlyReadsMemory() && F->doesNotThrow() && F->willReturn() &&
         F->getReturnType()->isVoidTy()) {
       for (Argument &A : F->args()) {
         if (A.getType()->isPointerTy() && !A.hasNoCaptureAttr()) {
