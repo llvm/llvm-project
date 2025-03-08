@@ -448,9 +448,21 @@ void MachineRegisterInfo::clearKillFlags(Register Reg) const {
 }
 
 bool MachineRegisterInfo::isLiveIn(Register Reg) const {
-  for (const std::pair<MCRegister, Register> &LI : liveins())
+  for (const std::pair<MCRegister, Register> &LI : liveins()) {
     if ((Register)LI.first == Reg || LI.second == Reg)
       return true;
+
+    // Check if Reg is a subreg of live-in register
+    MCRegister PhysReg = LI.first;
+    if (!PhysReg.isValid() || !Reg.isPhysical())
+      continue;
+
+    const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+    if (all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+          return llvm::is_contained(TRI->regunits(PhysReg), RegUnit);
+        }))
+      return true;
+  }
   return false;
 }
 
