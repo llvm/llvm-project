@@ -141,6 +141,12 @@ CMake itself provide.
    the compiler for `__float128` or 128-bit `long double` support.
    [More details](docs/Real16MathSupport.md).
 
+ * `FLANG_RT_QUADMATH_INCLUDE_DIR` (default: `""`)
+
+   Allows setting a path to `quadmath.h` directory.
+   It may be required when using non-gcc compiler for building flang-rt.
+   It maye also be required when building flang-rt in bootstrap mode.
+
  * `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT` (values: `"CUDA"`,`"OpenMP"`, `""` default: `""`)
 
    When set to `CUDA`, builds Flang-RT with experimental support for GPU

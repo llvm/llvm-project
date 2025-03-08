@@ -76,8 +76,15 @@ target_include_directories(FortranFloat128MathILib INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
   )
 
+set(FLANG_RT_QUADMATH_INCLUDE_DIR "" CACHE PATH
+  "An optional path to GNU libquadmath header files. \
+   It may be required when building with FLANG_RUNTIME_F128_MATH_LIB \
+   and a non-gcc compiler.")
+
 if (FLANG_RUNTIME_F128_MATH_LIB)
   if (${FLANG_RUNTIME_F128_MATH_LIB} STREQUAL "libquadmath")
+    include_directories(${FLANG_RT_QUADMATH_INCLUDE_DIR})
+    list(APPEND CMAKE_REQUIRED_INCLUDES ${FLANG_RT_QUADMATH_INCLUDE_DIR})
     check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
     if(FOUND_QUADMATH_HEADER)
       add_compile_definitions(HAS_QUADMATHLIB)
